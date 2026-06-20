@@ -28,6 +28,19 @@ checks and are cleared for use as-is. Microcontroller selected: **ESP32** (class
 | [`docs/RESEARCH_capacitive_soil_moisture_sensors.md`](docs/RESEARCH_capacitive_soil_moisture_sensors.md) | Foundational research: how these sensors work, every known defect + workaround, diagnosis, buying guidance, and an annotated source index (incl. code-example links). |
 | [`docs/evidence/`](docs/evidence/) | Macro board photos used as QA evidence. |
 
+## Firmware (PlatformIO)
+
+Firmware lives in [`firmware/`](firmware/) as a PlatformIO project (ESP32, Arduino framework).
+Open the `firmware/` folder in VS Code with the PlatformIO IDE extension, or use the CLI from that
+folder:
+
+- Build: `pio run`
+- Upload: `pio run -t upload`
+- Monitor: `pio device monitor` (115200 baud)
+
+Board env is `esp32dev` (classic ESP32). Pin assignments and tunables live in
+`firmware/include/config.h`. The build cache and resolved libraries (`firmware/.pio/`) are git-ignored.
+
 ## Roadmap
 
 - [x] Research the sensor class and its known defects
