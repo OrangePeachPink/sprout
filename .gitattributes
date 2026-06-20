@@ -1,0 +1,17 @@
+# Default: normalize text to LF in the repo
+* text=auto eol=lf
+
+# Windows-only files keep CRLF
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.url  text eol=crlf
+
+# Binary assets (never normalize)
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.pdf  binary
+*.bin  binary
+*.hex  binary
+*.elf  binary

@@ -1,0 +1,42 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Agent / session state (never track)
+.claude/
+
+# Secrets / local config (KEEP OUT OF GIT)
+.env
+.env.*
+secrets.h
+wifi_credentials.h
+credentials.h
+
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Arduino build artifacts
+build/
+*.bin
+*.elf
+*.hex
+*.map
+
+# Python (logging / analysis tooling, if added later)
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Logs / scratch
+*.log
+_scratch/
