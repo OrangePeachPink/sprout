@@ -40,3 +40,7 @@ venv/
 # Logs / scratch
 *.log
 _scratch/
+
+# Local-only evidence video (kept out of git to avoid permanent repo bloat)
+*.mov
+*.MOV
