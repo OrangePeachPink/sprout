@@ -1,0 +1,750 @@
+#YouTube Video Title
+Capacitive Soil Moisture Sensors don't work correctly + Fix for v2.0 v1.2 Arduino ESP32 Raspberry Pi
+#YouTube Video Channel
+https://www.youtube.com/@FlauraSmartPlantPot
+#YouTube Video Link
+https://www.youtube.com/watch?v=IGP38bz-K48
+https://youtu.be/IGP38bz-K48
+
+#YouTube Video Description
+261,961 views  Oct 3, 2021
+In this episode I talk about capacitive soil moisture sensors and why 82% of them dont work correctly. I analyze the 3 most common problems they have by design and show you how to fix them or how to find sensors that work right away.
+
+
+You can jump to one of these sections: 
+0:00 Introduction
+
+0:39 Flaura - the smart, self-watering plant pot
+1:20 Resistive sensors suck
+2:03 Working principle
+2:43 Learnings from 38 orders
+3:47 Missing voltage regulator
+5:11 Wrong timer chip
+6:57 Missing resistor connection
+9:39 Fixes
+10:01 Ordering advices
+
+
+This is the fourth video of my tutorial series on how to build your own “Flaura”, which is my Do-It-Yourself, Open-source project. 
+
+Flaura is a smart, self-watering plant pot that comes with the following features: 
+3D printed housing 
+Integrated water tank
+Soil moisture measurement 
+Automatic watering 
+Rechargeable battery 
+Arduino Code 
+App control and data display 
+Push notifications 
+
+Consider watching the introductory video, to learn more about the features and my future plans with Flaura:    • Flaura – Automatic, Smart Plant Pot (Self ...  
+I will release more step-by-step video tutorials here in the future on how to build such a plant pot yourself. Stay tuned! 😉
+
+#YouTube Video Transcript
+
+Search in video
+Introduction
+Every good plant care project for Arduino, Raspberry Pi or any other microcontroller
+needs a soil moisture sensor.
+You probably already know that resistive sensors like this one are absolute crap.
+Everyone wants one of these capacitive sensors, but be careful when ordering one of them!
+They all look pretty much the same, but I've found that 82% of them have major design flaws
+such that they won't work at all under certain conditions or their readings are very questionable.
+So be sure to watch this video until the end to not order the wrong product and save yourself
+some money and trouble!
+Flaura - the smart, self-watering plant pot
+If you don't already have your own plant care project, you can check out Flaura by following
+the link in the corner.
+Flaura is smart, self-watering plant pot, that can be built by anyone.
+It's completely open source and the instruction videos are being added to my YouTube channel
+step by step.
+It features a 3D-printed housing with an integrated water tank, soil moisture and water tank level
+sensing, automatic watering, a rechargeable battery, WiFi and Bluetooth and a smartphone
+app to track sensor data and receive push notifications.
+Of course, Flaura also uses a capacitive soil moisture sensor.
+Resistive sensors suck
+There are already a bunch of videos on Youtube about soil moisture sensors that explain in
+detail how they work and why capacitive sensors are much better than resistive ones.
+Here is a quick recap of these videos:
+Resistive Soil moisture sensors suck because they destroy themselves quickly after only
+few days of operation.
+This is because a chemical reaction called electrolysis takes place when the sensor legs
+with their exposed copper paths are stuck into the ground and power is supplied to the sensor.
+As a result, the copper on the cathodic sensor leg is quickly dissolved while gases are being
+produced, as shown in Andreas Spiess video at high speed.
+Working principle
+Capacitive soil moisture sensors do not have any copper exposed to water and they won’t dissolve.
+Here is a brief explanation of their working principle:
+Two isolated copper areas on the sensor PCB form a capacitor.
+Its capacity is determined, among other things, by the amount of water in the surrounding
+area of the sensor.
+A timer chip is then used to create an electrical square wave that gets converted into an analog
+DC voltage by a bunch of other components.
+The exact output voltage depends on the capacity of the sensor and thus on the amount of water nearby.
+Learnings from 38 orders
+You can find thousands of different suppliers online for these cheap soil moisture sensors
+and their products all look the same at first glance.
+But if you take a closer look, there are actually quite huge differences that make some of these
+sensors completely unusable.
+I ordered a total of 38 sensors from different shops to run some tests and compare the product quality.
+Here is what I found out:
+Version 2.0 is by no means a technical upgrade from version 1.2, it is exactly the same product
+and nothing but a marketing trick.
+All of the products sold by online retailers can be traced back to around five different
+versions, likely sourced from just a handful of different factories in Asia.
+82% of the sensors I have ordered have at least one flaw that prevents them from working
+correctly or even makes them unusable under certain conditions.
+I found 3 common problems:
+Missing voltage regulator
+Issue 1: Missing voltage regulator
+In theory, these sensors could operate on a wide variety of voltages.
+But of course, the voltage at the analog output of the sensor also depends on the supply voltage.
+This is a problem if you are supplying the sensor with a non-constant voltage power source,
+like pretty much any type of battery.
+For example, if you are using a 3.7-volt lithium-ion battery, it will not output 3.7 volts when
+fully charged, but rather 4.2 volts at room temperature.
+Then, as the battery drains over time, it will end up delivering only about 3 volts.
+This changing supply voltage would also confuse the output voltage of the sensor and thus
+the humidity readings.
+To solve this problem, many capacitive soil moisture sensors have a 662K voltage regulator
+on board, which regulates every supply voltage down to a constant 3 volts.
+But some manufacturers have chosen to forego this regulator in order to save a few cents
+and have simply bridged the solder pads instead.
+This is fine if you have can somehow supply the sensor with a constant voltage, but in
+any other case I would highly recommend to check the product pictures for the presence
+of the 662K voltage regulator.
+Wrong timer chip
+Issue 2: Wrong timer chip
+As I explained earlier, every capacitive soil moisture sensor uses some sort of timer chip
+to create an electrical square wave.
+Unfortunately, not every type of timer chip used is suitable for operation on a 3.3-volt
+power supply, although this suitability is almost always mentioned in the product description.
+To find out which timer chip is on the circuit board, you can enlarge the product images
+and look at the label on the chip.
+Both the TLC555C and the TLC555I can be powered with a voltage down to 2, respectively 3 volts,
+making them compatible with almost every microcontroller.
+However, some manufacturers use older NE555 chips instead to safe costs.
+The datasheet for this chip reveals that it has a minimum supply voltage of 4.5 Volts.
+So, these sensors will not work if powered by, for example, a 3.7-volt Li-Ion battery
+or directly from a 3.3-volt ESP32.
+Among the 38 sensors that I ordered for testing purposes, there are also some with the unwanted
+NE555, which surprisingly do work on 3.3V.
+What these have in common is that they all have “20M” written under the type labeling.
+It is quite possible that some samples work outside of the manufacturer's specifications,
+as they always allow for a certain buffer when writing the data sheets.
+But my few lucky finds may only have been a small batch and this will always be a game of chance.
+Missing resistor connection
+Issue 3: Missing resistor connection
+Out of my 38 test samples, 53% had this issue, which is absolutely shocking and reveals a
+huge quality problem.
+It cannot even be justified by the stinginess of the manufacturers, but only by stupidity.
+Here we can see the schematic of the capacitive soil moisture sensor as it’s supposed to be.
+The outlined part of the circuit is used to convert the waveform signal from the sensor
+into a constant voltage that can be read by other hardware.
+As you can see there is a 1 megaohm resistor that should be connected to the analog output
+on one side and to ground on the other.
+However, the check with the multimeter shows that this is not the case for the ground side.
+So, with one side disconnected, it's like the resistor isn't there at all.
+How could this happen?
+To find out, I have removed the silk screen from a faulty and a good sensor to compare
+the copper paths.
+For the working sensor, the multimeter confirms the connection of the resistor to ground by
+this copper path.
+Also note the positioning of this via hole between these two resistors.
+As we can see on the faulty sensor, the same via hole is located a little further outside,
+which interrupts the connection of the 1 megaohm resistor to ground.
+Wow, it's so embarrassing how such a product is still produced and sold all over the world.
+In practice, this means that the sensor becomes extremely unresponsive and the measured value
+changes only very slowly as perfectly demonstrated in Steward Cash’s video.
+Here is what it’s supposed to look like with a working sensor.
+Even though you might think you don't need a super responsive sensor because you only
+measure every few hours, it's still a bad thing.
+If you take measuring points for a value at a certain point in time, you usually want
+to record several sensor readings at the same time and then let the software filter out
+any outliers and average the rest.
+If you try to take 5 readings with the faulty, unresponsive sensor, all 5 readings will be
+exactly the same.
+If the first one is an outlier, all following readings will result in the same, wrong value
+and your measurement is garbage.
+Do you already have a capacitive soil moisture sensor?
+And does it have any of these issues too?
+Please let me know in the comment section.
+Fixes
+If you already have a sensor with a missing resistor connection, there are 2 possible
+ways to fix the problem yourself:
+Solder a new 1 megaohm resistor directly between the analog out pin and the ground pin of the sensor.
+Solder a cable between the existing resistor and the ground pin of the connector.
+Ordering advices
+Finally, a short summary of how you can identify a good capacitive soil moisture sensor without
+these problems before ordering:
+Just zoom in on the product images as much as possible and take a very close look.
+Check for the presence of the 662K Voltage regulator, the TLC555C or TLC555I label on
+the timer chip and for the correct positioning of the via hole.
+It should be located right between the two resistors and not somewhere at the side.
+If the image quality is too poor and you can't see things clearly - better play it safe and
+order from a diffrent shop
+Unfortunately, sometimes even high-quality product pictures and the best product sourcing don’t help.
+It has happened to me several times that retailers did not send me exactly the product as in
+the pictures, but a faulty one instead.
+A lot of people would probably never notice this and I think even most retailers are unaware
+of the tiny differences between these sensors.
+I hope these tips help you find a suitable capacitive soil moisture sensor for your project.
+I did quite a lot of research and placed a lot of orders for this video, so please consider
+liking it to appreciate my work.
+My next video will explain how to solder the electrical components for my smart plant pot
+Flaura, so subscribe to this channel and hit the alarm bell to not miss that.
+Over here you can already find the video in which all other parts required for Flaura
+are explained and down here is another video from my channel for you.
+Thanks for watching and see you next time!
+
+
+# YouTube Video Top Comments
+
+@ThePhaaze
+3 years ago
+JACKPOT: I've hit all 3 problems with the first ordered sensor!
+The fix i'm going for: Throw it in the garbage, order a new one.
+
+Thanks for the video.
+109
+Reply
+
+
+@Humbulla93
+1 year ago
+Get a blumat moisture sensor it's better in all aspects and most accurate
+1
+Reply
+
+
+@agent_artifical
+1 year ago
+ @Humbulla93  i agree, but i still want to monitor to home assistant or iobroker
+1
+Reply
+
+
+@Humbulla93
+1 year ago
+ @agent_artifical  I have a solution but I'm not tech savvy enough to implement it. The solution: use a camera module with a picture recognition module and couple it with a relay for a water pump. When the correct number is shown the relay gets activated for a fully automated watering
+Reply
+
+
+@agent_artifical
+1 year ago
+ @Humbulla93  might be an option but i rather would open the sensor and connect an esp directly to the pins to monitor the values. Its to much hustle in my opinion but also will require much more energy to work and will not work properly during lights out
+Reply
+
+
+@felipe.moraga
+11 months ago
+ @Humbulla93  Hi How many differences with capacitive?
+Reply
+
+
+Hide replies
+
+@robinharris4706
+2 years ago
+I did some work with soil moisture sensors a while back and agree, resistive are useless.   So I tried a capacitive one but got unreliable results and moved on to other projects.  After watching your video and the excellent research behind it, I checked my probe.  Yes it has the missing resistor connection!   Now I now why it didn't do the job and am about to go and fix it.  This opens up an old project - thank you 🙂
+34
+Reply
+
+
+@SoggyCashew
+4 years ago (edited)
+So where have you had your best luck purchasing the moisture sensors at?
+120
+Reply
+
+
+@Humbulla93
+1 year ago
+Get a blumat moisture sensor and enjoy the trouble free action
+1
+Reply
+
+
+@torquebiker9959
+1 year ago
+ @Humbulla93  Stop spamming plz
+11
+Reply
+
+
+Hide replies
+
+@jim5148
+2 years ago (edited)
+I got lucky. A few months ago I bought a bag of these and they are labeled v2.0 / HW-390, and they have the 3 terminal regulator and the TL555 chip. Despite having the via at the lower position as shown as the Faulty board at the 8:00 minute mark, the 1 Meg Ohm resistor indeed appears across pins 1 and 3 on the connector. I didn't scrape off the solder mask to see how they made the connection, but they did somehow. Thankfully the one I tested provides stable readings from ~200 submerged, to ~515 dry. It also works on 3.3 VDC, providing the same readings as when powered from 5 VDC. Thanks for the good video!
+29
+Reply
+
+
+@milutzuk
+1 year ago
+That's right! Have the same sensor,  v2.0 / HW-390. The 105 resistor (1MOhm - 10*10^5) makes the connection between AOUT and GND, even if the via seems to be at the wrong position. It can be checked directly on the connector pins with an ohmmeter (I waterproofed my sensor and I didn't want to destroy that to touch the resistor's terminals)
+3
+Reply
+
+
+@felipe.moraga
+11 months ago
+Did you manage to find a supplier with a good product?
+Reply
+
+
+Hide replies
+
+@chrislanier884
+4 years ago
+was kinda hoping you would point out reliable sources
+23
+Reply
+
+
+@Kkmylife
+3 months ago
+Fr
+1
+Reply
+
+
+Hide replies
+
+@iamluthe82
+6 days ago
+thank you so much!!! i'm doing a final proyect for a subject, and i'm was looking everywhere for a another sensor, you  saved me !!!
+1
+Reply
+
+
+@JensJackowski
+2 years ago (edited)
+i think it is important to understand that most of the sensors have corration problems when you try to read them. If you just put them in the soil and do not have any power on them they are much more stable to use. The main problem is that most people try to read the soil- moisture more or less all the time or every minute - but their is no need for that. 3 or 4 readings a day are more than enough. 
+
+And the other problem is that many people did not understand that soil is reacting verry slowly. If is a verry bad idear to try watering a plant and use a soil sensor to stop the watering. It takes time for the water to spread in the soil. So what you should do is starting the watering if your reading shows a value that make it nessesary and stop it after a reasonable amount of time. After one hour or so you can do another reading and start a new cirkel if this i nessecary - and you do not have to read all the time.
+
+It took me a long time to understand the importence of this point. Its mabybe more important if you are watering a bigger amount of soil than just a plantpott, but basicly it is the same. The water needs time to spread in the soil.
+
+I have a bunch of devices that i have build several years ago with those sensors that you describe som just crab. Yes in the beginning i needed to replace them after a few weeks. But since i changed the reading metod and just do a reading every 6 hours are they working without problems since 3 seasons and up till now the do not show any sign of corrotion.
+7
+Reply
+
+
+@shahnewajx
+4 years ago
+I bought 50 of this sensors. Didn't know what's the problem. I was looking for video like this for 2 years. I can find only one video which shows 1m resistor problem from "Stewart Cash" . But this one is epic.
+10
+Reply
+
+
+@felipe.moraga
+11 months ago
+Did you manage to find a supplier with a good product?
+1
+Reply
+
+
+Hide replies
+
+@DoctorRetina
+3 years ago
+I wish I was this good at electronics.
+1
+Reply
+
+
+@erdbeeren3241
+4 years ago
+Pretty important information: for those who want a more sensitive moisture sensor, you can bridge the 1MOhm resistor with a 100kOhm one. The default output value changes a bit but the sensor reacts on raindrops for example. Same probably goes if you have the faulty connection.
+81
+Reply
+
+
+@electrofrikis
+1 year ago
+How is that? Should I remove the 1mohm resistor and replace it with a 100kohm resistor? Or add a 100kohm resistor?
+Reply
+
+
+@erdbeeren3241
+1 year ago
+ @electrofrikis  since I worked on this project 3 years ago, I dont remember the details. I suppose my ESP32 just had a hard time reading high resistances, so making the signal a bit stronger (but I guess noisier) helped me for the time. Shorting the 1MOhm or replacing it should have the same overall effect, since most of your current will flow through the lower resistor anyway and you just read the value at the end, so I woulndt bother taking out the standard resistor.  Just try what works, thats how I did it anyway. Good luck!
+1
+Reply
+
+
+Hide replies
+
+@tonumeister
+4 years ago (edited)
+hmm...wanted to be ready for everything,but now I have moisture sensor with all of the flaws :D:D:D
+8
+
+Reply
+
+
+@FlauraSmartPlantPot
+4 years ago
+oh no ... sorry to hear that :(
+Reply
+
+
+Hide replies
+
+@coolaboris
+3 years ago
+Why measure on R4, according to the board, and refeering to R1 in the schematics, regarding no connection to ground?
+4
+Reply
+
+
+@fabrizioactis3095
+10 days ago
+Grazie, ordinato i miei sensori con molta attenzione e sono arrivati corretti secondo le tue preziose indicazioni. Iscritto al tuo canale!
+Reply
+
+
+@ObsequiousV4
+2 years ago
+This is nice and comprehensive. Thanks for the hard work
+Reply
+
+
+@minime9400
+2 years ago
+A power saving tip: If the sensors power usage is within your MCUs IO pins power output, connect Vcc to a IO pin, turn it on (with possibly a delay), do the measurement and the turn it off. For my sensor I use a delay of 350 ms from power on to read, otherwise the sensor won't stabilize and the reading will be off. This will of course vary, you have to try it out for yourself.
+20
+Reply
+
+
+@JensJackowski
+2 years ago
+this is verry importent. but not only for power saving - all corrotion needs power to take place and by doing what you suggest you will enhance the useagetime of your sensor.
+2
+Reply
+
+
+Hide replies
+
+@ultrafilipsz.5827
+3 years ago
+What a great video of investgative journalism in electronics field, what a story!
+1
+Reply
+
+
+@RubenKelevra
+2 years ago (edited)
+8:16 I got 4 sensors which has the hole in exactly this place, but the ground connection is fine. :)
+2
+Reply
+
+
+@Paulilmys
+11 months ago
+Exactly what I was looking for.  Thanks for sharing.
+Reply
+
+
+@planker
+2 years ago
+Well presented. Good solid information, I have a few on order. My first time with such a sensor and did all the work to receive it and apply it to my build. Had I NOT known about the 3 problems, I would have blown a gasket.  Thank you.
+1
+Reply
+
+
+@robinharris4706
+2 years ago
+Further to my comment yesterday - I applied the easy fix and it is working perfectly.   Brilliant - thank you for sharing the results of your work - you have helped me greatly.
+1
+Reply
+
+
+@hiddenotebook
+2 months ago
+I really thank you this video ❤
+Reply
+
+
+@ematejowsky
+2 years ago
+Thanx. All my sensors have needed a resistor - I used 15K. I also have a temperature co-efficient of around -0.2% per Deg C. I've started to uses 24Hrs averages and water twice a day.
+2
+Reply
+
+
+@FrerkMeyer
+1 year ago
+Many, many thanks. This was very valuable advice!
+Reply
+
+
+@AJB2K3
+3 years ago
+THanks, I have six sensors here I now need to check.
+Reply
+
+
+@fredberghoff9917
+2 years ago
+Thank you very much for your in depth analysis and fact finding on these sensors!  As i watched the video I looked at some of these sensors on AliExpress and indeed, they were missing the voltage regulator as you stated.  Very good work!
+Reply
+
+
+@plankalkulcompiler9468
+1 year ago
+Thank you so much for the video! I was just about to buy those metal tip ones then I have seen your video.
+Reply
+
+
+@SmoothSkySailin
+3 years ago
+The world needs more people like you! Thanks so much!
+5
+Reply
+
+
+@adrian30497
+1 year ago
+Super Video i wonder Always why i have such Problems with this now i have the explanation
+Reply
+
+
+@ftnavy123
+2 years ago
+Thank you so much! I learned quite a bit from this.
+Reply
+
+
+@TheRealStructurer
+1 year ago
+Happy I found this before ordering mine! Thanks for sharing 👍🏼
+Reply
+
+
+@sm5172
+11 months ago
+Thank you very much for the valuable tips, sir!
+Reply
+
+
+@Modschala
+1 year ago
+You just saved me some money and energy. The one i had in mind was 3/3 garbage.
+Reply
+
+
+@kumd
+4 years ago
+Extremally helpful! So glad I saw this before ordering. I can't thank you enough for devoting so much time and money to make this video. It's truly appreciated.
+34
+Reply
+
+
+2 replies
+
+@KarelQuast
+1 year ago
+Great video, thank you!
+Reply
+
+
+@MKBrno
+2 months ago
+Perfectly explained, i just corrected R4 ground connection and will live with no regulator on already regulated VCC rail. Thanks for those good vibrations 🙂
+Reply
+
+
+@kavitagovekar2582
+9 months ago
+OMG THANK YOU, I NEVER KNEW THIS!
+Reply
+
+
+@thekitsunedev_hun
+2 years ago
+Great! Thank you so much for pointing out these faults! It's a headache what some manufacturers do to save a few cents.
+1
+Reply
+
+
+@christoffer5345
+4 years ago
+I just spent 3 hours troubleshooting why the sensor did not work with my 3,3V Arduino mini battery setup. It did have the NE555 component and was not working on 3,3V. Thanks for making this video! I would have spent days troubleshooting this!
+13
+Reply
+
+
+1 reply
+
+@szjoin992
+3 years ago
+Thank you sooo much for this video! I thought I had two 'ok' sensors. Turned out that the resistor was not connected and therefore the sensors were very unresponsive, as I already noticed during my project (but taken for granted). Now I was able to fix it. Without you 'I'd never have known this and my projects would be flawed forever! THANKS!👍
+3
+Reply
+
+
+@rubabmubarrat
+3 years ago
+you got a new sub, mate!
+Reply
+
+
+@stefanrapp9139
+1 year ago
+the fix works awesome
+Reply
+
+
+@Funky3Player
+4 years ago
+Just a heads up if you already have a resistive moisture sensor. You can just pulse it's power on each measurement with a transistor/digital pin and prolong its life substentially. I've had mine running for over two months with no sign of dissolvement.
+47
+
+Reply
+
+
+@eaglehigh-h3e
+3 years ago
+Do you know links showing how to modify it?
+3
+Reply
+
+
+@moeburn
+2 years ago
+Measure your sensor with alternating current - turn one pin high and the other low, then next measurement, reverse the two pins.
+2
+Reply
+
+
+@SetTheCurve
+2 years ago
+Pretty sure that Ecowitt sensor must do this because they stay accurate for years and the single AS battery seems to last about a year, even though it’s also powering a radio.
+1
+Reply
+
+
+@imbass8151
+2 years ago
+bingo!
+Reply
+
+
+@m.sierra5258
+4 years ago
+Also, powering it with ac would probably help
+11
+Reply
+
+
+Hide replies
+
+@konstantinklementiev8684
+3 years ago
+Thanks a lot for having found a broken PCB path to the ground! Great job!
+Reply
+
+
+@Colololp
+1 year ago
+Wow very Helpful Thank you. You saved me years of Troubleshooting 🙏🏻
+Reply
+
+
+@MachuBaxter
+3 years ago
+Thanks for the video! I used the tips provided when shopping on Aliexpress
+Reply
+
+
+@mathieucaron4957
+1 year ago
+Thank you, that was useful 👌
+Reply
+
+
+@joseluislopezaldana5706
+7 months ago
+muchas gracias. saludos desde España
+Reply
+
+
+@ScottMorgan88
+8 months ago
+Thanks, great information! :)
+Reply
+
+
+@jenniferp3721
+3 years ago (edited)
+I just bought some of these sensors a few days ago. Wish I had seen this video before hand. However thankfully the sensors I received pass all the checks.  TY for the info.
+Reply
+
+
+@PixelPenguin647
+1 year ago
+Thank you so much for taking the time to explain all of this information. Super helpful as I'm looking to make some basic sensors for my plants.
+Reply
+
+
+@luigiranzato7182
+1 year ago
+You are my Hero! I connected the resistor to ground and the sensor finally works very well 🙂
+Reply
+
+
+@ToniSushanthU-hc8jo
+1 year ago
+Super informative
+Reply
+
+
+@Georg93
+5 months ago
+You got a new subscriber. Great video! 👍🏼
+Reply
+
+
+@syncopium
+3 years ago
+I was lucky to get the right ones. Thanks for the video
+Reply
+
+
+@p.m.aircrafts8563
+1 year ago
+This is realy good and understandable content! Well done, thank you!
+Reply
+
+
+@LVHeitor
+1 year ago
+Outstanding expanation about moister sensor tricks that I was never imagine to find... Tks
+1
+Reply
+
+
+@DM2HUF
+2 years ago
+Danke Martin, das war ein sehr hilfreiches Video. Ich habe so einen Sensor mit dem 1MOhm Fehler. Und kann ihn nun dank dir doch nutzen.
+Reply
+
+
+@Welshwizzard1
+3 years ago
+I had 5 of these boards order this week, when I checked them they were all good, phew !.
+Reply
+
+
+@learningmanagementsystemlm2552
+1 year ago
+Thank you for the sharing information, good to know for my research project related to this sensor.
+Reply
+
+
+@henrydj3220
+3 years ago
+SO  thats why my project is giving me a headache. Thank you!

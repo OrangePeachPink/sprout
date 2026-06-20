@@ -232,3 +232,7 @@ as the project expands.
 
 Primary video source for the project: Flaura, "Capacitive soil moisture sensors - 82% are faulty"
 (https://www.youtube.com/watch?v=IGP38bz-K48).
+
+A verbatim transcript of that video is archived alongside this doc at
+[`flaura-video-transcript.txt`](flaura-video-transcript.txt), kept as a source artifact. It is
+third-party content - reconsider keeping it if this repo is ever made public.
