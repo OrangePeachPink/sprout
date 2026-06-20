@@ -15,3 +15,8 @@
 *.bin  binary
 *.hex  binary
 *.elf  binary
+
+# Uppercase variants (gitattributes matching is case-sensitive)
+*.JPEG binary
+*.JPG  binary
+*.MOV  binary
