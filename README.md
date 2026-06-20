@@ -26,6 +26,7 @@ checks and are cleared for use as-is. Microcontroller selected: **ESP32** (class
 | --- | --- |
 | [`SENSOR_QA.md`](SENSOR_QA.md) | Bench QA of the four capacitive sensors against the three known board defects: method, readings, verdict. |
 | [`docs/RESEARCH_capacitive_soil_moisture_sensors.md`](docs/RESEARCH_capacitive_soil_moisture_sensors.md) | Foundational research: how these sensors work, every known defect + workaround, diagnosis, buying guidance, and an annotated source index (incl. code-example links). |
+| [`docs/WIRING.md`](docs/WIRING.md) | Power + wiring architecture: single-supply baseline, connection map, candidate pin map, protection parts, and escalation path. |
 | [`docs/evidence/`](docs/evidence/) | Macro board photos used as QA evidence. |
 
 ## Firmware (PlatformIO)
