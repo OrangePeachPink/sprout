@@ -78,6 +78,27 @@ is itself a quality signal: this is the well-designed variant of the board.
 
 ---
 
+## Bonus sensor - SunFounder ESP32 kit (NE555 variant, NOT used for this project)
+
+The SunFounder ESP32 starter kit included its own, *different* capacitive sensor board, checked here
+for completeness. It is the cautionary-tale variant from the source video:
+
+- **Silkscreen:** "Capacitive Soil Moisture Sensor v1.2" (v1.2, not the UMLIFE V2.0.0)
+- **Issue 1 - regulator:** PASS (`662K` present)
+- **Issue 3 - R4 to GND:** PASS (`0.996 Mohm` AOUT<->GND, both directions, after settling)
+- **Issue 2 - timer chip:** **FAIL** - `U1` is an `NE555` (Texas Instruments bipolar 555, marked `NE555 / 55A`), not a TLC555.
+
+Why this is worse than a plain no-regulator board: it *also* has the `662K` regulator, which clamps
+the chip supply to ~3.0-3.3 V regardless of input voltage - **below the NE555's ~4.5 V minimum.** The
+regulator guarantees the NE555 is underfed, and feeding the module 5 V does not help (the regulator
+drops it). It might oscillate by luck (some NE555 units do, out of spec) but would be unreliable.
+
+**Disposition:** not used for this project. The four UMLIFE `TLC555` boards are the project sensors.
+This NE555 board is kept only as a spare/curiosity (usable only if its regulator were bypassed and it
+were fed >=4.5 V - not worth the effort).
+
+---
+
 ## Remaining sensor prep (build phase, not defects)
 
 These apply to *every* capacitive sensor regardless of QA result:
