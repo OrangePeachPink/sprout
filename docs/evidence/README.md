@@ -29,7 +29,8 @@ and [`../BRINGUP.md`](../BRINGUP.md).
 > **Two variants were photographed.** The project's QA-passed units are **V2.0.0 / TLC555** - their
 > connector silkscreen misprints the signal pad as **`AUOT`** (a typo for `AOUT`). A second, older
 > **v1.2** board with a different timer and a `D1` diode is also pictured; its connector correctly reads
-> **`AOUT`**. Open question: confirm whether the v1.2 unit is a stray spare or part of the actual build.
+> **`AOUT`**. The build uses **4x V2.0.0** units; the single v1.2 is an **unused spare** - defect-checked
+> but set aside (it doesn't match the V2.0.0 boards, and the relay is only 4-channel).
 
 | File | What it shows | Key readable text |
 | --- | --- | --- |
