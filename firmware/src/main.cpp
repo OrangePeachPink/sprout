@@ -2,9 +2,9 @@
  * plants - capacitive soil-moisture + pump auto-watering controller
  * Target: classic ESP32 (SoC marked ESP-32D / ESP32-D0WD class)
  *
- * RUNG 3 - single soil sensor, read-only. Reads ONE capacitive sensor on
- * GPIO36 (SVP) every READ_INTERVAL_MS (non-blocking, drift-free) and prints a
- * human-readable table:
+ * RUNG 3 - single soil sensor, read-only. Every READ_INTERVAL_MS (non-blocking,
+ * drift-free) it samples GPIO36 (SVP) as a trimmed mean of SAMPLES_PER_READ reads
+ * and prints a human-readable table:
  *   uptime (+h:mm:ss since boot) | raw ADC | moisture % | state word
  * Moisture % and the state word come from the calibration constants in config.h.
  * There is still NO pump/relay control - nothing actuates.
@@ -21,6 +21,25 @@ static void printHeader() {
   Serial.println(h);
 }
 
+// Read the sensor as a trimmed mean: take SAMPLES_PER_READ raw samples, sort, drop
+// the SAMPLES_TRIM highest and lowest, and average what remains. Smooths the ESP32
+// ADC's random jitter and rejects the occasional spurious single sample.
+static int readSensorRaw() {
+  int s[SAMPLES_PER_READ];
+  for (int i = 0; i < SAMPLES_PER_READ; i++) s[i] = analogRead(SENSOR_PIN);
+
+  // Insertion sort - SAMPLES_PER_READ is small, so this is plenty fast.
+  for (int i = 1; i < SAMPLES_PER_READ; i++) {
+    int v = s[i], j = i - 1;
+    while (j >= 0 && s[j] > v) { s[j + 1] = s[j]; j--; }
+    s[j + 1] = v;
+  }
+
+  long sum = 0;
+  for (int i = SAMPLES_TRIM; i < SAMPLES_PER_READ - SAMPLES_TRIM; i++) sum += s[i];
+  return (int)(sum / (SAMPLES_PER_READ - 2 * SAMPLES_TRIM));
+}
+
 void setup() {
   Serial.begin(SERIAL_BAUD);
   delay(200);
@@ -35,6 +54,11 @@ void setup() {
   Serial.print(" raw, 0% dry >= ");
   Serial.print(SENSOR_DRY_RAW);
   Serial.println(" raw");
+  Serial.print("sampling: trimmed mean of ");
+  Serial.print(SAMPLES_PER_READ);
+  Serial.print(" (drop ");
+  Serial.print(SAMPLES_TRIM);
+  Serial.println("/side)");
 
   pinMode(LED_PIN, OUTPUT);
   printHeader();
@@ -49,7 +73,7 @@ void loop() {
   if (now - lastRead < READ_INTERVAL_MS) return;
   lastRead = now;
 
-  int raw = analogRead(SENSOR_PIN);
+  int raw = readSensorRaw();
 
   // Uptime since boot as +h:mm:ss (days dropped for now; hours keep counting up).
   unsigned long s = now / 1000UL;
