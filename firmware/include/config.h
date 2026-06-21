@@ -8,7 +8,7 @@
 #pragma once
 
 // Firmware version (keep in sync with README as it changes)
-constexpr char PLANTS_FW_VERSION[] = "0.2.1";
+constexpr char PLANTS_FW_VERSION[] = "0.2.2";
 
 // Serial
 constexpr unsigned long SERIAL_BAUD = 115200;
@@ -37,7 +37,8 @@ constexpr int SENSOR_DRY_RAW = 3400;  // raw at/above this reads 0% moisture
 //   raw <= STATE_SUBMERGED_MAX -> "submerged" (near 100% wet)
 //   raw >= STATE_DRY_MIN       -> "dry" (in air)
 //   in between                 -> "wet" (e.g. pulled from water, not yet wiped down)
-constexpr int STATE_SUBMERGED_MAX = 1500;
+constexpr int STATE_SUBMERGED_MAX = 1150;  // below true-submerged ceiling (~1100);
+                                           // a hand (~1350+) reads "wet", not "submerged"
 constexpr int STATE_DRY_MIN       = 3000;
 
 // Sampling cadence - non-blocking and drift-free (exact ms between reads).
