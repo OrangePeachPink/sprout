@@ -19,10 +19,12 @@ and [`../BRINGUP.md`](../BRINGUP.md).
 | IMG_0542.JPEG | Bottom (silkscreen) side, full board - BOTH pin-label rows legible. | "NODEMCU ESP-32S V1.1"; full pin map (rows below). |
 | IMG_0543.JPEG | Bottom side, alternate framing; pin labels legible. | Same two label rows as IMG_0542. |
 | IMG_0544.JPEG | Bottom side, landscape, one header row in sharp focus. | CLK SD0 SD1 P15 P2 P0 P4 P16 P17 P5 P18 P19 GND P21 RX TX P22 P23 GND. |
-| IMG_0545.JPEG | Bottom side, landscape, the opposite header row. | 3V3 EN SVP SVN P34 P35 P32 P33 P25 P26 P27 P14 P12 GND P13 SD2 SD3 5V. |
+| IMG_0545.JPEG | Bottom side, landscape, the opposite header row. | 3V3 EN SVP SVN P34 P35 P32 P33 P25 P26 P27 P14 P12 GND P13 SD2 SD3 [GND] 5V - the `[GND]` nearest 5V is silk-labeled GND but measures +3.3 V (mislabeled; see WIRING.md). |
 
 **Pinout takeaway (sensor edge):** `3V3` and `SVP` (GPIO36) sit at one corner of one long edge; `5V` is the
-*opposite* corner of that same edge. Keep sensor power on `3V3`, never `5V`.
+*opposite* corner of that same edge. Keep sensor power on `3V3`, never `5V`. **WARNING: the pad silk-labeled
+`GND` next to `5V` is mislabeled - it measures +3.3 V, not ground (bench-verified at Rung 3). Use the
+mid-edge `GND` instead.**
 
 ## sensor_photos/ - capacitive soil-moisture sensors
 

@@ -101,6 +101,13 @@ Rules baked in: sensors on **ADC1** (ADC2 is unusable while WiFi is on); relay p
   auto-reset ever fails).
 - PlatformIO `board = esp32dev` is correct (the `nodemcu-32s` board id also works). All pins in the
   map above are present and broken out.
+- **WARNING - silkscreen error (bench-verified at Rung 3):** the pad silk-labeled `GND` nearest the
+  `5V`/USB corner (2nd pin from that corner on the `3V3` edge) measures **+3.3 V, not ground** - it is
+  bonded to the 3V3 net, despite the label. **Do not use it as a ground.** Use the mid-edge `GND`
+  (~6th pin from the USB corner, between `P12` and `P13`), which is bench-verified as a true ground.
+  Lesson: meter every pin against a known ground before trusting the silk.
+- **Bench-verified pins (Rung 3, multimeter):** `3V3` (~3.22 V), the mid-edge `GND` (true ground), `5V`
+  (~4.68 V = USB 5 V minus the input-diode drop, normal), and `SVP`/GPIO36 (floating input, as expected).
 
 ---
 
