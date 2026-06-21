@@ -10,6 +10,19 @@ other three sensors, per-sensor air/water calibration).
 We climb one rung at a time; each has a **"proves"** gate that must pass before the next. See
 `WIRING.md` for the full power/pin map and `ADR.md` for the architecture decisions.
 
+## Firmware versioning
+
+`PLANTS_FW_VERSION` in `firmware/include/config.h` follows pre-1.0 SemVer:
+
+- **PATCH** (`0.2.x`) - an enhancement or fix *within* the current capability (output formatting, a
+  calibration tweak, a bug fix).
+- **MINOR** (`0.x.0`) - a new capability / rung completed (all-four sensors, OLED, relay, the watering loop).
+- **MAJOR** (`1.0.0`) - the first build trustworthy on real plants.
+
+Keep the version string, this file, and the README aligned when it changes. History: `0.0.1` scaffold ->
+`0.2.0` single-sensor read (Rung 3; `0.1.0` was skipped - a one-time gap) -> `0.2.1` human-readable table
+with moisture % and a state word.
+
 ## Phase A - Toolchain & first flash (ESP32 alone, nothing wired)
 
 - [x] **Rung 1 - Toolchain & first contact**
