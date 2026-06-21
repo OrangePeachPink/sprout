@@ -1,25 +1,26 @@
 # Bring-up checklist - plants controller
 
 **Last updated:** 2026-06-21
-**Status:** Rung 1 nearly done - board appears as a **Silicon Labs CP210x** COM port (driver v11.5.0.417,
-signed; currently **COM6** - the number can shift between USB ports/replugs). USB-C data cable confirmed.
-Next: open `firmware/` in VS Code, then flash the placeholder (Rung 2).
+**Status:** **Phase A complete** - first flash verified end-to-end. Board enumerates as a **Silicon Labs
+CP210x** COM port (driver v11.5.0.417, signed; currently **COM6** - number can shift between replugs).
+Built, uploaded, and confirmed the serial banner (`firmware version: 0.0.1`) plus the GPIO2 LED heartbeat.
+Auto-reset is reliable on this board - no BOOT/RST hold needed for flashing. Next: Rung 3 (one soil sensor).
 
 We climb one rung at a time; each has a **"proves"** gate that must pass before the next. See
 `WIRING.md` for the full power/pin map and `ADR.md` for the architecture decisions.
 
 ## Phase A - Toolchain & first flash (ESP32 alone, nothing wired)
 
-- [ ] **Rung 1 - Toolchain & first contact**
+- [x] **Rung 1 - Toolchain & first contact**
   - [x] SiLabs CP210x VCP driver (confirmed - v11.5.0.417, signed; verified in Device Manager)
   - [x] USB-C data cable (confirmed - it enumerated)
-  - [ ] VS Code + PlatformIO IDE extension present
+  - [x] VS Code + PlatformIO IDE extension present (PIO Core 6.1.19; STM32 clangd extension disabled to end the IntelliSense conflict with Microsoft cpptools)
   - [x] Board appears as a COM port (currently COM6 - number can shift between replugs)
   - *Proves: the PC can see and talk to the board.*
-- [ ] **Rung 2 - First flash**
-  - Open `firmware/` in VS Code (let PlatformIO finish its one-time toolchain download)
-  - Build the placeholder -> Upload (auto-reset; hold BOOT if it won't start)
-  - Serial Monitor @ 115200 -> banner + version; confirm the onboard LED blink
+- [x] **Rung 2 - First flash**
+  - [x] Open `firmware/` in VS Code (toolchain already cached; first build ~9.6s)
+  - [x] Build the placeholder -> Upload (15.07s; auto-reset worked, no BOOT hold needed)
+  - [x] Serial Monitor @ 115200 -> banner + `firmware version: 0.0.1` received; blue GPIO2 LED blinks ~1 Hz
   - *Proves: build -> upload -> run -> serial all work. Toolchain done.*
 
 ## Phase B - Sensing (one, then four)
