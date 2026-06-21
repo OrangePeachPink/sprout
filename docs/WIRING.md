@@ -33,7 +33,7 @@ Three invariants that hold regardless of power source:
 ## 2. The three domains
 
 | Domain | Flow | Carries |
-|---|---|---|
+| --- | --- | --- |
 | **SENSE** | sensors -> ESP32 | tiny analog signals in |
 | **CONTROL** | ESP32 GPIO -> relay INs | tiny logic signals out |
 | **ACTUATE** | 5 V -> relay contacts -> pumps | the real pump current (never through ESP32 logic) |
@@ -59,7 +59,7 @@ Three invariants that hold regardless of power source:
 
 **Per pump (off by default):**
 
-```
+```text
 5V ---------> COM
 NO ---------> pump red (+)
 NC ---------> (unused)
@@ -73,7 +73,7 @@ pump black (-) ---> common GND
 Confirm and finalize at wiring; then update `firmware/include/config.h` to match.
 
 | Function | ESP32 pin | Notes |
-|---|---|---|
+| --- | --- | --- |
 | Sensor 1 AOUT | GPIO36 (VP) | ADC1, input-only |
 | Sensor 2 AOUT | GPIO39 (VN) | ADC1, input-only |
 | Sensor 3 AOUT | GPIO34 | ADC1, input-only |
@@ -107,7 +107,7 @@ Rules baked in: sensors on **ADC1** (ADC2 is unusable while WiFi is on); relay p
 ## 5. Connector reference
 
 | Connection | Connector / method |
-|---|---|
+| --- | --- |
 | Sensor <-> ESP32 | JST-PH 2.0 (3-pin) at the sensor; far end onto ESP32 header (verify far end) |
 | ESP32 <-> relay 6-pin header (`GND IN1 IN2 IN3 IN4 VCC`) | DuPont jumper wires |
 | Relay contacts <-> pumps & 5 V | screw terminals - bare stripped wire, no connector |
@@ -129,7 +129,7 @@ Rules baked in: sensors on **ADC1** (ADC2 is unusable while WiFi is on); relay p
 Tame the pump motor's inrush/noise on the shared 5 V rail and protect the relay contacts:
 
 | Part | Spec | Placement | Inventory source |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Bulk capacitor | 470-1000 uF electrolytic, **16 V or 25 V** | across 5 V <-> GND near the relay | `consumable-capacitor-electrolytic-633` (0.1-2200 uF assortment) |
 | Decoupling cap (optional) | 0.1 uF ceramic (`104`) | across 5 V <-> GND alongside the bulk cap | `consumable-capacitor-ceramic-900` or `capacitor-sunfounder-kepler-104` |
 | Flyback diode x4 | 1N4007 (or 1N5819 Schottky) | across each pump, **band/cathode -> + (red)** | `diode-sunfounder-kepler-1n4007` (5 pcs) or `consumable-diode-kit-200` |
