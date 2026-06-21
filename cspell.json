@@ -1,0 +1,15 @@
+{
+  // Project dictionary for the plants controller - hardware part names, pin
+  // labels, and toolchain terms not in the base English dictionary.
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "AMS1117", "AOUT", "AUOT", "breadboard", "BRINGUP", "CP2102", "CP210x",
+    "DuPont", "ESP32", "esp32dev", "flyback", "GPIO", "Hosyond", "kepler",
+    "LittleFS", "MICRODEV", "NE555", "NodeMCU", "NTP", "OLED", "opto",
+    "PlatformIO", "Pinout", "protoboard", "Schottky", "SH1106", "silabser",
+    "SiLabs", "SONGLE", "SSD1306", "STEMMA", "sunfounder", "SVN", "SVP",
+    "TLC555", "U8g2", "UART", "UMLIFE", "VCP", "Wago", "WROOM", "Qwiic"
+  ],
+  "flagWords": []
+}
