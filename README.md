@@ -17,6 +17,7 @@ checks and are cleared for use as-is. Microcontroller selected: **ESP32** (class
 | 4-channel relay module | 1 | 5 V module. Active-high vs active-low and 3.3 V-drive compatibility **to be bench-verified.** |
 | PVC vinyl tubing | ~4 m | ID ~5.54 mm / OD ~8.20 mm. |
 | Microcontroller | 1 | **ESP32** (classic dual-core; SoC marked `ESP-32D`, ESP32-D0WD class) from the SunFounder ESP32 kit. 3.3 V ADC matches the 0-3.0 V sensor output; 4 sensors on ADC1 (avoid ADC2 = WiFi); WiFi/BT for monitoring. |
+| Status display | 1 | 1.3" SH1106 128x64 I2C OLED (Hosyond 5-pack). On the I2C bus (GPIO21/22), powered at 3.3 V. Shows status / last-watered / errors. |
 
 (Kit provenance is recorded in the local `parts` inventory: UMLIFE watering kit. The SunFounder ESP32 kit also bundled a 5th capacitive sensor - an `NE555`-based `v1.2` variant - which is **not used** for this project; see `SENSOR_QA.md`.)
 
@@ -24,6 +25,7 @@ checks and are cleared for use as-is. Microcontroller selected: **ESP32** (class
 
 | Doc | What it is |
 | --- | --- |
+| [`docs/ADR.md`](docs/ADR.md) | The project's single Architecture Decision Record: Phase 1 design + rationale, and Phase 2 future enhancements. |
 | [`SENSOR_QA.md`](SENSOR_QA.md) | Bench QA of the four capacitive sensors against the three known board defects: method, readings, verdict. |
 | [`docs/RESEARCH_capacitive_soil_moisture_sensors.md`](docs/RESEARCH_capacitive_soil_moisture_sensors.md) | Foundational research: how these sensors work, every known defect + workaround, diagnosis, buying guidance, and an annotated source index (incl. code-example links). |
 | [`docs/WIRING.md`](docs/WIRING.md) | Power + wiring architecture: single-supply baseline, connection map, candidate pin map, protection parts, and escalation path. |
