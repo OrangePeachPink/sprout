@@ -8,7 +8,7 @@
 #pragma once
 
 // Firmware version (keep in sync with README as it changes)
-constexpr char PLANTS_FW_VERSION[] = "0.2.2";
+constexpr char PLANTS_FW_VERSION[] = "0.2.3";
 
 // Serial
 constexpr unsigned long SERIAL_BAUD = 115200;
@@ -43,6 +43,13 @@ constexpr int STATE_DRY_MIN       = 3000;
 
 // Sampling cadence - non-blocking and drift-free (exact ms between reads).
 constexpr unsigned long READ_INTERVAL_MS = 1000;
+
+// Per-measurement smoothing (trimmed mean): take SAMPLES_PER_READ raw samples,
+// drop the SAMPLES_TRIM highest and lowest, average the rest. Tames the ESP32
+// ADC's random jitter while shrugging off the odd spurious single sample.
+constexpr int SAMPLES_PER_READ = 100;
+constexpr int SAMPLES_TRIM     = 15;  // dropped from EACH end (keeps the middle 70)
+static_assert(SAMPLES_PER_READ > 2 * SAMPLES_TRIM, "trimmed mean needs samples left after trimming");
 //
 // Later (Rung 4) - the full bank on ADC1:
 //   GPIO 36 (VP), 39 (VN), 34, 35
