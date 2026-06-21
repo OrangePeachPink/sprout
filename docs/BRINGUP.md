@@ -1,10 +1,11 @@
 # Bring-up checklist - plants controller
 
 **Last updated:** 2026-06-21
-**Status:** **Phase A complete** - first flash verified end-to-end. Board enumerates as a **Silicon Labs
-CP210x** COM port (driver v11.5.0.417, signed; currently **COM6** - number can shift between replugs).
-Built, uploaded, and confirmed the serial banner (`firmware version: 0.0.1`) plus the GPIO2 LED heartbeat.
-Auto-reset is reliable on this board - no BOOT/RST hold needed for flashing. Next: Rung 3 (one soil sensor).
+**Status:** **Rung 3 complete** - one capacitive sensor (V2.0.0 / TLC555) reads cleanly on GPIO36.
+Bench-verified raw 12-bit endpoints: **dry/air ~3150, wet/submerged ~1000** (~2150-count swing;
+damp-but-out-of-water ~2700). Phase A (toolchain + first flash) done; sensor pins multimeter-verified;
+firmware at 0.2.0. Auto-reset reliable on this board - no BOOT/RST hold needed. Next: Rung 4 (wire the
+other three sensors, per-sensor air/water calibration).
 
 We climb one rung at a time; each has a **"proves"** gate that must pass before the next. See
 `WIRING.md` for the full power/pin map and `ADR.md` for the architecture decisions.
@@ -25,9 +26,10 @@ We climb one rung at a time; each has a **"proves"** gate that must pass before 
 
 ## Phase B - Sensing (one, then four)
 
-- [ ] **Rung 3 - One soil sensor**
-  - Wire ONE: 3V3 / GND / AOUT -> GPIO36 (SVP); no relay/pumps
-  - Read-and-print sketch; read in air (dry) and water (wet) -> record both raw values
+- [x] **Rung 3 - One soil sensor** (V2.0.0 / TLC555 on GPIO36)
+  - [x] Wire ONE: 3V3 / GND / AOUT -> GPIO36 (SVP); no relay/pumps. Pins multimeter-verified at the bench.
+  - [x] Read-and-print sketch (fw 0.2.0); endpoints recorded - **dry/air ~3150, wet/submerged ~1000**
+    (~2150-count swing; damp-but-out-of-water ~2700)
   - *Proves: ADC + wiring good; first calibration endpoints (dry = high, wet = low).*
 - [ ] **Rung 4 - All four sensors**
   - Wire the other three (shared 3V3/GND rail = hub; signals -> GPIO39/34/35)
