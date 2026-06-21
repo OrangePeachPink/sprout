@@ -88,6 +88,20 @@ Confirm and finalize at wiring; then update `firmware/include/config.h` to match
 Rules baked in: sensors on **ADC1** (ADC2 is unusable while WiFi is on); relay pins avoid the
 **strapping pins** (0, 2, 5, 12, 15) and the **input-only** pins (34-39).
 
+**Dev board (confirmed from photos in `evidence/board_photos/`):** NodeMCU-32S, 38-pin, module
+`ESP-32D` / WROOM-32 class (classic ESP32), rev V1.1.
+
+- Pins are silk-labeled **`P<n>` = `GPIO<n>`** (e.g. `P21` = GPIO21, `P25` = GPIO25). The two
+  analog-only inputs are **`SVP`** = GPIO36 and **`SVN`** = GPIO39. (`3U3` / `5U` on the silk are
+  `3V3` / `5V` - the font's V reads as U.)
+- **USB-serial:** Silicon Labs **CP2102** -> install the **SiLabs CP210x VCP** driver (Win11 often
+  auto-installs it).
+- **Connector:** **USB-C** -> use a USB-C **data** cable (not charge-only).
+- **Regulator:** AMS1117-3.3. **Buttons:** `EN` (reset) and `BOOT` (hold for a manual flash if
+  auto-reset ever fails).
+- PlatformIO `board = esp32dev` is correct (the `nodemcu-32s` board id also works). All pins in the
+  map above are present and broken out.
+
 ---
 
 ## 5. Connector reference
@@ -170,4 +184,5 @@ far as needed:
 - [ ] Relay **active-LOW** trigger confirmed (powered click-test); `JD-VCC` jumper left ON
 - [ ] A **470-1000 uF @ >=16 V** cap confirmed present in the assortment
 - [ ] OLED: confirm controller is **SH1106** and find its I2C address by scan (`0x3C` / `0x3D`)
-- [ ] Finalize the pin map and update `firmware/include/config.h`
+- [x] Confirm the planned pins are present on the board (done - NodeMCU-32S, all present)
+- [ ] Finalize the pin assignment and update `firmware/include/config.h`
