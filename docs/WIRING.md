@@ -113,7 +113,8 @@ Rules baked in: sensors on **ADC1** (ADC2 is unusable while WiFi is on); relay p
 | Relay contacts <-> pumps & 5 V | screw terminals - bare stripped wire, no connector |
 | OLED <-> ESP32 | I2C, 4-wire (VCC / GND / SDA / SCL); DuPont jumpers; power at **3.3 V** |
 
-- Sensor leads: **red = VCC, black = GND, yellow = AOUT**.
+- Sensor leads: **red = VCC, black = GND, yellow = AOUT**. (The sensor board's silkscreen
+  misprints the signal pad as **`AUOT`** - same pin, just a typo on the board.)
 - Relay output terminals are **NO / COM / NC** - the middle is **COM** (switch common), **not ground**.
   Confirm order by silk or continuity (at rest: COM<->NC closed, COM<->NO open).
 - `JD-VCC` <-> `VCC` jumper: leave **ON** for the single-supply baseline (coils + logic both off 5 V).
