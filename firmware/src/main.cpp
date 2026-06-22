@@ -45,43 +45,33 @@ static moisture_state_t state;
 // snippet records the calibration + settings in effect: anchors, then config,
 // then the column names (kept directly above the data rows).
 static void printHeader() {
+  // Each line is built in one buffer and printed with a single write - shorter
+  // (so the monitor doesn't wrap+merge them) and more atomic on the serial link.
+  char buf[160];
+  int n;
+
   Serial.println();
 
-  // Line 1 - calibration anchors in effect.
-  Serial.print("cal: moist% wet<=");
-  Serial.print(SENSOR_WET_RAW);
-  Serial.print(" dry>=");
-  Serial.print(SENSOR_DRY_RAW);
-  Serial.print("  | level bounds raw (dry->wet):");
-  for (int i = 0; i < MOISTURE_BOUNDARY_COUNT; i++) {
-    Serial.print(' ');
-    Serial.print(cfg.boundary[i]);
-  }
-  Serial.println();
+  // Line 1 - calibration: the 8 level boundaries (dry->wet) + the moist% endpoints.
+  n = snprintf(buf, sizeof(buf), "cal bounds(dry>wet):");
+  for (int i = 0; i < MOISTURE_BOUNDARY_COUNT && n < (int)sizeof(buf); i++)
+    n += snprintf(buf + n, sizeof(buf) - n, " %u", (unsigned)cfg.boundary[i]);
+  snprintf(buf + n, sizeof(buf) - n, "  [moist%% %d..%d]", SENSOR_WET_RAW, SENSOR_DRY_RAW);
+  Serial.println(buf);
 
   // Line 2 - other configurable settings in effect.
-  Serial.print("cfg: samples=");
-  Serial.print(cfg.sample_count);
-  Serial.print(" trim=");
-  Serial.print(cfg.trim_each_side);
-  Serial.print(" deadband=");
-  Serial.print(cfg.deadband_raw);
-  Serial.print(" confirm_ms[soil/dry/wet]=");
-  Serial.print(cfg.confirm_ms_soil);
-  Serial.print('/');
-  Serial.print(cfg.confirm_ms_dry);
-  Serial.print('/');
-  Serial.print(cfg.confirm_ms_wet);
-  Serial.print(" period=");
-  Serial.print(cfg.loop_period_ms);
-  Serial.print(" spread_warn=");
-  Serial.println(cfg.spread_warn_raw);
+  snprintf(buf, sizeof(buf),
+           "cfg: smp=%u trim=%u db=%u confirm_ms=%lu/%lu/%lu period=%lu spr=%u",
+           (unsigned)cfg.sample_count, (unsigned)cfg.trim_each_side, (unsigned)cfg.deadband_raw,
+           (unsigned long)cfg.confirm_ms_soil, (unsigned long)cfg.confirm_ms_dry,
+           (unsigned long)cfg.confirm_ms_wet, (unsigned long)cfg.loop_period_ms,
+           (unsigned)cfg.spread_warn_raw);
+  Serial.println(buf);
 
   // Line 3 - column names.
-  char h[96];
-  snprintf(h, sizeof(h), "%-16s  %4s  %5s  %-16s  %-4s  %4s  %s",
-           "uptime(+h:mm:ss)", "raw", "moist", "level", "role", "spr", "health");
-  Serial.println(h);
+  snprintf(buf, sizeof(buf), "%6s  %-18s  %4s  %5s  %-16s  %-4s  %4s  %s",
+           "#", "uptime(+d h:mm:ss)", "raw", "moist", "level", "role", "spr", "health");
+  Serial.println(buf);
 }
 
 // Fill a buffer with SAMPLES_PER_READ raw ADC samples from the sensor.
@@ -118,6 +108,9 @@ void loop() {
   if (now - lastRead < READ_INTERVAL_MS) return;
   lastRead = now;
 
+  static unsigned long sample_no = 0;
+  sample_no++;
+
   uint16_t samples[SAMPLES_PER_READ];
   sampleSensor(samples);
   moisture_level_t level = moisture_process(&state, &cfg, samples, SAMPLES_PER_READ);
@@ -128,18 +121,19 @@ void loop() {
   if (pct < 0)   pct = 0;
   if (pct > 100) pct = 100;
 
-  // Uptime since boot as +h:mm:ss (days dropped for now; hours keep counting up).
+  // Uptime since boot as +Dd HH:MM:SS (days shown again for long runs).
   unsigned long s = now / 1000UL;
-  unsigned long hours = s / 3600UL;
+  unsigned long days  =  s / 86400UL;
+  unsigned long hours = (s % 86400UL) / 3600UL;
   unsigned long mins  = (s % 3600UL) / 60UL;
   unsigned long secs  =  s % 60UL;
 
-  char uptime[20];
-  snprintf(uptime, sizeof(uptime), "+%lu:%02lu:%02lu", hours, mins, secs);
+  char uptime[24];
+  snprintf(uptime, sizeof(uptime), "+%lud %02lu:%02lu:%02lu", days, hours, mins, secs);
 
   char line[96];
-  snprintf(line, sizeof(line), "%-16s  %4u  %4ld%%  %-16s  %-4s  %4u  %s",
-           uptime, (unsigned)raw, pct,
+  snprintf(line, sizeof(line), "%6lu  %-18s  %4u  %4ld%%  %-16s  %-4s  %4u  %s",
+           sample_no, uptime, (unsigned)raw, pct,
            moisture_level_name(level),
            moisture_level_is_display(level) ? "disp" : "diag",
            (unsigned)state.last_spread,
