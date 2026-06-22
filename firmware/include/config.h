@@ -8,7 +8,7 @@
 #pragma once
 
 // Firmware version (keep in sync with README as it changes)
-constexpr char PLANTS_FW_VERSION[] = "0.3.0";
+constexpr char PLANTS_FW_VERSION[] = "0.3.1";
 
 // Serial
 constexpr unsigned long SERIAL_BAUD = 115200;
