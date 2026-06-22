@@ -8,7 +8,7 @@
 #pragma once
 
 // Firmware version (keep in sync with README as it changes)
-constexpr char PLANTS_FW_VERSION[] = "0.2.3";
+constexpr char PLANTS_FW_VERSION[] = "0.2.4";
 
 // Serial
 constexpr unsigned long SERIAL_BAUD = 115200;
@@ -33,13 +33,30 @@ constexpr int SENSOR_PIN = 36;  // Sensor 1 AOUT -> GPIO36 (SVP)
 constexpr int SENSOR_WET_RAW = 900;   // raw at/below this reads 100% moisture
 constexpr int SENSOR_DRY_RAW = 3400;  // raw at/above this reads 0% moisture
 
-// State-word thresholds (raw ADC) for the human-readable column:
-//   raw <= STATE_SUBMERGED_MAX -> "submerged" (near 100% wet)
-//   raw >= STATE_DRY_MIN       -> "dry" (in air)
-//   in between                 -> "wet" (e.g. pulled from water, not yet wiped down)
-constexpr int STATE_SUBMERGED_MAX = 1150;  // below true-submerged ceiling (~1100);
-                                           // a hand (~1350+) reads "wet", not "submerged"
-constexpr int STATE_DRY_MIN       = 3000;
+// --- Moisture level bands: classify a raw reading into a named level --------------
+// PROVISIONAL raw bands - REPLACE with real potted-soil readings when available.
+// `diagnostic` = the probe is NOT in normal soil (in air / surface film / submerged),
+// useful for fault detection and to suppress watering; non-diagnostic ("display")
+// bands are the real soil range that drives watering. Ordered high raw (dry) -> low
+// raw (wet); `min_raw` is the inclusive lower edge of each band.
+struct MoistureBand {
+  int         min_raw;     // inclusive lower bound of this band (raw ADC)
+  const char *name;
+  bool        diagnostic;  // true = diagnostic (not normal soil); false = display
+};
+
+constexpr MoistureBand MOISTURE_BANDS[] = {
+  {3300, "air-dry winter",  true },  // >= 3300   probe in air, low indoor RH
+  {3150, "air-dry summer",  true },  // 3150-3299 probe in air, humid season
+  {2850, "dry",             false},  // 2850-3149 soil too dry (top of soil range)
+  {2550, "needs water",     false},  // 2550-2849 approaching irrigation threshold
+  {2150, "OK",              false},  // 2150-2549 healthy band
+  {1850, "well watered",    false},  // 1850-2149 freshly watered, draining
+  {1550, "overwatered",     false},  // 1550-1849 waterlogged (bottom of soil range)
+  {1100, "partial contact", true },  // 1100-1549 surface film / standing water
+  {   0, "submerged",       true },  // <  1100   probe under water
+};
+constexpr int MOISTURE_BAND_COUNT = sizeof(MOISTURE_BANDS) / sizeof(MOISTURE_BANDS[0]);
 
 // Sampling cadence - non-blocking and drift-free (exact ms between reads).
 constexpr unsigned long READ_INTERVAL_MS = 1000;

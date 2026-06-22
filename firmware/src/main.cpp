@@ -5,8 +5,8 @@
  * RUNG 3 - single soil sensor, read-only. Every READ_INTERVAL_MS (non-blocking,
  * drift-free) it samples GPIO36 (SVP) as a trimmed mean of SAMPLES_PER_READ reads
  * and prints a human-readable table:
- *   uptime (+h:mm:ss since boot) | raw ADC | moisture % | state word
- * Moisture % and the state word come from the calibration constants in config.h.
+ *   uptime (+h:mm:ss since boot) | raw ADC | moisture % | moisture level | role
+ * Moisture % and the level/role come from the calibration + band table in config.h.
  * There is still NO pump/relay control - nothing actuates.
  */
 
@@ -16,7 +16,8 @@
 // Column header for the table (printed at boot and every 20 rows).
 static void printHeader() {
   char h[64];
-  snprintf(h, sizeof(h), "%-16s  %4s  %5s  %s", "uptime(+h:mm:ss)", "raw", "moist", "state");
+  snprintf(h, sizeof(h), "%-16s  %4s  %5s  %-16s  %s",
+           "uptime(+h:mm:ss)", "raw", "moist", "level", "role");
   Serial.println();
   Serial.println(h);
 }
@@ -38,6 +39,15 @@ static int readSensorRaw() {
   long sum = 0;
   for (int i = SAMPLES_TRIM; i < SAMPLES_PER_READ - SAMPLES_TRIM; i++) sum += s[i];
   return (int)(sum / (SAMPLES_PER_READ - 2 * SAMPLES_TRIM));
+}
+
+// Classify a raw reading into one of the named moisture bands (config.h). Bands are
+// ordered high->low raw, so the first whose min_raw the reading meets is the match.
+static const MoistureBand &classifyRaw(int raw) {
+  for (int i = 0; i < MOISTURE_BAND_COUNT; i++) {
+    if (raw >= MOISTURE_BANDS[i].min_raw) return MOISTURE_BANDS[i];
+  }
+  return MOISTURE_BANDS[MOISTURE_BAND_COUNT - 1];  // raw < 0 cannot happen
 }
 
 void setup() {
@@ -86,17 +96,15 @@ void loop() {
   if (pct < 0)   pct = 0;
   if (pct > 100) pct = 100;
 
-  // Human-readable state from raw thresholds.
-  const char *state;
-  if (raw <= STATE_SUBMERGED_MAX)      state = "submerged";
-  else if (raw >= STATE_DRY_MIN)       state = "dry";
-  else                                 state = "wet";
+  // Classify the reading into a named moisture band (config.h).
+  const MoistureBand &band = classifyRaw(raw);
 
   char uptime[20];
   snprintf(uptime, sizeof(uptime), "+%lu:%02lu:%02lu", hours, mins, secs);
 
-  char line[64];
-  snprintf(line, sizeof(line), "%-16s  %4d  %4ld%%  %s", uptime, raw, pct, state);
+  char line[96];
+  snprintf(line, sizeof(line), "%-16s  %4d  %4ld%%  %-16s  %s",
+           uptime, raw, pct, band.name, band.diagnostic ? "diag" : "disp");
   Serial.println(line);
 
   // Reprint the header every 20 rows so a long scroll stays readable.
