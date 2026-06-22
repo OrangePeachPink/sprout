@@ -8,7 +8,7 @@
 #pragma once
 
 // Firmware version (keep in sync with README as it changes)
-constexpr char PLANTS_FW_VERSION[] = "0.3.1";
+constexpr char PLANTS_FW_VERSION[] = "0.3.2";
 
 // Serial
 constexpr unsigned long SERIAL_BAUD = 115200;
@@ -39,7 +39,11 @@ constexpr int SENSOR_DRY_RAW = 3400;  // raw at/above this reads 0% moisture
 // PROVISIONAL pending real potted-soil readings.
 
 // Sampling cadence - non-blocking and drift-free (exact ms between reads).
-constexpr unsigned long READ_INTERVAL_MS = 1000;
+// 30 s for a long unattended dry-down (keeps the log manageable, ~2880 rows/day);
+// set back to 1000 for interactive bench testing. NOTE: the classifier confirm
+// windows are in ms, so at 30 s they round down to ~1 sample (debounce effectively
+// immediate) - fine for slow drying, not ideal for poking the probe by hand.
+constexpr unsigned long READ_INTERVAL_MS = 30000;
 
 // Per-measurement smoothing (trimmed mean): take SAMPLES_PER_READ raw samples,
 // drop the SAMPLES_TRIM highest and lowest, average the rest. Tames the ESP32
