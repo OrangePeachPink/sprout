@@ -28,17 +28,59 @@ static moisture_cfg_t cfg = {
   2000,                                              // confirm_ms_wet  (TESTING; prod 3500)
   READ_INTERVAL_MS,                                  // loop_period_ms
   250,                                               // spread_warn_raw (0 disables)
-  {3300, 3150, 2850, 2550, 2150, 1850, 1550, 1100},  // boundary (descending raw)
+  // boundary (descending raw). Calibrated to real soil (2026-06-21, PROVISIONAL,
+  // cross-sensor): air ~3175; bone-dry distressed ~2440 -> "dry"; drained field
+  // capacity ~1165-1435 across probes -> "well watered"; saturated ~970 -> "overwatered".
+  // The ~270-count field-capacity spread is placement/contact variance -> each probe
+  // ultimately needs its OWN in-place cal. "needs water"/"OK" mid bands are interpolated
+  // (no measured point yet) and will tighten on the dry-down. water-contact/submerged
+  // sit BELOW the ~950 water rail: to a capacitive probe saturated soil == standing
+  // water, so those diagnostics are effectively unreachable by an in-soil probe.
+  {3300, 3050, 2200, 1750, 1450, 1080, 900, 800},
 };
 
 static moisture_state_t state;
 
-// Column header for the table (printed at boot and every 20 rows).
+// Header block (printed at boot and every 20 rows). Three lines so any pasted
+// snippet records the calibration + settings in effect: anchors, then config,
+// then the column names (kept directly above the data rows).
 static void printHeader() {
+  Serial.println();
+
+  // Line 1 - calibration anchors in effect.
+  Serial.print("cal: moist% wet<=");
+  Serial.print(SENSOR_WET_RAW);
+  Serial.print(" dry>=");
+  Serial.print(SENSOR_DRY_RAW);
+  Serial.print("  | level bounds raw (dry->wet):");
+  for (int i = 0; i < MOISTURE_BOUNDARY_COUNT; i++) {
+    Serial.print(' ');
+    Serial.print(cfg.boundary[i]);
+  }
+  Serial.println();
+
+  // Line 2 - other configurable settings in effect.
+  Serial.print("cfg: samples=");
+  Serial.print(cfg.sample_count);
+  Serial.print(" trim=");
+  Serial.print(cfg.trim_each_side);
+  Serial.print(" deadband=");
+  Serial.print(cfg.deadband_raw);
+  Serial.print(" confirm_ms[soil/dry/wet]=");
+  Serial.print(cfg.confirm_ms_soil);
+  Serial.print('/');
+  Serial.print(cfg.confirm_ms_dry);
+  Serial.print('/');
+  Serial.print(cfg.confirm_ms_wet);
+  Serial.print(" period=");
+  Serial.print(cfg.loop_period_ms);
+  Serial.print(" spread_warn=");
+  Serial.println(cfg.spread_warn_raw);
+
+  // Line 3 - column names.
   char h[96];
   snprintf(h, sizeof(h), "%-16s  %4s  %5s  %-16s  %-4s  %4s  %s",
            "uptime(+h:mm:ss)", "raw", "moist", "level", "role", "spr", "health");
-  Serial.println();
   Serial.println(h);
 }
 
@@ -55,19 +97,7 @@ void setup() {
   Serial.print("firmware version: ");
   Serial.println(PLANTS_FW_VERSION);
   Serial.print("sensor on GPIO");
-  Serial.print(SENSOR_PIN);
-  Serial.print("   cal: 100% wet <= ");
-  Serial.print(SENSOR_WET_RAW);
-  Serial.print(" raw, 0% dry >= ");
-  Serial.print(SENSOR_DRY_RAW);
-  Serial.println(" raw");
-  Serial.print("classifier: ");
-  Serial.print(SAMPLES_PER_READ);
-  Serial.print(" samples, trim ");
-  Serial.print(SAMPLES_TRIM);
-  Serial.print("/side, deadband ");
-  Serial.print(cfg.deadband_raw);
-  Serial.println(" raw");
+  Serial.println(SENSOR_PIN);
 
   pinMode(LED_PIN, OUTPUT);
 
