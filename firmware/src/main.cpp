@@ -18,6 +18,7 @@
 
 #include <Arduino.h>
 #include <esp_system.h>
+#include <esp_timer.h>
 #include "config.h"
 #include "moisture_classifier.h"
 
@@ -137,6 +138,11 @@ void loop() {
   if (now - lastRead < READ_INTERVAL_MS) return;
   lastRead = now;
 
+  // Log uptime from the 64-bit esp_timer (us since boot), not millis(): millis()
+  // is uint32 and wraps at ~49.7 days, but this counter stays monotonic for
+  // ~292,000 years, so the millis_ms column survives an arbitrarily long run.
+  unsigned long long up_ms = (unsigned long long)esp_timer_get_time() / 1000ULL;
+
   uint16_t samples[SAMPLES_PER_READ];
   for (int ch = 0; ch < NUM_SENSORS; ch++) {
     sampleChannel(ch, samples);
@@ -157,9 +163,9 @@ void loop() {
     // Compact device CSV row - host prepends time/sequence columns (B2).
     char line[200];
     snprintf(line, sizeof(line),
-             "%s,%s,%s,%s,%lu,%s,%s,%s,%s,%u,%ld,%s,%s,%s",
+             "%s,%s,%s,%s,%llu,%s,%s,%s,%s,%u,%ld,%s,%s,%s",
              RECORD_TYPE_SOIL, g_session_id, g_device_id, PLANTS_FW_VERSION,
-             now, SENSOR_MODEL, SENSOR_NAMES[ch], SENSOR_POSITION, SOIL_CHANNEL,
+             up_ms, SENSOR_MODEL, SENSOR_NAMES[ch], SENSOR_POSITION, SOIL_CHANNEL,
              (unsigned)raw, pct, "pct", qualityFlag(&state[ch]), payload);
     Serial.println(line);
   }
