@@ -8,23 +8,31 @@
 #pragma once
 
 // Firmware version (keep in sync with README as it changes)
-constexpr char PLANTS_FW_VERSION[] = "0.3.2";
+constexpr char PLANTS_FW_VERSION[] = "0.4.0";
 
-// Serial
-constexpr unsigned long SERIAL_BAUD = 115200;
+// Serial - dropped 115200 -> 19200 for noise margin on the USB-serial link
+// (the prefix-corruption framing errors); throughput is irrelevant at this cadence.
+constexpr unsigned long SERIAL_BAUD = 19200;
 
 // Onboard LED - most classic ESP32 dev boards use GPIO2
 constexpr int LED_PIN = 2;
 
-// --- Sensing ---------------------------------------------------------------
-// Rung 3: ONE soil sensor on ADC1. GPIO36 = the SVP pin (input-only, ideal for
-// analog). Bench-verified at the breadboard (3V3 / true GND / AOUT). ADC2 is
-// unusable while WiFi is on, so all sensors live on ADC1.
-constexpr int SENSOR_PIN = 36;  // Sensor 1 AOUT -> GPIO36 (SVP)
-// Observed raw endpoints (Rung 3, this sensor): dry/air ~3266 max, wet/submerged ~947 min
-// (damp-but-out-of-water ~2700).
+// --- Sensing: 4 soil sensors on ADC1 ---------------------------------------
+// ADC2 is unusable while WiFi is on, so all sensors live on ADC1. These four are
+// input-only pins, ideal for analog. Fixed pin map (see docs/WIRING.md).
+constexpr int NUM_SENSORS = 4;
+constexpr int SENSOR_PINS[NUM_SENSORS] = {36, 39, 34, 35};  // ch0..ch3 (SVP, SVN, 34, 35)
+// Short, space-free per-channel names - edit when you assign plants / repot.
+constexpr const char *SENSOR_NAMES[NUM_SENSORS] = {
+    "ch0_gpio36", "ch1_gpio39", "ch2_gpio34", "ch3_gpio35"};
+// Throwaway reads after switching the ADC mux to a channel (S/H settle).
+constexpr int ADC_DISCARD = 4;
+// Free-text run label for the log header - set per deployment.
+constexpr const char *RUN_LABEL = "4up-deploy";
+// Observed raw endpoints (sensor #3, Rung 3): dry/air ~3266 max, wet/submerged ~947 min
+// (damp-but-out-of-water ~2700). Per-channel calibration to come (BACKLOG C1).
 
-// --- Calibration: raw ADC -> moisture % (one sensor for now; per-sensor arrays at Rung 4) ---
+// --- Calibration: raw ADC -> moisture % (shared across channels for now) ---
 // Linear map, clamped: raw <= SENSOR_WET_RAW => 100%, raw >= SENSOR_DRY_RAW => 0%.
 // Endpoints are set a little OUTSIDE the observed range on purpose, for headroom:
 //   WET_RAW 900  sits just below the observed submerged floor (~947).
@@ -51,11 +59,7 @@ constexpr unsigned long READ_INTERVAL_MS = 30000;
 constexpr int SAMPLES_PER_READ = 100;
 constexpr int SAMPLES_TRIM     = 15;  // dropped from EACH end (keeps the middle 70)
 static_assert(SAMPLES_PER_READ > 2 * SAMPLES_TRIM, "trimmed mean needs samples left after trimming");
-//
-// Later (Rung 4) - the full bank on ADC1:
-//   GPIO 36 (VP), 39 (VN), 34, 35
-// constexpr int SENSOR_PINS[4] = {36, 39, 34, 35};
-//
+
 // 4 relay channels - the CW-022 board is active-LOW. Output-capable GPIOs that
 // avoid the strapping pins (0, 2, 12, 15):
 //   GPIO 25, 26, 27, 32
