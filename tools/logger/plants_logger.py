@@ -23,7 +23,7 @@ import csv
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 try:
     import serial
@@ -31,7 +31,7 @@ try:
 except ImportError:
     sys.exit("pyserial not installed.  Run:  pip install pyserial")
 
-LOGGER_VERSION = "plants_logger_0_1"
+LOGGER_VERSION = "plants_logger_0_2"
 
 # Canonical file schema (docs/TELEMETRY_SCHEMA.md S2). The host fills timestamp_*,
 # sample_id, logger_version; context/event/notes stay empty until those layers land.
@@ -60,6 +60,14 @@ def iso_local(dt):
     return loc.strftime("%Y-%m-%d %H:%M:%S.") + "%03d" % (loc.microsecond // 1000)
 
 
+def tz_offset(dt):
+    off = dt.astimezone().utcoffset() or timedelta(0)
+    total = int(off.total_seconds())
+    sign = "+" if total >= 0 else "-"
+    total = abs(total)
+    return "%s%02d:%02d" % (sign, total // 3600, (total % 3600) // 60)
+
+
 def payload_get(payload, key):
     for kv in payload.split(";"):
         if kv.startswith(key + "="):
@@ -77,8 +85,9 @@ def autodetect_port():
 
 
 def parse_device_line(text):
-    """Dict of DEVICE_COLS, or None if not a recoverable record. Tolerates
-    prefix corruption by re-syncing on the first known record_type token."""
+    """Dict of DEVICE_COLS (+ _crc_ok), or None if not a recoverable record.
+    Re-syncs on the first known record_type token, then validates an optional
+    NMEA-style '*HH' XOR checksum suffix (None if the line carries no checksum)."""
     idx = -1
     for pre in KNOWN_RECORD_PREFIXES:
         j = text.find(pre)
@@ -86,18 +95,31 @@ def parse_device_line(text):
             idx = j
     if idx == -1:
         return None
-    fields = text[idx:].strip().split(",")
+    body = text[idx:].strip()
+    crc_ok = None
+    star = body.rfind("*")
+    if star != -1 and len(body) - star == 3:  # trailing "*HH"
+        want = body[star + 1:]
+        body = body[:star]
+        calc = 0
+        for ch in body:
+            calc ^= ord(ch) & 0xFF
+        crc_ok = ("%02X" % calc == want.upper())
+    fields = body.split(",")
     if len(fields) != len(DEVICE_COLS):
         return None
-    return dict(zip(DEVICE_COLS, fields))
+    d = dict(zip(DEVICE_COLS, fields))
+    d["_crc_ok"] = crc_ok
+    return d
 
 
 class RotatingCsv:
     """One CSV file per UTC day, each re-emitting the device header block so every
     segment is independently self-describing."""
 
-    def __init__(self, logdir):
+    def __init__(self, logdir, maxbytes=0):
         self.logdir = logdir
+        self.maxbytes = maxbytes
         self.device_id = "unknown"
         self.day = None
         self.fh = None
@@ -110,7 +132,10 @@ class RotatingCsv:
 
     def _roll(self, now):
         day = now.strftime("%Y%m%d")
-        if day == self.day and self.fh:
+        need = (self.fh is None) or (day != self.day)
+        if not need and self.maxbytes and self.fh.tell() >= self.maxbytes:
+            need = True  # size cap: limit any corruption/disk-full to one segment
+        if not need:
             return None
         if self.fh:
             self.fh.close()
@@ -120,7 +145,8 @@ class RotatingCsv:
         path = os.path.join(self.logdir, fname)
         self.fh = open(path, "a", newline="", encoding="utf-8")
         self.writer = csv.writer(self.fh)
-        self.fh.write("# plants log segment  logger=%s  schema_version=1\n" % LOGGER_VERSION)
+        self.fh.write("# log_start_utc=%s  tz_offset=%s  logger=%s  schema_version=1\n"
+                      % (iso_utc(now), tz_offset(now), LOGGER_VERSION))
         for ln in self.header_lines:
             self.fh.write(ln + "\n")
         self.writer.writerow(CANONICAL_COLS)
@@ -164,11 +190,12 @@ def console_line(row):
         row["quality_flag"], payload_get(row["payload"], "level"))
 
 
-def run(port, baud, logdir):
-    csvlog = RotatingCsv(logdir)
+def run(port, baud, logdir, maxbytes):
+    csvlog = RotatingCsv(logdir, maxbytes)
     sample_id = 0
     pending_hdr = []
     dropped = 0
+    crc_fail = 0
     while True:
         try:
             ser = serial.Serial(port, baud, timeout=2)
@@ -194,6 +221,10 @@ def run(port, baud, logdir):
                     dropped += 1
                     print("[drop %d] %s" % (dropped, text[:80]))
                     continue
+                if dev.get("_crc_ok") is False:
+                    crc_fail += 1
+                    print("[crc %d] %s" % (crc_fail, text[:80]))
+                    continue
                 if pending_hdr:
                     csvlog.set_header(pending_hdr)
                     pending_hdr = []
@@ -211,7 +242,8 @@ def run(port, baud, logdir):
                 pass
             time.sleep(2)
         except KeyboardInterrupt:
-            print("\n[logger] stopped (%d rows written, %d dropped)" % (sample_id, dropped))
+            print("\n[logger] stopped (%d rows, %d dropped, %d crc-fail)"
+                  % (sample_id, dropped, crc_fail))
             try:
                 ser.close()
             except Exception:
@@ -226,11 +258,13 @@ def main():
     here = os.path.dirname(os.path.abspath(__file__))
     default_logdir = os.path.normpath(os.path.join(here, "..", "..", "logs"))
     ap.add_argument("--logdir", default=default_logdir, help="output dir (default <repo>/logs)")
+    ap.add_argument("--maxbytes", type=int, default=25 * 1024 * 1024,
+                    help="rotate when a segment exceeds this many bytes (default 25MB; 0=daily only)")
     args = ap.parse_args()
     port = args.port or autodetect_port()
     if not port:
         sys.exit("No serial port found. Specify --port.")
-    run(port, args.baud, args.logdir)
+    run(port, args.baud, args.logdir, args.maxbytes)
 
 
 if __name__ == "__main__":
