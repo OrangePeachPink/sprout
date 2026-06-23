@@ -33,6 +33,9 @@ project; see `SENSOR_QA.md`.)
 | [`SENSOR_QA.md`](SENSOR_QA.md) | Bench QA of the four capacitive sensors against the three known board defects: method, readings, verdict. |
 | [`docs/RESEARCH_capacitive_soil_moisture_sensors.md`](docs/RESEARCH_capacitive_soil_moisture_sensors.md) | Foundational research: how these sensors work, every known defect + workaround, diagnosis, buying guidance, and an annotated source index (incl. code-example links). |
 | [`docs/WIRING.md`](docs/WIRING.md) | Power + wiring architecture: single-supply baseline, connection map, candidate pin map, protection parts, and escalation path. |
+| [`docs/TELEMETRY_SCHEMA.md`](docs/TELEMETRY_SCHEMA.md) | Log row/file schema + the cross-project (plants ↔ HotBoxAQ) logging contract. |
+| [`tools/logger/`](tools/logger/) | Host-side serial logger (pyserial): UTC-stamped, rotating CSV capture. |
+| [`BACKLOG.md`](BACKLOG.md) | Project backlog - firmware, logging, sensing, actuators, analytics - grouped and prioritized. |
 | [`docs/evidence/`](docs/evidence/) | Macro board photos used as QA evidence. |
 
 ## Firmware (PlatformIO)
@@ -43,10 +46,29 @@ folder:
 
 - Build: `pio run`
 - Upload: `pio run -t upload`
-- Monitor: `pio device monitor` (115200 baud)
+- Monitor: `pio device monitor` (19200 baud, set in `platformio.ini`)
 
 Board env is `esp32dev` (classic ESP32). Pin assignments and tunables live in
 `firmware/include/config.h`. The build cache and resolved libraries (`firmware/.pio/`) are git-ignored.
+
+For data capture, prefer the host-side logger (`tools/logger/plants_logger.py`) over the raw monitor:
+it stamps each row with UTC time and writes a rotating, self-describing CSV under `logs/` per the shared
+telemetry schema ([`docs/TELEMETRY_SCHEMA.md`](docs/TELEMETRY_SCHEMA.md)). Requires `pyserial`.
+
+## Development & tooling
+
+Code-quality tooling lives at the repo root and is enforced per language:
+
+| Area | Tool | Config | Run |
+| --- | --- | --- | --- |
+| Python | [ruff](https://docs.astral.sh/ruff/) - lint + format | [`ruff.toml`](ruff.toml) | `ruff check .` · `ruff check --fix .` · `ruff format .` |
+| Markdown | markdownlint | [`.markdownlint.json`](.markdownlint.json) | `npx markdownlint-cli2 "**/*.md"` (add `--fix` to autofix) |
+| Endings / encoding | git + EditorConfig | [`.gitattributes`](.gitattributes) · [`.editorconfig`](.editorconfig) | LF · UTF-8 · final newline (see Conventions) |
+
+Ruff is the modern all-in-one (it replaces flake8 / isort / pyupgrade / black). The config selects a
+balanced, low-friction ruleset (`E/W/F/I/UP/B/C4/SIM/RUF`) and sets line length to `88` - the single
+knob, in `ruff.toml`. Install with `pip install ruff` (or `pipx install ruff`). The Python here is the
+host logger plus a PlatformIO pre-build hook.
 
 ## Roadmap
 
