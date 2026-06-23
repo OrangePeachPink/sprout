@@ -145,6 +145,8 @@ and the first `=` splits key/value, so values *may* contain spaces (e.g. `level=
   segments. Caps a corruption/disk-full to one segment (B5).
 - **Analysis tier** raw CSV is the immutable capture; a parquet/DuckDB load tier comes later for
   analysis (shared with HotBoxAQ's plan). One loader, both projects.
+- **Sample** a committed example is at [`sample_log.csv`](sample_log.csv) (3 rotation segments + data) —
+  design parsers/dashboards against it without the hardware.
 
 ---
 
