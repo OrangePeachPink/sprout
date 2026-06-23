@@ -28,7 +28,8 @@ with moisture % and a state word.
 - [x] **Rung 1 - Toolchain & first contact**
   - [x] SiLabs CP210x VCP driver (confirmed - v11.5.0.417, signed; verified in Device Manager)
   - [x] USB-C data cable (confirmed - it enumerated)
-  - [x] VS Code + PlatformIO IDE extension present (PIO Core 6.1.19; STM32 clangd extension disabled to end the IntelliSense conflict with Microsoft cpptools)
+  - [x] VS Code + PlatformIO IDE extension present (PIO Core 6.1.19; STM32 clangd extension disabled to end
+    the IntelliSense conflict with Microsoft cpptools)
   - [x] Board appears as a COM port (currently COM6 - number can shift between replugs)
   - *Proves: the PC can see and talk to the board.*
 - [x] **Rung 2 - First flash**

@@ -15,7 +15,8 @@ before committing them to the build.
 - **Board ID:** `HW-390`
 - **Date code:** `20240201` (2024-02-01)
 - **Vendor spec:** 3.3-5.5 VDC supply, analog output **0-3.0 VDC**, 3-pin PH2.0 interface, ~99 x 16 mm
-- **Source:** UMLIFE watering kit (4 sensors + 4 pumps + 4-ch relay + tubing). Purchase details on file in the local `parts` inventory.
+- **Source:** UMLIFE watering kit (4 sensors + 4 pumps + 4-ch relay + tubing). Purchase details on file in
+  the local `parts` inventory.
 
 ### Board component reference (read from macro photos)
 
@@ -39,16 +40,21 @@ for **AOUT** (analog out); cosmetic only.
 Source: Flaura project (Martin Uhlmann), "82% of capacitive soil moisture sensors are faulty."
 Full detail and citations in [`docs/RESEARCH_capacitive_soil_moisture_sensors.md`](docs/RESEARCH_capacitive_soil_moisture_sensors.md).
 
-1. **Missing 3.0 V voltage regulator** - some boards omit the `662K` regulator and bridge the pads, so output drifts with supply voltage (bad on battery).
-2. **Wrong timer chip** - cheaper boards use a bipolar `NE555` (needs ~4.5 V) instead of the CMOS `TLC555` (works down to ~2-3 V); NE555 boards fail at 3.3 V.
-3. **1 Mohm resistor not grounded** - a misplaced via leaves R4's ground side floating, so the sensor responds extremely slowly and returns stale/identical readings. (~53% of one tester's 38-board sample.)
+1. **Missing 3.0 V voltage regulator** - some boards omit the `662K` regulator and bridge the pads, so
+   output drifts with supply voltage (bad on battery).
+2. **Wrong timer chip** - cheaper boards use a bipolar `NE555` (needs ~4.5 V) instead of the CMOS `TLC555`
+   (works down to ~2-3 V); NE555 boards fail at 3.3 V.
+3. **1 Mohm resistor not grounded** - a misplaced via leaves R4's ground side floating, so the sensor
+   responds extremely slowly and returns stale/identical readings. (~53% of one tester's 38-board sample.)
 
 ---
 
 ## Method
 
-- **Issues 1 & 2 - visual.** Read the regulator and timer markings directly from macro photos (see `docs/evidence/`). Definitive: the part numbers are legible.
-- **Issue 3 - multimeter, unpowered.** The R4-to-ground connection runs under soldermask and cannot be judged by eye, so it was metered:
+- **Issues 1 & 2 - visual.** Read the regulator and timer markings directly from macro photos (see
+  `docs/evidence/`). Definitive: the part numbers are legible.
+- **Issue 3 - multimeter, unpowered.** The R4-to-ground connection runs under soldermask and cannot be
+  judged by eye, so it was metered:
   1. Sensor unplugged; meter in resistance (ohm) mode, ~2 Mohm range.
   2. Probes on the **GND** and **AUOT** header pins; let the reading settle (a filter cap charges off the meter).
   3. A stable **~1 Mohm** = R4 is grounded (PASS). **Open / "OL"** in *both* probe directions = ground link broken (FAIL).
@@ -103,9 +109,13 @@ were fed >=4.5 V - not worth the effort).
 
 These apply to *every* capacitive sensor regardless of QA result:
 
-- **Waterproofing** - coat the lower portion (below the max-insert line) with conformal coating / epoxy / clear nail polish to stop moisture wicking up the traces and corroding them over weeks. Keep the electronics end dry.
-- **Per-sensor calibration** - record each sensor's dry (in air) and wet (submerged / saturated soil) raw ADC value and map to %. Do not assume one calibration fits all four.
-- **Power-gating** - drive sensor VCC from a GPIO (or a transistor) and power it only during a reading, to reduce long-term degradation and save power.
+- **Waterproofing** - coat the lower portion (below the max-insert line) with conformal coating / epoxy /
+  clear nail polish to stop moisture wicking up the traces and corroding them over weeks. Keep the
+  electronics end dry.
+- **Per-sensor calibration** - record each sensor's dry (in air) and wet (submerged / saturated soil) raw
+  ADC value and map to %. Do not assume one calibration fits all four.
+- **Power-gating** - drive sensor VCC from a GPIO (or a transistor) and power it only during a reading, to
+  reduce long-term degradation and save power.
 
 ---
 

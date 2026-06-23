@@ -20,6 +20,7 @@ about what it doesn't know."
 ## Phase 1 - the decision (what we are building)
 
 ### Hardware
+
 - **MCU:** classic ESP32 (`ESP-32D`), 3.3 V logic, WiFi/BT, ADC1 for analog sensing.
 - **Sensing:** 4x UMLIFE capacitive soil moisture sensors (TLC555, QA-passed; see `SENSOR_QA.md`).
   **Soil moisture is the only control input.**
@@ -30,6 +31,7 @@ about what it doesn't know."
   ground, with bulk-cap + per-pump flyback-diode protection. Detail + escalation path in `WIRING.md`.
 
 ### Control architecture
+
 - **Closed-loop on soil moisture only.** Per zone: a "dryish" threshold triggers a **fixed pump dose
   (milliseconds)**, empirically tuned over the first 2-3 cycles. The loop is **self-correcting** - an
   imperfect dose is fixed on the next check.
@@ -42,10 +44,12 @@ about what it doesn't know."
   redundant when the output is measured directly.
 
 ### Separation of concerns (the core principle)
+
 The **control path** (soil -> pump; simple, human-tunable) is **decoupled** from the **observability
 path** (OLED now; logging later). Observability can grow without ever touching the control loop.
 
 ### Software / toolchain
+
 - **PlatformIO** project in `firmware/` (board `esp32dev`, Arduino framework). The Arduino-IDE option
   was dropped in favor of PlatformIO for in-repo build config + pinned dependencies.
 - **Config-driven** (`firmware/include/config.h`): pins, thresholds, calibration, dose times.
@@ -53,6 +57,7 @@ path** (OLED now; logging later). Observability can grow without ever touching t
   telemetry** hook.
 
 ### Scope boundary for Phase 1
+
 - 4 sensed/watered plants **or zones** (a zone = several similar pots on one pump+sensor, fed the same dose).
 - **Sensor waterproofing deferred** (POC: just don't insert past the max line).
 - **Battery deferred** (wall power; a USB power bank if cordless is ever wanted).

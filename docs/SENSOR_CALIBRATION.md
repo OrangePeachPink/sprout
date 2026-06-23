@@ -33,7 +33,7 @@ samples. Everything below predates it.
 ### All four sensors (where each was measured)
 
 | Condition | #1 | #2 | #3 | #4 | Level it maps to |
-|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- |
 | **Air** (open, indoor June) | ~3175 | ~3185 | ~3190 | ~3195 | air-dry (summer), diag |
 | **Just-watered soil, in-plant** (full-cycle sweep) | ~1300 | ~1205 | ~1245 | ~1130 | well watered, disp |
 | **Field capacity** (drained ~30 min, still moist) | ~1340 | ~1140 | ~1435 | ~1165 | well watered, disp |
@@ -47,7 +47,7 @@ watering (readings climbed erratically toward ~2900–3100 = contamination artif
 ### Single-sensor reference points (#1 only — the plant was dry/being tested with #1 at the time)
 
 | Condition | Reading | Notes |
-|---|---|---|
+| --- | --- | --- |
 | **Dry dirt** (bone-dry, distressed plant, >1 week unwatered) | **~2440 (floor) … ~2920** | 4 spots: ~2470, ~2475, ~2635, ~2920. Air gaps push *higher* (drier), so the firmly-bedded **~2440** is the trustworthy "bone-dry soil" value; ~2920 was a loose/re-probed hole. |
 | **Damp, out of water (unwiped)** | ~2700 | surface film on the probe; transient |
 | **Bench: held in hand** | ~1300–1750 | variable (grip/skin moisture); not a calibration point |
@@ -75,7 +75,7 @@ Chronology after the dry plant was watered thoroughly:
 ## Derived calibration anchors (this sensor family)
 
 | Anchor | Raw | Used for |
-|---|---|---|
+| --- | --- | --- |
 | Air (probe out of soil) | ~3175 | air-dry diagnostic |
 | **Dry dirt (bone-dry)** | **~2440** (floor) … ~2920 (air-gap) | "dry" band; the watering target |
 | Damp, out of water | ~2700 | (transient; not a band anchor) |

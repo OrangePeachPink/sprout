@@ -48,7 +48,8 @@ Three invariants that hold regardless of power source:
 - `5V`  : ESP32 `5V` pin -> relay `VCC` -> each relay `COM` (x4)
 - `3V3` : ESP32 `3V3` pin -> each sensor VCC (red) (x4) + OLED `VCC` (power the OLED at 3.3 V, not 5 V)
 - `GND` : ESP32 `GND` -> relay `GND` -> each sensor GND (black) -> OLED `GND` -> each pump (-) black -> adapter (-)
-  - one common ground; use a **distribution hub** - breadboard rail for bring-up, terminal strip / protoboard for the permanent build
+  - one common ground; use a **distribution hub** - breadboard rail for bring-up, terminal strip /
+    protoboard for the permanent build
 
 **Signal nets:**
 
