@@ -8,7 +8,7 @@
 #pragma once
 
 // Firmware version (keep in sync with README as it changes)
-constexpr char PLANTS_FW_VERSION[] = "0.4.0";
+constexpr char PLANTS_FW_VERSION[] = "0.5.0";
 
 // Serial - dropped 115200 -> 19200 for noise margin on the USB-serial link
 // (the prefix-corruption framing errors); throughput is irrelevant at this cadence.
@@ -35,6 +35,13 @@ constexpr const char *SENSOR_NAMES[NUM_SENSORS] = {"s3", "s4", "s1", "s2"};
 constexpr int ADC_DISCARD = 4;
 // Free-text run label for the log header - set per deployment.
 constexpr const char *RUN_LABEL = "4probe-coloc-origplant";
+
+// --- Cross-project telemetry identity (docs/TELEMETRY_SCHEMA.md) ------------
+// These populate the namespaced, joinable row schema shared with HotBoxAQ.
+constexpr const char *RECORD_TYPE_SOIL = "plants.soil";       // namespaced record_type
+constexpr const char *SENSOR_MODEL     = "UMLIFE_v2_TLC555";  // probe family
+constexpr const char *SENSOR_POSITION  = "origplant";        // all four co-located now; per-channel at repot
+constexpr const char *SOIL_CHANNEL     = "soil_moisture";    // the measured quantity
 // Observed raw endpoints (sensor #3, Rung 3): dry/air ~3266 max, wet/submerged ~947 min
 // (damp-but-out-of-water ~2700). Per-channel calibration to come (BACKLOG C1).
 
