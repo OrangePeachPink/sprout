@@ -294,3 +294,68 @@ When you place a sensor and assign its short name (C1), also capture the plant v
 - 
 - 
 - 
+
+---
+
+# Appendix — Agent-proposed status updates (NOT yet reconciled)
+
+> **Added by Claude (Opus 4.8), 2026-06-22. PROPOSALS with evidence — not adopted changes.**
+> Nothing in the sections above was edited. Veronica reconciles each against the item's *full intent*
+> before flipping any status. Commit hashes refer to the `plants` repo (`OrangePeachPink/plants`).
+
+### B7 — banner spacing → proposed DONE (with a nuance)
+- **Evidence:** `0.3.2` (commit `0620f30`) rebuilt the 3-line header as compact, single-write `snprintf`
+  lines. Live serial after upload shows the boundary list spaced cleanly:
+  `cal bounds(dry>wet): 3300 3050 2200 1750 1450 1080 900 800` — no run-together.
+- **Nuance:** the `22001750`/`27502400` symptom was diagnosed as the **monitor wrapping the long line and
+  merging the space on copy**, not a missing space in the format string (the firmware always emitted the
+  spaces). Compaction fixed the symptom by keeping the line short enough not to wrap. If the item's intent
+  was specifically "format-string delimiter," re-read before flipping.
+
+### B6 — serial `?`/replacement-char noise → still OPEN, re-scoped by new evidence
+- **Evidence (loss analysis, 2026-06-22, ~21 h overnight log):** firmware emitted ~2560 readings
+  (`#1..#2560`); **100% had a recoverable value; 0 truly lost.** Corruption is **prefix-only** — garbage
+  lands on the leading `#`/timestamp after the inter-print idle, then the UART re-syncs before the data
+  tail. ~19% of lines carried a garbled prefix; the `raw/level/role/spr/health` payload survived in every
+  one.
+- **Implication:** current data-loss ~0% (cosmetic). The deterministic-CRC-drop sub-item (B6.4) is lower
+  urgency than implied; the **baud drop (B6.1)** is still the cheapest real fix. The `0.3.2` 30 s cadence
+  already cut corruption *exposure* ~30x. No B6 fixes implemented yet — leave OPEN.
+
+### B4 — monotonic `millis()` column → partially served, not done
+- **Evidence:** `0.3.2` (commit `0620f30`) added a monotonic sample-count `#` column — already does the
+  *gap-detection / machine-parseable index* job B4 motivates (it's what proved 0 data loss above via
+  count-continuity). The raw `millis()` value for wall-clock reconstruction is NOT added.
+- **Proposal:** annotate that the `#` counter delivers part of B4's intent; the `millis()` field remains open.
+
+### A1 — health/spread veto in the supervisor → reference engine staged, not wired
+- **Evidence:** the merged `lib/irrigation` engine (commit `58c324c`) **already implements the health
+  veto** — `do_sweep()` refuses to water a channel whose `health_warn` is set — plus a structured event
+  log (`irrig_event_t`, `SENSOR_FAULT`, etc.). Staged in the repo, UNWIRED.
+- **Nuance:** my merge used a **non-latching** sensor-health veto (auto-recovers) **plus a separate hard
+  latch** for overrun/no-improvement — *not* the single `max_health_warn(~3)` latch A1 describes. Remaining
+  A1 work (fold into live firmware, pick latch semantics, add a banner accessor) is real and pending the
+  pump rungs. Leave OPEN, but the reference fix is further along than "partially built."
+
+### B5 — firmware timing audit (rollover-safe) → likely already satisfied for current code
+- **Evidence:** the live scheduler uses the wrap-safe `if (now - lastRead < READ_INTERVAL_MS) return;`
+  form, and the classifier's persistence gate counts *samples*, not absolute `millis()` deadlines. The
+  staged `lib/irrigation` engine uses `(now - since) >= dur` throughout (per its header).
+- **Proposal:** the *timing-audit* sub-bullet appears satisfied for today's firmware + staged engine; the
+  rest of B5 (uint64 millis column, rotation, auto-reconnect, session-id, UTC, watchdog) remains open.
+
+### A2 — raise wet-floor boundaries → OPEN, and flags an ACTIVE design conflict
+- **Evidence:** `0.3.1` (commit `1b4b60e`) deliberately set the wet boundaries `... 1080 900 800` — *below*
+  the ~950 water rail — so saturated soil reads **"overwatered" (a display state)** and a probe in air is
+  the only "not in soil" diagnostic. Full-cycle tests confirm A2's premise: pure water read ~970-1018 ->
+  "overwatered", so the `submerged`/`water-contact` diagnostics **never fired**.
+- **Conflict (do NOT silently overwrite):** A2 wants the floor *raised* (`1200/1100/1050`) so a "flooded /
+  probe in standing water" alarm *can* fire — the opposite of the `0.3.1` choice. Genuine design fork: is
+  the wettest state "overwatered soil" or a "check-probe" alarm? A2 is valid and open; today's data
+  supports its rationale. Decide intent before changing the array.
+
+### Foundations advanced today (context, not status flips)
+- `moisture_classifier` integrated (`0.3.0`, commit `1ba57af`) and real-soil **calibrated + fleet-validated**
+  across all 4 probes (`0.3.1`, `1b4b60e`; `0.3.2` long-run prep, `0620f30`) — underpins Section A items.
+- `lib/irrigation` 4-channel engine merged + staged, UNWIRED (`58c324c`) — the Section A/D supervisor, with
+  the health veto (A1) and the event-log seam (toward D1) already built in. Wires in at the pump rungs.
