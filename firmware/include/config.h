@@ -21,14 +21,20 @@ constexpr int LED_PIN = 2;
 // ADC2 is unusable while WiFi is on, so all sensors live on ADC1. These four are
 // input-only pins, ideal for analog. Fixed pin map (see docs/WIRING.md).
 constexpr int NUM_SENSORS = 4;
-constexpr int SENSOR_PINS[NUM_SENSORS] = {36, 39, 34, 35};  // ch0..ch3 (SVP, SVN, 34, 35)
-// Short, space-free per-channel names - edit when you assign plants / repot.
-constexpr const char *SENSOR_NAMES[NUM_SENSORS] = {
-    "ch0_gpio36", "ch1_gpio39", "ch2_gpio34", "ch3_gpio35"};
+constexpr int SENSOR_PINS[NUM_SENSORS] = {36, 39, 34, 35};  // ch0..ch3 = SVP, SVN, P34, P35
+// Channel -> physical sensor -> pin/silkscreen -> stress history (2026-06-23):
+//   ch0 = GPIO36 / SVP = sensor #3  (clean; was the solo dry-down reference probe)
+//   ch1 = GPIO39 / SVN = sensor #4  (clean)
+//   ch2 = GPIO34 / P34 = sensor #1  (recovered: water-on-board contamination)
+//   ch3 = GPIO35 / P35 = sensor #2  (recovered: reverse-polarity hot-swap)
+// All four go in the ONE original recovering plant for now -> a cross-probe
+// agreement test (how much do 4 probes in the same soil disagree over a run).
+// Per-channel name = the physical sensor id (short, space-free).
+constexpr const char *SENSOR_NAMES[NUM_SENSORS] = {"s3", "s4", "s1", "s2"};
 // Throwaway reads after switching the ADC mux to a channel (S/H settle).
 constexpr int ADC_DISCARD = 4;
 // Free-text run label for the log header - set per deployment.
-constexpr const char *RUN_LABEL = "4up-deploy";
+constexpr const char *RUN_LABEL = "4probe-coloc-origplant";
 // Observed raw endpoints (sensor #3, Rung 3): dry/air ~3266 max, wet/submerged ~947 min
 // (damp-but-out-of-water ~2700). Per-channel calibration to come (BACKLOG C1).
 
