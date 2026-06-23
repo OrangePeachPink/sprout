@@ -11,7 +11,7 @@ https://youtu.be/IGP38bz-K48
 In this episode I talk about capacitive soil moisture sensors and why 82% of them dont work correctly. I analyze the 3 most common problems they have by design and show you how to fix them or how to find sensors that work right away.
 
 
-You can jump to one of these sections: 
+You can jump to one of these sections:
 0:00 Introduction
 
 0:39 Flaura - the smart, self-watering plant pot
@@ -25,19 +25,19 @@ You can jump to one of these sections:
 10:01 Ordering advices
 
 
-This is the fourth video of my tutorial series on how to build your own “Flaura”, which is my Do-It-Yourself, Open-source project. 
+This is the fourth video of my tutorial series on how to build your own “Flaura”, which is my Do-It-Yourself, Open-source project.
 
-Flaura is a smart, self-watering plant pot that comes with the following features: 
-3D printed housing 
+Flaura is a smart, self-watering plant pot that comes with the following features:
+3D printed housing
 Integrated water tank
-Soil moisture measurement 
-Automatic watering 
-Rechargeable battery 
-Arduino Code 
-App control and data display 
-Push notifications 
+Soil moisture measurement
+Automatic watering
+Rechargeable battery
+Arduino Code
+App control and data display
+Push notifications
 
-Consider watching the introductory video, to learn more about the features and my future plans with Flaura:    • Flaura – Automatic, Smart Plant Pot (Self ...  
+Consider watching the introductory video, to learn more about the features and my future plans with Flaura:    • Flaura – Automatic, Smart Plant Pot (Self ...
 I will release more step-by-step video tutorials here in the future on how to build such a plant pot yourself. Stay tuned! 😉
 
 #YouTube Video Transcript
@@ -321,7 +321,7 @@ Reply
 
 @JensJackowski
 2 years ago (edited)
-i think it is important to understand that most of the sensors have corration problems when you try to read them. If you just put them in the soil and do not have any power on them they are much more stable to use. The main problem is that most people try to read the soil- moisture more or less all the time or every minute - but their is no need for that. 3 or 4 readings a day are more than enough. 
+i think it is important to understand that most of the sensors have corration problems when you try to read them. If you just put them in the soil and do not have any power on them they are much more stable to use. The main problem is that most people try to read the soil- moisture more or less all the time or every minute - but their is no need for that. 3 or 4 readings a day are more than enough.
 
 And the other problem is that many people did not understand that soil is reacting verry slowly. If is a verry bad idear to try watering a plant and use a soil sensor to stop the watering. It takes time for the water to spread in the soil. So what you should do is starting the watering if your reading shows a value that make it nessesary and stop it after a reasonable amount of time. After one hour or so you can do another reading and start a new cirkel if this i nessecary - and you do not have to read all the time.
 
