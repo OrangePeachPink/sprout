@@ -50,7 +50,7 @@ the cross-project core both repos carry.
 | 6 | `device_id` | dev | yes | `plants_esp32_a4cf12` | friendly + MAC suffix |
 | 7 | `firmware_version` | dev | yes | `0.5.0` | |
 | 8 | `logger_version` | host | yes | `plants_logger_0_1` | |
-| 9 | `millis_ms` | dev | yes | `30000` | device monotonic since boot (B4) |
+| 9 | `millis_ms` | dev | yes | `30000` | device monotonic ms since boot; 64-bit via `esp_timer` — no 49.7-day wrap (B4/B5) |
 | 10 | `sensor_model` | dev | yes | `UMLIFE_v2_TLC555` | probe family |
 | 11 | `sensor_id` | dev | yes | `s3` | physical sensor id |
 | 12 | `sensor_position` | dev | yes | `origplant` | placement; all four co-located now |
