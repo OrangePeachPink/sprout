@@ -41,7 +41,7 @@ CSV, RFC-4180 quoting, comma-delimited. **Null = empty field** (nothing between 
 the cross-project core both repos carry.
 
 | # | column | origin | shared | example | notes |
-|---|--------|--------|--------|---------|-------|
+| --- | --- | --- | --- | --- | --- |
 | 1 | `record_type` | dev | yes **[propose→HBAQ]** | `plants.soil` | namespaced; see §3 |
 | 2 | `timestamp_utc` | host | yes | `2026-06-23T14:05:30.123Z` | ISO-8601, ms, `Z` |
 | 3 | `timestamp_local` | host | yes | `2026-06-23 09:05:30.123` | host TZ, human |
@@ -78,7 +78,7 @@ infinitely extensible without widening the header. Plants puts its soil-only fie
 Format `project.stream`. Namespaced so a merged file is unambiguous.
 
 | record_type | project | meaning | backlog |
-|-------------|---------|---------|---------|
+| --- | --- | --- | --- |
 | `plants.soil` | plants | soil-moisture reading | C1 (live) |
 | `plants.env` | plants | onboard ambient (temp/RH/light/CO2…) | C4 |
 | `plants.pump` | plants | pump/actuator event | D1 |
@@ -105,7 +105,7 @@ own diagnostics:
 **Plants soil mapping:**
 
 | condition | flag | source |
-|-----------|------|--------|
+| --- | --- | --- |
 | healthy reading, spread within bound | `OK` | normal |
 | sample spread > `spread_warn_raw` (noisy/contact) | `SUSPECT` | `health_warn` |
 | floating/disconnected probe (incoherent, ~4095 spread) | `NO_SIGNAL` | classifier health |
@@ -153,11 +153,12 @@ and the first `=` splits key/value, so values *may* contain spaces (e.g. `level=
 The MCU emits a **compact CSV line** of its `origin=dev` columns, prefixed by `record_type` so it's
 greppable, e.g.:
 
-```
+```text
 plants.soil,3f9a1c,plants_esp32_a4cf12,0.5.0,30000,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1493,76,pct,OK,level=well watered;role=disp;spread=48;gpio=36
 ```
 
 Provenance/metadata still emit as `#`-prefixed lines at boot. The **host logger**:
+
 1. parses the device line, prepends `timestamp_utc,timestamp_local,sample_id,logger_version`,
    reorders to the canonical §2 order, writes the full CSV row to the rotating file;
 2. renders a **pretty aligned console** subset for live eyeballing;
