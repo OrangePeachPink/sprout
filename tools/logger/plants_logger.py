@@ -18,12 +18,14 @@ Usage:
 
 Requires: pyserial  (pip install pyserial)
 """
+
 import argparse
+import contextlib
 import csv
 import os
 import sys
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 try:
     import serial
@@ -36,28 +38,57 @@ LOGGER_VERSION = "plants_logger_0_2"
 # Canonical file schema (docs/TELEMETRY_SCHEMA.md S2). The host fills timestamp_*,
 # sample_id, logger_version; context/event/notes stay empty until those layers land.
 CANONICAL_COLS = [
-    "record_type", "timestamp_utc", "timestamp_local", "sample_id", "session_id",
-    "device_id", "firmware_version", "logger_version", "millis_ms", "sensor_model",
-    "sensor_id", "sensor_position", "channel", "raw_value", "value", "unit",
-    "quality_flag", "temp_context_c", "rh_context_pct", "pressure_context_hpa",
-    "event_id", "payload", "notes",
+    "record_type",
+    "timestamp_utc",
+    "timestamp_local",
+    "sample_id",
+    "session_id",
+    "device_id",
+    "firmware_version",
+    "logger_version",
+    "millis_ms",
+    "sensor_model",
+    "sensor_id",
+    "sensor_position",
+    "channel",
+    "raw_value",
+    "value",
+    "unit",
+    "quality_flag",
+    "temp_context_c",
+    "rh_context_pct",
+    "pressure_context_hpa",
+    "event_id",
+    "payload",
+    "notes",
 ]
 # Device serial-line column order (the firmware's "# device_cols:" legend).
 DEVICE_COLS = [
-    "record_type", "session_id", "device_id", "fw", "millis_ms", "sensor_model",
-    "sensor_id", "sensor_position", "channel", "raw_value", "value", "unit",
-    "quality_flag", "payload",
+    "record_type",
+    "session_id",
+    "device_id",
+    "fw",
+    "millis_ms",
+    "sensor_model",
+    "sensor_id",
+    "sensor_position",
+    "channel",
+    "raw_value",
+    "value",
+    "unit",
+    "quality_flag",
+    "payload",
 ]
 KNOWN_RECORD_PREFIXES = ("plants.", "aq.")
 
 
 def iso_utc(dt):
-    return dt.strftime("%Y-%m-%dT%H:%M:%S.") + "%03dZ" % (dt.microsecond // 1000)
+    return dt.strftime("%Y-%m-%dT%H:%M:%S.") + f"{dt.microsecond // 1000:03d}Z"
 
 
 def iso_local(dt):
     loc = dt.astimezone()
-    return loc.strftime("%Y-%m-%d %H:%M:%S.") + "%03d" % (loc.microsecond // 1000)
+    return loc.strftime("%Y-%m-%d %H:%M:%S.") + f"{loc.microsecond // 1000:03d}"
 
 
 def tz_offset(dt):
@@ -65,13 +96,13 @@ def tz_offset(dt):
     total = int(off.total_seconds())
     sign = "+" if total >= 0 else "-"
     total = abs(total)
-    return "%s%02d:%02d" % (sign, total // 3600, (total % 3600) // 60)
+    return f"{sign}{total // 3600:02d}:{(total % 3600) // 60:02d}"
 
 
 def payload_get(payload, key):
     for kv in payload.split(";"):
         if kv.startswith(key + "="):
-            return kv[len(key) + 1:]
+            return kv[len(key) + 1 :]
     return ""
 
 
@@ -79,7 +110,10 @@ def autodetect_port():
     ports = list(list_ports.comports())
     for p in ports:  # prefer a known USB-serial bridge
         blob = " ".join(x for x in (p.description, p.manufacturer, p.hwid) if x).lower()
-        if any(k in blob for k in ("cp210", "ch340", "ftdi", "silicon labs", "usb serial", "wch")):
+        if any(
+            k in blob
+            for k in ("cp210", "ch340", "ftdi", "silicon labs", "usb serial", "wch")
+        ):
             return p.device
     return ports[0].device if ports else None
 
@@ -99,12 +133,12 @@ def parse_device_line(text):
     crc_ok = None
     star = body.rfind("*")
     if star != -1 and len(body) - star == 3:  # trailing "*HH"
-        want = body[star + 1:]
+        want = body[star + 1 :]
         body = body[:star]
         calc = 0
         for ch in body:
             calc ^= ord(ch) & 0xFF
-        crc_ok = ("%02X" % calc == want.upper())
+        crc_ok = f"{calc:02X}" == want.upper()
     fields = body.split(",")
     if len(fields) != len(DEVICE_COLS):
         return None
@@ -141,12 +175,16 @@ class RotatingCsv:
             self.fh.close()
         self.day = day
         # device_id already starts with "plants_esp32_", so no extra prefix.
-        fname = "%s_%s_%s.csv" % (self.device_id, day, now.strftime("%H%M%S"))
+        fname = f"{self.device_id}_{day}_{now.strftime('%H%M%S')}.csv"
         path = os.path.join(self.logdir, fname)
-        self.fh = open(path, "a", newline="", encoding="utf-8")
+        # Long-lived handle - the rotating logger closes it on roll, so a `with`
+        # block doesn't apply (SIM115 is a false positive here).
+        self.fh = open(path, "a", newline="", encoding="utf-8")  # noqa: SIM115
         self.writer = csv.writer(self.fh)
-        self.fh.write("# log_start_utc=%s  tz_offset=%s  logger=%s  schema_version=1\n"
-                      % (iso_utc(now), tz_offset(now), LOGGER_VERSION))
+        self.fh.write(
+            f"# log_start_utc={iso_utc(now)}  tz_offset={tz_offset(now)}  "
+            f"logger={LOGGER_VERSION}  schema_version=1\n"
+        )
         for ln in self.header_lines:
             self.fh.write(ln + "\n")
         self.writer.writerow(CANONICAL_COLS)
@@ -157,27 +195,29 @@ class RotatingCsv:
         if self.device_id == "unknown" and dev["device_id"]:
             self.device_id = dev["device_id"]
         new_path = self._roll(now)
-        row = {c: "" for c in CANONICAL_COLS}
-        row.update({
-            "record_type": dev["record_type"],
-            "session_id": dev["session_id"],
-            "device_id": dev["device_id"],
-            "firmware_version": dev["fw"],
-            "logger_version": LOGGER_VERSION,
-            "millis_ms": dev["millis_ms"],
-            "sensor_model": dev["sensor_model"],
-            "sensor_id": dev["sensor_id"],
-            "sensor_position": dev["sensor_position"],
-            "channel": dev["channel"],
-            "raw_value": dev["raw_value"],
-            "value": dev["value"],
-            "unit": dev["unit"],
-            "quality_flag": dev["quality_flag"],
-            "payload": dev["payload"],
-            "timestamp_utc": iso_utc(now),
-            "timestamp_local": iso_local(now),
-            "sample_id": sample_id,
-        })
+        row = dict.fromkeys(CANONICAL_COLS, "")
+        row.update(
+            {
+                "record_type": dev["record_type"],
+                "session_id": dev["session_id"],
+                "device_id": dev["device_id"],
+                "firmware_version": dev["fw"],
+                "logger_version": LOGGER_VERSION,
+                "millis_ms": dev["millis_ms"],
+                "sensor_model": dev["sensor_model"],
+                "sensor_id": dev["sensor_id"],
+                "sensor_position": dev["sensor_position"],
+                "channel": dev["channel"],
+                "raw_value": dev["raw_value"],
+                "value": dev["value"],
+                "unit": dev["unit"],
+                "quality_flag": dev["quality_flag"],
+                "payload": dev["payload"],
+                "timestamp_utc": iso_utc(now),
+                "timestamp_local": iso_local(now),
+                "sample_id": sample_id,
+            }
+        )
         self.writer.writerow([row[c] for c in CANONICAL_COLS])
         self.fh.flush()
         return row, new_path
@@ -185,9 +225,11 @@ class RotatingCsv:
 
 def console_line(row):
     t = row["timestamp_local"][11:19]  # HH:MM:SS
-    return "%s  %-3s  raw=%-4s  %3s%%  %-9s  %s" % (
-        t, row["sensor_id"], row["raw_value"], row["value"],
-        row["quality_flag"], payload_get(row["payload"], "level"))
+    return (
+        f"{t}  {row['sensor_id']:<3}  raw={row['raw_value']:<4}  "
+        f"{row['value']:>3}%  {row['quality_flag']:<9}  "
+        f"{payload_get(row['payload'], 'level')}"
+    )
 
 
 def run(port, baud, logdir, maxbytes):
@@ -200,10 +242,10 @@ def run(port, baud, logdir, maxbytes):
         try:
             ser = serial.Serial(port, baud, timeout=2)
         except Exception as e:
-            print("[logger] cannot open %s (%s); retrying in 3s" % (port, e))
+            print(f"[logger] cannot open {port} ({e}); retrying in 3s")
             time.sleep(3)
             continue
-        print("[logger] connected %s @ %d  ->  %s" % (port, baud, logdir))
+        print(f"[logger] connected {port} @ {baud}  ->  {logdir}")
         try:
             while True:
                 raw = ser.readline()
@@ -219,11 +261,11 @@ def run(port, baud, logdir, maxbytes):
                 dev = parse_device_line(text)
                 if dev is None:
                     dropped += 1
-                    print("[drop %d] %s" % (dropped, text[:80]))
+                    print(f"[drop {dropped}] {text[:80]}")
                     continue
                 if dev.get("_crc_ok") is False:
                     crc_fail += 1
-                    print("[crc %d] %s" % (crc_fail, text[:80]))
+                    print(f"[crc {crc_fail}] {text[:80]}")
                     continue
                 if pending_hdr:
                     csvlog.set_header(pending_hdr)
@@ -232,34 +274,45 @@ def run(port, baud, logdir, maxbytes):
                 now = datetime.now(timezone.utc)
                 row, new_path = csvlog.write(dev, sample_id, now)
                 if new_path:
-                    print("[logger] -> %s" % new_path)
+                    print(f"[logger] -> {new_path}")
                 print(console_line(row))
         except serial.SerialException as e:
-            print("[logger] port dropped (%s); reconnecting..." % e)
-            try:
+            print(f"[logger] port dropped ({e}); reconnecting...")
+            with contextlib.suppress(Exception):
                 ser.close()
-            except Exception:
-                pass
             time.sleep(2)
         except KeyboardInterrupt:
-            print("\n[logger] stopped (%d rows, %d dropped, %d crc-fail)"
-                  % (sample_id, dropped, crc_fail))
-            try:
+            print(
+                f"\n[logger] stopped ({sample_id} rows, "
+                f"{dropped} dropped, {crc_fail} crc-fail)"
+            )
+            with contextlib.suppress(Exception):
                 ser.close()
-            except Exception:
-                pass
             return
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Host-side serial logger for the plants controller.")
-    ap.add_argument("--port", help="serial port (COM5, /dev/ttyUSB0). Auto-detect if omitted.")
-    ap.add_argument("--baud", type=int, default=19200, help="baud (default 19200, matches firmware)")
+    ap = argparse.ArgumentParser(
+        description="Host-side serial logger for the plants controller."
+    )
+    ap.add_argument(
+        "--port", help="serial port (COM5, /dev/ttyUSB0). Auto-detect if omitted."
+    )
+    ap.add_argument(
+        "--baud", type=int, default=19200, help="baud (default 19200, matches firmware)"
+    )
     here = os.path.dirname(os.path.abspath(__file__))
     default_logdir = os.path.normpath(os.path.join(here, "..", "..", "logs"))
-    ap.add_argument("--logdir", default=default_logdir, help="output dir (default <repo>/logs)")
-    ap.add_argument("--maxbytes", type=int, default=25 * 1024 * 1024,
-                    help="rotate when a segment exceeds this many bytes (default 25MB; 0=daily only)")
+    ap.add_argument(
+        "--logdir", default=default_logdir, help="output dir (default <repo>/logs)"
+    )
+    ap.add_argument(
+        "--maxbytes",
+        type=int,
+        default=25 * 1024 * 1024,
+        help="rotate when a segment exceeds this many bytes "
+        "(default 25MB; 0=daily only)",
+    )
     args = ap.parse_args()
     port = args.port or autodetect_port()
     if not port:

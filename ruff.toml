@@ -1,0 +1,33 @@
+# ruff.toml - Python lint + format policy for the plants repo.
+# Ruff is the modern all-in-one (replaces flake8 / isort / pyupgrade / black).
+# Usage:
+#   ruff check .          # lint
+#   ruff check --fix .    # lint + autofix
+#   ruff format .         # format (Black-compatible)
+
+# Conservative floor: the host Python is 3.14, but firmware/scripts/git_rev.py
+# runs under PlatformIO's bundled interpreter, so keep UP from suggesting
+# too-new syntax. Raise this if everything that runs the code is newer.
+target-version = "py39"
+
+# The de-facto norm (Black / ruff default). Bump to 100 or 120 here if you ever
+# want more room - this single line is the knob.
+line-length = 88
+
+[lint]
+select = [
+  "E", "W",   # pycodestyle errors + warnings (incl. comment formatting E26x)
+  "F",        # pyflakes - undefined names, unused imports (the real-bug core)
+  "I",        # isort - deterministic import ordering
+  "UP",       # pyupgrade - modernize syntax (incl. f-strings) to target-version
+  "B",        # flake8-bugbear - likely-bug footguns
+  "C4",       # flake8-comprehensions - cleaner / faster comprehensions
+  "SIM",      # flake8-simplify - obvious simplifications
+  "RUF",      # ruff's own high-signal rules (incl. unused-noqa)
+]
+# Deliberately NOT enabled (friction > value for a scripts repo):
+#   D (mandatory docstrings), ANN (mandatory annotations), PL/PLR (refactor
+#   nags), T20 (no-print - bad for CLI scripts), ERA (commented-code false +ves).
+
+[format]
+quote-style = "double"
