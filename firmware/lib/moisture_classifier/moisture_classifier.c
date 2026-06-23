@@ -14,24 +14,22 @@ bool moisture_level_is_display(moisture_level_t l)
 
 moisture_class_t moisture_class_of(moisture_level_t l)
 {
-    if (l <= MOIST_AIR_DRY_SUMMER) return MCLASS_DRY_DIAG;   /* idx 0..1 */
-    if (l >= MOIST_WATER_CONTACT)  return MCLASS_WET_DIAG;   /* idx 7..8 */
-    return MCLASS_SOIL;                                      /* idx 2..6 */
+    if (l <= MOIST_AIR_DRY)   return MCLASS_DRY_DIAG;   /* idx 0    */
+    if (l >= MOIST_SUBMERGED) return MCLASS_WET_DIAG;   /* idx 6    */
+    return MCLASS_SOIL;                                 /* idx 1..5 */
 }
 
 const char *moisture_level_name(moisture_level_t l)
 {
     switch (l) {
-        case MOIST_AIR_DRY_WINTER: return "air-dry (winter)";
-        case MOIST_AIR_DRY_SUMMER: return "air-dry (summer)";
-        case MOIST_DRY:            return "dry";
-        case MOIST_NEEDS_WATER:    return "needs water";
-        case MOIST_OK:             return "OK";
-        case MOIST_WELL_WATERED:   return "well watered";
-        case MOIST_OVERWATERED:    return "overwatered";
-        case MOIST_WATER_CONTACT:  return "water contact";
-        case MOIST_SUBMERGED:      return "submerged";
-        default:                   return "?";
+        case MOIST_AIR_DRY:      return "air-dry";
+        case MOIST_DRY:          return "dry";
+        case MOIST_NEEDS_WATER:  return "needs water";
+        case MOIST_OK:           return "OK";
+        case MOIST_WELL_WATERED: return "well watered";
+        case MOIST_OVERWATERED:  return "overwatered";
+        case MOIST_SUBMERGED:    return "submerged";
+        default:                 return "?";
     }
 }
 

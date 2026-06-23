@@ -43,8 +43,10 @@ static moisture_cfg_t cfg = {
   2000,                                              // confirm_ms_wet  (TESTING; prod 3500)
   READ_INTERVAL_MS,                                  // loop_period_ms
   250,                                               // spread_warn_raw (0 disables)
-  // boundary (descending raw): real-soil cal 2026-06-21 (provisional, cross-sensor #1/#3)
-  {3300, 3050, 2200, 1750, 1450, 1080, 900, 800},
+  // boundary (descending raw): 7-band scheme. Wet end + dry center anchored to
+  // measured readings; middle three (needs water/OK) interpolated - tighten from
+  // the dry-down log. db=60 uniform. (moisture_classifier_spec baseline.)
+  {2760, 2140, 1830, 1520, 1260, 1030},
 };
 
 static moisture_state_t state[NUM_SENSORS];
