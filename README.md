@@ -6,7 +6,8 @@ small multi-plant auto-waterer that reads soil moisture, decides when to water, 
 pumps through a relay, with room to grow toward logging and remote monitoring.
 
 **Status — 2026-06-20:** Sensor QA complete. All four capacitive sensors pass the known-defect
-checks and are cleared for use as-is. Microcontroller selected: **ESP32** (classic, SoC marked `ESP-32D`). Relay board identified (`CW-022`, opto-isolated, active-LOW). Build bring-up next.
+checks and are cleared for use as-is. Microcontroller selected: **ESP32** (classic, SoC marked `ESP-32D`).
+Relay board identified (`CW-022`, opto-isolated, active-LOW). Build bring-up next.
 
 ## Hardware
 
@@ -19,7 +20,9 @@ checks and are cleared for use as-is. Microcontroller selected: **ESP32** (class
 | Microcontroller | 1 | **ESP32** (classic dual-core; SoC marked `ESP-32D`, ESP32-D0WD class) from the SunFounder ESP32 kit. 3.3 V ADC matches the 0-3.0 V sensor output; 4 sensors on ADC1 (avoid ADC2 = WiFi); WiFi/BT for monitoring. |
 | Status display | 1 | 1.3" SH1106 128x64 I2C OLED (Hosyond 5-pack). On the I2C bus (GPIO21/22), powered at 3.3 V. Shows status / last-watered / errors. |
 
-(Kit provenance is recorded in the local `parts` inventory: UMLIFE watering kit. The SunFounder ESP32 kit also bundled a 5th capacitive sensor - an `NE555`-based `v1.2` variant - which is **not used** for this project; see `SENSOR_QA.md`.)
+(Kit provenance is recorded in the local `parts` inventory: UMLIFE watering kit. The SunFounder ESP32 kit
+also bundled a 5th capacitive sensor - an `NE555`-based `v1.2` variant - which is **not used** for this
+project; see `SENSOR_QA.md`.)
 
 ## Documentation
 

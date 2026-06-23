@@ -52,18 +52,21 @@ the soil, so there is nothing to dissolve - they last far longer.
 ## 2. The three famous defects (REPORTS, corroborated)
 
 ### Issue 1 - Missing voltage regulator
+
 A correct board carries a `662K` (XC6206 / HT7333-class) LDO that pins the sensor's supply to a
 constant ~3.0 V. Cheaper boards omit it and **bridge the pads**, so the output now drifts with the
 supply rail. Harmless on a clean regulated supply; **bad on any battery** (a Li-ion sags from 4.2 V
 to ~3.0 V as it drains, dragging the readings with it).
 
 ### Issue 2 - Wrong timer chip (NE555 vs TLC555)
+
 - **TLC555** (CMOS) runs from ~2 V (TLC555C) / ~3 V (TLC555I) up to 15 V and draws little current -
   fine on a 3.3 V ESP32 or a Li-ion (per the TI datasheet).
 - **NE555** (bipolar) needs ~**4.5 V** minimum, so NE555 boards **will not work at 3.3 V**.
   (A few NE555 boards marked "20M" reportedly work at 3.3 V by luck - a gamble, not a spec.)
 
 ### Issue 3 - 1 Mohm output resistor not connected to ground
+
 The 1 Mohm bleed resistor (R4) should tie the analog output to ground. On defective boards a
 **misplaced via** leaves its ground side floating - electrically the resistor is not there. Effect:
 the output **floats high and responds extremely slowly**, so repeated reads return the **same stale
@@ -97,12 +100,14 @@ value**. That quietly ruins any "take 5 readings and average / reject outliers" 
 ## 4. How to diagnose a board
 
 **Visual (magnifier / macro photo):**
+
 - Find the 3-pin `662K` regulator (Issue 1).
 - Read the 8-pin timer label: `TLC555` good, `NE555` bad (Issue 2).
 - Check the via near the two output resistors - it should sit *between* them, not shifted outboard
   (Issue 3). This one is sub-millimeter and often **cannot** be called by eye - meter it.
 
 **Multimeter:**
+
 - *Issue 3, unpowered:* resistance from **AOUT to GND** should be a stable **~1 Mohm**; open / "OL"
   in both directions = the defect. (This is the test used in [`../SENSOR_QA.md`](../SENSOR_QA.md).)
 - *Functional, powered:* in dry air the output reads high (~3.0 V) and should **drop promptly
@@ -129,6 +134,7 @@ value**. That quietly ruins any "take 5 readings and average / reject outliers" 
 ## 6. Buying guidance (for future orders)
 
 Zoom **all the way in** on the product photos and confirm:
+
 - the 3-pin **`662K`** regulator is present;
 - the timer is labeled **`TLC555C` / `TLC555I`** (not `NE555`);
 - the via sits **between the two output resistors**.
@@ -143,6 +149,7 @@ guaranteed clean design, the **DFRobot SEN0193** is the regulated reference part
 ## 7. Raw extracted claims (source-attributed; see section 0 caveat)
 
 ### A. Working principle (FACT)
+
 - A capacitive sensor's PCB forms a capacitor (central conductive plate + outer ground plate) and
   senses moisture via the soil's changing dielectric. [electroniclinic]
 - Two PCB copper traces act as the capacitor; a 555 timer feeds square waves into an RC integrator
@@ -152,16 +159,18 @@ guaranteed clean design, the **DFRobot SEN0193** is the regulated reference part
 - Capacitance changes with surrounding water content; the 555 times the charge/discharge. [basontech]
 - Coplanar traces filter the 555 output; a peak detector converts the filtered square wave to DC;
   frequency is set by the RC timing network. [thecavepearl]
-- TLC555 generates a near-square wave at f = 1.44 / ((R3 + 2*R2) * C3); rising moisture raises probe
+- TLC555 generates a near-square wave at `f = 1.44 / ((R3 + 2*R2) * C3)`; rising moisture raises probe
   capacitance and lowers output voltage (dry = higher voltage). [hackmd]
 
 ### B. Capacitive vs resistive
+
 - Capacitive is preferred because the plates are not exposed to soil, so the sensor does not corrode. [biomaker]
 - Resistive sensors corrode over time because their DC current electrolyzes in water. [basontech]
 - Resistive sensors rust/corrode (even gold-plated), degrading readings; capacitive has no exposed
   metal. [lastminuteengineers]
 
 ### C. Timer chip (TLC555 vs NE555)
+
 - The timer must be a TLC555 (runs at 3.3 V) for correct low-voltage operation; NE555-substituted
   boards may not function. [hackmd]
 - TLC555 single-supply 2-15 V; TLC555C rated to 2 V min, TLC555I to 3 V min (Recommended Operating
@@ -174,12 +183,14 @@ guaranteed clean design, the **DFRobot SEN0193** is the regulated reference part
   the correct choice for battery / 3.3 V ESP32. [thecavepearl]
 
 ### D. Voltage regulator
+
 - The onboard 662K regulator drops a higher supply to ~3.0-3.3 V; if it is missing, the input supply
   itself must be held near 3.3 V for correct operation. [hackmd]
 - The SEN0193 includes an onboard regulator over 3.3-5.5 V input, so output is fixed 0-3.0 V
   regardless of supply - exactly the regulator the defective clones omit (bridging the pads instead). [dfrobot]
 
 ### E. Issue 3 - ungrounded 1 Mohm resistor
+
 - A missing R4-to-ground connection makes some v2.0 sensors discharge extremely slowly: air -> water,
   only a few discharge within 1 s while the rest take >10 s; soldering a wire between the two points
   fixes it. [hackmd]
@@ -193,10 +204,12 @@ guaranteed clean design, the **DFRobot SEN0193** is the regulated reference part
   voltage in free air; fix by soldering a 1 Mohm resistor across the output. [thecavepearl]
 
 ### F. Prevalence
+
 - Uhlmann (Flaura) reported 82% of the cheap capacitive sensors he bought were faulty - establishing
   the defect as widespread ("an epidemic"), not a one-off. [hackster]
 
 ### G. ADC range / regulated reference part
+
 - The DFRobot SEN0193 accepts 3.3-5.5 VDC, usable on both a 3.3 V ESP32 and a 5 V Arduino without the
   low-voltage failure of NE555 clones. [dfrobot]
 - Its output tops out at 3.0 VDC even at a 5 V supply, so a 3.3 V ESP32 ADC stays in range with no
@@ -231,7 +244,7 @@ as the project expands.
 | 18 | [Physics Forums - TLC555 sensor thread](https://www.physicsforums.com/threads/capacitive-soil-moisture-sensor-using-tlc555.970505/) | forum | Discussion / troubleshooting thread. |
 
 Primary video source for the project: Flaura, "Capacitive soil moisture sensors - 82% are faulty"
-(https://www.youtube.com/watch?v=IGP38bz-K48).
+(<https://www.youtube.com/watch?v=IGP38bz-K48>).
 
 A verbatim transcript of that video is archived alongside this doc at
 [`flaura-video-transcript.txt`](flaura-video-transcript.txt), kept as a source artifact. It is
