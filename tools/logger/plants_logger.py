@@ -33,7 +33,7 @@ try:
 except ImportError:
     sys.exit("pyserial not installed.  Run:  pip install pyserial")
 
-LOGGER_VERSION = "plants_logger_0_2"
+LOGGER_VERSION = "plants_logger_0_3"
 
 # Canonical file schema (docs/TELEMETRY_SCHEMA.md S2). The host fills timestamp_*,
 # sample_id, logger_version; context/event/notes stay empty until those layers land.
@@ -104,6 +104,15 @@ def payload_get(payload, key):
         if kv.startswith(key + "="):
             return kv[len(key) + 1 :]
     return ""
+
+
+def is_line_noise(text):
+    """True for an idle-line-noise line - mostly non-ASCII bytes (e.g. runs of
+    0xFF from false UART frames during the 30 s idle gap), vs a genuinely
+    unparseable but printable line. The device only ever emits ASCII."""
+    if not text:
+        return False
+    return sum(ord(c) < 127 for c in text) / len(text) < 0.5
 
 
 def autodetect_port():
@@ -238,6 +247,7 @@ def run(port, baud, logdir, maxbytes):
     pending_hdr = []
     dropped = 0
     crc_fail = 0
+    noise = 0
     while True:
         try:
             ser = serial.Serial(port, baud, timeout=2)
@@ -260,6 +270,14 @@ def run(port, baud, logdir, maxbytes):
                     continue
                 dev = parse_device_line(text)
                 if dev is None:
+                    if is_line_noise(text):
+                        # Idle-line noise (0xFF false frames during the 30 s gap):
+                        # swallow it; surface a count every 10 so a rising trend
+                        # stays visible without flooding the console.
+                        noise += 1
+                        if noise % 10 == 0:
+                            print(f"[noise] {noise} idle-line lines suppressed")
+                        continue
                     dropped += 1
                     print(f"[drop {dropped}] {text[:80]}")
                     continue
@@ -283,8 +301,8 @@ def run(port, baud, logdir, maxbytes):
             time.sleep(2)
         except KeyboardInterrupt:
             print(
-                f"\n[logger] stopped ({sample_id} rows, "
-                f"{dropped} dropped, {crc_fail} crc-fail)"
+                f"\n[logger] stopped ({sample_id} rows, {dropped} dropped, "
+                f"{crc_fail} crc-fail, {noise} idle-noise)"
             )
             with contextlib.suppress(Exception):
                 ser.close()
