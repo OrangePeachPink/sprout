@@ -359,3 +359,90 @@ When you place a sensor and assign its short name (C1), also capture the plant v
   across all 4 probes (`0.3.1`, `1b4b60e`; `0.3.2` long-run prep, `0620f30`) — underpins Section A items.
 - `lib/irrigation` 4-channel engine merged + staged, UNWIRED (`58c324c`) — the Section A/D supervisor, with
   the health veto (A1) and the event-log seam (toward D1) already built in. Wires in at the pump rungs.
+
+---
+
+## 2026-06-23 batch — logging pipeline (B), cross-project schema (C2), multi-sensor (C1), 7-band classifier
+
+> **Added by Claude (Opus 4.8), 2026-06-23. PROPOSALS with evidence — NOT adopted changes.**
+> Sections A–E above are untouched. Coding and marking-complete are a **hard boundary**: nothing below is
+> "done" until Veronica reconciles it (piece by piece, with a second agent) against the item's full intent.
+> Commit hashes are in `OrangePeachPink/plants`.
+
+### B1 — self-describing log header → proposed DONE
+- **Evidence:** `0.5.0` (`f68522b`) emits a `#` provenance block — `schema_version`, `fw` + **git commit hash**
+  (via `scripts/git_rev.py`) + build time, `device_id` + **MAC** + chip model + ADC config, `session_id`,
+  per-sensor `chN=GPIO/name` map + model/position, cal-bounds, cfg, and a `device_cols` legend. The host logger
+  (`082be1e`) adds a `# log_start_utc=… tz_offset=…` line and the CSV column-name header at each segment.
+- **B1 checklist coverage:** column-schema line ✓, schema version ✓, fw+git+build ✓, log-start UTC + offset ✓,
+  board identity (MAC/chip) ✓, ADC config ✓, per-sensor block ✓, run label ✓, capture-tool id ✓.
+- **Nuance:** units ride in the column header + contract doc, not a separate legend line.
+
+### B2 — host-side logger (dense file / console split) → proposed DONE
+- **Evidence:** `tools/logger/plants_logger.py` (`7d40ba8`, enhanced `082be1e`) owns the port (pyserial), writes
+  the dense canonical CSV to a rotating file AND a terse pretty console (the split), emits the header block once
+  per segment, and carries no legacy `moist%` duplicate. Replaces `pio … log2file`.
+
+### B3 — wall-clock UTC timestamp (host) → proposed DONE
+- **Evidence:** `7d40ba8` stamps each row host-side: `timestamp_utc` (ISO-8601 ms `…Z`) + `timestamp_local`.
+  Verified live: `2026-06-23T21:09:10.841Z` / `16:09:10.841`, `tz_offset=-05:00`.
+
+### B4 — monotonic millis() column → proposed DONE (supersedes the 2026-06-22 "partial")
+- **Evidence:** `0.5.0` (`f68522b`) adds the real `millis_ms` column; `a6728dc` switches it to the 64-bit
+  `esp_timer` (µs→ms), monotonic past the uint32 ~49.7-day wrap.
+
+### B5 — extended-duration logging → proposed PARTIAL (most landed; watchdog open)
+- **Done:** daily **+ size** rotation (`082be1e`, `--maxbytes`), host auto-reconnect (`7d40ba8`), per-boot
+  `session_id` (`f68522b`), UTC axis (`7d40ba8`), 64-bit `millis_ms` (`a6728dc`); firmware timing-audit already
+  wrap-safe (2026-06-22 note).
+- **Open:** hardware **watchdog** feed (deferred to pump bring-up — guards actuation; version-sensitive WDT
+  API), gzip of closed segments (optional, skipped), host-monotonic-clock column (skipped to keep schema stable).
+
+### B6 — serial-noise reduction → proposed DONE (B6.1–B6.4); B6.5 future
+- **Evidence:** B6.1 baud 115200→**19200** (firmware `708c0c0`, monitor `bf287fe`); B6.2 **sacrificial sync
+  newline** per burst (`bf287fe`); B6.3 host **latin-1 lossless decode** (`7d40ba8`); B6.4 **per-line XOR
+  checksum** `*HH` emitted (`bf287fe`) and validated host-side, dropping byte-corrupted lines as `[crc]` distinct
+  from unrecoverable `[drop]` (`082be1e`).
+- **Live proof:** first deploy logged 24 rows with `sample_id` 1…24 contiguous → **0 data-row loss**; the only
+  drops were 2 pre-header DTR-reset bytes.
+- **Open:** B6.5 EMI hardening (ferrite/grounds) — future, once pumps switch nearby.
+
+### B7 — banner spacing → reaffirm DONE (now structurally moot)
+- **Evidence:** under the CSV device format (`f68522b`) the boundary list is machine-delimited; the run-together
+  symptom can't recur. (2026-06-22 already proposed DONE for the console banner.)
+
+### C1 — multi-sensor logging + identity → proposed PARTIAL (logging done; per-pin cal open)
+- **Done:** long/tidy one-row-per-sensor logging across all 4 channels with `sensor_id` + GPIO + `sensor_model`
+  + `sensor_position`, id→pin→name map in the header (`708c0c0` v0.4.0; 4-up map `4385105`; schema `f68522b`).
+  Live: 4 channels (`s3/s4/s1/s2`) reporting, cross-probe spread ~**103 counts** captured in identical soil.
+- **Open:** the per-pin same-probe/same-water calibration check + per-channel boundary calibration — data only
+  just began accruing (the four are co-located now, by design, to measure exactly this).
+
+### C2 — cross-project schema (plants ↔ HotBoxAQ) → proposed DONE (plants side)
+- **Evidence:** contract `docs/TELEMETRY_SCHEMA.md` (`cd9b9ed`) + the `0.5.0` reshape (`f68522b`): namespaced
+  `record_type` (`plants.soil`), `{raw_value,value,unit}` triple, shared `quality_flag` enum, reserved
+  `event_id` + `*_context_*` columns, `device_id` + `session_id`. Matches HotBoxAQ's field names and settles its
+  open `DEC-004` items (null=empty, comma delimiter, `#`-header).
+- **Nuance:** the HotBoxAQ side (adopt `record_type`/`session_id`) is that repo's work; an agent-memory pointer
+  was left so a future HotBoxAQ thread finds this contract.
+
+### A2 — raise wet-floor boundaries → proposed RESOLVED via the 7-band scheme (Veronica's call)
+- **Evidence:** the design fork A2 flagged was decided — Veronica chose **raise the floor**. The 7-band collapse
+  (`0.6.0`, `f42ced4`) sets overwatered `1030–1260` / submerged `<1030`, so pure water (~1015) now reads the
+  **submerged diagnostic** and the "probe in standing water" alarm can fire (opposite of the 0.3.1 choice).
+- **Nuance:** implemented with the `moisture_classifier_spec` values, **not** A2's exact `1200/1100/1050`; A2's
+  *intent* is satisfied, its specific numbers superseded. Wet bands are narrow (≲ noise) by design.
+
+### A1 — health/spread veto → still OPEN, but the surfacing half advanced
+- **Evidence:** `0.5.0` (`f68522b`) maps health → a richer **`quality_flag`** enum (OK/SUSPECT/NO_SIGNAL/
+  SATURATED) — the per-row health surfacing A1 wants. The supervisor veto + `max_health_warn` latch + banner
+  accessor remain unwired (pending pump rungs). Leave OPEN.
+
+### Foundations advanced 2026-06-23 (context, not status flips)
+- **7-band classifier baseline** adopted (`0.6.0`, `f42ced4`) from `moisture_classifier_spec`: 9→7 bands,
+  boundaries `2760/2140/1830/1520/1260/1030`, db=60. Wet end + dry center anchored to measurements; **middle
+  three (needs water / OK) interpolated — to be tightened from the dry-down log.**
+- **v0.7.0 deployed live** to all 4 sensors and verified: 24 rows, 0 loss, all `OK`, ~103-count cross-probe
+  spread; recovered boards #1/#2 tracking fine. Device `plants_esp32_f4e9d4` (ESP32-D0WD-V3).
+- **Housekeeping:** repo EOL/UTF policy confirmed correct; transcript normalized (`9c79eba`); `espressif` added
+  to cspell (`267adda`); markdownlint cleanup of the contract doc (`98501e1`).
