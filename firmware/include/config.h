@@ -8,7 +8,7 @@
 #pragma once
 
 // Firmware version (keep in sync with README as it changes)
-constexpr char PLANTS_FW_VERSION[] = "0.6.0";
+constexpr char PLANTS_FW_VERSION[] = "0.7.0";
 
 // Serial - dropped 115200 -> 19200 for noise margin on the USB-serial link
 // (the prefix-corruption framing errors); throughput is irrelevant at this cadence.

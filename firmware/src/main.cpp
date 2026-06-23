@@ -51,6 +51,15 @@ static moisture_cfg_t cfg = {
 
 static moisture_state_t state[NUM_SENSORS];
 
+// NMEA-style XOR checksum over the row body (B6.4) so the host can
+// deterministically detect and drop a byte-corrupted line - not just a
+// prefix-garbled one - which matters when the data feeds calibration.
+static uint8_t lineChecksum(const char *s) {
+  uint8_t c = 0;
+  while (*s) c ^= (uint8_t)*s++;
+  return c;
+}
+
 // Map classifier health -> the shared quality_flag enum (docs/TELEMETRY_SCHEMA.md S4).
 static const char *qualityFlag(const moisture_state_t *st) {
   uint16_t raw = st->last_raw;
@@ -145,6 +154,10 @@ void loop() {
   // ~292,000 years, so the millis_ms column survives an arbitrarily long run.
   unsigned long long up_ms = (unsigned long long)esp_timer_get_time() / 1000ULL;
 
+  // B6.2 sacrificial sync: a leading newline absorbs the post-idle UART framing
+  // glitch, so the first real data byte of the burst isn't the one that mangles.
+  Serial.println();
+
   uint16_t samples[SAMPLES_PER_READ];
   for (int ch = 0; ch < NUM_SENSORS; ch++) {
     sampleChannel(ch, samples);
@@ -169,7 +182,10 @@ void loop() {
              RECORD_TYPE_SOIL, g_session_id, g_device_id, PLANTS_FW_VERSION,
              up_ms, SENSOR_MODEL, SENSOR_NAMES[ch], SENSOR_POSITION, SOIL_CHANNEL,
              (unsigned)raw, pct, "pct", qualityFlag(&state[ch]), payload);
-    Serial.println(line);
+    char crc[6];
+    snprintf(crc, sizeof(crc), "*%02X", lineChecksum(line));
+    Serial.print(line);
+    Serial.println(crc);
   }
 
   // Reprint the header every 20 sweeps so a long scroll stays self-describing.
