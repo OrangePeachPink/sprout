@@ -164,6 +164,12 @@ Provenance/metadata still emit as `#`-prefixed lines at boot. The **host logger*
 2. renders a **pretty aligned console** subset for live eyeballing;
 3. writes the `#` header block once per file segment.
 
+**Integrity (B6):** each burst is preceded by a sacrificial newline (absorbs the post-idle UART
+glitch), and each device line carries a trailing NMEA-style XOR checksum `*HH` over the row body.
+The host validates it and drops a byte-corrupted line deterministically (`[crc N]`) rather than
+letting a mangled reading enter the data — important when the data feeds calibration. The checksum
+is a transport suffix only, **not** a CSV column, so the file stays `schema_version=1`.
+
 **Trade-off to confirm:** with the device emitting CSV, a *raw* `pio monitor` (no host logger) shows
 comma lines instead of today's pretty columns. Mitigation: the host logger restores the pretty
 console, and the boot `#` header stays human-readable. Alternative is to keep the device emitting

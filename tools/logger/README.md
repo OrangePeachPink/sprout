@@ -20,7 +20,8 @@ python plants_logger.py                         # auto-detect the USB-serial por
 ```
 
 Baud defaults to **19200** (matches the firmware `SERIAL_BAUD`). Output lands in
-`<repo>/logs/` as `<device_id>_<YYYYMMDD>_<HHMMSS>.csv` (e.g. `plants_esp32_a4cf12_20260623_140530.csv`), a new file each UTC day,
+`<repo>/logs/` as `<device_id>_<YYYYMMDD>_<HHMMSS>.csv` (e.g. `plants_esp32_a4cf12_20260623_140530.csv`),
+a new file each UTC day (or when a segment exceeds `--maxbytes`, default 25 MB),
 each re-emitting the device's `#` provenance header so it's independently readable.
 Stop with **Ctrl-C**.
 
@@ -29,8 +30,8 @@ Stop with **Ctrl-C**.
 - Opening the port toggles DTR/RTS and **resets most ESP32 boards** — expect a fresh
   `session_id` and a boot header when you start the logger. Start it at a cycle boundary,
   not mid-capture.
-- Lines that can't be re-synced to a known `record_type` are counted and shown as `[drop N]`
-  on the console (not written). Corruption to date is prefix-only and ~0%; a per-line CRC
-  (backlog B6) is the next step if that ever changes.
+- Integrity: each device line carries an XOR checksum (`*HH`). A byte-corrupted line is dropped as
+  `[crc N]`, an unrecoverable/garbled one as `[drop N]` — neither is written. The firmware also emits
+  a sacrificial sync newline per burst to absorb the post-idle UART glitch.
 - The console is the *human* view; the CSV file is the *dense analysis* view — they
   intentionally differ (the B2 split).
