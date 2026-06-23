@@ -39,8 +39,10 @@ venv/
 
 # Logs / scratch
 *.log
+logs/
 _scratch/
 
 # Local-only evidence video (kept out of git to avoid permanent repo bloat)
 *.mov
 *.MOV
+.gstack/
