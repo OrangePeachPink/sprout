@@ -30,8 +30,10 @@ Stop with **Ctrl-C**.
 - Opening the port toggles DTR/RTS and **resets most ESP32 boards** — expect a fresh
   `session_id` and a boot header when you start the logger. Start it at a cycle boundary,
   not mid-capture.
-- Integrity: each device line carries an XOR checksum (`*HH`). A byte-corrupted line is dropped as
-  `[crc N]`, an unrecoverable/garbled one as `[drop N]` — neither is written. The firmware also emits
-  a sacrificial sync newline per burst to absorb the post-idle UART glitch.
+- Integrity: each device line carries an XOR checksum (`*HH`). A byte-corrupted line is rejected as
+  `[crc N]` and a genuinely garbled-but-printable line as `[drop N]`; **idle-line noise** (runs of
+  `0xFF` false frames during the 30 s gap) is swallowed silently with a periodic `[noise N]` count so
+  it doesn't flood the console. None are written to the CSV. The firmware also emits a sacrificial sync
+  newline per burst to absorb the post-idle UART glitch.
 - The console is the *human* view; the CSV file is the *dense analysis* view — they
   intentionally differ (the B2 split).
