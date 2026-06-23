@@ -107,7 +107,7 @@ static void do_sweep(irrig_ctrl_t *c, uint32_t now)
 
         /* out of the real soil range: never water */
         if (!moisture_level_is_display(lvl)) {
-            if (lvl <= MOIST_AIR_DRY_SUMMER) emit(c, ch, IRRIG_EV_PROBE_NOT_IN_SOIL, now);
+            if (lvl <= MOIST_AIR_DRY) emit(c, ch, IRRIG_EV_PROBE_NOT_IN_SOIL, now);
             c->status[ch] = CH_OK;   /* not soil, but not a hard fault either */
             continue;
         }
