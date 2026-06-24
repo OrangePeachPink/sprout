@@ -1,9 +1,11 @@
 {
-  "//": "Repo markdownlint config. Prose is wrapped ~100 chars; relax the line-length rule.",
+  "//": "Repo markdownlint rules. MD013 line-length relaxed to 120 (prose only). MD060 (table-pipe spacing) and MD036 (emphasis-as-heading) are off: the repo intentionally mixes compact ADR + padded doc tables, and uses intentional bold labels (Do / Don't) in style/brand docs - neither is a defect. Runner globs/ignores live in .markdownlint-cli2.jsonc.",
   "default": true,
   "MD013": {
     "line_length": 120,
     "code_blocks": false,
     "tables": false
-  }
+  },
+  "MD060": false,
+  "MD036": false
 }

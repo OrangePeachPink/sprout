@@ -1,0 +1,17 @@
+{
+  // markdownlint-cli2 runner config. The lint RULES live in .markdownlint.json;
+  // this file only scopes WHICH files are linted. Running `markdownlint-cli2`
+  // with no arguments lints the whole repo and should report zero errors.
+  "globs": ["**/*.md"],
+  // Skip everything git already ignores (node_modules, .pio, .venv,
+  // .data-worktree, reports/, build output, ...).
+  "gitignore": true,
+  "ignores": [
+    // No-fly: the work ledger is migrating to GitHub Issues; its formatting is
+    // handled at that migration, not here.
+    "BACKLOG.md",
+    // Vendored design delivery - stored verbatim for provenance, not ours to
+    // reformat (the design system v1 docs ARE linted).
+    "docs/design/sprout-v2/**"
+  ]
+}
