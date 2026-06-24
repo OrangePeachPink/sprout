@@ -892,3 +892,39 @@ paragraph) and file it into the right section when you're ready.*
   `tz_offset`). **B6** — the per-line XOR checksum guarantees integrity regardless of noise rate, so even the short
   "0-loss" proof is backstopped. **B7** structurally moot under CSV. **C2 structure** is correct; the only caveat is
   the `value` semantics above.
+
+### 2026-06-23 — chat-approved completed work (no pre-existing tracked item)
+
+> **Added by Claude (Opus 4.8), 2026-06-23.** These are *completed* and were **approved directly in chat by
+> Veronica** — recorded here (not as Section A–E status flips) so dev-infra work has a tracked home. Commit
+> hashes are the `plants` repo unless noted.
+
+#### Native host FSM test harness for the irrigation supervisor → DONE (chat-approved)
+
+- **What:** `tests/native/` — a host-compiled (`gcc` / MinGW) rig with a synthetic ADC + pump + fake clock
+  that exercises the framework-agnostic `lib/irrigation` FSM with no ESP32 and no flash.
+- **Evidence:** commit `6b1f060`; `tests/native/build_and_run.sh` → **27 checks, 0 failed** (health veto +
+  latch, healthy-dry waters, two-channel fairness / invariants, no-improvement fault, overrun failsafe,
+  `last_water_ms`). Backs verification of A1 / A3 / D1 before any pump is wired.
+- **Why no item:** it is test *infrastructure*, not a feature — there was no Section A–E line for it.
+
+#### Host C compiler install (MinGW-w64 gcc 16.1.0) → DONE (chat-approved)
+
+- **What:** installed the WinLibs MinGW-w64 toolchain so the firmware C libs can be unit-tested on the host
+  (the enabling step for the harness above).
+- **Evidence:** `winget install -e --id BrechtSanders.WinLibs.POSIX.UCRT` (gcc / g++ 16.1.0). Recorded in the
+  `dev/tooling` environment report — repo `OrangePeachPink/tooling`, commit `c4d3c1c` (separate repo).
+
+#### C/C++ style + lint config (clang-format + clang-tidy) → DONE (chat-approved)
+
+- **What:** root `.clang-format` (firmware house style) and `.clang-tidy` (advisory bug / correctness
+  check set), plus a README "Development & tooling" row — bringing C/C++ to parity with the Python
+  (ruff) and Markdown (markdownlint) tooling so every component has one documented style + lint guide.
+- **Evidence:** commit `7f6e4a8`. `firmware/lib/{irrigation,moisture_classifier}.c` pass clang-tidy clean;
+  policy is **format new / changed files only** (clang-format would collapse the manual column alignment).
+
+#### Reference archive of the late-night irrigation variants → DONE (chat-approved, context)
+
+- **What:** `docs/reference/late-night-irrigation-2026-06-23/` preserves the uncommitted Design B / C sources,
+  banner-marked **ARCHIVED REFERENCE — NOT ACTIVE** and renamed so nothing builds them.
+- **Evidence:** commit `4095103`. Supported the A1 synthesis (`d087e58`); recorded here for provenance.
