@@ -21,6 +21,7 @@ const char *irrig_event_name(irrig_event_code_t code)
         case IRRIG_EV_SENSOR_FAULT:         return "sensor_fault";
         case IRRIG_EV_PUMP_OVERRUN_FAULT:   return "pump_overrun_fault";
         case IRRIG_EV_NO_IMPROVEMENT_FAULT: return "no_improvement_fault";
+        case IRRIG_EV_HEALTH_FAULT:         return "health_fault";
         case IRRIG_EV_FAULT_CLEARED:        return "fault_cleared";
         default:                            return "?";
     }
@@ -95,15 +96,29 @@ static void do_sweep(irrig_ctrl_t *c, uint32_t now)
         /* hard latched fault: never water until manually cleared */
         if (c->faulted[ch]) { c->status[ch] = CH_FAULT; continue; }
 
-        /* sensor-health (spread) warning: non-latching, suppresses watering for
-         * this sweep and auto-recovers when the spread settles. */
+        /* sensor-health (spread) veto - BACKLOG A1. A floating/disconnected probe
+         * can report a plausible "dry" with a huge sample spread; never act on it.
+         * The per-read veto suppresses watering immediately and auto-recovers when
+         * the spread settles (a transient glitch). A SUSTAINED warning - health_warn
+         * for max_health_warn consecutive sweeps - escalates to a HARD latched fault
+         * (manual clear), because a probe unhealthy that long is real hardware
+         * trouble a human should look at. warn_count self-heals to 0 on any clean
+         * read, so only a persistent fault reaches the threshold. max_health_warn
+         * == 0 disables the latch; the per-read veto still applies. */
         if (c->mstate[ch].health_warn) {
             if (!c->prev_health_warn[ch]) emit(c, ch, IRRIG_EV_SENSOR_FAULT, now);
             c->prev_health_warn[ch] = true;
+            if (c->warn_count[ch] < 0xFF) c->warn_count[ch]++;
+            if (c->sys->max_health_warn &&
+                c->warn_count[ch] >= c->sys->max_health_warn) {
+                if (!c->faulted[ch]) emit(c, ch, IRRIG_EV_HEALTH_FAULT, now);
+                c->faulted[ch] = true;                  /* HARD latch */
+            }
             c->status[ch] = CH_FAULT;
             continue;
         }
         c->prev_health_warn[ch] = false;
+        c->warn_count[ch] = 0;          /* clean read -> self-heal the soft counter */
 
         /* out of the real soil range: never water */
         if (!moisture_level_is_display(lvl)) {
@@ -192,6 +207,8 @@ void irrig_init(irrig_ctrl_t *c,
         c->dosed_once[ch]       = false;
         c->prev_level[ch]       = mstate[ch].committed;
         c->prev_health_warn[ch] = false;
+        c->warn_count[ch]       = 0;
+        c->last_water_ms[ch]    = now_ms;
     }
 
     c->mode           = SYS_SAMPLING;
@@ -243,6 +260,7 @@ void irrig_tick(irrig_ctrl_t *c, uint32_t now)
             c->io.set_pump(ch, false, c->io.user);
             c->active_ch = -1;
             emit(c, ch, IRRIG_EV_PUMP_OFF, now);
+            c->last_water_ms[ch] = now;          /* last dose-off (D1/E3 telemetry) */
 
             c->soak_until_ms[ch] = now + c->chan_cfg[ch].soak_ms;
             c->status[ch]        = CH_SOAKING;
@@ -281,6 +299,7 @@ void irrig_clear_fault(irrig_ctrl_t *c, int ch)
     c->faulted[ch]    = false;
     c->dose_count[ch] = 0;
     c->dosed_once[ch] = false;
+    c->warn_count[ch] = 0;
     c->status[ch]     = CH_OK;
     emit(c, ch, IRRIG_EV_FAULT_CLEARED, c->phase_start_ms);
 }
@@ -289,3 +308,24 @@ irrig_mode_t        irrig_mode(const irrig_ctrl_t *c)           { return c->mode
 int                 irrig_active_pump(const irrig_ctrl_t *c)    { return c->active_ch; }
 irrig_chan_status_t irrig_status(const irrig_ctrl_t *c, int ch) { return c->status[ch]; }
 moisture_level_t    irrig_level(const irrig_ctrl_t *c, int ch)  { return c->level[ch]; }
+
+/* A1: true if the probe's last read tripped the spread/health flag, OR the
+ * sustained-fault latch has fired. Surface this on the serial banner / HMI so a
+ * floating probe announces itself instead of silently reading "dry". */
+bool irrig_health_warn(const irrig_ctrl_t *c, int ch)
+{
+    if (ch < 0 || ch >= IRRIG_CHANNELS) return false;
+    if (c->mstate[ch].health_warn) return true;
+    return c->sys->max_health_warn &&
+           c->warn_count[ch] >= c->sys->max_health_warn;
+}
+
+uint8_t irrig_warn_count(const irrig_ctrl_t *c, int ch)
+{
+    return (ch < 0 || ch >= IRRIG_CHANNELS) ? 0 : c->warn_count[ch];
+}
+
+uint32_t irrig_last_water_ms(const irrig_ctrl_t *c, int ch)
+{
+    return (ch < 0 || ch >= IRRIG_CHANNELS) ? 0 : c->last_water_ms[ch];
+}
