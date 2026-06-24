@@ -644,6 +644,35 @@ fail-to-water risk once irrigation is wired), so the dashboard should label band
 on E6 (parser); reads parquet/DuckDB instead of raw if E5 lands first. Styling per the **Sprout design system**
 (`docs/design/`) — its instrument components and engineering tokens cover this build directly.
 
+### E8. Dashboard robustness: full-history join (logs + archive), reliable new-file pickup, time-range views
+
+**Status:** in progress — analytics/data thread (self-assigned 2026-06-24)
+**Priority:** P8 (within section)
+**Scope:** M — server-side full-history read (incl. the B8 `.gz` archive), hardened newest-file pickup, and a
+time-range selector with downsampling in the dashboard.
+**Where:** host-side — `tools/analytics/serve.py` + `parse_v1.py` + the dashboard template; reads `logs/*.csv` **and**
+the B8 archive (`.data-worktree/data/archive/*.csv.gz`).
+
+Make the dashboard a dependable long-horizon view. Surfaced 2026-06-24 when a VS Code restart spawned a new session +
+file (B5) and the new data looked "missing" — in fact `serve.py` *was* picking it up (it re-globs `logs/` each
+request), but the ~14 min post-restart segment was an invisible sliver at the right edge of a 20 h chart. So the real
+gaps are visibility and deep-history, in three parts:
+
+- **Full-history join.** Read the live `logs/*.csv` **and** the B8 gzipped archive (`data/archive/*.csv.gz`) so history
+  survives once closed segments are pruned from `logs/`, and so 7-day / 30-day windows actually have their data. Today
+  `serve.py` only globs `logs/`; the archive is invisible to it. (`parse_v1` already decodes `.csv.gz`, so this is
+  mostly pointing it at the archive dir and de-duplicating against any still-present live copy by segment filename.)
+- **Reliable new-file pickup + recency signal.** Keep the per-request re-glob (it works), but make session boundaries
+  explicit in the view — a reset should read as a *labeled gap*, not as missing data — and add a "last reading / N min
+  ago" freshness indicator so a stalled capture is obvious at a glance.
+- **Time-range views.** A selector — 24 h / 7 d (default) / 30 d / all — that windows the trajectory and recomputes the
+  rate / stat / forecast panels for the chosen span, with downsampling (~1–2k points per series) so 30 days stays
+  responsive. Default 7 d, one-click zoom to 24 h.
+
+Nearer-term unblock for honest multi-day analysis (the diurnal / wake-sleep-sun phase work) and E2/E3; a precursor to
+E5 (parquet) once re-parsing 30 days of CSV + gz gets slow — at today's volume CSV + gz is fine. Self-assigned by the
+analytics thread per Veronica's 2026-06-24 request to file it before developing.
+
 ---
 
 ## Your additions (to review / expand)
