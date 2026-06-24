@@ -37,12 +37,12 @@ architecture → assurance.
 |---|---|---|---|---|
 | **1** | Collaboration & concurrency model | Role-specialized lanes (one author per domain), coordinated by the maintainer | 🟡 Maintainer | 📋 several lanes active |
 | **2** | Contributor guide & domain glossary | A lean set: `AGENTS.md` (working rules incl. native-first + a challenger/architecture-review pass) + `CONTEXT.md` (domain glossary) + the ADRs | 🟡 Maintainer / Firmware | 📋 **gap** — only `README.md` today |
-| **3** | Environment & dependencies | `uv`-managed Python (pinned interpreter + lockfile) + `.env.example`; secrets gitignored | 🟡 Firmware | 📋 `ruff.toml` present; no `pyproject.toml`/`uv.lock` yet |
+| **3** | Environment & dependencies | `uv`-managed Python (pinned interpreter + lockfile) + **PlatformIO/embedded toolchain pinning (`platformio.ini`)** + `.env.example`; secrets gitignored. Firmware owns the foundation; Data declares its analytics deps into it | 🟡 Firmware (Data declares deps) | 📋 `ruff.toml` present; no `pyproject.toml`/`uv.lock` yet |
 | **4** | Task runner & rituals | A `justfile` exposing `start` / `check` / `ship` | 🟡 Firmware | 📋 none yet |
-| **5** | Running the app (operator launch) | Operator self-serve: launcher + fixed port + in-UI stop (no "ask an agent to start the server") | 🟡 Data | 📋 a live-serving dashboard exists |
+| **5** | Running the app (operator launch) | Operator self-serve: launcher + fixed port + in-UI stop; host functionality presents as **one application surface** (Data owns it — see ADR-0005) | 🟡 Data | 📋 a live-serving dashboard exists |
 | **6** | Spec & requirements | Specs/PRDs as `docs/prd/` markdown + an ideas inbox (Discussions); decomposed to issues — **see [ADR-0003](0003-work-pipeline.md)** | ✅ Workflow | 📋 a backlog doc is today's spec; migrating to the pipeline |
 | **7** | Backlog & issue tracking | **GitHub Issues (ledger) + Projects (board); IDs = issue `#N`** — **see [ADR-0003](0003-work-pipeline.md)** | ✅ Workflow | 📋 currently a flat backlog file + letter IDs |
-| **8** | Branching & merge | Short branch → PR → squash-merge → manual review (auto-merge earned later) | 🟡 Firmware | 📋 commits currently land **directly on `main`** — confirm or close this gap |
+| **8** | Branching & merge | Short branch → PR → squash → manual review (auto-merge earned later); the flow is in [ADR-0003 §8](0003-work-pipeline.md); all lanes cut over at once when no-fly lifts | 🟡 **policy: Workflow · mechanics: Firmware · ratify: Maintainer** | 📋 commits currently land **directly on `main`** — closes at cutover |
 | **9** | Commits & changelog | **Conventional Commits** + a generated changelog (`git-cliff`) | 🟡 Firmware | 📋 Conventional Commits **already in consistent use** — ratify; changelog not wired |
 | **10** | Quality gates | `pre-commit` (fast hygiene/format/lint) + slower checks in CI | 🟡 Firmware | 📋 linters configured (`ruff`, `clang-format`, `clang-tidy`, `markdownlint`, `cspell`); no `pre-commit` orchestration yet |
 | **11** | Testing | `pytest` on the deterministic core; coverage **visible, not gated** | 🟡 Firmware | 📋 `tests/` + native host FSM tests present |
@@ -51,7 +51,7 @@ architecture → assurance.
 | **14** | Process telemetry & insights | **GitHub-native Insights / API** for velocity & cycle-time | ✅ Workflow | 📋 *product* telemetry (sensor schema) is a separate data-lane concern |
 | **15** | Data store & versioning | Match the substrate to the data's shape: CSV → DuckDB/parquet analysis tier; raw archive → Git LFS; a single-writer store (SQLite) if wanted | 🟡 Data | 📋 `logs/*.csv` + an LFS archive worktree; DuckDB/parquet planned |
 | **16** | Machine learning / inference | Native-first: classical/library methods before any trained model; earn a model with a named gap | 🟡 Data | 📋 a forecast engine exists (drying-rate / ETA / diurnal) — appears classical |
-| **17** | Frontend stack | A conscious choice recorded here (vanilla + design tokens vs a framework) | 🟡 Design / Data | 📋 served dashboard + `sprout-tokens.css` |
+| **17** | Frontend stack | **Host app = vanilla HTML/CSS/JS + Chart.js + Sprout tokens, no build** (decided); control-page framework deferred to its own decision. Split: **Design = token/component system + consumption contract · Data = served-app runtime/stack** (see ADR-0004/0005) | 🟡 Design + Data | 📋 served dashboard + `sprout-tokens.css` |
 | **18** | Design system | Design tokens (color/type/space/radius) as CSS custom properties + a small component set | 🟡 Design | 📋 **already built** — v1 + v2 under `docs/design/` |
 | **19** | Code intelligence | Editor/LSP + GitHub code navigation; revisit a code-graph tool later | 🟡 Maintainer | 📋 open |
 | **20** | Security & compliance | Native only: secret scanning + dependency alerts (not maximal tooling) | 🟡 Firmware / Maintainer | 📋 credentials gitignored; secret-scan hook to confirm |

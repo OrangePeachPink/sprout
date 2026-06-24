@@ -60,9 +60,13 @@ prototype's history honestly. (Execution belongs to the architecture/firmware la
 | 0001 | Architecture & control loop | **To be written** by the architecture/firmware lane — informed by, and superseding, the archived v0 record | Firmware lane / architecture |
 | [0002](0002-process-tiers.md) | Process tiers (the project's engineering process choices) | **Proposed** — per-row owners to confirm; maintainer to accept | Maintainer / cross-lane |
 | [0003](0003-work-pipeline.md) | Work pipeline: ideas, specs, backlog, issues & releases | **Proposed** | Workflow lane |
+| 0004 | Design system + token-consumption contract | **Planned** | Design lane |
+| 0005 | Application surface & frontend | **Planned** | Data lane |
+| 0006 | Data architecture (telemetry schema, calibration, quality, analysis tier) | **Planned** | Data lane |
 | — | *(archived)* Sprout v0 combined architecture record | Superseded by ADR-0001 | history |
 
-*New ADRs append a row here when proposed.*
+*New ADRs append a row here when proposed. Any lane may author an ADR for an ADR-sized decision in its
+own area — see [ADR-0003 §10](0003-work-pipeline.md) "When a decision merits an ADR."*
 
 ## Consequences
 
