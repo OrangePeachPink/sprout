@@ -1,0 +1,8 @@
+# Issue chooser config. blank_issues_enabled=false steers people through a form
+# (maintainers can still open quick issues via `gh issue create`). The contact
+# link goes live once Discussions is enabled (scaffolding step 3.4).
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Questions, ideas & "should we…?" → Discussions
+    url: https://github.com/OrangePeachPink/plants/discussions
+    about: Not sure it's a task yet? Ask a question or float an idea in Discussions — it can grow into an issue later.
