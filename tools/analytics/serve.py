@@ -20,19 +20,26 @@ import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import ClassVar
+from urllib.parse import parse_qs, urlparse
 
 _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from dashboard import build_context, render  # noqa: E402  (sibling import)
+from dashboard import (  # noqa: E402  (sibling import)
+    RANGE_HOURS,
+    build_context,
+    filter_since,
+    gather_inputs,
+    render,
+)
 from parse_v1 import parse_files  # noqa: E402
 
 _REPO = _HERE.parents[1]
 
 
-def _context(inputs: list[str]) -> dict:
-    data = parse_files(inputs)
+def _context(inputs: list[str], hours: float | None = None) -> dict:
+    data = filter_since(parse_files(inputs), hours)
     if not data.readings:
         raise ValueError(f"no readings parsed from {inputs}")
     return build_context(data)
@@ -51,13 +58,19 @@ class DashboardHandler(BaseHTTPRequestHandler):
         self.wfile.write(raw)
 
     def do_GET(self) -> None:  # http.server dispatch name
-        path = self.path.split("?", 1)[0]
+        parsed = urlparse(self.path)
+        rng = parse_qs(parsed.query).get("range", ["all"])[0]
+        hours = RANGE_HOURS.get(rng)  # unknown / "all" -> None -> full history
         try:
-            if path in ("/", "/index.html"):
-                self._send(render(_context(self.inputs)), "text/html; charset=utf-8")
-            elif path == "/data.json":
+            if parsed.path in ("/", "/index.html"):
+                self._send(
+                    render(_context(self.inputs, hours)), "text/html; charset=utf-8"
+                )
+            elif parsed.path == "/data.json":
                 blob = json.dumps(
-                    _context(self.inputs), separators=(",", ":"), ensure_ascii=False
+                    _context(self.inputs, hours),
+                    separators=(",", ":"),
+                    ensure_ascii=False,
                 )
                 self._send(blob, "application/json; charset=utf-8")
             else:
@@ -78,7 +91,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--host", default="127.0.0.1", help="bind host (default localhost)")
     args = ap.parse_args(argv)
 
-    DashboardHandler.inputs = args.inputs or [str(_REPO / "logs")]
+    DashboardHandler.inputs = args.inputs or gather_inputs()
     httpd = ThreadingHTTPServer((args.host, args.port), DashboardHandler)
     url = f"http://{args.host}:{args.port}/"
     print(f"serving live dashboard at {url}  (inputs: {DashboardHandler.inputs})")

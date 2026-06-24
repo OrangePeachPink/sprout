@@ -48,6 +48,12 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .btn.busy { opacity: .6; }
 .auto { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; }
 .auto input { accent-color: var(--leaf); }
+.rangesel { display: inline-flex; border: 1px solid var(--border); border-radius: var(--r-pill); overflow: hidden; }
+.rangesel .rangebtn { font-family: var(--font-ui); font-size: 12px; font-weight: 600; cursor: pointer; border: none;
+  border-left: 1px solid var(--border); background: var(--surface); color: var(--muted); padding: 6px 11px; }
+.rangesel .rangebtn:first-child { border-left: none; }
+.rangesel .rangebtn:hover { color: var(--ink); }
+.rangesel .rangebtn.active { background: var(--leaf); color: #fff; }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card);
   box-shadow: var(--e1); padding: var(--space-lg); margin-bottom: var(--space-lg); }
@@ -162,6 +168,12 @@ footer.prov code { font-family: var(--font-data); }
       <div class="sub" id="subline"></div>
     </div>
     <div class="controls">
+      <div class="rangesel" id="rangesel">
+        <button class="rangebtn" data-r="24h" type="button">24h</button>
+        <button class="rangebtn" data-r="7d" type="button">7d</button>
+        <button class="rangebtn" data-r="30d" type="button">30d</button>
+        <button class="rangebtn" data-r="all" type="button">all</button>
+      </div>
       <span class="refreshed" id="refreshed"></span>
       <button class="btn" id="refreshBtn" type="button">↻ Refresh</button>
       <label class="auto" id="autoLbl"><input type="checkbox" id="autoChk"> auto</label>
@@ -220,6 +232,8 @@ const LIVE = location.protocol === 'http:' || location.protocol === 'https:';
 const AUTO_MS = 30000;
 let autoTimer = null;
 let currentDetail = null;
+let curRange = '24h';
+const RANGE_H = { '24h': 24, '7d': 168, '30d': 720, all: null };
 
 function hexA(hex, a){
   const h = hex.replace('#',''); const n = parseInt(h,16);
@@ -244,7 +258,16 @@ function renderHeader(){
     `4 co-located probes · <span class="mono">origplant</span> · fw <span class="mono">${m.fw||'?'}</span> ` +
     `· ${DASH.sensors.length} channels · ${fmt(DASH.integrity.total)} readings · ` +
     `${m.total_hours}h since ${m.start_local}`;
-  document.getElementById('refreshed').textContent = `data as of ${m.generated_local}`;
+  const span = document.getElementById('refreshed');
+  let txt = `data as of ${m.generated_local}`;
+  if(m.last_local){
+    const last = new Date(m.last_local.replace(' ', 'T'));
+    const ageMin = (Date.now() - last.getTime()) / 60000;
+    const age = ageMin < 1 ? 'just now' : ageMin < 60 ? `${Math.round(ageMin)} min ago` : `${(ageMin/60).toFixed(1)} h ago`;
+    txt += ` · last reading ${age}`;
+    span.style.color = ageMin > 3 ? 'var(--st-dry)' : 'var(--muted)';
+  }
+  span.textContent = txt;
 }
 
 /* ---- summary cards (click -> single-plant detail) ---- */
@@ -654,12 +677,30 @@ async function refresh(){
   if(!LIVE){ flash(btn, 'snapshot — run serve.py', false); return; }
   btn.classList.add('busy'); btn.disabled = true;
   try{
-    const r = await fetch('data.json', {cache:'no-store'});
+    const r = await fetch(`data.json?range=${curRange}`, {cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     DASH = await r.json();
     renderAll();
   }catch(e){ flash(btn, 'refresh failed', false); }
   finally{ btn.classList.remove('busy'); btn.disabled = false; }
+}
+
+/* ---- time-range selector (E8) ---- */
+function applyStaticZoom(){  // file:// mode: zoom the chart x-axis (stats stay full-range)
+  const hrs = RANGE_H[curRange];
+  [charts.traj, charts.spread, charts.detail].forEach(c=>{
+    if(!c || !c.scales || !c.scales.x) return;
+    const xs = []; c.data.datasets.forEach(d=> d.data.forEach(p=>{ if(p && p.x!=null) xs.push(p.x); }));
+    if(!xs.length) return;
+    const maxX = Math.max(...xs);
+    c.options.scales.x.min = (hrs==null) ? undefined : Math.max(0, maxX - hrs);
+    c.update();
+  });
+}
+function setRange(r){
+  curRange = r;
+  document.querySelectorAll('.rangebtn').forEach(b=> b.classList.toggle('active', b.dataset.r===r));
+  if(LIVE) refresh(); else applyStaticZoom();
 }
 
 /* ---- controls + boot ---- */
@@ -678,8 +719,11 @@ async function refresh(){
     else if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
   });
 
+  document.querySelectorAll('.rangebtn').forEach(b=> b.addEventListener('click', ()=> setRange(b.dataset.r)));
+
   applyTheme();
   renderAll();
+  setRange(curRange);
 })();
 </script>
 </body>
