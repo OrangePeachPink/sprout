@@ -1,0 +1,80 @@
+# ADR-0002 — Process tiers
+
+**Status:** Proposed (skeleton — per-row owners to confirm; maintainer to accept)
+**Date:** 2026-06-24
+**Owner:** Maintainer (per-row owners below)
+**Lane:** cross-lane
+
+---
+
+> **What this is.** A single place that records *how this project is engineered* — the deliberate
+> choice, per area, of how much process to apply. It is intentionally **right-sized for a small,
+> mostly-solo build**: lightweight by default, heavier only where a real need justifies it. New
+> contributors can read it top-to-bottom to understand how work flows here.
+>
+> Each row proposes a starting choice and names the **owning lane** that confirms or overrides it.
+> Tags: ✅ decided in-lane · 🟡 proposed, **owner to confirm** · 📋 what the repo shows today.
+>
+> Some rows are **foundational** (cheap now, painful to retrofit — decide deliberately); others are
+> **default-for-now** (a safe starting choice with a revisit trigger, refined as the work demands).
+> "We'll decide the specifics when we get there" is a valid answer for the latter.
+
+## Context
+
+Sprout is a window-ledge capacitive-soil-moisture + small-pump auto-waterer: ESP32 firmware
+(PlatformIO), a Python host logger and analytics, a served dashboard, and a design system. It is a
+small, learning-and-portfolio build worked on across a few focused lanes. The choices below keep the
+process light enough to enjoy and disciplined enough to trust — explicitly avoiding the
+over-engineering that a project this size doesn't need.
+
+The decisions are ordered as a **new-contributor reading path**: who works on it → get it running →
+how work is defined and tracked → how changes are made, checked, and shipped → the domain
+architecture → assurance.
+
+## Decision — choice per area
+
+| # | Area | Proposed choice | Owner | Today |
+|---|---|---|---|---|
+| **1** | Collaboration & concurrency model | Role-specialized lanes (one author per domain), coordinated by the maintainer | 🟡 Maintainer | 📋 several lanes active |
+| **2** | Contributor guide & domain glossary | A lean set: `AGENTS.md` (working rules incl. native-first + a challenger/architecture-review pass) + `CONTEXT.md` (domain glossary) + the ADRs | 🟡 Maintainer / Firmware | 📋 **gap** — only `README.md` today |
+| **3** | Environment & dependencies | `uv`-managed Python (pinned interpreter + lockfile) + `.env.example`; secrets gitignored | 🟡 Firmware | 📋 `ruff.toml` present; no `pyproject.toml`/`uv.lock` yet |
+| **4** | Task runner & rituals | A `justfile` exposing `start` / `check` / `ship` | 🟡 Firmware | 📋 none yet |
+| **5** | Running the app (operator launch) | Operator self-serve: launcher + fixed port + in-UI stop (no "ask an agent to start the server") | 🟡 Data | 📋 a live-serving dashboard exists |
+| **6** | Spec & requirements | Specs/PRDs as `docs/prd/` markdown + an ideas inbox (Discussions); decomposed to issues — **see [ADR-0003](0003-work-pipeline.md)** | ✅ Workflow | 📋 a backlog doc is today's spec; migrating to the pipeline |
+| **7** | Backlog & issue tracking | **GitHub Issues (ledger) + Projects (board); IDs = issue `#N`** — **see [ADR-0003](0003-work-pipeline.md)** | ✅ Workflow | 📋 currently a flat backlog file + letter IDs |
+| **8** | Branching & merge | Short branch → PR → squash-merge → manual review (auto-merge earned later) | 🟡 Firmware | 📋 commits currently land **directly on `main`** — confirm or close this gap |
+| **9** | Commits & changelog | **Conventional Commits** + a generated changelog (`git-cliff`) | 🟡 Firmware | 📋 Conventional Commits **already in consistent use** — ratify; changelog not wired |
+| **10** | Quality gates | `pre-commit` (fast hygiene/format/lint) + slower checks in CI | 🟡 Firmware | 📋 linters configured (`ruff`, `clang-format`, `clang-tidy`, `markdownlint`, `cspell`); no `pre-commit` orchestration yet |
+| **11** | Testing | `pytest` on the deterministic core; coverage **visible, not gated** | 🟡 Firmware | 📋 `tests/` + native host FSM tests present |
+| **12** | Continuous integration | GitHub Actions, hosted, path-filtered (green-or-not) | 🟡 Firmware | 📋 no workflows yet |
+| **13** | Change control & decision records | Right-sized ladder: commit → issue + PR → **ADR** for significant/hard-to-reverse decisions | 🟡 Maintainer | 📋 this ADR series is the top rung |
+| **14** | Process telemetry & insights | **GitHub-native Insights / API** for velocity & cycle-time | ✅ Workflow | 📋 *product* telemetry (sensor schema) is a separate data-lane concern |
+| **15** | Data store & versioning | Match the substrate to the data's shape: CSV → DuckDB/parquet analysis tier; raw archive → Git LFS; a single-writer store (SQLite) if wanted | 🟡 Data | 📋 `logs/*.csv` + an LFS archive worktree; DuckDB/parquet planned |
+| **16** | Machine learning / inference | Native-first: classical/library methods before any trained model; earn a model with a named gap | 🟡 Data | 📋 a forecast engine exists (drying-rate / ETA / diurnal) — appears classical |
+| **17** | Frontend stack | A conscious choice recorded here (vanilla + design tokens vs a framework) | 🟡 Design / Data | 📋 served dashboard + `sprout-tokens.css` |
+| **18** | Design system | Design tokens (color/type/space/radius) as CSS custom properties + a small component set | 🟡 Design | 📋 **already built** — v1 + v2 under `docs/design/` |
+| **19** | Code intelligence | Editor/LSP + GitHub code navigation; revisit a code-graph tool later | 🟡 Maintainer | 📋 open |
+| **20** | Security & compliance | Native only: secret scanning + dependency alerts (not maximal tooling) | 🟡 Firmware / Maintainer | 📋 credentials gitignored; secret-scan hook to confirm |
+
+## Consequences
+
+- The project gains a recorded, right-sized process baseline instead of an implicit one.
+- Clear **gaps** are surfaced for owners: a contributor-docs set with the native-first/challenger rule
+  (#2), `uv`/`pre-commit`/CI (#3/#10/#12), and a PR flow (#8).
+- Deliberately **not** doing: hard coverage gates, bespoke land/backlog/changelog harnesses, heavy
+  change-control ceremony, or redundant security layers — process weight is matched to this project's
+  actual stakes.
+
+## Revisit triggers
+
+- A second author enters a lane → reconsider #1 / #8.
+- A persistent multi-channel dataset outgrows CSV → make the #15 substrate decision.
+- The Project board starts to feel like it's taxing planning → revisit the #7 board (e.g. a dedicated
+  tracker), recorded as a new ADR.
+- Manual PR review proves reliable → earn auto-merge (merge-when-green) + branch protection.
+
+## Confirmation
+
+Each `🟡 owner-to-confirm` row is confirmed or overridden (with a one-line reason) by its owning lane;
+the maintainer then flips this ADR to **Accepted** and updates the
+[0000 register](0000-record-architecture-decisions.md).
