@@ -1,4 +1,4 @@
-/* Sprout Design System v1 - core tokens.
+/* Sprout Design System - core tokens.
  *
  * Lift these as CSS custom properties for the plants dashboard / UI.
  * Toggle  data-theme="dark"  on the root element for "soil" (dark) mode.
@@ -6,6 +6,10 @@
  *
  * Fonts (load via Google Fonts or self-host):
  *   Baloo 2 (display) - Hanken Grotesk (UI/body) - JetBrains Mono (all numbers/data).
+ *
+ * v3 update (ADR-0008): the "soil" (dark) mode NEUTRALS were refined from the original warm-olive surfaces
+ * to a cooler, deeper green-charcoal that reads refined rather than dank. Light mode and every --st-* / --band-*
+ * meaning color are unchanged. See docs/design/sprout-v3/.
  */
 
 :root {
@@ -65,15 +69,21 @@
   --e3: 0 16px 36px rgba(30, 42, 24, 0.14);
 }
 
-/* "soil" / dark mode - surfaces drop to soil-dark, greens glow, accents hold position */
+/* "soil" / dark mode (v3, ADR-0008) - refined cool green-charcoal neutrals.
+ * Surfaces are deep and desaturated rather than warm/olive; greens still glow; meaning colors hold position. */
 [data-theme="dark"] {
-  --ink: #EAF2E0;
-  --muted: #7C8A72;
-  --border: #283322;
-  --surface: #1B2417;
-  --surface-2: #121A0E;
-  --bg: #0E140B;
-  --leaf: #9EE04A;
+  /* surfaces - cool desaturated green-charcoal ramp (was warm olive: #0E140B / #121A0E / #1B2417 / #283322) */
+  --bg: #0C1311;
+  --surface-2: #111A16;
+  --surface: #18231F;
+  --border: #29372F;
+
+  /* text - cool soft sage-white (was warm cream #EAF2E0 / #7C8A72) */
+  --ink: #E9F1EB;
+  --muted: #8B9B90;
+
+  /* accents hold; brand green loses a little acid against the cooler ground (was #9EE04A) */
+  --leaf: #93DD6A;
   --st-watering: #3FD0DE;
   --st-fault: #FF6B5E;
   /* live status dots: add  box-shadow: 0 0 8px currentColor  for the glow */
