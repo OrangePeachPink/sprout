@@ -33,6 +33,15 @@ try:
 except ImportError:
     sys.exit("pyserial not installed.  Run:  pip install pyserial")
 
+# Optional B8 archive step (tools/archive/archive_logs.py). Best-effort: if it is
+# missing or git fails, logging continues uninterrupted.
+_ARCHIVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "archive")
+sys.path.insert(0, _ARCHIVE_DIR)
+try:
+    import archive_logs
+except Exception:
+    archive_logs = None
+
 LOGGER_VERSION = "plants_logger_0_3"
 
 # Canonical file schema (docs/TELEMETRY_SCHEMA.md S2). The host fills timestamp_*,
@@ -168,6 +177,7 @@ class RotatingCsv:
         self.fh = None
         self.writer = None
         self.header_lines = []
+        self.current_path = None
         os.makedirs(logdir, exist_ok=True)
 
     def set_header(self, lines):
@@ -198,6 +208,7 @@ class RotatingCsv:
             self.fh.write(ln + "\n")
         self.writer.writerow(CANONICAL_COLS)
         self.fh.flush()
+        self.current_path = path
         return path
 
     def write(self, dev, sample_id, now):
@@ -241,6 +252,16 @@ def console_line(row):
     )
 
 
+def _archive_step(logdir, exclude=None, include_all=False):
+    """Best-effort B8 archive of closed segments; never disrupts logging."""
+    if archive_logs is None:
+        return
+    try:
+        archive_logs.archive(logs_dir=logdir, exclude=exclude, include_all=include_all)
+    except Exception as e:
+        print(f"[logger] archive step failed (non-fatal): {e}")
+
+
 def run(port, baud, logdir, maxbytes):
     csvlog = RotatingCsv(logdir, maxbytes)
     sample_id = 0
@@ -248,6 +269,7 @@ def run(port, baud, logdir, maxbytes):
     dropped = 0
     crc_fail = 0
     noise = 0
+    _archive_step(logdir, include_all=False)  # back up closed segments from prior runs
     while True:
         try:
             ser = serial.Serial(port, baud, timeout=2)
@@ -293,6 +315,8 @@ def run(port, baud, logdir, maxbytes):
                 row, new_path = csvlog.write(dev, sample_id, now)
                 if new_path:
                     print(f"[logger] -> {new_path}")
+                    # new segment opened -> the previous one is closed; back it up
+                    _archive_step(logdir, exclude=new_path)
                 print(console_line(row))
         except serial.SerialException as e:
             print(f"[logger] port dropped ({e}); reconnecting...")
@@ -306,6 +330,7 @@ def run(port, baud, logdir, maxbytes):
             )
             with contextlib.suppress(Exception):
                 ser.close()
+            _archive_step(logdir, include_all=True)  # the active segment is now closed
             return
 
 

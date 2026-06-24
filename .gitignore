@@ -42,6 +42,9 @@ venv/
 logs/
 _scratch/
 
+# Git LFS data-archive worktree (B8) - linked worktree on the `data` branch
+.data-worktree/
+
 # Local-only evidence video (kept out of git to avoid permanent repo bloat)
 *.mov
 *.MOV
