@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sprout · plants soil dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"></noscript>
+<!--__CHARTJS__-->
+<style>
+/* ---- Sprout design tokens (inlined from docs/design/sprout-tokens.css) ---- */
+/*__SPROUT_TOKENS__*/
+
+/* ---- dashboard layout ---- */
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.45;
+  padding: var(--space-lg);
+}
+a { color: var(--leaf); }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; line-height: 1.15; }
+h1 { font-size: 26px; font-weight: 700; }
+h2 { font-size: 17px; font-weight: 600; margin-bottom: var(--space-sm); }
+.wrap { max-width: 1180px; margin: 0 auto; }
+.mono { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; text-align: right; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.tiny { font-size: 11px; }
+
+header.top { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-md); margin-bottom: var(--space-lg); }
+header.top .sub { color: var(--muted); margin-top: 4px; }
+.theme-btn { font-family: var(--font-ui); font-size: 12px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+  border-radius: var(--r-pill); padding: 6px 14px; }
+.theme-btn:hover { border-color: var(--leaf); }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card);
+  box-shadow: var(--e1); padding: var(--space-lg); margin-bottom: var(--space-lg); }
+.panel-h { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-md); margin-bottom: var(--space-md); }
+.panel-h .cap { color: var(--muted); font-size: 12px; }
+
+.proposed { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--st-dry); border: 1px solid var(--st-dry);
+  border-radius: var(--r-pill); padding: 1px 8px; vertical-align: middle; }
+
+/* summary cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-md); }
+.scard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-tile);
+  box-shadow: var(--e1); padding: var(--space-md); position: relative; overflow: hidden; }
+.scard .accent { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; }
+.scard .sid { font-family: var(--font-display); font-weight: 700; font-size: 16px; }
+.scard .gpio { color: var(--muted); font-size: 11px; font-family: var(--font-data); }
+.scard .raw { font-family: var(--font-data); font-weight: 600; font-size: 34px; line-height: 1; margin: 6px 0 2px; }
+.scard .rawu { color: var(--muted); font-size: 11px; }
+.pill { display: inline-block; color: #fff; font-weight: 600; font-size: 12px; border-radius: var(--r-pill); padding: 2px 10px; }
+.scard .meta { margin-top: 10px; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 12px; }
+.scard .meta .num { color: var(--ink); }
+
+/* ladder */
+.ladder { display: flex; flex-direction: column; gap: 3px; }
+.ladrow { display: grid; grid-template-columns: 14px 150px 110px 1fr; align-items: center; gap: 10px;
+  padding: 7px 10px; border-radius: var(--r-control); }
+.ladrow .sw { width: 14px; height: 14px; border-radius: 4px; }
+.ladrow .nm { font-weight: 600; }
+.ladrow .uin { color: var(--muted); font-size: 12px; }
+.ladrow .rg { font-family: var(--font-data); font-size: 12px; color: var(--muted); }
+.ladrow .here { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font-family: var(--font-data); font-size: 11px; font-weight: 600; color: #fff;
+  border-radius: var(--r-pill); padding: 1px 8px; }
+
+/* charts */
+.chartbox { position: relative; height: 340px; }
+.chartbox.short { height: 240px; }
+.legend { display: flex; gap: var(--space-md); flex-wrap: wrap; margin-top: var(--space-sm); font-size: 12px; }
+.legend .it { display: flex; align-items: center; gap: 6px; }
+.legend .dot { width: 12px; height: 12px; border-radius: 3px; }
+.kpi { display: flex; gap: var(--space-xl); flex-wrap: wrap; margin-top: var(--space-sm); }
+.kpi .k .v { font-family: var(--font-data); font-weight: 600; font-size: 20px; }
+.kpi .k .l { color: var(--muted); font-size: 11px; }
+
+/* quality strips */
+.qrow { display: grid; grid-template-columns: 40px 1fr; align-items: center; gap: 10px; margin-bottom: 6px; }
+.qrow .ql { font-family: var(--font-data); font-weight: 600; }
+.strip { display: flex; height: 18px; border-radius: 5px; overflow: hidden; border: 1px solid var(--border); }
+.strip .cell { flex: 1 1 0; }
+
+/* integrity table */
+table.grid { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.grid th, table.grid td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+table.grid td.num, table.grid th.num { text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+table.grid tr:last-child td { border-bottom: none; }
+.flag { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-data); font-size: 12px; margin-right: 14px; }
+.flag .dot { width: 10px; height: 10px; border-radius: 50%; }
+.warnrow td { background: color-mix(in srgb, var(--st-dry) 12%, transparent); }
+
+footer.prov { color: var(--muted); font-size: 11px; line-height: 1.6; margin-top: var(--space-md); }
+footer.prov code { font-family: var(--font-data); }
+.note { background: color-mix(in srgb, var(--st-dry) 9%, transparent); border-left: 3px solid var(--st-dry);
+  padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-top: var(--space-sm); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>🌱 Sprout — soil moisture</h1>
+      <div class="sub" id="subline"></div>
+    </div>
+    <button class="theme-btn" id="themeBtn" type="button">soil mode</button>
+  </header>
+
+  <section class="card">
+    <div class="panel-h"><h2>Channels <span class="proposed" title="7-band boundaries are the un-reconciled A2 spec">bands proposed</span></h2><span class="cap" id="cardsCap"></span></div>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <section class="card">
+    <div class="panel-h"><h2>Calibration ladder</h2><span class="cap">raw ADC · higher = drier · boundaries are placeholders pending A2</span></div>
+    <div class="ladder" id="ladder"></div>
+  </section>
+
+  <section class="card">
+    <div class="panel-h"><h2>Raw trajectory — 4 channels</h2><span class="cap">higher = drier · band shading behind · hover for local time</span></div>
+    <div class="chartbox"><canvas id="trajChart"></canvas></div>
+    <div class="legend" id="trajLegend"></div>
+  </section>
+
+  <section class="card">
+    <div class="panel-h"><h2>Cross-channel spread</h2><span class="cap">max − min raw across the four co-located probes (C1: pin + placement variance)</span></div>
+    <div class="chartbox short"><canvas id="spreadChart"></canvas></div>
+    <div class="kpi" id="spreadKpi"></div>
+  </section>
+
+  <section class="card">
+    <div class="panel-h"><h2>Distribution</h2><span class="cap">raw histogram per channel</span></div>
+    <div class="chartbox short"><canvas id="distChart"></canvas></div>
+  </section>
+
+  <section class="card">
+    <div class="panel-h"><h2>Quality timeline</h2><span class="cap" id="qcap"></span></div>
+    <div id="qstrips"></div>
+    <div class="legend" id="qlegend"></div>
+  </section>
+
+  <section class="card">
+    <div class="panel-h"><h2>Data integrity</h2><span class="cap">what the capture actually contains — gaps surfaced, not hidden</span></div>
+    <div id="integrity"></div>
+  </section>
+
+  <footer class="prov" id="prov"></footer>
+</div>
+
+<script>
+const DASH = "__DASH_JSON__";
+
+function hexA(hex, a){
+  const h = hex.replace('#',''); const n = parseInt(h,16);
+  const r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  return `rgba(${r},${g},${b},${a})`;
+}
+const el = (t, cls, html) => { const e=document.createElement(t); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; };
+const fmt = n => (n==null? '—' : (''+n).replace(/\B(?=(\d{3})+(?!\d))/g, ','));
+
+/* ---- header ---- */
+(function(){
+  const m = DASH.meta;
+  document.getElementById('subline').innerHTML =
+    `4 co-located probes · <span class="mono">origplant</span> · fw <span class="mono">${m.fw||'?'}</span> ` +
+    `· ${DASH.sensors.length} channels · ${fmt(DASH.integrity.total)} readings · ` +
+    `${DASH.meta.total_hours}h since ${m.start_local}`;
+})();
+
+/* ---- summary cards ---- */
+(function(){
+  const wrap = document.getElementById('cards');
+  document.getElementById('cardsCap').textContent = 'raw + band = truth · % omitted by design';
+  DASH.sensors.forEach(s => {
+    const c = el('div','scard');
+    c.appendChild(el('div','accent')).style.background = s.color;
+    c.appendChild(el('div', null,
+      `<span class="sid">${s.id}</span> <span class="gpio">GPIO ${s.gpio} · ${s.channel}</span>`));
+    c.appendChild(el('div','raw', fmt(s.raw_last) + '<span class="rawu"> raw</span>'));
+    const pill = el('span','pill', `${s.band_ui} <span style="opacity:.8">· ${s.mood}</span>`);
+    pill.style.background = s.band_color;
+    const pwrap = el('div'); pwrap.appendChild(pill); c.appendChild(pwrap);
+    const meta = el('div','meta');
+    const add = (l,v) => { meta.appendChild(el('span','muted small',l)); meta.appendChild(el('span','num small',v)); };
+    add('fw band', s.band_fw||'—');
+    add('spread', s.spread_last!=null? s.spread_last : '—');
+    add('quality', s.quality_last||'—');
+    add('range', `${fmt(s.raw_min)}–${fmt(s.raw_max)}`);
+    add('median', fmt(s.raw_median));
+    add('slope', s.slope_per_hr!=null? `${s.slope_per_hr>=0?'+':''}${s.slope_per_hr}/h` : '—');
+    c.appendChild(meta);
+    wrap.appendChild(c);
+  });
+})();
+
+/* ---- calibration ladder (dry at top -> wet at bottom) ---- */
+(function(){
+  const wrap = document.getElementById('ladder');
+  DASH.cal.bands.forEach(b => {
+    const row = el('div','ladrow');
+    row.style.background = hexA(b.color, 0.10);
+    const sw = el('div','sw'); sw.style.background = b.color; row.appendChild(sw);
+    row.appendChild(el('div', null, `<span class="nm">${b.ui}</span> <span class="uin">${b.fw}</span>`));
+    row.appendChild(el('div','rg', `${fmt(b.lo)} – ${fmt(b.hi)}`));
+    const here = el('div','here');
+    DASH.sensors.filter(s => s.raw_last>=b.lo && s.raw_last<b.hi).forEach(s => {
+      const chip = el('span','chip', `${s.id} ${fmt(s.raw_last)}`); chip.style.background = s.color;
+      here.appendChild(chip);
+    });
+    row.appendChild(here);
+    wrap.appendChild(row);
+  });
+})();
+
+/* ---- shared chart helpers ---- */
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function gridColor(){ return hexA('#888888', 0.18); }
+function baseScales(xTitle, yTitle){
+  return {
+    x: { type:'linear', title:{display:true, text:xTitle, color:css('--muted')},
+         ticks:{ color:css('--muted'), callback:v=>v+'h' }, grid:{ color:gridColor() } },
+    y: { title:{display:true, text:yTitle, color:css('--muted')},
+         ticks:{ color:css('--muted') }, grid:{ color:gridColor() } }
+  };
+}
+
+/* ---- trajectory chart ---- */
+let trajChart, spreadChart, distChart;
+const bandShade = {
+  id:'bandShade',
+  beforeDatasetsDraw(chart, args, opts){
+    const y = chart.scales.y, area = chart.chartArea, c = chart.ctx;
+    if(!y) return;
+    (opts.bands||[]).forEach(b=>{
+      const top = y.getPixelForValue(b.hi), bot = y.getPixelForValue(b.lo);
+      c.save(); c.fillStyle = hexA(b.color, 0.10);
+      c.fillRect(area.left, Math.min(top,bot), area.right-area.left, Math.abs(bot-top));
+      c.restore();
+    });
+  }
+};
+
+function buildTraj(){
+  const lo = Math.min(...DASH.sensors.map(s=>s.raw_min));
+  const hi = Math.max(...DASH.sensors.map(s=>s.raw_max));
+  const pad = Math.max(40, (hi-lo)*0.6);
+  const datasets = DASH.trajectory.datasets.map(d=>({
+    label:d.id, data:d.points, parsing:false, borderColor:d.color, backgroundColor:d.color,
+    borderWidth:1.6, pointRadius:0, tension:0.25, _local:d.local
+  }));
+  trajChart = new Chart(document.getElementById('trajChart'), {
+    type:'line',
+    data:{ datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      interaction:{ mode:'nearest', intersect:false },
+      scales:{
+        ...baseScales(`hours since ${DASH.trajectory.start_local} (local)`, 'raw ADC  (higher = drier)'),
+        y:{ ...baseScales('', 'raw ADC  (higher = drier)').y, suggestedMin: lo-pad, suggestedMax: hi+pad }
+      },
+      plugins:{
+        legend:{ display:false },
+        bandShade:{ bands: DASH.cal.bands },
+        tooltip:{ callbacks:{
+          title:(items)=>{ const it=items[0]; const loc=it.dataset._local[it.dataIndex]; return `${it.dataset.label} · ${loc}`; },
+          label:(it)=>`raw ${fmt(it.parsed.y)}`
+        }}
+      }
+    },
+    plugins:[bandShade]
+  });
+  const lg = document.getElementById('trajLegend');
+  DASH.sensors.forEach(s=>{
+    const it=el('div','it'); const d=el('span','dot'); d.style.background=s.color; it.appendChild(d);
+    it.appendChild(el('span',null, `${s.id} <span class="muted">GPIO ${s.gpio}</span>`)); lg.appendChild(it);
+  });
+}
+
+function buildSpread(){
+  spreadChart = new Chart(document.getElementById('spreadChart'), {
+    type:'line',
+    data:{ datasets:[{ label:'spread', data:DASH.spread.points, parsing:false,
+      borderColor:css('--st-predicted')||'#7C5CFF', backgroundColor:hexA('#7C5CFF',0.12),
+      borderWidth:1.6, pointRadius:0, fill:true, tension:0.2 }] },
+    options:{ responsive:true, maintainAspectRatio:false, animation:false,
+      scales: baseScales('hours since start (local)', 'raw spread (counts)'),
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:it=>`spread ${fmt(it.parsed.y)} counts` } } } }
+  });
+  const k = document.getElementById('spreadKpi'); const sp=DASH.spread;
+  [['current',sp.current],['mean',sp.mean],['median',sp.median],['max',sp.max]].forEach(([l,v])=>{
+    const box=el('div','k'); box.appendChild(el('div','v num', v!=null? fmt(v)+' ' : '— ')); box.appendChild(el('div','l',l+' spread')); k.appendChild(box);
+  });
+}
+
+function buildDist(){
+  const datasets = DASH.distribution.datasets.map(d=>({
+    label:d.id, data:d.counts, backgroundColor:hexA(d.color,0.55), borderColor:d.color, borderWidth:1
+  }));
+  distChart = new Chart(document.getElementById('distChart'), {
+    type:'bar',
+    data:{ labels: DASH.distribution.centers, datasets },
+    options:{ responsive:true, maintainAspectRatio:false, animation:false,
+      scales:{ x:{ title:{display:true,text:'raw ADC (bin center, higher = drier)',color:css('--muted')},
+                   ticks:{ color:css('--muted'), maxTicksLimit:12 }, grid:{display:false} },
+               y:{ title:{display:true,text:'count',color:css('--muted')}, ticks:{color:css('--muted')}, grid:{color:gridColor()} } },
+      plugins:{ legend:{ labels:{ color:css('--ink') } } } }
+  });
+}
+
+/* ---- quality strips ---- */
+(function(){
+  const wrap = document.getElementById('qstrips');
+  DASH.quality.strips.forEach(s=>{
+    const row=el('div','qrow'); row.appendChild(el('div','ql', s.id));
+    const strip=el('div','strip');
+    s.cells.forEach(c=>{ const cell=el('div','cell'); cell.style.background = c.color || 'transparent';
+      if(c.flag) cell.title = `${c.flag} ·  ${c.n} reading(s)`; strip.appendChild(cell); });
+    row.appendChild(strip); wrap.appendChild(row);
+  });
+  document.getElementById('qcap').textContent =
+    Object.entries(DASH.quality.flags).map(([f,n])=>`${f}: ${n}`).join('  ·  ');
+  const lg=document.getElementById('qlegend');
+  Object.keys(DASH.quality.flags).forEach(f=>{
+    const it=el('div','it'); const d=el('span','dot'); d.style.background = (DASH.quality.strips[0]&& '') || '#34A853';
+    d.style.background = ({OK:'#34A853',SUSPECT:'#F5A623',SATURATED:'#17B6C4',NO_SIGNAL:'#9A8480',ERROR:'#E0483D'}[f]||'#9A8480');
+    it.appendChild(d); it.appendChild(el('span',null,f)); lg.appendChild(it);
+  });
+})();
+
+/* ---- integrity ---- */
+(function(){
+  const I = DASH.integrity; const wrap = document.getElementById('integrity');
+  const t = el('table','grid');
+  const rows = [
+    ['readings (rows)', fmt(I.total)],
+    ['sweeps (sample ticks)', fmt(I.sweeps)],
+    ['partial sweeps (&lt;4 sensors)', fmt(I.partial_sweeps)],
+    ['cadence (median)', I.cadence_actual_s!=null? I.cadence_actual_s+' s' : '—'],
+    ['span (local)', `${I.span_start} → ${I.span_end}`],
+    ['duration', I.duration],
+  ];
+  rows.forEach(([l,v])=>{ const tr=el('tr'); tr.appendChild(el('td',null,l)); tr.appendChild(el('td','num',v)); t.appendChild(tr); });
+  wrap.appendChild(t);
+
+  const t2 = el('table','grid'); t2.style.marginTop='14px';
+  t2.appendChild((()=>{ const tr=el('tr'); tr.appendChild(el('th',null,'sensor')); tr.appendChild(el('th','num','rows')); tr.appendChild(el('th',null,'note')); return tr; })());
+  I.per_sensor.forEach(p=>{ const tr=el('tr'); if(p.n!==I.count_max) tr.className='warnrow';
+    tr.appendChild(el('td','mono',p.id)); tr.appendChild(el('td','num',fmt(p.n)));
+    tr.appendChild(el('td','small muted', p.n!==I.count_max? `${I.count_max-p.n} fewer than the fullest channel` : 'fullest channel'));
+    t2.appendChild(tr); });
+  wrap.appendChild(t2);
+  if(I.count_gap>0){
+    wrap.appendChild(el('div','note',
+      `⚠ channel row counts differ by <b>${I.count_gap}</b> — ${I.partial_sweeps} sweep(s) are missing a sensor. Real dropped samples, surfaced not smoothed.`));
+  }
+
+  const t3 = el('table','grid'); t3.style.marginTop='14px';
+  t3.appendChild((()=>{ const tr=el('tr'); ['session','start (local)','end (local)','rows'].forEach((h,i)=>tr.appendChild(el(i===3?'th':'th', i===3?'num':null, h))); return tr; })());
+  I.sessions.forEach(s=>{ const tr=el('tr'); tr.appendChild(el('td','mono',s.session_id));
+    tr.appendChild(el('td','mono small',s.start)); tr.appendChild(el('td','mono small',s.end)); tr.appendChild(el('td','num',fmt(s.n))); t3.appendChild(tr); });
+  wrap.appendChild(el('div','small muted', `sessions (a reflash / port reopen starts a new one):`));
+  wrap.appendChild(t3);
+})();
+
+/* ---- footer provenance ---- */
+(function(){
+  const m=DASH.meta;
+  document.getElementById('prov').innerHTML =
+    `Generated ${m.generated_local} · schema_version ${m.schema_version} · parser <code>${m.parser}</code> · ` +
+    `device <code>${m.device_id||'?'}</code> git <code>${m.git||'?'}</code> run <code>${m.run||'?'}</code><br>` +
+    `Sources: ${m.sources.map(s=>`<code>${s.replace(/\\/g,'/').split('/').pop()}</code>`).join(', ')}<br>` +
+    `The legacy moist% <code>value</code> column is intentionally not plotted (B2/C2); analysis is on raw_value + band. ` +
+    `Band boundaries are the un-reconciled spec (A2) and are shown as <b>proposed</b>. ` +
+    `Day/night shading is omitted — it needs the real light schedule, which is not in the data.`;
+})();
+
+/* ---- theme toggle ---- */
+(function(){
+  const btn=document.getElementById('themeBtn'); const root=document.documentElement;
+  const apply = th => { root.setAttribute('data-theme', th); btn.textContent = th==='dark'? 'light mode':'soil mode';
+    [trajChart,spreadChart,distChart].forEach(c=>{ if(c) c.update(); }); };
+  let cur='light'; try{ cur = localStorage.getItem('sprout-theme')||'light'; }catch(e){}
+  btn.addEventListener('click', ()=>{ cur = (cur==='dark')?'light':'dark'; try{ localStorage.setItem('sprout-theme',cur);}catch(e){} apply(cur); });
+  buildTraj(); buildSpread(); buildDist(); apply(cur);
+})();
+</script>
+</body>
+</html>

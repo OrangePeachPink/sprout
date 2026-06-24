@@ -8,8 +8,8 @@ Backlog lane (see [`../../BACKLOG.md`](../../BACKLOG.md) section E):
 
 | Item | What | Status |
 | --- | --- | --- |
-| E6 | Schema-v1 log parser (`parse_v1.py`) | done — this file |
-| E7 | 4-channel dashboard + analytics (Sprout-styled) | next |
+| E6 | Schema-v1 log parser (`parse_v1.py`) | done |
+| E7 | 4-channel dashboard (`dashboard.py` + template) | done |
 | E5 | Local parquet / DuckDB analysis tier | deferred until query/ML volume justifies it |
 
 ## `parse_v1.py` — schema-v1 reader (E6)
@@ -54,6 +54,35 @@ r.raw_value, r.band, r.quality_flag, r.spread, r.gpio   # the trustworthy signal
 `band_for_raw(raw, bounds)` is a naive threshold helper for drawing the band ladder; it ignores the
 firmware deadband/hysteresis, so prefer the per-row `Reading.band` (the device-emitted `level`) for
 ground truth.
+
+## `dashboard.py` — 4-channel dashboard (E7)
+
+Renders a **single self-contained HTML dashboard** from the v1 logs, styled with the Sprout design
+system (`../../docs/design/`). Chart.js is vendored (`vendor/chart.umd.min.js`) and inlined, so the
+output opens offline with no network — one file you can double-click.
+
+```text
+python tools/analytics/dashboard.py                  # all logs/ -> reports/plants_dashboard.html
+python tools/analytics/dashboard.py logs/ -o out.html
+python tools/analytics/dashboard.py docs/sample_log.csv
+```
+
+Output lands in `reports/` (gitignored — derived and rebuildable from the logs, never tracked).
+
+Panels: per-channel summary cards (raw + band pill + mood), the Sprout calibration range-ladder with
+each probe's live position, the overlaid raw trajectory (7-band shading behind it), cross-channel
+spread (the C1 pin/placement variance), per-channel distribution, a `quality_flag` heat-strip, and a
+data-integrity grid that surfaces dropped/partial sweeps and session boundaries instead of hiding them.
+
+Honesty rules, enforced in the generator:
+
+- the legacy moist% `value` is never plotted — raw + band only (B2/C2);
+- the 7-band boundaries are labelled **proposed**, not validated (A2);
+- day/night shading is omitted — it needs the real light schedule, which is not in the data; overall
+  drying slope is shown instead.
+
+`vendor/chart.umd.min.js` is Chart.js v4.4.3 (MIT), vendored so the dashboard is offline and
+self-contained. Delete it and the generator falls back to a CDN `<script>` tag.
 
 ## The `value` column is the legacy moist% — do not analyse on it (B2 / C2)
 
