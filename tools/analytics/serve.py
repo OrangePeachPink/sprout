@@ -29,6 +29,7 @@ if str(_HERE) not in sys.path:
 from dashboard import (  # noqa: E402  (sibling import)
     RANGE_HOURS,
     build_context,
+    filter_channels,
     filter_since,
     gather_inputs,
     render,
@@ -38,11 +39,19 @@ from parse_v1 import parse_files  # noqa: E402
 _REPO = _HERE.parents[1]
 
 
-def _context(inputs: list[str], hours: float | None = None) -> dict:
-    data = filter_since(parse_files(inputs), hours)
+def _context(
+    inputs: list[str], hours: float | None = None, channels: list[str] | None = None
+) -> dict:
+    data = parse_files(inputs)
+    all_ch = sorted(
+        {r.sensor_id for r in data.readings if r.record_type.startswith("plants.soil")}
+    )
+    data = filter_since(filter_channels(data, channels), hours)
     if not data.readings:
         raise ValueError(f"no readings parsed from {inputs}")
-    return build_context(data)
+    ctx = build_context(data)
+    ctx["meta"]["all_channels"] = all_ch  # full set, so the toggles can re-enable
+    return ctx
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
@@ -59,16 +68,18 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # http.server dispatch name
         parsed = urlparse(self.path)
-        rng = parse_qs(parsed.query).get("range", ["all"])[0]
-        hours = RANGE_HOURS.get(rng)  # unknown / "all" -> None -> full history
+        q = parse_qs(parsed.query)
+        hours = RANGE_HOURS.get(q.get("range", ["all"])[0])  # unknown/"all" -> None
+        channels = [c for c in q.get("channels", [""])[0].split(",") if c] or None
         try:
             if parsed.path in ("/", "/index.html"):
                 self._send(
-                    render(_context(self.inputs, hours)), "text/html; charset=utf-8"
+                    render(_context(self.inputs, hours, channels)),
+                    "text/html; charset=utf-8",
                 )
             elif parsed.path == "/data.json":
                 blob = json.dumps(
-                    _context(self.inputs, hours),
+                    _context(self.inputs, hours, channels),
                     separators=(",", ":"),
                     ensure_ascii=False,
                 )
