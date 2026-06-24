@@ -9,9 +9,6 @@
   "ignores": [
     // No-fly: the work ledger is migrating to GitHub Issues; its formatting is
     // handled at that migration, not here.
-    "BACKLOG.md",
-    // Vendored design delivery - stored verbatim for provenance, not ours to
-    // reformat (the design system v1 docs ARE linted).
-    "docs/design/sprout-v2/**"
+    "BACKLOG.md"
   ]
 }
