@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background:#eef4e6; }
+  @keyframes pov-sway { 0%,100% { transform: rotate(-2.4deg); } 50% { transform: rotate(2.4deg); } }
+  @keyframes pov-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.045) translateY(-2px); } }
+  @keyframes pov-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+  @keyframes pov-drift { 0% { transform: translateY(10px); opacity:0; } 18% { opacity:0.8; } 100% { transform: translateY(-150px); opacity:0; } }
+  @keyframes pov-drip { 0%,55% { transform: translateY(0) scale(1); opacity:0; } 62% { opacity:0.9; } 100% { transform: translateY(54px) scale(0.7); opacity:0; } }
+  @keyframes pov-fadein { 0% { opacity:0; transform: translateY(6px); } 100% { opacity:1; transform: translateY(0); } }
+  @keyframes pov-ringpulse { 0%,100% { opacity:0.5; } 50% { opacity:0.8; } }
+  .pov-sway { transform-box: fill-box; transform-origin: 50% 92%; animation: pov-sway 6.5s ease-in-out infinite; }
+  .pov-breathe { transform-box: fill-box; transform-origin: 50% 100%; animation: pov-breathe 4.5s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .pov-sway,.pov-breathe { animation:none !important; } }
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:#eef4e6; padding:36px 24px 70px; font-family:'Hanken Grotesk',sans-serif;">
+<div style="max-width:1000px; margin:0 auto;">
+
+  <!-- header note -->
+  <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:18px;">
+    <div style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:24px; color:#1e2a18;">Plant's POV <span style="font-weight:600; font-size:15px; color:#7a8a6e;">— pushed further</span></div>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8a9a78;">the plant is the story</span>
+  </div>
+
+  <!-- HERO -->
+  <div style="position:relative; overflow:hidden; border-radius:26px; background:radial-gradient(120% 100% at 50% 18%, #ffffff 0%, #eaf3da 55%, #dcecc4 100%); border:1px solid #d7e6c2; height:620px;">
+
+    <!-- ambient motes -->
+    <div style="position:absolute; left:18%; bottom:90px; width:7px; height:7px; border-radius:50%; background:#b6d98a; animation:pov-drift 7s ease-in infinite;"></div>
+    <div style="position:absolute; left:30%; bottom:80px; width:5px; height:5px; border-radius:50%; background:#cbe4a6; animation:pov-drift 9s ease-in infinite 1.5s;"></div>
+    <div style="position:absolute; left:68%; bottom:100px; width:6px; height:6px; border-radius:50%; background:#b6d98a; animation:pov-drift 8s ease-in infinite 3s;"></div>
+    <div style="position:absolute; left:80%; bottom:70px; width:5px; height:5px; border-radius:50%; background:#e0c068; animation:pov-drift 10s ease-in infinite 0.8s;"></div>
+    <div style="position:absolute; left:46%; bottom:60px; width:4px; height:4px; border-radius:50%; background:#cbe4a6; animation:pov-drift 11s ease-in infinite 4s;"></div>
+
+    <!-- speech bubble -->
+    <div style="position:absolute; top:44px; left:50%; transform:translateX(-50%); z-index:3; width:min(560px,86%);">
+      <div style="animation:pov-bob 5s ease-in-out infinite;">
+        <div key="{{ moodKey }}" style="animation:pov-fadein 0.5s ease; background:#ffffff; border:1px solid #e2ecd2; border-radius:22px; padding:22px 30px; box-shadow:0 10px 30px rgba(30,42,24,0.10); text-align:center; position:relative;">
+          <div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:30px; line-height:1.2; color:#1e2a18;">{{ say }}</div>
+          <div style="position:absolute; left:50%; bottom:-11px; transform:translateX(-50%) rotate(45deg); width:22px; height:22px; background:#ffffff; border-right:1px solid #e2ecd2; border-bottom:1px solid #e2ecd2;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- moisture ring halo behind plant -->
+    <div style="position:absolute; left:50%; bottom:96px; transform:translateX(-50%); width:300px; height:300px; border-radius:50%; background:{{ ringStyle }}; -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 13px)); mask:radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 13px)); animation:pov-ringpulse 4.5s ease-in-out infinite;"></div>
+
+    <!-- the plant, large -->
+    <div style="position:absolute; left:50%; bottom:104px; transform:translateX(-50%); z-index:2;">
+      <svg width="280" height="340" viewBox="0 0 200 250" class="pov-sway">
+        <!-- soil mound -->
+        <ellipse cx="100" cy="236" rx="74" ry="15" fill="#3a2a1c" opacity="0.18"></ellipse>
+        <path d="M40 236 Q100 214 160 236 Z" fill="#5a3f28"></path>
+        <path d="M52 233 Q100 219 148 233" fill="none" stroke="#6f5236" stroke-width="3" stroke-linecap="round"></path>
+        <!-- stem -->
+        <path d="M100 232 C99 190 101 160 100 120" fill="none" stroke="{{ stemColor }}" stroke-width="7" stroke-linecap="round"></path>
+        <!-- leaves group (breathe) -->
+        <g class="pov-breathe">
+          <!-- left leaf -->
+          <path d="M100 150 C66 140 44 108 50 70 C90 84 104 120 100 150 Z" fill="{{ sproutColor }}" stroke="{{ stemColor }}" stroke-width="3" stroke-linejoin="round"></path>
+          <path d="M96 146 C78 128 64 104 56 80" fill="none" stroke="{{ stemColor }}" stroke-width="2.5" stroke-linecap="round" opacity="0.55"></path>
+          <!-- right leaf -->
+          <path d="M100 150 C134 140 156 108 150 70 C110 84 96 120 100 150 Z" fill="{{ leafColor }}" stroke="{{ stemColor }}" stroke-width="3" stroke-linejoin="round"></path>
+          <path d="M104 146 C122 128 136 104 144 80" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" opacity="0.35"></path>
+          <!-- top tip leaf -->
+          <path d="M100 122 C92 104 96 84 110 72 C116 92 112 112 100 122 Z" fill="{{ tipColor }}" stroke="{{ stemColor }}" stroke-width="2.5" stroke-linejoin="round"></path>
+        </g>
+        <!-- dewdrop -->
+        <circle cx="150" cy="92" r="5" fill="{{ dropColor }}" style="transform-box:fill-box; transform-origin:center; animation:pov-drip 6s ease-in infinite 2s;"></circle>
+      </svg>
+    </div>
+
+    <!-- name + mood pill -->
+    <div style="position:absolute; bottom:34px; left:0; right:0; text-align:center; z-index:3;">
+      <div style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:26px; color:#1e2a18;">Monstera</div>
+      <div key="{{ moodKey }}" style="display:inline-flex; align-items:center; gap:8px; margin-top:8px; background:{{ pillBg }}; border-radius:999px; padding:7px 16px; animation:pov-fadein 0.5s ease;">
+        <span style="width:9px; height:9px; border-radius:50%; background:{{ leafColor }};"></span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:13px; color:{{ pillText }};">{{ sub }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- voice extends -->
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:18px;">
+    <div style="background:#fff; border:1px solid #e3e9d8; border-radius:16px; padding:20px; display:flex; gap:14px; align-items:center;">
+      <div style="width:40px; height:40px; border-radius:11px; background:#dff0cc; flex-shrink:0; display:flex; align-items:center; justify-content:center;"><svg width="22" height="26" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+      <div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:3px;">PHONE · push</div><div style="font-size:14px; color:#1e2a18; line-height:1.4;">“Herb box here — I'm getting thirsty. No rush, maybe tomorrow.”</div></div>
+    </div>
+    <div style="background:#fff; border:1px solid #e3e9d8; border-radius:16px; padding:20px; display:flex; gap:14px; align-items:center;">
+      <div style="width:40px; height:40px; border-radius:11px; background:#cdeef1; flex-shrink:0; display:flex; align-items:center; justify-content:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e7a86" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c0 0-6 6.4-6 10.2A6 6 0 0 0 18 13.2C18 9.4 12 3 12 3z"></path></svg></div>
+      <div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:3px;">WIDGET · status</div><div style="font-size:14px; color:#1e2a18; line-height:1.4;">“All four of us are doing great today.”</div></div>
+    </div>
+  </div>
+
+  <div style="font-family:'Hanken Grotesk',sans-serif; font-size:13px; color:#7a8a6e; line-height:1.55; margin-top:16px; max-width:760px;">The plant owns the screen and tells its own story — swaying, breathing, a dewdrop catching the light, its mood shifting with the soil. Motion + voice carry the personality (no cartoon face needed). Watch the bubble: it cycles through how Monstera's feeling.</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1040,&quot;height&quot;:860}}">
+class Component extends DCLogic {
+  state = { i: 0 };
+  moods = [
+    { key:'thriving',  leaf:'#34a853', sprout:'#8bd24f', tip:'#a9da6e', stem:'#2f7d3f', drop:'#9fdcff', deg:295,
+      say:"I'm feeling wonderful today.", sub:'82% · thriving', pillBg:'#dff0cc', pillText:'#1f6b33' },
+    { key:'content',   leaf:'#5a9e2e', sprout:'#a9da6e', tip:'#c2e88a', stem:'#4a8a2a', drop:'#9fdcff', deg:225,
+      say:"Comfortable — just sipping slowly.", sub:'64% · content', pillBg:'#e8f4d6', pillText:'#456b1f' },
+    { key:'thirsty',   leaf:'#cf8a1e', sprout:'#f5a623', tip:'#f7c46a', stem:'#9a6a18', drop:'#f3d27a', deg:130,
+      say:"Getting a little thirsty\u2026", sub:'38% · thirsty', pillBg:'#fbe7c4', pillText:'#9a6410' },
+    { key:'refreshed', leaf:'#0e8a96', sprout:'#17b6c4', tip:'#7fdce6', stem:'#0e7a86', drop:'#bfeef4', deg:275,
+      say:"Ahh \u2014 just had a drink. Thank you.", sub:'76% · refreshed', pillBg:'#cdeef1', pillText:'#0e7a86' }
+  ];
+  componentDidMount() {
+    this._t = setInterval(() => this.setState(s => ({ i: (s.i + 1) % this.moods.length })), 4600);
+  }
+  componentWillUnmount() { clearInterval(this._t); }
+  renderVals() {
+    const m = this.moods[this.state.i];
+    return {
+      moodKey: m.key,
+      say: m.say,
+      sub: m.sub,
+      leafColor: m.leaf,
+      sproutColor: m.sprout,
+      tipColor: m.tip,
+      stemColor: m.stem,
+      dropColor: m.drop,
+      pillBg: m.pillBg,
+      pillText: m.pillText,
+      ringStyle: `conic-gradient(${m.leaf} 0deg ${m.deg}deg, rgba(52,168,83,0.12) ${m.deg}deg 360deg)`
+    };
+  }
+}
+</script>
+</body>
+</html>

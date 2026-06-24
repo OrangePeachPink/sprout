@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+</style>
+</helmet>
+
+<!-- ============================================================= -->
+<!-- DIRECTION A — SPROUT  (lush botanical-playful)                -->
+<!-- ============================================================= -->
+<div style="position:absolute; left:0px; top:0px; width:1240px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:16px; cursor:grab;">
+    <span style="font-family:'Baloo 2',sans-serif; font-size:14px; font-weight:700; letter-spacing:0.02em; color:#34691f;">Direction A · Sprout</span>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8a9a78;">lush · botanical · playful</span>
+  </div>
+
+  <div style="background:#eef4e6; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08); overflow:hidden;">
+
+    <!-- Hero -->
+    <div style="position:relative; padding:52px 52px 46px; background:radial-gradient(130% 130% at 88% -10%, #d8edbf 0%, #eef4e6 60%); overflow:hidden;">
+      <div style="position:absolute; top:-30px; right:-20px; width:200px; height:200px; border-radius:46% 54% 60% 40% / 50% 44% 56% 50%; background:radial-gradient(circle at 38% 34%, #8bd24f, #34a853 78%); opacity:0.92;"></div>
+      <div style="position:absolute; top:120px; right:150px; width:78px; height:78px; border-radius:50%; background:#f5a623; opacity:0.9;"></div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.14em; color:#5f7a3e; margin-bottom:16px;">SPROUT / DS</div>
+      <h1 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:66px; line-height:0.98; color:#1e2a18; margin:0 0 16px; max-width:640px;">Tend a tiny jungle.</h1>
+      <p style="font-family:'Hanken Grotesk',sans-serif; font-size:18px; line-height:1.5; color:#4a5740; margin:0; max-width:540px;">The lushest take: organic blobs, a rounded display face and saturated garden colors. Dense enough to run four pumps at once, warm enough to enjoy every morning.</p>
+    </div>
+
+    <!-- Palette / tokens -->
+    <div style="padding:38px 52px; border-top:1px solid #e0e7d3;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#8a9a78; margin-bottom:20px;">PALETTE &amp; TOKENS</div>
+      <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:12px;">
+        <div><div style="height:64px; border-radius:10px; background:#34a853;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#6f7e62; margin-top:7px;">#34A853</div><div style="font-family:'Hanken Grotesk',sans-serif; font-size:12px; font-weight:600; color:#1e2a18;">leaf</div></div>
+        <div><div style="height:64px; border-radius:10px; background:#8bd24f;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#6f7e62; margin-top:7px;">#8BD24F</div><div style="font-family:'Hanken Grotesk',sans-serif; font-size:12px; font-weight:600; color:#1e2a18;">sprout</div></div>
+        <div><div style="height:64px; border-radius:10px; background:#17b6c4;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#6f7e62; margin-top:7px;">#17B6C4</div><div style="font-family:'Hanken Grotesk',sans-serif; font-size:12px; font-weight:600; color:#1e2a18;">water</div></div>
+        <div><div style="height:64px; border-radius:10px; background:#f5a623;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#6f7e62; margin-top:7px;">#F5A623</div><div style="font-family:'Hanken Grotesk',sans-serif; font-size:12px; font-weight:600; color:#1e2a18;">sun</div></div>
+        <div><div style="height:64px; border-radius:10px; background:#e8703a;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#6f7e62; margin-top:7px;">#E8703A</div><div style="font-family:'Hanken Grotesk',sans-serif; font-size:12px; font-weight:600; color:#1e2a18;">clay</div></div>
+        <div><div style="height:64px; border-radius:10px; background:#e0483d;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#6f7e62; margin-top:7px;">#E0483D</div><div style="font-family:'Hanken Grotesk',sans-serif; font-size:12px; font-weight:600; color:#1e2a18;">alert</div></div>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:14px;">
+        <div style="flex:1; height:30px; border-radius:8px; background:#1e2a18;"></div>
+        <div style="flex:1; height:30px; border-radius:8px; background:#6f7e62;"></div>
+        <div style="flex:1; height:30px; border-radius:8px; background:#e3e9d8;"></div>
+        <div style="flex:1; height:30px; border-radius:8px; background:#f7faf2; border:1px solid #e3e9d8;"></div>
+        <div style="flex:1; height:30px; border-radius:8px; background:#ffffff; border:1px solid #e3e9d8;"></div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-top:10px;">ink · muted · border · surface-2 · surface &nbsp;|&nbsp; radius 10–18px · soft shadows</div>
+    </div>
+
+    <!-- Type + icons -->
+    <div style="padding:38px 52px; border-top:1px solid #e0e7d3;">
+      <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:36px; align-items:start;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#8a9a78; margin-bottom:18px;">TYPE</div>
+          <div style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:40px; color:#1e2a18; line-height:1; margin-bottom:4px;">Baloo 2</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:16px;">Display · rounded, friendly headings</div>
+          <div style="font-family:'Hanken Grotesk',sans-serif; font-weight:700; font-size:24px; color:#1e2a18; margin-bottom:4px;">Hanken Grotesk</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:16px;">Body &amp; UI · 400 / 600 / 700</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-weight:500; font-size:20px; color:#34691f;">JetBrains Mono · 62.4%</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-top:4px;">Numeric data &amp; labels</div>
+        </div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#8a9a78; margin-bottom:18px;">ICONS · rounded, 1.75 stroke</div>
+          <div style="display:flex; gap:14px; flex-wrap:wrap;">
+            <div style="width:52px; height:52px; border-radius:14px; background:#ffffff; border:1px solid #e3e9d8; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#34a853" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c0 0-6 6.4-6 10.2A6 6 0 0 0 18 13.2C18 9.4 12 3 12 3z"></path></svg></div>
+            <div style="width:52px; height:52px; border-radius:14px; background:#ffffff; border:1px solid #e3e9d8; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e8703a" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"></path></svg></div>
+            <div style="width:52px; height:52px; border-radius:14px; background:#ffffff; border:1px solid #e3e9d8; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5a623" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"></path></svg></div>
+            <div style="width:52px; height:52px; border-radius:14px; background:#ffffff; border:1px solid #e3e9d8; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#17b6c4" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M8 15.5a6 6 0 0 1 8 0"></path><circle cx="12" cy="19" r="0.6" fill="#17b6c4"></circle></svg></div>
+            <div style="width:52px; height:52px; border-radius:14px; background:#ffffff; border:1px solid #e3e9d8; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6f7e62" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"></rect><path d="M9 14l2.2 2.2L15.5 10"></path></svg></div>
+            <div style="width:52px; height:52px; border-radius:14px; background:#ffffff; border:1px solid #e3e9d8; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e0483d" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5L21 19H3z"></path><path d="M12 10v3.5"></path><circle cx="12" cy="16.4" r="0.6" fill="#e0483d"></circle></svg></div>
+          </div>
+          <div style="font-family:'Hanken Grotesk',sans-serif; font-size:12.5px; color:#6f7e62; margin-top:14px; line-height:1.5;">Droplet · pump · light · signal · relay · alert. Soft squircle chips, generous corners.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Components: buttons / badges / gauge -->
+    <div style="padding:38px 52px; border-top:1px solid #e0e7d3;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#8a9a78; margin-bottom:20px;">COMPONENTS</div>
+      <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:22px;">
+        <button style="font-family:'Hanken Grotesk',sans-serif; font-size:15px; font-weight:700; color:#ffffff; background:#34a853; border:none; border-radius:999px; padding:12px 24px; cursor:pointer; box-shadow:0 4px 12px rgba(52,168,83,0.28);">Water now</button>
+        <button style="font-family:'Hanken Grotesk',sans-serif; font-size:15px; font-weight:700; color:#2c4a1e; background:#ffffff; border:1.5px solid #cdddb8; border-radius:999px; padding:12px 24px; cursor:pointer;">Schedule</button>
+        <button style="font-family:'Hanken Grotesk',sans-serif; font-size:15px; font-weight:700; color:#e8703a; background:transparent; border:none; border-radius:999px; padding:12px 14px; cursor:pointer;">Pause pump</button>
+        <div style="display:flex; gap:8px;">
+          <span style="display:inline-flex; align-items:center; gap:6px; font-family:'Hanken Grotesk',sans-serif; font-size:13px; font-weight:700; color:#1f6b33; background:#dff0cc; border-radius:999px; padding:7px 13px;"><span style="width:8px; height:8px; border-radius:50%; background:#34a853;"></span>Optimal</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-family:'Hanken Grotesk',sans-serif; font-size:13px; font-weight:700; color:#0e7a86; background:#cdeef1; border-radius:999px; padding:7px 13px;"><span style="width:8px; height:8px; border-radius:50%; background:#17b6c4;"></span>Watering</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-family:'Hanken Grotesk',sans-serif; font-size:13px; font-weight:700; color:#9a6410; background:#fbe7c4; border-radius:999px; padding:7px 13px;"><span style="width:8px; height:8px; border-radius:50%; background:#f5a623;"></span>Dry</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-family:'Hanken Grotesk',sans-serif; font-size:13px; font-weight:700; color:#a32a22; background:#fad6d2; border-radius:999px; padding:7px 13px;"><span style="width:8px; height:8px; border-radius:50%; background:#e0483d;"></span>Error</span>
+        </div>
+      </div>
+
+      <!-- Channel cards -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+        <div style="background:#ffffff; border:1px solid #e3e9d8; border-radius:20px; padding:22px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px;">
+            <div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; letter-spacing:0.08em;">CH 1</div><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:23px; color:#1e2a18;">Monstera</div></div>
+            <span style="display:inline-flex; align-items:center; gap:6px; font-family:'Hanken Grotesk',sans-serif; font-size:12px; font-weight:700; color:#1f6b33; background:#dff0cc; border-radius:999px; padding:5px 11px;"><span style="width:7px; height:7px; border-radius:50%; background:#34a853;"></span>Optimal</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:18px;">
+            <div style="position:relative; width:112px; height:112px; border-radius:50%; background:conic-gradient(#34a853 0deg 223deg, #e7eede 223deg 360deg); flex-shrink:0;">
+              <div style="position:absolute; inset:12px; border-radius:50%; background:#ffffff; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-family:'JetBrains Mono',monospace; font-size:25px; font-weight:600; color:#1e2a18;">62%</span><span style="font-family:'Hanken Grotesk',sans-serif; font-size:11px; color:#8a9a78;">moisture</span></div>
+            </div>
+            <div style="flex:1; display:flex; flex-direction:column; gap:11px;">
+              <div><div style="font-family:'Hanken Grotesk',sans-serif; font-size:12px; color:#8a9a78;">Last watered</div><div style="font-family:'Hanken Grotesk',sans-serif; font-size:15px; font-weight:700; color:#1e2a18;">2 days ago</div></div>
+              <div><div style="font-family:'Hanken Grotesk',sans-serif; font-size:12px; color:#8a9a78;">Next cycle</div><div style="font-family:'Hanken Grotesk',sans-serif; font-size:15px; font-weight:700; color:#17b6c4;">in ~18 hours</div></div>
+            </div>
+          </div>
+          <svg viewBox="0 0 280 44" style="width:100%; height:40px; margin-top:16px; display:block;"><polyline points="0,36 35,28 70,31 105,19 140,23 175,11 210,17 245,8 280,13" fill="none" stroke="#8bd24f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+        </div>
+        <div style="background:#ffffff; border:1px solid #e3e9d8; border-radius:20px; padding:22px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px;">
+            <div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; letter-spacing:0.08em;">CH 3</div><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:23px; color:#1e2a18;">Herb box</div></div>
+            <span style="display:inline-flex; align-items:center; gap:6px; font-family:'Hanken Grotesk',sans-serif; font-size:12px; font-weight:700; color:#9a6410; background:#fbe7c4; border-radius:999px; padding:5px 11px;"><span style="width:7px; height:7px; border-radius:50%; background:#f5a623;"></span>Dry</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:18px;">
+            <div style="position:relative; width:112px; height:112px; border-radius:50%; background:conic-gradient(#f5a623 0deg 104deg, #e7eede 104deg 360deg); flex-shrink:0;">
+              <div style="position:absolute; inset:12px; border-radius:50%; background:#ffffff; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-family:'JetBrains Mono',monospace; font-size:25px; font-weight:600; color:#1e2a18;">29%</span><span style="font-family:'Hanken Grotesk',sans-serif; font-size:11px; color:#8a9a78;">moisture</span></div>
+            </div>
+            <div style="flex:1; display:flex; flex-direction:column; gap:11px;">
+              <div><div style="font-family:'Hanken Grotesk',sans-serif; font-size:12px; color:#8a9a78;">Last watered</div><div style="font-family:'Hanken Grotesk',sans-serif; font-size:15px; font-weight:700; color:#1e2a18;">5 days ago</div></div>
+              <div><div style="font-family:'Hanken Grotesk',sans-serif; font-size:12px; color:#8a9a78;">Next cycle</div><div style="font-family:'Hanken Grotesk',sans-serif; font-size:15px; font-weight:700; color:#e8703a;">due now</div></div>
+            </div>
+          </div>
+          <svg viewBox="0 0 280 44" style="width:100%; height:40px; margin-top:16px; display:block;"><polyline points="0,9 35,15 70,13 105,21 140,25 175,29 210,33 245,37 280,39" fill="none" stroke="#f5a623" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dense dashboard strip (control room) -->
+    <div style="padding:38px 52px; border-top:1px solid #e0e7d3;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#8a9a78; margin-bottom:20px;">DASHBOARD · DENSE</div>
+      <div style="background:#f7faf2; border:1px solid #e3e9d8; border-radius:18px; padding:18px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding-bottom:14px; border-bottom:1px solid #e3e9d8; margin-bottom:14px;">
+          <div style="display:flex; align-items:center; gap:10px;"><span style="width:9px; height:9px; border-radius:50%; background:#34a853;"></span><span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:17px; color:#1e2a18;">Garden · All systems nominal</span></div>
+          <div style="display:flex; gap:22px; font-family:'JetBrains Mono',monospace; font-size:12px;">
+            <span style="color:#8a9a78;">CHANNELS <span style="color:#1e2a18; font-weight:600;">4</span></span>
+            <span style="color:#8a9a78;">WATER TODAY <span style="color:#17b6c4; font-weight:600;">1.2L</span></span>
+            <span style="color:#8a9a78;">NEXT EVENT <span style="color:#1e2a18; font-weight:600;">CH3 now</span></span>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px;">
+          <div style="background:#ffffff; border:1px solid #e3e9d8; border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:'Hanken Grotesk',sans-serif; font-weight:700; font-size:13px; color:#1e2a18;">Monstera</span><span style="width:7px; height:7px; border-radius:50%; background:#34a853;"></span></div>
+            <div style="display:flex; align-items:center; gap:10px;"><div style="position:relative; width:44px; height:44px; border-radius:50%; background:conic-gradient(#34a853 0deg 223deg,#e7eede 223deg 360deg);"><div style="position:absolute; inset:5px; border-radius:50%; background:#fff;"></div></div><div><div style="font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600; color:#1e2a18;">62%</div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#8a9a78;">~18h</div></div></div>
+          </div>
+          <div style="background:#ffffff; border:1px solid #e3e9d8; border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:'Hanken Grotesk',sans-serif; font-weight:700; font-size:13px; color:#1e2a18;">Ferns</span><span style="width:7px; height:7px; border-radius:50%; background:#17b6c4;"></span></div>
+            <div style="display:flex; align-items:center; gap:10px;"><div style="position:relative; width:44px; height:44px; border-radius:50%; background:conic-gradient(#17b6c4 0deg 270deg,#e7eede 270deg 360deg);"><div style="position:absolute; inset:5px; border-radius:50%; background:#fff;"></div></div><div><div style="font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600; color:#1e2a18;">75%</div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#17b6c4;">pump on</div></div></div>
+          </div>
+          <div style="background:#ffffff; border:1px solid #f0dcb0; border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:'Hanken Grotesk',sans-serif; font-weight:700; font-size:13px; color:#1e2a18;">Herb box</span><span style="width:7px; height:7px; border-radius:50%; background:#f5a623;"></span></div>
+            <div style="display:flex; align-items:center; gap:10px;"><div style="position:relative; width:44px; height:44px; border-radius:50%; background:conic-gradient(#f5a623 0deg 104deg,#e7eede 104deg 360deg);"><div style="position:absolute; inset:5px; border-radius:50%; background:#fff;"></div></div><div><div style="font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600; color:#1e2a18;">29%</div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#e8703a;">due now</div></div></div>
+          </div>
+          <div style="background:#ffffff; border:1px solid #e3e9d8; border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:'Hanken Grotesk',sans-serif; font-weight:700; font-size:13px; color:#1e2a18;">Succulents</span><span style="width:7px; height:7px; border-radius:50%; background:#34a853;"></span></div>
+            <div style="display:flex; align-items:center; gap:10px;"><div style="position:relative; width:44px; height:44px; border-radius:50%; background:conic-gradient(#34a853 0deg 180deg,#e7eede 180deg 360deg);"><div style="position:absolute; inset:5px; border-radius:50%; background:#fff;"></div></div><div><div style="font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600; color:#1e2a18;">50%</div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#8a9a78;">~3d</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dark mode peek -->
+    <div style="padding:38px 52px; border-top:1px solid #e0e7d3;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#8a9a78; margin-bottom:20px;">DARK MODE · for late nights</div>
+      <div style="background:#131a10; border:1px solid #2a3522; border-radius:18px; padding:22px; display:flex; align-items:center; gap:22px;">
+        <div style="position:relative; width:104px; height:104px; border-radius:50%; background:conic-gradient(#9ee04a 0deg 223deg, #283322 223deg 360deg); flex-shrink:0; box-shadow:0 0 22px rgba(158,224,74,0.22);">
+          <div style="position:absolute; inset:12px; border-radius:50%; background:#1b2417; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-family:'JetBrains Mono',monospace; font-size:23px; font-weight:600; color:#eaf2e0;">62%</span><span style="font-family:'Hanken Grotesk',sans-serif; font-size:10px; color:#7c8a72;">moisture</span></div>
+        </div>
+        <div style="flex:1;">
+          <div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:22px; color:#eaf2e0; margin-bottom:6px;">Monstera</div>
+          <div style="font-family:'Hanken Grotesk',sans-serif; font-size:13px; color:#9fb094; margin-bottom:14px;">Same tokens, inverted. Greens glow, surfaces drop to soil-dark.</div>
+          <div style="display:flex; gap:10px;">
+            <button style="font-family:'Hanken Grotesk',sans-serif; font-size:13px; font-weight:700; color:#131a10; background:#9ee04a; border:none; border-radius:999px; padding:8px 16px; cursor:pointer;">Water now</button>
+            <span style="display:inline-flex; align-items:center; gap:6px; font-family:'Hanken Grotesk',sans-serif; font-size:12px; font-weight:700; color:#9ee04a; background:rgba(158,224,74,0.12); border:1px solid rgba(158,224,74,0.25); border-radius:999px; padding:7px 13px;"><span style="width:7px; height:7px; border-radius:50%; background:#9ee04a; box-shadow:0 0 6px #9ee04a;"></span>Optimal</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Choose if -->
+    <div style="padding:36px 52px; border-top:1px solid #e0e7d3; background:#e6efd6;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#5f7a3e; margin-bottom:12px;">CHOOSE SPROUT IF…</div>
+      <ul style="font-family:'Hanken Grotesk',sans-serif; font-size:15px; line-height:1.7; color:#374a2a; margin:0; padding-left:20px; max-width:780px;">
+        <li>You want the <strong>most personality and warmth</strong> — a tool that feels like a hobby you love, great for the portfolio story.</li>
+        <li>The rounded display + organic blobs read instantly as <strong>"plants," friendly, alive.</strong></li>
+        <li>Still scales to dense dashboards — playful skin, serious plumbing underneath.</li>
+      </ul>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#7a8a68; margin-top:14px;">Trade-off: the most opinionated look; less &quot;neutral product&quot; if you later sell it.</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================= -->
+<!-- DIRECTION B — CANOPY  (fresh, clean, vibrant)                 -->
+<!-- ============================================================= -->
+<div style="position:absolute; left:1320px; top:0px; width:1240px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:16px; cursor:grab;">
+    <span style="font-family:'Outfit',sans-serif; font-size:14px; font-weight:700; color:#0f766e;">Direction B · Canopy</span>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#94a39c;">fresh · clean · vibrant</span>
+  </div>
+
+  <div style="background:#f4f7f6; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08); overflow:hidden;">
+
+    <!-- Hero -->
+    <div style="padding:52px 52px 46px; background:#ffffff; border-bottom:1px solid #eaefed;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:18px;">
+        <span style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#10b981;">CANOPY</span>
+        <span style="width:5px; height:5px; border-radius:50%; background:#cbd5d1;"></span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#94a39c;">design system</span>
+      </div>
+      <h1 style="font-family:'Outfit',sans-serif; font-weight:700; font-size:64px; line-height:1; letter-spacing:-0.02em; color:#102a22; margin:0 0 16px; max-width:660px;">Fresh air, clear data.</h1>
+      <p style="font-family:'Plus Jakarta Sans',sans-serif; font-size:18px; line-height:1.5; color:#52645c; margin:0; max-width:540px;">The balanced middle: bright white space, vivid jewel accents, and crisp rounded cards. Reads like a modern product app — calm to scan, punchy where it counts.</p>
+      <div style="display:flex; gap:10px; margin-top:24px;">
+        <span style="width:40px; height:40px; border-radius:12px; background:#10b981;"></span>
+        <span style="width:40px; height:40px; border-radius:12px; background:#06b6d4;"></span>
+        <span style="width:40px; height:40px; border-radius:12px; background:#84cc16;"></span>
+        <span style="width:40px; height:40px; border-radius:12px; background:#f59e0b;"></span>
+        <span style="width:40px; height:40px; border-radius:12px; background:#fb7185;"></span>
+      </div>
+    </div>
+
+    <!-- Palette / tokens -->
+    <div style="padding:38px 52px; background:#ffffff; border-bottom:1px solid #eaefed;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#94a39c; margin-bottom:20px;">PALETTE &amp; TOKENS</div>
+      <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:12px;">
+        <div><div style="height:64px; border-radius:12px; background:#10b981;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#7a8a82; margin-top:7px;">#10B981</div><div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; font-weight:600; color:#102a22;">emerald</div></div>
+        <div><div style="height:64px; border-radius:12px; background:#06b6d4;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#7a8a82; margin-top:7px;">#06B6D4</div><div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; font-weight:600; color:#102a22;">cyan</div></div>
+        <div><div style="height:64px; border-radius:12px; background:#84cc16;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#7a8a82; margin-top:7px;">#84CC16</div><div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; font-weight:600; color:#102a22;">lime</div></div>
+        <div><div style="height:64px; border-radius:12px; background:#f59e0b;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#7a8a82; margin-top:7px;">#F59E0B</div><div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; font-weight:600; color:#102a22;">amber</div></div>
+        <div><div style="height:64px; border-radius:12px; background:#fb7185;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#7a8a82; margin-top:7px;">#FB7185</div><div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; font-weight:600; color:#102a22;">rose</div></div>
+        <div><div style="height:64px; border-radius:12px; background:#ef4444;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#7a8a82; margin-top:7px;">#EF4444</div><div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; font-weight:600; color:#102a22;">red</div></div>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:14px;">
+        <div style="flex:1; height:30px; border-radius:9px; background:#102a22;"></div>
+        <div style="flex:1; height:30px; border-radius:9px; background:#52645c;"></div>
+        <div style="flex:1; height:30px; border-radius:9px; background:#eaefed;"></div>
+        <div style="flex:1; height:30px; border-radius:9px; background:#f4f7f6; border:1px solid #eaefed;"></div>
+        <div style="flex:1; height:30px; border-radius:9px; background:#ffffff; border:1px solid #eaefed;"></div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#94a39c; margin-top:10px;">ink · muted · border · surface-2 · surface &nbsp;|&nbsp; radius 12–16px · crisp shadows</div>
+    </div>
+
+    <!-- Type + icons -->
+    <div style="padding:38px 52px; background:#ffffff; border-bottom:1px solid #eaefed;">
+      <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:36px; align-items:start;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#94a39c; margin-bottom:18px;">TYPE</div>
+          <div style="font-family:'Outfit',sans-serif; font-weight:700; font-size:40px; letter-spacing:-0.02em; color:#102a22; line-height:1; margin-bottom:4px;">Outfit</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#94a39c; margin-bottom:16px;">Display · geometric, friendly headings</div>
+          <div style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:24px; color:#102a22; margin-bottom:4px;">Plus Jakarta Sans</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#94a39c; margin-bottom:16px;">Body &amp; UI · 400 / 600 / 700</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-weight:500; font-size:20px; color:#0f766e;">JetBrains Mono · 62.4%</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#94a39c; margin-top:4px;">Numeric data &amp; labels</div>
+        </div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#94a39c; margin-bottom:18px;">ICONS · crisp, 1.75 stroke</div>
+          <div style="display:flex; gap:14px; flex-wrap:wrap;">
+            <div style="width:52px; height:52px; border-radius:12px; background:#ecfdf5; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c0 0-6 6.4-6 10.2A6 6 0 0 0 18 13.2C18 9.4 12 3 12 3z"></path></svg></div>
+            <div style="width:52px; height:52px; border-radius:12px; background:#fffbeb; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"></path></svg></div>
+            <div style="width:52px; height:52px; border-radius:12px; background:#fffbeb; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"></path></svg></div>
+            <div style="width:52px; height:52px; border-radius:12px; background:#ecfeff; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M8 15.5a6 6 0 0 1 8 0"></path><circle cx="12" cy="19" r="0.6" fill="#06b6d4"></circle></svg></div>
+            <div style="width:52px; height:52px; border-radius:12px; background:#f4f7f6; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#52645c" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"></rect><path d="M9 14l2.2 2.2L15.5 10"></path></svg></div>
+            <div style="width:52px; height:52px; border-radius:12px; background:#fff1f2; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fb7185" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5L21 19H3z"></path><path d="M12 10v3.5"></path><circle cx="12" cy="16.4" r="0.6" fill="#fb7185"></circle></svg></div>
+          </div>
+          <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:12.5px; color:#52645c; margin-top:14px; line-height:1.5;">Tinted soft-square chips — each icon sits on its own color wash.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Components -->
+    <div style="padding:38px 52px; background:#ffffff; border-bottom:1px solid #eaefed;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#94a39c; margin-bottom:20px;">COMPONENTS</div>
+      <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:22px;">
+        <button style="font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:700; color:#ffffff; background:#10b981; border:none; border-radius:12px; padding:12px 22px; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.25);">Water now</button>
+        <button style="font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:700; color:#0f3d34; background:#ffffff; border:1.5px solid #d6e0dd; border-radius:12px; padding:12px 22px; cursor:pointer;">Schedule</button>
+        <button style="font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:700; color:#0891b2; background:#ecfeff; border:none; border-radius:12px; padding:12px 18px; cursor:pointer;">+ Add sensor</button>
+        <div style="display:flex; gap:8px;">
+          <span style="display:inline-flex; align-items:center; gap:6px; font-family:'Plus Jakarta Sans',sans-serif; font-size:13px; font-weight:700; color:#047857; background:#d1fae5; border-radius:8px; padding:7px 12px;"><span style="width:7px; height:7px; border-radius:2px; background:#10b981;"></span>Optimal</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-family:'Plus Jakarta Sans',sans-serif; font-size:13px; font-weight:700; color:#0e7490; background:#cffafe; border-radius:8px; padding:7px 12px;"><span style="width:7px; height:7px; border-radius:2px; background:#06b6d4;"></span>Watering</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-family:'Plus Jakarta Sans',sans-serif; font-size:13px; font-weight:700; color:#b45309; background:#fef3c7; border-radius:8px; padding:7px 12px;"><span style="width:7px; height:7px; border-radius:2px; background:#f59e0b;"></span>Dry</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-family:'Plus Jakarta Sans',sans-serif; font-size:13px; font-weight:700; color:#be123c; background:#ffe4e6; border-radius:8px; padding:7px 12px;"><span style="width:7px; height:7px; border-radius:2px; background:#fb7185;"></span>Error</span>
+        </div>
+      </div>
+
+      <!-- Channel cards -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+        <div style="background:#ffffff; border:1px solid #eaefed; border-radius:16px; padding:22px; box-shadow:0 6px 18px rgba(16,42,34,0.05);">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px;">
+            <div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#94a39c; letter-spacing:0.08em;">CH 1</div><div style="font-family:'Outfit',sans-serif; font-weight:700; font-size:22px; color:#102a22;">Monstera</div></div>
+            <span style="display:inline-flex; align-items:center; gap:6px; font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; font-weight:700; color:#047857; background:#d1fae5; border-radius:8px; padding:5px 10px;"><span style="width:6px; height:6px; border-radius:2px; background:#10b981;"></span>Optimal</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:18px;">
+            <div style="position:relative; width:108px; height:108px; border-radius:50%; background:conic-gradient(#10b981 0deg 223deg, #eef2f0 223deg 360deg); flex-shrink:0;">
+              <div style="position:absolute; inset:11px; border-radius:50%; background:#ffffff; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:600; color:#102a22;">62%</span><span style="font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#94a39c;">moisture</span></div>
+            </div>
+            <div style="flex:1; display:flex; flex-direction:column; gap:11px;">
+              <div><div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; color:#94a39c;">Last watered</div><div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:700; color:#102a22;">2 days ago</div></div>
+              <div><div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; color:#94a39c;">Next cycle</div><div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:700; color:#0891b2;">in ~18 hours</div></div>
+            </div>
+          </div>
+          <svg viewBox="0 0 280 44" style="width:100%; height:40px; margin-top:16px; display:block;"><polyline points="0,36 35,28 70,31 105,19 140,23 175,11 210,17 245,8 280,13" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+        </div>
+        <div style="background:#ffffff; border:1px solid #eaefed; border-radius:16px; padding:22px; box-shadow:0 6px 18px rgba(16,42,34,0.05);">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px;">
+            <div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#94a39c; letter-spacing:0.08em;">CH 3</div><div style="font-family:'Outfit',sans-serif; font-weight:700; font-size:22px; color:#102a22;">Herb box</div></div>
+            <span style="display:inline-flex; align-items:center; gap:6px; font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; font-weight:700; color:#b45309; background:#fef3c7; border-radius:8px; padding:5px 10px;"><span style="width:6px; height:6px; border-radius:2px; background:#f59e0b;"></span>Dry</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:18px;">
+            <div style="position:relative; width:108px; height:108px; border-radius:50%; background:conic-gradient(#f59e0b 0deg 104deg, #eef2f0 104deg 360deg); flex-shrink:0;">
+              <div style="position:absolute; inset:11px; border-radius:50%; background:#ffffff; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:600; color:#102a22;">29%</span><span style="font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#94a39c;">moisture</span></div>
+            </div>
+            <div style="flex:1; display:flex; flex-direction:column; gap:11px;">
+              <div><div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; color:#94a39c;">Last watered</div><div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:700; color:#102a22;">5 days ago</div></div>
+              <div><div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; color:#94a39c;">Next cycle</div><div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:700; color:#e11d48;">due now</div></div>
+            </div>
+          </div>
+          <svg viewBox="0 0 280 44" style="width:100%; height:40px; margin-top:16px; display:block;"><polyline points="0,9 35,15 70,13 105,21 140,25 175,29 210,33 245,37 280,39" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dense dashboard strip -->
+    <div style="padding:38px 52px; background:#ffffff; border-bottom:1px solid #eaefed;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#94a39c; margin-bottom:20px;">DASHBOARD · DENSE</div>
+      <div style="background:#f4f7f6; border:1px solid #eaefed; border-radius:16px; padding:18px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding-bottom:14px; border-bottom:1px solid #e3e9e6; margin-bottom:14px;">
+          <div style="display:flex; align-items:center; gap:10px;"><span style="width:9px; height:9px; border-radius:50%; background:#10b981;"></span><span style="font-family:'Outfit',sans-serif; font-weight:700; font-size:17px; color:#102a22;">Greenhouse · All systems nominal</span></div>
+          <div style="display:flex; gap:22px; font-family:'JetBrains Mono',monospace; font-size:12px;">
+            <span style="color:#94a39c;">CHANNELS <span style="color:#102a22; font-weight:600;">4</span></span>
+            <span style="color:#94a39c;">WATER TODAY <span style="color:#06b6d4; font-weight:600;">1.2L</span></span>
+            <span style="color:#94a39c;">NEXT <span style="color:#102a22; font-weight:600;">CH3 now</span></span>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px;">
+          <div style="background:#ffffff; border:1px solid #eaefed; border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:13px; color:#102a22;">Monstera</span><span style="width:7px; height:7px; border-radius:50%; background:#10b981;"></span></div>
+            <div style="display:flex; align-items:center; gap:10px;"><div style="position:relative; width:44px; height:44px; border-radius:50%; background:conic-gradient(#10b981 0deg 223deg,#eef2f0 223deg 360deg);"><div style="position:absolute; inset:5px; border-radius:50%; background:#fff;"></div></div><div><div style="font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600; color:#102a22;">62%</div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#94a39c;">~18h</div></div></div>
+          </div>
+          <div style="background:#ffffff; border:1px solid #eaefed; border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:13px; color:#102a22;">Ferns</span><span style="width:7px; height:7px; border-radius:50%; background:#06b6d4;"></span></div>
+            <div style="display:flex; align-items:center; gap:10px;"><div style="position:relative; width:44px; height:44px; border-radius:50%; background:conic-gradient(#06b6d4 0deg 270deg,#eef2f0 270deg 360deg);"><div style="position:absolute; inset:5px; border-radius:50%; background:#fff;"></div></div><div><div style="font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600; color:#102a22;">75%</div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#06b6d4;">pump on</div></div></div>
+          </div>
+          <div style="background:#ffffff; border:1px solid #fde9c8; border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:13px; color:#102a22;">Herb box</span><span style="width:7px; height:7px; border-radius:50%; background:#f59e0b;"></span></div>
+            <div style="display:flex; align-items:center; gap:10px;"><div style="position:relative; width:44px; height:44px; border-radius:50%; background:conic-gradient(#f59e0b 0deg 104deg,#eef2f0 104deg 360deg);"><div style="position:absolute; inset:5px; border-radius:50%; background:#fff;"></div></div><div><div style="font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600; color:#102a22;">29%</div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#e11d48;">due now</div></div></div>
+          </div>
+          <div style="background:#ffffff; border:1px solid #eaefed; border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:13px; color:#102a22;">Succulents</span><span style="width:7px; height:7px; border-radius:50%; background:#10b981;"></span></div>
+            <div style="display:flex; align-items:center; gap:10px;"><div style="position:relative; width:44px; height:44px; border-radius:50%; background:conic-gradient(#10b981 0deg 180deg,#eef2f0 180deg 360deg);"><div style="position:absolute; inset:5px; border-radius:50%; background:#fff;"></div></div><div><div style="font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600; color:#102a22;">50%</div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#94a39c;">~3d</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dark mode peek -->
+    <div style="padding:38px 52px; background:#ffffff; border-bottom:1px solid #eaefed;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#94a39c; margin-bottom:20px;">DARK MODE · for late nights</div>
+      <div style="background:#0d1714; border:1px solid #1e2c27; border-radius:16px; padding:22px; display:flex; align-items:center; gap:22px;">
+        <div style="position:relative; width:104px; height:104px; border-radius:50%; background:conic-gradient(#2dd4a7 0deg 223deg, #1c2a25 223deg 360deg); flex-shrink:0; box-shadow:0 0 22px rgba(45,212,167,0.2);">
+          <div style="position:absolute; inset:11px; border-radius:50%; background:#11201b; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-family:'JetBrains Mono',monospace; font-size:23px; font-weight:600; color:#e6f4ef;">62%</span><span style="font-family:'Plus Jakarta Sans',sans-serif; font-size:10px; color:#7d918a;">moisture</span></div>
+        </div>
+        <div style="flex:1;">
+          <div style="font-family:'Outfit',sans-serif; font-weight:700; font-size:22px; color:#e6f4ef; margin-bottom:6px;">Monstera</div>
+          <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:13px; color:#94a89f; margin-bottom:14px;">Jewel accents stay vivid on near-black; surfaces shift to deep teal-slate.</div>
+          <div style="display:flex; gap:10px;">
+            <button style="font-family:'Plus Jakarta Sans',sans-serif; font-size:13px; font-weight:700; color:#0d1714; background:#2dd4a7; border:none; border-radius:10px; padding:8px 16px; cursor:pointer;">Water now</button>
+            <span style="display:inline-flex; align-items:center; gap:6px; font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; font-weight:700; color:#2dd4a7; background:rgba(45,212,167,0.12); border:1px solid rgba(45,212,167,0.25); border-radius:8px; padding:7px 12px;"><span style="width:7px; height:7px; border-radius:2px; background:#2dd4a7;"></span>Optimal</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Choose if -->
+    <div style="padding:36px 52px; background:#ecfdf5;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#0f766e; margin-bottom:12px;">CHOOSE CANOPY IF…</div>
+      <ul style="font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; line-height:1.7; color:#0f3d34; margin:0; padding-left:20px; max-width:780px;">
+        <li>You want the <strong>safest, most versatile</strong> base — clean modern product UI that ages well and stays neutral if it grows beyond you.</li>
+        <li>Vivid jewel accents give <strong>energy without theming</strong> the whole app green.</li>
+        <li>The most <strong>Tailwind-native palette</strong> (these are close to default tokens) — fastest to build &amp; learn with.</li>
+      </ul>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#6b8a80; margin-top:14px;">Trade-off: a touch less distinctive than Sprout or Terrarium.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- DIRECTION C — TERRARIUM  (technical control-room, dark-forward)-->
+<!-- ============================================================= -->
+<div style="position:absolute; left:2640px; top:0px; width:1240px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:16px; cursor:grab;">
+    <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color:#5f7a3e;">Direction C · Terrarium</span>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8a978a;">technical · control-room · dark-first</span>
+  </div>
+
+  <div style="background:#0c1310; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.2); overflow:hidden;">
+
+    <!-- Hero -->
+    <div style="position:relative; padding:52px 52px 46px; background:radial-gradient(120% 130% at 85% -10%, #16261a 0%, #0c1310 60%); overflow:hidden;">
+      <div style="position:absolute; top:24px; right:44px; width:150px; height:150px; border-radius:50%; background:radial-gradient(circle at 42% 40%, rgba(163,230,53,0.5), rgba(34,211,238,0.04) 70%); filter:blur(4px);"></div>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:18px;"><span style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.14em; color:#a3e635;">TERRARIUM</span><span style="width:5px; height:5px; border-radius:50%; background:#34433a;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#7b8a80;">ds // night build</span></div>
+      <h1 style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:62px; line-height:1; letter-spacing:-0.02em; color:#e9f1ea; margin:0 0 16px; max-width:680px;">A control room that breathes.</h1>
+      <p style="font-family:'Manrope',sans-serif; font-size:18px; line-height:1.5; color:#9fb0a4; margin:0; max-width:540px;">The most powerful + technical take, dark by default for your midnight sessions. Glowing data, tight grids, monospaced everything — four channels or forty, all legible at a glance.</p>
+    </div>
+
+    <!-- Palette -->
+    <div style="padding:38px 52px; border-top:1px solid #1c2620;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#7b8a80; margin-bottom:20px;">PALETTE &amp; TOKENS · dark</div>
+      <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:12px;">
+        <div><div style="height:64px; border-radius:10px; background:#a3e635; box-shadow:0 0 18px rgba(163,230,53,0.32);"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#8a978a; margin-top:7px;">#A3E635</div><div style="font-family:'Manrope',sans-serif; font-size:12px; font-weight:600; color:#e9f1ea;">lumen</div></div>
+        <div><div style="height:64px; border-radius:10px; background:#22d3ee; box-shadow:0 0 18px rgba(34,211,238,0.3);"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#8a978a; margin-top:7px;">#22D3EE</div><div style="font-family:'Manrope',sans-serif; font-size:12px; font-weight:600; color:#e9f1ea;">mist</div></div>
+        <div><div style="height:64px; border-radius:10px; background:#34d399;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#8a978a; margin-top:7px;">#34D399</div><div style="font-family:'Manrope',sans-serif; font-size:12px; font-weight:600; color:#e9f1ea;">moss</div></div>
+        <div><div style="height:64px; border-radius:10px; background:#fbbf24;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#8a978a; margin-top:7px;">#FBBF24</div><div style="font-family:'Manrope',sans-serif; font-size:12px; font-weight:600; color:#e9f1ea;">ember</div></div>
+        <div><div style="height:64px; border-radius:10px; background:#fb7185;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#8a978a; margin-top:7px;">#FB7185</div><div style="font-family:'Manrope',sans-serif; font-size:12px; font-weight:600; color:#e9f1ea;">coral</div></div>
+        <div><div style="height:64px; border-radius:10px; background:#18241d; border:1px solid #243029;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#8a978a; margin-top:7px;">#18241D</div><div style="font-family:'Manrope',sans-serif; font-size:12px; font-weight:600; color:#e9f1ea;">surface</div></div>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:14px;">
+        <div style="flex:1; height:30px; border-radius:8px; background:#0c1310; border:1px solid #243029;"></div>
+        <div style="flex:1; height:30px; border-radius:8px; background:#121b16;"></div>
+        <div style="flex:1; height:30px; border-radius:8px; background:#243029;"></div>
+        <div style="flex:1; height:30px; border-radius:8px; background:#7b8a80;"></div>
+        <div style="flex:1; height:30px; border-radius:8px; background:#e9f1ea;"></div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#7b8a80; margin-top:10px;">bg · surface · border · muted · text &nbsp;|&nbsp; radius 8–14px · subtle glow on live data</div>
+    </div>
+
+    <!-- Type + icons -->
+    <div style="padding:38px 52px; border-top:1px solid #1c2620;">
+      <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:36px; align-items:start;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#7b8a80; margin-bottom:18px;">TYPE</div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:40px; letter-spacing:-0.02em; color:#e9f1ea; line-height:1; margin-bottom:4px;">Space Grotesk</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#7b8a80; margin-bottom:16px;">Display · technical headings</div>
+          <div style="font-family:'Manrope',sans-serif; font-weight:700; font-size:24px; color:#e9f1ea; margin-bottom:4px;">Manrope</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#7b8a80; margin-bottom:16px;">Body &amp; UI · 400 / 600 / 700</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-weight:500; font-size:20px; color:#a3e635;">JetBrains Mono · 62.4%</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#7b8a80; margin-top:4px;">All numeric data &amp; labels</div>
+        </div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#7b8a80; margin-bottom:18px;">ICONS · glow, 1.75 stroke</div>
+          <div style="display:flex; gap:14px; flex-wrap:wrap;">
+            <div style="width:52px; height:52px; border-radius:13px; background:#18241d; border:1px solid #243029; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a3e635" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c0 0-6 6.4-6 10.2A6 6 0 0 0 18 13.2C18 9.4 12 3 12 3z"></path></svg></div>
+            <div style="width:52px; height:52px; border-radius:13px; background:#18241d; border:1px solid #243029; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"></path></svg></div>
+            <div style="width:52px; height:52px; border-radius:13px; background:#18241d; border:1px solid #243029; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"></path></svg></div>
+            <div style="width:52px; height:52px; border-radius:13px; background:#18241d; border:1px solid #243029; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M8 15.5a6 6 0 0 1 8 0"></path><circle cx="12" cy="19" r="0.6" fill="#22d3ee"></circle></svg></div>
+            <div style="width:52px; height:52px; border-radius:13px; background:#18241d; border:1px solid #243029; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7b8a80" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"></rect><path d="M9 14l2.2 2.2L15.5 10"></path></svg></div>
+            <div style="width:52px; height:52px; border-radius:13px; background:#18241d; border:1px solid #243029; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fb7185" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5L21 19H3z"></path><path d="M12 10v3.5"></path><circle cx="12" cy="16.4" r="0.6" fill="#fb7185"></circle></svg></div>
+          </div>
+          <div style="font-family:'Manrope',sans-serif; font-size:12.5px; color:#9fb0a4; margin-top:14px; line-height:1.5;">Line icons on inset chips; live ones pick up the accent glow.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Components -->
+    <div style="padding:38px 52px; border-top:1px solid #1c2620;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#7b8a80; margin-bottom:20px;">COMPONENTS</div>
+      <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:22px;">
+        <button style="font-family:'Manrope',sans-serif; font-size:15px; font-weight:700; color:#0c1310; background:#a3e635; border:none; border-radius:10px; padding:12px 22px; cursor:pointer; box-shadow:0 0 20px rgba(163,230,53,0.3);">Run pump 04</button>
+        <button style="font-family:'Manrope',sans-serif; font-size:15px; font-weight:600; color:#cfe0c2; background:transparent; border:1.5px solid #34433a; border-radius:10px; padding:12px 22px; cursor:pointer;">Calibrate</button>
+        <button style="font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:500; color:#22d3ee; background:rgba(34,211,238,0.1); border:none; border-radius:10px; padding:12px 18px; cursor:pointer;">+ ADD SENSOR</button>
+        <div style="display:flex; gap:8px;">
+          <span style="display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:500; color:#a3e635; background:rgba(163,230,53,0.1); border:1px solid rgba(163,230,53,0.25); border-radius:6px; padding:6px 11px;"><span style="width:7px; height:7px; border-radius:50%; background:#a3e635; box-shadow:0 0 6px #a3e635;"></span>OPTIMAL</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:500; color:#22d3ee; background:rgba(34,211,238,0.1); border:1px solid rgba(34,211,238,0.25); border-radius:6px; padding:6px 11px;"><span style="width:7px; height:7px; border-radius:50%; background:#22d3ee; box-shadow:0 0 6px #22d3ee;"></span>PUMP ON</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:500; color:#fbbf24; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.25); border-radius:6px; padding:6px 11px;"><span style="width:7px; height:7px; border-radius:50%; background:#fbbf24; box-shadow:0 0 6px #fbbf24;"></span>LOW</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:500; color:#fb7185; background:rgba(251,113,133,0.1); border:1px solid rgba(251,113,133,0.25); border-radius:6px; padding:6px 11px;"><span style="width:7px; height:7px; border-radius:50%; background:#fb7185; box-shadow:0 0 6px #fb7185;"></span>FAULT</span>
+        </div>
+      </div>
+
+      <!-- Channel cards -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+        <div style="background:#121b16; border:1px solid #243029; border-radius:14px; padding:22px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px;">
+            <div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#7b8a80; letter-spacing:0.08em;">CH01 · ZONE A</div><div style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:22px; color:#e9f1ea;">Monstera</div></div>
+            <span style="display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:500; color:#a3e635; background:rgba(163,230,53,0.1); border:1px solid rgba(163,230,53,0.25); border-radius:6px; padding:5px 10px;"><span style="width:6px; height:6px; border-radius:50%; background:#a3e635; box-shadow:0 0 6px #a3e635;"></span>OPTIMAL</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:18px;">
+            <div style="position:relative; width:108px; height:108px; border-radius:50%; background:conic-gradient(#a3e635 0deg 223deg, #243029 223deg 360deg); flex-shrink:0; box-shadow:0 0 22px rgba(163,230,53,0.16);">
+              <div style="position:absolute; inset:11px; border-radius:50%; background:#121b16; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:600; color:#e9f1ea;">62%</span><span style="font-family:'Manrope',sans-serif; font-size:11px; color:#7b8a80;">moisture</span></div>
+            </div>
+            <div style="flex:1; display:flex; flex-direction:column; gap:11px;">
+              <div><div style="font-family:'Manrope',sans-serif; font-size:12px; color:#7b8a80;">Last watered</div><div style="font-family:'Manrope',sans-serif; font-size:15px; font-weight:700; color:#e9f1ea;">2d 04h ago</div></div>
+              <div><div style="font-family:'Manrope',sans-serif; font-size:12px; color:#7b8a80;">Next cycle</div><div style="font-family:'Manrope',sans-serif; font-size:15px; font-weight:700; color:#22d3ee;">in ~18 hours</div></div>
+            </div>
+          </div>
+          <svg viewBox="0 0 280 44" style="width:100%; height:40px; margin-top:16px; display:block;"><polyline points="0,36 35,28 70,31 105,19 140,23 175,11 210,17 245,8 280,13" fill="none" stroke="#a3e635" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+        </div>
+        <div style="background:#121b16; border:1px solid #243029; border-radius:14px; padding:22px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px;">
+            <div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#7b8a80; letter-spacing:0.08em;">CH03 · ZONE C</div><div style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:22px; color:#e9f1ea;">Herb box</div></div>
+            <span style="display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:500; color:#fbbf24; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.25); border-radius:6px; padding:5px 10px;"><span style="width:6px; height:6px; border-radius:50%; background:#fbbf24; box-shadow:0 0 6px #fbbf24;"></span>LOW</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:18px;">
+            <div style="position:relative; width:108px; height:108px; border-radius:50%; background:conic-gradient(#fbbf24 0deg 104deg, #243029 104deg 360deg); flex-shrink:0; box-shadow:0 0 22px rgba(251,191,36,0.14);">
+              <div style="position:absolute; inset:11px; border-radius:50%; background:#121b16; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:600; color:#e9f1ea;">29%</span><span style="font-family:'Manrope',sans-serif; font-size:11px; color:#7b8a80;">moisture</span></div>
+            </div>
+            <div style="flex:1; display:flex; flex-direction:column; gap:11px;">
+              <div><div style="font-family:'Manrope',sans-serif; font-size:12px; color:#7b8a80;">Last watered</div><div style="font-family:'Manrope',sans-serif; font-size:15px; font-weight:700; color:#e9f1ea;">5d 11h ago</div></div>
+              <div><div style="font-family:'Manrope',sans-serif; font-size:12px; color:#7b8a80;">Next cycle</div><div style="font-family:'Manrope',sans-serif; font-size:15px; font-weight:700; color:#fb7185;">due now</div></div>
+            </div>
+          </div>
+          <svg viewBox="0 0 280 44" style="width:100%; height:40px; margin-top:16px; display:block;"><polyline points="0,9 35,15 70,13 105,21 140,25 175,29 210,33 245,37 280,39" fill="none" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dense dashboard -->
+    <div style="padding:38px 52px; border-top:1px solid #1c2620;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#7b8a80; margin-bottom:20px;">DASHBOARD · CONTROL ROOM</div>
+      <div style="background:#101813; border:1px solid #243029; border-radius:14px; padding:18px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding-bottom:14px; border-bottom:1px solid #243029; margin-bottom:14px;">
+          <div style="display:flex; align-items:center; gap:10px;"><span style="width:9px; height:9px; border-radius:50%; background:#a3e635; box-shadow:0 0 8px #a3e635;"></span><span style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:17px; color:#e9f1ea;">SYSTEM · NOMINAL</span></div>
+          <div style="display:flex; gap:20px; font-family:'JetBrains Mono',monospace; font-size:12px;">
+            <span style="color:#7b8a80;">CH <span style="color:#e9f1ea; font-weight:600;">4</span></span>
+            <span style="color:#7b8a80;">H2O/D <span style="color:#22d3ee; font-weight:600;">1.2L</span></span>
+            <span style="color:#7b8a80;">UPTIME <span style="color:#e9f1ea; font-weight:600;">14d</span></span>
+            <span style="color:#7b8a80;">NEXT <span style="color:#fb7185; font-weight:600;">CH3 now</span></span>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
+          <div style="background:#18241d; border:1px solid #243029; border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:9px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:12px; color:#e9f1ea;">CH01</span><span style="width:7px; height:7px; border-radius:50%; background:#a3e635; box-shadow:0 0 6px #a3e635;"></span></div>
+            <div style="display:flex; align-items:center; gap:9px;"><div style="position:relative; width:40px; height:40px; border-radius:50%; background:conic-gradient(#a3e635 0deg 223deg,#243029 223deg 360deg);"><div style="position:absolute; inset:5px; border-radius:50%; background:#18241d;"></div></div><div><div style="font-family:'JetBrains Mono',monospace; font-size:17px; font-weight:600; color:#e9f1ea;">62%</div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#7b8a80;">~18h</div></div></div>
+          </div>
+          <div style="background:#18241d; border:1px solid #243029; border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:9px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:12px; color:#e9f1ea;">CH02</span><span style="width:7px; height:7px; border-radius:50%; background:#22d3ee; box-shadow:0 0 6px #22d3ee;"></span></div>
+            <div style="display:flex; align-items:center; gap:9px;"><div style="position:relative; width:40px; height:40px; border-radius:50%; background:conic-gradient(#22d3ee 0deg 270deg,#243029 270deg 360deg);"><div style="position:absolute; inset:5px; border-radius:50%; background:#18241d;"></div></div><div><div style="font-family:'JetBrains Mono',monospace; font-size:17px; font-weight:600; color:#e9f1ea;">75%</div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#22d3ee;">PUMP</div></div></div>
+          </div>
+          <div style="background:#1e1b14; border:1px solid #4a3d1c; border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:9px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:12px; color:#e9f1ea;">CH03</span><span style="width:7px; height:7px; border-radius:50%; background:#fbbf24; box-shadow:0 0 6px #fbbf24;"></span></div>
+            <div style="display:flex; align-items:center; gap:9px;"><div style="position:relative; width:40px; height:40px; border-radius:50%; background:conic-gradient(#fbbf24 0deg 104deg,#243029 104deg 360deg);"><div style="position:absolute; inset:5px; border-radius:50%; background:#18241d;"></div></div><div><div style="font-family:'JetBrains Mono',monospace; font-size:17px; font-weight:600; color:#e9f1ea;">29%</div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#fb7185;">DUE</div></div></div>
+          </div>
+          <div style="background:#18241d; border:1px solid #243029; border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:9px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:12px; color:#e9f1ea;">CH04</span><span style="width:7px; height:7px; border-radius:50%; background:#a3e635; box-shadow:0 0 6px #a3e635;"></span></div>
+            <div style="display:flex; align-items:center; gap:9px;"><div style="position:relative; width:40px; height:40px; border-radius:50%; background:conic-gradient(#a3e635 0deg 180deg,#243029 180deg 360deg);"><div style="position:absolute; inset:5px; border-radius:50%; background:#18241d;"></div></div><div><div style="font-family:'JetBrains Mono',monospace; font-size:17px; font-weight:600; color:#e9f1ea;">50%</div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#7b8a80;">~3d</div></div></div>
+          </div>
+        </div>
+        <!-- chart row -->
+        <div style="margin-top:12px; background:#18241d; border:1px solid #243029; border-radius:10px; padding:14px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#7b8a80;">MOISTURE · 24H · ALL CHANNELS</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#7b8a80;">VWC %</span></div>
+          <svg viewBox="0 0 600 90" style="width:100%; height:80px; display:block;">
+            <line x1="0" y1="20" x2="600" y2="20" stroke="#243029" stroke-width="1"></line>
+            <line x1="0" y1="50" x2="600" y2="50" stroke="#243029" stroke-width="1"></line>
+            <line x1="0" y1="80" x2="600" y2="80" stroke="#243029" stroke-width="1"></line>
+            <polyline points="0,50 75,46 150,48 225,38 300,40 375,30 450,34 525,24 600,28" fill="none" stroke="#a3e635" stroke-width="2"></polyline>
+            <polyline points="0,30 75,26 150,28 225,22 300,24 375,18 450,22 525,16 600,18" fill="none" stroke="#22d3ee" stroke-width="2"></polyline>
+            <polyline points="0,40 75,46 150,50 225,56 300,60 375,66 450,70 525,74 600,78" fill="none" stroke="#fbbf24" stroke-width="2"></polyline>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Light mode peek -->
+    <div style="padding:38px 52px; border-top:1px solid #1c2620;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#7b8a80; margin-bottom:20px;">LIGHT MODE · for daytime</div>
+      <div style="background:#f3f6f4; border:1px solid #e0e6e2; border-radius:14px; padding:22px; display:flex; align-items:center; gap:22px;">
+        <div style="position:relative; width:104px; height:104px; border-radius:50%; background:conic-gradient(#4d9e1f 0deg 223deg, #e2e8e4 223deg 360deg); flex-shrink:0;">
+          <div style="position:absolute; inset:11px; border-radius:50%; background:#ffffff; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-family:'JetBrains Mono',monospace; font-size:23px; font-weight:600; color:#11201a;">62%</span><span style="font-family:'Manrope',sans-serif; font-size:10px; color:#6b7a72;">moisture</span></div>
+        </div>
+        <div style="flex:1;">
+          <div style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:22px; color:#11201a; margin-bottom:6px;">CH01 · Monstera</div>
+          <div style="font-family:'Manrope',sans-serif; font-size:13px; color:#5a6a61; margin-bottom:14px;">Same grid, daylight palette. Glows become solid fills; contrast stays instrument-sharp.</div>
+          <div style="display:flex; gap:10px;">
+            <button style="font-family:'Manrope',sans-serif; font-size:13px; font-weight:700; color:#ffffff; background:#4d9e1f; border:none; border-radius:8px; padding:8px 16px; cursor:pointer;">Run pump</button>
+            <span style="display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:500; color:#3a7016; background:#e3f2d4; border:1px solid #cbe6b3; border-radius:6px; padding:7px 11px;"><span style="width:6px; height:6px; border-radius:50%; background:#4d9e1f;"></span>OPTIMAL</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Choose if -->
+    <div style="padding:36px 52px; border-top:1px solid #1c2620; background:#101813;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#7b8a80; margin-bottom:12px;">CHOOSE TERRARIUM IF…</div>
+      <ul style="font-family:'Manrope',sans-serif; font-size:15px; line-height:1.7; color:#aebfb2; margin:0; padding-left:20px; max-width:780px;">
+        <li>You live in <strong>dark mode</strong> and want the build that's designed for night-first, daylight-second.</li>
+        <li>You want the <strong>most data per pixel</strong> — multi-channel charts, tight grids, true control-room feel as sensors grow.</li>
+        <li>The glow + mono language is the <strong>boldest portfolio statement</strong> and a rich playground for charts &amp; motion.</li>
+      </ul>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#6b7a72; margin-top:14px;">Trade-off: the least &quot;soft &amp; friendly&quot;; needs care to stay warm, not clinical.</div>
+    </div>
+  </div>
+</div></x-dc>
+</body>
+</html>
