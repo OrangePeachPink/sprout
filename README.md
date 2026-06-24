@@ -63,6 +63,7 @@ Code-quality tooling lives at the repo root and is enforced per language:
 | Area | Tool | Config | Run |
 | --- | --- | --- | --- |
 | Python | [ruff](https://docs.astral.sh/ruff/) - lint + format | [`ruff.toml`](ruff.toml) | `ruff check .` · `ruff check --fix .` · `ruff format .` |
+| C / C++ (firmware) | clang-format + clang-tidy | [`.clang-format`](.clang-format) · [`.clang-tidy`](.clang-tidy) | `clang-format -i FILE` · `clang-tidy FILE -- -Ifirmware/lib/...` |
 | Markdown | markdownlint | [`.markdownlint.json`](.markdownlint.json) | `npx markdownlint-cli2 "**/*.md"` (add `--fix` to autofix) |
 | Endings / encoding | git + EditorConfig | [`.gitattributes`](.gitattributes) · [`.editorconfig`](.editorconfig) | LF · UTF-8 · final newline (see Conventions) |
 
@@ -70,6 +71,16 @@ Ruff is the modern all-in-one (it replaces flake8 / isort / pyupgrade / black). 
 balanced, low-friction ruleset (`E/W/F/I/UP/B/C4/SIM/RUF`) and sets line length to `88` - the single
 knob, in `ruff.toml`. Install with `pip install ruff` (or `pipx install ruff`). The Python here is the
 host logger plus a PlatformIO pre-build hook.
+
+For the firmware C, `clang-format` owns formatting and `clang-tidy` owns static analysis, both
+tuned to the existing house style (4-space indent, function brace on its own line, K&R control
+braces, 80 columns). The check set is bug/correctness-focused (`clang-analyzer`, `bugprone`,
+`cert`, `performance`, `portability`) and **advisory, not build-blocking** - the current
+`firmware/lib` sources pass it clean. Policy is **format new / changed files only**: clang-format
+collapses the firmware's manual column alignment, so we do not bulk-reformat the tree. Both
+binaries ship with the VS Code C/C++ extension (`.../ms-vscode.cpptools-*/LLVM/bin`); `clang-tidy`
+additionally needs the firmware include dirs (and, on this host, the MinGW system-header paths)
+passed after `--`.
 
 ## Roadmap
 

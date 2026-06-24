@@ -1,0 +1,20 @@
+# .clang-tidy - C/C++ static analysis for the plants firmware.
+# Tool: clang-tidy (LLVM). Light touch: high-signal bug / correctness /
+# portability checks only. clang-format owns formatting; readability-* and
+# modernize-* are C++-centric and noisy for embedded C, so they stay off.
+# Advisory by default (not WarningsAsErrors) - it informs, it doesn't block.
+#
+#   clang-tidy FILE.c -- -std=gnu11 \
+#     -Ifirmware/lib/irrigation -Ifirmware/lib/moisture_classifier
+Checks: >
+  clang-analyzer-*,
+  bugprone-*,
+  cert-*,
+  performance-*,
+  portability-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-branch-clone,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+WarningsAsErrors: ''
+HeaderFilterRegex: 'firmware/lib/.*'
+FormatStyle: file

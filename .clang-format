@@ -1,0 +1,24 @@
+# .clang-format - C/C++ formatting policy for the plants firmware.
+# Tool: clang-format (LLVM). Tuned to the existing firmware house style:
+# 4-space indent, function brace on its own line, K&R control braces,
+# 80 columns, pointer binds to the name.
+#
+# Light touch: format NEW / CHANGED files; we do NOT bulk-reformat the tree.
+#   clang-format -i path/to/file.c        # format in place
+#   clang-format --dry-run -Werror FILE   # check only (CI-friendly)
+---
+Language: Cpp
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 80
+BreakBeforeBraces: Linux
+PointerAlignment: Right
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: false
+KeepEmptyLinesAtTheStartOfBlocks: false
+SpaceAfterCStyleCast: false
+# Keep include order as written - C headers can be order-sensitive.
+SortIncludes: false
