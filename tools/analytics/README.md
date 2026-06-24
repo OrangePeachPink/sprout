@@ -11,6 +11,7 @@ Backlog lane (see [`../../BACKLOG.md`](../../BACKLOG.md) section E):
 | E6 | Schema-v1 log parser (`parse_v1.py`) | done |
 | E7 | 4-channel dashboard, static self-contained (`dashboard.py` + template) | done |
 | E1 | Live-serving dashboard + Refresh / Auto (`serve.py`) | done — monitoring slice |
+| E3 | Forecast engine + single-plant detail view (`forecast.py`) | done |
 | E5 | Local parquet / DuckDB analysis tier | deferred until query/ML volume justifies it |
 
 ## `parse_v1.py` — schema-v1 reader (E6)
@@ -84,6 +85,17 @@ Honesty rules, enforced in the generator:
 
 `vendor/chart.umd.min.js` is Chart.js v4.4.3 (MIT), vendored so the dashboard is offline and
 self-contained. Delete it and the generator falls back to a CDN `<script>` tag.
+
+### Single-plant view (E3)
+
+Click any channel card to drill into a focused single-plant view (powered by `forecast.py`): the
+current raw + band with a **headroom gauge** (distance to the next band and to the thirsty threshold),
+a trajectory chart with a **least-squares trend line**, **forecast cards** (time-to-next-band,
+time-to-thirsty, diurnal / next-day), a per-window **drying-rate table** (1h/6h/24h/all with se + R²),
+a band-history ribbon, and per-window stats. Every forecast is **gated** — it shows *"no estimate yet"*
+with the reason until drying is statistically real, instead of inventing an ETA. Back to the overview
+with **← all channels**. The standalone CLI (`python tools/analytics/forecast.py [-s s3]`) prints the
+same analysis to the terminal.
 
 ### Live mode (`serve.py`)
 

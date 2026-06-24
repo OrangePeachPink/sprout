@@ -282,6 +282,64 @@ def forecast_sensor(sid: str, readings: list, bounds: list[int]) -> dict:
 
 
 # --------------------------------------------------------------------------- #
+# JSON payload (for the single-plant view)
+# --------------------------------------------------------------------------- #
+def _ropt(v: float | None, n: int) -> float | None:
+    return None if v is None else round(v, n)
+
+
+def _fit_payload(fit: Fit | None) -> dict | None:
+    if fit is None:
+        return None
+    return {
+        "slope": round(fit.slope, 2),
+        "se": round(fit.se, 2) if fit.se != math.inf else None,
+        "r2": round(fit.r2, 2),
+        "n": fit.n,
+        "dir": fit.direction,
+        "sig": fit.significant,
+    }
+
+
+def _eta_payload(e: Eta | None) -> dict | None:
+    if e is None:
+        return None
+    return {
+        "target": e.target,
+        "headroom": round(e.headroom),
+        "reachable": e.reachable,
+        "hours": _ropt(e.hours, 1),
+        "hours_lo": _ropt(e.hours_lo, 1),
+        "hours_hi": _ropt(e.hours_hi, 1),
+        "reason": e.reason,
+    }
+
+
+def forecast_payload(sid: str, readings: list, bounds: list[int]) -> dict:
+    """JSON-safe per-sensor forecast for the single-plant view (E3 -> UI)."""
+    f = forecast_sensor(sid, readings, bounds)
+    d = f["diurnal"]
+    return {
+        "raw_now": f["raw_now"],
+        "band_now": f["band_now"],
+        "band_now_hours": round(f["band_now_hours"], 1),
+        "stats": f["stats"],
+        "rates": {k: _fit_payload(v) for k, v in f["rates"].items()},
+        "next_band": _eta_payload(f["to_next_band"]),
+        "thirsty": _eta_payload(f["to_thirsty"]),
+        "diurnal": {
+            "ready": d.ready,
+            "days": round(d.days, 2),
+            "reason": d.reason,
+            "by_hour": {str(h): round(v) for h, v in sorted(d.by_hour.items())},
+        },
+        "band_history": [
+            {"band": s.band, "hours": round(s.hours, 2)} for s in f["band_spans"]
+        ],
+    }
+
+
+# --------------------------------------------------------------------------- #
 # CLI report
 # --------------------------------------------------------------------------- #
 def _fmt_eta(e: Eta | None) -> str:
