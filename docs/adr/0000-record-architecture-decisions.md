@@ -63,7 +63,7 @@ prototype's history honestly. (Execution belongs to the architecture/firmware la
 | [0004](0004-design-system.md) | Design system & token-consumption contract | **Proposed** | Design lane |
 | [0005](0005-application-surface-and-frontend.md) | Application surface & frontend | **Proposed** | Data lane |
 | [0006](0006-data-architecture.md) | Data architecture (telemetry schema, calibration, quality, analysis tier) | **Proposed** | Data lane |
-| 0007 | Brand guidelines & voice | **Planned** | Design lane |
+| [0007](0007-brand-guidelines.md) | Brand guidelines & voice | **Proposed** | Design lane |
 | — | *(archived)* [Sprout v0 combined architecture record](archive/sprout-v0-architecture.md) | Superseded by ADR-0001 | history |
 
 *New ADRs append a row here when proposed. Any lane may author an ADR for an ADR-sized decision in its
