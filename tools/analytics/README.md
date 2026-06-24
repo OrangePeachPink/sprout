@@ -12,6 +12,7 @@ Backlog lane (see [`../../BACKLOG.md`](../../BACKLOG.md) section E):
 | E7 | 4-channel dashboard, static self-contained (`dashboard.py` + template) | done |
 | E1 | Live-serving dashboard + Refresh / Auto (`serve.py`) | done — monitoring slice |
 | E3 | Forecast engine + single-plant detail view (`forecast.py`) | done |
+| E8 | Full-history join (logs + B8 archive), time-range views, recency (`serve.py` + dashboard) | done |
 | E5 | Local parquet / DuckDB analysis tier | deferred until query/ML volume justifies it |
 
 ## `parse_v1.py` — schema-v1 reader (E6)
@@ -112,6 +113,18 @@ each request. The page's **↻ Refresh** button (and the **auto** toggle, ~30 s)
 re-render in place — no full reload, scroll and theme preserved. Opened as a bare file it detects
 `file://` and stays a static snapshot (Refresh shows a "run serve.py" hint). It is read-only — it
 never writes the logs. This is the live-monitoring slice of backlog **E1**.
+
+### History & time ranges (E8)
+
+`serve.py` reads the live `logs/*.csv` **and** the B8 gzip archive
+(`.data-worktree/data/archive/*.csv.gz`), de-duped by segment (the live `.csv` wins), so history
+survives once closed segments are pruned from `logs/`. A **time-range selector** — 24 h / 7 d / 30 d /
+all, default 24 h — windows the view: served, it re-fetches `/data.json?range=…` so the stat / rate /
+forecast panels recompute for the span; opened as a file it zooms the chart client-side. Long ranges
+are downsampled to ~2 k points per series so 30 days stays responsive — the panels always consume the
+full windowed data, only the plotted points thin. The header shows a **"last reading N min ago"**
+recency cue (amber if the capture stalls), and a B5 reset reads as a labelled session gap rather than
+missing data.
 
 ## The `value` column is the legacy moist% — do not analyse on it (B2 / C2)
 

@@ -28,7 +28,7 @@ import argparse
 import json
 import statistics
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
@@ -50,6 +50,19 @@ DEFAULT_OUT = _REPO / "reports" / "plants_dashboard.html"
 # back to CDN only if the vendored copy is missing.
 VENDOR_CHARTJS = _HERE / "vendor" / "chart.umd.min.js"
 CDN_CHARTJS = "https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"
+# B8 gzip archive of closed segments (read for deep history once they leave logs/).
+ARCHIVE_DIR = _REPO / ".data-worktree" / "data" / "archive"
+LOGS_DIR = _REPO / "logs"
+# Chart series are capped for responsiveness over long ranges; the stat / rate /
+# forecast panels always use the full windowed data, only the plotted points thin.
+MAX_TRAJ_POINTS = 2000
+# Time-range windows (E8). None = all history.
+RANGE_HOURS: dict[str, float | None] = {
+    "24h": 24.0,
+    "7d": 24.0 * 7,
+    "30d": 24.0 * 30,
+    "all": None,
+}
 
 # firmware band -> (Sprout UI band name, token color, mood label). Mood is band-
 # derived (Sprout principle); full personality copy lives in the .dc.html source.
@@ -137,6 +150,41 @@ def _band_ranges(bounds: list[int], lo: int, hi: int) -> list[dict[str, object]]
             }
         )
     return out
+
+
+# --------------------------------------------------------------------------- #
+# inputs, windowing, downsampling (E8)
+# --------------------------------------------------------------------------- #
+def gather_inputs() -> list[str]:
+    """Live logs/ + the B8 gz archive, de-duped by segment stem (live wins)."""
+    files: dict[str, Path] = {}
+    if ARCHIVE_DIR.is_dir():
+        for p in ARCHIVE_DIR.glob("*.csv.gz"):
+            files[p.name[:-7]] = p  # strip ".csv.gz"
+    if LOGS_DIR.is_dir():
+        for p in LOGS_DIR.glob("*.csv"):
+            files[p.name[:-4]] = p  # ".csv" live copy overrides the archived .gz
+    return [str(p) for _, p in sorted(files.items())]  # stem sort = chronological
+
+
+def filter_since(data: LogData, hours: float | None) -> LogData:
+    """Return a LogData windowed to the last `hours` of data (None = unchanged)."""
+    if hours is None:
+        return data
+    times = [r.timestamp_utc for r in data.readings if r.timestamp_utc]
+    if not times:
+        return data
+    cutoff = max(times) - timedelta(hours=hours)
+    kept = [r for r in data.readings if r.timestamp_utc and r.timestamp_utc >= cutoff]
+    return LogData(readings=kept, segments=data.segments, sources=data.sources)
+
+
+def _dec_idx(n: int, cap: int) -> list[int]:
+    """Evenly-spaced indices thinning a length-n series down to <= cap."""
+    if n <= cap:
+        return list(range(n))
+    step = n / cap
+    return [int(i * step) for i in range(cap)]
 
 
 # --------------------------------------------------------------------------- #
@@ -247,6 +295,16 @@ def build_context(data: LogData) -> dict:
     quality = _quality_strips(by_sensor, sensor_ids, soil, start)
     integrity = _integrity(soil, sweeps, by_sensor, sensor_ids, sessions)
 
+    # E8: thin only the plotted series for long ranges; stats/forecasts above
+    # already consumed the full windowed data.
+    for ts in trajectory_sets:
+        idx = _dec_idx(len(ts["points"]), MAX_TRAJ_POINTS)
+        ts["points"] = [ts["points"][i] for i in idx]
+        ts["local"] = [ts["local"][i] for i in idx]
+    spread_points = [
+        spread_points[i] for i in _dec_idx(len(spread_points), MAX_TRAJ_POINTS)
+    ]
+
     last_seg = data.segments[-1] if data.segments else None
     total_h = _hours_since(soil[-1].timestamp_utc, start)
     meta = {
@@ -265,6 +323,11 @@ def build_context(data: LogData) -> dict:
             else ""
         ),
         "total_hours": round(total_h, 2),
+        "last_local": (
+            soil[-1].timestamp_local.strftime("%Y-%m-%d %H:%M:%S")
+            if soil[-1].timestamp_local
+            else ""
+        ),
     }
 
     return {
@@ -430,7 +493,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("-o", "--out", default=str(DEFAULT_OUT), help="output HTML path")
     args = ap.parse_args(argv)
 
-    inputs = args.inputs or [str(_REPO / "logs")]
+    inputs = args.inputs or gather_inputs()
     data = parse_files(inputs)
     if not data.readings:
         print("no readings parsed from:", inputs, file=sys.stderr)
