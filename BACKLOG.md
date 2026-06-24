@@ -827,6 +827,16 @@ paragraph) and file it into the right section when you're ready.*
 - **Housekeeping:** repo EOL/UTF policy confirmed correct; transcript normalized (`9c79eba`); `espressif` added
   to cspell (`267adda`); markdownlint cleanup of the contract doc (`98501e1`).
 
+#### Sample telemetry CSV — out-of-band (chat request, NO tracked backlog item)
+
+- Added `docs/sample_log.csv` on direct chat request: a ~1-page self-contained example of the logger's output —
+  full `#` provenance header + the 23-column schema, shown as **3 rotation segments** with real-shaped 4-sensor
+  rows — so parsers/dashboards can be built without the hardware. **Not tied to any backlog item.**
+- **Evidence:** commit `477ab4b`. Validated as a consumer would: 3 segment header blocks, 23 columns, 24 data rows
+  (all 23-wide), all `record_type=plants.soil`, all 4 sensors present. Authentic values from the live run
+  (`plants_esp32_f4e9d4` / session `b4691f`); no `*HH` checksums (transport-only, stripped before write); lives in
+  `docs/` (tracked), not gitignored `logs/`. Referenced from `docs/TELEMETRY_SCHEMA.md` §7.
+
 ---
 
 ### 2026-06-23 review — analytics-thread careful-attention notes (NOT status changes)
