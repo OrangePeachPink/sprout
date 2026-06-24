@@ -1,6 +1,6 @@
 # ADR-0007 — Brand guidelines & voice
 
-**Status:** Proposed (Design lane authored; maintainer to accept)
+**Status:** Accepted (2026-06-24)
 **Date:** 2026-06-24
 **Owner:** Design lane
 **Lane:** design (brand, UI, design system, tokens, voice)

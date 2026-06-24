@@ -1,6 +1,6 @@
 # ADR-0006 — Data architecture
 
-**Status:** Proposed
+**Status:** Accepted (2026-06-24)
 **Date:** 2026-06-24
 **Owner:** Data lane
 **Lane:** data/analytics (telemetry schema, calibration, data quality, storage substrate)

@@ -1,6 +1,6 @@
 # ADR-0001 — Architecture & control loop
 
-**Status:** Proposed (pending Maintainer review)
+**Status:** Accepted (2026-06-24)
 **Date:** 2026-06-24
 **Owner:** Firmware lane / architecture
 **Lane:** architecture / firmware

@@ -1,6 +1,6 @@
 # ADR-0004 — Design system & the token-consumption contract
 
-**Status:** Proposed (Design lane confirms its rows; maintainer to accept)
+**Status:** Accepted (2026-06-24)
 **Date:** 2026-06-24
 **Owner:** Design lane
 **Lane:** design (brand, UI, design system, tokens, voice)
