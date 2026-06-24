@@ -37,6 +37,7 @@ project; see `SENSOR_QA.md`.)
 | [`tools/logger/`](tools/logger/) | Host-side serial logger (pyserial): UTC-stamped, rotating CSV capture. |
 | [`BACKLOG.md`](BACKLOG.md) | Project backlog - firmware, logging, sensing, actuators, analytics - grouped and prioritized. |
 | [`docs/evidence/`](docs/evidence/) | Macro board photos used as QA evidence. |
+| [`docs/design/`](docs/design/) | **Sprout design system v1** - the dashboard / UI styling foundation: tokens, components, light + dark themes. Start with [`docs/design/README.md`](docs/design/README.md). |
 
 ## Firmware (PlatformIO)
 
