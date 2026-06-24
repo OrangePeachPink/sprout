@@ -37,6 +37,10 @@ __pycache__/
 .venv/
 venv/
 
+# Native (host) test build artifacts
+tests/native/*.exe
+tests/native/*.o
+
 # Logs / scratch
 *.log
 logs/
