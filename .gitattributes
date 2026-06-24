@@ -1,0 +1,2 @@
+# Data-archive branch: gzipped raw log segments stored via Git LFS.
+data/archive/*.csv.gz filter=lfs diff=lfs merge=lfs -text
