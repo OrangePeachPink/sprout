@@ -42,6 +42,9 @@ venv/
 logs/
 _scratch/
 
+# Generated analysis output (derived from logs/, rebuilt by tools/analytics - never tracked)
+reports/
+
 # Git LFS data-archive worktree (B8) - linked worktree on the `data` branch
 .data-worktree/
 
