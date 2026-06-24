@@ -701,6 +701,31 @@ invisible on three surfaces:
 Surfaced 2026-06-24 reviewing the post-restart capture. Self-assigned per Veronica's "record before
 working on them."
 
+### E10. Per-channel on/off selection + sub-day zoom ranges
+
+**Status:** in progress — analytics/data thread (self-assigned 2026-06-24)
+**Priority:** P10 (within section)
+**Scope:** S–M — a per-channel toggle that filters the analysis set, plus 1h / 3h / 12h additions to the
+range selector.
+**Where:** host-side — `dashboard.py` (`build_context` + a channel filter, stable per-channel colours) +
+`serve.py` (`?channels=`) + the dashboard template.
+
+Two dashboard controls:
+
+- **Per-channel on/off.** Toggle each of `s1`–`s4` individually so a channel can be excluded as a
+  comparison lens (e.g. "everything without s2," the high-offset outlier). Crucially this is **not** just
+  hiding a line: the **cross-channel spread recomputes** over the selected probes (s1/s3/s4 ≈ 17 counts
+  vs ≈ 94 with s2), the **distribution** re-fits to the selected set, and the **stats / C1 variance**
+  follow. Done server-side (`?channels=s1,s3,s4`) so every panel stays consistent and honest; the static
+  file falls back to hiding trajectory lines + distribution bars client-side (its spread stays
+  4-channel). Default all on — it is a comparison lens, not a permanent filter. (Needs a fix to make
+  per-channel colours stable by sensor id, not by index of the filtered subset.)
+- **Sub-day zoom ranges.** Add 1h / 3h / 12h to the E8 range selector (1h/3h/12h/24h/7d/30d/all) for
+  zooming into recent behaviour — the dawn "wake-up" drying onset, a watering response — without the
+  whole day compressing it.
+
+Surfaced 2026-06-24. Self-assigned per Veronica's request to file before implementing.
+
 ---
 
 ## Your additions (to review / expand)
