@@ -58,7 +58,7 @@ prototype's history honestly. (Execution belongs to the architecture/firmware la
 |---|---|---|---|
 | [0000](0000-record-architecture-decisions.md) | Record architecture (and process) decisions | Accepted | Maintainer / meta |
 | [0001](0001-architecture-and-control-loop.md) | Architecture & control loop | **Proposed** — informed by, and supersedes, the archived v0 record | Firmware lane / architecture |
-| [0002](0002-process-tiers.md) | Process tiers (the project's engineering process choices) | **Proposed** — per-row owners to confirm; maintainer to accept | Maintainer / cross-lane |
+| [0002](0002-process-tiers.md) | Process tiers (the project's engineering process choices) | **Accepted** | Maintainer / cross-lane |
 | [0003](0003-work-pipeline.md) | Work pipeline: ideas, specs, backlog, issues & releases | **Proposed** | Workflow lane |
 | [0004](0004-design-system.md) | Design system & token-consumption contract | **Proposed** | Design lane |
 | [0005](0005-application-surface-and-frontend.md) | Application surface & frontend | **Proposed** | Data lane |
