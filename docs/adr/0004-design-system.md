@@ -4,7 +4,8 @@
 **Date:** 2026-06-24
 **Owner:** Design lane
 **Lane:** design (brand, UI, design system, tokens, voice)
-**Elaborates:** [ADR-0002](0002-process-tiers.md) area #18 (Design system) and the **Design half** of area #17 (Frontend stack).
+**Elaborates:** [ADR-0002](0002-process-tiers.md) area #18 (Design system) and the **Design half** of
+area #17 (Frontend stack).
 
 ---
 
@@ -61,7 +62,7 @@ This is the heart of this ADR and the resolution of the #17 seam.
   `var(--space-md)`, …) and toggle themes via `data-theme="dark"` on the root. They do **not** hard-code the
   hex/px literals or fork the palette.
 - **The decided host stack for now is vanilla + these tokens** (matching the existing self-contained
-  analytics dashboard). 
+  analytics dashboard).
 - **The control-page framework decision is deferred** to its own later decision (Data lane). **If/when** it
   adopts Tailwind, the Design lane will pin the **token-consumption bridge** at that point: the Tailwind theme
   maps *to* the CSS custom properties (Tailwind reads the vars), so `sprout-tokens.css` stays the one source of

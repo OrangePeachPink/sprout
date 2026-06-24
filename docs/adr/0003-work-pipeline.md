@@ -4,7 +4,8 @@
 **Date:** 2026-06-24
 **Owner:** Workflow lane
 **Lane:** work intake, specs/PRDs, backlog, issues, the team workflow, releases & insights
-**Elaborates:** [ADR-0002](0002-process-tiers.md) area #6 (Spec & requirements), #7 (Backlog & issue tracking), #14 (Process telemetry).
+**Elaborates:** [ADR-0002](0002-process-tiers.md) area #6 (Spec & requirements), #7 (Backlog & issue
+tracking), #14 (Process telemetry).
 
 ---
 
@@ -23,7 +24,7 @@ trigger), rather than fragmenting the pipeline on day one.
 
 ## 1. The pipeline at a glance
 
-```
+```text
   idea / goal        requirement         theme            unit of work     the change
   ───────────        ───────────         ─────            ────────────     ──────────
   Discussion   ──▶   PRD (docs/prd/) ──▶ Epic (issue ──▶  Issue       ──▶  PR (Refs #N) ──▶ Release
@@ -56,6 +57,7 @@ trackable task. The distinction from Issues is sharp and worth internalizing:
   maybe?"* → Discussion.
 
 **Categories** (each category has a format) to enable for this repo:
+
 - **Announcements** *(announcement format — maintainers post, anyone comments)* — releases, direction.
 - **Ideas** *(open-ended)* — **the inbox**: not-yet-actionable proposals and goals.
 - **Q&A** *(question/answer format with an accepted answer)* — usage and contributor questions.
@@ -71,6 +73,7 @@ scriptable). We'll do this together during setup, then seed the categories above
 ## 4. Specs & PRDs — `docs/prd/` (how, when, where)
 
 **When to write a PRD** (a Product Requirements Doc — "what we're building and why," before the how):
+
 - the work is bigger than a few issues, or
 - it has several acceptance criteria, spans multiple areas, or needs design input, or
 - the team needs shared understanding *before* building (to avoid building the wrong thing).
@@ -92,12 +95,14 @@ board + fields) · Releases (auto notes) · Insights (velocity/cycle-time).
 
 **Labels — colon-namespaced (~16).** `type:` mirrors the project's Conventional-Commits vocabulary so
 issue → commit → release-note stays one thread:
+
 - `type:` (one): `type:feat` · `type:fix` · `type:docs` · `type:refactor` · `type:chore`
 - `area:` (one+): `area:control` · `area:logging` · `area:sensing` · `area:actuators` · `area:analytics`
 - `layer:` (one+): `layer:firmware` (flash-gated) · `layer:host` (build anytime)
 - community: `good first issue` · `help wanted` · meta: `blocked` · `needs-verification`
 
 **Project fields** (Priority & Size are fields, not labels — they sort and feed Insights):
+
 - **Status** (lean start): `Backlog → In Progress → In Review → Needs Verification → Done`, + `Won't Do`
 - **Priority:** `P0`–`P3` · **Size:** `XS`–`XL` (feeds velocity) · **Milestone** (built-in)
 
@@ -109,6 +114,7 @@ a `.github/PULL_REQUEST_TEMPLATE.md` carrying the linking convention.
 An issue is **one independently shippable, reviewable unit** — about one focused PR, a few days for one
 person. **No lower-bound ceremony** (a typo sweep is a fine one-line issue). The concern is
 **over-large** issues — **split when any "epic smell" appears:**
+
 - the title needs an **"and"** · sized **L or XL** · spans multiple `area:`/`layer:` · several
   independent acceptance criteria · "done" needs more than a sentence · it'd be more than one PR.
 
@@ -153,6 +159,7 @@ will need the *why* for. **Any lane may author an ADR** for an ADR-sized decisio
 under the same numbered series + [register](0000-record-architecture-decisions.md).
 
 **Write an ADR when any of these is true:**
+
 - **Hard or expensive to reverse** — architecture, data substrate, a public schema/API, repo
   structure, a framework choice.
 - **Binds more than one lane** — a shared contract, interface, or cross-cutting policy.
@@ -164,12 +171,14 @@ under the same numbered series + [register](0000-record-architecture-decisions.m
 - You'd otherwise **re-explain the same "why" repeatedly** to new contributors.
 
 **Good ADR material (patterns):**
+
 - "GitHub Issues is the work ledger; IDs are `#N`." *(cross-lane convention)*
 - "Closed-loop on soil moisture only; environmental sensors are logging-only." *(architecture; alternatives rejected)*
 - "Raw CSV is immutable; the DuckDB tier is rebuildable." *(substrate; hard to reverse)*
 - "Host functionality presents as one application surface." *(cross-lane boundary)*
 
 **NOT an ADR (antipatterns) — use the lighter rung instead:**
+
 - A bug fix or a single feature → an **issue + PR**.
 - A reversible, low-stakes tweak (rename a var, nudge a threshold) → just the change.
 - A routine choice with no real alternative → no record needed.
