@@ -38,9 +38,10 @@ time, `millis_ms`, sensor id / model / position.
 The canonical contract is **[`docs/TELEMETRY_SCHEMA.md`](../TELEMETRY_SCHEMA.md)** — schema-v1: a
 **long/tidy CSV**, one row per sensor-channel per sample; self-describing `#` provenance headers
 re-emitted per rotation segment; a namespaced **`record_type`** discriminator; and the
-`{raw_value, value, unit}` + `quality_flag` shape shared cross-project (plants ↔ HotBoxAQ). The schema
-is **versioned** (`schema_version`); readers map columns **by name** so an added/reordered column does
-not break them. `raw_value` is immutable truth; `value` is interpretation; both are kept.
+`{raw_value, value, unit}` + `quality_flag` shape shared cross-project so it stays joinable with a
+sibling air-quality sensor project. The schema is **versioned** (`schema_version`); readers map columns
+**by name** so an added/reordered column does not break them. `raw_value` is immutable truth; `value`
+is interpretation; both are kept.
 
 ### 3. Storage substrate ladder (ADR-0002 #15)
 
@@ -118,4 +119,5 @@ beats the classical baseline). A model, when earned, records its data provenance
 - Environmental sensors (temp/RH/light) are added → the schema extends (`record_type=env`) and thermal
   correction of the raw becomes possible.
 - A model is earned by a named gap → record the model, its data provenance, and its evaluation.
-- HotBoxAQ is co-deployed → exercise and, if needed, refine the shared cross-project contract.
+- A sibling air-quality sensor project is co-deployed → exercise and, if needed, refine the shared
+  cross-project contract.
