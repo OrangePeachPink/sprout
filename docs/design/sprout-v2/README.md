@@ -9,7 +9,10 @@ foundation.
 
 - **Source:** `Plant monitoring application design system (1).zip` (design team, via Claude Design export).
 - **Stored as delivered** — the full set is kept intact and self-contained; nothing was pruned, so the
-  `.dc.html` sources keep their internal references (runtime + screenshots) working.
+  `.dc.html` sources keep their internal references (runtime + screenshots) working. The design-tool
+  sources (`.dc.html` / `.html` / `.js`) and all binaries are byte-for-byte as delivered; the two markdown
+  files here (`README.md`, `Sprout - Backlog.md`) received a mechanical markdownlint normalization
+  (whitespace / blank-lines / line-wraps only — no content changed) on 2026-06-24 so the repo lints clean.
 - **Relationship to v1:** purely additive. v1 remains the source of truth for the dashboard/instrument UI
   (tokens, the seven-band honesty rules, the five instrument components). This v2 set extends it with brand
   and presentation material. Where a future conflict arises on a shared token, the newer source should be
