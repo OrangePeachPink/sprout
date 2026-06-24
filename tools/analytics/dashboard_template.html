@@ -37,10 +37,16 @@ h2 { font-size: 17px; font-weight: 600; margin-bottom: var(--space-sm); }
 
 header.top { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-md); margin-bottom: var(--space-lg); }
 header.top .sub { color: var(--muted); margin-top: 4px; }
-.theme-btn { font-family: var(--font-ui); font-size: 12px; font-weight: 600; cursor: pointer;
+.controls { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.controls .refreshed { color: var(--muted); font-size: 11px; font-family: var(--font-data); max-width: 210px; text-align: right; }
+.btn { font-family: var(--font-ui); font-size: 12px; font-weight: 600; cursor: pointer;
   border: 1px solid var(--border); background: var(--surface); color: var(--ink);
   border-radius: var(--r-pill); padding: 6px 14px; }
-.theme-btn:hover { border-color: var(--leaf); }
+.btn:hover { border-color: var(--leaf); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.busy { opacity: .6; }
+.auto { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; }
+.auto input { accent-color: var(--leaf); }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card);
   box-shadow: var(--e1); padding: var(--space-lg); margin-bottom: var(--space-lg); }
@@ -97,8 +103,6 @@ table.grid { border-collapse: collapse; width: 100%; font-size: 13px; }
 table.grid th, table.grid td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); }
 table.grid td.num, table.grid th.num { text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; }
 table.grid tr:last-child td { border-bottom: none; }
-.flag { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-data); font-size: 12px; margin-right: 14px; }
-.flag .dot { width: 10px; height: 10px; border-radius: 50%; }
 .warnrow td { background: color-mix(in srgb, var(--st-dry) 12%, transparent); }
 
 footer.prov { color: var(--muted); font-size: 11px; line-height: 1.6; margin-top: var(--space-md); }
@@ -114,7 +118,12 @@ footer.prov code { font-family: var(--font-data); }
       <h1>🌱 Sprout — soil moisture</h1>
       <div class="sub" id="subline"></div>
     </div>
-    <button class="theme-btn" id="themeBtn" type="button">soil mode</button>
+    <div class="controls">
+      <span class="refreshed" id="refreshed"></span>
+      <button class="btn" id="refreshBtn" type="button">↻ Refresh</button>
+      <label class="auto" id="autoLbl"><input type="checkbox" id="autoChk"> auto</label>
+      <button class="btn" id="themeBtn" type="button">soil mode</button>
+    </div>
   </header>
 
   <section class="card">
@@ -159,7 +168,10 @@ footer.prov code { font-family: var(--font-data); }
 </div>
 
 <script>
-const DASH = "__DASH_JSON__";
+let DASH = "__DASH_JSON__";
+const LIVE = location.protocol === 'http:' || location.protocol === 'https:';
+const AUTO_MS = 30000;
+let autoTimer = null;
 
 function hexA(hex, a){
   const h = hex.replace('#',''); const n = parseInt(h,16);
@@ -168,19 +180,26 @@ function hexA(hex, a){
 }
 const el = (t, cls, html) => { const e=document.createElement(t); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; };
 const fmt = n => (n==null? '—' : (''+n).replace(/\B(?=(\d{3})+(?!\d))/g, ','));
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const gridColor = () => hexA('#888888', 0.18);
+
+/* ---- chart registry (so a refresh can destroy + rebuild cleanly) ---- */
+const charts = {};
+function destroyCharts(){ for(const k in charts){ if(charts[k]) charts[k].destroy(); delete charts[k]; } }
 
 /* ---- header ---- */
-(function(){
+function renderHeader(){
   const m = DASH.meta;
   document.getElementById('subline').innerHTML =
     `4 co-located probes · <span class="mono">origplant</span> · fw <span class="mono">${m.fw||'?'}</span> ` +
     `· ${DASH.sensors.length} channels · ${fmt(DASH.integrity.total)} readings · ` +
-    `${DASH.meta.total_hours}h since ${m.start_local}`;
-})();
+    `${m.total_hours}h since ${m.start_local}`;
+  document.getElementById('refreshed').textContent = `data as of ${m.generated_local}`;
+}
 
 /* ---- summary cards ---- */
-(function(){
-  const wrap = document.getElementById('cards');
+function renderCards(){
+  const wrap = document.getElementById('cards'); wrap.innerHTML = '';
   document.getElementById('cardsCap').textContent = 'raw + band = truth · % omitted by design';
   DASH.sensors.forEach(s => {
     const c = el('div','scard');
@@ -202,11 +221,11 @@ const fmt = n => (n==null? '—' : (''+n).replace(/\B(?=(\d{3})+(?!\d))/g, ','))
     c.appendChild(meta);
     wrap.appendChild(c);
   });
-})();
+}
 
 /* ---- calibration ladder (dry at top -> wet at bottom) ---- */
-(function(){
-  const wrap = document.getElementById('ladder');
+function renderLadder(){
+  const wrap = document.getElementById('ladder'); wrap.innerHTML = '';
   DASH.cal.bands.forEach(b => {
     const row = el('div','ladrow');
     row.style.background = hexA(b.color, 0.10);
@@ -221,11 +240,9 @@ const fmt = n => (n==null? '—' : (''+n).replace(/\B(?=(\d{3})+(?!\d))/g, ','))
     row.appendChild(here);
     wrap.appendChild(row);
   });
-})();
+}
 
-/* ---- shared chart helpers ---- */
-const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-function gridColor(){ return hexA('#888888', 0.18); }
+/* ---- charts ---- */
 function baseScales(xTitle, yTitle){
   return {
     x: { type:'linear', title:{display:true, text:xTitle, color:css('--muted')},
@@ -234,9 +251,6 @@ function baseScales(xTitle, yTitle){
          ticks:{ color:css('--muted') }, grid:{ color:gridColor() } }
   };
 }
-
-/* ---- trajectory chart ---- */
-let trajChart, spreadChart, distChart;
 const bandShade = {
   id:'bandShade',
   beforeDatasetsDraw(chart, args, opts){
@@ -251,7 +265,7 @@ const bandShade = {
   }
 };
 
-function buildTraj(){
+function renderTraj(){
   const lo = Math.min(...DASH.sensors.map(s=>s.raw_min));
   const hi = Math.max(...DASH.sensors.map(s=>s.raw_max));
   const pad = Math.max(40, (hi-lo)*0.6);
@@ -259,9 +273,8 @@ function buildTraj(){
     label:d.id, data:d.points, parsing:false, borderColor:d.color, backgroundColor:d.color,
     borderWidth:1.6, pointRadius:0, tension:0.25, _local:d.local
   }));
-  trajChart = new Chart(document.getElementById('trajChart'), {
-    type:'line',
-    data:{ datasets },
+  charts.traj = new Chart(document.getElementById('trajChart'), {
+    type:'line', data:{ datasets },
     options:{
       responsive:true, maintainAspectRatio:false, animation:false,
       interaction:{ mode:'nearest', intersect:false },
@@ -280,15 +293,15 @@ function buildTraj(){
     },
     plugins:[bandShade]
   });
-  const lg = document.getElementById('trajLegend');
+  const lg = document.getElementById('trajLegend'); lg.innerHTML = '';
   DASH.sensors.forEach(s=>{
     const it=el('div','it'); const d=el('span','dot'); d.style.background=s.color; it.appendChild(d);
     it.appendChild(el('span',null, `${s.id} <span class="muted">GPIO ${s.gpio}</span>`)); lg.appendChild(it);
   });
 }
 
-function buildSpread(){
-  spreadChart = new Chart(document.getElementById('spreadChart'), {
+function renderSpread(){
+  charts.spread = new Chart(document.getElementById('spreadChart'), {
     type:'line',
     data:{ datasets:[{ label:'spread', data:DASH.spread.points, parsing:false,
       borderColor:css('--st-predicted')||'#7C5CFF', backgroundColor:hexA('#7C5CFF',0.12),
@@ -297,19 +310,18 @@ function buildSpread(){
       scales: baseScales('hours since start (local)', 'raw spread (counts)'),
       plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:it=>`spread ${fmt(it.parsed.y)} counts` } } } }
   });
-  const k = document.getElementById('spreadKpi'); const sp=DASH.spread;
+  const k = document.getElementById('spreadKpi'); k.innerHTML = ''; const sp=DASH.spread;
   [['current',sp.current],['mean',sp.mean],['median',sp.median],['max',sp.max]].forEach(([l,v])=>{
     const box=el('div','k'); box.appendChild(el('div','v num', v!=null? fmt(v)+' ' : '— ')); box.appendChild(el('div','l',l+' spread')); k.appendChild(box);
   });
 }
 
-function buildDist(){
+function renderDist(){
   const datasets = DASH.distribution.datasets.map(d=>({
     label:d.id, data:d.counts, backgroundColor:hexA(d.color,0.55), borderColor:d.color, borderWidth:1
   }));
-  distChart = new Chart(document.getElementById('distChart'), {
-    type:'bar',
-    data:{ labels: DASH.distribution.centers, datasets },
+  charts.dist = new Chart(document.getElementById('distChart'), {
+    type:'bar', data:{ labels: DASH.distribution.centers, datasets },
     options:{ responsive:true, maintainAspectRatio:false, animation:false,
       scales:{ x:{ title:{display:true,text:'raw ADC (bin center, higher = drier)',color:css('--muted')},
                    ticks:{ color:css('--muted'), maxTicksLimit:12 }, grid:{display:false} },
@@ -319,28 +331,28 @@ function buildDist(){
 }
 
 /* ---- quality strips ---- */
-(function(){
-  const wrap = document.getElementById('qstrips');
+function renderQuality(){
+  const wrap = document.getElementById('qstrips'); wrap.innerHTML = '';
   DASH.quality.strips.forEach(s=>{
     const row=el('div','qrow'); row.appendChild(el('div','ql', s.id));
     const strip=el('div','strip');
     s.cells.forEach(c=>{ const cell=el('div','cell'); cell.style.background = c.color || 'transparent';
-      if(c.flag) cell.title = `${c.flag} ·  ${c.n} reading(s)`; strip.appendChild(cell); });
+      if(c.flag) cell.title = `${c.flag} · ${c.n} reading(s)`; strip.appendChild(cell); });
     row.appendChild(strip); wrap.appendChild(row);
   });
   document.getElementById('qcap').textContent =
     Object.entries(DASH.quality.flags).map(([f,n])=>`${f}: ${n}`).join('  ·  ');
-  const lg=document.getElementById('qlegend');
+  const lg=document.getElementById('qlegend'); lg.innerHTML = '';
+  const palette = {OK:'#34A853',SUSPECT:'#F5A623',SATURATED:'#17B6C4',NO_SIGNAL:'#9A8480',ERROR:'#E0483D'};
   Object.keys(DASH.quality.flags).forEach(f=>{
-    const it=el('div','it'); const d=el('span','dot'); d.style.background = (DASH.quality.strips[0]&& '') || '#34A853';
-    d.style.background = ({OK:'#34A853',SUSPECT:'#F5A623',SATURATED:'#17B6C4',NO_SIGNAL:'#9A8480',ERROR:'#E0483D'}[f]||'#9A8480');
+    const it=el('div','it'); const d=el('span','dot'); d.style.background = palette[f]||'#9A8480';
     it.appendChild(d); it.appendChild(el('span',null,f)); lg.appendChild(it);
   });
-})();
+}
 
 /* ---- integrity ---- */
-(function(){
-  const I = DASH.integrity; const wrap = document.getElementById('integrity');
+function renderIntegrity(){
+  const I = DASH.integrity; const wrap = document.getElementById('integrity'); wrap.innerHTML = '';
   const t = el('table','grid');
   const rows = [
     ['readings (rows)', fmt(I.total)],
@@ -366,15 +378,15 @@ function buildDist(){
   }
 
   const t3 = el('table','grid'); t3.style.marginTop='14px';
-  t3.appendChild((()=>{ const tr=el('tr'); ['session','start (local)','end (local)','rows'].forEach((h,i)=>tr.appendChild(el(i===3?'th':'th', i===3?'num':null, h))); return tr; })());
+  t3.appendChild((()=>{ const tr=el('tr'); ['session','start (local)','end (local)','rows'].forEach((h,i)=>tr.appendChild(el('th', i===3?'num':null, h))); return tr; })());
   I.sessions.forEach(s=>{ const tr=el('tr'); tr.appendChild(el('td','mono',s.session_id));
     tr.appendChild(el('td','mono small',s.start)); tr.appendChild(el('td','mono small',s.end)); tr.appendChild(el('td','num',fmt(s.n))); t3.appendChild(tr); });
-  wrap.appendChild(el('div','small muted', `sessions (a reflash / port reopen starts a new one):`));
+  wrap.appendChild(el('div','small muted', 'sessions (a reflash / port reopen starts a new one):'));
   wrap.appendChild(t3);
-})();
+}
 
 /* ---- footer provenance ---- */
-(function(){
+function renderProv(){
   const m=DASH.meta;
   document.getElementById('prov').innerHTML =
     `Generated ${m.generated_local} · schema_version ${m.schema_version} · parser <code>${m.parser}</code> · ` +
@@ -383,16 +395,52 @@ function buildDist(){
     `The legacy moist% <code>value</code> column is intentionally not plotted (B2/C2); analysis is on raw_value + band. ` +
     `Band boundaries are the un-reconciled spec (A2) and are shown as <b>proposed</b>. ` +
     `Day/night shading is omitted — it needs the real light schedule, which is not in the data.`;
-})();
+}
 
-/* ---- theme toggle ---- */
+/* ---- render everything (re-runnable for live refresh) ---- */
+function renderAll(){
+  destroyCharts();
+  renderHeader(); renderCards(); renderLadder();
+  renderTraj(); renderSpread(); renderDist();
+  renderQuality(); renderIntegrity(); renderProv();
+}
+
+/* ---- live refresh ---- */
+function flash(btn, msg, ok){
+  const old = btn.textContent; btn.textContent = msg; btn.classList.toggle('busy', !ok);
+  setTimeout(()=>{ btn.textContent = old; btn.classList.remove('busy'); }, 1600);
+}
+async function refresh(){
+  const btn = document.getElementById('refreshBtn');
+  if(!LIVE){ flash(btn, 'snapshot — run serve.py', false); return; }
+  btn.classList.add('busy'); btn.disabled = true;
+  try{
+    const r = await fetch('data.json', {cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    DASH = await r.json();
+    renderAll();
+  }catch(e){ flash(btn, 'refresh failed', false); }
+  finally{ btn.classList.remove('busy'); btn.disabled = false; }
+}
+
+/* ---- controls + boot ---- */
 (function(){
-  const btn=document.getElementById('themeBtn'); const root=document.documentElement;
-  const apply = th => { root.setAttribute('data-theme', th); btn.textContent = th==='dark'? 'light mode':'soil mode';
-    [trajChart,spreadChart,distChart].forEach(c=>{ if(c) c.update(); }); };
-  let cur='light'; try{ cur = localStorage.getItem('sprout-theme')||'light'; }catch(e){}
-  btn.addEventListener('click', ()=>{ cur = (cur==='dark')?'light':'dark'; try{ localStorage.setItem('sprout-theme',cur);}catch(e){} apply(cur); });
-  buildTraj(); buildSpread(); buildDist(); apply(cur);
+  const themeBtn=document.getElementById('themeBtn'), root=document.documentElement;
+  const refreshBtn=document.getElementById('refreshBtn'), autoChk=document.getElementById('autoChk');
+
+  let theme='light'; try{ theme = localStorage.getItem('sprout-theme')||'light'; }catch(e){}
+  function applyTheme(){ root.setAttribute('data-theme', theme); themeBtn.textContent = theme==='dark'? 'light mode':'soil mode'; }
+  themeBtn.addEventListener('click', ()=>{ theme = theme==='dark'?'light':'dark'; try{ localStorage.setItem('sprout-theme',theme);}catch(e){} applyTheme(); renderAll(); });
+
+  refreshBtn.addEventListener('click', refresh);
+  if(!LIVE){ autoChk.disabled = true; document.getElementById('autoLbl').title = 'Serve via tools/analytics/serve.py for live data'; }
+  autoChk.addEventListener('change', ()=>{
+    if(autoChk.checked){ autoTimer = setInterval(refresh, AUTO_MS); refresh(); }
+    else if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
+  });
+
+  applyTheme();
+  renderAll();
 })();
 </script>
 </body>

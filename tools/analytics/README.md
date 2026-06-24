@@ -9,7 +9,8 @@ Backlog lane (see [`../../BACKLOG.md`](../../BACKLOG.md) section E):
 | Item | What | Status |
 | --- | --- | --- |
 | E6 | Schema-v1 log parser (`parse_v1.py`) | done |
-| E7 | 4-channel dashboard (`dashboard.py` + template) | done |
+| E7 | 4-channel dashboard, static self-contained (`dashboard.py` + template) | done |
+| E1 | Live-serving dashboard + Refresh / Auto (`serve.py`) | done — monitoring slice |
 | E5 | Local parquet / DuckDB analysis tier | deferred until query/ML volume justifies it |
 
 ## `parse_v1.py` — schema-v1 reader (E6)
@@ -83,6 +84,22 @@ Honesty rules, enforced in the generator:
 
 `vendor/chart.umd.min.js` is Chart.js v4.4.3 (MIT), vendored so the dashboard is offline and
 self-contained. Delete it and the generator falls back to a CDN `<script>` tag.
+
+### Live mode (`serve.py`)
+
+The static file is a point-in-time snapshot. For a view that tracks the logger as it appends, serve
+it instead:
+
+```text
+python tools/analytics/serve.py            # serve repo logs/ at http://127.0.0.1:8765
+python tools/analytics/serve.py logs/ -p 8000
+```
+
+`serve.py` serves the dashboard at `/` plus a `/data.json` endpoint that re-parses the logs fresh on
+each request. The page's **↻ Refresh** button (and the **auto** toggle, ~30 s) pull `/data.json` and
+re-render in place — no full reload, scroll and theme preserved. Opened as a bare file it detects
+`file://` and stays a static snapshot (Refresh shows a "run serve.py" hint). It is read-only — it
+never writes the logs. This is the live-monitoring slice of backlog **E1**.
 
 ## The `value` column is the legacy moist% — do not analyse on it (B2 / C2)
 
