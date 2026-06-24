@@ -673,6 +673,34 @@ Nearer-term unblock for honest multi-day analysis (the diurnal / wake-sleep-sun 
 E5 (parquet) once re-parsing 30 days of CSV + gz gets slow — at today's volume CSV + gz is fine. Self-assigned by the
 analytics thread per Veronica's 2026-06-24 request to file it before developing.
 
+### E9. Make logging gaps / interruptions visible across the dashboard
+
+**Status:** in progress — analytics/data thread (self-assigned 2026-06-24)
+**Priority:** P9 (within section)
+**Scope:** S–M — break the trajectory line at gaps, represent "no data" on the quality timeline, and list
+gaps explicitly in the data-integrity panel.
+**Where:** host-side — `dashboard.py` (`build_context`) + the dashboard template.
+
+A logging interruption (a B5 board reset, a logger restart, a USB drop) should be *obvious* in the view —
+"surface gaps, don't hide them" is the integrity panel's own promise. Today a 6-min restart gap is
+invisible on three surfaces:
+
+- **The trajectory line interpolates across it.** Chart.js connects the last pre-gap point straight to
+  the first post-gap point, so even a wide gap draws as a continuous line. Fix: when building each
+  sensor's points, detect a time-delta greater than ~2–3× cadence between consecutive samples and insert
+  a `null` break (Chart.js `spanGaps:false` then shows a real break). Optionally shade the gap span.
+- **The quality timeline shows only the quality of *present* data, not its *absence*.** A 6-min gap is
+  smaller than one ~17-min strip bucket, so the bucket still colors `OK`. Fix: represent missing-data
+  time on the strip (a distinct "gap" colour when a bucket's actual sample count falls well short of the
+  cadence-expected count), so an interruption reads as a break, not green.
+- **Data integrity implies the gap (3 sessions) but never states it.** The sessions table shows `35f975`
+  ending `11:22:26` and `7abd57` starting `11:28:35`, but nothing says "6.2-min gap." Fix: compute gaps
+  (inter-session, plus any intra-session delta over threshold) and list them explicitly with start
+  timestamp + duration, as a first-class integrity row.
+
+Surfaced 2026-06-24 reviewing the post-restart capture. Self-assigned per Veronica's "record before
+working on them."
+
 ---
 
 ## Your additions (to review / expand)
