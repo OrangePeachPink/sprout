@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background:#eef4e6; }
+  ::selection { background:#8bd24f; color:#1e2a18; }
+  .bl { font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:#8a9a78; }
+  .sys { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+</style>
+</helmet>
+
+<div style="background:#eef4e6; padding:40px 24px 80px; font-family:'Hanken Grotesk',sans-serif;">
+<div style="max-width:1200px; margin:0 auto; display:flex; flex-direction:column; gap:26px;">
+
+  <!-- ============ COVER ============ -->
+  <div style="position:relative; overflow:hidden; background:radial-gradient(130% 120% at 84% -10%, #1c3320 0%, #0e140b 58%); border-radius:26px; padding:60px; min-height:300px; display:flex; flex-direction:column; justify-content:center;">
+    <div style="position:absolute; top:40px; right:70px; width:280px; height:280px; border-radius:46% 54% 60% 40% / 50% 44% 56% 50%; background:radial-gradient(circle at 38% 34%, rgba(158,224,74,0.45), rgba(23,182,196,0.04) 72%); filter:blur(8px);"></div>
+    <div style="position:relative;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+        <svg width="30" height="36" viewBox="0 0 24 28" fill="none" stroke="#9ee04a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#9ee04a"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#9ee04a"></path></svg>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:14px; letter-spacing:0.2em; color:#9ee04a;">SPROUT</span>
+      </div>
+      <h1 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:62px; line-height:0.98; color:#eaf2e0; margin:0 0 16px; max-width:760px;">Social starter kit.</h1>
+      <p style="font-size:19px; line-height:1.5; color:#9fb094; margin:0; max-width:620px;">Everything to take it public — a GitHub page, LinkedIn-ready posts, and a generic asset set for everywhere else. Copy is written; just swap the name when you pick one.</p>
+    </div>
+  </div>
+
+  <!-- ============ GITHUB ============ -->
+  <div style="background:#fff; border:1px solid #e3e9d8; border-radius:22px; padding:40px;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px;">
+      <h2 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:30px; color:#1e2a18; margin:0;">GitHub page</h2>
+      <span class="bl">01 · Repo &amp; README</span>
+    </div>
+    <p style="font-size:15px; color:#6f7e62; margin:0 0 24px; max-width:680px;">The home base. A README that opens with a branded hero, proves itself with a live screenshot, and gets a maker running in three commands — shown here in GitHub's dark theme.</p>
+
+    <!-- GitHub chrome -->
+    <div class="sys" style="background:#0d1117; border:1px solid #30363d; border-radius:14px; overflow:hidden;">
+      <!-- repo bar -->
+      <div style="padding:16px 20px; border-bottom:1px solid #21262d; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:8px; font-size:15px; color:#e6edf3;">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="#8b949e"><path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.708A2.486 2.486 0 0 1 4.5 9h8ZM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.087a.249.249 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z"></path></svg>
+          <span style="color:#58a6ff;">yourname</span><span style="color:#8b949e;">/</span><span style="color:#58a6ff; font-weight:600;">sprout</span>
+          <span style="font-size:12px; color:#8b949e; border:1px solid #30363d; border-radius:999px; padding:1px 8px; margin-left:4px;">Public</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <span style="font-size:12.5px; color:#e6edf3; background:#21262d; border:1px solid #30363d; border-radius:6px; padding:5px 12px;">☆ Star <b style="color:#fff;">1.2k</b></span>
+          <span style="font-size:12.5px; color:#e6edf3; background:#21262d; border:1px solid #30363d; border-radius:6px; padding:5px 12px;">⑂ Fork <b style="color:#fff;">86</b></span>
+        </div>
+      </div>
+      <!-- tabs -->
+      <div style="padding:0 20px; border-bottom:1px solid #21262d; display:flex; gap:22px; font-size:13.5px; color:#8b949e;">
+        <span style="padding:12px 0; color:#e6edf3; border-bottom:2px solid #f78166; font-weight:600;">Code</span>
+        <span style="padding:12px 0;">Issues <span style="background:#30363d; border-radius:999px; padding:0 6px; font-size:11px;">7</span></span>
+        <span style="padding:12px 0;">Pull requests</span>
+        <span style="padding:12px 0;">Actions</span>
+        <span style="padding:12px 0;">Wiki</span>
+      </div>
+
+      <!-- readme body -->
+      <div style="padding:40px 56px;">
+        <!-- hero -->
+        <div style="text-align:center; margin-bottom:30px;">
+          <div style="position:relative; overflow:hidden; background:radial-gradient(120% 130% at 80% -20%, #1c3320 0%, #0e140b 62%); border:1px solid #30363d; border-radius:14px; padding:46px 30px; margin-bottom:24px;">
+            <div style="position:absolute; top:-20px; right:60px; width:150px; height:150px; border-radius:50%; background:radial-gradient(circle at 38% 34%, rgba(158,224,74,0.4), rgba(14,20,11,0) 72%); filter:blur(6px);"></div>
+            <div style="position:relative; display:inline-flex; align-items:center; gap:14px;">
+              <svg width="40" height="48" viewBox="0 0 24 28" fill="none" stroke="#9ee04a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#9ee04a"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#9ee04a"></path></svg>
+              <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:46px; color:#eaf2e0;">Sprout</span>
+            </div>
+            <div style="font-family:'Hanken Grotesk',sans-serif; position:relative; font-size:18px; color:#9fb094; margin-top:12px;">Tend a tiny jungle — four-channel soil monitoring &amp; auto-watering.</div>
+          </div>
+          <!-- badges -->
+          <div style="display:flex; gap:7px; justify-content:center; flex-wrap:wrap;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#fff; background:#34a853; border-radius:5px; padding:4px 9px;">build passing</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#fff; background:#0d1117; border:1px solid #30363d; border-radius:5px; padding:4px 9px;">license MIT</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#fff; background:#17b6c4; border-radius:5px; padding:4px 9px;">platform ESP32</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#fff; background:#7c5cff; border-radius:5px; padding:4px 9px;">release v0.4.0</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#fff; background:#0d1117; border:1px solid #30363d; border-radius:5px; padding:4px 9px;">PRs welcome</span>
+          </div>
+        </div>
+
+        <!-- demo screenshot (reuse mini dark dashboard) -->
+        <div style="border:1px solid #30363d; border-radius:12px; overflow:hidden; margin-bottom:34px;">
+          <div style="background:#121a0e; padding:18px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding-bottom:12px; border-bottom:1px solid #243019; margin-bottom:12px;">
+              <div style="display:flex; align-items:center; gap:9px;"><span style="width:8px; height:8px; border-radius:50%; background:#9ee04a; box-shadow:0 0 6px #9ee04a;"></span><span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:15px; color:#eaf2e0;">Greenhouse · nominal</span></div>
+              <div style="display:flex; gap:16px; font-family:'JetBrains Mono',monospace; font-size:11px;"><span style="color:#7c8a72;">CH <span style="color:#eaf2e0;">4</span></span><span style="color:#7c8a72;">H2O <span style="color:#3fd0de;">1.2L</span></span><span style="color:#7c8a72;">NEXT <span style="color:#f5a623;">CH3</span></span></div>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
+              <div style="background:#1b2417; border:1px solid #283322; border-radius:10px; padding:11px; display:flex; align-items:center; gap:9px;"><div style="position:relative; width:38px; height:38px; border-radius:50%; background:conic-gradient(#9ee04a 0deg 295deg,#283322 295deg 360deg);"><div style="position:absolute; inset:5px; border-radius:50%; background:#1b2417;"></div></div><div><div style="font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:600; color:#eaf2e0;">82%</div><div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#7c8a72;">Monstera</div></div></div>
+              <div style="background:#1b2417; border:1px solid #283322; border-radius:10px; padding:11px; display:flex; align-items:center; gap:9px;"><div style="position:relative; width:38px; height:38px; border-radius:50%; background:conic-gradient(#3fd0de 0deg 270deg,#283322 270deg 360deg);"><div style="position:absolute; inset:5px; border-radius:50%; background:#1b2417;"></div></div><div><div style="font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:600; color:#eaf2e0;">75%</div><div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#3fd0de;">drinking</div></div></div>
+              <div style="background:#1b2417; border:1px solid #4a3d1c; border-radius:10px; padding:11px; display:flex; align-items:center; gap:9px;"><div style="position:relative; width:38px; height:38px; border-radius:50%; background:conic-gradient(#f5a623 0deg 104deg,#283322 104deg 360deg);"><div style="position:absolute; inset:5px; border-radius:50%; background:#1b2417;"></div></div><div><div style="font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:600; color:#eaf2e0;">29%</div><div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#f5a623;">due now</div></div></div>
+              <div style="background:#1b2417; border:1px solid #283322; border-radius:10px; padding:11px; display:flex; align-items:center; gap:9px;"><div style="position:relative; width:38px; height:38px; border-radius:50%; background:conic-gradient(#9ee04a 0deg 180deg,#283322 180deg 360deg);"><div style="position:absolute; inset:5px; border-radius:50%; background:#1b2417;"></div></div><div><div style="font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:600; color:#eaf2e0;">50%</div><div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#7c8a72;">Cacti</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Features heading -->
+        <div style="border-bottom:1px solid #21262d; padding-bottom:8px; margin-bottom:18px;"><span style="font-size:22px; font-weight:600; color:#e6edf3;">Features</span></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px 32px; margin-bottom:34px;">
+          <div style="display:flex; gap:10px; align-items:flex-start;"><svg width="18" height="21" viewBox="0 0 24 28" fill="none" stroke="#9ee04a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px; flex-shrink:0;"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#34a853" stroke="#9ee04a"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#9ee04a"></path></svg><span style="font-size:14.5px; color:#c9d1d9; line-height:1.5;"><b style="color:#e6edf3;">Four independent channels</b> — a sensor, pump &amp; relay each.</span></div>
+          <div style="display:flex; gap:10px; align-items:flex-start;"><svg width="18" height="21" viewBox="0 0 24 28" fill="none" stroke="#9ee04a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px; flex-shrink:0;"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#34a853" stroke="#9ee04a"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#9ee04a"></path></svg><span style="font-size:14.5px; color:#c9d1d9; line-height:1.5;"><b style="color:#e6edf3;">Honest readings</b> — raw ADC + 7 calibrated bands, no fake %.</span></div>
+          <div style="display:flex; gap:10px; align-items:flex-start;"><svg width="18" height="21" viewBox="0 0 24 28" fill="none" stroke="#9ee04a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px; flex-shrink:0;"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#34a853" stroke="#9ee04a"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#9ee04a"></path></svg><span style="font-size:14.5px; color:#c9d1d9; line-height:1.5;"><b style="color:#e6edf3;">Predictive watering</b> — forecasts the next cycle per zone.</span></div>
+          <div style="display:flex; gap:10px; align-items:flex-start;"><svg width="18" height="21" viewBox="0 0 24 28" fill="none" stroke="#9ee04a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px; flex-shrink:0;"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#34a853" stroke="#9ee04a"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#9ee04a"></path></svg><span style="font-size:14.5px; color:#c9d1d9; line-height:1.5;"><b style="color:#e6edf3;">Live dashboard</b> — dense control-room view, light &amp; dark.</span></div>
+        </div>
+
+        <!-- Quick start -->
+        <div style="border-bottom:1px solid #21262d; padding-bottom:8px; margin-bottom:18px;"><span style="font-size:22px; font-weight:600; color:#e6edf3;">Quick start</span></div>
+        <div style="background:#161b22; border:1px solid #30363d; border-radius:8px; padding:18px 20px; font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.8; margin-bottom:34px;">
+          <div><span style="color:#8b949e;"># clone &amp; flash the firmware</span></div>
+          <div><span style="color:#7ee787;">git</span> <span style="color:#c9d1d9;">clone https://github.com/yourname/sprout.git</span></div>
+          <div><span style="color:#7ee787;">cd</span> <span style="color:#c9d1d9;">sprout &amp;&amp;</span> <span style="color:#7ee787;">pio</span> <span style="color:#c9d1d9;">run -t upload</span></div>
+          <div><span style="color:#8b949e;"># then open the dashboard</span></div>
+          <div><span style="color:#79c0ff;">open</span> <span style="color:#a5d6ff;">http://sprout.local</span></div>
+        </div>
+
+        <!-- Hardware -->
+        <div style="border-bottom:1px solid #21262d; padding-bottom:8px; margin-bottom:18px;"><span style="font-size:22px; font-weight:600; color:#e6edf3;">Hardware</span></div>
+        <div style="border:1px solid #30363d; border-radius:8px; overflow:hidden; font-size:13.5px;">
+          <div style="display:grid; grid-template-columns:1fr 2fr; background:#161b22; border-bottom:1px solid #30363d; color:#8b949e; font-weight:600;"><span style="padding:9px 16px;">Part</span><span style="padding:9px 16px; border-left:1px solid #30363d;">Notes</span></div>
+          <div style="display:grid; grid-template-columns:1fr 2fr; border-bottom:1px solid #21262d; color:#c9d1d9;"><span style="padding:9px 16px;">ESP32 dev board</span><span style="padding:9px 16px; border-left:1px solid #21262d;">Wi-Fi + ADC, the brain</span></div>
+          <div style="display:grid; grid-template-columns:1fr 2fr; border-bottom:1px solid #21262d; color:#c9d1d9; background:#0d1117;"><span style="padding:9px 16px;">4× capacitive sensors</span><span style="padding:9px 16px; border-left:1px solid #21262d;">one per zone</span></div>
+          <div style="display:grid; grid-template-columns:1fr 2fr; color:#c9d1d9;"><span style="padding:9px 16px;">4-ch relay + pumps</span><span style="padding:9px 16px; border-left:1px solid #21262d;">5V pumps, food-safe tubing</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8a9a78; margin-top:16px;">Also drops straight into <span style="color:#247a3a;">GitHub Pages</span> as a landing page — same hero, same screenshot.</div>
+  </div>
+
+  <!-- ============ LINKEDIN ============ -->
+  <div style="background:#fff; border:1px solid #e3e9d8; border-radius:22px; padding:40px;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px;">
+      <h2 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:30px; color:#1e2a18; margin:0;">LinkedIn kit</h2>
+      <span class="bl">02 · Post &amp; profile</span>
+    </div>
+    <p style="font-size:15px; color:#6f7e62; margin:0 0 24px; max-width:680px;">A profile banner, headline and three ready-to-paste posts — written in the brand voice, sequenced as a launch arc: announce, then the feature people remember, then the maker story.</p>
+
+    <!-- banner -->
+    <div class="bl" style="margin-bottom:12px;">Profile banner <span style="text-transform:none; letter-spacing:0; color:#b3bfa6;">· 1584 × 396</span></div>
+    <div style="position:relative; overflow:hidden; border-radius:14px; aspect-ratio:1584/396; background:radial-gradient(120% 160% at 82% -20%, #1c3320 0%, #0e140b 60%); display:flex; align-items:center; padding:0 56px; margin-bottom:14px;">
+      <div style="position:absolute; top:-40px; right:120px; width:300px; height:300px; border-radius:50%; background:radial-gradient(circle at 38% 34%, rgba(158,224,74,0.4), rgba(14,20,11,0) 70%); filter:blur(8px);"></div>
+      <div style="position:relative;">
+        <div style="display:flex; align-items:center; gap:14px; margin-bottom:14px;"><svg width="34" height="40" viewBox="0 0 24 28" fill="none" stroke="#9ee04a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#9ee04a"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#9ee04a"></path></svg><span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:38px; color:#eaf2e0;">Sprout</span></div>
+        <div style="font-family:'Hanken Grotesk',sans-serif; font-size:22px; color:#9fb094;">Quiet care for living things · open-source plant monitoring</div>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:32px;">
+      <div style="background:#f7faf2; border:1px solid #e3e9d8; border-radius:14px; padding:20px;"><div class="bl" style="margin-bottom:10px;">Headline</div><div style="font-size:15px; font-weight:600; color:#1e2a18; line-height:1.5;">Building Sprout — an open-source system that keeps four plants perfectly watered, and treats each one like it's alive.</div></div>
+      <div style="background:#f7faf2; border:1px solid #e3e9d8; border-radius:14px; padding:20px;"><div class="bl" style="margin-bottom:10px;">About / bio</div><div style="font-size:14px; color:#4a5740; line-height:1.55;">Maker project: ESP32 + soil sensors + pumps, with a dashboard that gives every plant a mood. Honest data, predictive watering, fully open. Following along? ↓ repo in featured.</div></div>
+    </div>
+
+    <!-- posts -->
+    <div class="bl" style="margin-bottom:14px;">Ready-to-post · 3-part launch arc</div>
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
+
+      <!-- post 1: launch -->
+      <div class="sys" style="border:1px solid #e3e9d8; border-radius:14px; overflow:hidden; background:#fff;">
+        <div style="padding:16px 16px 0;">
+          <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px;">
+            <div style="width:44px; height:44px; border-radius:50%; background:#34a853; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="24" height="28" viewBox="0 0 24 28" fill="none" stroke="#eafbe7" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#eafbe7"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#bff39c" stroke="#eafbe7"></path></svg></div>
+            <div><div style="font-size:14px; font-weight:600; color:#1e2a18;">Your Name</div><div style="font-size:12px; color:#8a9a78;">Maker · now</div></div>
+          </div>
+          <div style="font-size:13.5px; line-height:1.5; color:#1e2a18; margin-bottom:12px;">I kept forgetting to water my plants. So I built something that doesn't.<br><br>Meet <b>Sprout</b>: four soil sensors, four pumps, and a dashboard that gives every plant a mood. It waters before a leaf ever droops — and tells me what's coming next.<br><br>Open-source, built on an ESP32. Repo in the comments.</div>
+          <div style="font-size:12px; color:#0a66c2; margin-bottom:12px;">#opensource #IoT #maker #plants #ESP32</div>
+        </div>
+        <div style="height:130px; background:radial-gradient(120% 130% at 80% -10%, #1c3320, #0e140b); display:flex; align-items:center; justify-content:center; gap:10px;"><svg width="26" height="31" viewBox="0 0 24 28" fill="none" stroke="#9ee04a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#9ee04a"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#9ee04a"></path></svg><span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:26px; color:#eaf2e0;">Sprout</span></div>
+        <div style="padding:10px 16px; display:flex; gap:18px; border-top:1px solid #eef2e6; font-size:12px; color:#8a9a78;"><span>Like</span><span>Comment</span><span>Share</span><span>Send</span></div>
+      </div>
+
+      <!-- post 2: moods -->
+      <div class="sys" style="border:1px solid #e3e9d8; border-radius:14px; overflow:hidden; background:#fff;">
+        <div style="padding:16px 16px 0;">
+          <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px;">
+            <div style="width:44px; height:44px; border-radius:50%; background:#34a853; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="24" height="28" viewBox="0 0 24 28" fill="none" stroke="#eafbe7" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#eafbe7"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#bff39c" stroke="#eafbe7"></path></svg></div>
+            <div><div style="font-size:14px; font-weight:600; color:#1e2a18;">Your Name</div><div style="font-size:12px; color:#8a9a78;">Maker · 3d</div></div>
+          </div>
+          <div style="font-size:13.5px; line-height:1.5; color:#1e2a18; margin-bottom:12px;">The feature I didn't expect to love: <b>plants have moods.</b><br><br>Each channel reads its own soil and shows how it's doing — thriving, content, thirsty, parched. Not a gimmick: the mood is driven by calibrated data, never a fake percentage.<br><br>Turns out a little personality makes you actually <i>care</i> about the dashboard.</div>
+          <div style="font-size:12px; color:#0a66c2; margin-bottom:12px;">#productdesign #UX #IoT #plants</div>
+        </div>
+        <div style="height:130px; background:#f3f9ea; display:flex; align-items:center; justify-content:center; gap:18px;">
+          <svg width="30" height="35" viewBox="0 0 24 28" fill="#8bd24f" stroke="#247a3a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12" fill="none"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg>
+          <svg width="30" height="35" viewBox="0 0 24 28" fill="#f5c97a" stroke="#b07d12" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V14" fill="none"></path><path d="M12 15 C8 14 5 14 4 16 C8 18 11 17 12 15 Z"></path><path d="M12 15 C16 14 19 14 20 16 C16 18 13 17 12 15 Z" fill="#f5a623"></path></svg>
+          <svg width="30" height="35" viewBox="0 0 24 28" fill="#f0a984" stroke="#c2561f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 C12 20 12 18 12 16" fill="none"></path><path d="M12 16 C8 17 6 20 6 23 C10 22 12 19 12 16 Z"></path><path d="M12 16 C16 17 18 20 18 23 C14 22 12 19 12 16 Z" fill="#e8703a"></path></svg>
+        </div>
+        <div style="padding:10px 16px; display:flex; gap:18px; border-top:1px solid #eef2e6; font-size:12px; color:#8a9a78;"><span>Like</span><span>Comment</span><span>Share</span><span>Send</span></div>
+      </div>
+
+      <!-- post 3: build log -->
+      <div class="sys" style="border:1px solid #e3e9d8; border-radius:14px; overflow:hidden; background:#fff;">
+        <div style="padding:16px 16px 0;">
+          <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px;">
+            <div style="width:44px; height:44px; border-radius:50%; background:#34a853; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="24" height="28" viewBox="0 0 24 28" fill="none" stroke="#eafbe7" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#eafbe7"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#bff39c" stroke="#eafbe7"></path></svg></div>
+            <div><div style="font-size:14px; font-weight:600; color:#1e2a18;">Your Name</div><div style="font-size:12px; color:#8a9a78;">Maker · 1w</div></div>
+          </div>
+          <div style="font-size:13.5px; line-height:1.5; color:#1e2a18; margin-bottom:12px;">Lesson from building Sprout: <b>the percentage was lying.</b><br><br>Cheap soil sensors output raw ADC counts. Mapping that to a clean “83%” looks trustworthy — and isn't. I switched to honest raw values + 7 calibrated bands, and the watering got dramatically more reliable.<br><br>Full write-up and code in the repo. Calibration thread below.</div>
+          <div style="font-size:12px; color:#0a66c2; margin-bottom:12px;">#embedded #engineering #opensource #datadesign</div>
+        </div>
+        <div style="height:130px; background:#0d1117; display:flex; align-items:center; justify-content:center; padding:14px;"><div style="font-family:'JetBrains Mono',monospace; font-size:11px; line-height:1.6; color:#c9d1d9;"><span style="color:#8b949e;">raw 1830 →</span> <span style="color:#9ee04a;">band: moist</span><br><span style="color:#8b949e;">idx 68 · </span><span style="color:#f5a623;">not VWC</span><br><span style="color:#7ee787;">$ honest by design</span></div></div>
+        <div style="padding:10px 16px; display:flex; gap:18px; border-top:1px solid #eef2e6; font-size:12px; color:#8a9a78;"><span>Like</span><span>Comment</span><span>Share</span><span>Send</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ GENERIC / EVERYWHERE ELSE ============ -->
+  <div style="background:#fff; border:1px solid #e3e9d8; border-radius:22px; padding:40px;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px;">
+      <h2 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:30px; color:#1e2a18; margin:0;">Everywhere else</h2>
+      <span class="bl">03 · Generic assets</span>
+    </div>
+    <p style="font-size:15px; color:#6f7e62; margin:0 0 26px; max-width:680px;">A small reusable set for YouTube, Instagram, X, Reddit and the rest — avatars, post and story templates, a thumbnail, and copy you can paste anywhere.</p>
+
+    <!-- avatars -->
+    <div class="bl" style="margin-bottom:12px;">Avatars</div>
+    <div style="display:flex; gap:18px; align-items:center; margin-bottom:30px;">
+      <div style="width:84px; height:84px; border-radius:50%; background:#34a853; display:flex; align-items:center; justify-content:center;"><svg width="46" height="54" viewBox="0 0 24 28" fill="none" stroke="#eafbe7" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#eafbe7"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#bff39c" stroke="#eafbe7"></path></svg></div>
+      <div style="width:84px; height:84px; border-radius:50%; background:#0e140b; display:flex; align-items:center; justify-content:center; box-shadow:0 0 18px rgba(158,224,74,0.25);"><svg width="44" height="52" viewBox="0 0 24 28" fill="none" stroke="#9ee04a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#9ee04a"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#9ee04a"></path></svg></div>
+      <div style="width:84px; height:84px; border-radius:50%; background:#eef4e6; border:1px solid #e3e9d8; display:flex; align-items:center; justify-content:center;"><svg width="44" height="52" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8a9a78; margin-left:6px;">on-leaf · soil-glow · cream<br>(use the same crop everywhere)</div>
+    </div>
+
+    <!-- templates row -->
+    <div style="display:grid; grid-template-columns:1fr 0.62fr 1fr; gap:16px; margin-bottom:30px; align-items:start;">
+      <!-- square post -->
+      <div>
+        <div class="bl" style="margin-bottom:10px;">Square post · 1:1</div>
+        <div style="position:relative; overflow:hidden; aspect-ratio:1/1; border-radius:14px; background:radial-gradient(120% 120% at 80% 0%, #e9efd9 0%, #f6f4ec 60%); border:1px solid #e3e9d8; padding:30px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:8px;"><svg width="22" height="26" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg><span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.16em; color:#5f7a3e;">SPROUT</span></div>
+          <div style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:34px; line-height:1.02; color:#1e2a18;">Know before<br>they show.</div>
+          <div style="font-size:13px; color:#6f7e62;">Predictive plant watering, open-source.</div>
+        </div>
+      </div>
+      <!-- story -->
+      <div>
+        <div class="bl" style="margin-bottom:10px;">Story · 9:16</div>
+        <div style="position:relative; overflow:hidden; aspect-ratio:9/16; border-radius:14px; background:radial-gradient(120% 90% at 80% 0%, #1c3320 0%, #0e140b 60%); padding:24px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div style="position:absolute; top:30px; right:-20px; width:120px; height:120px; border-radius:50%; background:radial-gradient(circle at 40% 38%, rgba(158,224,74,0.4), rgba(14,20,11,0) 72%); filter:blur(6px);"></div>
+          <div style="position:relative; display:flex; align-items:center; gap:7px;"><svg width="18" height="21" viewBox="0 0 24 28" fill="none" stroke="#9ee04a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#9ee04a"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#9ee04a"></path></svg><span style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.16em; color:#9ee04a;">SPROUT</span></div>
+          <div style="position:relative;"><div style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:26px; line-height:1.05; color:#eaf2e0;">Plants with a pulse.</div><div style="font-size:12px; color:#9fb094; margin-top:8px;">tap to see the build →</div></div>
+        </div>
+      </div>
+      <!-- youtube thumb -->
+      <div>
+        <div class="bl" style="margin-bottom:10px;">YouTube thumb · 16:9</div>
+        <div style="position:relative; overflow:hidden; aspect-ratio:16/9; border-radius:14px; background:radial-gradient(120% 150% at 88% -10%, #1c3320 0%, #0e140b 60%); padding:22px; display:flex; align-items:center; gap:16px;">
+          <div style="flex:1;"><div style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:27px; line-height:1.0; color:#eaf2e0;">I built a robot<br>to water my<br><span style="color:#9ee04a;">plants.</span></div></div>
+          <div style="width:96px; height:96px; flex-shrink:0; position:relative;"><div style="position:absolute; inset:0; border-radius:50%; border:9px solid #283322;"></div><div style="position:absolute; inset:0; border-radius:50%; background:conic-gradient(#9ee04a 0deg 295deg, transparent 295deg 360deg);"></div><div style="position:absolute; inset:11px; border-radius:50%; background:#0e140b; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:600; color:#eaf2e0;">82%</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- bio + hashtags -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+      <div style="background:#f7faf2; border:1px solid #e3e9d8; border-radius:14px; padding:22px;">
+        <div class="bl" style="margin-bottom:12px;">Short bio · X / IG / Reddit</div>
+        <div style="font-size:14px; color:#1e2a18; line-height:1.55; margin-bottom:12px; padding:12px 14px; background:#fff; border:1px solid #e3e9d8; border-radius:10px;">Open-source plant care that treats every plant like it's alive. 4 sensors, 4 pumps, honest soil data. Built by a maker — no hype, just dirt.</div>
+        <div style="font-size:13px; color:#6f7e62; line-height:1.5;">Keep it one line, lead with the idea, link the repo. (Drop the playful last clause on formal channels.)</div>
+      </div>
+      <div style="background:#f7faf2; border:1px solid #e3e9d8; border-radius:14px; padding:22px;">
+        <div class="bl" style="margin-bottom:12px;">Hashtag kit</div>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+          <span style="font-size:13px; font-weight:600; color:#247a3a; background:#dff0cc; border-radius:8px; padding:6px 12px;">#opensource</span>
+          <span style="font-size:13px; font-weight:600; color:#0e7a86; background:#cdeef1; border-radius:8px; padding:6px 12px;">#IoT</span>
+          <span style="font-size:13px; font-weight:600; color:#9a6410; background:#fbe7c4; border-radius:8px; padding:6px 12px;">#maker</span>
+          <span style="font-size:13px; font-weight:600; color:#5b43c2; background:#e6e0ff; border-radius:8px; padding:6px 12px;">#ESP32</span>
+          <span style="font-size:13px; font-weight:600; color:#247a3a; background:#dff0cc; border-radius:8px; padding:6px 12px;">#plants</span>
+          <span style="font-size:13px; font-weight:600; color:#a3461a; background:#fad9c8; border-radius:8px; padding:6px 12px;">#homeautomation</span>
+          <span style="font-size:13px; font-weight:600; color:#0e7a86; background:#cdeef1; border-radius:8px; padding:6px 12px;">#embedded</span>
+          <span style="font-size:13px; font-weight:600; color:#9a6410; background:#fbe7c4; border-radius:8px; padding:6px 12px;">#DIY</span>
+        </div>
+        <div style="font-size:12.5px; color:#6f7e62; line-height:1.5; margin-top:14px;">Pick 3–5 per post. <span style="color:#247a3a; font-weight:600;">#opensource + #maker</span> for reach; <span style="color:#5b43c2; font-weight:600;">#ESP32 + #embedded</span> for the right crowd.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FOOTER ============ -->
+  <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 8px;">
+    <div style="display:flex; align-items:center; gap:10px;"><svg width="22" height="26" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8a9a78;">SPROUT · SOCIAL STARTER KIT v1</span></div>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#b3bfa6;">tend well.</span>
+  </div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1248,&quot;height&quot;:900}}"></script>
+</body>
+</html>
