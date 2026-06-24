@@ -1,6 +1,6 @@
 # ADR-0003 — Work pipeline: from idea to release
 
-**Status:** Proposed (pending [ADR-0002](0002-process-tiers.md) areas #6, #7, #14, and maintainer acceptance)
+**Status:** Accepted (2026-06-24)
 **Date:** 2026-06-24
 **Owner:** Workflow lane
 **Lane:** work intake, specs/PRDs, backlog, issues, the team workflow, releases & insights

@@ -1,6 +1,6 @@
 # ADR-0005 — Application surface & frontend
 
-**Status:** Proposed
+**Status:** Accepted (2026-06-24)
 **Date:** 2026-06-24
 **Owner:** Data lane
 **Lane:** data/analytics (host application surface)
