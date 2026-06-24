@@ -145,6 +145,40 @@ This is the process the whole team adopts; it will be surfaced to outside contri
   notes from its merged work; a `.github/release.yml` categorizes them by `type:` label.
 - **Insights** gives velocity (via Size) and status-flow charts. Deeper cycle-time is deferred (below).
 
+## 10. When a decision merits an ADR
+
+Not every choice needs an ADR — and "ADR everything" is its own over-engineering. An ADR is the **top
+rung** of the change ladder (commit → issue + PR → ADR), reserved for decisions a future contributor
+will need the *why* for. **Any lane may author an ADR** for an ADR-sized decision in its own area,
+under the same numbered series + [register](0000-record-architecture-decisions.md).
+
+**Write an ADR when any of these is true:**
+- **Hard or expensive to reverse** — architecture, data substrate, a public schema/API, repo
+  structure, a framework choice.
+- **Binds more than one lane** — a shared contract, interface, or cross-cutting policy.
+- **Chooses among real alternatives** where the rejected options matter ("why not X?").
+- **Establishes a convention everyone must follow** — naming, branching policy, the label taxonomy,
+  the verification gate.
+- **Sets a foundational default/boundary** — born-correct things, cheap now and painful to retrofit
+  (line endings, env tool, data store, directory layout).
+- You'd otherwise **re-explain the same "why" repeatedly** to new contributors.
+
+**Good ADR material (patterns):**
+- "GitHub Issues is the work ledger; IDs are `#N`." *(cross-lane convention)*
+- "Closed-loop on soil moisture only; environmental sensors are logging-only." *(architecture; alternatives rejected)*
+- "Raw CSV is immutable; the DuckDB tier is rebuildable." *(substrate; hard to reverse)*
+- "Host functionality presents as one application surface." *(cross-lane boundary)*
+
+**NOT an ADR (antipatterns) — use the lighter rung instead:**
+- A bug fix or a single feature → an **issue + PR**.
+- A reversible, low-stakes tweak (rename a var, nudge a threshold) → just the change.
+- A routine choice with no real alternative → no record needed.
+- Restating a decision already in another ADR → **link it**, don't duplicate.
+- A how-to, runbook, or frequently-edited reference → **docs**, not an ADR (ADRs are
+  append-only/superseded, not living documents).
+
+Rule of thumb: *if you'll edit it often, it's a doc; if you'll defend it later, it's an ADR.*
+
 ## Consequences
 
 - Every altitude of work has a home — a loose idea isn't forced into the tracker, and a shippable slice
