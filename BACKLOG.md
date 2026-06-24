@@ -641,7 +641,8 @@ place of the old binary health; and the live questions this co-located rig was b
 settling-vs-coupling** behaviour now that the neighbours are powered, and whether the four diverge under identical
 soil. Note the as-flashed **7-band boundaries are the un-reconciled spec** (dry edge 2760, wet split 1030 — a
 fail-to-water risk once irrigation is wired), so the dashboard should label bands as *proposed*, not validated. Builds
-on E6 (parser); reads parquet/DuckDB instead of raw if E5 lands first.
+on E6 (parser); reads parquet/DuckDB instead of raw if E5 lands first. Styling per the **Sprout design system**
+(`docs/design/`) — its instrument components and engineering tokens cover this build directly.
 
 ---
 
