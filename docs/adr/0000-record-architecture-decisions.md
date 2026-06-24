@@ -65,6 +65,7 @@ prototype's history honestly. (Execution belongs to the architecture/firmware la
 | [0006](0006-data-architecture.md) | Data architecture (telemetry schema, calibration, quality, analysis tier) | **Accepted** | Data lane |
 | [0007](0007-brand-guidelines.md) | Brand guidelines & voice | **Accepted** | Design lane |
 | [0008](0008-design-system-v3-personality-layer.md) | Design system v3: the personality layer | **Accepted** | Design lane |
+| [0009](0009-versioning-and-release-policy.md) | Versioning & release policy | **Accepted** | Workflow lane |
 | — | *(archived)* [Sprout v0 combined architecture record](archive/sprout-v0-architecture.md) | Superseded by ADR-0001 | history |
 
 *New ADRs append a row here when proposed. Any lane may author an ADR for an ADR-sized decision in its
