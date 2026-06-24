@@ -35,6 +35,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+from forecast import fit_line, forecast_payload  # noqa: E402
 from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
     DEFAULT_CAL_BOUNDS,
     LogData,
@@ -200,10 +201,28 @@ def build_context(data: LogData) -> dict:
                 "spread_last": last.spread,
                 "quality_last": last.quality_flag,
                 "slope_per_hr": _round_opt(_slope_per_hour(pairs), 2),
+                "forecast": forecast_payload(sid, rs, bounds),
             }
         )
+        _fit = fit_line(pairs)
+        trend = None
+        if _fit and len(pairs) >= 3:
+            x0, x1 = pairs[0][0], pairs[-1][0]
+            trend = {
+                "x0": round(x0, 4),
+                "y0": round(_fit.intercept + _fit.slope * x0, 1),
+                "x1": round(x1, 4),
+                "y1": round(_fit.intercept + _fit.slope * x1, 1),
+                "slope": round(_fit.slope, 2),
+            }
         trajectory_sets.append(
-            {"id": sid, "color": colors[sid], "points": points, "local": locals_}
+            {
+                "id": sid,
+                "color": colors[sid],
+                "points": points,
+                "local": locals_,
+                "trend": trend,
+            }
         )
 
     sweeps = [
