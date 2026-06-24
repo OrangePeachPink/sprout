@@ -107,8 +107,10 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 /* quality strips */
 .qrow { display: grid; grid-template-columns: 40px 1fr; align-items: center; gap: 10px; margin-bottom: 6px; }
 .qrow .ql { font-family: var(--font-data); font-weight: 600; }
-.strip { display: flex; height: 18px; border-radius: 5px; overflow: hidden; border: 1px solid var(--border); }
+.strip { display: flex; height: 18px; border-radius: 5px; overflow: hidden; border: 1px solid var(--border); position: relative; }
 .strip .cell { flex: 1 1 0; }
+.strip .gapmark { position: absolute; top: 0; bottom: 0; min-width: 2px;
+  background: repeating-linear-gradient(45deg, var(--q-nosignal) 0 2px, rgba(0,0,0,0) 2px 5px); }
 
 /* integrity table */
 table.grid { border-collapse: collapse; width: 100%; font-size: 13px; }
@@ -246,6 +248,19 @@ const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).
 const gridColor = () => hexA('#888888', 0.18);
 const bandByLo = lo => (DASH.cal.bands.find(b => b.lo === lo) || null);
 function fmtHours(h){ if(h==null) return '—'; if(h < 1) return (h*60).toFixed(0)+' min'; if(h < 48) return h.toFixed(1)+' h'; return (h/24).toFixed(1)+' d'; }
+function withGapBreaks(points, locals){  // E9: split the line at logging interruptions
+  const gaps = DASH.gaps || [];
+  if(!gaps.length) return { points, locals };
+  const op = [], ol = locals ? [] : null;
+  for(let i=0;i<points.length;i++){
+    op.push(points[i]); if(ol) ol.push(locals[i]);
+    if(i+1<points.length){
+      const a = points[i].x, b = points[i+1].x;
+      for(const g of gaps){ const gm=(g.x0+g.x1)/2; if(a < gm && b > gm){ op.push({x:gm, y:null}); if(ol) ol.push(''); break; } }
+    }
+  }
+  return { points: op, locals: ol };
+}
 
 /* ---- chart registry (so a refresh can destroy + rebuild cleanly) ---- */
 const charts = {};
@@ -339,16 +354,32 @@ const bandShade = {
     });
   }
 };
+const gapShade = {  // E9: shade the span of a logging interruption (min-width so short gaps still show)
+  id:'gapShade',
+  afterDatasetsDraw(chart, args, opts){
+    const x = chart.scales.x, area = chart.chartArea, c = chart.ctx;
+    if(!x) return;
+    (opts.gaps||[]).forEach(g=>{
+      let l = x.getPixelForValue(g.x0), r = x.getPixelForValue(g.x1);
+      if(r < area.left || l > area.right) return;
+      l = Math.max(l, area.left); r = Math.min(r, area.right);
+      c.save(); c.fillStyle = hexA('#9A8480', 0.32);
+      c.fillRect(l, area.top, Math.max(3, r-l), area.bottom-area.top);
+      c.restore();
+    });
+  }
+};
 
 /* ---- overview charts ---- */
 function renderTraj(){
   const lo = Math.min(...DASH.sensors.map(s=>s.raw_min));
   const hi = Math.max(...DASH.sensors.map(s=>s.raw_max));
   const pad = Math.max(40, (hi-lo)*0.6);
-  const datasets = DASH.trajectory.datasets.map(d=>({
-    label:d.id, data:d.points, parsing:false, borderColor:d.color, backgroundColor:d.color,
-    borderWidth:1.6, pointRadius:0, tension:0.25, _local:d.local
-  }));
+  const datasets = DASH.trajectory.datasets.map(d=>{
+    const g = withGapBreaks(d.points, d.local);
+    return { label:d.id, data:g.points, parsing:false, borderColor:d.color, backgroundColor:d.color,
+      borderWidth:1.6, pointRadius:0, tension:0.25, spanGaps:false, _local:g.locals };
+  });
   charts.traj = new Chart(document.getElementById('trajChart'), {
     type:'line', data:{ datasets },
     options:{
@@ -361,13 +392,14 @@ function renderTraj(){
       plugins:{
         legend:{ display:false },
         bandShade:{ bands: DASH.cal.bands },
+        gapShade:{ gaps: DASH.gaps },
         tooltip:{ callbacks:{
           title:(items)=>{ const it=items[0]; const loc=it.dataset._local[it.dataIndex]; return `${it.dataset.label} · ${loc}`; },
           label:(it)=>`raw ${fmt(it.parsed.y)}`
         }}
       }
     },
-    plugins:[bandShade]
+    plugins:[bandShade, gapShade]
   });
   const lg = document.getElementById('trajLegend'); lg.innerHTML = '';
   DASH.sensors.forEach(s=>{
@@ -377,14 +409,17 @@ function renderTraj(){
 }
 
 function renderSpread(){
+  const sg = withGapBreaks(DASH.spread.points, null);
   charts.spread = new Chart(document.getElementById('spreadChart'), {
     type:'line',
-    data:{ datasets:[{ label:'spread', data:DASH.spread.points, parsing:false,
+    data:{ datasets:[{ label:'spread', data:sg.points, parsing:false,
       borderColor:css('--st-predicted')||'#7C5CFF', backgroundColor:hexA('#7C5CFF',0.12),
-      borderWidth:1.6, pointRadius:0, fill:true, tension:0.2 }] },
+      borderWidth:1.6, pointRadius:0, fill:true, tension:0.2, spanGaps:false }] },
     options:{ responsive:true, maintainAspectRatio:false, animation:false,
       scales: baseScales('hours since start (local)', 'raw spread (counts)'),
-      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:it=>`spread ${fmt(it.parsed.y)} counts` } } } }
+      plugins:{ legend:{display:false}, gapShade:{ gaps: DASH.gaps },
+        tooltip:{ callbacks:{ label:it=>`spread ${fmt(it.parsed.y)} counts` } } } },
+    plugins:[gapShade]
   });
   const k = document.getElementById('spreadKpi'); k.innerHTML = ''; const sp=DASH.spread;
   [['current',sp.current],['mean',sp.mean],['median',sp.median],['max',sp.max]].forEach(([l,v])=>{
@@ -408,11 +443,15 @@ function renderDist(){
 
 function renderQuality(){
   const wrap = document.getElementById('qstrips'); wrap.innerHTML = '';
+  const qspan = DASH.meta.total_hours || 1;
   DASH.quality.strips.forEach(s=>{
     const row=el('div','qrow'); row.appendChild(el('div','ql', s.id));
     const strip=el('div','strip');
     s.cells.forEach(c=>{ const cell=el('div','cell'); cell.style.background = c.color || 'transparent';
       if(c.flag) cell.title = `${c.flag} · ${c.n} reading(s)`; strip.appendChild(cell); });
+    (DASH.gaps||[]).forEach(g=>{ const m=el('div','gapmark');
+      m.style.left=(g.x0/qspan*100)+'%'; m.style.width=Math.max(0.5,(g.x1-g.x0)/qspan*100)+'%';
+      m.title=`gap ${g.dur_min} min @ ${g.at_local}`; strip.appendChild(m); });
     row.appendChild(strip); wrap.appendChild(row);
   });
   document.getElementById('qcap').textContent =
@@ -457,6 +496,19 @@ function renderIntegrity(){
     tr.appendChild(el('td','mono small',s.start)); tr.appendChild(el('td','mono small',s.end)); tr.appendChild(el('td','num',fmt(s.n))); t3.appendChild(tr); });
   wrap.appendChild(el('div','small muted', 'sessions (a reflash / port reopen starts a new one):'));
   wrap.appendChild(t3);
+
+  const gaps = DASH.gaps || [];
+  wrap.appendChild(el('div','small muted', 'logging gaps (interruptions in the capture):'));
+  if(!gaps.length){
+    wrap.appendChild(el('div','small', 'none — continuous'));
+  } else {
+    const gt = el('table','grid');
+    gt.appendChild((()=>{ const tr=el('tr'); ['#','at (local)','duration'].forEach((h,i)=>tr.appendChild(el('th', i===2?'num':null, h))); return tr; })());
+    gaps.forEach((g,i)=>{ const tr=el('tr'); tr.className='warnrow';
+      tr.appendChild(el('td','mono', String(i+1))); tr.appendChild(el('td','mono small', g.at_local));
+      tr.appendChild(el('td','num', g.dur_min+' min')); gt.appendChild(tr); });
+    wrap.appendChild(gt);
+  }
 }
 
 function renderProv(){
@@ -633,9 +685,10 @@ function statsCard(s, f, st){
 function buildDetailChart(s){
   const dset = DASH.trajectory.datasets.find(d=>d.id===s.id);
   const lo = s.raw_min, hi = s.raw_max, pad = Math.max(40,(hi-lo)*0.7);
+  const gb = withGapBreaks(dset.points, dset.local);
   const datasets = [{
-    label:s.id, data:dset.points, parsing:false, borderColor:s.color, backgroundColor:s.color,
-    borderWidth:1.8, pointRadius:0, tension:0.25, _local:dset.local
+    label:s.id, data:gb.points, parsing:false, borderColor:s.color, backgroundColor:s.color,
+    borderWidth:1.8, pointRadius:0, tension:0.25, spanGaps:false, _local:gb.locals
   }];
   if(dset.trend){
     datasets.push({ label:'trend', data:[{x:dset.trend.x0,y:dset.trend.y0},{x:dset.trend.x1,y:dset.trend.y1}],
@@ -647,11 +700,11 @@ function buildDetailChart(s){
       interaction:{ mode:'nearest', intersect:false },
       scales:{ ...baseScales(`hours since ${DASH.trajectory.start_local} (local)`, 'raw ADC (higher = drier)'),
         y:{ ...baseScales('','raw ADC (higher = drier)').y, suggestedMin: lo-pad, suggestedMax: hi+pad } },
-      plugins:{ legend:{display:false}, bandShade:{ bands: DASH.cal.bands },
+      plugins:{ legend:{display:false}, bandShade:{ bands: DASH.cal.bands }, gapShade:{ gaps: DASH.gaps },
         tooltip:{ callbacks:{
           title:(items)=>{ const it=items[0]; if(it.dataset._trend) return 'trend'; const loc=it.dataset._local[it.dataIndex]; return loc; },
           label:(it)=>it.dataset._trend? `trend ${fmt(Math.round(it.parsed.y))}` : `raw ${fmt(it.parsed.y)}` } } } },
-    plugins:[bandShade]
+    plugins:[bandShade, gapShade]
   });
 }
 

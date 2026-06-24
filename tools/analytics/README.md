@@ -13,6 +13,7 @@ Backlog lane (see [`../../BACKLOG.md`](../../BACKLOG.md) section E):
 | E1 | Live-serving dashboard + Refresh / Auto (`serve.py`) | done — monitoring slice |
 | E3 | Forecast engine + single-plant detail view (`forecast.py`) | done |
 | E8 | Full-history join (logs + B8 archive), time-range views, recency (`serve.py` + dashboard) | done |
+| E9 | Logging-gap visibility — line breaks + shaded span, quality-strip marks, integrity list | done |
 | E5 | Local parquet / DuckDB analysis tier | deferred until query/ML volume justifies it |
 
 ## `parse_v1.py` — schema-v1 reader (E6)
@@ -76,6 +77,10 @@ Panels: per-channel summary cards (raw + band pill + mood), the Sprout calibrati
 each probe's live position, the overlaid raw trajectory (7-band shading behind it), cross-channel
 spread (the C1 pin/placement variance), per-channel distribution, a `quality_flag` heat-strip, and a
 data-integrity grid that surfaces dropped/partial sweeps and session boundaries instead of hiding them.
+Logging **interruptions** (a board reset, a logger restart) are surfaced three ways (E9): a break +
+shaded span on the trajectory and spread charts, a hatched mark on the `quality_flag` strip, and an
+explicit gap list (start + duration) in the integrity grid — a sample-to-sample delta over
+`GAP_THRESHOLD_S` (120 s) counts as a gap.
 
 Honesty rules, enforced in the generator:
 

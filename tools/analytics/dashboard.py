@@ -56,6 +56,8 @@ LOGS_DIR = _REPO / "logs"
 # Chart series are capped for responsiveness over long ranges; the stat / rate /
 # forecast panels always use the full windowed data, only the plotted points thin.
 MAX_TRAJ_POINTS = 2000
+# A sample-to-sample gap longer than this is a logging interruption, surfaced (E9).
+GAP_THRESHOLD_S = 120
 # Time-range windows (E8). None = all history.
 RANGE_HOURS: dict[str, float | None] = {
     "24h": 24.0,
@@ -187,6 +189,29 @@ def _dec_idx(n: int, cap: int) -> list[int]:
     return [int(i * step) for i in range(cap)]
 
 
+def _gaps(sweeps: list, start: datetime) -> list[dict]:
+    """Logging interruptions: sweep-to-sweep deltas over GAP_THRESHOLD_S (E9)."""
+    ts = []
+    for sw in sweeps:
+        locs = [r.timestamp_local for r in sw.by_sensor.values() if r.timestamp_local]
+        if sw.timestamp_utc and locs:
+            ts.append((sw.timestamp_utc, min(locs)))
+    ts.sort()
+    out = []
+    for (ua, la), (ub, _lb) in zip(ts, ts[1:]):
+        dt = (ub - ua).total_seconds()
+        if dt > GAP_THRESHOLD_S:
+            out.append(
+                {
+                    "x0": round(_hours_since(ua, start), 4),
+                    "x1": round(_hours_since(ub, start), 4),
+                    "dur_min": round(dt / 60, 1),
+                    "at_local": la.strftime("%m-%d %H:%M:%S"),
+                }
+            )
+    return out
+
+
 # --------------------------------------------------------------------------- #
 # context build
 # --------------------------------------------------------------------------- #
@@ -291,6 +316,7 @@ def build_context(data: LogData) -> dict:
         )
 
     sessions = _sessions(soil)
+    gaps = _gaps(sweeps, start)
     distribution = _distribution(by_sensor, sensor_ids, colors)
     quality = _quality_strips(by_sensor, sensor_ids, soil, start)
     integrity = _integrity(soil, sweeps, by_sensor, sensor_ids, sessions)
@@ -348,6 +374,7 @@ def build_context(data: LogData) -> dict:
         "distribution": distribution,
         "quality": quality,
         "integrity": integrity,
+        "gaps": gaps,
     }
 
 
