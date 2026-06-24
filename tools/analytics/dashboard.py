@@ -60,6 +60,9 @@ MAX_TRAJ_POINTS = 2000
 GAP_THRESHOLD_S = 120
 # Time-range windows (E8). None = all history.
 RANGE_HOURS: dict[str, float | None] = {
+    "1h": 1.0,
+    "3h": 3.0,
+    "12h": 12.0,
     "24h": 24.0,
     "7d": 24.0 * 7,
     "30d": 24.0 * 30,
@@ -181,6 +184,22 @@ def filter_since(data: LogData, hours: float | None) -> LogData:
     return LogData(readings=kept, segments=data.segments, sources=data.sources)
 
 
+def filter_channels(data: LogData, channels: list[str] | None) -> LogData:
+    """Keep only readings for the given sensor ids (None / empty = all) (E10)."""
+    if not channels:
+        return data
+    keep = set(channels)
+    kept = [r for r in data.readings if r.sensor_id in keep]
+    return LogData(readings=kept, segments=data.segments, sources=data.sources)
+
+
+def _channel_idx(sid: str) -> int:
+    """Stable colour index from a sensor id ('s2' -> 1), so colours don't shuffle
+    when a channel is excluded (E10)."""
+    digits = "".join(ch for ch in sid if ch.isdigit())
+    return (int(digits) - 1) if digits else 0
+
+
 def _dec_idx(n: int, cap: int) -> list[int]:
     """Evenly-spaced indices thinning a length-n series down to <= cap."""
     if n <= cap:
@@ -239,7 +258,8 @@ def build_context(data: LogData) -> dict:
         by_sensor.setdefault(r.sensor_id, []).append(r)
     sensor_ids = sorted(by_sensor)
     colors = {
-        sid: SENSOR_COLORS[i % len(SENSOR_COLORS)] for i, sid in enumerate(sensor_ids)
+        sid: SENSOR_COLORS[_channel_idx(sid) % len(SENSOR_COLORS)]
+        for sid in sensor_ids
     }
 
     sensors = []
@@ -341,6 +361,7 @@ def build_context(data: LogData) -> dict:
         "schema_version": getattr(last_seg, "schema_version", None),
         "tz_offset": getattr(last_seg, "tz_offset", None),
         "parser": "tools/analytics/parse_v1.py (E6)",
+        "all_channels": list(sensor_ids),
         "sources": data.sources,
         "generated_local": datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %z"),
         "start_local": (

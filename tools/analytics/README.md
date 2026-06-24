@@ -14,6 +14,7 @@ Backlog lane (see [`../../BACKLOG.md`](../../BACKLOG.md) section E):
 | E3 | Forecast engine + single-plant detail view (`forecast.py`) | done |
 | E8 | Full-history join (logs + B8 archive), time-range views, recency (`serve.py` + dashboard) | done |
 | E9 | Logging-gap visibility — line breaks + shaded span, quality-strip marks, integrity list | done |
+| E10 | Per-channel on/off toggles + sub-day zoom ranges (1h/3h/12h) | done |
 | E5 | Local parquet / DuckDB analysis tier | deferred until query/ML volume justifies it |
 
 ## `parse_v1.py` — schema-v1 reader (E6)
@@ -123,13 +124,20 @@ never writes the logs. This is the live-monitoring slice of backlog **E1**.
 
 `serve.py` reads the live `logs/*.csv` **and** the B8 gzip archive
 (`.data-worktree/data/archive/*.csv.gz`), de-duped by segment (the live `.csv` wins), so history
-survives once closed segments are pruned from `logs/`. A **time-range selector** — 24 h / 7 d / 30 d /
-all, default 24 h — windows the view: served, it re-fetches `/data.json?range=…` so the stat / rate /
-forecast panels recompute for the span; opened as a file it zooms the chart client-side. Long ranges
+survives once closed segments are pruned from `logs/`. A **time-range selector** — 1 h / 3 h / 12 h /
+24 h / 7 d / 30 d / all, default 24 h — windows the view: served, it re-fetches `/data.json?range=…`
+so the stat / rate / forecast panels recompute for the span; opened as a file it zooms the chart
+client-side. Long ranges
 are downsampled to ~2 k points per series so 30 days stays responsive — the panels always consume the
 full windowed data, only the plotted points thin. The header shows a **"last reading N min ago"**
 recency cue (amber if the capture stalls), and a B5 reset reads as a labelled session gap rather than
 missing data.
+
+**Per-channel on/off (E10).** The header chips toggle each probe individually as a comparison lens
+(e.g. "everything without s2," the high-offset outlier). Served, it re-fetches `?channels=…` so the
+cross-channel **spread recomputes** over the selected probes (s1/s3/s4 vs all four), the distribution
+re-fits, and the stats follow; as a static file it hides the lines + bars (its spread stays 4-channel).
+Colours are stable per sensor id so they don't shuffle when a channel is excluded.
 
 ## The `value` column is the legacy moist% — do not analyse on it (B2 / C2)
 
