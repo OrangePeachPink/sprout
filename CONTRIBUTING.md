@@ -1,0 +1,61 @@
+# Contributing to Sprout
+
+<!-- VOICE: the Design lane voices this intro/welcome in Phase 3 batch 2. Placeholder copy below. -->
+Thanks for your interest in Sprout. This guide covers how work is proposed, tracked, and merged here.
+The process is deliberately light — sized for a small project, not an enterprise.
+
+## Where things go
+
+| You have… | Put it in… |
+|---|---|
+| a question, a loose idea, a "should we…?" | [**Discussions**](https://github.com/OrangePeachPink/plants/discussions) — the idea inbox |
+| a written requirement for a larger feature | a **PRD** in [`docs/prd/`](docs/prd/) |
+| a concrete, shippable piece of work | a [**GitHub Issue**](https://github.com/OrangePeachPink/plants/issues) (use the forms) |
+| a change that implements an issue | a **Pull Request** |
+
+The test: *can I assign it and define "done" in a sentence?* → Issue. *Is it a question or a maybe?* →
+Discussion.
+
+## Opening an issue
+
+Use the **issue forms** (New issue → Feature / Bug / Task). They capture the area, layer, and details a
+maintainer needs to triage. Don't worry about labels — the form applies the `type:` label, and a
+maintainer confirms `area:` / `layer:` at triage.
+
+## Making a change
+
+1. **Pick up** an issue (a maintainer can assign it and move it to *In Progress*).
+2. **Branch** from `main`, named `type/short-desc` — e.g. `feat/tank-level`, `fix/banner-spacing`.
+   (Outside collaborators: fork, then branch.)
+3. **Commit** with [Conventional Commits](https://www.conventionalcommits.org/):
+   `type(scope): imperative subject`, where `type` is `feat | fix | docs | refactor | chore` (plus
+   `test | ci | style` for finer changes). State the *result* in the subject when that's the point.
+4. **Run the checks** before pushing — see **Development & tooling** in the [README](README.md)
+   (ruff, clang-format / clang-tidy, markdownlint).
+5. **Open a PR** and fill in the template. Link the issue with **`Refs #N`** or **`Part of #N`** —
+   **not** `Closes #N` (see the gate below). Include how you verified the change.
+6. PRs are **squash-merged** — one clean commit per change; the branch auto-deletes after merge.
+
+## The verification gate (why issues aren't auto-closed)
+
+Sprout uses a **review-before-close** gate: merging a PR does **not** close its issue. Instead:
+
+1. The implementer posts **evidence** on the issue (what was built, how it was verified), moves it to
+   **Needs Verification**, and adds the `needs-verification` label — but does **not** close it.
+2. A **reviewer** checks the change against the issue's **technical, functional, and quality** intent,
+   then closes it.
+
+That's why PRs use `Refs #N` (a non-closing link) rather than `Closes #N`, and why the repo's
+"auto-close issues with merged linked PRs" setting is **off**. The human confirmation *is* the gate.
+
+## Labels (quick reference)
+
+- `type:*` — the kind of work (mirrors the commit `type:` vocabulary)
+- `area:*` — the subsystem (control / logging / sensing / actuators / analytics)
+- `layer:*` — `firmware` (needs a reflash) vs `host` (build anytime)
+- `good first issue` / `help wanted` — welcoming places to start
+
+## Questions?
+
+Ask in [**Discussions → Q&A**](https://github.com/OrangePeachPink/plants/discussions/categories/q-a).
+No setup question is too small.
