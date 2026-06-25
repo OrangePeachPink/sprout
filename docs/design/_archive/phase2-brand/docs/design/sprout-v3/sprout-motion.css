@@ -1,0 +1,30 @@
+/*
+ * sprout-motion.css — Sprout's mark motion vocabulary, for hand-rolled (non-component) marks.  v3.0.0-proposed
+ *
+ * Apply a class to the <g> wrapping the foliage of an inline Sprout SVG. Honors prefers-reduced-motion.
+ * The sprout-mark.js component already bundles these; use this file only when animating a bespoke inline mark
+ * (e.g. a README hero or a one-off). Motion -> context per ADR-0007 §4.
+ */
+
+.sprout-sway,
+.sprout-breathe,
+.sprout-droop {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.sprout-sway    { animation: sprout-sway 6.5s ease-in-out infinite; } /* calm idle — default */
+.sprout-breathe { animation: sprout-breathe 4.5s ease-in-out infinite; } /* alive & well — thriving */
+.sprout-droop   { animation: sprout-droop 4.4s ease-in-out infinite; } /* thirsty — needs water */
+
+@keyframes sprout-sway    { 0%, 100% { transform: rotate(-2.6deg); } 50% { transform: rotate(2.6deg); } }
+@keyframes sprout-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+@keyframes sprout-droop   { 0%, 100% { transform: rotate(-1deg) translateY(0); } 50% { transform: rotate(1.4deg) translateY(2px); } }
+
+/* 'bob' (speaking/greeting) animates the whole element, not just the foliage */
+.sprout-bob { animation: sprout-bob 5s ease-in-out infinite; }
+@keyframes sprout-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sprout-sway, .sprout-breathe, .sprout-droop, .sprout-bob { animation: none !important; }
+}

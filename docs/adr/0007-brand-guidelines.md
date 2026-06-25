@@ -121,5 +121,5 @@ not redefine them.
 - `docs/design/brand/BRAND.md` — the canonical written reference (do/don't + examples).
 - `docs/design/brand/Sprout Brand Guidelines.dc.html` — the living visual guide.
 - [ADR-0004](0004-design-system.md) — design system & the token-consumption contract.
-- Source explorations (v2 delivery): `docs/design/sprout-v2/` — Brand World, Personality Directions, Day
-  in the Life, Social Kit.
+- Source explorations (v2 delivery), reorganized into the `docs/design/` shelves: Brand World (`brand/`),
+  Personality Directions (`voice/`), Day in the Life (`motion/`), Social Kit (`go-to-market/`).

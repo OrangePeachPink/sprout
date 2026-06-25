@@ -14,7 +14,7 @@ folder's front door: a clickable bookmark of every Sprout design page across v1,
 **Runtime:** how the `support.js` runtime is versioned across these folders → [RUNTIME.md](RUNTIME.md).
 
 > A broader **v2 brand delivery** (brand world, decks, social kit, narrative pieces, expanded system) was
-> added 2026-06-23 alongside this folder — see [`sprout-v2/`](sprout-v2/README.md). It is additive; this v1
+> added 2026-06-23 alongside this folder — see [the Design Library](Sprout%20Design%20Library.dc.html). It is additive; this v1
 > remains the source of truth for the dashboard/instrument UI.
 
 ## What's here

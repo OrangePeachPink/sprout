@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes spro-spin { to { transform: rotate(360deg); } }
+  @keyframes spro-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+  @media (prefers-reduced-motion: reduce) { .spro-spin, .spro-breathe { animation: none !important; } }
+</style>
+</helmet>
+
+<x-import component-from-global-scope="deck-stage" from="./deck-stage.js" width="1920" height="1080" hint-size="100%,100%">
+
+  <!-- 01 · COVER -->
+  <section data-label="Cover" data-speaker-notes="Open warm. 'This is Sprout — the system I built to keep four plants perfectly watered without thinking about it.' One sentence on why you made it, then advance." style="width:100%; height:100%; position:relative; overflow:hidden; background:radial-gradient(130% 120% at 82% -10%, #17261D 0%, #0C1311 58%); display:flex; flex-direction:column; justify-content:center; padding:0 130px; font-family:'Hanken Grotesk',sans-serif;">
+    <div style="position:absolute; top:90px; right:120px; width:360px; height:360px; border-radius:46% 54% 60% 40% / 50% 44% 56% 50%; background:radial-gradient(circle at 38% 34%, rgba(147,221,106,0.55), rgba(23,182,196,0.04) 72%); filter:blur(8px);"></div>
+    <div style="position:absolute; top:150px; right:210px; width:240px; height:240px;">
+      <div style="position:absolute; inset:0; border-radius:50%; border:18px solid rgba(40,51,34,0.55);"></div>
+      <div class="spro-spin" style="position:absolute; inset:0; border-radius:50%; background:conic-gradient(from 0deg, rgba(147,221,106,0) 0deg, rgba(147,221,106,0) 60deg, #6cc23c 210deg, #93DD6A 330deg, rgba(147,221,106,0) 360deg); -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 18px), #000 calc(100% - 17px)); mask:radial-gradient(farthest-side, transparent calc(100% - 18px), #000 calc(100% - 17px)); animation: spro-spin 1.1s linear infinite; filter:drop-shadow(0 0 10px rgba(147,221,106,0.45));"></div>
+      <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;"><div class="spro-breathe" style="animation: spro-breathe 2.6s ease-in-out infinite;"><svg width="92" height="108" viewBox="0 0 24 28" fill="none" stroke="#93DD6A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#93DD6A"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#93DD6A"></path></svg></div></div>
+    </div>
+    <div style="display:flex; align-items:center; gap:18px; margin-bottom:40px;">
+      <svg width="46" height="54" viewBox="0 0 24 28" fill="none" stroke="#93DD6A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#93DD6A"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#93DD6A"></path></svg>
+      <span style="font-family:'JetBrains Mono',monospace; font-size:24px; letter-spacing:0.22em; color:#93DD6A;">SPROUT</span>
+    </div>
+    <h1 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:130px; line-height:0.95; color:#E9F1EB; margin:0 0 30px; max-width:1300px;">Tend a tiny jungle.</h1>
+    <p style="font-size:36px; line-height:1.45; color:#9fb094; margin:0; max-width:980px;">A four-channel soil-monitoring &amp; automatic-watering system — that treats every plant like it's alive.</p>
+    <div style="position:absolute; bottom:70px; left:130px; font-family:'JetBrains Mono',monospace; font-size:20px; color:#5f6e55;">a product introduction</div>
+  </section>
+
+  <!-- 02 · BIG STATEMENT -->
+  <section data-label="Why" data-speaker-notes="The hook. Plants fail quietly — by the time leaves droop, damage is done. Sprout closes that gap. Pause after the line." style="width:100%; height:100%; background:#eef4e6; display:flex; flex-direction:column; justify-content:center; padding:0 140px; font-family:'Hanken Grotesk',sans-serif;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:24px; letter-spacing:0.16em; color:#5f7a3e; margin-bottom:34px;">THE PROBLEM</div>
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:96px; line-height:1.02; color:#1e2a18; margin:0; max-width:1480px;">Plants don't tell you<br>when they're thirsty.</h2>
+    <p style="font-size:38px; line-height:1.4; color:#4a5740; margin:40px 0 0; max-width:1100px;">By the time a leaf droops, the soil dried out days ago. <strong style="color:#247a3a;">Sprout watches the soil itself</strong> — and acts before the plant ever notices.</p>
+  </section>
+
+  <!-- 03 · WHAT IT IS (two-col) -->
+  <section data-label="What it is" data-speaker-notes="The plain-English what. Four sensors, four pumps, one brain. Walk the three points left-to-right; the gauges on the right are the live read it produces." style="width:100%; height:100%; background:#fff; display:flex; align-items:center; gap:90px; padding:0 130px; font-family:'Hanken Grotesk',sans-serif;">
+    <div style="flex:1;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:22px; letter-spacing:0.16em; color:#8a9a78; margin-bottom:26px;">WHAT IT IS</div>
+      <h2 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:78px; line-height:1; color:#1e2a18; margin:0 0 40px;">Four sensors,<br>four pumps,<br>one calm brain.</h2>
+      <div style="display:flex; flex-direction:column; gap:24px;">
+        <div style="display:flex; gap:18px; align-items:flex-start;"><div style="width:14px; height:14px; border-radius:50%; background:#34a853; margin-top:9px; flex-shrink:0;"></div><div style="font-size:28px; line-height:1.4; color:#3f4a32;"><strong>Senses</strong> moisture in each zone, continuously.</div></div>
+        <div style="display:flex; gap:18px; align-items:flex-start;"><div style="width:14px; height:14px; border-radius:50%; background:#17b6c4; margin-top:9px; flex-shrink:0;"></div><div style="font-size:28px; line-height:1.4; color:#3f4a32;"><strong>Waters</strong> automatically when a zone runs dry.</div></div>
+        <div style="display:flex; gap:18px; align-items:flex-start;"><div style="width:14px; height:14px; border-radius:50%; background:#7c5cff; margin-top:9px; flex-shrink:0;"></div><div style="font-size:28px; line-height:1.4; color:#3f4a32;"><strong>Predicts</strong> the next cycle so nothing surprises you.</div></div>
+      </div>
+    </div>
+    <div style="flex:1; display:flex; flex-wrap:wrap; gap:24px; justify-content:center;">
+      <div style="position:relative; width:200px; height:200px; border-radius:50%; background:conic-gradient(#34a853 0deg 295deg,#e7eede 295deg 360deg);"><div style="position:absolute; inset:22px; border-radius:50%; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-family:'JetBrains Mono',monospace; font-size:48px; font-weight:600; color:#1e2a18;">82%</span><span style="font-size:19px; color:#8a9a78;">Monstera</span></div></div>
+      <div style="position:relative; width:200px; height:200px; border-radius:50%; background:conic-gradient(#17b6c4 0deg 270deg,#e7eede 270deg 360deg);"><div style="position:absolute; inset:22px; border-radius:50%; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-family:'JetBrains Mono',monospace; font-size:48px; font-weight:600; color:#1e2a18;">75%</span><span style="font-size:19px; color:#8a9a78;">Ferns</span></div></div>
+      <div style="position:relative; width:200px; height:200px; border-radius:50%; background:conic-gradient(#f5a623 0deg 104deg,#e7eede 104deg 360deg);"><div style="position:absolute; inset:22px; border-radius:50%; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-family:'JetBrains Mono',monospace; font-size:48px; font-weight:600; color:#1e2a18;">29%</span><span style="font-size:19px; color:#8a9a78;">Herbs</span></div></div>
+      <div style="position:relative; width:200px; height:200px; border-radius:50%; background:conic-gradient(#34a853 0deg 180deg,#e7eede 180deg 360deg);"><div style="position:absolute; inset:22px; border-radius:50%; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-family:'JetBrains Mono',monospace; font-size:48px; font-weight:600; color:#1e2a18;">50%</span><span style="font-size:19px; color:#8a9a78;">Cacti</span></div></div>
+    </div>
+  </section>
+
+  <!-- 04 · SECTION DIVIDER -->
+  <section data-label="Divider · How" data-speaker-notes="Breath / transition slide. Just say 'here's how it actually works' and move on." style="width:100%; height:100%; position:relative; overflow:hidden; background:#0C1311; display:flex; flex-direction:column; justify-content:center; padding:0 140px; font-family:'Hanken Grotesk',sans-serif;">
+    <div style="position:absolute; bottom:60px; right:90px; width:300px; height:300px; border-radius:46% 54% 60% 40% / 50% 44% 56% 50%; background:radial-gradient(circle at 40% 38%, rgba(52,168,83,0.45), rgba(12,19,17,0) 72%); filter:blur(6px);"></div>
+    <div style="font-family:'JetBrains Mono',monospace; font-size:120px; font-weight:700; color:#29372F; line-height:1; margin-bottom:10px;">01</div>
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:104px; line-height:1; color:#E9F1EB; margin:0;">How it works</h2>
+    <p style="font-size:32px; color:#9fb094; margin:32px 0 0; max-width:900px;">Sense → decide → water → learn. A loop that runs every few minutes, quietly.</p>
+  </section>
+
+  <!-- 05 · FOUR CHANNELS -->
+  <section data-label="Channels" data-speaker-notes="Each channel is one plant or zone: a sensor, a pump, a relay. Point out the status colors — green good, amber drying, orange due, and the live mini-trend under each." style="width:100%; height:100%; background:#eef4e6; display:flex; flex-direction:column; justify-content:center; padding:0 110px; font-family:'Hanken Grotesk',sans-serif;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:22px; letter-spacing:0.16em; color:#8a9a78; margin-bottom:14px;">FOUR INDEPENDENT CHANNELS</div>
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:64px; line-height:1; color:#1e2a18; margin:0 0 44px;">Every zone, its own story.</h2>
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:26px;">
+      <div style="background:#fff; border:1px solid #e3e9d8; border-radius:24px; padding:30px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;"><div><div style="font-family:'JetBrains Mono',monospace; font-size:16px; color:#8a9a78;">CH 1</div><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:28px; color:#1e2a18;">Monstera</div></div><span style="display:inline-flex; align-items:center; gap:8px; font-size:17px; font-weight:700; color:#1f6b33; background:#dff0cc; border-radius:999px; padding:7px 14px;"><span style="width:9px; height:9px; border-radius:50%; background:#34a853;"></span>Thriving</span></div>
+        <div style="position:relative; width:150px; height:150px; border-radius:50%; background:conic-gradient(#34a853 0deg 295deg,#e7eede 295deg 360deg); margin:0 auto 22px;"><div style="position:absolute; inset:17px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:40px; font-weight:600; color:#1e2a18;">82%</div></div>
+        <svg viewBox="0 0 280 44" style="width:100%; height:40px; display:block;"><polyline points="0,36 35,28 70,31 105,19 140,23 175,11 210,17 245,8 280,13" fill="none" stroke="#8bd24f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+      </div>
+      <div style="background:#fff; border:1px solid #cdeef1; border-radius:24px; padding:30px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;"><div><div style="font-family:'JetBrains Mono',monospace; font-size:16px; color:#8a9a78;">CH 2</div><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:28px; color:#1e2a18;">Ferns</div></div><span style="display:inline-flex; align-items:center; gap:8px; font-size:17px; font-weight:700; color:#0e7a86; background:#cdeef1; border-radius:999px; padding:7px 14px;"><span style="width:9px; height:9px; border-radius:50%; background:#17b6c4;"></span>Drinking</span></div>
+        <div style="position:relative; width:150px; height:150px; border-radius:50%; background:conic-gradient(#17b6c4 0deg 270deg,#e7eede 270deg 360deg); margin:0 auto 22px;"><div style="position:absolute; inset:17px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:40px; font-weight:600; color:#1e2a18;">75%</div></div>
+        <svg viewBox="0 0 280 44" style="width:100%; height:40px; display:block;"><polyline points="0,30 35,26 70,28 105,20 140,24 175,14 210,18 245,9 280,6" fill="none" stroke="#17b6c4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+      </div>
+      <div style="background:#fff; border:1px solid #f0dcb0; border-radius:24px; padding:30px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;"><div><div style="font-family:'JetBrains Mono',monospace; font-size:16px; color:#8a9a78;">CH 3</div><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:28px; color:#1e2a18;">Herb box</div></div><span style="display:inline-flex; align-items:center; gap:8px; font-size:17px; font-weight:700; color:#a3461a; background:#fad9c8; border-radius:999px; padding:7px 14px;"><span style="width:9px; height:9px; border-radius:50%; background:#e8703a;"></span>Due now</span></div>
+        <div style="position:relative; width:150px; height:150px; border-radius:50%; background:conic-gradient(#e8703a 0deg 104deg,#e7eede 104deg 360deg); margin:0 auto 22px;"><div style="position:absolute; inset:17px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:40px; font-weight:600; color:#1e2a18;">29%</div></div>
+        <svg viewBox="0 0 280 44" style="width:100%; height:40px; display:block;"><polyline points="0,9 35,15 70,13 105,21 140,25 175,29 210,33 245,37 280,39" fill="none" stroke="#f5a623" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+      </div>
+      <div style="background:#fff; border:1px solid #e3e9d8; border-radius:24px; padding:30px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;"><div><div style="font-family:'JetBrains Mono',monospace; font-size:16px; color:#8a9a78;">CH 4</div><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:28px; color:#1e2a18;">Cacti</div></div><span style="display:inline-flex; align-items:center; gap:8px; font-size:17px; font-weight:700; color:#456b1f; background:#e8f4d6; border-radius:999px; padding:7px 14px;"><span style="width:9px; height:9px; border-radius:50%; background:#8bd24f;"></span>Content</span></div>
+        <div style="position:relative; width:150px; height:150px; border-radius:50%; background:conic-gradient(#8bd24f 0deg 180deg,#e7eede 180deg 360deg); margin:0 auto 22px;"><div style="position:absolute; inset:17px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:40px; font-weight:600; color:#1e2a18;">50%</div></div>
+        <svg viewBox="0 0 280 44" style="width:100%; height:40px; display:block;"><polyline points="0,24 35,22 70,24 105,21 140,23 175,20 210,22 245,19 280,21" fill="none" stroke="#8bd24f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 · PERSONALITY (differentiator) -->
+  <section data-label="Personality" data-speaker-notes="This is the part people remember. Each plant has a mood from its data — the seedling perks up or droops, the copy is honest, never cutesy. This is what makes it feel alive. Slow down here." style="width:100%; height:100%; background:linear-gradient(180deg,#f3f9ea 0%,#ffffff 100%); display:flex; flex-direction:column; justify-content:center; padding:0 130px; font-family:'Hanken Grotesk',sans-serif;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:22px; letter-spacing:0.16em; color:#5f7a3e; margin-bottom:14px;">THE PART THAT MAKES IT ALIVE</div>
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:72px; line-height:1; color:#1e2a18; margin:0 0 16px;">Plants with a pulse.</h2>
+    <p style="font-size:30px; line-height:1.4; color:#4a5740; margin:0 0 50px; max-width:1150px;">Every channel has a <strong>mood</strong> read from its own data — the seedling perks up or wilts, and says one honest thing. Warm, never childish.</p>
+    <div style="display:flex; gap:22px; justify-content:space-between;">
+      <div style="flex:1; background:#fff; border:1px solid #cfe6b8; border-radius:22px; padding:30px; text-align:center;"><svg width="58" height="68" viewBox="0 0 24 28" fill="#8bd24f" stroke="#247a3a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:14px;"><path d="M12 26 V12" fill="none"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:26px; color:#1f6b33;">Thriving</div><div style="font-size:18px; color:#6f7e62; margin-top:6px;">Lush &amp; steady</div></div>
+      <div style="flex:1; background:#fff; border:1px solid #e3e9d8; border-radius:22px; padding:30px; text-align:center;"><svg width="58" height="68" viewBox="0 0 24 28" fill="#a9da6e" stroke="#5a8e2a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:14px;"><path d="M12 26 V12" fill="none"></path><path d="M12 13 C8.5 12 6.5 10 7 7 C10.5 8 12 10.5 12 13 Z"></path><path d="M12 13 C15.5 12 17.5 10 17 7 C13.5 8 12 10.5 12 13 Z" fill="#8bd24f"></path></svg><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:26px; color:#456b1f;">Content</div><div style="font-size:18px; color:#6f7e62; margin-top:6px;">Sipping slowly</div></div>
+      <div style="flex:1; background:#fff; border:1px solid #cdeef1; border-radius:22px; padding:30px; text-align:center;"><svg width="58" height="68" viewBox="0 0 24 28" fill="#8bd24f" stroke="#247a3a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:14px;"><path d="M12 3 C12 3 14.4 5.6 12 7 C9.6 5.6 12 3 12 3 Z" fill="#17b6c4" stroke="#0e7a86"></path><path d="M12 26 V13" fill="none"></path><path d="M12 14 C8 12 6 9 7 6 C11 7 12 11 12 14 Z"></path><path d="M12 14 C16 12 18 9 17 6 C13 7 12 11 12 14 Z" fill="#34a853"></path></svg><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:26px; color:#0e7a86;">Drinking</div><div style="font-size:18px; color:#6f7e62; margin-top:6px;">Back shortly</div></div>
+      <div style="flex:1; background:#fff; border:1px solid #f0dcb0; border-radius:22px; padding:30px; text-align:center;"><svg width="58" height="68" viewBox="0 0 24 28" fill="#f5c97a" stroke="#b07d12" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:14px;"><path d="M12 26 V14" fill="none"></path><path d="M12 15 C8 14 5 14 4 16 C8 18 11 17 12 15 Z"></path><path d="M12 15 C16 14 19 14 20 16 C16 18 13 17 12 15 Z" fill="#f5a623"></path></svg><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:26px; color:#9a6410;">Thirsty</div><div style="font-size:18px; color:#6f7e62; margin-top:6px;">Drink before long</div></div>
+      <div style="flex:1; background:#fff; border:1px solid #f0c8b0; border-radius:22px; padding:30px; text-align:center;"><svg width="58" height="68" viewBox="0 0 24 28" fill="#f0a984" stroke="#c2561f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:14px;"><path d="M12 26 C12 20 12 18 12 16" fill="none"></path><path d="M12 16 C8 17 6 20 6 23 C10 22 12 19 12 16 Z"></path><path d="M12 16 C16 17 18 20 18 23 C14 22 12 19 12 16 Z" fill="#e8703a"></path></svg><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:26px; color:#a3461a;">Parched</div><div style="font-size:18px; color:#6f7e62; margin-top:6px;">Water now</div></div>
+    </div>
+  </section>
+
+  <!-- 07 · PREDICTIONS (two-col) -->
+  <section data-label="Predictions" data-speaker-notes="It's not just reactive. Sprout learns each plant's drawdown rate and forecasts the next watering, with confidence. Tie back to 'nothing surprises you.'" style="width:100%; height:100%; background:#fff; display:flex; align-items:center; gap:90px; padding:0 130px; font-family:'Hanken Grotesk',sans-serif;">
+    <div style="flex:1;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:22px; letter-spacing:0.16em; color:#8a9a78; margin-bottom:26px;">LOOKING AHEAD</div>
+      <h2 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:74px; line-height:1; color:#1e2a18; margin:0 0 36px;">It tells you<br>what's next.</h2>
+      <p style="font-size:30px; line-height:1.45; color:#4a5740; margin:0 0 30px; max-width:720px;">Sprout learns how fast each zone dries and forecasts the next watering — so you see it coming, days out.</p>
+      <div style="display:flex; gap:40px;">
+        <div><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:46px; color:#247a3a;">2d ago</div><div style="font-size:20px; color:#8a9a78;">last watered</div></div>
+        <div><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:46px; color:#5b43c2;">+18%</div><div style="font-size:20px; color:#8a9a78;">drinking more lately</div></div>
+      </div>
+    </div>
+    <div style="flex:1; background:#f5f2ff; border:1px solid #ddd5fb; border-radius:28px; padding:44px;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:22px;"><span style="width:12px; height:12px; border-radius:50%; background:#7c5cff;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:20px; letter-spacing:0.08em; color:#5b43c2;">PREDICTED · NEXT CYCLE</span></div>
+      <div style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:84px; color:#1e2a18; line-height:1;">in ~18 hours</div>
+      <div style="font-size:24px; color:#6f7e62; margin:14px 0 30px;">Tomorrow ~09:40 · 92% confidence</div>
+      <div style="display:flex; gap:8px; align-items:flex-end; height:120px;"><div style="flex:1; background:#cabffa; height:38%; border-radius:5px;"></div><div style="flex:1; background:#cabffa; height:52%; border-radius:5px;"></div><div style="flex:1; background:#b6a6f7; height:46%; border-radius:5px;"></div><div style="flex:1; background:#b6a6f7; height:64%; border-radius:5px;"></div><div style="flex:1; background:#9c86f2; height:78%; border-radius:5px;"></div><div style="flex:1; background:#7c5cff; height:100%; border-radius:5px;"></div></div>
+    </div>
+  </section>
+
+  <!-- 08 · DASHBOARD SHOWCASE -->
+  <section data-label="Dashboard" data-speaker-notes="The whole system at a glance. Everything dense but calm — channels, live trend, events. This is the screen you'd glance at over coffee." style="width:100%; height:100%; background:#eef4e6; display:flex; flex-direction:column; justify-content:center; padding:60px 90px; font-family:'Hanken Grotesk',sans-serif;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:24px;"><h2 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:56px; color:#1e2a18; margin:0;">Everything, at a glance.</h2><span style="font-family:'JetBrains Mono',monospace; font-size:20px; color:#8a9a78;">the control room</span></div>
+    <div style="background:#fff; border:1px solid #e3e9d8; border-radius:24px; padding:26px; box-shadow:0 16px 40px rgba(30,42,24,0.10);">
+      <div style="display:flex; align-items:center; justify-content:space-between; padding-bottom:20px; border-bottom:1px solid #eef2e6; margin-bottom:20px;"><div style="display:flex; align-items:center; gap:14px;"><span style="width:13px; height:13px; border-radius:50%; background:#34a853;"></span><span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:30px; color:#1e2a18;">Greenhouse · all systems nominal</span></div><div style="display:flex; gap:34px; font-family:'JetBrains Mono',monospace; font-size:20px;"><span style="color:#8a9a78;">CH <span style="color:#1e2a18; font-weight:600;">4</span></span><span style="color:#8a9a78;">WATER <span style="color:#0e7a86; font-weight:600;">1.2L</span></span><span style="color:#8a9a78;">NEXT <span style="color:#e8703a; font-weight:600;">CH3</span></span></div></div>
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-bottom:18px;">
+        <div style="background:#f7faf2; border:1px solid #e3e9d8; border-radius:16px; padding:20px; display:flex; align-items:center; gap:16px;"><div style="position:relative; width:80px; height:80px; border-radius:50%; background:conic-gradient(#34a853 0deg 295deg,#e7eede 295deg 360deg); flex-shrink:0;"><div style="position:absolute; inset:9px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:600;">82%</div></div><div><div style="font-weight:700; font-size:20px; color:#1e2a18;">Monstera</div><div style="font-family:'JetBrains Mono',monospace; font-size:15px; color:#8a9a78;">~2d</div></div></div>
+        <div style="background:#f7faf2; border:1px solid #e3e9d8; border-radius:16px; padding:20px; display:flex; align-items:center; gap:16px;"><div style="position:relative; width:80px; height:80px; border-radius:50%; background:conic-gradient(#17b6c4 0deg 270deg,#e7eede 270deg 360deg); flex-shrink:0;"><div style="position:absolute; inset:9px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:600;">75%</div></div><div><div style="font-weight:700; font-size:20px; color:#1e2a18;">Ferns</div><div style="font-family:'JetBrains Mono',monospace; font-size:15px; color:#0e7a86;">pump on</div></div></div>
+        <div style="background:#fdf6ee; border:1px solid #f0dcb0; border-radius:16px; padding:20px; display:flex; align-items:center; gap:16px;"><div style="position:relative; width:80px; height:80px; border-radius:50%; background:conic-gradient(#e8703a 0deg 104deg,#e7eede 104deg 360deg); flex-shrink:0;"><div style="position:absolute; inset:9px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:600;">29%</div></div><div><div style="font-weight:700; font-size:20px; color:#1e2a18;">Herb box</div><div style="font-family:'JetBrains Mono',monospace; font-size:15px; color:#e8703a;">due now</div></div></div>
+        <div style="background:#f7faf2; border:1px solid #e3e9d8; border-radius:16px; padding:20px; display:flex; align-items:center; gap:16px;"><div style="position:relative; width:80px; height:80px; border-radius:50%; background:conic-gradient(#8bd24f 0deg 180deg,#e7eede 180deg 360deg); flex-shrink:0;"><div style="position:absolute; inset:9px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:600;">50%</div></div><div><div style="font-weight:700; font-size:20px; color:#1e2a18;">Cacti</div><div style="font-family:'JetBrains Mono',monospace; font-size:15px; color:#8a9a78;">~3d</div></div></div>
+      </div>
+      <div style="background:#f7faf2; border:1px solid #e3e9d8; border-radius:16px; padding:20px;">
+        <svg viewBox="0 0 1500 150" style="width:100%; height:150px; display:block;">
+          <line x1="0" y1="40" x2="1500" y2="40" stroke="#eef2e6" stroke-width="1.5"></line>
+          <line x1="0" y1="95" x2="1500" y2="95" stroke="#eef2e6" stroke-width="1.5"></line>
+          <polyline points="0,90 190,80 380,84 560,60 750,66 940,44 1130,52 1320,32 1500,38" fill="none" stroke="#34a853" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+          <polyline points="0,58 190,52 380,56 560,46 750,50 940,38 1130,42 1320,30 1500,28" fill="none" stroke="#17b6c4" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+          <polyline points="0,80 190,88 380,96 560,104 750,112 940,120 1130,126 1320,132 1500,138" fill="none" stroke="#f5a623" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- 09 · AFTER DARK -->
+  <section data-label="After dark" data-speaker-notes="Mention you built dark mode because you work late. It's glance-able across a room, easy on the eyes — and could live on an always-on wall display." style="width:100%; height:100%; position:relative; overflow:hidden; background:#0C1311; display:flex; align-items:center; gap:80px; padding:0 130px; font-family:'Hanken Grotesk',sans-serif;">
+    <div style="flex:1;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:22px; letter-spacing:0.16em; color:#93DD6A; margin-bottom:26px;">FOR LATE NIGHTS</div>
+      <h2 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:80px; line-height:0.98; color:#E9F1EB; margin:0 0 30px;">The greenhouse,<br>after dark.</h2>
+      <p style="font-size:30px; line-height:1.45; color:#9fb094; margin:0; max-width:680px;">A soil-dark mode where living data glows — easy on the eyes, glance-able from across the room, ready for an always-on display.</p>
+    </div>
+    <div style="flex:1; display:flex; justify-content:center;">
+      <div style="background:#18231F; border:1px solid #29372F; border-radius:28px; padding:40px; display:flex; align-items:center; gap:34px; box-shadow:0 24px 60px rgba(0,0,0,0.4);">
+        <div style="position:relative; width:200px; height:200px; border-radius:50%; background:conic-gradient(#93DD6A 0deg 295deg,#29372F 295deg 360deg); flex-shrink:0; box-shadow:0 0 40px rgba(147,221,106,0.25);"><div style="position:absolute; inset:22px; border-radius:50%; background:#101a0d; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-family:'JetBrains Mono',monospace; font-size:48px; font-weight:600; color:#E9F1EB;">82%</span><span style="font-size:18px; color:#8B9B90;">Monstera</span></div></div>
+        <div>
+          <span style="display:inline-flex; align-items:center; gap:8px; font-size:18px; font-weight:700; color:#93DD6A; background:rgba(147,221,106,0.12); border:1px solid rgba(147,221,106,0.25); border-radius:999px; padding:8px 16px; margin-bottom:20px;"><span style="width:9px; height:9px; border-radius:50%; background:#93DD6A; box-shadow:0 0 8px #93DD6A;"></span>Thriving</span>
+          <div style="font-size:22px; color:#9fb094; line-height:1.8;">Last watered <strong style="color:#E9F1EB;">2 days ago</strong><br>Next cycle <strong style="color:#3fd0de;">~18 hours</strong></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · AT A GLANCE (stats) -->
+  <section data-label="At a glance" data-speaker-notes="The proof points / specs. Keep it punchy — four numbers, don't read them all, let them land." style="width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; padding:0 130px; font-family:'Hanken Grotesk',sans-serif;">
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:64px; line-height:1; color:#1e2a18; margin:0 0 60px;">At a glance.</h2>
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:30px;">
+      <div style="border-top:4px solid #34a853; padding-top:26px;"><div style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:96px; color:#1e2a18; line-height:1;">4</div><div style="font-size:24px; color:#6f7e62; margin-top:10px;">channels — sensor + pump each</div></div>
+      <div style="border-top:4px solid #17b6c4; padding-top:26px;"><div style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:96px; color:#1e2a18; line-height:1;">24/7</div><div style="font-size:24px; color:#6f7e62; margin-top:10px;">autonomous monitoring</div></div>
+      <div style="border-top:4px solid #7c5cff; padding-top:26px;"><div style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:96px; color:#1e2a18; line-height:1;">~18h</div><div style="font-size:24px; color:#6f7e62; margin-top:10px;">next-cycle foresight</div></div>
+      <div style="border-top:4px solid #f5a623; padding-top:26px;"><div style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:96px; color:#1e2a18; line-height:1;">0</div><div style="font-size:24px; color:#6f7e62; margin-top:10px;">plants you forget to water</div></div>
+    </div>
+  </section>
+
+  <!-- 11 · ROADMAP -->
+  <section data-label="What's next" data-speaker-notes="Where it's going. Wi-Fi, phone access, more sensors. Frame as 'this is the foundation' — invites questions about the future." style="width:100%; height:100%; background:#eef4e6; display:flex; flex-direction:column; justify-content:center; padding:0 130px; font-family:'Hanken Grotesk',sans-serif;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:22px; letter-spacing:0.16em; color:#8a9a78; margin-bottom:14px;">THE FOUNDATION IS LAID</div>
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:64px; line-height:1; color:#1e2a18; margin:0 0 56px;">Where it's growing next.</h2>
+    <div style="display:flex; gap:24px;">
+      <div style="flex:1; background:#fff; border:1px solid #e3e9d8; border-radius:22px; padding:34px;"><div style="font-family:'JetBrains Mono',monospace; font-size:18px; color:#17b6c4; margin-bottom:14px;">NEXT</div><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:32px; color:#1e2a18; margin-bottom:10px;">Wi-Fi &amp; mobile</div><div style="font-size:22px; line-height:1.45; color:#6f7e62;">Check every zone from your phone, anywhere.</div></div>
+      <div style="flex:1; background:#fff; border:1px solid #e3e9d8; border-radius:22px; padding:34px;"><div style="font-family:'JetBrains Mono',monospace; font-size:18px; color:#e8703a; margin-bottom:14px;">SOON</div><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:32px; color:#1e2a18; margin-bottom:10px;">Temp &amp; humidity</div><div style="font-size:22px; line-height:1.45; color:#6f7e62;">A fuller picture of each plant's environment.</div></div>
+      <div style="flex:1; background:#fff; border:1px solid #e3e9d8; border-radius:22px; padding:34px;"><div style="font-family:'JetBrains Mono',monospace; font-size:18px; color:#7c5cff; margin-bottom:14px;">LATER</div><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:32px; color:#1e2a18; margin-bottom:10px;">More zones</div><div style="font-size:22px; line-height:1.45; color:#6f7e62;">Scale past four as the garden grows.</div></div>
+    </div>
+  </section>
+
+  <!-- 12 · CLOSING -->
+  <section data-label="Closing" data-speaker-notes="Warm close. Thank them, invite questions. 'Let's grow something' is the sign-off — swap in your contact or a live demo offer." style="width:100%; height:100%; position:relative; overflow:hidden; background:radial-gradient(120% 130% at 20% 110%, #17261D 0%, #0C1311 60%); display:flex; flex-direction:column; justify-content:center; padding:0 140px; font-family:'Hanken Grotesk',sans-serif;">
+    <div style="position:absolute; top:-40px; left:-30px; width:300px; height:300px; border-radius:46% 54% 60% 40% / 50% 44% 56% 50%; background:radial-gradient(circle at 40% 38%, rgba(147,221,106,0.4), rgba(12,19,17,0) 72%); filter:blur(8px);"></div>
+    <div style="display:flex; align-items:center; gap:16px; margin-bottom:36px;"><svg width="40" height="48" viewBox="0 0 24 28" fill="none" stroke="#93DD6A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#93DD6A"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#93DD6A"></path></svg><span style="font-family:'JetBrains Mono',monospace; font-size:22px; letter-spacing:0.22em; color:#93DD6A;">SPROUT</span></div>
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:120px; line-height:0.96; color:#E9F1EB; margin:0 0 30px;">Let's grow<br>something.</h2>
+    <p style="font-size:32px; color:#9fb094; margin:0;">Questions, a live demo, or just want to see your plants happier? — let's talk.</p>
+  </section>
+
+</x-import>
+</x-dc>
+</body>
+</html>

@@ -22,7 +22,7 @@ This ADR records the chosen execution: an **additive layer**, not a restyle.
 
 ## Decision
 
-Add the brand personality to the system as **design system v3** under `docs/design/sprout-v3/` — **additive
+Add the brand personality to the system as **design system v3** under `docs/design/` — **additive
 over v1/v2**, with v1 unchanged as the source of truth for the instrument UI. v3 consists of:
 
 1. **A canonical band→mood map** (`mood-band-map.json`) — the 1:1 bridge from the seven calibrated bands to
