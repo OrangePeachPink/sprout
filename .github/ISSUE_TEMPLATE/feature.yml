@@ -5,8 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        <!-- VOICE: the Design lane voices this intro in Phase 3 batch 2. Placeholder copy below. -->
-        Thanks for proposing an improvement. Fill in what you can — fields marked *optional* can be left blank.
+        Got an idea to make Sprout better? Lovely — let's hear it. Fill in what you can; the fields marked *optional* can stay blank, and a maintainer will help shape the rest at triage.
   - type: textarea
     id: problem
     attributes:

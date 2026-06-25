@@ -1,8 +1,9 @@
 # Contributing to Sprout
 
-<!-- VOICE: the Design lane voices this intro/welcome in Phase 3 batch 2. Placeholder copy below. -->
-Thanks for your interest in Sprout. This guide covers how work is proposed, tracked, and merged here.
-The process is deliberately light — sized for a small project, not an enterprise.
+Welcome — glad you're here. Sprout is a small, honest project with one clean path from idea to merge, and this
+guide walks it in about five minutes. However you've arrived — fixing a typo, wiring up a pump, or just curious —
+there's a place for you. We keep it calm, plain, and kind: the watering's honest, the board's clean, and there's
+one path now. **Tend well.**
 
 ## Where things go
 

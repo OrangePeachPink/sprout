@@ -5,8 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        <!-- VOICE: the Design lane voices this intro in Phase 3 batch 2. Placeholder copy below. -->
-        Thanks for the report. Clear steps and the firmware/host versions help a lot.
+        Something not behaving as it should? Thanks for flagging it — noticing the gap is how Sprout stays honest. The clearer the steps, and the firmware/host versions you were on, the faster we can see what you're seeing.
   - type: textarea
     id: what-happened
     attributes:
