@@ -59,6 +59,57 @@ and it is why real experiments naturally wait until after the baseline window an
 - **Firmware:** serial-port ownership semantics and the `set_cadence` runtime serial command (cadence is
   firmware-timed; the host never polls).
 
+### Firmware detail — the `set_cadence` command (#63)
+
+The capture process sets the experiment cadence with one host→device serial command; the device stays
+firmware-timed (it free-runs the sweep, the host never polls).
+
+**Grammar.** A single ASCII line, checksummed like the telemetry rows so a corrupted command can never
+silently mis-set timing:
+
+```text
+!cad,<ms>*HH\n
+```
+
+- `!` marks a command — distinct from data rows (`plants.*`) and `#` headers.
+- `<ms>` is the unsigned-integer sweep period.
+- `*HH` is the 2-hex XOR over the body `cad,<ms>` (same algorithm as the row checksum) and is **required**;
+  a bad checksum is rejected with the cadence unchanged.
+
+**Acknowledgement** — on the device's existing `#` header stream, so the capture process knows it took:
+
+```text
+# ack cad=<ms> prev=<old> floor=<floor>      # accepted
+# nak cad=<bad> err=<reason> floor=<floor>   # rejected - cadence UNCHANGED
+```
+
+`reason` is one of `checksum` / `range` / `parse`. The capture process waits for `ack`/`nak` before
+treating the rate as changed.
+
+**Valid range — a config-dependent floor.** Any integer ms in `[floor, 3_600_000]`. The device computes the
+**floor from its current config** (channels x baud x burst) and rejects anything below it (`err=range`).
+For the shipped 4-channel / 19200-baud / 100-sample monitor config the floor is **~500 ms** (the ~0.3 s
+sweep plus headroom for the periodic header reprint), so the PRD's v1 tiers map cleanly: **5 s and 1 s are
+comfortable, 0.5 s sits right at the floor** (accepted, with the margin reported in the ack). **Sub-second
+(0.25 / 0.1 s) is rejected** in the shipped config and only becomes valid once the stretch config (115200
+baud / 16–32-sample burst / single-channel) lowers the floor — the labeled stretch goal, bench-validated
+after the baseline window.
+
+**Mid-sweep change** is parsed but **applied at the next scheduling boundary** — never mid-row. The device
+finishes the current burst, then the new period governs the next read; a row is never split or re-timed.
+
+**Error, timeout, persistence.**
+
+- Malformed / bad-checksum / out-of-range → `nak`, **cadence unchanged** (a bad command can never change
+  timing — the safe default).
+- The capture process waits `max(2x the current cadence, 1500 ms)` for the ack; on timeout it retries once,
+  then surfaces "device not acking" rather than assuming the rate changed.
+- Re-sending the same cadence is idempotent.
+- Cadence is **RAM-only, not persisted** — a reboot (including the DTR reset on port-open, see the handoff
+  detail) returns the device to its compile-time default (the monitor cadence), so a power-cycle can never
+  leave it stuck sampling fast; the host re-applies the experiment rate after every open.
+- The command is **cadence-only** — it cannot enable actuation, change band boundaries, or alter the schema.
+
 *(To finalize when sub-issues are cut: the control-API request/response contract, the capture-process
 lifecycle + state file the UI reads, and the precise port-handoff / refusal protocol between monitor and
 experiment.)*
