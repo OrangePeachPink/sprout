@@ -2,7 +2,7 @@
 
 > **Status: Accepted** (2026-06-24). The Phase 2 personality layer and the v1 soil-mode token refinement are
 > approved. Ratified as [ADR-0008](../../adr/0008-design-system-v3-personality-layer.md). These files are
-> live; the refined dark-mode neutrals are folded into [`../sprout-tokens.css`](../sprout-tokens.css).
+> live; the refined dark-mode neutrals are folded into [`../tokens/sprout-tokens.css`](../tokens/sprout-tokens.css).
 
 Additive over [v1](../README.md) and [v2](../sprout-v2/README.md): it **adds a layer**, with one approved
 refinement to v1's dark-mode neutrals. The decision it executes is
@@ -31,7 +31,7 @@ consumed from `sprout-tokens.css`, never redefined elsewhere.
 | [`Sprout v3 Personality Layer.dc.html`](Sprout%20v3%20Personality%20Layer.dc.html) | The living visual record: additive before/after, the deltas, the seven states, the refined soil mode. Open with `support.js`. | reviewers |
 
 > **The soil-mode refinement is not a separate file** — the approved cool green-charcoal dark neutrals are
-> folded into [`../sprout-tokens.css`](../sprout-tokens.css)'s `[data-theme="dark"]` block (one tokens file).
+> folded into [`../tokens/sprout-tokens.css`](../tokens/sprout-tokens.css)'s `[data-theme="dark"]` block (one tokens file).
 
 ## The deltas (v1 → with v3 layered on)
 
