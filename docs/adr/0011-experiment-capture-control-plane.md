@@ -110,9 +110,60 @@ finishes the current burst, then the new period governs the next read; a row is 
   leave it stuck sampling fast; the host re-applies the experiment rate after every open.
 - The command is **cadence-only** — it cannot enable actuation, change band boundaries, or alter the schema.
 
-*(To finalize when sub-issues are cut: the control-API request/response contract, the capture-process
-lifecycle + state file the UI reads, and the precise port-handoff / refusal protocol between monitor and
-experiment.)*
+### Firmware detail — the monitor↔experiment port handoff (#64)
+
+This is the precise protocol behind the serial-port mutual-exclusion invariant above — *how* the port is
+released, reacquired, and kept single-owner.
+
+**The hard guarantee is the OS, not our code.** A serial port opens **exclusive** by default (Windows
+returns `Access denied` to a second opener), so a both-grab race is impossible at the OS level: the first
+open wins and the loser gets a clean error, never a corrupted shared stream. The protocol's job is to make
+that error never happen by surprise, and to hand off cleanly.
+
+**The reset-on-open fact that shapes everything.** Opening the port pulses DTR/RTS and **resets the
+ESP32** — a fresh `session_id` and a return to the default cadence. Two consequences:
+
+- Acquiring the port always reboots the device, so a capture **cannot join a live monitor session** — the
+  open ends it. The device is strictly **single-owner and sequential**. This is why real experiments wait
+  until the monitor is stopped and the probes are pulled (PRD-0001 R10): the hardware, not discipline,
+  enforces it.
+- After any open, the owner **waits for the boot banner** (`# boot … fw=…`) before sending `!cad` — the
+  device is not listening until it has booted.
+
+**Handoff sequence (monitor → experiment → monitor).**
+
+1. The operator stops Monitor mode (deliberate; window done, probes pulled). The monitor logger's stop path
+   closes the serial handle cleanly, releasing the port.
+2. Before launching a capture, the control plane (`serve.py`) **pre-checks**: (a) no monitor-logger process
+   is alive, **and** (b) a quick open-then-close probe of the port succeeds. Either failing → the start is
+   **refused with an honest message** ("monitor still holds the port"); the control plane never kills the
+   monitor — releasing it is the operator's act.
+3. The capture process opens the port, waits for the banner, sends `!cad,<ms>`, awaits `ack`, then captures
+   to its isolated `experiments/<experiment_id>/` file.
+4. On auto-stop / stop the capture closes the port and exits; the operator may then restart the monitor,
+   which reopens the port (a fresh device reset and monitor session).
+
+**The lock layer (advisory, on top of the OS guarantee).** Whoever opens the port writes an advisory lock —
+`logs/.serial-owner.json` = `{pid, mode, port, opened_utc}`, removed on clean close — so the control plane
+can answer "who holds the port?" **without opening it** (which would reset the device). The OS exclusive
+open stays the source of truth; the lock only avoids a needless *attempt* (and reset). **Stale-lock
+recovery:** if the lock names a PID that is no longer alive (a crashed owner — the OS already freed the
+port), the lock is stale and reclaimable; always validate PID liveness before trusting it.
+
+**Races and edges.**
+
+- Both-grab → impossible (OS exclusive); the loser surfaces "port busy".
+- Monitor-restart attempt mid-experiment → refused (single owner).
+- Crashed capture → the OS frees the port; the stale lock is detected by PID-liveness and reclaimed.
+- Operator forgets to stop the monitor → the step-2 pre-check refuses (and the OS open would refuse anyway).
+
+**Net:** OS-exclusive open (the hard mutex) + an advisory PID lock (so we never reset the device merely to
+ask who owns it) + wait-for-banner-then-`set_cadence` after every open + the control plane's pre-launch
+check. No both-grab race is possible, and the only handoff action is the operator's deliberate monitor stop
+— which the device's reset-on-open already makes mandatory.
+
+*(To finalize when sub-issues are cut: the control-API request/response contract and the capture-process
+lifecycle + state file the UI reads — both Data-owned.)*
 
 ## Consequences
 
