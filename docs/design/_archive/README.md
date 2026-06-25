@@ -13,6 +13,7 @@ for building.
 | Folder | What it was | Superseded by (live) |
 |---|---|---|
 | `pre-v3-originals/` | Pre-alignment page originals, captured before the v3 soil-mode consistency pass. | The aligned pages across the shelves (`foundations/`, `brand/`, `voice/`, `motion/`, `go-to-market/`, `merch/`). |
+| `v1-v2-previews/` | Original rendered preview screenshots from the v1 (`screenshots/`) and v2 (`sprout-v2/screenshots/`) deliveries. | Current per-page thumbnails in `library/thumbs/`; the depicted source lives across the shelves + `pre-v3-originals/`. |
 | `phase1-brand/` | Phase 1 handoff: first brand guidelines + voice (ADR-0007, BRAND.md, the guide). | `brand/`, `docs/adr/0007-…` |
 | `phase2-brand/` | Phase 2 handoff: the v3 personality layer (tokens refinement, mark component, motion, JSON maps, ADR-0008). | `tokens/`, `components/`, `voice/`, `docs/adr/0008-…` |
 | `adr-handoff/` | Delivery package for ADR-0004. | `docs/adr/0004-…` |
