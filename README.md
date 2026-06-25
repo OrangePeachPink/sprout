@@ -144,6 +144,14 @@ intentionally gated behind real per-probe calibration (the safety-first order: *
 it's possible*). The firmware roadmap and current standing live in the
 [handoff notes](docs/HANDOFF_2026-06-23.md).
 
+## Contributing
+
+Work is proposed, tracked, and merged through GitHub — **Issues** are the ledger, the
+**[project board](https://github.com/users/OrangePeachPink/projects/2)** is the working view, and
+**[Discussions](https://github.com/OrangePeachPink/plants/discussions)** are the idea inbox. The full loop
+(branch → PR with `Refs #N` → the review-before-close **verification gate**) lives in
+**[CONTRIBUTING.md](CONTRIBUTING.md)**.
+
 ---
 
 <p align="center"><sub>Sprout · plants with a pulse · <b>tend well.</b></sub></p>

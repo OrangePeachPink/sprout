@@ -16,6 +16,21 @@ The process is deliberately light — sized for a small project, not an enterpri
 The test: *can I assign it and define "done" in a sentence?* → Issue. *Is it a question or a maybe?* →
 Discussion.
 
+## The board
+
+The [**Sprout board**](https://github.com/users/OrangePeachPink/projects/2) is the working view of every
+issue. Four fields drive it:
+
+| Field | Values | Means |
+|---|---|---|
+| **Status** | Backlog → In Progress → In Review → Needs Verification → Done · Won't Do | where the work is in its life |
+| **Priority** | P0 · P1 · P2 · P3 | execution order (P0 = do first) |
+| **Size** | XS · S · M · L · XL | rough effort (feeds velocity) |
+| **Verification** | Pending · Approved · Conditional · Changes requested | the reviewer's disposition at the gate |
+
+Priority, Size, and Verification are **board fields, not labels** — they sort and chart without
+cluttering the issue's label list.
+
 ## Opening an issue
 
 Use the **issue forms** (New issue → Feature / Bug / Task). They capture the area, layer, and details a
@@ -24,7 +39,7 @@ maintainer confirms `area:` / `layer:` at triage.
 
 ## Making a change
 
-1. **Pick up** an issue (a maintainer can assign it and move it to *In Progress*).
+1. **Pick up** an issue (a maintainer can assign it and move its card to *In Progress* on the board).
 2. **Branch** from `main`, named `type/short-desc` — e.g. `feat/tank-level`, `fix/banner-spacing`.
    (Outside collaborators: fork, then branch.)
 3. **Commit** with [Conventional Commits](https://www.conventionalcommits.org/):
@@ -43,7 +58,8 @@ Sprout uses a **review-before-close** gate: merging a PR does **not** close its 
 1. The implementer posts **evidence** on the issue (what was built, how it was verified), moves it to
    **Needs Verification**, and adds the `needs-verification` label — but does **not** close it.
 2. A **reviewer** checks the change against the issue's **technical, functional, and quality** intent,
-   then closes it.
+   records a disposition in the **Verification** field (Approved / Conditional / Changes requested), and
+   *then* — as a separate, deliberate step — closes it.
 
 That's why PRs use `Refs #N` (a non-closing link) rather than `Closes #N`, and why the repo's
 "auto-close issues with merged linked PRs" setting is **off**. The human confirmation *is* the gate.
@@ -53,7 +69,13 @@ That's why PRs use `Refs #N` (a non-closing link) rather than `Closes #N`, and w
 - `type:*` — the kind of work (mirrors the commit `type:` vocabulary)
 - `area:*` — the subsystem (control / logging / sensing / actuators / analytics)
 - `layer:*` — `firmware` (needs a reflash) vs `host` (build anytime)
+- `blocks:*` — milestone **gates**, independent of Priority: `blocks:pumps`, `blocks:public-release`,
+  `blocks:data-integrity`. Filter by these to see what stands between us and pumps / a public release /
+  trustworthy data.
+- `needs-verification` — set when an issue enters the gate (above)
 - `good first issue` / `help wanted` — welcoming places to start
+
+Priority, Size, and Verification are **board fields**, not labels — see [The board](#the-board).
 
 ## Questions?
 
