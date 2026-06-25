@@ -1,9 +1,9 @@
 # PRD: Experiment Capture Mode
 
-**Status:** Draft <!-- Draft → Accepted → Implemented -->
+**Status:** Accepted (maintainer-approved 2026-06-25) <!-- Draft → Accepted → Implemented -->
 **Date:** 2026-06-25
-**Owner:** Data lane
-**Epic / issues:** *parent epic Issue to be cut from this PRD once Accepted*
+**Owner:** Data lane (with Firmware: serial ownership + `set_cadence`)
+**Epic / issues:** epic + tracer-bullet sub-issues cut from this PRD; see the `epic` issue on the board.
 
 ---
 
@@ -31,7 +31,8 @@ first-class guarantee, not an afterthought.
   duration, set sample rate, start/stop — with no agent in the loop.
 - Experiment captures are **provenance-isolated**: a separate data folder and a distinct id namespace, so
   no tool can auto-discover or stitch them into the baseline.
-- **Settable sample rate** (1 s / 5 s in v1; sub-second a labeled stretch).
+- **Settable, config-driven sample rate** — fast (5 s / 1 s / 0.5 s) through slow
+  (15 s / 30 s / 60 s / 5 min) tiers, editable in a config file; 0.25 / 0.1 s a labeled deeper stretch.
 - Durable **findings reports** (human + machine readable) as the output of an experiment.
 
 ## Non-goals
@@ -46,63 +47,108 @@ first-class guarantee, not an afterthought.
 
 - **R1.** Per-probe **labels**, operator-set, persisted with the capture.
 - **R2.** A **subject** field — arbitrary, non-plant allowed (e.g. `common-cup`, `air`, `tap-water`).
-- **R3.** **Bounded session** — the operator sets a duration; the capture **auto-stops** at it.
-- **R4.** **In-screen start/stop** — a click in the dashboard begins/ends a capture; no agent involved.
-- **R5.** **Settable sample rate** — 1 s and 5 s in v1; sub-second (0.5 / 0.25 / 0.1 s) a **labeled stretch
-  goal**, included only if Firmware confirms it is reasonable to try.
-- **R6.** **Isolated storage** — experiment captures write to a **separate folder**, never `logs/`, and are
-  never auto-discovered by the monitor dashboard's `gather_inputs()`.
-- **R7.** **Never-stitch** — a distinct `experiment_id` / session namespace and an explicit `mode` marker,
-  so no analysis tool can merge experiment data into the baseline.
+- **R3.** **Bounded session** — the operator sets a duration; the capture **auto-stops** at it. Auto-stop
+  is owned by the **capture process itself** (fail-safe: it stops even if `serve.py` or the browser dies);
+  a manual stop is a secondary signal.
+- **R4.** **In-screen start/stop/configure** — a click in the dashboard begins / ends / configures a
+  capture; no agent. `serve.py` owns the operator **control API** and **launches a bounded capture
+  process**; that process owns the serial port, issues `set_cadence`, and writes the isolated file
+  ([ADR-0011](../adr/0011-experiment-capture-control-plane.md), Option A refined).
+- **R5.** **Settable sample rate, config-driven.** Cadence is **firmware-timed** (the device free-runs;
+  the capture reads passively), set at runtime via a `set_cadence` serial command — not host-polling. The
+  **available cadences live in a host-side config file, not hardcoded** (Data-owned), so tiers are added or
+  changed as we learn; the capture process issues `set_cadence` for the selected value (Firmware). The
+  config spans:
+  - **Fast (for today):** 5 s / 1 s / **0.5 s** (0.5 s confirmed reasonable as-is).
+  - **Slow:** 15 s / 30 s / 60 s / 5 min — included specifically to **measure whether the transport error
+    rate rises as the idle window lengthens** (Firmware flagged the idle-burst glitch as cadence-sensitive),
+    so error-rate-vs-cadence is itself an experiment output (R9).
+  - **Sub-second stretch:** 0.25 / 0.1 s — labeled, gated on Firmware's three knobs (raise baud, shrink the
+    sample burst to 16–32, single-channel).
+- **R6.** **Isolated storage** — captures write to a **separate folder** (`experiments/<experiment_id>/`),
+  never `logs/`, and are never auto-discovered by the monitor dashboard's `gather_inputs()`.
+- **R7.** **Never-stitch** — enforced by the separate folder + a distinct `experiment_id` + a `mode`
+  (`monitor` | `experiment`) **shared-core column** (filterable, *not* buried in payload). `record_type`
+  stays `plants.soil`; **`mode` is the discriminator**. The schema bumps to **`schema_version=2`**
+  (additive, nullable, mapped by name) so monitor readers are unaffected.
 - **R8.** **Archival** — a naming convention, a per-experiment manifest, and a zip/store policy for
   completed experiments.
 - **R9.** **Findings reports** — durable, paired human (`.md`) + machine (`.json`/`.yaml`), in
-  `docs/experiments/`.
+  `docs/experiments/`. For rate-sweep experiments the findings include the **per-cadence transport error
+  rate** (dropped / corrupted lines via `quality_flag` + the XOR checksum), so degradation at longer
+  windows is measured, not assumed.
+- **R10.** **Serial-port mutual exclusion** — a capture needs **exclusive** ownership of the device serial
+  port (COM6); it **cannot run while Monitor mode holds the port**. Starting one is refused with an honest
+  message unless the monitor has released it. This makes "don't disturb the baseline" an **enforced
+  invariant**, not a guideline.
+
+### Lane split (confirmed with Firmware, Discussion #57)
+
+- **Data:** the `serve.py` control API, launching the bounded capture process, the isolated folder +
+  isolation gate, the rate **config file**, the schema columns (host-written), archival, findings, and the
+  analytics.
+- **Firmware:** serial-port ownership, the `set_cadence` runtime command, device timing, and co-authoring
+  the [ADR-0011](../adr/0011-experiment-capture-control-plane.md) /
+  [ADR-0012](../adr/0012-experiment-data-architecture.md) detail when sub-issues are cut.
 
 ## Acceptance criteria
 
 - [ ] The operator can label each probe, set subject, duration, and sample rate, and **start/stop a
       capture entirely from the dashboard**.
-- [ ] A bounded capture **auto-stops** at the set duration.
+- [ ] A bounded capture **auto-stops** at the set duration — **and still auto-stops if `serve.py` or the
+      browser is killed mid-capture** (capture-process-owned, fail-safe).
 - [ ] Experiment captures land in the **experiment data folder, not `logs/`**.
 - [ ] **PROVEN at the gate: the monitor dashboard's `gather_inputs()` cannot auto-discover experiment
       data** — a reviewer confirms the never-stitch guarantee before close (not an aspiration).
-- [ ] **1 s and 5 s** rates verified end-to-end; sub-second only behind a labeled flag, and only if
-      Firmware confirmed feasibility.
+- [ ] Rates are **config-driven, not hardcoded**; the fast (5 s / 1 s / 0.5 s) and slow
+      (15 s / 30 s / 60 s / 5 min) tiers are selectable and verified end-to-end; 0.25 / 0.1 s only behind a
+      labeled flag with Firmware's three knobs applied.
+- [ ] A rate-sweep experiment surfaces the **transport error rate per cadence** — so we can see whether
+      errors increase as the window lengthens.
+- [ ] Starting a capture while Monitor mode holds the serial port is **refused with an honest message**
+      (R10 mutex) — the running baseline is never interrupted.
+- [ ] `schema_version=2` is documented; monitor readers are unaffected and **the sibling air-quality
+      project stays valid**.
 - [ ] A completed experiment produces a **findings report pair** (`.md` + `.json`/`.yaml`) in
       `docs/experiments/`.
 - [ ] Monitor mode and the baseline path are demonstrably **unchanged**.
 
-## Open questions
+## Resolved by the Discussion (Firmware, #57)
 
-These are the cross-lane unknowns to resolve **in the Discussion**, with **Firmware** confirming
-feasibility, before this PRD is locked:
+The four open questions are answered; the agreed direction is folded into the requirements above and the
+ADR stubs (full ADR detail co-authored when sub-issues are cut):
 
-- **Sub-second feasibility (R5).** Can the firmware/logger sample reliably at 1 s, and is sub-second
-  (0.5 / 0.25 / 0.1 s) "reasonable to try"? Bounded by firmware timing, serial throughput, and capacitive
-  settling physics. *(Maintainer lean: v1 = 1 s / 5 s; sub-second a stretch gated on Firmware.)*
-- **Control seam (R4 → [ADR-0011](../adr/0011-experiment-capture-control-plane.md)).** How does an in-screen
-  click reach the logger — does `serve.py` expose a control API that launches/stops the logger, or does the
-  logger own the control surface and `serve.py` proxy?
-- **Auto-stop ownership (R3).** Logger-side timer vs. the control layer.
-- **Schema sign-off (R6/R7 → [ADR-0012](../adr/0012-experiment-data-architecture.md)).** The new fields
-  (`mode`, `subject`, `experiment_id`, `sample_rate`, per-probe label) are written by the logger and the
-  contract is shared with the sibling air-quality project — Firmware + contract sign-off.
+- **Sample rate.** Firmware-timed; runtime `set_cadence` command (no host-polling). Config-driven tiers:
+  fast 5 s / 1 s / 0.5 s + slow 15 s / 30 s / 60 s / 5 min (the slow end to characterize error-rate vs.
+  cadence); 0.25 / 0.1 s a knob-gated stretch (R5).
+- **Control seam (ADR-0011).** Option A refined: `serve.py` owns the control API + launches a bounded
+  capture process that owns the port; `serve.py` stays out of the port/data (R4).
+- **Auto-stop.** Capture-process-owned, fail-safe (R3).
+- **Schema (ADR-0012).** Conditional approve: host-written, device line unchanged; additive/nullable
+  shared-core **columns**, `schema_version=2`, `record_type` stays `plants.soil`, `mode` discriminates
+  (R7).
+
+**Still open (Data-owned, settle at build):** the archival store location (LFS `data` branch vs. a
+separate experiment archive) and the exact `docs/experiments/` findings schema.
 
 ## Out of scope / later
 
-- Sub-second sampling beyond what Firmware blesses → a stretch flag, not v1 scope.
+- 0.25 / 0.1 s sub-second beyond the knob-gated stretch → not for-today scope.
 - On-device temp / light sensors and environmental correlation → **Epic 2** ([PRD-0002](0002-environmental-context-and-correlation.md)).
 - A DuckDB / parquet tier for cross-experiment queries → when CSV re-parse gets slow (ADR-0006 storage ladder).
+- **The sibling air-quality project's adoption** of the `schema_version=2` columns is its own side todo
+  (a cross-project proposal), not part of this epic.
 
 ## Phasing (tracer bullets)
 
 The build order, once Accepted and sub-issues are cut (each a `Refs` PR through the gate):
 
-1. **Isolated capture, manual start** — separate folder + session metadata (label / subject / rate /
-   duration) + a launcher. Delivers R1–R3, R5 (1 s/5 s), R6–R7 decoupled from the control plane.
-2. **Control-plane spike + ADR-0011** — a thin start/stop-from-browser path to prove the seam, then lock
-   the ADR.
+1. **Isolated capture, manual start** — separate folder + `schema_version=2` metadata (label / subject /
+   rate / duration / `mode` / `experiment_id`) + a capture process that owns the port and `set_cadence`,
+   with the rate config file. Delivers R1–R3, R5 (config-driven rates), R6–R7, R10 decoupled from the
+   browser control plane.
+2. **Control-plane spike + ADR-0011** — a thin start/stop-from-browser path (`serve.py` control API →
+   capture process) to prove the seam + the mutex, then lock the ADR.
 3. **Full capture UI** — the control panel (R4): labels / subject / rate / duration / start-stop / status.
 4. **Archival + findings + per-state analysis** — R8/R9 + the per-state tooling (mean raw / spread /
    settling per sensor per state) that turns a capture into a findings pair.

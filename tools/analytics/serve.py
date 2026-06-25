@@ -40,22 +40,28 @@ _REPO = _HERE.parents[1]
 
 
 def _context(
-    inputs: list[str], hours: float | None = None, channels: list[str] | None = None
+    inputs: list[str] | None = None,
+    hours: float | None = None,
+    channels: list[str] | None = None,
 ) -> dict:
-    data = parse_files(inputs)
+    # Re-discover files on every request (fix #39): a list frozen at startup
+    # misses log files created later (a UTC-midnight rotation, a reconnect), so
+    # a long-running server would silently go stale. None => auto-discover.
+    resolved = inputs or gather_inputs()
+    data = parse_files(resolved)
     all_ch = sorted(
         {r.sensor_id for r in data.readings if r.record_type.startswith("plants.soil")}
     )
     data = filter_since(filter_channels(data, channels), hours)
     if not data.readings:
-        raise ValueError(f"no readings parsed from {inputs}")
+        raise ValueError(f"no readings parsed from {resolved}")
     ctx = build_context(data)
     ctx["meta"]["all_channels"] = all_ch  # full set, so the toggles can re-enable
     return ctx
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
-    inputs: ClassVar[list[str]] = []
+    inputs: ClassVar[list[str] | None] = None  # None => auto-discover per request
 
     def _send(self, body: str, ctype: str, status: int = 200) -> None:
         raw = body.encode("utf-8")
@@ -102,10 +108,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--host", default="127.0.0.1", help="bind host (default localhost)")
     args = ap.parse_args(argv)
 
-    DashboardHandler.inputs = args.inputs or gather_inputs()
+    # Explicit CLI inputs are pinned; otherwise leave None so each request
+    # re-discovers logs/ + the B8 archive (fix #39).
+    DashboardHandler.inputs = args.inputs or None
     httpd = ThreadingHTTPServer((args.host, args.port), DashboardHandler)
     url = f"http://{args.host}:{args.port}/"
-    print(f"serving live dashboard at {url}  (inputs: {DashboardHandler.inputs})")
+    src = DashboardHandler.inputs or "logs/ + B8 archive (auto-discovered each request)"
+    print(f"serving live dashboard at {url}  (inputs: {src})")
     print("Ctrl-C to stop")
     try:
         httpd.serve_forever()
