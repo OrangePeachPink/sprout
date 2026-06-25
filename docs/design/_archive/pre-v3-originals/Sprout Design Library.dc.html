@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Hanken+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; background:#eef4e6; }
+  ::selection { background:#8bd24f; color:#1e2a18; }
+  @keyframes lib-sway { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+  .mk { transform-box:fill-box; transform-origin:50% 92%; animation: lib-sway 6s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce){ .mk { animation:none !important; } }
+</style>
+</helmet>
+
+<div style="background:#eef4e6; font-family:'Hanken Grotesk',sans-serif; color:#1e2a18; min-height:100%;">
+<div style="max-width:1200px; margin:0 auto; padding:32px 28px 100px;">
+
+  <!-- ===== MASTHEAD ===== -->
+  <div style="display:flex; align-items:center; gap:11px; margin-bottom:22px;">
+    <svg width="22" height="26" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.22em; color:#5f7a3e;">SPROUT · DESIGN LIBRARY</span>
+  </div>
+  <div style="margin-bottom:38px; max-width:760px;">
+    <h1 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:46px; line-height:1.02; margin:0 0 14px;">Every Sprout design page, in one place.</h1>
+    <p style="font-size:17px; line-height:1.55; color:#4a5740; margin:0;">A visual bookmark of the system, brand, voice, motion, and go-to-market pieces. Each card is a live page — click through to open it. Eighteen pages across six shelves, with standalone and print formats linked where they exist.</p>
+  </div>
+
+  <!-- ===== FOUNDATIONS ===== -->
+  <div style="display:flex; align-items:center; gap:12px; margin:0 0 18px;">
+    <span style="width:11px; height:11px; border-radius:3px; background:#34A853;"></span>
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:22px; margin:0;">Foundations</h2>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.12em; color:#9aa888; text-transform:uppercase;">tokens &amp; the system</span>
+  </div>
+  <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(310px,1fr)); gap:22px; margin-bottom:48px;">
+
+    <div style="position:relative; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb"><a href="sprout-v2/Sprout%20Design%20System.dc.html" aria-label="Open Sprout Design System" style="position:absolute; inset:0; z-index:1;"></a>
+      <div style="position:relative;">
+        <img src="library/thumbs/design-system.png" alt="Sprout Design System" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top; background:#eef4e6; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#fff; background:#34A853; border-radius:999px; padding:4px 11px;">FOUNDATIONS</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#dff0cc; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">A system for tending things that grow</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">Sprout Design System.dc.html · v1</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">The full design system — every token, the instrument component set, and both in-context dashboards (light + soil). Reach for it whenever you're building or extending a data surface and need the authoritative spec; it governs the dashboard, analytics, and any served UI. Read it top to bottom, then lift values from <code style="font-family:'JetBrains Mono',monospace; font-size:11.5px; background:#f1f5ea; padding:1px 4px; border-radius:3px;">sprout-tokens.css</code> and rebuild components in your stack to match.</p>
+        <div style="position:relative; z-index:2; margin-top:13px; display:flex; gap:8px; flex-wrap:wrap;"><a href="sprout-v2/Sprout%20Design%20System.html" style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#1f6b33; background:#eef4e6; border:1px solid #d7e6c2; border-radius:6px; padding:4px 9px; text-decoration:none; white-space:nowrap;" style-hover="background:#dff0cc">standalone · no runtime</a><a href="sprout-v2/Sprout%20Design%20System-print.dc.html" style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#1f6b33; background:#eef4e6; border:1px solid #d7e6c2; border-radius:6px; padding:4px 9px; text-decoration:none; white-space:nowrap;" style-hover="background:#dff0cc">print / PDF</a></div>
+      </div>
+    </div>
+
+    <a href="sprout-v2/Plant%20Design%20System.dc.html" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb">
+      <div style="position:relative;">
+        <img src="library/thumbs/plant-design-system.png" alt="Plant Design System" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top; background:#eef4e6; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#fff; background:#34A853; border-radius:999px; padding:4px 11px;">FOUNDATIONS</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#dff0cc; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">Tend a tiny jungle</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">Plant Design System.dc.html · direction A</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">An early visual direction — lush, botanical, playful, with organic blobs and a saturated garden palette. Use it as historical reference for how the look was chosen, not as a live dependency; it lives in the exploration archive. Read it as a study — the system that actually shipped is the Sprout Design System.</p>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- ===== BRAND & IDENTITY ===== -->
+  <div style="display:flex; align-items:center; gap:12px; margin:0 0 18px;">
+    <span style="width:11px; height:11px; border-radius:3px; background:#0E7A86;"></span>
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:22px; margin:0;">Brand &amp; identity</h2>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.12em; color:#9aa888; text-transform:uppercase;">who Sprout is</span>
+  </div>
+  <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(310px,1fr)); gap:22px; margin-bottom:48px;">
+
+    <a href="brand/Sprout%20Brand%20Guidelines.dc.html" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb">
+      <div style="position:relative;">
+        <img src="library/thumbs/brand-guidelines.png" alt="Sprout Brand Guidelines" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top; background:#eef4e6; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#fff; background:#0E7A86; border-radius:999px; padding:4px 11px;">CANONICAL</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#d3eef1; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#0e7a86" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">The brand is a plant that finally has a voice</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">Sprout Brand Guidelines.dc.html · v1 · ADR-0007</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">The canonical, locked brand reference: voice do/don'ts, the living mark and its motion states, the seven-band mood system, and the character↔instrument boundary. This is the one to build to whenever you write copy or place Sprout — it governs every plant-facing surface. Follow it directly; it's the decision of record (ADR-0007), with the others as background.</p>
+      </div>
+    </a>
+
+    <a href="sprout-v2/Sprout%20-%20Brand%20World.dc.html" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb">
+      <div style="position:relative;">
+        <img src="library/thumbs/brand-world.png" alt="Sprout Brand World" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top; background:#eef4e6; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#fff; background:#0E7A86; border-radius:999px; padding:4px 11px;">BRAND</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#d3eef1; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#0e7a86" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">One plant, one voice, one little world</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">Sprout - Brand World.dc.html</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">The expansive brand world: the hero, the four-beat story, Sprout's voice across surfaces, applications, and the sticker/merch system. Use it when you need the full creative universe — campaigns, launch storytelling, merch — and it feeds social, GitHub, and any narrative surface. Browse it for tone and applications; pull specific rules from the Brand Guidelines.</p>
+      </div>
+    </a>
+
+    <a href="sprout-v2/Sprout%20Brand%20Identity.dc.html" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb">
+      <div style="position:relative;">
+        <img src="library/thumbs/brand-identity.png" alt="Sprout Brand Identity" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top; background:#0e140b; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#fff; background:#0E7A86; border-radius:999px; padding:4px 11px;">BRAND</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#d3eef1; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#0e7a86" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">Quiet care for living things</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">Sprout Brand Identity.dc.html · v1</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">The first articulation of the brand's personality, voice, and visual identity — framed to share, publish, or drop in a portfolio. Use it for the high-level "who Sprout is" story when introducing the project; it suits decks, about pages, and external intros. Skim it for the narrative — the binding rules now live in the Brand Guidelines.</p>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- ===== VOICE & PERSONALITY ===== -->
+  <div style="display:flex; align-items:center; gap:12px; margin:0 0 18px;">
+    <span style="width:11px; height:11px; border-radius:3px; background:#7C5CFF;"></span>
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:22px; margin:0;">Voice &amp; personality</h2>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.12em; color:#9aa888; text-transform:uppercase;">how Sprout speaks</span>
+  </div>
+  <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(310px,1fr)); gap:22px; margin-bottom:48px;">
+
+    <a href="sprout-v2/Sprout%20Personality%20Directions.dc.html" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb">
+      <div style="position:relative;">
+        <img src="library/thumbs/personality-directions.png" alt="Sprout Personality Directions" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top; background:#eef4e6; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#fff; background:#7C5CFF; border-radius:999px; padding:4px 11px;">EXPLORATION</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#e7e1fb; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#5b43c2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">Shortlist, narrowing as we go</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">Sprout Personality Directions.dc.html</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">The five personality directions that were explored, with the winner (Plant's POV) and why each other was cut. Use it to understand why the brand is what it is — and to avoid drifting back into a rejected frame; it's an exploration and decision artifact. Read it for rationale — the chosen direction is codified in the Brand Guidelines.</p>
+      </div>
+    </a>
+
+    <a href="sprout-v2/Sprout%20-%20Plant%20POV.dc.html" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb">
+      <div style="position:relative;">
+        <img src="library/thumbs/plant-pov.png" alt="Sprout Plant POV" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top; background:#eef4e6; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#fff; background:#7C5CFF; border-radius:999px; padding:4px 11px;">VOICE</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#e7e1fb; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#5b43c2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">The plant is the story</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">Sprout - Plant POV.dc.html</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">The winning direction pushed further: Sprout narrating in first person, the living mark front and centre. Use it as the reference render for the "plant speaks for itself" voice and hero treatment; it informs in-app hero states, social, and onboarding. Look to it for tone and staging, and pair it with Day in the Life for motion.</p>
+      </div>
+    </a>
+
+    <a href="sprout-v3/Sprout%20v3%20Personality%20Layer.dc.html" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb">
+      <div style="position:relative;">
+        <img src="library/thumbs/v3-personality-layer.png" alt="Sprout v3 Personality Layer" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top; background:#eef4e6; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#fff; background:#7C5CFF; border-radius:999px; padding:4px 11px;">ACCEPTED</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#e7e1fb; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#5b43c2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">The personality layer</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">Sprout v3 Personality Layer.dc.html · v3.0.0 · ADR-0008</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">The accepted, additive layer that brings the character onto the product — the mood↔band map, the drop-in mark component, voice strings, and the refined soil mode. Use it when wiring Sprout into the dashboard or any product surface; Data consumes its files and firmware needs no change. Adopt per its incorporation note — it layers on, never restyling the instrument (ADR-0008).</p>
+      </div>
+    </a>
+
+    <a href="sprout-v3/sprout-mark-demo.html" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb">
+      <div style="position:relative;">
+        <img src="library/thumbs/mark-demo.png" alt="sprout-mark component demo" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top; background:#eef4e6; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#fff; background:#7C5CFF; border-radius:999px; padding:4px 11px;">COMPONENT</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#e7e1fb; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#5b43c2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">sprout-mark — the living mark, in code</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">sprout-mark-demo.html · v3 component</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">A live demo of the &lt;sprout-mark&gt; custom element — the seven band states, each posed and colored by the calibrated band. Use it to see the real component run before wiring it in, and as the copy-paste API reference (band / mood / size / static). It ships in the v3 personality layer; drop it on hero, empty, and loading surfaces — never inside dense readouts.</p>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- ===== MOTION & CHARACTER ===== -->
+  <div style="display:flex; align-items:center; gap:12px; margin:0 0 18px;">
+    <span style="width:11px; height:11px; border-radius:3px; background:#E8703A;"></span>
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:22px; margin:0;">Motion &amp; character</h2>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.12em; color:#9aa888; text-transform:uppercase;">the mark, alive</span>
+  </div>
+  <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(310px,1fr)); gap:22px; margin-bottom:48px;">
+
+    <a href="sprout-v2/Sprout%20Loader.dc.html" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb">
+      <div style="position:relative;">
+        <img src="library/thumbs/loader.png" alt="Sprout Loader" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top; background:#eef4e6; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#fff; background:#E8703A; border-radius:999px; padding:4px 11px;">MOTION</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#fbe0d3; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#c2561f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">The mark, animated</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">Sprout Loader.dc.html</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">The loading states: the seedling grows, breathes, and spins while the soil is read, in light and soil variants. Use it any time a surface needs a branded wait or splash — app launch, data refresh, empty/loading screens. Drop in the matching variant; all motion honors reduced-motion.</p>
+      </div>
+    </a>
+
+    <a href="sprout-v2/Sprout%20Day%20in%20the%20Life.dc.html" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb">
+      <div style="position:relative;">
+        <img src="library/thumbs/day-in-the-life.png" alt="Sprout Day in the Life" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top; background:#eef4e6; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#fff; background:#E8703A; border-radius:999px; padding:4px 11px;">MOTION</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#fbe0d3; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#c2561f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">Dawn to dusk, on a loop</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">Sprout Day in the Life.dc.html</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">A compressed day-cycle of Sprout — waking, soaking up sun, drinking, sleeping — the motion engine behind reels and pitches. Use it for video, presentations, and any storytelling that needs the character alive over time; it powers social clips and deck moments. Scrub to a beat, set the duration, and export the frame.</p>
+      </div>
+    </a>
+
+    <a href="Sprout%20Welcome.dc.html" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb">
+      <div style="position:relative;">
+        <img src="library/thumbs/welcome.png" alt="Sprout Welcome — a day in the life" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top; background:#eef4e6; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#fff; background:#E8703A; border-radius:999px; padding:4px 11px;">REPO HOME</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#fbe0d3; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#c2561f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">The repo home, alive — dawn to dusk</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">Sprout Welcome.dc.html · repo hero</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">A self-running day-in-the-life built as the repository's front door — waking at dawn, a passing rain, the midday sun, dusk, and sleep, with the honest instrument reading the soil right beside the plant. Use it as the animated hero on the README: capture it as a looping GIF or short video, or link this live page. Mood follows the calibrated band (never a number), it honors reduced-motion, and an occasional companion bloom rewards anyone who lingers.</p>
+      </div>
+    </a>
+
+    <a href="sprout-v2/Sprout%20-%20On%20Stage.dc.html" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb">
+      <div style="position:relative;">
+        <img src="library/thumbs/on-stage.png" alt="Sprout On Stage" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top; background:#16201a; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#fff; background:#E8703A; border-radius:999px; padding:4px 11px;">CHARACTER</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#fbe0d3; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#c2561f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">The character, alive</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">Sprout - On Stage.dc.html</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">A full animated character scene — Sprout living through moods and moments on a staged backdrop. Use it as the showcase of the character's range and personality; it suits hero moments, launch pages, and demos. Watch it to feel the character, then pull specific poses into the mark and loader system.</p>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- ===== GO-TO-MARKET ===== -->
+  <div style="display:flex; align-items:center; gap:12px; margin:0 0 18px;">
+    <span style="width:11px; height:11px; border-radius:3px; background:#17B6C4;"></span>
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:22px; margin:0;">Go-to-market</h2>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.12em; color:#9aa888; text-transform:uppercase;">taking it public</span>
+  </div>
+  <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(310px,1fr)); gap:22px;">
+
+    <div style="position:relative; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb"><a href="Sprout%20Deck%20Template.dc.html" aria-label="Open Sprout Deck Template" style="position:absolute; inset:0; z-index:1;"></a>
+      <div style="position:relative;">
+        <img src="library/thumbs/deck-template.png" alt="Sprout Deck Template" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top; background:#eef4e6; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#fff; background:#17B6C4; border-radius:999px; padding:4px 11px;">TEMPLATE</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#d3eef1; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#0e7a86" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">A pitch-deck template</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">Sprout Deck Template.dc.html · 10 layouts</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">A reusable, branded slide template for any Sprout presentation — ten master layouts (title, agenda, section, content, stat, two-column, image, quote, data, closing). Use it as the starting point for pitch decks and talks: duplicate it and swap the placeholder copy. It presents full-screen, prints to PDF, and exports to editable PowerPoint.</p>
+        <div style="position:relative; z-index:2; margin-top:13px; display:flex; gap:8px; flex-wrap:wrap;"><a href="Sprout%20Deck%20Template.pptx" style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#0e7a86; background:#eef4e6; border:1px solid #d7e6c2; border-radius:6px; padding:4px 9px; text-decoration:none; white-space:nowrap;" style-hover="background:#d3eef1">PowerPoint .pptx</a></div>
+      </div>
+    </div>
+
+    <div style="position:relative; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb"><a href="sprout-v2/Sprout%20Deck.dc.html" aria-label="Open Sprout Deck" style="position:absolute; inset:0; z-index:1;"></a>
+      <div style="position:relative;">
+        <img src="library/thumbs/deck.png" alt="Sprout Deck" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:center; background:#0e140b; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#fff; background:#17B6C4; border-radius:999px; padding:4px 11px;">DECK</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#d3eef1; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#0e7a86" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">Tend a tiny jungle — the pitch</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">Sprout Deck.dc.html</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">The product introduction deck — what Sprout is and why, in the brand's voice, ready to present. Use it to pitch or onboard a new audience; it fits investor, portfolio, and team intros. Present it as-is or lift individual slides — print/export variants already exist alongside it.</p>
+        <div style="position:relative; z-index:2; margin-top:13px; display:flex; gap:8px; flex-wrap:wrap;"><a href="sprout-v2/Sprout%20Deck-print-vo4pvb.dc.html" style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#0e7a86; background:#eef4e6; border:1px solid #d7e6c2; border-radius:6px; padding:4px 9px; text-decoration:none; white-space:nowrap;" style-hover="background:#d3eef1">print / PDF</a></div>
+      </div>
+    </div>
+
+    <a href="sprout-v2/Sprout%20Social%20Kit.dc.html" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb">
+      <div style="position:relative;">
+        <img src="library/thumbs/social-kit.png" alt="Sprout Social Kit" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top; background:#0e140b; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#fff; background:#17B6C4; border-radius:999px; padding:4px 11px;">SOCIAL</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#d3eef1; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#0e7a86" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">Social starter kit</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">Sprout Social Kit.dc.html</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">The social starter kit: a GitHub page, LinkedIn-ready posts, and a generic asset set, with the copy already written. Use it when launching or sharing the project publicly; it feeds the repo README, social posts, and announcements. Swap in the final name and post — the Phase 3 GitHub package builds directly on it.</p>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- ===== MERCH & SWAG ===== -->
+  <div style="display:flex; align-items:center; gap:12px; margin:50px 0 18px;">
+    <span style="width:11px; height:11px; border-radius:3px; background:#F5A623;"></span>
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:22px; margin:0;">Merch &amp; swag</h2>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.12em; color:#9aa888; text-transform:uppercase;">stickers, magnets, patches</span>
+  </div>
+  <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(310px,1fr)); gap:22px;">
+
+    <div style="position:relative; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb"><a href="Sprout%20Merch%20Library.dc.html" aria-label="Open Sprout Merch Library" style="position:absolute; inset:0; z-index:1;"></a>
+      <div style="position:relative;">
+        <img src="library/thumbs/merch-library.png" alt="Sprout Merch Library" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top; background:#eef4e6; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#1e2a18; background:#F5A623; border-radius:999px; padding:4px 11px;">MERCH</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#fcedcf; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#b87d12" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">Stickers, magnets &amp; patches</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">Sprout Merch Library.dc.html · 4 sets</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">Production-ready merch built on the living mark — two sticker sets, a magnet set, and a patch set, each at least 40% its own. Use it to brief a print shop or choose a giveaway; every piece carries its size, cut, and finish, mapped to who it's for (contributors, supporters, kids, promo). Pair it with the production spec for the full vendor handoff.</p>
+        <div style="position:relative; z-index:2; margin-top:13px; display:flex; gap:8px; flex-wrap:wrap;"><a href="Sprout%20Merch%20Production%20Spec.dc.html" style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#a8730f; background:#fdf1d8; border:1px solid #f0d8a0; border-radius:6px; padding:4px 9px; text-decoration:none; white-space:nowrap;" style-hover="background:#fbe6b8">production spec →</a></div>
+      </div>
+    </div>
+
+    <a href="Sprout%20Merch%20Production%20Spec.dc.html" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; background:#fff; border:1px solid #e3e9d8; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(30,42,24,.06);" style-hover="box-shadow:0 14px 30px rgba(30,42,24,.14); transform:translateY(-3px); border-color:#cfe0bb">
+      <div style="position:relative;">
+        <img src="library/thumbs/merch-spec.png" alt="Sprout Merch Production Spec" style="width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top; background:#eef4e6; display:block;">
+        <span style="position:absolute; top:12px; left:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; color:#1e2a18; background:#F5A623; border-radius:999px; padding:4px 11px;">PRINT SPEC</span>
+      </div>
+      <div style="padding:18px 20px 22px; position:relative;">
+        <div style="position:absolute; top:-22px; right:18px; width:44px; height:44px; border-radius:50%; background:#fcedcf; border:3px solid #fff; display:flex; align-items:center; justify-content:center;"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="#b87d12" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mk"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <h3 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; margin:0 0 5px; padding-right:40px;">Sending Sprout to the print shop</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78; margin-bottom:11px;">Sprout Merch Production Spec.dc.html</div>
+        <p style="font-size:13px; line-height:1.6; color:#52614a; margin:0;">The vendor-facing production guide: file prep, CMYK + Pantone bridges, and the size/cut/finish/thread limits each process imposes — plus how we put the merch to work (contributor rewards, supporter packs, kids, promo). Read it before sending art to a printer; approve a proof, then run.</p>
+      </div>
+    </a>
+
+  </div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1200,&quot;height&quot;:900}}"></script>
+</body>
+</html>

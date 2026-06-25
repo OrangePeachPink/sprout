@@ -43,7 +43,7 @@ offline" property. (A framework is *earned* later by a named interactivity/state
 
 ### 3. Consumes the Sprout design language (does not own it)
 
-The app **consumes** the design system: it imports the tokens (`docs/design/sprout-tokens.css`) and the
+The app **consumes** the design system: it imports the tokens (`docs/design/tokens/sprout-tokens.css`) and the
 component patterns, so the UI stays consistent regardless of which view or process serves it. Per the
 ADR-0002 row #17 split, **Design owns the token/component system and the consumption contract
 (ADR-0004 / #18); this lane owns the application that consumes it.** New tokens are *requested from

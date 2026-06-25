@@ -91,7 +91,7 @@ Two honesty notes:
 ## 5. Color & type — Sprout's environment
 
 Color and type are Sprout's surroundings, named for what's around a plant. **All values are consumed from
-[`sprout-tokens.css`](../sprout-tokens.css)** (ADR-0004) — never redefined here.
+[`sprout-tokens.css`](../tokens/sprout-tokens.css)** (ADR-0004) — never redefined here.
 
 | Name | Token | Role |
 |---|---|---|
@@ -100,7 +100,7 @@ Color and type are Sprout's surroundings, named for what's around a plant. **All
 | Water | `--st-watering` `#17B6C4` | watering / wet |
 | Sun | `--st-dry` `#F5A623` | drying / warmth |
 | Soil | `#5A3F28` | earth, the pot |
-| Night | `--bg` (dark) `#0E140B` | soil/dark mode |
+| Night | `--bg` (dark) `#0C1311` | soil/dark mode |
 
 Type: **Baloo 2** (display & Sprout's voice) · **Hanken Grotesk** (UI & body) · **JetBrains Mono** (all
 numbers & data — always).

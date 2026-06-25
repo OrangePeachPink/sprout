@@ -60,7 +60,7 @@ guide:
 - **[Brand guide](docs/design/brand/BRAND.md)** — voice, the living mark + motion, the mood↔band system, the
   character↔instrument boundary.
 - **[Design system](docs/design/)** — tokens (`sprout-tokens.css`), instrument components, and the
-  [v3 personality layer](docs/design/sprout-v3/).
+  [v3 personality layer](docs/design/voice/Sprout%20v3%20Personality%20Layer.dc.html).
 - Decisions of record: **[ADR-0007 (brand &amp; voice)](docs/adr/0007-brand-guidelines.md)** ·
   **[ADR-0008 (personality layer)](docs/adr/0008-design-system-v3-personality-layer.md)**.
 

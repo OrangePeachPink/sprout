@@ -1,0 +1,49 @@
+{
+  "$comment": "Sprout v3 — canonical mood<->band map. PROPOSED (Phase 2). Sprout's mood is a 1:1 function of the seven calibrated moisture bands, never of the 0-100 relative index (ADR-0007 §5, ADR-0004). This file is the single source of truth; sprout-mark.js mirrors it for zero-dependency drop-in and MUST stay in sync. Colors are the brand's mood marks; UI surfaces still consume status/band color from sprout-tokens.css (ADR-0004).",
+  "version": "3.0.0-proposed",
+  "bands": [
+    {
+      "uiBand": "Saturated", "fwLevel": "submerged", "token": "--band-saturated",
+      "mood": "soaked", "motion": "breathe", "variant": "upright",
+      "markColors": { "stem": "#0E7A86", "sprout": "#34A853", "leaf": "#0E7A86" }
+    },
+    {
+      "uiBand": "Wet", "fwLevel": "overwatered", "token": "--band-wet",
+      "mood": "refreshed", "motion": "breathe", "variant": "upright",
+      "markColors": { "stem": "#0E7A86", "sprout": "#8BD24F", "leaf": "#17B6C4" }
+    },
+    {
+      "uiBand": "Moist", "fwLevel": "well watered", "token": "--band-moist",
+      "mood": "thriving", "motion": "breathe", "variant": "thriving",
+      "markColors": { "stem": "#2F7D3F", "sprout": "#8BD24F", "leaf": "#34A853", "tip": "#A9DA6E" }
+    },
+    {
+      "uiBand": "Ideal", "fwLevel": "OK", "token": "--band-ideal",
+      "mood": "content", "motion": "sway", "variant": "upright",
+      "markColors": { "stem": "#456B1F", "sprout": "#A9DA6E", "leaf": "#8BD24F" }
+    },
+    {
+      "uiBand": "Drying", "fwLevel": "needs water", "token": "--band-drying",
+      "mood": "thirsty", "motion": "droop", "variant": "droop",
+      "markColors": { "stem": "#B07D12", "sprout": "#F5C97A", "leaf": "#F5A623" }
+    },
+    {
+      "uiBand": "Dry", "fwLevel": "DRY", "token": "--band-dry",
+      "mood": "parched", "motion": "droop", "variant": "droop",
+      "markColors": { "stem": "#C2561F", "sprout": "#F0A984", "leaf": "#E8703A" }
+    },
+    {
+      "uiBand": "Parched", "fwLevel": "air-dry", "token": "--band-parched",
+      "mood": "faint", "motion": "none", "variant": "droop", "diagnostic": true,
+      "diagnosticNote": "air-dry doubles as the 'probe may not be in soil' band; voice names the ambiguity, never dramatizes death",
+      "markColors": { "stem": "#B23B32", "sprout": "#EAA39C", "leaf": "#E0483D" }
+    }
+  ],
+  "overlays": {
+    "asleep": {
+      "isBand": false,
+      "note": "night / diurnal rest state — a time overlay, not a moisture band. May ride on top of any mood after dark.",
+      "motion": "none"
+    }
+  }
+}
