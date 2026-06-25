@@ -1,14 +1,14 @@
 # Telemetry schema & cross-project logging contract
 
-**Status:** v1 draft (2026-06-23). This is the canonical row/file contract for `\plants\` logging,
-and the **cross-project contract** that makes `\plants\` and `\HotBoxAQ\` data joinable (backlog
+**Status:** v1 draft (2026-06-23). This is the canonical row/file contract for `plants` logging,
+and the **cross-project contract** that makes `plants` and the sibling air-quality project data joinable (backlog
 **C2**). It consolidates the B1 self-describing-header spec and the C2 reconciliation checklist.
 
-**Who leads:** plants has live captured data and a working device logger; HotBoxAQ's schema
-(`HotBoxAQ/docs/data_ml_plan.md`) is **approved but unimplemented** (Phase P5) with open decisions
+**Who leads:** plants has live captured data and a working device logger; the sibling air-quality project's schema
+(the sibling project's data plan) is **approved but unimplemented** (Phase P5) with open decisions
 (`DEC-004`: no `record_type`, no `session_id`, undefined null/delimiter/header). So this contract
-**adopts HotBoxAQ's field names where they exist** and **proposes** the additions it still lacks.
-Items marked **[propose→HBAQ]** are things HotBoxAQ should adopt for the join to work.
+**adopts the sibling air-quality project's field names where they exist** and **proposes** the additions it still lacks.
+Items marked **[propose→sibling-AQ]** are things the sibling air-quality project should adopt for the join to work.
 
 **Schema version:** `schema_version=1`. Bump on any breaking column change; the version is written
 in every file's header block so one loader can read mixed-version history.
@@ -19,7 +19,7 @@ in every file's header block so one loader can read mixed-version history.
 
 - **Long/tidy, one row per sensor-channel per sample.** Never a wide `raw1..raw4` row. Each row is
   self-contained — a pasted fragment still names its sensor. Matches how the firmware samples
-  (one channel at a time) and how HotBoxAQ's rows are shaped.
+  (one channel at a time) and how the sibling air-quality project's rows are shaped.
 - **Raw is immutable.** `raw_value` (ADC counts) is never rewritten. `value` is the interpretation
   and may change as calibration improves; both are kept so history can be re-derived.
 - **Time is host-authoritative.** The device has no RTC and WiFi is off, so it cannot know UTC. The
@@ -42,11 +42,11 @@ the cross-project core both repos carry.
 
 | # | column | origin | shared | example | notes |
 | --- | --- | --- | --- | --- | --- |
-| 1 | `record_type` | dev | yes **[propose→HBAQ]** | `plants.soil` | namespaced; see §3 |
+| 1 | `record_type` | dev | yes **[propose→sibling-AQ]** | `plants.soil` | namespaced; see §3 |
 | 2 | `timestamp_utc` | host | yes | `2026-06-23T14:05:30.123Z` | ISO-8601, ms, `Z` |
 | 3 | `timestamp_local` | host | yes | `2026-06-23 09:05:30.123` | host TZ, human |
 | 4 | `sample_id` | host | yes | `12345` | logger monotonic counter |
-| 5 | `session_id` | dev | yes **[propose→HBAQ]** | `3f9a1c` | per-boot; reboot = new id |
+| 5 | `session_id` | dev | yes **[propose→sibling-AQ]** | `3f9a1c` | per-boot; reboot = new id |
 | 6 | `device_id` | dev | yes | `plants_esp32_a4cf12` | friendly + MAC suffix |
 | 7 | `firmware_version` | dev | yes | `0.5.0` | |
 | 8 | `logger_version` | host | yes | `plants_logger_0_1` | |
@@ -66,10 +66,10 @@ the cross-project core both repos carry.
 | 22 | `payload` | dev | plants-ext | `level=OK;role=disp;spread=50;gpio=36` | `;`-sep `k=v`, §6 |
 | 23 | `notes` | host | yes | *(null)* | optional human annotation |
 
-The **shared core** (cols 1–21, 23) is byte-identical in shape between plants and HotBoxAQ, so one
+The **shared core** (cols 1–21, 23) is byte-identical in shape between plants and the sibling air-quality project, so one
 loader reads both. `payload` (22) is the type-specific escape hatch: opaque to the shared loader,
 infinitely extensible without widening the header. Plants puts its soil-only fields there
-(`level`, `role`, `spread`, `gpio`); HotBoxAQ puts its gas-only fields there.
+(`level`, `role`, `spread`, `gpio`); the sibling air-quality project puts its gas-only fields there.
 
 ---
 
@@ -86,18 +86,18 @@ Format `project.stream`. Namespaced so a merged file is unambiguous.
 | `plants.weather` | plants | host-pulled outdoor weather | C3 |
 | `plants.net` | plants | WiFi/connectivity | D4 |
 | `plants.health` | plants | fast liveness tick | A3 |
-| `aq.gas` | HotBoxAQ | gas channel (CO2/VOC/…) | **[propose→HBAQ]** |
-| `aq.env` | HotBoxAQ | AQ ambient context | **[propose→HBAQ]** |
+| `aq.gas` | the sibling air-quality project | gas channel (CO2/VOC/…) | **[propose→sibling-AQ]** |
+| `aq.env` | the sibling air-quality project | AQ ambient context | **[propose→sibling-AQ]** |
 
-The **CO2 ↔ watering** correlation you want is: co-deploy HotBoxAQ on the same window ledge, then
+The **CO2 ↔ watering** correlation you want is: co-deploy the sibling air-quality project on the same window ledge, then
 join `plants.soil`/`plants.pump` against `aq.gas` rows **on `timestamp_utc`**. The shared time axis +
 namespaced `record_type` are the only mandatory pieces that makes that join trivial.
 
 ---
 
-## 4. `quality_flag` enum (shared, from HotBoxAQ)
+## 4. `quality_flag` enum (shared, from the sibling air-quality project)
 
-Adopt HotBoxAQ's enum verbatim — richer than plants' old binary `ok|WARN` and it upgrades plants'
+Adopt the sibling air-quality project's enum verbatim — richer than plants' old binary `ok|WARN` and it upgrades plants'
 own diagnostics:
 
 `OK · WARMING · BASELINE_LEARNING · SUSPECT · SATURATED · ESTIMATED · NO_SIGNAL · ERROR`
@@ -114,10 +114,10 @@ own diagnostics:
 
 ---
 
-## 5. Event overlay (from HotBoxAQ)
+## 5. Event overlay (from the sibling air-quality project)
 
-Adopt HotBoxAQ's `event_id` + separate event-metadata table. A plants watering or fault becomes a
-joinable event, unifying it with HotBoxAQ's gas exposures and giving D1's pump log its event shape.
+Adopt the sibling air-quality project's `event_id` + separate event-metadata table. A plants watering or fault becomes a
+joinable event, unifying it with the sibling air-quality project's gas exposures and giving D1's pump log its event shape.
 Raw rows carry `event_id` (null when idle); one event-table row per event with: `event_id`,
 `event_label`, `event_family`, `known_source`, `start/stop/recovery_timestamp_utc`, `operator`,
 `notes`, `metadata_version`. (Deferred until pump logging, D1 — schema reserved now so no migration.)
@@ -144,7 +144,7 @@ and the first `=` splits key/value, so values *may* contain spaces (e.g. `level=
 - **Rotation** daily and/or by size (default: new file each calendar day, UTC); optionally gzip closed
   segments. Caps a corruption/disk-full to one segment (B5).
 - **Analysis tier** raw CSV is the immutable capture; a parquet/DuckDB load tier comes later for
-  analysis (shared with HotBoxAQ's plan). One loader, both projects.
+  analysis (shared with the sibling air-quality project's plan). One loader, both projects.
 - **Sample** a committed example is at [`sample_log.csv`](sample_log.csv) (3 rotation segments + data) —
   design parsers/dashboards against it without the hardware.
 
@@ -192,7 +192,7 @@ prefix-corruption. **Recommendation: device emits CSV.**
 
 ---
 
-## 10. What plants proposes HotBoxAQ adopt (for the join)
+## 10. What plants proposes the sibling air-quality project adopt (for the join)
 
 - Add a namespaced **`record_type`** column (`aq.gas`, `aq.env`).
 - Add **`session_id`** (it needs it for long runs anyway, its B5-equivalent).

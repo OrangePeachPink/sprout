@@ -7,7 +7,7 @@
 > closed. See **[CONTRIBUTING.md](.github/CONTRIBUTING.md)** for how work flows now. This file is kept only as a
 > historical record of the original backlog — **do not add to it.**
 
-**Scope of this list:** the whole `\plants\` project — on-device firmware, host-side capture/logging, downstream
+**Scope of this list:** the whole `plants` project — on-device firmware, host-side capture/logging, downstream
 analytics, and data/product ideas. Not everything here is firmware. **Flash-gated items** (Section A, and the firmware
 parts of B/C/D) batch into the next flash (call it v0.4.0) at a *cycle boundary* — after the current drench-to-dry
 capture ends and you water again — never mid-capture, so the stream stays unbroken. **Host-side items** (the logger in
@@ -110,7 +110,7 @@ console never needs it re-shown.
   infinitely extensible — preferred for an exploratory data layer); low-cadence layers forward-fill onto soil rows by
   UTC timestamp at analysis time. Clean alternative: one file per stream, each with a fixed simple schema, joined on
   the UTC timestamp — keeps every schema trivial at the cost of more files. (See C2 — this same `record_type` +
-  timestamp contract is what makes the HotBoxAQ cross-reference work.)
+  timestamp contract is what makes the sibling air-quality project cross-reference work.)
 - Log/schema format version.
 - Firmware version + git commit hash (+ `dirty` flag) + build date/time — ties the data to the exact source that
   produced it.
@@ -319,7 +319,7 @@ something floats or faults while unattended. Optionally tag the four rows of one
 counter so they group cleanly in analysis even though their per-row timestamps differ by the few hundred ms it takes
 to read them in turn.
 
-### C2. Cross-project schema compatibility (plants ↔ HotBoxAQ)
+### C2. Cross-project schema compatibility (plants ↔ the sibling air-quality project)
 
 **Status:** proposed — pending review (architectural)
 **Priority:** P2 (within section)
@@ -328,38 +328,38 @@ lightly.
 **Where:** a shared logging contract across both repos; mandatory layer = UTC timestamp + `record_type` +
 location/device id; nice-to-haves on ingest/fields/units.
 
-Design a shared minimal schema contract so `\plants\` and `\hotboxaq\` data are cross-referenceable and can be
+Design a shared minimal schema contract so `plants` and the sibling air-quality project data are cross-referenceable and can be
 co-deployed (e.g. both on the south kitchen ledge for a month). Why: overlapping sensors already exist (CO2/VOC) and
 there's a real experiment in mind; fixing the contract before either project locks in history makes a future join
 trivial instead of a migration. Having now compared the two raw-row schemas, they are already ~80% the same shape, so
-this is a short reconciliation, not a redesign — and several items below are places HotBoxAQ's more-mature data design
+this is a short reconciliation, not a redesign — and several items below are places the sibling air-quality project's more-mature data design
 improves plants on its own merits, not just compatibility tax. Keep the contract to the minimum mandatory set so
 neither project is over-constrained.
 
-**Reconciliation checklist (from the plants ↔ HotBoxAQ schema diff):**
+**Reconciliation checklist (from the plants ↔ the sibling air-quality project schema diff):**
 
-- **Timestamp contract (mandatory).** Same UTC ISO-8601 format and millisecond precision in both (HotBoxAQ's `…123Z`),
+- **Timestamp contract (mandatory).** Same UTC ISO-8601 format and millisecond precision in both (the sibling air-quality project's `…123Z`),
   offset recorded once in the header, local derived. Plants' B3 is already on this path.
-- **Shared `record_type` namespace (mandatory).** HotBoxAQ adds the row-level discriminator it currently lacks;
+- **Shared `record_type` namespace (mandatory).** The sibling air-quality project adds the row-level discriminator it currently lacks;
   namespace a shared registry (`plants.soil`, `aq.gas`, `aq.env`) so a merged file is unambiguous.
 - **Aligned identity columns (mandatory).** Both carry `device_id` + session/boot id + sensor/channel id +
-  position/name. HotBoxAQ adds `session_id` (it needs it for long runs anyway — B5); plants adopts `device_id`.
-- **`{raw_value, value, unit}` triple (borrow from HotBoxAQ).** Plants adopts it so a soil row (`raw_value`=ADC,
+  position/name. The sibling air-quality project adds `session_id` (it needs it for long runs anyway — B5); plants adopts `device_id`.
+- **`{raw_value, value, unit}` triple (borrow from the sibling air-quality project).** Plants adopts it so a soil row (`raw_value`=ADC,
   `value`=level/%, `unit`) is the same schema as a gas row.
-- **Shared `quality_flag` enum (borrow from HotBoxAQ).** Adopt `OK / WARMING / BASELINE_LEARNING / SUSPECT / SATURATED
+- **Shared `quality_flag` enum (borrow from the sibling air-quality project).** Adopt `OK / WARMING / BASELINE_LEARNING / SUSPECT / SATURATED
   / ESTIMATED / NO_SIGNAL / ERROR`; plants' spread-WARN → `SUSPECT`, floating probe → `NO_SIGNAL`, railed ADC →
   `SATURATED`. Richer than plants' binary `ok|WARN` and improves plants' own diagnostics.
 - **Shared context columns.** `temp/rh/pressure_context` names + units agreed, so co-deployed env sensors populate
   both files identically.
-- **Event overlay (borrow from HotBoxAQ).** Adopt its `event_id` + event-metadata table in plants; a watering/fault
+- **Event overlay (borrow from the sibling air-quality project).** Adopt its `event_id` + event-metadata table in plants; a watering/fault
   becomes a joinable event, unifying it with gas exposures (and giving D1's pump log its event shape).
 - **Format hygiene.** Shared delimiter, null token, header block, and the raw-immutable → parquet/DuckDB analysis tier
-  (HotBoxAQ's data plan specs this well; plants adopts it). One loader reads both.
+  (the sibling air-quality project's data plan specs this well; plants adopts it). One loader reads both.
 
-**Gas channels — direct vs. join:** keep plants firmware lean. Of the HotBoxAQ array, only CO2 (strong), VOC/HCHO (the
+**Gas channels — direct vs. join:** keep plants firmware lean. Of the sibling air-quality project array, only CO2 (strong), VOC/HCHO (the
 "do plants scrub the air" experiment), and maybe NH3 have plant-physiological meaning; the rest (CO, NO2, CH4, H2,
 H2S, smoke, odor) are AQ/event channels with no plant signal. None drive a watering decision, so none belong on the
-plant board — co-deploy HotBoxAQ on the same ledge and join on timestamp in post for the full gas context. The
+plant board — co-deploy the sibling air-quality project on the same ledge and join on timestamp in post for the full gas context. The
 reconciliation above is what makes that join trivial.
 
 ### C3. Local weather capture (host-side, low cadence)
@@ -403,7 +403,7 @@ a shift to electronics vs soil); CO2 (SCD40, drives photosynthesis, swings indoo
 reservoir/tank level (real empty-tank detection, ties to `max_doses` and D2) and pump volume or run-time per dose
 (correlate watering against the moisture recovery that follows — see D1). Where: device emits these as their own
 `record_type=env` rows at a slower cadence (1–5 min is plenty; they don't need 30 s), carried by the B1 schema
-discriminator. Note: CO2/VOC overlap the HotBoxAQ inventory — coordinate via C2 so the same physical sensors and field
+discriminator. Note: CO2/VOC overlap the sibling air-quality project inventory — coordinate via C2 so the same physical sensors and field
 names serve both projects.
 
 ### C5. Calendar / temporal review fields (derived analysis layer)
@@ -557,7 +557,7 @@ the diurnal overshoot, summer-vs-winter via C5's calendar fields), and trend sta
 the field-capacity reading, a per-plant baseline/"fingerprint"). Underneath it sits the piece that quietly makes
 everything else easy: a **historical feature set** — one row per watering cycle with engineered features (dry-down
 rate, time-to-needs-water, field-capacity reading, post-water recovery, ambient means during the cycle) — mirroring
-HotBoxAQ's event-feature-table idea (C2) but for plant cycles. That feature table is the shared substrate: it powers
+The sibling air-quality project's event-feature-table idea (C2) but for plant cycles. That feature table is the shared substrate: it powers
 the charts, simple anomaly flags ("this dry-down is unusual for this plant → heat / root issue / sensor drift"), the
 seasonal comparison, and the E3 predictor. No heavy ML — this is the histograms-and-trends layer you called — but
 building the per-cycle feature set deliberately (rather than re-deriving from raw each time) is what keeps the rest
@@ -884,14 +884,14 @@ paragraph) and file it into the right section when you're ready.*
 - **Open:** the per-pin same-probe/same-water calibration check + per-channel boundary calibration — data only
   just began accruing (the four are co-located now, by design, to measure exactly this).
 
-#### C2 — cross-project schema (plants ↔ HotBoxAQ) → proposed DONE (plants side)
+#### C2 — cross-project schema (plants ↔ the sibling air-quality project) → proposed DONE (plants side)
 
 - **Evidence:** contract `docs/TELEMETRY_SCHEMA.md` (`cd9b9ed`) + the `0.5.0` reshape (`f68522b`): namespaced
   `record_type` (`plants.soil`), `{raw_value,value,unit}` triple, shared `quality_flag` enum, reserved
-  `event_id` + `*_context_*` columns, `device_id` + `session_id`. Matches HotBoxAQ's field names and settles its
+  `event_id` + `*_context_*` columns, `device_id` + `session_id`. Matches the sibling air-quality project's field names and settles its
   open `DEC-004` items (null=empty, comma delimiter, `#`-header).
-- **Nuance:** the HotBoxAQ side (adopt `record_type`/`session_id`) is that repo's work; an agent-memory pointer
-  was left so a future HotBoxAQ thread finds this contract.
+- **Nuance:** The sibling air-quality project side (adopt `record_type`/`session_id`) is that repo's work; an agent-memory pointer
+  was left so a future the sibling air-quality project thread finds this contract.
 
 #### A2 — raise wet-floor boundaries → proposed RESOLVED via the 7-band scheme (Veronica's call)
 
