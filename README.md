@@ -43,9 +43,8 @@ index.
 
 ## A look
 
-<p align="center">
-  <img src="docs/design/screenshots/personality.png" alt="Sprout's plant-personality mood system" width="82%">
-</p>
+<!-- The animated welcome loop (docs/design/motion/welcome-loop.gif) lands here via #42; the previous
+     personality.png preview was retired in the design-library consolidation (it returns to _archive). -->
 
 <p align="center"><sub>The live dashboard (light + soil mode) serves at
 <code>tools/analytics/serve.py</code>; the design system &amp; mood system live in
@@ -150,7 +149,7 @@ Work is proposed, tracked, and merged through GitHub — **Issues** are the ledg
 **[project board](https://github.com/users/OrangePeachPink/projects/2)** is the working view, and
 **[Discussions](https://github.com/OrangePeachPink/plants/discussions)** are the idea inbox. The full loop
 (branch → PR with `Refs #N` → the review-before-close **verification gate**) lives in
-**[CONTRIBUTING.md](CONTRIBUTING.md)**.
+**[CONTRIBUTING.md](.github/CONTRIBUTING.md)**.
 
 ---
 
