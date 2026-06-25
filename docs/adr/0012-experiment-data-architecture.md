@@ -50,8 +50,8 @@ Conditions (from Firmware):
 - **`schema_version` bumps to 2**, documented in [`docs/TELEMETRY_SCHEMA.md`](../TELEMETRY_SCHEMA.md);
   readers map by name, so monitor (v1-shaped) readers are unaffected.
 - **`record_type` stays `plants.soil`** — `mode` is the discriminator; the namespace is **not** forked.
-- **HotBoxAQ stays valid and adopts the columns** — a HotBox-side todo (propose → HBAQ), since the
-  schema-v1/v2 contract is shared cross-project.
+- **The sibling air-quality project stays valid and adopts the columns** — its own cross-project todo,
+  since the schema-v1/v2 contract is shared.
 
 ### 3. Never-stitch guarantee
 
@@ -81,7 +81,8 @@ handshake ([ADR-0006](0006-data-architecture.md) §5–6).
   can't conflate the two.
 - The schema gains an explicit mode/subject dimension as **filterable columns** without breaking monitor
   readers or the device serial line — and without forking `record_type`.
-- A `schema_version=2` bump is now on the cross-project contract; HotBoxAQ must adopt it to stay joinable.
+- A `schema_version=2` bump is now on the cross-project contract; the sibling air-quality project must
+  adopt it to stay joinable.
 - Findings become durable, machine-consumable evidence that drives calibration — closing the loop ADR-0006
   opened.
 
@@ -91,4 +92,5 @@ handshake ([ADR-0006](0006-data-architecture.md) §5–6).
   experiments.
 - Environmental experiments add sensors (temp/light) → coordinate with Epic 2 /
   [PRD-0002](../prd/0002-environmental-context-and-correlation.md) and ADR-0006's `record_type=env` trigger.
-- HotBoxAQ adopts `schema_version=2` → confirm the shared contract stays joinable across both projects.
+- The sibling air-quality project adopts `schema_version=2` → confirm the shared contract stays joinable
+  across both projects.

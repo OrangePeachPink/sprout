@@ -31,7 +31,8 @@ first-class guarantee, not an afterthought.
   duration, set sample rate, start/stop — with no agent in the loop.
 - Experiment captures are **provenance-isolated**: a separate data folder and a distinct id namespace, so
   no tool can auto-discover or stitch them into the baseline.
-- **Settable sample rate** — 5 s / 1 s / **0.5 s** for today; 0.25 / 0.1 s a labeled deeper stretch.
+- **Settable, config-driven sample rate** — fast (5 s / 1 s / 0.5 s) through slow
+  (15 s / 30 s / 60 s / 5 min) tiers, editable in a config file; 0.25 / 0.1 s a labeled deeper stretch.
 - Durable **findings reports** (human + machine readable) as the output of an experiment.
 
 ## Non-goals
@@ -53,11 +54,17 @@ first-class guarantee, not an afterthought.
   capture; no agent. `serve.py` owns the operator **control API** and **launches a bounded capture
   process**; that process owns the serial port, issues `set_cadence`, and writes the isolated file
   ([ADR-0011](../adr/0011-experiment-capture-control-plane.md), Option A refined).
-- **R5.** **Settable sample rate.** Cadence is **firmware-timed** (the device free-runs; the capture reads
-  passively), set at runtime via a `set_cadence` serial command — not host-polling. **For-today tiers:
-  5 s / 1 s / 0.5 s** (0.5 s confirmed reasonable as-is). **Deeper sub-second — 0.25 / 0.1 s — a labeled
-  stretch**, gated on Firmware's three knobs: raise baud, shrink the sample burst (16–32, not 100),
-  single-channel.
+- **R5.** **Settable sample rate, config-driven.** Cadence is **firmware-timed** (the device free-runs;
+  the capture reads passively), set at runtime via a `set_cadence` serial command — not host-polling. The
+  **available cadences live in a host-side config file, not hardcoded** (Data-owned), so tiers are added or
+  changed as we learn; the capture process issues `set_cadence` for the selected value (Firmware). The
+  config spans:
+  - **Fast (for today):** 5 s / 1 s / **0.5 s** (0.5 s confirmed reasonable as-is).
+  - **Slow:** 15 s / 30 s / 60 s / 5 min — included specifically to **measure whether the transport error
+    rate rises as the idle window lengthens** (Firmware flagged the idle-burst glitch as cadence-sensitive),
+    so error-rate-vs-cadence is itself an experiment output (R9).
+  - **Sub-second stretch:** 0.25 / 0.1 s — labeled, gated on Firmware's three knobs (raise baud, shrink the
+    sample burst to 16–32, single-channel).
 - **R6.** **Isolated storage** — captures write to a **separate folder** (`experiments/<experiment_id>/`),
   never `logs/`, and are never auto-discovered by the monitor dashboard's `gather_inputs()`.
 - **R7.** **Never-stitch** — enforced by the separate folder + a distinct `experiment_id` + a `mode`
@@ -67,7 +74,9 @@ first-class guarantee, not an afterthought.
 - **R8.** **Archival** — a naming convention, a per-experiment manifest, and a zip/store policy for
   completed experiments.
 - **R9.** **Findings reports** — durable, paired human (`.md`) + machine (`.json`/`.yaml`), in
-  `docs/experiments/`.
+  `docs/experiments/`. For rate-sweep experiments the findings include the **per-cadence transport error
+  rate** (dropped / corrupted lines via `quality_flag` + the XOR checksum), so degradation at longer
+  windows is measured, not assumed.
 - **R10.** **Serial-port mutual exclusion** — a capture needs **exclusive** ownership of the device serial
   port (COM6); it **cannot run while Monitor mode holds the port**. Starting one is refused with an honest
   message unless the monitor has released it. This makes "don't disturb the baseline" an **enforced
@@ -76,7 +85,8 @@ first-class guarantee, not an afterthought.
 ### Lane split (confirmed with Firmware, Discussion #57)
 
 - **Data:** the `serve.py` control API, launching the bounded capture process, the isolated folder +
-  isolation gate, the schema columns (host-written), archival, findings, and the analytics.
+  isolation gate, the rate **config file**, the schema columns (host-written), archival, findings, and the
+  analytics.
 - **Firmware:** serial-port ownership, the `set_cadence` runtime command, device timing, and co-authoring
   the [ADR-0011](../adr/0011-experiment-capture-control-plane.md) /
   [ADR-0012](../adr/0012-experiment-data-architecture.md) detail when sub-issues are cut.
@@ -90,11 +100,15 @@ first-class guarantee, not an afterthought.
 - [ ] Experiment captures land in the **experiment data folder, not `logs/`**.
 - [ ] **PROVEN at the gate: the monitor dashboard's `gather_inputs()` cannot auto-discover experiment
       data** — a reviewer confirms the never-stitch guarantee before close (not an aspiration).
-- [ ] **5 s, 1 s, and 0.5 s** rates verified end-to-end; 0.25 / 0.1 s only behind a labeled flag and only
-      with Firmware's three knobs applied.
+- [ ] Rates are **config-driven, not hardcoded**; the fast (5 s / 1 s / 0.5 s) and slow
+      (15 s / 30 s / 60 s / 5 min) tiers are selectable and verified end-to-end; 0.25 / 0.1 s only behind a
+      labeled flag with Firmware's three knobs applied.
+- [ ] A rate-sweep experiment surfaces the **transport error rate per cadence** — so we can see whether
+      errors increase as the window lengthens.
 - [ ] Starting a capture while Monitor mode holds the serial port is **refused with an honest message**
       (R10 mutex) — the running baseline is never interrupted.
-- [ ] `schema_version=2` is documented; monitor readers are unaffected and **HotBoxAQ stays valid**.
+- [ ] `schema_version=2` is documented; monitor readers are unaffected and **the sibling air-quality
+      project stays valid**.
 - [ ] A completed experiment produces a **findings report pair** (`.md` + `.json`/`.yaml`) in
       `docs/experiments/`.
 - [ ] Monitor mode and the baseline path are demonstrably **unchanged**.
@@ -104,8 +118,9 @@ first-class guarantee, not an afterthought.
 The four open questions are answered; the agreed direction is folded into the requirements above and the
 ADR stubs (full ADR detail co-authored when sub-issues are cut):
 
-- **Sample rate.** Firmware-timed; runtime `set_cadence` command (no host-polling). 5 s / 1 s / 0.5 s for
-  today; 0.25 / 0.1 s a knob-gated stretch (R5).
+- **Sample rate.** Firmware-timed; runtime `set_cadence` command (no host-polling). Config-driven tiers:
+  fast 5 s / 1 s / 0.5 s + slow 15 s / 30 s / 60 s / 5 min (the slow end to characterize error-rate vs.
+  cadence); 0.25 / 0.1 s a knob-gated stretch (R5).
 - **Control seam (ADR-0011).** Option A refined: `serve.py` owns the control API + launches a bounded
   capture process that owns the port; `serve.py` stays out of the port/data (R4).
 - **Auto-stop.** Capture-process-owned, fail-safe (R3).
@@ -121,16 +136,17 @@ separate experiment archive) and the exact `docs/experiments/` findings schema.
 - 0.25 / 0.1 s sub-second beyond the knob-gated stretch → not for-today scope.
 - On-device temp / light sensors and environmental correlation → **Epic 2** ([PRD-0002](0002-environmental-context-and-correlation.md)).
 - A DuckDB / parquet tier for cross-experiment queries → when CSV re-parse gets slow (ADR-0006 storage ladder).
-- **HotBoxAQ adoption** of the `schema_version=2` columns is a **HotBox-side todo** (propose → HBAQ), not
-  part of this epic.
+- **The sibling air-quality project's adoption** of the `schema_version=2` columns is its own side todo
+  (a cross-project proposal), not part of this epic.
 
 ## Phasing (tracer bullets)
 
 The build order, once Accepted and sub-issues are cut (each a `Refs` PR through the gate):
 
 1. **Isolated capture, manual start** — separate folder + `schema_version=2` metadata (label / subject /
-   rate / duration / `mode` / `experiment_id`) + a capture process that owns the port and `set_cadence`.
-   Delivers R1–R3, R5 (5 s/1 s/0.5 s), R6–R7, R10 decoupled from the browser control plane.
+   rate / duration / `mode` / `experiment_id`) + a capture process that owns the port and `set_cadence`,
+   with the rate config file. Delivers R1–R3, R5 (config-driven rates), R6–R7, R10 decoupled from the
+   browser control plane.
 2. **Control-plane spike + ADR-0011** — a thin start/stop-from-browser path (`serve.py` control API →
    capture process) to prove the seam + the mutex, then lock the ADR.
 3. **Full capture UI** — the control panel (R4): labels / subject / rate / duration / start-stop / status.
