@@ -1,5 +1,6 @@
 /*
- * test_irrigation.c - host-native unit tests for the irrigation supervisor FSM.
+ * test_irrigation.c - host-native unit tests for the irrigation supervisor FSM
+ * plus the moisture-classifier band boundaries (issue #3).
  *
  * The engine is framework-agnostic C, so we compile it for the host alongside a
  * synthetic ADC+pump rig and drive it with a fake millisecond clock - no ESP32,
@@ -234,6 +235,35 @@ static void t_last_water_ms(void)
     CHECK(irrig_last_water_ms(&CTRL, 1) > at_init,      "last_water_ms advanced past init");
 }
 
+/* Issue #3: the reconciled boundaries map the 2026-06-21 calibration anchors
+ * (docs/SENSOR_CALIBRATION.md) to the right bands - in particular a parched pot
+ * now reads DRY (a watering display band), not air-dry ("out of soil"). */
+static moisture_level_t band_of(uint16_t raw)
+{
+    moisture_cfg_t   cfg = (moisture_cfg_t)MOISTURE_CFG_DEFAULT;
+    moisture_state_t st;
+    moisture_init(&st, &cfg, raw);
+    return st.committed;
+}
+
+static void t_band_anchors(void)
+{
+    printf("  reconciled band boundaries vs calibration anchors (issue #3)\n");
+    /* probe in air -> air-dry diagnostic (never waters) */
+    CHECK(band_of(3180) == MOIST_AIR_DRY,           "air ~3180 -> air-dry (out of soil)");
+    /* THE FIX: bone-dry / parched soil now reads DRY, not air-dry. 2760 was the
+     * old air-dry edge; ~2900 is a loose, air-gappy dry-soil hole. */
+    CHECK(band_of(2900) == MOIST_DRY,               "parched soil ~2900 -> DRY (waters)");
+    CHECK(band_of(2760) == MOIST_DRY,               "old air-dry edge 2760 -> DRY now");
+    CHECK(band_of(2440) == MOIST_DRY,               "bone-dry soil ~2440 -> DRY");
+    CHECK(moisture_level_is_display(band_of(2900)), "parched soil is a watering display band");
+    /* field capacity -> well-watered (healthy; no too-wet alarm) */
+    CHECK(band_of(1300) == MOIST_WELL_WATERED,      "field capacity ~1300 -> well-watered");
+    /* saturated soil / standing water -> the 'too wet / check probe' diagnostics */
+    CHECK(band_of(1060) == MOIST_OVERWATERED,       "saturated soil ~1060 -> overwatered");
+    CHECK(band_of(1010) == MOIST_SUBMERGED,         "standing water ~1010 -> submerged");
+}
+
 int main(void)
 {
     printf("native irrigation FSM tests\n");
@@ -243,6 +273,7 @@ int main(void)
     t_no_improvement_fault();
     t_overrun_failsafe();
     t_last_water_ms();
+    t_band_anchors();
     printf("\n%d checks, %d failed\n", TESTS, FAILS);
     return FAILS ? 1 : 0;
 }
