@@ -2,14 +2,14 @@
  *
  * Lift these as CSS custom properties for the plants dashboard / UI.
  * Toggle  data-theme="dark"  on the root element for "soil" (dark) mode.
- * Names match the design source: docs/design/sprout-design-system.dc.html (section 14 - Engineering tokens).
+ * Names match the design source: docs/design/foundations/Sprout Design System.dc.html (section 14 - Engineering tokens).
  *
  * Fonts (load via Google Fonts or self-host):
  *   Baloo 2 (display) - Hanken Grotesk (UI/body) - JetBrains Mono (all numbers/data).
  *
  * v3 update (ADR-0008): the "soil" (dark) mode NEUTRALS were refined from the original warm-olive surfaces
  * to a cooler, deeper green-charcoal that reads refined rather than dank. Light mode and every --st-* / --band-*
- * meaning color are unchanged. See docs/design/sprout-v3/.
+ * meaning color are unchanged. The v3 personality content now lives in docs/design/voice/ and docs/design/components/.
  */
 
 :root {
