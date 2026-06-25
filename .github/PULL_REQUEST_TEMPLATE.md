@@ -1,8 +1,9 @@
-<!-- VOICE: the Design lane voices the framing copy in Phase 3 batch 2. -->
+Thanks for tending Sprout. Fill in what helps and trim what doesn't — these notes carry your change through the
+verification gate.
 
 ## Summary
 
-What does this change do, and why?
+What does this change do, and why? A sentence or two is plenty.
 
 ## Linked issue
 
@@ -13,7 +14,7 @@ Refs #<!-- issue number -->
 
 ## How I verified it
 
-What you ran or observed to confirm it works — this is the evidence for the verification gate.
+What you ran or saw that shows it works — the evidence the reviewer checks at the gate.
 
 ## Checklist
 
