@@ -1,6 +1,7 @@
 /*
- * test_irrigation.c - host-native unit tests for the irrigation supervisor FSM
- * plus the moisture-classifier band boundaries (issue #3).
+ * test_irrigation.c - host-native unit tests for the irrigation supervisor FSM,
+ * the moisture-classifier band boundaries (#3), and the set_cadence command
+ * parser (#63).
  *
  * The engine is framework-agnostic C, so we compile it for the host alongside a
  * synthetic ADC+pump rig and drive it with a fake millisecond clock - no ESP32,
@@ -16,6 +17,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "irrigation.h"
+#include "serial_cmd.h"
 
 /* -------------------------------------------------------------------------- */
 /* synthetic rig: ADC source + pump observer + event sink                     */
@@ -264,6 +266,64 @@ static void t_band_anchors(void)
     CHECK(band_of(1010) == MOIST_SUBMERGED,         "standing water ~1010 -> submerged");
 }
 
+/* Issue #63: the host->device `!cad,<ms>*HH` command parser - valid / checksum /
+ * range / parse paths, the v1 tiers (incl. 0.5 s at the floor and the slow tiers),
+ * and re-sync past leading UART noise. */
+static void make_cad(char *out, size_t n, uint32_t ms)
+{
+    char body[32];
+    snprintf(body, sizeof(body), "cad,%lu", (unsigned long)ms);
+    uint8_t x = 0;
+    for (const char *p = body; *p; p++) x ^= (uint8_t)*p;
+    snprintf(out, n, "!%s*%02X", body, x);
+}
+
+static void t_set_cadence_cmd(void)
+{
+    printf("  set_cadence command parser (#63)\n");
+    const uint32_t FLOOR = 500, CEIL = 3600000;
+    char buf[40];
+    uint32_t ms = 0;
+
+    make_cad(buf, sizeof(buf), 1000);
+    CHECK(cadence_cmd_parse(buf, FLOOR, CEIL, &ms) == CADENCE_OK && ms == 1000,
+          "valid !cad,1000 -> OK");
+    make_cad(buf, sizeof(buf), 500);
+    CHECK(cadence_cmd_parse(buf, FLOOR, CEIL, &ms) == CADENCE_OK && ms == 500,
+          "0.5 s tier (500) accepted at the floor");
+    make_cad(buf, sizeof(buf), 300000);
+    CHECK(cadence_cmd_parse(buf, FLOOR, CEIL, &ms) == CADENCE_OK,
+          "slow tier (5 min) accepted");
+
+    make_cad(buf, sizeof(buf), 250);
+    CHECK(cadence_cmd_parse(buf, FLOOR, CEIL, &ms) == CADENCE_ERR_RANGE && ms == 250,
+          "sub-floor (250) -> range (value still reported)");
+    make_cad(buf, sizeof(buf), 7200000);
+    CHECK(cadence_cmd_parse(buf, FLOOR, CEIL, &ms) == CADENCE_ERR_RANGE,
+          "above ceil -> range");
+
+    CHECK(cadence_cmd_parse("!cad,1000*00", FLOOR, CEIL, &ms) == CADENCE_ERR_CHECKSUM,
+          "wrong checksum -> checksum");
+    /* malformed integer but VALID checksum, so it reaches the int-parse path */
+    {
+        const char *bad = "cad,12x4";
+        uint8_t x = 0;
+        for (const char *p = bad; *p; p++) x ^= (uint8_t)*p;
+        char m[24];
+        snprintf(m, sizeof(m), "!%s*%02X", bad, x);
+        CHECK(cadence_cmd_parse(m, FLOOR, CEIL, &ms) == CADENCE_ERR_PARSE,
+              "non-digit body -> parse");
+    }
+    CHECK(cadence_cmd_parse("plants.soil,s3,...", FLOOR, CEIL, &ms) == CADENCE_NOT_A_COMMAND,
+          "telemetry row -> not a command");
+
+    make_cad(buf, sizeof(buf), 1000);
+    char noisy[48];
+    snprintf(noisy, sizeof(noisy), "\xff\xfe%s", buf);
+    CHECK(cadence_cmd_parse(noisy, FLOOR, CEIL, &ms) == CADENCE_OK && ms == 1000,
+          "leading UART noise re-syncs to !cad");
+}
+
 int main(void)
 {
     printf("native irrigation FSM tests\n");
@@ -274,6 +334,7 @@ int main(void)
     t_overrun_failsafe();
     t_last_water_ms();
     t_band_anchors();
+    t_set_cadence_cmd();
     printf("\n%d checks, %d failed\n", TESTS, FAILS);
     return FAILS ? 1 : 0;
 }
