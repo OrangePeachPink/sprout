@@ -1,6 +1,7 @@
 # ADR-0012 — Experiment data architecture
 
-**Status:** Proposed — *stub; refine through the Experiment Capture Mode Discussion*
+**Status:** Proposed — *schema direction agreed (Firmware conditional approve, Discussion #57); detail
+co-authored when sub-issues are cut*
 **Date:** 2026-06-25
 **Owner:** Data lane
 **Lane:** data/analytics (experiment data lifecycle)
@@ -22,7 +23,8 @@ immutable raw, quality-flag posture, and storage ladder all carry over unchanged
 
 ## Decision
 
-**Proposed; sub-decisions marked open pending the Discussion + Firmware sign-off.**
+**Proposed; schema approach agreed with Firmware (#57); the archival store + findings schema remain
+Data-owned and settle at build.**
 
 ### 1. Separate storage (the never-stitch substrate)
 
@@ -31,33 +33,40 @@ Experiment captures write to a **dedicated folder** (proposed `experiments/<expe
 discover experiment data — the same opt-in isolation already used for `logs/legacy/`. *Enforced and
 gate-verified per PRD-0001's acceptance criteria.*
 
-### 2. Schema extension (on the schema-v1 contract — ADR-0006 §2)
+### 2. Schema extension — `schema_version=2` (Firmware conditional approve, #57)
 
-Add / confirm fields, carried in the `#` provenance header and as columns/payload as appropriate, mapped
-**by name** so monitor readers are unaffected:
+The new fields are **host-written**; the **device serial line does not change** (no firmware/device-row
+change). They are added as **additive, nullable, shared-core columns** — **not** in `payload` — so the
+isolation gate can *filter* on `mode` / `experiment_id`:
 
-- `mode` — `monitor` | `experiment` (the discriminator).
-- `subject` — free text (e.g. `common-cup`, `air`, `tap-water`).
+- `mode` — `monitor` | `experiment` (**the discriminator**).
 - `experiment_id` — the isolation namespace.
+- `subject` — free text (e.g. `common-cup`, `air`, `tap-water`).
 - `sample_rate` — the cadence in effect.
 - per-probe **label** (operator-set).
 
-The contract is **shared cross-project** (the sibling AQ project) → **Firmware + contract sign-off**
-required (open). `record_type` may also distinguish experiment readings — to settle in the Discussion.
+Conditions (from Firmware):
+
+- **`schema_version` bumps to 2**, documented in [`docs/TELEMETRY_SCHEMA.md`](../TELEMETRY_SCHEMA.md);
+  readers map by name, so monitor (v1-shaped) readers are unaffected.
+- **`record_type` stays `plants.soil`** — `mode` is the discriminator; the namespace is **not** forked.
+- **HotBoxAQ stays valid and adopts the columns** — a HotBox-side todo (propose → HBAQ), since the
+  schema-v1/v2 contract is shared cross-project.
 
 ### 3. Never-stitch guarantee
 
-A distinct `experiment_id` namespace + the `mode` marker; analysis tools **refuse** to merge experiment +
-monitor data; and `gather_inputs()` cannot reach the experiment folder. The reviewer **proves** this at the
-gate (PRD-0001 acceptance) — it is a checkable guarantee, not an intention.
+Isolation is enforced by the **separate `experiments/` folder + the distinct `experiment_id`** (and the
+filterable `mode` column) — **not** by the `record_type` namespace. Analysis tools **refuse** to merge
+experiment + monitor data, and `gather_inputs()` cannot reach the experiment folder. The reviewer
+**proves** this at the gate (PRD-0001 acceptance) — a checkable guarantee, not an intention.
 
-### 4. Naming + archival
+### 4. Naming + archival (Data-owned; settle at build)
 
 - **Naming:** `<date>_<subject>_<purpose>` (e.g. `2026-06-26_common-cup_wet-dry-airdry`).
 - **Manifest:** one per experiment — params (subject, rate, duration, probe labels), and a link to its
   findings report.
 - **Archival (open):** zip + store completed experiments on close — to the Git LFS `data` branch (like the
-  B8 monitor archive) **or** a separate experiment archive. Decide in the Discussion.
+  B8 monitor archive) **or** a separate experiment archive. Decide at build.
 
 ### 5. Findings reports
 
@@ -70,7 +79,9 @@ handshake ([ADR-0006](0006-data-architecture.md) §5–6).
 
 - The experiment lifecycle is isolated by construction: the baseline can't be polluted and future analysis
   can't conflate the two.
-- The schema gains an explicit mode/subject dimension without breaking monitor readers (by-name mapping).
+- The schema gains an explicit mode/subject dimension as **filterable columns** without breaking monitor
+  readers or the device serial line — and without forking `record_type`.
+- A `schema_version=2` bump is now on the cross-project contract; HotBoxAQ must adopt it to stay joinable.
 - Findings become durable, machine-consumable evidence that drives calibration — closing the loop ADR-0006
   opened.
 
@@ -80,3 +91,4 @@ handshake ([ADR-0006](0006-data-architecture.md) §5–6).
   experiments.
 - Environmental experiments add sensors (temp/light) → coordinate with Epic 2 /
   [PRD-0002](../prd/0002-environmental-context-and-correlation.md) and ADR-0006's `record_type=env` trigger.
+- HotBoxAQ adopts `schema_version=2` → confirm the shared contract stays joinable across both projects.
