@@ -42,7 +42,19 @@ try:
 except Exception:
     archive_logs = None
 
-LOGGER_VERSION = "plants_logger_0_3"
+# Advisory serial-ownership lock (ADR-0011 #64, tools/capture/serial_lock.py).
+# Best-effort: lets the experiment control plane learn the monitor holds the port
+# *without opening it* (opening pulses DTR and resets the ESP32). The OS exclusive
+# open is the real mutex; this dotfile is the courtesy that avoids a reset-to-ask
+# and surfaces a stale lock from a crashed owner. Both writers use the same schema.
+_CAPTURE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "capture")
+sys.path.insert(0, _CAPTURE_DIR)
+try:
+    import serial_lock
+except Exception:
+    serial_lock = None
+
+LOGGER_VERSION = "plants_logger_0_4"
 
 # Canonical file schema (docs/TELEMETRY_SCHEMA.md S2). The host fills timestamp_*,
 # sample_id, logger_version; context/event/notes stay empty until those layers land.
@@ -262,6 +274,32 @@ def _archive_step(logdir, exclude=None, include_all=False):
         print(f"[logger] archive step failed (non-fatal): {e}")
 
 
+def _lock_claim(port):
+    """Best-effort advisory claim that the monitor owns ``port`` (ADR-0011 #64).
+    Written on the canonical lock path (serial_lock's default <repo>/logs), not
+    --logdir, so the control plane always looks in one agreed place. Never blocks
+    logging: the OS exclusive open already happened and is the real mutex."""
+    if serial_lock is None:
+        return
+    try:
+        serial_lock.write_lock(port, "monitor")
+    except Exception as e:
+        print(f"[logger] serial-lock claim failed (non-fatal): {e}")
+
+
+def _lock_release():
+    """Best-effort advisory release; safe when no lock exists. Only the clean-stop
+    path calls this — a crash leaves a stale lock that current_owner() ignores via
+    its pid-alive check, and a transient reconnect intentionally keeps the lock so
+    the control plane still sees the (live) monitor as the owner."""
+    if serial_lock is None:
+        return
+    try:
+        serial_lock.clear_lock()
+    except Exception as e:
+        print(f"[logger] serial-lock release failed (non-fatal): {e}")
+
+
 def run(port, baud, logdir, maxbytes):
     csvlog = RotatingCsv(logdir, maxbytes)
     sample_id = 0
@@ -278,6 +316,7 @@ def run(port, baud, logdir, maxbytes):
             time.sleep(3)
             continue
         print(f"[logger] connected {port} @ {baud}  ->  {logdir}")
+        _lock_claim(port)  # advisory: the monitor now owns the port (ADR-0011 #64)
         try:
             while True:
                 raw = ser.readline()
@@ -330,6 +369,7 @@ def run(port, baud, logdir, maxbytes):
             )
             with contextlib.suppress(Exception):
                 ser.close()
+            _lock_release()  # advisory: port released on clean stop (ADR-0011 #64)
             _archive_step(logdir, include_all=True)  # the active segment is now closed
             return
 
