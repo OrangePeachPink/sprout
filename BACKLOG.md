@@ -1,5 +1,12 @@
 # Plants Project Backlog
 
+> ⚠️ **RETIRED — this file is no longer the source of truth.**
+> Work now lives in **[GitHub Issues](https://github.com/OrangePeachPink/plants/issues)** (the ledger) on the
+> **[Sprout project board](https://github.com/users/OrangePeachPink/projects/2)** (the working view). Every item
+> below (A1–E10) was migrated to an issue on 2026-06-24, and four already-done infra items were recorded as
+> closed. See **[CONTRIBUTING.md](CONTRIBUTING.md)** for how work flows now. This file is kept only as a
+> historical record of the original backlog — **do not add to it.**
+
 **Scope of this list:** the whole `\plants\` project — on-device firmware, host-side capture/logging, downstream
 analytics, and data/product ideas. Not everything here is firmware. **Flash-gated items** (Section A, and the firmware
 parts of B/C/D) batch into the next flash (call it v0.4.0) at a *cycle boundary* — after the current drench-to-dry
