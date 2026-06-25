@@ -4,15 +4,15 @@
 **Date:** 2026-06-24
 **Owner:** Workflow lane
 **Lane:** releases & versioning
-**Elaborates:** [ADR-0003 §9](0003-work-pipeline.md) (milestones, releases, insights) and [ADR-0002](0002-process-tiers.md) #9 (commits & changelog).
+**Elaborates:** [ADR-0003 §9](0003-work-pipeline.md) (releases) and [ADR-0002](0002-process-tiers.md) #9 (commits).
 
 ---
 
 ## Context
 
 Sprout is at firmware `0.7.0` with **no release tags** — it has never cut a formal release. Milestones
-+ Releases (ADR-0003 §9) introduce one, which forces two questions this ADR answers: **how many version
-lines** the project carries, and **the discipline for bumping the number.**
+and Releases (ADR-0003 §9) introduce one, which forces two questions this ADR answers: **how many
+version lines** the project carries, and **the discipline for bumping the number.**
 
 Two failure modes to avoid, both seen before:
 
@@ -79,6 +79,6 @@ they adopt it.
 
 ## Register row (add)
 
-```
+```text
 | [0009](0009-versioning-and-release-policy.md) | Versioning & release policy | **Accepted** | Workflow lane |
 ```
