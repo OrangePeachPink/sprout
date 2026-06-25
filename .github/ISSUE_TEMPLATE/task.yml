@@ -4,8 +4,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        <!-- VOICE: the Design lane voices this intro in Phase 3 batch 2. Placeholder copy below. -->
-        For documentation, tooling, dependencies, refactors, and housekeeping.
+        The quieter, essential work — docs, tooling, dependencies, refactors, housekeeping. Tending the soil so everything else can grow. Tell us what needs doing, and why it's worth it.
   - type: dropdown
     id: type
     attributes:
