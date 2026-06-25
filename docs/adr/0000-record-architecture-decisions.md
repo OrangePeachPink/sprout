@@ -67,6 +67,8 @@ prototype's history honestly. (Execution belongs to the architecture/firmware la
 | [0008](0008-design-system-v3-personality-layer.md) | Design system v3: the personality layer | **Accepted** | Design lane |
 | [0009](0009-versioning-and-release-policy.md) | Versioning & release policy | **Accepted** | Workflow lane |
 | [0010](0010-design-library-front-door.md) | The Design Library is the single front door for design assets | **Accepted** | Design lane |
+| [0011](0011-experiment-capture-control-plane.md) | Experiment capture control plane (browser→host) | **Proposed** — stub, pending Discussion + Firmware | Data + Firmware lanes |
+| [0012](0012-experiment-data-architecture.md) | Experiment data architecture (extends ADR-0006) | **Proposed** — stub, pending Discussion | Data lane |
 | — | *(archived)* [Sprout v0 combined architecture record](archive/sprout-v0-architecture.md) | Superseded by ADR-0001 | history |
 
 *New ADRs append a row here when proposed. Any lane may author an ADR for an ADR-sized decision in its
