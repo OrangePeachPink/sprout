@@ -8,6 +8,9 @@ importantly - *how a moisture reading is honestly represented*.
 Origin: exported from [Claude Design](https://claude.ai/design) as a developer handoff. This v1 folds in
 the analytics-thread review - the five instrument components plus the raw-vs-percentage correction.
 
+**Visual index:** open [`Sprout Design Library.dc.html`](Sprout%20Design%20Library.dc.html) — the design
+folder's front door: a clickable bookmark of every Sprout design page across v1, v2, v3, and brand.
+
 > A broader **v2 brand delivery** (brand world, decks, social kit, narrative pieces, expanded system) was
 > added 2026-06-23 alongside this folder — see [`sprout-v2/`](sprout-v2/README.md). It is additive; this v1
 > remains the source of truth for the dashboard/instrument UI.
