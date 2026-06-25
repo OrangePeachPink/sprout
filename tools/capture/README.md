@@ -27,9 +27,13 @@ characterization work behind C1 / A2 (see [PRD-0001](../../docs/prd/0001-experim
 ## The serial seam (Firmware #63 + #64)
 
 The capture source is a pluggable `Reader`. `SyntheticReader` is device-free and lets the
-storage / isolation / schema path be built and tested today. `SerialReader` is a **stub**
-until Firmware lands the `set_cadence` command (**#63**) and the monitor↔experiment
-port-handoff (**#64**); its `acquire()` / `set_cadence()` map exactly onto those.
+storage / isolation / schema path be built and tested today. **`SerialReader` now implements
+the full ADR-0011 host contract** — exclusive open (the OS mutex) → wait-for-boot-banner →
+advisory `logs/.serial-owner.json` lock → `!cad,<ms>*HH` with `# ack`/`# nak` → close + unlock.
+Its serial open is injectable, so the whole protocol is unit-tested against a fake device
+(`test_serial_reader.py`). The **real device integration** still needs Firmware **#63** (the
+on-device `set_cadence` command) and **#64** (reset-on-open + the monitor-side lock), and the
+freed port after the baseline teardown — that's the one remaining step to close #65.
 
 ## Run it
 

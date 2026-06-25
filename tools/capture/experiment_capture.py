@@ -38,8 +38,10 @@ so a real device line is parsed identically in both modes; that import pulls in
 from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
 import json
+import os
 import random
 import sys
 import time
@@ -65,6 +67,15 @@ from plants_logger import (  # noqa: E402  (sibling import after sys.path)
     parse_device_line,
     tz_offset,
 )
+
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+import serial_lock  # noqa: E402  (sibling module)
+
+
+class CaptureError(RuntimeError):
+    """A serial-capture protocol failure (no boot banner, a nak, or no ack)."""
+
 
 CAPTURE_VERSION = "experiment_capture_0_1"
 SCHEMA_VERSION = 2
@@ -154,33 +165,116 @@ class SyntheticReader(Reader):
                 yield "".join(chr(0xFF) for _ in range(12))
             if self._sweep % (self._glitch_every * 2) == 0:  # a corrupted line
                 yield "plants.soil,x,x,x,x,x,x,x,x,x,x,x,x,x*00"
-            time.sleep(self._rate_s)
+            # idle to the next sweep, yielding "" ticks so a bounded capture can
+            # auto-stop promptly even at a slow cadence (never block for minutes)
+            slept = 0.0
+            while slept < self._rate_s:
+                step = min(0.5, self._rate_s - slept)
+                time.sleep(step)
+                slept += step
+                yield ""
 
     def release(self) -> None:
         return None
 
 
 class SerialReader(Reader):
-    """Real serial source — lands with Firmware #63 (set_cadence) + #64 (port
-    handoff). Stubbed so the storage/isolation/schema path ships independently."""
+    """Real serial source implementing the ADR-0011 host contract:
 
-    def __init__(self, port: str | None, baud: int) -> None:
-        self._port, self._baud = port, baud
+    ``acquire`` = exclusive open (the OS mutex) -> wait for the boot banner ->
+    write the advisory lock; ``set_cadence`` = ``!cad,<ms>*HH`` then await
+    ``# ack`` / ``# nak``; ``release`` = close + clear the lock.
+
+    The serial open is injectable (``open_fn``) so the whole protocol is
+    unit-tested against a fake device; the real device integration needs Firmware
+    #63 (the ``!cad`` command) + #64 (reset-on-open + the shared lock)."""
+
+    def __init__(
+        self,
+        port: str | None,
+        baud: int,
+        *,
+        open_fn=None,
+        lock_dir=None,
+        ack_timeout_s: float | None = None,
+        banner_timeout_s: float = 5.0,
+    ) -> None:
+        self._port = port
+        self._baud = baud
+        self._open_fn = open_fn or self._default_open
+        self._lock_dir = lock_dir
+        self._ack_timeout_s = ack_timeout_s
+        self._banner_timeout_s = banner_timeout_s
+        self._ser = None
+
+    def _default_open(self):
+        import serial  # real-path only; tests inject open_fn
+
+        kw = {"timeout": 1}
+        if os.name != "nt":  # Windows serial is exclusive already; POSIX needs the flag
+            kw["exclusive"] = True
+        return serial.Serial(self._port, self._baud, **kw)
+
+    def _readline(self) -> str:
+        raw = self._ser.readline()
+        if not raw:
+            return ""
+        return raw.decode("latin-1").rstrip("\r\n")
 
     def acquire(self) -> None:
-        raise NotImplementedError(
-            "Real serial capture lands with #63 (set_cadence) + #64 (port-handoff). "
-            "Use --source synthetic until the firmware seam is ready."
-        )
+        try:
+            self._ser = self._open_fn()  # OS-exclusive: a 2nd opener is refused
+        except Exception as exc:  # surface "port busy" rather than crash
+            raise CaptureError(
+                f"cannot open {self._port} - monitor still holds it / port busy: {exc}"
+            ) from exc
+        self._wait_for_banner()  # opening reset the device; wait until it's listening
+        serial_lock.write_lock(self._port, "experiment", lock_dir=self._lock_dir)
 
-    def set_cadence(self, rate_s: float) -> None:  # via the #63 serial command
-        raise NotImplementedError
+    def _wait_for_banner(self) -> None:
+        deadline = time.monotonic() + self._banner_timeout_s
+        while time.monotonic() < deadline:
+            line = self._readline()
+            if line.startswith("# boot") and "fw=" in line:
+                return
+        raise CaptureError("no boot banner after open (device didn't reset / boot?)")
+
+    def set_cadence(self, rate_s: float) -> None:
+        ms = max(1, round(rate_s * 1000))
+        body = f"cad,{ms}"
+        cmd = f"!{body}*{_nmea_crc(body)}\n".encode("ascii")
+        timeout = self._ack_timeout_s
+        if timeout is None:
+            timeout = max(2 * rate_s, 1.5)  # per the contract
+        for _ in range(2):  # send + one retry on timeout
+            self._ser.write(cmd)
+            result = self._await_ack(timeout)
+            if result == "ack":
+                return
+            if result == "nak":
+                raise CaptureError(f"device rejected cadence {ms} ms (nak)")
+        raise CaptureError(f"device not acking set_cadence {ms} ms")
+
+    def _await_ack(self, timeout: float) -> str:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            line = self._readline()
+            if line.startswith("# ack cad="):
+                return "ack"
+            if line.startswith("# nak"):
+                return "nak"
+        return "timeout"
 
     def lines(self) -> Iterator[str]:
-        raise NotImplementedError
+        while True:
+            yield self._readline()  # "" on idle -> run_capture ticks the deadline
 
     def release(self) -> None:
-        return None
+        if self._ser is not None:
+            with contextlib.suppress(Exception):  # release must never raise
+                self._ser.close()
+            self._ser = None
+        serial_lock.clear_lock(lock_dir=self._lock_dir)
 
 
 # --------------------------------------------------------------------------- #
@@ -278,6 +372,8 @@ def run_capture(
             if stop_file is not None and stop_file.exists():  # operator stop (#66)
                 stopped_by = "operator"
                 break
+            if not text:  # idle tick - lets us check the deadline between bursts
+                continue
             dev = parse_device_line(text)
             if dev is None:
                 counts["noise" if is_line_noise(text) else "dropped"] += 1

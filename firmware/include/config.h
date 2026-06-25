@@ -66,6 +66,18 @@ constexpr int SENSOR_DRY_RAW = 3400;  // raw at/above this reads 0% moisture
 // immediate) - fine for slow drying, not ideal for poking the probe by hand.
 constexpr unsigned long READ_INTERVAL_MS = 30000;
 
+// --- set_cadence runtime serial command (ADR-0011, issue #63) --------------
+// The host may retune the sweep cadence at runtime via `!cad,<ms>*HH` (Experiment
+// mode). Bounds the device accepts:
+//   FLOOR - a sweep must finish before the next is due. At the shipped 4ch / 19200
+//     / 100-sample config a sweep is ~330 ms (serial-TX-dominated), so 500 ms keeps
+//     headroom for the periodic header reprint while still admitting the PRD v1
+//     0.5 s tier. The stretch config (higher baud / smaller burst / single channel)
+//     would lower this; v1 ships the constant.
+//   CEIL  - 1 h, a sane upper bound.
+constexpr unsigned long CADENCE_FLOOR_MS =     500UL;
+constexpr unsigned long CADENCE_CEIL_MS  = 3600000UL;
+
 // Per-measurement smoothing (trimmed mean): take SAMPLES_PER_READ raw samples,
 // drop the SAMPLES_TRIM highest and lowest, average the rest. Tames the ESP32
 // ADC's random jitter while shrugging off the odd spurious single sample.
