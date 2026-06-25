@@ -1,0 +1,77 @@
+name: ✨ Feature or enhancement
+description: Propose a new capability or an improvement to an existing one.
+labels: ["type:feat"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Got an idea to make Sprout better? Lovely — let's hear it. Fill in what you can; the fields marked *optional* can stay blank, and a maintainer will help shape the rest at triage.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What problem does this solve, and who is it for? Why does it matter?
+      placeholder: "Right now… / It's hard to… / It would help because…"
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you build or change? Sketch the approach if you have one.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the system does this touch? A maintainer confirms the `area:*` label at triage.
+      multiple: true
+      options:
+        - "Control — watering brain, safety, timing"
+        - "Logging — capture, schema, data integrity"
+        - "Sensing — probes, ADC, calibration"
+        - "Actuators — pumps, relays, display, connectivity"
+        - "Analytics — dashboards, forecasts, analysis"
+        - "Not sure / cross-cutting"
+    validations:
+      required: true
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Layer
+      options:
+        - "Firmware — runs on the ESP32 (needs a reflash)"
+        - "Host — Python / tooling (build anytime)"
+        - "Both"
+        - "Not sure"
+    validations:
+      required: true
+  - type: dropdown
+    id: size
+    attributes:
+      label: Rough size (optional)
+      description: Your gut estimate — the maintainer sets the real Size on the board.
+      options:
+        - "XS — an hour or less"
+        - "S — an evening"
+        - "M — a session or two"
+        - "L — a multi-session sub-project"
+        - "XL — a project in its own right"
+        - "Not sure"
+    validations:
+      required: false
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria (optional)
+      description: How do we know it's done? What does success look like?
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context (optional)
+      description: Links, sketches, related issues, prior discussion.
+    validations:
+      required: false

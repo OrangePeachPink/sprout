@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background:#eef4e6; }
+  ::selection { background:#8bd24f; color:#1e2a18; }
+  .bw-l { font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:#8a9a78; }
+  @keyframes bw-sway { 0%,100% { transform: rotate(-2.6deg); } 50% { transform: rotate(2.6deg); } }
+  @keyframes bw-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  @keyframes bw-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+  @keyframes bw-drift { 0% { transform: translateY(8px); opacity:0; } 18% { opacity:0.8; } 100% { transform: translateY(-130px); opacity:0; } }
+  @keyframes bw-fadein { 0% { opacity:0; transform: translateY(6px); } 100% { opacity:1; } }
+  @keyframes bw-droop { 0%,100% { transform: rotate(-1deg) translateY(0); } 50% { transform: rotate(1deg) translateY(2px); } }
+  .bw-sway { transform-box:fill-box; transform-origin:50% 92%; animation: bw-sway 6.5s ease-in-out infinite; }
+  .bw-breathe { transform-box:fill-box; transform-origin:50% 100%; animation: bw-breathe 4.5s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce){ .bw-sway,.bw-breathe { animation:none !important; } }
+</style>
+</helmet>
+
+<div style="background:#eef4e6; font-family:'Hanken Grotesk',sans-serif;">
+<div style="max-width:1180px; margin:0 auto; padding:24px 24px 90px;">
+
+  <!-- ===== ACT I · HERO — Sprout introduces itself ===== -->
+  <div style="position:relative; overflow:hidden; border-radius:30px; background:radial-gradient(120% 95% at 50% 16%, #ffffff 0%, #eaf3da 55%, #d8edc0 100%); border:1px solid #d7e6c2; min-height:660px; display:flex; flex-direction:column; align-items:center; padding:40px 24px 0;">
+    <!-- motes -->
+    <div style="position:absolute; left:22%; bottom:120px; width:7px; height:7px; border-radius:50%; background:#b6d98a; animation:bw-drift 8s ease-in infinite;"></div>
+    <div style="position:absolute; left:70%; bottom:130px; width:6px; height:6px; border-radius:50%; background:#cbe4a6; animation:bw-drift 9.5s ease-in infinite 2s;"></div>
+    <div style="position:absolute; left:84%; bottom:100px; width:5px; height:5px; border-radius:50%; background:#e0c068; animation:bw-drift 10s ease-in infinite 1s;"></div>
+
+    <!-- brand line -->
+    <div style="position:relative; display:flex; align-items:center; gap:12px; z-index:4;">
+      <svg width="26" height="31" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg>
+      <span style="font-family:'JetBrains Mono',monospace; font-size:13px; letter-spacing:0.22em; color:#5f7a3e;">SPROUT · BRAND WORLD</span>
+    </div>
+
+    <!-- speech bubble -->
+    <div style="position:relative; z-index:4; margin-top:30px; width:min(620px,90%);">
+      <div style="animation:bw-bob 5s ease-in-out infinite;">
+        <div style="background:#fff; border:1px solid #e2ecd2; border-radius:24px; padding:24px 32px; box-shadow:0 12px 34px rgba(30,42,24,0.12); text-align:center; position:relative;">
+          <div style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:34px; line-height:1.15; color:#1e2a18;">{{ say }}</div>
+          <div style="position:absolute; left:50%; bottom:-11px; transform:translateX(-50%) rotate(45deg); width:22px; height:22px; background:#fff; border-right:1px solid #e2ecd2; border-bottom:1px solid #e2ecd2;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- big animated sprout -->
+    <div style="position:relative; z-index:3; margin-top:6px; flex:1; display:flex; align-items:flex-end;">
+      <div style="position:relative;">
+        <div style="position:absolute; left:50%; bottom:40px; transform:translateX(-50%); width:280px; height:280px; border-radius:50%; background:{{ ringStyle }}; -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 13px), #000 calc(100% - 12px)); mask:radial-gradient(farthest-side, transparent calc(100% - 13px), #000 calc(100% - 12px)); opacity:0.7;"></div>
+        <svg width="300" height="360" viewBox="0 0 200 250" class="bw-sway" style="position:relative;">
+          <ellipse cx="100" cy="236" rx="74" ry="15" fill="#3a2a1c" opacity="0.16"></ellipse>
+          <path d="M40 236 Q100 214 160 236 Z" fill="#5a3f28"></path>
+          <path d="M100 232 C99 190 101 160 100 120" fill="none" stroke="{{ stemColor }}" stroke-width="7" stroke-linecap="round"></path>
+          <g class="bw-breathe">
+            <path d="M100 150 C66 140 44 108 50 70 C90 84 104 120 100 150 Z" fill="{{ sproutColor }}" stroke="{{ stemColor }}" stroke-width="3" stroke-linejoin="round"></path>
+            <path d="M100 150 C134 140 156 108 150 70 C110 84 96 120 100 150 Z" fill="{{ leafColor }}" stroke="{{ stemColor }}" stroke-width="3" stroke-linejoin="round"></path>
+            <path d="M100 122 C92 104 96 84 110 72 C116 92 112 112 100 122 Z" fill="{{ tipColor }}" stroke="{{ stemColor }}" stroke-width="2.5" stroke-linejoin="round"></path>
+          </g>
+          <circle cx="150" cy="92" r="5" fill="#9fdcff" style="transform-box:fill-box; transform-origin:center; animation:bw-bob 4s ease-in-out infinite;"></circle>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- title under hero -->
+  <div style="text-align:center; margin:38px auto 10px; max-width:840px;">
+    <h1 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:58px; line-height:1.0; color:#1e2a18; margin:0 0 18px;">The brand is a plant<br>that finally has a voice.</h1>
+    <p style="font-size:19px; line-height:1.55; color:#4a5740; margin:0;">Everything in this world exists so <strong>Sprout</strong> — the living, talking plant at the center — can tell its own story. The voice is its voice. The animation is its life. Every other piece simply holds it up.</p>
+  </div>
+
+  <!-- ===== STORYLINE SPINE ===== -->
+  <div style="background:#fff; border:1px solid #e3e9d8; border-radius:24px; padding:42px; margin-top:34px;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:30px;">
+      <h2 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:30px; color:#1e2a18; margin:0;">The story, in four beats</h2>
+      <span class="bw-l">the spine everything hangs on</span>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:20px;">
+      <!-- beat 1 -->
+      <div style="text-align:center;">
+        <div style="height:120px; display:flex; align-items:flex-end; justify-content:center;">
+          <svg width="70" height="90" viewBox="0 0 24 28" fill="none" stroke="#b07d12" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="animation:bw-droop 5s ease-in-out infinite; transform-box:fill-box; transform-origin:50% 100%;"><path d="M12 26 C12 20 12 18 12 16" fill="none"></path><path d="M12 16 C8 17 6 20 6 23 C10 22 12 19 12 16 Z" fill="#f0a984"></path><path d="M12 16 C16 17 18 20 18 23 C14 22 12 19 12 16 Z" fill="#e8703a"></path></svg>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#a3461a; margin:14px 0 6px;">I.</div>
+        <div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; color:#1e2a18;">Plants fail in silence.</div>
+        <div style="font-size:13.5px; color:#6f7e62; line-height:1.5; margin-top:6px;">By the time a leaf droops, the damage is days old.</div>
+      </div>
+      <!-- beat 2 -->
+      <div style="text-align:center;">
+        <div style="height:120px; display:flex; align-items:flex-end; justify-content:center; position:relative;">
+          <div style="position:absolute; top:6px; background:#fff; border:1px solid #e2ecd2; border-radius:10px 10px 10px 2px; padding:5px 10px; font-family:'Baloo 2',sans-serif; font-weight:700; font-size:11px; color:#247a3a; box-shadow:0 4px 10px rgba(0,0,0,0.06);">thirsty!</div>
+          <svg width="64" height="80" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="bw-breathe"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#0e7a86; margin:14px 0 6px;">II.</div>
+        <div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; color:#1e2a18;">Sprout gives them a voice.</div>
+        <div style="font-size:13.5px; color:#6f7e62; line-height:1.5; margin-top:6px;">Now the soil speaks — in the plant's own words.</div>
+      </div>
+      <!-- beat 3 -->
+      <div style="text-align:center;">
+        <div style="height:120px; display:flex; align-items:flex-end; justify-content:center; position:relative;">
+          <span style="position:absolute; top:24px; left:50%; transform:translateX(-50%); width:7px; height:11px; border-radius:0 50% 50% 50%; background:#17b6c4; rotate:45deg; animation:bw-drift 2.2s ease-in infinite reverse;"></span>
+          <svg width="64" height="80" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="bw-breathe"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#247a3a; margin:14px 0 6px;">III.</div>
+        <div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; color:#1e2a18;">And quietly cares for them.</div>
+        <div style="font-size:13.5px; color:#6f7e62; line-height:1.5; margin-top:6px;">Automatic watering, before it's ever urgent.</div>
+      </div>
+      <!-- beat 4 -->
+      <div style="text-align:center;">
+        <div style="height:120px; display:flex; align-items:flex-end; justify-content:center;">
+          <svg width="74" height="92" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="bw-sway"><path d="M12 26 V12"></path><path d="M12 13 C7 10 5 7 6 4 C11 5 12 9 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C17 10 19 7 18 4 C13 5 12 9 12 13 Z" fill="#34a853"></path><path d="M12 11 C9 6 11 3 12 1 C14 4 14 8 12 11 Z" fill="#a9da6e"></path></svg>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#1f6b33; margin:14px 0 6px;">IV.</div>
+        <div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:19px; color:#1e2a18;">You just watch them thrive.</div>
+        <div style="font-size:13.5px; color:#6f7e62; line-height:1.5; margin-top:6px;">The reward is a happy plant, and nothing to do.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== HERO + SUPPORTING MODEL ===== -->
+  <div style="background:#0C1311; border:1px solid #29372F; border-radius:24px; padding:42px; margin-top:26px;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px;">
+      <h2 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:30px; color:#E9F1EB; margin:0;">Sprout sits on top. Everything else holds it up.</h2>
+      <span style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:#6f7e62;">the system</span>
+    </div>
+    <p style="font-size:15px; color:#9fb094; margin:0 0 30px; max-width:680px;">One hero, many supports. The animated, talking plant leads every surface; voice, color, type, honesty and the applications are the soil it grows from — never competing for the spotlight.</p>
+    <div style="display:flex; align-items:center; justify-content:center; gap:18px; flex-wrap:wrap;">
+      <div style="text-align:center;">
+        <div style="width:150px; height:150px; border-radius:50%; background:radial-gradient(120% 120% at 35% 25%, #1e2a18, #0a0f08); display:flex; align-items:center; justify-content:center; box-shadow:0 0 40px rgba(147,221,106,0.25); margin:0 auto;">
+          <svg width="78" height="92" viewBox="0 0 24 28" fill="none" stroke="#93DD6A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="bw-sway"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#93DD6A"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#93DD6A"></path></svg>
+        </div>
+        <div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:18px; color:#93DD6A; margin-top:12px;">Sprout · the hero</div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:28px; color:#3a4a32;">←</div>
+      <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:12px; max-width:440px;">
+        <div style="background:#18231F; border:1px solid #29372F; border-radius:12px; padding:14px 16px;"><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:15px; color:#E9F1EB;">Voice</div><div style="font-size:12.5px; color:#8B9B90;">first-person, Sprout's own</div></div>
+        <div style="background:#18231F; border:1px solid #29372F; border-radius:12px; padding:14px 16px;"><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:15px; color:#E9F1EB;">Color &amp; type</div><div style="font-size:12.5px; color:#8B9B90;">its soil, sun &amp; leaves</div></div>
+        <div style="background:#18231F; border:1px solid #29372F; border-radius:12px; padding:14px 16px;"><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:15px; color:#E9F1EB;">Honesty</div><div style="font-size:12.5px; color:#8B9B90;">real data, quietly under</div></div>
+        <div style="background:#18231F; border:1px solid #29372F; border-radius:12px; padding:14px 16px;"><div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:15px; color:#E9F1EB;">Applications</div><div style="font-size:12.5px; color:#8B9B90;">where Sprout shows up</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SPROUT'S VOICE ===== -->
+  <div style="background:#fff; border:1px solid #e3e9d8; border-radius:24px; padding:42px; margin-top:26px;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px;">
+      <h2 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:30px; color:#1e2a18; margin:0;">The voice is Sprout's</h2>
+      <span class="bw-l">first person, always</span>
+    </div>
+    <p style="font-size:15px; color:#6f7e62; margin:0 0 26px; max-width:680px;">We stopped writing <em>about</em> the plant and started writing <em>as</em> it. Every surface speaks in Sprout's first-person voice — calm, fond, honest. The data leads; the warmth follows.</p>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:24px;">
+      <div style="border:1px solid #e3e9d8; border-radius:14px; padding:20px;"><div class="bw-l" style="margin-bottom:8px;">In-app</div><div style="font-size:16px; color:#1e2a18; line-height:1.4;">“I'm thriving. Last drink was two days ago.”</div></div>
+      <div style="border:1px solid #f0dcb0; border-radius:14px; padding:20px; background:#fdf9ef;"><div class="bw-l" style="margin-bottom:8px;">Push</div><div style="font-size:16px; color:#1e2a18; line-height:1.4;">“Getting thirsty over here — no rush, maybe tomorrow.”</div></div>
+      <div style="border:1px solid #e3e9d8; border-radius:14px; padding:20px;"><div class="bw-l" style="margin-bottom:8px;">Social</div><div style="font-size:16px; color:#1e2a18; line-height:1.4;">“Day 30: still alive, still green. We're a good team.”</div></div>
+      <div style="border:1px solid #f1d8d4; border-radius:14px; padding:20px; background:#fdf6f5;"><div class="bw-l" style="margin-bottom:8px;">Fault</div><div style="font-size:16px; color:#1e2a18; line-height:1.4;">“I can't feel my soil sensor — I've paused my pump to be safe.”</div></div>
+      <div style="border:1px solid #e3e9d8; border-radius:14px; padding:20px;"><div class="bw-l" style="margin-bottom:8px;">README intro</div><div style="font-size:16px; color:#1e2a18; line-height:1.4;">“Hi, I'm Sprout. Here's how I keep four plants happy.”</div></div>
+      <div style="border:1px solid #e3e9d8; border-radius:14px; padding:20px;"><div class="bw-l" style="margin-bottom:8px;">Empty state</div><div style="font-size:16px; color:#1e2a18; line-height:1.4;">“No plants yet — add one and I'll start watching.”</div></div>
+    </div>
+    <div style="display:flex; gap:14px; flex-wrap:wrap; font-family:'JetBrains Mono',monospace; font-size:12px;">
+      <span style="color:#1f6b33; background:#dff0cc; border-radius:999px; padding:7px 14px;">first person “I”</span>
+      <span style="color:#1f6b33; background:#dff0cc; border-radius:999px; padding:7px 14px;">fact, then feeling</span>
+      <span style="color:#1f6b33; background:#dff0cc; border-radius:999px; padding:7px 14px;">one short line</span>
+      <span style="color:#a3461a; background:#fad9c8; border-radius:999px; padding:7px 14px;">no baby-talk · no emoji · no guilt</span>
+    </div>
+  </div>
+
+  <!-- ===== THE WORLD (color/type/mark) ===== -->
+  <div style="background:#fff; border:1px solid #e3e9d8; border-radius:24px; padding:42px; margin-top:26px;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px;">
+      <h2 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:30px; color:#1e2a18; margin:0;">Sprout's world</h2>
+      <span class="bw-l">the soil it grows from</span>
+    </div>
+    <p style="font-size:15px; color:#6f7e62; margin:0 0 26px; max-width:680px;">Color, type and the mark aren't a separate system — they're Sprout's environment. Named for what surrounds a plant: soil, leaf, sun, water.</p>
+    <div style="display:grid; grid-template-columns:1.3fr 1fr; gap:24px;">
+      <div>
+        <div class="bw-l" style="margin-bottom:12px;">Palette · its environment</div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+          <div><div style="height:60px; border-radius:12px; background:#34a853;"></div><div style="font-size:12px; font-weight:700; color:#1e2a18; margin-top:6px;">Leaf</div></div>
+          <div><div style="height:60px; border-radius:12px; background:#8bd24f;"></div><div style="font-size:12px; font-weight:700; color:#1e2a18; margin-top:6px;">Sprout</div></div>
+          <div><div style="height:60px; border-radius:12px; background:#17b6c4;"></div><div style="font-size:12px; font-weight:700; color:#1e2a18; margin-top:6px;">Water</div></div>
+          <div><div style="height:60px; border-radius:12px; background:#f5a623;"></div><div style="font-size:12px; font-weight:700; color:#1e2a18; margin-top:6px;">Sun</div></div>
+          <div><div style="height:60px; border-radius:12px; background:#5a3f28;"></div><div style="font-size:12px; font-weight:700; color:#1e2a18; margin-top:6px;">Soil</div></div>
+          <div><div style="height:60px; border-radius:12px; background:#0C1311;"></div><div style="font-size:12px; font-weight:700; color:#1e2a18; margin-top:6px;">Night</div></div>
+        </div>
+        <div class="bw-l" style="margin:22px 0 12px;">Type</div>
+        <div style="display:flex; gap:24px; align-items:baseline; flex-wrap:wrap;">
+          <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:30px; color:#1e2a18;">Baloo 2</span>
+          <span style="font-family:'Hanken Grotesk',sans-serif; font-weight:700; font-size:22px; color:#1e2a18;">Hanken Grotesk</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:18px; color:#247a3a;">JetBrains Mono</span>
+        </div>
+      </div>
+      <div style="background:#f3f9ea; border:1px solid #d7e6c2; border-radius:16px; padding:24px; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <div class="bw-l" style="margin-bottom:16px;">The living mark</div>
+        <svg width="90" height="108" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="bw-sway"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg>
+        <div style="font-size:13px; color:#6f7e62; text-align:center; margin-top:14px; line-height:1.5;">Static when it must be, alive whenever it can be. The same mark breathes in the UI, the icon, and the stickers.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SPROUT EVERYWHERE (applications) ===== -->
+  <div style="background:#fff; border:1px solid #e3e9d8; border-radius:24px; padding:42px; margin-top:26px;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px;">
+      <h2 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:30px; color:#1e2a18; margin:0;">Sprout shows up everywhere</h2>
+      <span class="bw-l">the plant leads every surface</span>
+    </div>
+    <p style="font-size:15px; color:#6f7e62; margin:0 0 26px; max-width:680px;">Every touchpoint opens with the living plant — greeting, speaking, growing. The Day-in-the-Life loop is the engine that powers the storytelling ones.</p>
+
+    <div style="display:grid; grid-template-columns:1fr 1.4fr; gap:16px;">
+      <!-- app icon (animated splash) -->
+      <div style="background:#f7faf2; border:1px solid #e3e9d8; border-radius:16px; padding:26px; display:flex; flex-direction:column; align-items:center; gap:14px;">
+        <div style="width:120px; height:120px; border-radius:28px; background:radial-gradient(120% 120% at 35% 25%, #1e2a18, #0a0f08); display:flex; align-items:center; justify-content:center; box-shadow:0 0 30px rgba(147,221,106,0.25);">
+          <svg width="66" height="78" viewBox="0 0 24 28" fill="none" stroke="#93DD6A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="bw-sway"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#93DD6A"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#93DD6A"></path></svg>
+        </div>
+        <div class="bw-l">App icon · live splash</div>
+      </div>
+      <!-- github hero (sprout greets) -->
+      <div style="position:relative; overflow:hidden; background:radial-gradient(120% 130% at 85% -20%, #17261D, #0C1311); border:1px solid #29372F; border-radius:16px; padding:28px; display:flex; align-items:center; gap:22px;">
+        <svg width="70" height="84" viewBox="0 0 24 28" fill="none" stroke="#93DD6A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="bw-sway" style="flex-shrink:0;"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#93DD6A"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#93DD6A"></path></svg>
+        <div>
+          <div style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:30px; color:#E9F1EB; margin-bottom:6px;">Hi, I'm Sprout.</div>
+          <div style="font-family:'Hanken Grotesk',sans-serif; font-size:15px; color:#9fb094; margin-bottom:12px;">I keep four plants perfectly watered — and I'll show you exactly how.</div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap; font-family:'JetBrains Mono',monospace; font-size:11px;"><span style="color:#93DD6A; background:rgba(147,221,106,0.12); border:1px solid rgba(147,221,106,0.25); border-radius:5px; padding:3px 8px;">MIT</span><span style="color:#3fd0de; background:rgba(63,208,222,0.12); border:1px solid rgba(63,208,222,0.25); border-radius:5px; padding:3px 8px;">ESP32</span><span style="color:#E9F1EB; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); border-radius:5px; padding:3px 8px;">★ 1.2k</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- social + in-app pairing -->
+    <div style="display:grid; grid-template-columns:1fr 1.4fr; gap:16px; margin-top:16px;">
+      <!-- social post -->
+      <div style="border:1px solid #e3e9d8; border-radius:16px; overflow:hidden;">
+        <div style="padding:16px 16px 0; display:flex; gap:10px; align-items:center;"><div style="width:40px; height:40px; border-radius:50%; background:#34a853; display:flex; align-items:center; justify-content:center;"><svg width="22" height="26" viewBox="0 0 24 28" fill="none" stroke="#eafbe7" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#eafbe7"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#bff39c" stroke="#eafbe7"></path></svg></div><div><div style="font-size:13px; font-weight:600; color:#1e2a18;">Sprout</div><div style="font-size:11px; color:#8a9a78;">@sprout · 2h</div></div></div>
+        <div style="padding:12px 16px; font-size:13.5px; color:#1e2a18; line-height:1.45;">“Woke up, stretched toward the sun, had a drink at 9:40. Living my best little life.”</div>
+        <div style="height:96px; background:radial-gradient(120% 120% at 70% 0%, #eaf3da, #d8edc0); display:flex; align-items:center; justify-content:center;"><svg width="40" height="48" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="bw-sway"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        <div style="padding:9px 16px; display:flex; gap:16px; border-top:1px solid #eef2e6; font-size:12px; color:#8a9a78;"><span>Like</span><span>Reply</span><span>Repost</span></div>
+      </div>
+      <!-- in-app pairing -->
+      <div style="border:1px solid #e3e9d8; border-radius:16px; padding:20px; background:#f7faf2;">
+        <div class="bw-l" style="margin-bottom:14px;">In-app · the stretch pairing</div>
+        <div style="display:flex; gap:16px; align-items:stretch;">
+          <div style="width:120px; flex-shrink:0; background:radial-gradient(120% 100% at 50% 20%, #eaf3da, #d8edc0); border-radius:12px; display:flex; align-items:flex-end; justify-content:center; padding-bottom:8px;"><svg width="52" height="62" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="bw-sway"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+          <div style="flex:1; display:flex; flex-direction:column; gap:10px;">
+            <div style="background:#fff; border:1px solid #e3e9d8; border-radius:10px; padding:12px;"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#8a9a78;">MOISTURE · 24H</div><svg viewBox="0 0 240 40" style="width:100%; height:32px; margin-top:4px;"><polyline points="0,30 40,24 80,26 120,16 160,20 200,10 240,14" fill="none" stroke="#34a853" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></div>
+            <div style="display:flex; gap:10px;"><div style="flex:1; background:#fff; border:1px solid #e3e9d8; border-radius:10px; padding:10px;"><div style="font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600; color:#1e2a18;">82%</div><div style="font-size:10px; color:#8a9a78;">moisture</div></div><div style="flex:1; background:#fff; border:1px solid #e3e9d8; border-radius:10px; padding:10px;"><div style="font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600; color:#5b43c2;">~18h</div><div style="font-size:10px; color:#8a9a78;">next drink</div></div></div>
+          </div>
+        </div>
+        <div style="font-size:12.5px; color:#6f7e62; line-height:1.5; margin-top:12px;">The living Sprout sits right beside the gauges &amp; charts — personality and instrument, reinforcing each other.</div>
+      </div>
+    </div>
+
+    <!-- day in the life engine callout -->
+    <div style="margin-top:16px; background:linear-gradient(110deg, #17261D, #0C1311); border:1px solid #29372F; border-radius:16px; padding:24px 28px; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;">
+      <div style="display:flex; align-items:center; gap:16px;">
+        <div style="display:flex; gap:-6px;"><span style="width:34px; height:34px; border-radius:50%; background:#0b1430; display:inline-block;"></span></div>
+        <div>
+          <div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:20px; color:#E9F1EB;">“Day in the Life” is the engine</div>
+          <div style="font-size:13.5px; color:#9fb094; margin-top:4px; max-width:520px;">The compressed dawn→sun→drink→dusk→sleep loop powers reels, pitches and presentations — scrub to any beat, set 10–60s, export the moment.</div>
+        </div>
+      </div>
+      <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8B9B90;">→ Sprout Day in the Life</span>
+    </div>
+  </div>
+
+  <!-- ===== STICKER PACKS ===== -->
+  <div style="background:#f3f9ea; border:1px solid #d7e6c2; border-radius:24px; padding:42px; margin-top:26px;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px;">
+      <h2 style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:30px; color:#1e2a18; margin:0;">Sticker packs</h2>
+      <span class="bw-l">Sprout, center stage</span>
+    </div>
+    <p style="font-size:15px; color:#6f7e62; margin:0 0 30px; max-width:680px;">The most ownable, shareable thing the brand has — Sprout's face on a die-cut. Three packs, plus magnets and iron-ons. Big, characterful, all personality.</p>
+
+    <!-- Pack 1 · Moods -->
+    <div style="margin-bottom:30px;">
+      <div class="bw-l" style="margin-bottom:16px;">Pack 01 · The Moods</div>
+      <div style="display:flex; gap:22px; flex-wrap:wrap; justify-content:center;">
+        <div style="width:120px; height:120px; border-radius:50%; background:#fff; box-shadow:0 6px 16px rgba(30,42,24,0.14); display:flex; flex-direction:column; align-items:center; justify-content:center; border:5px solid #fff;">
+          <svg width="46" height="55" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="bw-sway"><path d="M12 26 V12"></path><path d="M12 13 C7 10 5 7 6 4 C11 5 12 9 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C17 10 19 7 18 4 C13 5 12 9 12 13 Z" fill="#34a853"></path><path d="M12 11 C9 6 11 3 12 1 C14 4 14 8 12 11 Z" fill="#a9da6e"></path></svg>
+          <span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:12px; color:#1f6b33; margin-top:4px;">thriving</span>
+        </div>
+        <div style="width:120px; height:120px; border-radius:50%; background:#fff; box-shadow:0 6px 16px rgba(30,42,24,0.14); display:flex; flex-direction:column; align-items:center; justify-content:center; border:5px solid #fff;">
+          <svg width="46" height="55" viewBox="0 0 24 28" fill="none" stroke="#5a8e2a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="bw-breathe"><path d="M12 26 V12"></path><path d="M12 13 C8.5 12 6.5 10 7 7 C10.5 8 12 10.5 12 13 Z" fill="#a9da6e"></path><path d="M12 13 C15.5 12 17.5 10 17 7 C13.5 8 12 10.5 12 13 Z" fill="#8bd24f"></path></svg>
+          <span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:12px; color:#456b1f; margin-top:4px;">content</span>
+        </div>
+        <div style="width:120px; height:120px; border-radius:50%; background:#fff; box-shadow:0 6px 16px rgba(30,42,24,0.14); display:flex; flex-direction:column; align-items:center; justify-content:center; border:5px solid #fff;">
+          <svg width="46" height="55" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 C12 3 14.4 5.6 12 7 C9.6 5.6 12 3 12 3 Z" fill="#17b6c4" stroke="#0e7a86"></path><path d="M12 26 V13"></path><path d="M12 14 C8 12 6 9 7 6 C11 7 12 11 12 14 Z" fill="#8bd24f"></path><path d="M12 14 C16 12 18 9 17 6 C13 7 12 11 12 14 Z" fill="#34a853"></path></svg>
+          <span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:12px; color:#0e7a86; margin-top:4px;">drinking</span>
+        </div>
+        <div style="width:120px; height:120px; border-radius:50%; background:#fff; box-shadow:0 6px 16px rgba(30,42,24,0.14); display:flex; flex-direction:column; align-items:center; justify-content:center; border:5px solid #fff;">
+          <svg width="46" height="55" viewBox="0 0 24 28" fill="none" stroke="#b07d12" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="animation:bw-droop 4s ease-in-out infinite; transform-box:fill-box; transform-origin:50% 100%;"><path d="M12 26 V14"></path><path d="M12 15 C8 14 5 14 4 16 C8 18 11 17 12 15 Z" fill="#f5c97a"></path><path d="M12 15 C16 14 19 14 20 16 C16 18 13 17 12 15 Z" fill="#f5a623"></path></svg>
+          <span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:12px; color:#9a6410; margin-top:4px;">thirsty</span>
+        </div>
+        <div style="width:120px; height:120px; border-radius:50%; background:#fff; box-shadow:0 6px 16px rgba(30,42,24,0.14); display:flex; flex-direction:column; align-items:center; justify-content:center; border:5px solid #fff;">
+          <svg width="46" height="55" viewBox="0 0 24 28" fill="none" stroke="#c2561f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="animation:bw-droop 4.6s ease-in-out infinite; transform-box:fill-box; transform-origin:50% 100%;"><path d="M12 26 C12 20 12 18 12 16"></path><path d="M12 16 C8 17 6 20 6 23 C10 22 12 19 12 16 Z" fill="#f0a984"></path><path d="M12 16 C16 17 18 20 18 23 C14 22 12 19 12 16 Z" fill="#e8703a"></path></svg>
+          <span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:12px; color:#a3461a; margin-top:4px;">parched</span>
+        </div>
+        <div style="width:120px; height:120px; border-radius:50%; background:#16201a; box-shadow:0 6px 16px rgba(30,42,24,0.2); display:flex; flex-direction:column; align-items:center; justify-content:center; border:5px solid #fff; position:relative;">
+          <span style="position:absolute; top:18px; right:30px; font-family:'Baloo 2',sans-serif; font-weight:700; font-size:13px; color:#93DD6A;">z</span>
+          <svg width="46" height="55" viewBox="0 0 24 28" fill="none" stroke="#6f8a5a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="transform:scaleY(0.86) translateY(4px);"><path d="M12 26 C12 20 12 18 12 16"></path><path d="M12 16 C8 17 6 20 6 23 C10 22 12 19 12 16 Z" fill="#4a6b3a"></path><path d="M12 16 C16 17 18 20 18 23 C14 22 12 19 12 16 Z" fill="#3a5a2a"></path></svg>
+          <span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:12px; color:#93DD6A; margin-top:4px;">asleep</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pack 2 · Sayings -->
+    <div style="margin-bottom:30px;">
+      <div class="bw-l" style="margin-bottom:16px;">Pack 02 · Sayings</div>
+      <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center; align-items:center;">
+        <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:22px; color:#fff; background:#34a853; border:4px solid #fff; border-radius:999px; padding:12px 26px; box-shadow:0 6px 16px rgba(30,42,24,0.14);">tend well.</span>
+        <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:22px; color:#1e2a18; background:#f5a623; border:4px solid #fff; border-radius:999px; padding:12px 26px; box-shadow:0 6px 16px rgba(30,42,24,0.14);">a little thirsty</span>
+        <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:22px; color:#fff; background:#0e7a86; border:4px solid #fff; border-radius:999px; padding:12px 26px; box-shadow:0 6px 16px rgba(30,42,24,0.14);">plants with a pulse</span>
+        <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:22px; color:#1e2a18; background:#8bd24f; border:4px solid #fff; border-radius:999px; padding:12px 26px; box-shadow:0 6px 16px rgba(30,42,24,0.14);">tiny jungle</span>
+        <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:22px; color:#fff; background:#7c5cff; border:4px solid #fff; border-radius:999px; padding:12px 26px; box-shadow:0 6px 16px rgba(30,42,24,0.14);">know before they show</span>
+      </div>
+    </div>
+
+    <!-- Pack 3 · Day beats + magnets + iron-ons -->
+    <div style="display:grid; grid-template-columns:1.4fr 1fr; gap:20px;">
+      <div>
+        <div class="bw-l" style="margin-bottom:16px;">Pack 03 · A Day in the Life</div>
+        <div style="display:flex; gap:16px; flex-wrap:wrap;">
+          <div style="width:84px; height:84px; border-radius:18px; background:#fff; border:4px solid #fff; box-shadow:0 5px 14px rgba(30,42,24,0.14); display:flex; align-items:center; justify-content:center;"><div style="width:42px; height:42px; border-radius:50%; background:radial-gradient(circle at 40% 36%, #fff3c4, #f5a623); box-shadow:0 0 14px rgba(245,166,35,0.5);"></div></div>
+          <div style="width:84px; height:84px; border-radius:18px; background:#fff; border:4px solid #fff; box-shadow:0 5px 14px rgba(30,42,24,0.14); display:flex; align-items:center; justify-content:center;"><div style="width:26px; height:38px; border-radius:0 50% 50% 50%; background:#17b6c4; transform:rotate(45deg);"></div></div>
+          <div style="width:84px; height:84px; border-radius:18px; background:#16201a; border:4px solid #fff; box-shadow:0 5px 14px rgba(30,42,24,0.14); display:flex; align-items:center; justify-content:center;"><div style="width:38px; height:38px; border-radius:50%; background:radial-gradient(circle at 38% 34%, #f4f1e2, #cfc9b0); box-shadow:0 0 14px rgba(230,226,200,0.5);"></div></div>
+          <div style="width:84px; height:84px; border-radius:18px; background:#fff; border:4px solid #fff; box-shadow:0 5px 14px rgba(30,42,24,0.14); display:flex; align-items:center; justify-content:center;"><svg width="40" height="48" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="bw-sway"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+        </div>
+        <!-- iron-ons -->
+        <div class="bw-l" style="margin:24px 0 16px;">Iron-ons · for totes &amp; tees</div>
+        <div style="display:flex; gap:16px;">
+          <div style="flex:1; background:#1f3d22; border-radius:14px; padding:20px; display:flex; align-items:center; gap:14px;"><svg width="40" height="48" viewBox="0 0 24 28" fill="none" stroke="#b7f05a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="bw-sway"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#b7f05a" stroke="#1f3d22"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#8bd24f" stroke="#1f3d22"></path></svg><span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:20px; color:#E9F1EB;">tend well.</span></div>
+        </div>
+      </div>
+      <!-- magnets -->
+      <div>
+        <div class="bw-l" style="margin-bottom:16px;">Magnets · the fridge crew</div>
+        <div style="background:#dfe6d4; border-radius:16px; padding:20px; display:flex; gap:14px; flex-wrap:wrap; justify-content:center;">
+          <div style="width:78px; height:96px; border-radius:12px; background:#fff; box-shadow:0 4px 10px rgba(30,42,24,0.16); display:flex; flex-direction:column; align-items:center; justify-content:center;"><svg width="34" height="41" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="bw-breathe"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg></div>
+          <div style="width:78px; height:96px; border-radius:12px; background:#fff; box-shadow:0 4px 10px rgba(30,42,24,0.16); display:flex; flex-direction:column; align-items:center; justify-content:center;"><svg width="34" height="41" viewBox="0 0 24 28" fill="none" stroke="#b07d12" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V14"></path><path d="M12 15 C8 14 5 14 4 16 C8 18 11 17 12 15 Z" fill="#f5c97a"></path><path d="M12 15 C16 14 19 14 20 16 C16 18 13 17 12 15 Z" fill="#f5a623"></path></svg></div>
+          <div style="width:78px; height:96px; border-radius:12px; background:#16201a; box-shadow:0 4px 10px rgba(30,42,24,0.16); display:flex; flex-direction:column; align-items:center; justify-content:center;"><svg width="34" height="41" viewBox="0 0 24 28" fill="none" stroke="#93DD6A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#93DD6A"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#93DD6A"></path></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CLOSE ===== -->
+  <div style="position:relative; overflow:hidden; border-radius:24px; background:radial-gradient(120% 130% at 20% 110%, #17261D, #0C1311); padding:48px; margin-top:26px; display:flex; align-items:center; gap:30px;">
+    <svg width="90" height="108" viewBox="0 0 24 28" fill="none" stroke="#93DD6A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="bw-sway" style="flex-shrink:0;"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#93DD6A"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#93DD6A"></path></svg>
+    <div>
+      <h2 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:46px; line-height:1; color:#E9F1EB; margin:0 0 12px;">One plant. One voice.<br>One little world.</h2>
+      <p style="font-size:17px; color:#9fb094; margin:0;">Every piece exists so Sprout can tell its story — and so you can tend well.</p>
+    </div>
+  </div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1180,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { i: 0 };
+  moods = [
+    { key:'thriving',  leaf:'#34a853', sprout:'#8bd24f', tip:'#a9da6e', stem:'#2f7d3f', deg:295, say:"Hi — I'm Sprout. I'm doing wonderfully today." },
+    { key:'content',   leaf:'#5a9e2e', sprout:'#a9da6e', tip:'#c2e88a', stem:'#4a8a2a', deg:225, say:"Comfortable and green. Just sipping slowly." },
+    { key:'thirsty',   leaf:'#cf8a1e', sprout:'#f5a623', tip:'#f7c46a', stem:'#9a6a18', deg:130, say:"Getting a little thirsty\u2026 but don't worry." },
+    { key:'refreshed', leaf:'#0e8a96', sprout:'#17b6c4', tip:'#7fdce6', stem:'#0e7a86', deg:275, say:"Ahh \u2014 just had a drink. All better." }
+  ];
+  componentDidMount(){ this._t = setInterval(()=>this.setState(s=>({i:(s.i+1)%this.moods.length})), 4600); }
+  componentWillUnmount(){ clearInterval(this._t); }
+  renderVals(){
+    const m = this.moods[this.state.i];
+    return {
+      moodKey:m.key, say:m.say,
+      leafColor:m.leaf, sproutColor:m.sprout, tipColor:m.tip, stemColor:m.stem,
+      ringStyle:`conic-gradient(${m.leaf} 0deg ${m.deg}deg, rgba(52,168,83,0.12) ${m.deg}deg 360deg)`
+    };
+  }
+}
+</script>
+</body>
+</html>

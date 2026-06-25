@@ -1,0 +1,23 @@
+{
+  "$comment": "Sprout v3 — voice string pool. PROPOSED (Phase 2). First-person, fact-then-feeling, one line, no baby-talk/emoji/guilt/fake-numbers (ADR-0007 §3). byMood lines derive from the calibrated band (pair with mood-band-map.json). bySurface lines are non-mood surfaces. Consumers should pick one line; never concatenate.",
+  "version": "3.0.0-proposed",
+  "rules": "first-person 'I'; fact then feeling; one short line; calm/fond/honest; calm under fault; no baby-talk, no emoji, no guilt, no invented % or ETA",
+  "byMood": {
+    "soaked":    ["Whoa — that's plenty. I'm soaking it all in."],
+    "refreshed": ["Ahh — just had a good drink. All better."],
+    "thriving":  ["I'm thriving. My last drink was two days ago.", "Feeling great today, thanks for asking."],
+    "content":   ["Comfortable and green. Just sipping slowly.", "All good here — no notes."],
+    "thirsty":   ["Getting a little thirsty — no rush, maybe tomorrow.", "Could go for a drink soon, whenever suits you."],
+    "parched":   ["I'm properly thirsty now. A drink soon would be lovely."],
+    "faint":     ["I can barely feel my soil — am I truly bone-dry, or has my sensor slipped?"]
+  },
+  "bySurface": {
+    "fault_sensor": ["I can't feel my soil sensor — I've paused my pump to be safe."],
+    "fault_pump":   ["Something's off with my pump, so I've stopped it. Best to check me."],
+    "empty":        ["No plants yet — add one and I'll start watching."],
+    "loading":      ["One moment — reading the soil."],
+    "onboarding":   ["Hi, I'm Sprout. Pop a probe in the soil and I'll take it from here."],
+    "readme":       ["Hi, I'm Sprout. Here's how I keep four plants happy."],
+    "social":       ["Day 30: still alive, still green. We're a good team."]
+  }
+}
