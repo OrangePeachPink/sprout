@@ -9,6 +9,10 @@
   "ignores": [
     // No-fly: the work ledger is migrating to GitHub Issues; its formatting is
     // handled at that migration, not here.
-    "BACKLOG.md"
+    "BACKLOG.md",
+    // Frozen design provenance: prior generations + delivered handoffs are kept
+    // verbatim (per ADR-0010 supersede-don't-delete); reformatting would corrupt
+    // the snapshots, so they are not linted.
+    "docs/design/_archive/**"
   ]
 }

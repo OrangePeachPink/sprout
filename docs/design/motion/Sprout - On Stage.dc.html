@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background:#0b0c0f; }
+  @keyframes stg-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+  @keyframes stg-blink { 0%,92%,100% { transform: scaleY(1); } 96% { transform: scaleY(0.12); } }
+  @keyframes stg-mote { 0% { transform: translateY(0); opacity:0; } 25% { opacity:0.6; } 100% { transform: translateY(-200px); opacity:0; } }
+  @keyframes stg-rain { 0% { transform: translateY(-34px); opacity:0; } 18% { opacity:1; } 100% { transform: translateY(96px); opacity:0; } }
+  @keyframes stg-sip { 0% { transform: translateY(10px) scale(0.5); opacity:0; } 45% { opacity:1; } 100% { transform: translateY(-8px) scale(1); opacity:0; } }
+  @keyframes stg-petal { 0% { transform: translateY(-30px) rotate(0deg); opacity:0; } 14% { opacity:0.95; } 100% { transform: translateY(360px) rotate(220deg); opacity:0; } }
+  .stg-breathe { transform-box: fill-box; transform-origin: 50% 100%; animation: stg-breathe 4.2s ease-in-out infinite; }
+  .stg-blink { transform-box: fill-box; transform-origin: 50% 50%; animation: stg-blink 5.5s ease-in-out infinite; }
+  .stg-rain { transform-box: fill-box; animation: stg-rain 1.05s linear infinite; }
+  .stg-sip { transform-box: fill-box; animation: stg-sip 1.2s ease-in infinite; }
+  .stg-petal { transform-box: fill-box; animation: stg-petal 6s linear infinite; }
+  @media (prefers-reduced-motion: reduce){ .stg-breathe,.stg-blink,.stg-rain,.stg-sip,.stg-petal,.stg-mote { animation:none !important; } }
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:#0b0c0f; display:flex; align-items:center; justify-content:center; padding:30px;">
+  <div style="position:relative; width:100%; max-width:920px; height:600px; border-radius:24px; overflow:hidden; background:{{ skyStyle }}; transition:background 1.4s ease;">
+
+    <!-- sun -->
+    <div style="position:absolute; top:60px; right:140px; width:96px; height:96px; border-radius:50%; background:radial-gradient(circle at 42% 38%, #fff6d6, #ffd870); box-shadow:0 0 70px 18px rgba(255,216,112,0.4); opacity:{{ sunOpacity }}; transition:opacity 1.4s ease;"></div>
+    <!-- moon -->
+    <div style="position:absolute; top:64px; right:150px; width:62px; height:62px; border-radius:50%; background:radial-gradient(circle at 38% 34%, #f4f1e2, #cfc9b0); box-shadow:0 0 30px rgba(230,226,200,0.4); opacity:{{ moonOpacity }}; transition:opacity 1.4s ease;"></div>
+
+    <!-- soft highlight behind sprout (keeps Sprout the lead) -->
+    <div style="position:absolute; left:50%; bottom:60px; transform:translateX(-50%); width:420px; height:380px; border-radius:50%; background:radial-gradient(50% 55% at 50% 50%, rgba(255,248,214,0.5), transparent 70%); opacity:{{ highlight }}; transition:opacity 1.4s ease;"></div>
+
+    <!-- ambient pollen (day) -->
+    <div style="position:absolute; inset:0; opacity:{{ sunOpacity }}; transition:opacity 1.4s ease; pointer-events:none;">
+      <div style="position:absolute; left:30%; bottom:180px; width:4px; height:4px; border-radius:50%; background:#fff3c4; animation:stg-mote 10s ease-in infinite;"></div>
+      <div style="position:absolute; left:66%; bottom:200px; width:3px; height:3px; border-radius:50%; background:#fff3c4; animation:stg-mote 12s ease-in infinite 3s;"></div>
+      <div style="position:absolute; left:50%; bottom:160px; width:3px; height:3px; border-radius:50%; background:#fffae0; animation:stg-mote 11s ease-in infinite 5s;"></div>
+    </div>
+
+    <!-- falling petals (bloom) -->
+    <div style="position:absolute; inset:0; opacity:{{ petalOpacity }}; transition:opacity 0.8s ease; pointer-events:none;">
+      <div style="position:absolute; left:24%; top:-20px; width:9px; height:7px; border-radius:50% 50% 50% 50%/60% 60% 40% 40%; background:#ff9db0; animation:stg-petal 6s linear infinite;"></div>
+      <div style="position:absolute; left:40%; top:-20px; width:8px; height:6px; border-radius:50%; background:#ffc0cd; animation:stg-petal 7.5s linear infinite 1.2s;"></div>
+      <div style="position:absolute; left:58%; top:-20px; width:9px; height:7px; border-radius:50%; background:#ff9db0; animation:stg-petal 6.8s linear infinite 2.4s;"></div>
+      <div style="position:absolute; left:72%; top:-20px; width:8px; height:6px; border-radius:50%; background:#ffd45e; animation:stg-petal 8s linear infinite 0.6s;"></div>
+      <div style="position:absolute; left:86%; top:-20px; width:8px; height:6px; border-radius:50%; background:#ffc0cd; animation:stg-petal 7s linear infinite 3.2s;"></div>
+      <div style="position:absolute; left:12%; top:-20px; width:8px; height:6px; border-radius:50%; background:#ffd45e; animation:stg-petal 7.8s linear infinite 1.8s;"></div>
+    </div>
+
+    <!-- grass field -->
+    <div style="position:absolute; left:0; right:0; bottom:0; height:148px; background:linear-gradient(180deg, {{ grassColor }}, {{ grassDark }}); transition:background 1.4s ease;"></div>
+    <svg viewBox="0 0 920 44" preserveAspectRatio="none" style="position:absolute; left:0; right:0; bottom:138px; width:100%; height:44px;">
+      <g style="fill:{{ grassColor }}; transition:fill 1.4s ease;">
+        <path d="M0 44 L18 8 L36 44 Z"></path><path d="M70 44 L86 14 L102 44 Z"></path><path d="M150 44 L168 6 L186 44 Z"></path><path d="M240 44 L256 16 L272 44 Z"></path><path d="M330 44 L348 10 L366 44 Z"></path><path d="M430 44 L446 18 L462 44 Z"></path><path d="M520 44 L538 8 L556 44 Z"></path><path d="M620 44 L636 15 L652 44 Z"></path><path d="M710 44 L728 7 L746 44 Z"></path><path d="M800 44 L816 16 L832 44 Z"></path><path d="M870 44 L886 10 L902 44 Z"></path>
+      </g>
+    </svg>
+
+    <!-- SPROUT -->
+    <div style="position:absolute; left:50%; bottom:96px; transform:translateX(-50%);">
+      <svg width="300" height="360" viewBox="0 0 200 250">
+        <ellipse cx="100" cy="214" rx="52" ry="9" fill="#000" opacity="0.22"></ellipse>
+        <!-- little soil mound (planted in the field) -->
+        <path d="M64 206 Q100 188 136 206 Q100 220 64 206 Z" style="fill:{{ soilColor }}; transition:fill 1.4s ease;"></path>
+
+        <g style="transform:translateY({{ bodyY }}px) rotate({{ tilt }}deg); transform-box:fill-box; transform-origin:50% 96%; transition:transform 1.0s cubic-bezier(.34,1.25,.5,1);">
+          <g style="transform:scale({{ sx }},{{ sy }}); transform-box:fill-box; transform-origin:50% 100%; transition:transform 1.0s cubic-bezier(.34,1.2,.55,1);">
+
+            <g style="transform:rotate({{ lRot }}deg) scale({{ lScale }}); transform-box:fill-box; transform-origin:100% 100%; transition:transform 1.0s ease;">
+              <path d="M100 142 C74 134 58 108 64 80 C92 92 104 118 100 142 Z" style="fill:{{ leafColor }}; transition:fill 1.2s ease;" stroke="#1e3a14" stroke-width="3" stroke-linejoin="round"></path>
+              <g transform="translate(63 84)"><g style="transform:scale({{ flowerScale }}); transform-box:fill-box; transform-origin:center; transition:transform 0.7s ease;" opacity="{{ flowerOpacity }}"><circle cx="0" cy="-6" r="4.6" fill="#ff9db0"></circle><circle cx="6" cy="-1.8" r="4.6" fill="#ff9db0"></circle><circle cx="3.6" cy="5" r="4.6" fill="#ff9db0"></circle><circle cx="-3.6" cy="5" r="4.6" fill="#ff9db0"></circle><circle cx="-6" cy="-1.8" r="4.6" fill="#ff9db0"></circle><circle cx="0" cy="0" r="3.1" fill="#ffd45e"></circle></g></g>
+            </g>
+            <g style="transform:rotate({{ rRot }}deg) scale({{ lScale }}); transform-box:fill-box; transform-origin:0% 100%; transition:transform 1.0s ease;">
+              <path d="M100 142 C126 134 142 108 136 80 C108 92 96 118 100 142 Z" style="fill:{{ leafColor }}; transition:fill 1.2s ease;" stroke="#1e3a14" stroke-width="3" stroke-linejoin="round"></path>
+              <g transform="translate(137 84)"><g style="transform:scale({{ flowerScale }}); transform-box:fill-box; transform-origin:center; transition:transform 0.7s ease;" opacity="{{ flowerOpacity }}"><circle cx="0" cy="-6" r="4.6" fill="#ffd45e"></circle><circle cx="6" cy="-1.8" r="4.6" fill="#ffd45e"></circle><circle cx="3.6" cy="5" r="4.6" fill="#ffd45e"></circle><circle cx="-3.6" cy="5" r="4.6" fill="#ffd45e"></circle><circle cx="-6" cy="-1.8" r="4.6" fill="#ffd45e"></circle><circle cx="0" cy="0" r="3.1" fill="#ff9db0"></circle></g></g>
+            </g>
+            <g style="transform:rotate({{ tipRot }}deg); transform-box:fill-box; transform-origin:50% 100%; transition:transform 1.0s ease;">
+              <path d="M100 120 C93 104 97 86 109 76 C114 94 110 112 100 120 Z" style="fill:{{ tipColor }}; transition:fill 1.2s ease;" stroke="#1e3a14" stroke-width="2.5" stroke-linejoin="round"></path>
+              <g transform="translate(104 78)"><g style="transform:scale({{ flowerScale }}); transform-box:fill-box; transform-origin:center; transition:transform 0.7s ease;" opacity="{{ flowerOpacity }}"><circle cx="0" cy="-5" r="4" fill="#fff0f3"></circle><circle cx="5" cy="-1.5" r="4" fill="#fff0f3"></circle><circle cx="3" cy="4" r="4" fill="#fff0f3"></circle><circle cx="-3" cy="4" r="4" fill="#fff0f3"></circle><circle cx="-5" cy="-1.5" r="4" fill="#fff0f3"></circle><circle cx="0" cy="0" r="2.7" fill="#ffd45e"></circle></g></g>
+            </g>
+
+            <g class="stg-breathe">
+              <ellipse cx="100" cy="174" rx="27" ry="31" style="fill:{{ bodyColor }}; transition:fill 1.2s ease;" stroke="#1e3a14" stroke-width="3"></ellipse>
+              <circle cx="80" cy="182" r="5" fill="#ff9e7a" opacity="{{ cheekOpacity }}" style="transition:opacity 1.2s ease;"></circle>
+              <circle cx="120" cy="182" r="5" fill="#ff9e7a" opacity="{{ cheekOpacity }}" style="transition:opacity 1.2s ease;"></circle>
+              <g transform="translate(100 172)">
+                <g class="stg-blink" style="transform-origin:89px 172px;">
+                  <circle cx="{{ eyeShiftL }}" cy="0" r="2.8" fill="#243018" opacity="{{ pupilOpacity }}"></circle>
+                  <path d="{{ lidD }}" transform="translate(-11 0)" fill="none" stroke="#243018" stroke-width="2" stroke-linecap="round" opacity="{{ lidOpacity }}"></path>
+                </g>
+                <g class="stg-blink" style="transform-origin:111px 172px;">
+                  <circle cx="{{ eyeShiftR }}" cy="0" r="2.8" fill="#243018" opacity="{{ pupilOpacity }}"></circle>
+                  <path d="{{ lidD }}" transform="translate(11 0)" fill="none" stroke="#243018" stroke-width="2" stroke-linecap="round" opacity="{{ lidOpacity }}"></path>
+                </g>
+                <path d="{{ mouthD }}" transform="translate(0 11)" fill="none" stroke="#243018" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="{{ mouthLineOpacity }}"></path>
+                <ellipse cx="0" cy="12" rx="2.6" ry="3.4" fill="#243018" opacity="{{ mouthOOpacity }}"></ellipse>
+              </g>
+            </g>
+
+            <g opacity="{{ sparkle }}" style="transition:opacity 0.6s ease;">
+              <path d="M150 96 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 l5 -2 Z" fill="#fff3c4"></path>
+              <path d="M60 110 l1.5 3.5 l3.5 1.5 l-3.5 1.5 l-1.5 3.5 l-1.5 -3.5 l-3.5 -1.5 l3.5 -1.5 Z" fill="#fff3c4"></path>
+            </g>
+          </g>
+        </g>
+
+        <!-- SHOWER -->
+        <g opacity="{{ showerOpacity }}" style="transition:opacity 0.5s ease;">
+          <ellipse cx="68" cy="64" rx="2" ry="3.6" fill="#5fd6e6" class="stg-rain" style="animation-delay:0s;"></ellipse>
+          <ellipse cx="80" cy="58" rx="2" ry="3.6" fill="#3fd0de" class="stg-rain" style="animation-delay:0.35s;"></ellipse>
+          <ellipse cx="92" cy="66" rx="2" ry="3.6" fill="#5fd6e6" class="stg-rain" style="animation-delay:0.7s;"></ellipse>
+          <ellipse cx="104" cy="56" rx="2" ry="3.6" fill="#3fd0de" class="stg-rain" style="animation-delay:0.15s;"></ellipse>
+          <ellipse cx="116" cy="64" rx="2" ry="3.6" fill="#5fd6e6" class="stg-rain" style="animation-delay:0.55s;"></ellipse>
+          <ellipse cx="128" cy="60" rx="2" ry="3.6" fill="#3fd0de" class="stg-rain" style="animation-delay:0.9s;"></ellipse>
+          <ellipse cx="100" cy="62" rx="2" ry="3.6" fill="#7fe0ec" class="stg-rain" style="animation-delay:0.45s;"></ellipse>
+        </g>
+
+        <!-- DRINK -->
+        <g opacity="{{ drinkOpacity }}" style="transition:opacity 0.4s ease;">
+          <ellipse cx="92" cy="196" rx="2" ry="3.4" fill="#3fd0de" class="stg-sip" style="animation-delay:0s;"></ellipse>
+          <ellipse cx="100" cy="200" rx="2.2" ry="3.8" fill="#17b6c4" class="stg-sip" style="animation-delay:0.4s;"></ellipse>
+          <ellipse cx="108" cy="196" rx="2" ry="3.4" fill="#5fd6e6" class="stg-sip" style="animation-delay:0.8s;"></ellipse>
+        </g>
+      </svg>
+    </div>
+
+    <div style="position:absolute; inset:0; box-shadow:inset 0 0 130px 30px rgba(20,30,16,0.34); border-radius:24px; pointer-events:none;"></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:920,&quot;height&quot;:660}}">
+class Component extends DCLogic {
+  state = { type:'regular', i: 0 };
+
+  // hold, spot(daylight), by, tilt, sx, sy, lRot, rRot, tipRot, lScale, body, leaf, tip, eyes, mouth, shift, sparkle, cheek, shower, drink, flower, petal
+  regular = [
+    { hold:3200, spot:0.10, by:16, tilt:-58, sx:1.06, sy:0.92, lRot:30, rRot:-30, tipRot:16, lScale:0.9,  body:'#6f9e4a', leaf:'#3a6b2a', tip:'#4a7a30', eyes:'closed', mouth:'soft',  shift:0,   sparkle:0, cheek:0, shower:0, drink:0 },
+    { hold:1700, spot:0.12, by:16, tilt:-56, sx:1.05, sy:0.93, lRot:29, rRot:-29, tipRot:15, lScale:0.9,  body:'#6f9e4a', leaf:'#3a6b2a', tip:'#4a7a30', eyes:'closed', mouth:'soft',  shift:0,   sparkle:0, cheek:0, shower:0, drink:0 },
+    { hold:1500, spot:0.42, by:10, tilt:-34, sx:1.04, sy:0.95, lRot:22, rRot:-22, tipRot:12, lScale:0.94, body:'#7fb24a', leaf:'#34a853', tip:'#6cae3a', eyes:'half',   mouth:'soft',  shift:0,   sparkle:0, cheek:0, shower:0, drink:0 },
+    { hold:1900, spot:0.78, by:-12,tilt:0,   sx:0.92, sy:1.14, lRot:-14,rRot:14,  tipRot:-8, lScale:1.05, body:'#8bd24f', leaf:'#34a853', tip:'#a9da6e', eyes:'open',   mouth:'o',     shift:0,   sparkle:0, cheek:0, shower:0, drink:0 },
+    { hold:1600, spot:1.0,  by:-3, tilt:0,   sx:1.04, sy:1.0,  lRot:-30,rRot:30,  tipRot:0,  lScale:1.1,  body:'#8bd24f', leaf:'#34a853', tip:'#a9da6e', eyes:'happy',  mouth:'smile', shift:0,   sparkle:0, cheek:1, shower:0, drink:0 },
+    { hold:1400, spot:1.0,  by:2,  tilt:0,   sx:1.0,  sy:1.0,  lRot:-18,rRot:18,  tipRot:0,  lScale:1.02, body:'#8bd24f', leaf:'#34a853', tip:'#a9da6e', eyes:'open',   mouth:'neutral',shift:0,  sparkle:0, cheek:0, shower:0, drink:0 },
+    { hold:2000, spot:1.0,  by:0,  tilt:0,   sx:1.02, sy:1.0,  lRot:-16,rRot:16,  tipRot:0,  lScale:1.02, body:'#8bd24f', leaf:'#34a853', tip:'#a9da6e', eyes:'happy',  mouth:'o',     shift:0,   sparkle:0, cheek:1, shower:0, drink:1 },
+    { hold:1600, spot:1.0,  by:-6, tilt:0,   sx:0.95, sy:1.08, lRot:-28,rRot:28,  tipRot:-4, lScale:1.08, body:'#8bd24f', leaf:'#34a853', tip:'#a9da6e', eyes:'happy',  mouth:'smile', shift:0,   sparkle:0.5,cheek:1, shower:0, drink:0 },
+    { hold:1800, spot:1.0,  by:-5, tilt:0,   sx:1.07, sy:1.0,  lRot:-38,rRot:38,  tipRot:0,  lScale:1.12, body:'#8bd24f', leaf:'#34a853', tip:'#a9da6e', eyes:'happy',  mouth:'smile', shift:0,   sparkle:0, cheek:1, shower:0, drink:0 },
+    { hold:1000, spot:1.0,  by:-3, tilt:9,   sx:1.02, sy:1.0,  lRot:-30,rRot:30,  tipRot:8,  lScale:1.08, body:'#8bd24f', leaf:'#34a853', tip:'#a9da6e', eyes:'happy',  mouth:'smile', shift:0,   sparkle:0, cheek:1, shower:0, drink:0 },
+    { hold:1000, spot:1.0,  by:-3, tilt:-9,  sx:1.02, sy:1.0,  lRot:-30,rRot:30,  tipRot:-8, lScale:1.08, body:'#8bd24f', leaf:'#34a853', tip:'#a9da6e', eyes:'happy',  mouth:'smile', shift:0,   sparkle:0, cheek:1, shower:0, drink:0 },
+    { hold:1800, spot:0.95, by:0,  tilt:-5,  sx:1.0,  sy:1.0,  lRot:-22,rRot:8,   tipRot:-10,lScale:1.04, body:'#8bd24f', leaf:'#34a853', tip:'#a9da6e', eyes:'side',   mouth:'neutral',shift:1.9,sparkle:0, cheek:0, shower:0, drink:0 },
+    { hold:1500, spot:1.0,  by:0,  tilt:0,   sx:1.0,  sy:1.04, lRot:-20,rRot:20,  tipRot:-4, lScale:1.04, body:'#8bd24f', leaf:'#34a853', tip:'#a9da6e', eyes:'open',   mouth:'o',     shift:0,   sparkle:0, cheek:0, shower:1, drink:0 },
+    { hold:2400, spot:1.0,  by:-4, tilt:0,   sx:1.03, sy:1.0,  lRot:-34,rRot:34,  tipRot:0,  lScale:1.1,  body:'#8be0c0', leaf:'#17b6c4', tip:'#7fdce6', eyes:'happy',  mouth:'smile', shift:0,   sparkle:0, cheek:1, shower:1, drink:0 },
+    { hold:1000, spot:1.0,  by:-3, tilt:8,   sx:1.02, sy:1.0,  lRot:-32,rRot:32,  tipRot:6,  lScale:1.08, body:'#8be0c0', leaf:'#17b6c4', tip:'#7fdce6', eyes:'happy',  mouth:'smile', shift:0,   sparkle:0, cheek:1, shower:1, drink:0 },
+    { hold:1000, spot:1.0,  by:-3, tilt:-8,  sx:1.02, sy:1.0,  lRot:-32,rRot:32,  tipRot:-6, lScale:1.08, body:'#8be0c0', leaf:'#17b6c4', tip:'#7fdce6', eyes:'happy',  mouth:'smile', shift:0,   sparkle:0, cheek:1, shower:1, drink:0 },
+    { hold:1800, spot:1.0,  by:-10,tilt:0,   sx:0.92, sy:1.14, lRot:-34,rRot:34,  tipRot:-4, lScale:1.12, body:'#8be0c0', leaf:'#17b6c4', tip:'#7fdce6', eyes:'happy',  mouth:'o',     shift:0,   sparkle:1, cheek:1, shower:0, drink:0 },
+    { hold:2000, spot:0.98, by:0,  tilt:0,   sx:1.02, sy:1.0,  lRot:-16,rRot:16,  tipRot:0,  lScale:1.02, body:'#8bd24f', leaf:'#34a853', tip:'#a9da6e', eyes:'happy',  mouth:'o',     shift:0,   sparkle:0, cheek:1, shower:0, drink:1 },
+    { hold:2400, spot:0.9,  by:0,  tilt:0,   sx:1.02, sy:1.0,  lRot:-16,rRot:16,  tipRot:0,  lScale:1.04, body:'#9bd85a', leaf:'#3a9e48', tip:'#bfe87a', eyes:'happy',  mouth:'smilesoft',shift:0,sparkle:0,cheek:1, shower:0, drink:0 },
+    { hold:1800, spot:0.6,  by:4,  tilt:0,   sx:1.0,  sy:1.0,  lRot:-2, rRot:2,   tipRot:0,  lScale:1.0,  body:'#7fb24a', leaf:'#34a853', tip:'#6cae3a', eyes:'half',   mouth:'soft',  shift:0,   sparkle:0, cheek:0, shower:0, drink:0 },
+    { hold:1600, spot:0.45, by:6,  tilt:-6,  sx:1.04, sy:0.96, lRot:14, rRot:-14, tipRot:8,  lScale:0.96, body:'#7fb24a', leaf:'#34a853', tip:'#6cae3a', eyes:'half',   mouth:'o',     shift:0,   sparkle:0, cheek:0, shower:0, drink:0 },
+    { hold:1600, spot:0.30, by:10, tilt:-34, sx:1.05, sy:0.95, lRot:24, rRot:-24, tipRot:12, lScale:0.94, body:'#7fb24a', leaf:'#3a6b2a', tip:'#6cae3a', eyes:'half',   mouth:'soft',  shift:0,   sparkle:0, cheek:0, shower:0, drink:0 },
+    { hold:1800, spot:0.16, by:14, tilt:-50, sx:1.06, sy:0.93, lRot:28, rRot:-28, tipRot:15, lScale:0.92, body:'#6f9e4a', leaf:'#3a6b2a', tip:'#4a7a30', eyes:'closed', mouth:'soft',  shift:0,   sparkle:0, cheek:0, shower:0, drink:0 },
+    { hold:2600, spot:0.10, by:16, tilt:-58, sx:1.06, sy:0.92, lRot:30, rRot:-30, tipRot:16, lScale:0.9,  body:'#6f9e4a', leaf:'#3a6b2a', tip:'#4a7a30', eyes:'closed', mouth:'soft',  shift:0,   sparkle:0, cheek:0, shower:0, drink:0 }
+  ];
+  bloom = [
+    { hold:2600, spot:1.0, by:-2, tilt:0,  sx:1.02, sy:1.04, lRot:-22,rRot:22, tipRot:-2, lScale:1.06, body:'#8bd24f', leaf:'#34a853', tip:'#a9da6e', eyes:'happy', mouth:'smile', shift:0, sparkle:0,   cheek:1, shower:0, drink:0, flower:0.25, petal:0.2 },
+    { hold:3400, spot:1.0, by:-8, tilt:0,  sx:0.94, sy:1.12, lRot:-30,rRot:30, tipRot:-4, lScale:1.1,  body:'#9be060', leaf:'#34a853', tip:'#b9e87a', eyes:'happy', mouth:'o',     shift:0, sparkle:0.6, cheek:1, shower:0, drink:0, flower:0.6,  petal:0.45 },
+    { hold:5200, spot:1.0, by:-5, tilt:0,  sx:1.07, sy:1.0,  lRot:-40,rRot:40, tipRot:0,  lScale:1.16, body:'#9be060', leaf:'#3a9e48', tip:'#bfe87a', eyes:'happy', mouth:'smile', shift:0, sparkle:0.4, cheek:1, shower:0, drink:0, flower:1,    petal:0.7 },
+    { hold:1400, spot:1.0, by:-4, tilt:11, sx:1.03, sy:1.0,  lRot:-34,rRot:34, tipRot:9,  lScale:1.14, body:'#9be060', leaf:'#3a9e48', tip:'#bfe87a', eyes:'happy', mouth:'smile', shift:0, sparkle:0,   cheek:1, shower:0, drink:0, flower:1,    petal:0.8 },
+    { hold:1400, spot:1.0, by:-4, tilt:-11,sx:1.03, sy:1.0,  lRot:-34,rRot:34, tipRot:-9, lScale:1.14, body:'#9be060', leaf:'#3a9e48', tip:'#bfe87a', eyes:'happy', mouth:'smile', shift:0, sparkle:0,   cheek:1, shower:0, drink:0, flower:1,    petal:0.8 },
+    { hold:2000, spot:1.0, by:-14,tilt:0,  sx:0.9,  sy:1.18, lRot:-38,rRot:38, tipRot:-4, lScale:1.18, body:'#9be060', leaf:'#3a9e48', tip:'#bfe87a', eyes:'happy', mouth:'o',     shift:0, sparkle:1,   cheek:1, shower:0, drink:0, flower:1,    petal:0.9 },
+    { hold:5000, spot:1.0, by:-4, tilt:0,  sx:1.04, sy:1.0,  lRot:-36,rRot:36, tipRot:0,  lScale:1.16, body:'#8be0c0', leaf:'#17b6c4', tip:'#7fdce6', eyes:'happy', mouth:'smile', shift:0, sparkle:0,   cheek:1, shower:1, drink:0, flower:1,    petal:0.8 },
+    { hold:1500, spot:1.0, by:-4, tilt:9,  sx:1.03, sy:1.0,  lRot:-34,rRot:34, tipRot:7,  lScale:1.16, body:'#8be0c0', leaf:'#17b6c4', tip:'#7fdce6', eyes:'happy', mouth:'smile', shift:0, sparkle:0,   cheek:1, shower:1, drink:0, flower:1,    petal:0.9 },
+    { hold:1500, spot:1.0, by:-4, tilt:-9, sx:1.03, sy:1.0,  lRot:-34,rRot:34, tipRot:-7, lScale:1.16, body:'#8be0c0', leaf:'#17b6c4', tip:'#7fdce6', eyes:'happy', mouth:'smile', shift:0, sparkle:0,   cheek:1, shower:1, drink:0, flower:1,    petal:0.9 },
+    { hold:2800, spot:1.0, by:0,  tilt:0,  sx:1.02, sy:1.0,  lRot:-18,rRot:18, tipRot:0,  lScale:1.08, body:'#9be060', leaf:'#3a9e48', tip:'#bfe87a', eyes:'happy', mouth:'o',     shift:0, sparkle:0,   cheek:1, shower:0, drink:1, flower:1,    petal:0.6 },
+    { hold:5500, spot:1.0, by:0,  tilt:0,  sx:1.03, sy:1.0,  lRot:-26,rRot:26, tipRot:0,  lScale:1.12, body:'#9bd85a', leaf:'#3a9e48', tip:'#bfe87a', eyes:'happy', mouth:'smilesoft',shift:0,sparkle:0.3,cheek:1, shower:0, drink:0, flower:1,   petal:0.7 },
+    { hold:2200, spot:1.0, by:0,  tilt:0,  sx:1.02, sy:1.0,  lRot:-18,rRot:18, tipRot:0,  lScale:1.08, body:'#9be060', leaf:'#3a9e48', tip:'#bfe87a', eyes:'happy', mouth:'o',     shift:0, sparkle:0,   cheek:1, shower:0, drink:1, flower:0.9,  petal:0.6 },
+    { hold:3000, spot:0.95,by:2,  tilt:0,  sx:1.02, sy:1.0,  lRot:-16,rRot:16, tipRot:0,  lScale:1.04, body:'#9bd85a', leaf:'#3a9e48', tip:'#bfe87a', eyes:'happy', mouth:'smilesoft',shift:0,sparkle:0,  cheek:1, shower:0, drink:0, flower:0.55, petal:0.9 },
+    { hold:2600, spot:0.9, by:3,  tilt:0,  sx:1.02, sy:0.99, lRot:-12,rRot:12, tipRot:0,  lScale:1.02, body:'#8bd24f', leaf:'#34a853', tip:'#a9da6e', eyes:'happy', mouth:'smilesoft',shift:0,sparkle:0,  cheek:1, shower:0, drink:0, flower:0.2,  petal:0.5 }
+  ];
+
+  randPrime(){ const a=[11,13,17,19]; return a[Math.floor(Math.random()*a.length)]; }
+  poseSet(type){ return type==='bloom' ? this.bloom : this.regular; }
+  // Precompute a long flat pose timeline (cycles of regular days + periodic
+  // prime-spaced blooms) ONCE, persisted on window so remounts/hot-reloads can
+  // never reset progress. Pose is a pure function of elapsed time since a
+  // window-level epoch — so the loop can never stall, drift, or restart at 0.
+  buildTimeline(){
+    if (window.__sproutSegs){ this._segs = window.__sproutSegs; this._dur = window.__sproutDur; return; }
+    const segs = []; let acc = 0, sinceBloom = 0, every = this.randPrime();
+    while (acc < 3600000){
+      let type;
+      if (sinceBloom >= every){ type='bloom'; sinceBloom=0; every=this.randPrime(); }
+      else { type='regular'; sinceBloom++; }
+      const poses = this.poseSet(type);
+      for (let i=0;i<poses.length;i++){ const h=poses[i].hold; segs.push({ s:acc, e:acc+h, type, i }); acc+=h; }
+    }
+    this._segs = segs; this._dur = acc;
+    window.__sproutSegs = segs; window.__sproutDur = acc;
+  }
+  // Pure function of elapsed time → current {type, index}. Computed live in
+  // renderVals() each render, so the view can never freeze on a stale state.
+  currentPose(){
+    const segs = this._segs || window.__sproutSegs, dur = this._dur || window.__sproutDur;
+    if (!segs || !dur) return { type:'regular', i:0 };
+    const ep = window.__sproutEpoch || 0;
+    const e = (((performance.now() - ep) % dur) + dur) % dur;
+    let lo=0, hi=segs.length-1, idx=0;
+    while (lo<=hi){ const mid=(lo+hi)>>1; if (segs[mid].s <= e){ idx=mid; lo=mid+1; } else hi=mid-1; }
+    return { type: segs[idx].type, i: segs[idx].i };
+  }
+  componentDidMount(){
+    if (!window.__sproutEpoch) window.__sproutEpoch = performance.now();
+    this.buildTimeline();
+    // The timer ONLY forces a re-render; renderVals() recomputes the pose live
+    // from elapsed time, so a stale/detached state can never freeze the view.
+    const loop = () => { this.forceUpdate(); this._raf = requestAnimationFrame(loop); };
+    this._raf = requestAnimationFrame(loop);
+    this._iv = setInterval(() => this.forceUpdate(), 120);
+  }
+  componentWillUnmount(){ if(this._iv) clearInterval(this._iv); if(this._raf) cancelAnimationFrame(this._raf); }
+
+  eyeCfg(s){
+    switch(s){
+      case 'open':  return { pupil:1, lid:0, lidD:'', sl:0, sr:0 };
+      case 'side':  return { pupil:1, lid:0, lidD:'', sl:1.9, sr:1.9 };
+      case 'happy': return { pupil:0, lid:1, lidD:'M-3.6 1.6 Q0 -3.2 3.6 1.6', sl:0, sr:0 };
+      case 'sad':   return { pupil:0, lid:1, lidD:'M-3.6 -1.4 Q0 2.6 3.6 -1.4', sl:0, sr:0 };
+      case 'half':  return { pupil:0, lid:1, lidD:'M-3.6 0 Q0 1.3 3.6 0', sl:0, sr:0 };
+      default:      return { pupil:0, lid:1, lidD:'M-3.6 0 Q0 2.4 3.6 0', sl:0, sr:0 };
+    }
+  }
+  mouthCfg(m){
+    const M={ smile:'M-6 0 Q0 6.5 6 0', smilesoft:'M-5 0 Q0 4 5 0', soft:'M-4 0 Q0 2.4 4 0', neutral:'M-4 0.5 Q0 0.6 4 0.5', frown:'M-6 3 Q0 -3.4 6 3', frownsoft:'M-5 2 Q0 -1.6 5 2' };
+    if (m==='o') return { d:'', line:0, o:1 };
+    return { d:M[m]||M.soft, line:1, o:0 };
+  }
+  hx(h){ return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]; }
+  mix(h1,h2,k){ const a=this.hx(h1),b=this.hx(h2); const r=x=>Math.round(x); return `rgb(${r(a[0]+(b[0]-a[0])*k)},${r(a[1]+(b[1]-a[1])*k)},${r(a[2]+(b[2]-a[2])*k)})`; }
+  clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+  renderVals(){
+    const cur = this.currentPose();
+    const poses = this.poseSet(cur.type);
+    const p = poses[cur.i] || poses[0];
+    const e=this.eyeCfg(p.eyes), m=this.mouthCfg(p.mouth);
+    const L=p.spot;
+    const skyTop=this.mix('#162449', '#bfe3f2', L), skyBot=this.mix('#1c2c26', '#e8f3da', L);
+    return {
+      skyStyle:`linear-gradient(180deg, ${skyTop} 0%, ${skyBot} 78%)`,
+      sunOpacity:this.clamp((L-0.45)*1.9,0,1),
+      moonOpacity:this.clamp((0.36-L)*2.4,0,1),
+      highlight:(0.22 + L*0.45).toFixed(3),
+      grassColor:this.mix('#1f3320', '#74b24c', L),
+      grassDark:this.mix('#16241600'.slice(0,7), '#4f8a36', L),
+      soilColor:this.mix('#2a2018', '#6a4a2c', L),
+      bodyY:p.by, tilt:p.tilt, sx:p.sx, sy:p.sy,
+      lRot:p.lRot, rRot:p.rRot, tipRot:p.tipRot, lScale:p.lScale,
+      bodyColor:p.body, leafColor:p.leaf, tipColor:p.tip,
+      sparkle:p.sparkle, cheekOpacity:p.cheek, showerOpacity:p.shower, drinkOpacity:p.drink,
+      flowerOpacity:(p.flower||0), flowerScale:(0.25+0.75*(p.flower||0)).toFixed(3), petalOpacity:(p.petal||0),
+      pupilOpacity:e.pupil, lidOpacity:e.lid, lidD:e.lidD, eyeShiftL:(e.sl||0), eyeShiftR:(e.sr||0),
+      mouthD:m.d, mouthLineOpacity:m.line, mouthOOpacity:m.o
+    };
+  }
+}
+</script>
+</body>
+</html>

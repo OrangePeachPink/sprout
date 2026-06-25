@@ -1,0 +1,58 @@
+name: 🧹 Task / chore
+description: Maintenance, docs, or a refactor — work that isn't a feature or a bug.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The quieter, essential work — docs, tooling, dependencies, refactors, housekeeping. Tending the soil so everything else can grow. Tell us what needs doing, and why it's worth it.
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type of work
+      description: Sets the `type:*` label (a maintainer confirms it at triage).
+      options:
+        - "Docs — documentation only"
+        - "Chore — tooling, deps, housekeeping"
+        - "Refactor — internal change, no behavior change"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What needs doing
+      description: The task, and why it's worth doing.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the system does this touch? A maintainer confirms the `area:*` label at triage.
+      multiple: true
+      options:
+        - "Control — watering brain, safety, timing"
+        - "Logging — capture, schema, data integrity"
+        - "Sensing — probes, ADC, calibration"
+        - "Actuators — pumps, relays, display, connectivity"
+        - "Analytics — dashboards, forecasts, analysis"
+        - "Repo / tooling / docs (cross-cutting)"
+    validations:
+      required: true
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Layer
+      options:
+        - "Firmware — runs on the ESP32 (needs a reflash)"
+        - "Host — Python / tooling (build anytime)"
+        - "Both"
+        - "N/A"
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes / context (optional)
+      description: Links, related issues, anything useful.
+    validations:
+      required: false

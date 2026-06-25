@@ -1,0 +1,73 @@
+# Sprout label palette — brand-coherent GitHub labels.  Phase 3 (Design lane).
+#
+# Colors are drawn from sprout-tokens.css (+ the v3 soil-mode neutrals); each namespace shares a logic so the
+# board reads as a system. Compatible with label-sync actions (e.g. crazy-max/ghaction-github-labeler or
+# github-label-sync). The Workflow lane applies these when standing labels up, so they're on-brand from creation.
+#
+# Naming + set per ADR-0003 §5. Descriptions are clear and lightly warm — NOT Sprout's first-person voice:
+# labels are contributor tooling, which sits outside the character boundary (ADR-0007 §6). Color = hex sans '#'.
+#
+# Logic:
+#   type:*      brand + status accents (the work vocabulary, mirrors Conventional Commits)
+#   area:*      the band/domain spectrum (where in the system the work lives)
+#   layer:*     earth / stone neutrals (firmware vs host)
+#   community   bright, welcoming greens & cyan
+#   meta        alert / pending status
+
+# ── type: (one per issue) ───────────────────────────────────────────────
+- name: "type:feat"
+  color: "34A853"   # --leaf — new growth
+  description: "New growth — a feature or capability."
+- name: "type:fix"
+  color: "E0483D"   # --st-fault — something was broken
+  description: "A bug fix — restoring expected behavior."
+- name: "type:docs"
+  color: "17B6C4"   # --st-watering — clarity
+  description: "Documentation only — no code behavior change."
+- name: "type:refactor"
+  color: "7C5CFF"   # --st-predicted — internal change
+  description: "Internal change — no new behavior, no fix."
+- name: "type:chore"
+  color: "6F7E62"   # --muted — housekeeping
+  description: "Tooling, deps, or housekeeping."
+
+# ── area: (one or more) ─────────────────────────────────────────────────
+- name: "area:control"
+  color: "0E7A86"   # --band-saturated — the watering brain
+  description: "The control loop & watering supervisor."
+- name: "area:logging"
+  color: "9A8480"   # --q-nosignal — host data plumbing
+  description: "Host logger, capture, and the CSV pipeline."
+- name: "area:sensing"
+  color: "8BD24F"   # --sprout — the probes
+  description: "Capacitive probes, ADC, bands & calibration."
+- name: "area:actuators"
+  color: "E8703A"   # --st-due — pumps & relays
+  description: "Pumps, relays, and dosing."
+- name: "area:analytics"
+  color: "F5A623"   # --st-dry — insight
+  description: "Forecasting, dashboards, and analysis."
+
+# ── layer: (one or more) ────────────────────────────────────────────────
+- name: "layer:firmware"
+  color: "5A3F28"   # soil — flash-gated, on the board
+  description: "Runs on the ESP32 — needs a reflash."
+- name: "layer:host"
+  color: "8B9B90"   # soil-mode stone — build anytime
+  description: "Host-side — Python / tooling, no flash."
+
+# ── community ───────────────────────────────────────────────────────────
+- name: "good first issue"
+  color: "A9DA6E"   # tip-green — a friendly start
+  description: "A gentle, well-scoped place to start."
+- name: "help wanted"
+  color: "3FD0DE"   # soil-mode watering glow — extra hands welcome
+  description: "Extra hands would be welcome here."
+
+# ── meta ────────────────────────────────────────────────────────────────
+- name: "blocked"
+  color: "B23B32"   # deep fault — stop
+  description: "Waiting on something before it can move."
+- name: "needs-verification"
+  color: "F5A623"   # --st-dry amber — pending a reviewer
+  description: "Built — awaiting the reviewer's verification gate."

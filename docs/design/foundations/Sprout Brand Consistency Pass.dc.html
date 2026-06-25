@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #edf2e4; }
+  @keyframes cp-sway { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+  .cp-sway { transform-box: fill-box; transform-origin: 50% 100%; animation: cp-sway 6s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce){ .cp-sway { animation: none !important; } }
+</style>
+</helmet>
+
+<div style="font-family:'Hanken Grotesk',sans-serif; color:#1e2a18; background:#edf2e4; min-height:100%;">
+<div style="max-width:1000px; margin:0 auto; padding:34px 30px 90px;">
+
+  <!-- masthead -->
+  <div style="display:flex; align-items:center; gap:11px; margin-bottom:22px;">
+    <svg width="22" height="26" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.22em; color:#5f7a3e;">SPROUT · BRAND CONSISTENCY PASS</span>
+  </div>
+
+  <div style="max-width:720px; margin-bottom:30px;">
+    <h1 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:44px; line-height:1.03; margin:0 0 14px;">One Sprout, everywhere.</h1>
+    <p style="font-size:16px; line-height:1.58; color:#4a5740; margin:0 0 10px;">A full alignment pass across all eighteen design pages and the GitHub-facing surfaces — checking that every page, color, component, and line speaks in the one voice the brand evolved into: <strong>modern, warm, and plant-forward, with Sprout center stage.</strong></p>
+    <p style="font-size:14px; line-height:1.58; color:#6f7e62; margin:0;">This page is both the record of what changed and the reference for <em>how</em> to keep it consistent. Nothing was deleted — every pre-alignment original is preserved in <code style="font-family:'JetBrains Mono',monospace; font-size:12.5px; background:#e3ecd5; padding:1px 5px; border-radius:4px;">_archive/pre-v3-originals/</code>.</p>
+  </div>
+
+  <!-- THE STANDARD -->
+  <div style="background:#1f3320; border-radius:20px; padding:30px 32px; margin-bottom:18px;">
+    <div style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:22px; color:#eaf2e0; margin-bottom:4px;">The one standard</div>
+    <div style="font-size:13.5px; color:#9fb094; margin-bottom:22px;">The canon every surface is measured against. When in doubt, this wins.</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+      <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(147,221,106,0.2); border-radius:13px; padding:16px 18px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#93DD6A; margin-bottom:8px;">VOICE</div>
+        <div style="font-size:13px; line-height:1.55; color:#d6e3ca;">Write <strong style="color:#eaf2e0;">as</strong> Sprout — first person, on plant-facing surfaces. Fact, then feeling. One short, glanceable line. Calm under fault. No baby-talk, no emoji, no guilt, no invented numbers. Tooling &amp; process copy stays plain and warm — not first person.</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(147,221,106,0.2); border-radius:13px; padding:16px 18px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#93DD6A; margin-bottom:8px;">THE LIVING MARK</div>
+        <div style="font-size:13px; line-height:1.55; color:#d6e3ca;">One mark — two leaves on a stem. Static when it must be, alive when it can. <strong style="color:#eaf2e0;">Sway</strong> (idle) · <strong style="color:#eaf2e0;">breathe</strong> (thriving) · <strong style="color:#eaf2e0;">droop</strong> (thirsty) · <strong style="color:#eaf2e0;">bob</strong> (greeting). Honors reduced-motion.</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(147,221,106,0.2); border-radius:13px; padding:16px 18px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#93DD6A; margin-bottom:8px;">COLOR &amp; SOIL MODE</div>
+        <div style="font-size:13px; line-height:1.55; color:#d6e3ca;">Consume tokens, never redefine. Leaf <code style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#93DD6A;">#34A853</code>, the seven <code style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#93DD6A;">--band-*</code> meaning colors. Soil (dark) mode is the refined <strong style="color:#eaf2e0;">cool green-charcoal</strong> — never the old warm-olive.</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(147,221,106,0.2); border-radius:13px; padding:16px 18px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#93DD6A; margin-bottom:8px;">TYPE</div>
+        <div style="font-size:13px; line-height:1.55; color:#d6e3ca;"><strong style="color:#eaf2e0;">Baloo 2</strong> for display &amp; Sprout's voice · <strong style="color:#eaf2e0;">Hanken Grotesk</strong> for UI &amp; body · <strong style="color:#eaf2e0;">JetBrains Mono</strong> for every number and datum, always.</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(147,221,106,0.2); border-radius:13px; padding:16px 18px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#93DD6A; margin-bottom:8px;">HONESTY &amp; THE BOUNDARY</div>
+        <div style="font-size:13px; line-height:1.55; color:#d6e3ca;"><strong style="color:#eaf2e0;">Raw + band = truth;</strong> any 0–100 is a labelled relative index, never VWC. Mood follows the band, never the index. Character layers <em>beside</em> the instrument — never inside the numbers.</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(147,221,106,0.2); border-radius:13px; padding:16px 18px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:8px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#93DD6A;">THE SIGN-OFF</div>
+        <div style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:26px; color:#eaf2e0;">tend well.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- THE HEADLINE CHANGE -->
+  <div style="display:flex; align-items:center; gap:12px; margin:38px 0 6px;">
+    <span style="width:13px; height:13px; border-radius:4px; background:#34A853;"></span>
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:24px; margin:0;">What changed — soil mode, brought to v3</h2>
+  </div>
+  <div style="padding-left:25px; font-size:14px; line-height:1.58; color:#52614a; margin-bottom:18px; max-width:780px;">The biggest drift was the dark theme. The v2-era pages still used the original <strong>warm-olive</strong> soil mode and the old acid green; <a href="../voice/Sprout%20v3%20Personality%20Layer.dc.html" style="color:#1f6b33; font-weight:600;">v3 / ADR-0008</a> refined those neutrals to a cool green-charcoal and softened the green, but the early pages predated it. This pass folds the refinement into every live page so soil mode reads the same everywhere.</div>
+
+  <!-- swatch before/after -->
+  <div style="background:#fff; border:1px solid #e3e9d8; border-radius:18px; padding:24px 26px; margin-bottom:18px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#9aa888; text-transform:uppercase; margin-bottom:16px;">Old (warm-olive) → New (cool green-charcoal)</div>
+    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px;">
+      <div style="display:flex; align-items:center; gap:11px;"><span style="width:38px; height:38px; border-radius:8px; background:#0E140B; border:1px solid #d7e0cb;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78;">#0E140B</span><span style="color:#b6c8a2;">→</span><span style="width:38px; height:38px; border-radius:8px; background:#0C1311; border:1px solid #d7e0cb;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#1f6b33;">#0C1311</span></div>
+      <div style="display:flex; align-items:center; gap:11px;"><span style="width:38px; height:38px; border-radius:8px; background:#1B2417; border:1px solid #d7e0cb;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78;">#1B2417</span><span style="color:#b6c8a2;">→</span><span style="width:38px; height:38px; border-radius:8px; background:#18231F; border:1px solid #d7e0cb;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#1f6b33;">#18231F</span></div>
+      <div style="display:flex; align-items:center; gap:11px;"><span style="width:38px; height:38px; border-radius:8px; background:#283322; border:1px solid #d7e0cb;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78;">#283322</span><span style="color:#b6c8a2;">→</span><span style="width:38px; height:38px; border-radius:8px; background:#29372F; border:1px solid #d7e0cb;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#1f6b33;">#29372F</span></div>
+      <div style="display:flex; align-items:center; gap:11px;"><span style="width:38px; height:38px; border-radius:8px; background:#9EE04A; border:1px solid #d7e0cb;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78;">#9EE04A</span><span style="color:#b6c8a2;">→</span><span style="width:38px; height:38px; border-radius:8px; background:#93DD6A; border:1px solid #d7e0cb;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#1f6b33;">#93DD6A</span></div>
+      <div style="display:flex; align-items:center; gap:11px;"><span style="width:38px; height:38px; border-radius:8px; background:#EAF2E0; border:1px solid #d7e0cb;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78;">#EAF2E0</span><span style="color:#b6c8a2;">→</span><span style="width:38px; height:38px; border-radius:8px; background:#E9F1EB; border:1px solid #d7e0cb;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#1f6b33;">#E9F1EB</span></div>
+      <div style="display:flex; align-items:center; gap:11px;"><span style="width:38px; height:38px; border-radius:8px; background:#7C8A72; border:1px solid #d7e0cb;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78;">#7C8A72</span><span style="color:#b6c8a2;">→</span><span style="width:38px; height:38px; border-radius:8px; background:#8B9B90; border:1px solid #d7e0cb;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#1f6b33;">#8B9B90</span></div>
+    </div>
+  </div>
+
+  <!-- per-file changelog -->
+  <div style="background:#fff; border:1px solid #e3e9d8; border-radius:18px; padding:24px 26px; margin-bottom:18px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#9aa888; text-transform:uppercase; margin-bottom:6px;">Changelog · 14 pages aligned · ~725 token swaps</div>
+    <div style="font-size:12.5px; color:#6f7e62; margin-bottom:14px;">Same change on every row: warm-olive → cool green-charcoal soil neutrals, acid green → refined green, warm cream text → cool sage-white. Light mode and all <code style="font-family:'JetBrains Mono',monospace; font-size:11px; background:#f1f5ea; padding:1px 4px; border-radius:3px;">--st-*</code> / <code style="font-family:'JetBrains Mono',monospace; font-size:11px; background:#f1f5ea; padding:1px 4px; border-radius:3px;">--band-*</code> meaning colors untouched.</div>
+    <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:6px 26px;">
+      <sc-for list="{{ changelog }}" as="row" hint-placeholder-count="14">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 2px; border-bottom:1px solid #f0f3ea;">
+          <span style="font-size:13px; color:#3f4c37;">{{ row.file }}</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#1f6b33; white-space:nowrap;">{{ row.swaps }} swaps</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- preserved + notes -->
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px;">
+    <div style="background:#f4f1e9; border:1px solid #e0d8c8; border-radius:16px; padding:18px 20px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#9c9078; text-transform:uppercase; margin-bottom:10px;">Preserved as history — left unaligned on purpose</div>
+      <div style="display:flex; flex-direction:column; gap:9px; font-size:13px; color:#52614a; line-height:1.5;">
+        <div><strong style="color:#1e2a18;">Plant Design System</strong> — direction A (lush botanical). A rejected exploration; aligning it would erase the record of why we chose Plant's POV.</div>
+        <div><strong style="color:#1e2a18;">Personality Directions</strong> — the five-way shortlist, including the cut options. Same reason: it documents the decision.</div>
+        <div><strong style="color:#1e2a18;">v3 Personality Layer</strong> — it <em>is</em> the before/after record of this exact warm→cool change; its "before" swatches must stay warm.</div>
+      </div>
+    </div>
+    <div style="background:#fff; border:1px solid #e3e9d8; border-radius:16px; padding:18px 20px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#9aa888; text-transform:uppercase; margin-bottom:10px;">Already on-standard (checked, no change)</div>
+      <div style="display:flex; flex-direction:column; gap:9px; font-size:13px; color:#52614a; line-height:1.5;">
+        <div><strong style="color:#1e2a18;">Voice across surfaces</strong> — first-person on plant-facing pages; the GitHub issue forms / PR / CONTRIBUTING were voiced plain in the batch-2 pass.</div>
+        <div><strong style="color:#1e2a18;">Type &amp; the mark</strong> — Baloo&nbsp;2 / Hanken / JetBrains Mono and the two-leaf mark are consistent on every page.</div>
+        <div><strong style="color:#1e2a18;">Sign-off</strong> — "tend well." closes the pages that should close.</div>
+        <div style="color:#1f6b33;"><strong style="color:#1f6b33;">Resolved this pass:</strong> BRAND.md's token table now reads <code style="font-family:'JetBrains Mono',monospace; font-size:11px;">#0C1311</code> for dark <code style="font-family:'JetBrains Mono',monospace; font-size:11px;">--bg</code> — matching <code style="font-family:'JetBrains Mono',monospace; font-size:11px;">sprout-tokens.css</code>, the source it quotes (which was already on v3). Corrected canonical is proxy-ready.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- how to apply -->
+  <div style="background:#fff; border:1px solid #e3e9d8; border-radius:18px; padding:24px 26px;">
+    <div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:18px; color:#1e2a18; margin-bottom:6px;">How to apply this — the short version</div>
+    <div style="font-size:13px; color:#6f7e62; margin-bottom:16px;">If you're making or touching a Sprout surface, this is the checklist that keeps it one voice:</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px 22px;">
+      <div style="display:flex; gap:9px; align-items:flex-start;"><span style="color:#34a853; font-weight:700;">→</span><span style="font-size:13px; color:#3f4c37; line-height:1.5;">Speak as the plant on plant-facing copy; plain &amp; warm everywhere else.</span></div>
+      <div style="display:flex; gap:9px; align-items:flex-start;"><span style="color:#34a853; font-weight:700;">→</span><span style="font-size:13px; color:#3f4c37; line-height:1.5;">Pull colors from the tokens; for dark, use the cool green-charcoal set.</span></div>
+      <div style="display:flex; gap:9px; align-items:flex-start;"><span style="color:#34a853; font-weight:700;">→</span><span style="font-size:13px; color:#3f4c37; line-height:1.5;">Let the mark be alive; pick motion by mood; honor reduced-motion.</span></div>
+      <div style="display:flex; gap:9px; align-items:flex-start;"><span style="color:#34a853; font-weight:700;">→</span><span style="font-size:13px; color:#3f4c37; line-height:1.5;">Numbers are mono and honest; mood follows the band, not the index.</span></div>
+      <div style="display:flex; gap:9px; align-items:flex-start;"><span style="color:#34a853; font-weight:700;">→</span><span style="font-size:13px; color:#3f4c37; line-height:1.5;">Keep character beside the instrument, never inside the readouts.</span></div>
+      <div style="display:flex; gap:9px; align-items:flex-start;"><span style="color:#34a853; font-weight:700;">→</span><span style="font-size:13px; color:#3f4c37; line-height:1.5;">Close with <strong style="color:#1e2a18;">tend well.</strong> — and no emoji in product copy.</span></div>
+    </div>
+  </div>
+
+  <div style="text-align:center; margin-top:30px; font-family:'Baloo 2',sans-serif; font-weight:600; font-size:15px; color:#9aa890; letter-spacing:0.04em;">tend well.</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1040,&quot;height&quot;:1500}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      changelog: [
+        { file: 'Sprout Design System.dc.html', swaps: 118 },
+        { file: 'Sprout Design System-print.dc.html', swaps: 118 },
+        { file: 'Sprout Design System.html', swaps: 118 },
+        { file: 'Sprout Social Kit.dc.html', swaps: 97 },
+        { file: 'Sprout Brand Identity.dc.html', swaps: 76 },
+        { file: 'Sprout - Brand World.dc.html', swaps: 57 },
+        { file: 'Sprout Deck.dc.html', swaps: 45 },
+        { file: 'Sprout Deck-print-vo4pvb.dc.html', swaps: 37 },
+        { file: 'Sprout Brand Guidelines.dc.html', swaps: 15 },
+        { file: 'Sprout Merch Library.dc.html', swaps: 15 },
+        { file: 'Sprout Deck Template.dc.html', swaps: 14 },
+        { file: 'Sprout Loader.dc.html', swaps: 11 },
+        { file: 'Sprout Design Library.dc.html', swaps: 3 },
+        { file: 'Sprout Day in the Life.dc.html', swaps: 1 }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

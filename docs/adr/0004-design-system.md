@@ -13,9 +13,9 @@ area #17 (Frontend stack).
 
 Sprout's design system is not a proposal — it is **already built and in use**. v1 (the dashboard/instrument
 foundation: tokens, the seven-band moisture-honesty rules, and five instrument components) ships as
-`docs/design/`, with the core tokens lifted into a ready-to-use `docs/design/sprout-tokens.css`. A broader v2
+`docs/design/`, with the core tokens lifted into a ready-to-use `docs/design/tokens/sprout-tokens.css`. A broader v2
 brand delivery (brand world, decks, social kit, narrative pieces, an expanded system source) was added
-**additively** under `docs/design/sprout-v2/` and does not replace v1.
+**additively** under `docs/design/` and does not replace v1.
 
 ADR-0002 area #18 proposed exactly this shape (design tokens as CSS custom properties + a small component set)
 and area #17 left the frontend stack as "a conscious choice to be recorded," shared between the Design and
@@ -30,8 +30,8 @@ interface** — the one place color/type/space/radius/elevation are defined.
 
 - **v1 is the source of truth for the dashboard / instrument UI** — tokens, the seven-band honesty rules, and
   the five instrument components (dense data grid, analysis chart, calibration range ladder,
-  distribution + integrity, engineering tokens). Authoritative source: `docs/design/sprout-design-system.dc.html`.
-- **Tokens are CSS custom properties** in `docs/design/sprout-tokens.css`: brand + neutrals, the seven
+  distribution + integrity, engineering tokens). Authoritative source: `docs/design/foundations/Sprout Design System.dc.html`.
+- **Tokens are CSS custom properties** in `docs/design/tokens/sprout-tokens.css`: brand + neutrals, the seven
   `--band-*` moisture bands, the `--st-*` status colors, quality flags, the three type roles
   (`--font-display` Baloo 2 / `--font-ui` Hanken Grotesk / `--font-data` JetBrains Mono), a 4px space scale,
   radius, and elevation. A `data-theme="dark"` toggle provides "soil" mode.
@@ -54,7 +54,7 @@ preferences:
 
 This is the heart of this ADR and the resolution of the #17 seam.
 
-- **`docs/design/sprout-tokens.css` is the single source of truth** for color, type, space, radius, and
+- **`docs/design/tokens/sprout-tokens.css` is the single source of truth** for color, type, space, radius, and
   elevation. There is exactly one definition of these values; no lane maintains a parallel set.
 - **Design owns** the token + component *system* and *how tokens are consumed* (this contract). **Data owns**
   the served-app runtime / stack and consumes the tokens; it does not redefine them.
@@ -112,6 +112,6 @@ This is the heart of this ADR and the resolution of the #17 seam.
 ## References
 
 - `docs/design/README.md` — v1 system overview and the non-negotiable principles.
-- `docs/design/sprout-tokens.css` — the tokens (the consumption surface).
-- `docs/design/sprout-design-system.dc.html` — the authoritative v1 source (every token + component).
-- `docs/design/sprout-v2/README.md` — the additive v2 brand delivery and its v1 relationship.
+- `docs/design/tokens/sprout-tokens.css` — the tokens (the consumption surface).
+- `docs/design/foundations/Sprout Design System.dc.html` — the authoritative v1 source (every token + component).
+- `docs/design/Sprout Design Library.dc.html` — the front door indexing the (former v2) brand delivery.

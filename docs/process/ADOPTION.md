@@ -1,7 +1,7 @@
 # Sprout — lane onboarding & adoption
 
 *How each working lane plugs into the GitHub workflow. Pairs with
-[CONTRIBUTING.md](../../CONTRIBUTING.md) (the canonical loop) and
+[CONTRIBUTING.md](../../.github/CONTRIBUTING.md) (the canonical loop) and
 [ADR-0003](../adr/0003-work-pipeline.md) (the decision of record).*
 
 ## Welcome
@@ -20,7 +20,7 @@ and there's one path now. Let's grow it.
 **[board](https://github.com/users/OrangePeachPink/projects/2)** is the working view ·
 **[Discussions](https://github.com/OrangePeachPink/plants/discussions)** are the idea inbox. Every backlog
 item (A1–E10) is now an issue. The full loop — branch → PR with `Refs #N` → the review-before-close
-**verification gate** — is in [CONTRIBUTING.md](../../CONTRIBUTING.md). Read it once; it's short.
+**verification gate** — is in [CONTRIBUTING.md](../../.github/CONTRIBUTING.md). Read it once; it's short.
 
 ## The one rule that defines us
 
@@ -78,7 +78,7 @@ precisely because the gate (no agent merges or closes) is the backstop.
 
 ## Shared first moves (every lane)
 
-1. **Read** [CONTRIBUTING.md](../../CONTRIBUTING.md) once (~5 min).
+1. **Read** [CONTRIBUTING.md](../../.github/CONTRIBUTING.md) once (~5 min).
 2. **Open** the [board](https://github.com/users/OrangePeachPink/projects/2), filter to your area / layer,
    find your column.
 3. **For your next piece of work:** move the card `Backlog → In Progress`, branch `type/short-desc`, open a

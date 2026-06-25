@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e7ecde; }
+  .doc h2 { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 26px; color: #1e2a18; margin: 0 0 4px; }
+  .doc h3 { font-family: 'Baloo 2', sans-serif; font-weight: 700; font-size: 17px; color: #1e2a18; margin: 22px 0 8px; }
+  .doc p { font-size: 14px; line-height: 1.62; color: #3f4c37; margin: 0 0 12px; }
+  .doc li { font-size: 14px; line-height: 1.6; color: #3f4c37; margin-bottom: 6px; }
+  .doc code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #eef4e6; color: #2f5c2f; padding: 1px 5px; border-radius: 4px; }
+  .doc table { border-collapse: collapse; width: 100%; margin: 10px 0 16px; }
+  .doc th { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; color: #6f7e62; text-align: left; padding: 8px 10px; border-bottom: 2px solid #e3e9d8; }
+  .doc td { font-size: 13px; color: #3f4c37; padding: 8px 10px; border-bottom: 1px solid #eef2e6; vertical-align: top; }
+  .doc td.m { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #2f5c2f; white-space: nowrap; }
+  @media print { body { background: #fff; } .docwrap { padding: 0 !important; } .doc { box-shadow: none !important; border: none !important; } .sec { break-inside: avoid; } }
+</style>
+</helmet>
+
+<div class="docwrap" style="font-family:'Hanken Grotesk',sans-serif; background:#e7ecde; min-height:100%; padding:38px 24px 80px;">
+<div class="doc" style="max-width:880px; margin:0 auto; background:#fff; border:1px solid #e3e9d8; border-radius:14px; box-shadow:0 10px 30px rgba(30,42,24,0.10); padding:48px 56px 60px;">
+
+  <!-- masthead -->
+  <div style="display:flex; align-items:center; gap:11px; margin-bottom:26px;">
+    <svg width="22" height="26" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:11.5px; letter-spacing:0.2em; color:#5f7a3e;">SPROUT · MERCH PRODUCTION SPEC</span>
+  </div>
+
+  <h1 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:38px; line-height:1.05; color:#1e2a18; margin:0 0 12px;">Sending Sprout to the print shop</h1>
+  <p style="font-size:15.5px; line-height:1.6; color:#4a5740; margin:0 0 8px;">Everything a vendor needs to quote and produce the sticker, magnet, and patch sets without a back-and-forth: file formats, sizes, cut and finish options, color, and the limits each process imposes. Pair it with the visual <a href="Sprout%20Merch%20Library.dc.html" style="color:#1f6b33; font-weight:600;">Merch Library</a>, where every piece carries its own size and cut.</p>
+  <div style="background:#f7faf2; border:1px solid #e3e9d8; border-left:3px solid #34a853; border-radius:8px; padding:13px 16px; margin:16px 0 30px;">
+    <p style="margin:0; font-size:13px; color:#52614a;"><strong style="color:#1e2a18;">How to use this.</strong> Send the relevant section to your printer with the vector art. Color, thread, and material values here are <em>starting points</em> — always approve a physical proof (and a sewn strike-off for patches) before a full run.</p>
+  </div>
+
+  <!-- 1 · universal file prep -->
+  <div class="sec">
+    <h2>1 · Universal file prep</h2>
+    <p>These apply to every product unless a section below overrides them.</p>
+    <ul style="margin:0 0 12px; padding-left:20px;">
+      <li><strong>Vector source.</strong> Supply art as <code>PDF</code>, <code>SVG</code>, <code>AI</code>, or <code>EPS</code>. Every piece in the library is built from vector shapes and the SVG mark, so it scales to any size cleanly.</li>
+      <li><strong>Color mode <code>CMYK</code></strong> for anything printed (stickers, magnets). Convert from the brand's screen <code>RGB/HEX</code> using the table in §2 and approve a proof — greens shift most.</li>
+      <li><strong>Bleed <code>0.125"</code> (3&nbsp;mm)</strong> on all printed pieces, with a <strong><code>0.125"</code> safe margin</strong> inside the cut line. Keep text and the mark out of the safe margin.</li>
+      <li><strong>Cut line on its own layer / spot color.</strong> Name it <code>CutContour</code> (or your printer's convention) as a 100% spot, <code>0.25–1&nbsp;pt</code> stroke, no fill — this drives die, kiss, and contour cuts.</li>
+      <li><strong>Outline all fonts</strong> (Baloo&nbsp;2, Hanken Grotesk, JetBrains Mono) or embed them. Don't rely on the shop having them.</li>
+      <li><strong>Raster fallback:</strong> if a piece must ship as raster, <code>300&nbsp;dpi</code> at final size, minimum. Vector is always preferred.</li>
+      <li><strong>Minimum line weight <code>0.5&nbsp;pt</code> (≈0.18&nbsp;mm)</strong> for print; thinner strokes may break up. The mark's stem holds fine at every size in the library.</li>
+      <li><strong>Transparent / holographic stock</strong> needs a <strong>white underbase</strong> layer under the art, or colors print see-through. Flag it on the cut layer.</li>
+    </ul>
+  </div>
+
+  <!-- 2 · color -->
+  <div class="sec">
+    <h2>2 · Brand color reference</h2>
+    <p>Source values from <code>sprout-tokens.css</code> (ADR-0004). CMYK and Pantone columns are <strong>approximate bridges</strong> for quoting — confirm against a printed proof. Pantone matches are Coated (C); ask for the Uncoated equivalent on matte stock.</p>
+    <table>
+      <thead><tr><th>Role</th><th>HEX</th><th>CMYK (approx)</th><th>Pantone bridge</th></tr></thead>
+      <tbody>
+        <tr><td>Leaf · primary green</td><td class="m">#34A853</td><td class="m">68 / 0 / 75 / 0</td><td class="m">7739 C</td></tr>
+        <tr><td>Sprout · bright accent</td><td class="m">#8BD24F</td><td class="m">48 / 0 / 82 / 0</td><td class="m">367 C</td></tr>
+        <tr><td>Water · wet / watering</td><td class="m">#17B6C4</td><td class="m">72 / 0 / 22 / 0</td><td class="m">7466 C</td></tr>
+        <tr><td>Sun · drying / warmth</td><td class="m">#F5A623</td><td class="m">0 / 37 / 90 / 0</td><td class="m">143 C</td></tr>
+        <tr><td>Due · over-warm</td><td class="m">#E8703A</td><td class="m">0 / 65 / 80 / 0</td><td class="m">1655 C</td></tr>
+        <tr><td>Fault · alert red</td><td class="m">#E0483D</td><td class="m">0 / 80 / 78 / 0</td><td class="m">1788 C</td></tr>
+        <tr><td>Saturated · deep teal</td><td class="m">#0E7A86</td><td class="m">88 / 30 / 36 / 8</td><td class="m">7474 C</td></tr>
+        <tr><td>Ink · near-black</td><td class="m">#1E2A18</td><td class="m">70 / 50 / 72 / 62</td><td class="m">Black 6 C</td></tr>
+        <tr><td>Soil · earth brown</td><td class="m">#5A3F28</td><td class="m">40 / 55 / 75 / 45</td><td class="m">4625 C</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:12.5px; color:#6f7e62;">For embroidery, hand these hex values to the digitizer and approve a <strong>sewn strike-off</strong>; common thread systems (Madeira Polyneon, Isacord) carry close matches to the greens, but the dye lot is what matters — judge thread on fabric, not on screen.</p>
+  </div>
+
+  <!-- 3 · stickers -->
+  <div class="sec">
+    <h2>3 · Stickers — both sets</h2>
+    <p>Two sets: <strong>Moods&nbsp;&amp;&nbsp;Mark</strong> (character die-cuts) and <strong>Sayings&nbsp;&amp;&nbsp;Signals</strong> (words + instrument motifs). Same base process; finishes vary.</p>
+    <table>
+      <thead><tr><th>Spec</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Material</td><td>Durable white vinyl (PVC or PET); BOPP for sheets. Outdoor-grade vinyl for anything that lives on a water bottle or laptop.</td></tr>
+        <tr><td>Finish / laminate</td><td>Matte (default), gloss, or soft-touch laminate — scratch/UV/water resistant. <strong>Holographic</strong> and <strong>clear</strong> reserved for the Signals (sparkline, band ladder, drop); both need a white underbase.</td></tr>
+        <tr><td>Cut</td><td><strong>Die-cut</strong> (custom contour through backing) for singles. <strong>Kiss-cut</strong> for the 4×6&quot; sheet — cut through vinyl, not backing, easy peel.</td></tr>
+        <tr><td>Sizes</td><td class="m">1.5"–3.5" longest side. Per-piece sizes are on each card in the library. Min 2&quot; for the mood faces to keep the mark legible.</td></tr>
+        <tr><td>Formats</td><td>Singles (die-cut) and one 4×6&quot; kiss-cut sheet of the full Set&nbsp;02. Optional sheet of Set&nbsp;01 moods.</td></tr>
+        <tr><td>Bleed / safe</td><td class="m">0.125" bleed · 0.125" safe · 1pt CutContour</td></tr>
+        <tr><td>Quantity (MOQ)</td><td>Typically 50–100 per design; price breaks at 250/500/1000. Sheets from 25.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 4 · magnets -->
+  <div class="sec">
+    <h2>4 · Magnets — The Windowsill Crew</h2>
+    <p>Flexible printed magnets for fridge, locker, and whiteboard. Two are functional (watering tracker, mood key), so legibility and a writable surface matter.</p>
+    <table>
+      <thead><tr><th>Spec</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Material</td><td><strong>30&nbsp;mil (0.030&quot;) flexible vinyl magnet</strong>, UV-printed. 20&nbsp;mil acceptable for small pieces; 30&nbsp;mil holds better on vertical fridges.</td></tr>
+        <tr><td>Face finish</td><td>Matte (default) or gloss. <strong>Dry-erase laminate</strong> on the <em>watering tracker</em> so a day can be marked and wiped. No holo/clear (opaque white face only).</td></tr>
+        <tr><td>Shape / cut</td><td>Rounded-rectangle standard; <strong>die-cut</strong> contour for the potted-Sprout shape. Cut line on its own layer.</td></tr>
+        <tr><td>Sizes</td><td class="m">2.0"–3.0". Tracker &amp; name badge 3.0×2.5"; pot 2.0×3.0"; mood/mark 2.0×2.5".</td></tr>
+        <tr><td>Bleed / safe</td><td class="m">0.125" bleed · 0.125" safe</td></tr>
+        <tr><td>Quantity (MOQ)</td><td>Often 25–50 per design; sheet-ganging several designs lowers cost.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 5 · patches -->
+  <div class="sec">
+    <h2>5 · Patches — Embroidered Badges</h2>
+    <p>The keepsake tier. Embroidery is bold and forgiving of wear but <strong>can't do fine detail or gradients</strong> — the art is drawn for it (thick strokes, flat color blocks). Where finer detail is wanted (small text, the sparkline), specify <strong>woven</strong> instead.</p>
+    <table>
+      <thead><tr><th>Spec</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Type</td><td><strong>Embroidered</strong> on twill (crests, badges, laurel). <strong>Woven</strong> for any piece with small text or fine line work.</td></tr>
+        <tr><td>Border</td><td><strong>Merrowed</strong> (overlocked) edge for circles &amp; ovals; <strong>heat-cut / laser</strong> border for shields, banners, and the drop — anything non-round.</td></tr>
+        <tr><td>Backing</td><td>Iron-on (heat-seal) default. Offer <strong>sew-on</strong> and <strong>hook-and-loop (Velcro)</strong> for jackets and packs.</td></tr>
+        <tr><td>Sizes</td><td class="m">2.5"–3.5", measured as (W+H)/2. Below ~2.5" detail and text suffer.</td></tr>
+        <tr><td>Thread colors</td><td>Up to <strong>9</strong> per patch; the library pieces use 3–5. Match to the §2 hex; approve a sewn strike-off.</td></tr>
+        <tr><td>Min text / line</td><td><strong>Text ≥ 0.2"</strong> (≈5&nbsp;mm) cap height embroidered (smaller → woven). <strong>Lines ≥ 0.08"</strong> (≈2&nbsp;mm).</td></tr>
+        <tr><td>Coverage</td><td>50–100% stitch. The crest &amp; merit badge are ~100% (full twill cover); wordmark is partial on a twill ground.</td></tr>
+        <tr><td>Digitizing file</td><td>Vendor converts vector → stitch file (<code>.dst</code> / <code>.emb</code>). Supply vector + the §2 colors; review the <strong>digitized proof</strong> before sewing.</td></tr>
+        <tr><td>Quantity (MOQ)</td><td>Usually 50–100 (digitizing is a one-time setup cost amortized across the run).</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 6 · uses -->
+  <div class="sec">
+    <h2>6 · Uses &amp; distribution</h2>
+    <h3>Contributor giveaways — earned, not sold</h3>
+    <p>The <strong>“I&nbsp;TEND” merit-badge patch</strong> is the flagship reward: one per merged PR (or first contribution). Pair a first-merge thank-you with a sticker pick and the <code>raw + band = truth</code> signal sticker as an in-joke. Keep a small mailer stock; ship with a handwritten <em>tend well.</em></p>
+    <h3>Supporters — packs to buy</h3>
+    <p>Bundle for sale to fund the project: the full <strong>7-mood die-cut pack</strong>, the <strong>magnet crew</strong>, and a <strong>patch + sticker</strong> starter. Sell at cost-plus through a simple store; the goal is sustainability, not margin. The honesty principle extends to pricing — say where the money goes.</p>
+    <h3>Kids — cute and safe</h3>
+    <p>The mood faces and the sun/moon/drop are the kid magnets (literally). Specify <strong>non-toxic inks</strong>, <strong>laminated</strong> stickers (no peeling fragments), and note any <strong>small-parts / choking</strong> considerations for magnets aimed at young children — magnets especially should carry the standard caution and not be marketed to under-3s.</p>
+    <h3>Promo — show up everywhere</h3>
+    <p>Conference and unboxing swag: the <strong>kiss-cut sheet</strong> for sticker bombing, the <strong>SPROUT wordmark</strong> and <strong>plants-with-a-pulse</strong> patches for bags, and the <strong>“Hi, I'm Sprout” speech bubble</strong> as the give-one-to-everyone opener. One die-cut hero mark in every package.</p>
+  </div>
+
+  <!-- 7 · preflight -->
+  <div class="sec" style="margin-top:6px;">
+    <h2>7 · Pre-flight checklist</h2>
+    <div style="background:#f7faf2; border:1px solid #e3e9d8; border-radius:10px; padding:18px 22px;">
+      <div style="display:flex; flex-direction:column; gap:9px;">
+        <label style="display:flex; gap:10px; align-items:flex-start; font-size:13.5px; color:#3f4c37;"><span style="width:16px; height:16px; border:2px solid #b6c8a2; border-radius:4px; flex-shrink:0; margin-top:1px;"></span>Vector art supplied; fonts outlined; mark at full vector.</label>
+        <label style="display:flex; gap:10px; align-items:flex-start; font-size:13.5px; color:#3f4c37;"><span style="width:16px; height:16px; border:2px solid #b6c8a2; border-radius:4px; flex-shrink:0; margin-top:1px;"></span>CMYK conversion done; proof requested for greens.</label>
+        <label style="display:flex; gap:10px; align-items:flex-start; font-size:13.5px; color:#3f4c37;"><span style="width:16px; height:16px; border:2px solid #b6c8a2; border-radius:4px; flex-shrink:0; margin-top:1px;"></span>0.125&quot; bleed + safe margin on every printed piece.</label>
+        <label style="display:flex; gap:10px; align-items:flex-start; font-size:13.5px; color:#3f4c37;"><span style="width:16px; height:16px; border:2px solid #b6c8a2; border-radius:4px; flex-shrink:0; margin-top:1px;"></span>CutContour layer present and named; underbase flagged on clear/holo.</label>
+        <label style="display:flex; gap:10px; align-items:flex-start; font-size:13.5px; color:#3f4c37;"><span style="width:16px; height:16px; border:2px solid #b6c8a2; border-radius:4px; flex-shrink:0; margin-top:1px;"></span>Patch art checked against min text/line; embroidered vs woven chosen per piece.</label>
+        <label style="display:flex; gap:10px; align-items:flex-start; font-size:13.5px; color:#3f4c37;"><span style="width:16px; height:16px; border:2px solid #b6c8a2; border-radius:4px; flex-shrink:0; margin-top:1px;"></span>Physical proof / sewn strike-off approved before the full run.</label>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:34px; padding-top:18px; border-top:1px solid #eef2e6; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+    <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9aa888;">Design lane · pairs with the Merch Library · colors per ADR-0004</span>
+    <span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:15px; color:#5f7a3e;">tend well.</span>
+  </div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:940,&quot;height&quot;:1200}}"></script>
+</body>
+</html>

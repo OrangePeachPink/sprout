@@ -20,7 +20,7 @@ Operating rules for any agent (or human) working in this repository.
 ## Reading order
 
 1. **This file** — operating rules.
-2. **[CONTRIBUTING.md](CONTRIBUTING.md)** — the canonical work loop + the verification gate.
+2. **[CONTRIBUTING.md](.github/CONTRIBUTING.md)** — the canonical work loop + the verification gate.
 3. **[docs/process/ADOPTION.md](docs/process/ADOPTION.md)** — per-lane onboarding (which
    board filter, which issues, which ADRs you own). *Current specifics live here, not above.*
 4. **[docs/adr/](docs/adr/)** — decisions of record. Start at
@@ -38,7 +38,7 @@ Sprout is built by coordinated lanes. Stay in yours; route cross-lane needs thro
 | **Firmware** | ESP32 control, sensing, actuators (`firmware/`) | ADR-0001, the native C test harness |
 | **Data** | host logger, analytics, the served dashboard | ADR-0005, ADR-0006 |
 | **Design** | design system, brand, voice (repo read-only; lands via commit-proxy) | ADR-0004, ADR-0007, ADR-0008 |
-| **Workflow** | issues, board, releases, process | CONTRIBUTING.md, this file |
+| **Workflow** | issues, board, releases, process | .github/CONTRIBUTING.md, this file |
 
 ## Workflow & GitHub
 

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #edf2e4; }
+  @keyframes mk-sway { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+  .mk-sway { transform-box: fill-box; transform-origin: 50% 100%; animation: mk-sway 6s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce){ .mk-sway { animation: none !important; } }
+</style>
+</helmet>
+
+<div style="font-family:'Hanken Grotesk',sans-serif; color:#1e2a18; background:#edf2e4; min-height:100%;">
+<div style="max-width:1200px; margin:0 auto; padding:34px 30px 90px;">
+
+  <!-- masthead -->
+  <div style="display:flex; align-items:center; gap:11px; margin-bottom:22px;">
+    <svg width="22" height="26" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853"></path></svg>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.22em; color:#5f7a3e;">SPROUT · MERCH LIBRARY</span>
+  </div>
+
+  <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:30px; flex-wrap:wrap; margin-bottom:26px;">
+    <div style="max-width:680px;">
+      <h1 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:46px; line-height:1.02; margin:0 0 14px;">Stickers, magnets &amp; patches — print-ready.</h1>
+      <p style="font-size:16px; line-height:1.55; color:#4a5740; margin:0;">Four sets the plant carries onto the real world: two sticker sets, one magnet set, one patch set. A shared core of marks and sayings, with each set holding its own — built to send straight to a print shop. Specs sit on every piece; the full production guide is one click away.</p>
+    </div>
+    <a href="Sprout%20Merch%20Production%20Spec.dc.html" style="flex-shrink:0; text-decoration:none; display:inline-flex; align-items:center; gap:9px; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; color:#1f6b33; background:#fff; border:1px solid #cfe0bb; border-radius:10px; padding:11px 16px;" style-hover="background:#dff0cc">production spec →</a>
+  </div>
+
+  <!-- production at a glance -->
+  <div style="background:#1f3320; border-radius:18px; padding:20px 24px; display:flex; gap:30px; flex-wrap:wrap; align-items:center; margin-bottom:14px;">
+    <div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:15px; color:#eaf2e0;">Production at a glance</div>
+    <div style="display:flex; gap:24px; flex-wrap:wrap; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#bcd0a8;">
+      <span><span style="color:#9ee04a;">color</span> &nbsp;CMYK + Pantone bridge</span>
+      <span><span style="color:#9ee04a;">art</span> &nbsp;vector (PDF/SVG/AI)</span>
+      <span><span style="color:#9ee04a;">bleed</span> &nbsp;0.125&quot; · safe 0.125&quot;</span>
+      <span><span style="color:#9ee04a;">cut</span> &nbsp;die · kiss · merrowed</span>
+      <span><span style="color:#9ee04a;">raster</span> &nbsp;300&nbsp;dpi min</span>
+    </div>
+  </div>
+
+  <!-- shared-core + audiences -->
+  <div style="display:grid; grid-template-columns:1.3fr 1fr; gap:14px; margin-bottom:40px;">
+    <div style="background:#fff; border:1px solid #e3e9d8; border-radius:16px; padding:18px 20px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.1em; color:#9aa888; text-transform:uppercase; margin-bottom:10px;">How the sets relate</div>
+      <p style="font-size:13.5px; line-height:1.6; color:#52614a; margin:0 0 12px;">A small <strong>shared core</strong> — the living mark, the seven moods, and a few sayings — recurs across sets so the brand reads as one. On top of that, <strong>every set is at least 40% its own</strong>: art and formats that live nowhere else.</p>
+      <div style="display:flex; gap:14px; flex-wrap:wrap;">
+        <span style="display:inline-flex; align-items:center; gap:7px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1f6b33;"><span style="width:11px; height:11px; border-radius:50%; background:#34a853;"></span>unique to this set</span>
+        <span style="display:inline-flex; align-items:center; gap:7px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a9a78;"><span style="width:11px; height:11px; border-radius:50%; background:#fff; border:2px solid #c5d3b2;"></span>shared core</span>
+      </div>
+    </div>
+    <div style="background:#fff; border:1px solid #e3e9d8; border-radius:16px; padding:18px 20px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.1em; color:#9aa888; text-transform:uppercase; margin-bottom:10px;">Made for</div>
+      <div style="display:flex; flex-direction:column; gap:7px; font-size:13px; color:#52614a;">
+        <div><strong style="color:#1e2a18;">Contributors</strong> — earned thank-yous for merged work</div>
+        <div><strong style="color:#1e2a18;">Supporters</strong> — packs to buy and keep us growing</div>
+        <div><strong style="color:#1e2a18;">Kids</strong> — a cute plant that's easy to love</div>
+        <div><strong style="color:#1e2a18;">Promo</strong> — conferences, unboxings, sticker bombs</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SET A · STICKERS · MOODS & MARK ============ -->
+  <div style="display:flex; align-items:center; gap:12px; margin:0 0 6px;">
+    <span style="width:13px; height:13px; border-radius:4px; background:#34A853;"></span>
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:26px; margin:0;">Sticker Set 01 — Moods &amp; Mark</h2>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; gap:8px 22px; margin:0 0 22px; padding-left:25px; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#7a8a6e;">
+    <span><span style="color:#34A853;">●</span> die-cut vinyl singles</span>
+    <span>matte or gloss laminate</span>
+    <span>2.5–3.0&quot; longest side</span>
+    <span>9 pieces · 8 unique</span>
+  </div>
+  <div style="background:#fff; border:1px solid #e3e9d8; border-radius:20px; padding:30px 26px; margin-bottom:18px;">
+    <div style="display:flex; flex-wrap:wrap; gap:26px 20px; justify-content:center;">
+      <sc-for list="{{ stickersA }}" as="it" hint-placeholder-count="9">
+        <div style="width:132px; display:flex; flex-direction:column; align-items:center; gap:9px;">
+          <div style="position:relative; width:128px; height:128px; border-radius:{{ it.radius }}; background:{{ it.bg }}; border:5px solid #fff; box-shadow:0 6px 16px rgba(30,42,24,0.16); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;">
+            <svg width="56" height="65" viewBox="0 0 24 28" fill="none" stroke="{{ it.stem }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="{{ it.dropD }}" fill="#17b6c4" stroke="{{ it.stem }}"></path>
+              <path d="{{ it.stemD }}"></path>
+              <path d="{{ it.lD }}" fill="{{ it.sprout }}"></path>
+              <path d="{{ it.rD }}" fill="{{ it.leaf }}"></path>
+              <path d="{{ it.tipD }}" fill="{{ it.tipFill }}"></path>
+            </svg>
+            <span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:11.5px; color:{{ it.labelColor }};">{{ it.label }}</span>
+            <div style="position:absolute; inset:0; border-radius:{{ it.radius }}; background:linear-gradient(135deg, rgba(255,255,255,0.5), transparent 44%); pointer-events:none;"></div>
+          </div>
+          <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9aa888;">{{ it.size }} · die-cut</div>
+          <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:{{ it.tagColor }};"><span style="width:8px; height:8px; border-radius:50%; background:{{ it.tagDot }}; border:{{ it.tagBorder }};"></span>{{ it.tagLabel }}</span></div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="margin-top:22px; padding-top:18px; border-top:1px dashed #dde6cf; display:flex; gap:10px; align-items:flex-start;">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#9aa888; white-space:nowrap; padding-top:2px;">USE →</span>
+      <p style="margin:0; font-size:12.5px; color:#6f7e62; line-height:1.55;">The character set — the seven calibrated moods plus the hero mark. Big, friendly, instantly Sprout. <strong style="color:#52614a;">Kids</strong> grab the faces; <strong style="color:#52614a;">supporters</strong> buy the full mood pack; the lone hero mark is the give-one-to-everyone freebie. Each mood reads from its band, so the colors are honest, never decorative.</p>
+    </div>
+  </div>
+
+  <!-- ============ SET B · STICKERS · SAYINGS & SIGNALS ============ -->
+  <div style="display:flex; align-items:center; gap:12px; margin:34px 0 6px;">
+    <span style="width:13px; height:13px; border-radius:4px; background:#F5A623;"></span>
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:26px; margin:0;">Sticker Set 02 — Sayings &amp; Signals</h2>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; gap:8px 22px; margin:0 0 22px; padding-left:25px; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#7a8a6e;">
+    <span><span style="color:#F5A623;">●</span> die-cut singles + kiss-cut sheet</span>
+    <span>matte; holographic option on signals</span>
+    <span>1.5–3.5&quot;</span>
+    <span>11 pieces · 8 unique</span>
+  </div>
+  <div style="background:#fff; border:1px solid #e3e9d8; border-radius:20px; padding:30px 26px; margin-bottom:18px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#9aa888; text-transform:uppercase; margin-bottom:16px;">Sayings · die-cut word stickers</div>
+    <div style="display:flex; gap:15px; flex-wrap:wrap; align-items:center; justify-content:center; margin-bottom:28px;">
+      <sc-for list="{{ sayingsB }}" as="s" hint-placeholder-count="6">
+        <span style="font-family:{{ s.font }}; font-weight:800; font-size:{{ s.fontSize }}; color:{{ s.fg }}; background:{{ s.bg }}; border:4px solid #fff; border-radius:999px; padding:11px 24px; box-shadow:0 6px 15px rgba(30,42,24,0.14); white-space:nowrap;">{{ s.text }}</span>
+      </sc-for>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#9aa888; text-transform:uppercase; margin-bottom:16px;">Signals · the instrument, made shareable</div>
+    <div style="display:flex; flex-wrap:wrap; gap:26px 22px; justify-content:center;">
+      <!-- sparkline -->
+      <div style="width:150px; display:flex; flex-direction:column; align-items:center; gap:9px;">
+        <div style="position:relative; width:148px; height:104px; border-radius:18px; background:#0e1a14; border:5px solid #fff; box-shadow:0 6px 16px rgba(30,42,24,0.16); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px;">
+          <svg viewBox="0 0 130 44" style="width:118px; height:40px;"><polyline points="0,32 22,28 44,30 58,12 72,9 96,20 130,16" fill="none" stroke="#9ee04a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline><circle cx="72" cy="9" r="4" fill="#9ee04a"></circle></svg>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#7f9a6a; margin-top:6px;">a good day</span>
+          <div style="position:absolute; inset:0; border-radius:18px; background:linear-gradient(135deg, rgba(255,255,255,0.22), transparent 44%); pointer-events:none;"></div>
+        </div>
+        <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9aa888;">3.0&quot; · die-cut</div>
+        <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#1f6b33;"><span style="width:8px; height:8px; border-radius:50%; background:#34a853;"></span>unique</span></div>
+      </div>
+      <!-- band ladder -->
+      <div style="width:150px; display:flex; flex-direction:column; align-items:center; gap:9px;">
+        <div style="position:relative; width:108px; height:128px; border-radius:16px; background:#fff; border:5px solid #fff; box-shadow:0 6px 16px rgba(30,42,24,0.16); display:flex; flex-direction:column; gap:3px; padding:12px 12px;">
+          <span style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#9aa888; margin-bottom:2px;">SEVEN BANDS</span>
+          <span style="height:11px; border-radius:3px; background:#0E7A86;"></span>
+          <span style="height:11px; border-radius:3px; background:#17B6C4;"></span>
+          <span style="height:11px; border-radius:3px; background:#34A853;"></span>
+          <span style="height:11px; border-radius:3px; background:#8BD24F;"></span>
+          <span style="height:11px; border-radius:3px; background:#F5A623;"></span>
+          <span style="height:11px; border-radius:3px; background:#E8703A;"></span>
+          <span style="height:11px; border-radius:3px; background:#E0483D;"></span>
+          <div style="position:absolute; inset:0; border-radius:16px; background:linear-gradient(135deg, rgba(255,255,255,0.5), transparent 44%); pointer-events:none;"></div>
+        </div>
+        <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9aa888;">2.5&quot; · die-cut</div>
+        <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#1f6b33;"><span style="width:8px; height:8px; border-radius:50%; background:#34a853;"></span>unique</span></div>
+      </div>
+      <!-- speech bubble -->
+      <div style="width:150px; display:flex; flex-direction:column; align-items:center; gap:9px;">
+        <div style="position:relative; width:148px; height:104px; display:flex; align-items:center; justify-content:center;">
+          <div style="position:relative; background:#34a853; border:5px solid #fff; border-radius:20px; padding:16px 18px; box-shadow:0 6px 16px rgba(30,42,24,0.16);">
+            <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:16px; color:#fff; line-height:1.05;">Hi, I'm<br>Sprout.</span>
+            <div style="position:absolute; bottom:-13px; left:24px; width:0; height:0; border-left:10px solid transparent; border-right:10px solid transparent; border-top:16px solid #fff;"></div>
+          </div>
+        </div>
+        <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9aa888;">3.0&quot; · die-cut</div>
+        <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#1f6b33;"><span style="width:8px; height:8px; border-radius:50%; background:#34a853;"></span>unique</span></div>
+      </div>
+      <!-- sun (shared) -->
+      <div style="width:150px; display:flex; flex-direction:column; align-items:center; gap:9px;">
+        <div style="position:relative; width:104px; height:104px; border-radius:50%; background:#fff; border:5px solid #fff; box-shadow:0 6px 16px rgba(30,42,24,0.16); display:flex; align-items:center; justify-content:center;">
+          <div style="width:54px; height:54px; border-radius:50%; background:radial-gradient(circle at 40% 36%, #fff3c4, #f5a623); box-shadow:0 0 16px rgba(245,166,35,0.5);"></div>
+          <div style="position:absolute; inset:0; border-radius:50%; background:linear-gradient(135deg, rgba(255,255,255,0.5), transparent 44%); pointer-events:none;"></div>
+        </div>
+        <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9aa888;">2.0&quot; · die-cut</div>
+        <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#8a9a78;"><span style="width:8px; height:8px; border-radius:50%; background:#fff; border:2px solid #c5d3b2;"></span>shared</span></div>
+      </div>
+      <!-- drop (shared) -->
+      <div style="width:150px; display:flex; flex-direction:column; align-items:center; gap:9px;">
+        <div style="position:relative; width:104px; height:104px; border-radius:50%; background:#fff; border:5px solid #fff; box-shadow:0 6px 16px rgba(30,42,24,0.16); display:flex; align-items:center; justify-content:center;">
+          <div style="width:36px; height:50px; border-radius:0 50% 50% 50%; background:linear-gradient(160deg, #3fd0de, #17b6c4); transform:rotate(45deg); box-shadow:0 3px 8px rgba(23,182,196,0.4);"></div>
+          <div style="position:absolute; inset:0; border-radius:50%; background:linear-gradient(135deg, rgba(255,255,255,0.5), transparent 44%); pointer-events:none;"></div>
+        </div>
+        <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9aa888;">2.0&quot; · die-cut</div>
+        <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#8a9a78;"><span style="width:8px; height:8px; border-radius:50%; background:#fff; border:2px solid #c5d3b2;"></span>shared</span></div>
+      </div>
+    </div>
+    <div style="margin-top:22px; padding-top:18px; border-top:1px dashed #dde6cf; display:flex; gap:10px; align-items:flex-start;">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#9aa888; white-space:nowrap; padding-top:2px;">USE →</span>
+      <p style="margin:0; font-size:12.5px; color:#6f7e62; line-height:1.55;">Words and instrument motifs — the voice on a laptop lid. <strong style="color:#52614a;">Promo</strong> loves the sayings and the holographic signals; <strong style="color:#52614a;">contributors</strong> get the <code style="font-family:'JetBrains Mono',monospace; font-size:11px; background:#f1f5ea; padding:1px 5px; border-radius:3px;">raw + band = truth</code> badge as an in-joke reward. Ships as singles or a 4×6&quot; kiss-cut sheet for sticker bombing.</p>
+    </div>
+  </div>
+
+  <!-- ============ MAGNETS · THE WINDOWSILL CREW ============ -->
+  <div style="display:flex; align-items:center; gap:12px; margin:34px 0 6px;">
+    <span style="width:13px; height:13px; border-radius:4px; background:#17B6C4;"></span>
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:26px; margin:0;">Magnet Set — The Windowsill Crew</h2>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; gap:8px 22px; margin:0 0 22px; padding-left:25px; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#7a8a6e;">
+    <span><span style="color:#17B6C4;">●</span> 30 mil flexible vinyl magnet</span>
+    <span>matte UV-printed face</span>
+    <span>2.0–3.0&quot;</span>
+    <span>8 pieces · 4 unique</span>
+  </div>
+  <div style="background:#fff; border:1px solid #e3e9d8; border-radius:20px; padding:30px 26px; margin-bottom:18px;">
+    <div style="display:flex; flex-wrap:wrap; gap:26px 22px; justify-content:center;">
+      <!-- shared mood/mark magnets (sc-for) -->
+      <sc-for list="{{ magnetMarks }}" as="it" hint-placeholder-count="4">
+        <div style="width:120px; display:flex; flex-direction:column; align-items:center; gap:9px;">
+          <div style="position:relative; width:92px; height:114px; border-radius:13px; background:{{ it.bg }}; box-shadow:0 4px 0 #c7d0bb, 0 11px 16px rgba(30,42,24,0.2); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;">
+            <svg width="40" height="47" viewBox="0 0 24 28" fill="none" stroke="{{ it.stem }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="{{ it.dropD }}" fill="#17b6c4" stroke="{{ it.stem }}"></path>
+              <path d="{{ it.stemD }}"></path>
+              <path d="{{ it.lD }}" fill="{{ it.sprout }}"></path>
+              <path d="{{ it.rD }}" fill="{{ it.leaf }}"></path>
+              <path d="{{ it.tipD }}" fill="{{ it.tipFill }}"></path>
+            </svg>
+            <span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:10px; color:{{ it.labelColor }};">{{ it.label }}</span>
+          </div>
+          <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9aa888;">2.0×2.5&quot;</div>
+          <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#8a9a78;"><span style="width:8px; height:8px; border-radius:50%; background:#fff; border:2px solid #c5d3b2;"></span>shared</span></div>
+        </div>
+      </sc-for>
+      <!-- potted sprout (unique) -->
+      <div style="width:120px; display:flex; flex-direction:column; align-items:center; gap:9px;">
+        <div style="position:relative; width:96px; height:114px; border-radius:13px; background:#f3f9ea; box-shadow:0 4px 0 #c7d0bb, 0 11px 16px rgba(30,42,24,0.2); display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding-bottom:14px;">
+          <svg width="44" height="52" viewBox="0 0 24 28" fill="none" stroke="#247a3a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:-2px;"><path d="M12 20 V11"></path><path d="M12 12 C8 10 6 7 7 4 C11 5 12 9 12 12 Z" fill="#8bd24f"></path><path d="M12 12 C16 10 18 7 17 4 C13 5 12 9 12 12 Z" fill="#34a853"></path><path d="M12 10 C9.5 6 11 3.5 12 2 C13.4 4 13.2 7 12 10 Z" fill="#a9da6e"></path></svg>
+          <div style="width:54px; height:30px; background:linear-gradient(180deg,#c2724a,#a85a36); border-radius:4px 4px 7px 7px; clip-path:polygon(8% 0,92% 0,84% 100%,16% 100%); position:relative;"><div style="position:absolute; top:0; left:-3px; right:-3px; height:8px; background:#cf805a; border-radius:4px;"></div></div>
+        </div>
+        <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9aa888;">2.0×3.0&quot; · die</div>
+        <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#1f6b33;"><span style="width:8px; height:8px; border-radius:50%; background:#34a853;"></span>unique</span></div>
+      </div>
+      <!-- watering tracker (unique, functional) -->
+      <div style="width:140px; display:flex; flex-direction:column; align-items:center; gap:9px;">
+        <div style="position:relative; width:138px; height:114px; border-radius:13px; background:#fff; box-shadow:0 4px 0 #c7d0bb, 0 11px 16px rgba(30,42,24,0.2); padding:13px 14px; display:flex; flex-direction:column; justify-content:center;">
+          <span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:13px; color:#1e2a18; margin-bottom:9px;">last watered</span>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#5f7a3e; background:#eef4e6; border-radius:5px; padding:3px 5px;">M</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#5f7a3e; background:#eef4e6; border-radius:5px; padding:3px 5px;">T</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#fff; background:#34a853; border-radius:5px; padding:3px 5px;">W</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#5f7a3e; background:#eef4e6; border-radius:5px; padding:3px 5px;">T</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#5f7a3e; background:#eef4e6; border-radius:5px; padding:3px 5px;">F</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#5f7a3e; background:#eef4e6; border-radius:5px; padding:3px 5px;">S</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#5f7a3e; background:#eef4e6; border-radius:5px; padding:3px 5px;">S</span>
+          </div>
+          <span style="font-family:'Hanken Grotesk',sans-serif; font-size:10px; color:#8a9a78; margin-top:9px;">dry-erase · tap today</span>
+        </div>
+        <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9aa888;">3.0×2.5&quot;</div>
+        <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#1f6b33;"><span style="width:8px; height:8px; border-radius:50%; background:#34a853;"></span>unique</span></div>
+      </div>
+      <!-- name badge (unique) -->
+      <div style="width:140px; display:flex; flex-direction:column; align-items:center; gap:9px;">
+        <div style="position:relative; width:138px; height:114px; border-radius:13px; background:#34a853; box-shadow:0 4px 0 #2a8043, 0 11px 16px rgba(30,42,24,0.2); padding:14px; display:flex; flex-direction:column; justify-content:center; gap:7px;">
+          <span style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.08em; color:#d6f0c4;">THIS WINDOWSILL BELONGS TO</span>
+          <div style="height:22px; border-bottom:2px dashed rgba(255,255,255,0.55);"></div>
+          <div style="display:flex; align-items:center; gap:7px;"><svg width="16" height="19" viewBox="0 0 24 28" fill="none" stroke="#eafbe7" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V13"></path><path d="M12 14 C8 12 6 9 7 6 C11 7 12 11 12 14 Z" fill="#bff39c" stroke="#eafbe7"></path><path d="M12 14 C16 12 18 9 17 6 C13 7 12 11 12 14 Z" fill="#8bd24f" stroke="#eafbe7"></path></svg><span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:12px; color:#fff;">tend well.</span></div>
+        </div>
+        <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9aa888;">3.0×2.5&quot;</div>
+        <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#1f6b33;"><span style="width:8px; height:8px; border-radius:50%; background:#34a853;"></span>unique</span></div>
+      </div>
+      <!-- mood key magnet (unique, functional) -->
+      <div style="width:120px; display:flex; flex-direction:column; align-items:center; gap:9px;">
+        <div style="position:relative; width:92px; height:114px; border-radius:13px; background:#16201a; box-shadow:0 4px 0 #0c130d, 0 11px 16px rgba(30,42,24,0.2); padding:11px 11px; display:flex; flex-direction:column; gap:4px;">
+          <span style="font-family:'JetBrains Mono',monospace; font-size:7.5px; letter-spacing:0.06em; color:#7f9a6a;">MOOD KEY</span>
+          <div style="display:flex; align-items:center; gap:6px;"><span style="width:9px; height:9px; border-radius:50%; background:#17B6C4;"></span><span style="font-family:'Hanken Grotesk',sans-serif; font-size:9px; color:#cfe0c2;">refreshed</span></div>
+          <div style="display:flex; align-items:center; gap:6px;"><span style="width:9px; height:9px; border-radius:50%; background:#34A853;"></span><span style="font-family:'Hanken Grotesk',sans-serif; font-size:9px; color:#cfe0c2;">thriving</span></div>
+          <div style="display:flex; align-items:center; gap:6px;"><span style="width:9px; height:9px; border-radius:50%; background:#8BD24F;"></span><span style="font-family:'Hanken Grotesk',sans-serif; font-size:9px; color:#cfe0c2;">content</span></div>
+          <div style="display:flex; align-items:center; gap:6px;"><span style="width:9px; height:9px; border-radius:50%; background:#F5A623;"></span><span style="font-family:'Hanken Grotesk',sans-serif; font-size:9px; color:#cfe0c2;">thirsty</span></div>
+          <div style="display:flex; align-items:center; gap:6px;"><span style="width:9px; height:9px; border-radius:50%; background:#E8703A;"></span><span style="font-family:'Hanken Grotesk',sans-serif; font-size:9px; color:#cfe0c2;">parched</span></div>
+        </div>
+        <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9aa888;">2.0×2.5&quot;</div>
+        <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#1f6b33;"><span style="width:8px; height:8px; border-radius:50%; background:#34a853;"></span>unique</span></div>
+      </div>
+    </div>
+    <div style="margin-top:22px; padding-top:18px; border-top:1px dashed #dde6cf; display:flex; gap:10px; align-items:flex-start;">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#9aa888; white-space:nowrap; padding-top:2px;">USE →</span>
+      <p style="margin:0; font-size:12.5px; color:#6f7e62; line-height:1.55;">For the fridge, the locker, the server rack. The unique four earn their keep — a <strong style="color:#52614a;">watering tracker</strong> and <strong style="color:#52614a;">mood key</strong> that are actually useful, a potted hero, and a name badge. <strong style="color:#52614a;">Supporters</strong> and <strong style="color:#52614a;">kids</strong> alike; a friendly desk-warming gift for new contributors.</p>
+    </div>
+  </div>
+
+  <!-- ============ PATCHES · EMBROIDERED BADGES ============ -->
+  <div style="display:flex; align-items:center; gap:12px; margin:34px 0 6px;">
+    <span style="width:13px; height:13px; border-radius:4px; background:#5A3F28;"></span>
+    <h2 style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:26px; margin:0;">Patch Set — Embroidered Badges</h2>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; gap:8px 22px; margin:0 0 22px; padding-left:25px; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#7a8a6e;">
+    <span><span style="color:#5A3F28;">●</span> embroidered, merrowed border</span>
+    <span>iron-on backing (sew / velcro opt.)</span>
+    <span>2.5–3.5&quot; · ≤9 thread colors</span>
+    <span>8 pieces · 5 unique</span>
+  </div>
+  <div style="background:#f4f1e9; border:1px solid #e0d8c8; border-radius:20px; padding:30px 26px; margin-bottom:18px;">
+    <div style="display:flex; flex-wrap:wrap; gap:30px 24px; justify-content:center;">
+      <!-- mark crest (unique) -->
+      <div style="width:140px; display:flex; flex-direction:column; align-items:center; gap:10px;">
+        <div style="position:relative; width:118px; height:118px; border-radius:50%; background:repeating-linear-gradient(48deg, #2f7d3f 0 2px, #2a7339 2px 4px); border:6px solid #8bd24f; box-shadow:0 0 0 2px #2f7d3f, 0 7px 14px rgba(30,42,24,0.26); display:flex; align-items:center; justify-content:center;">
+          <svg width="52" height="61" viewBox="0 0 24 28" fill="none" stroke="#1e3a14" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 1px 0 rgba(0,0,0,0.25));"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#cdeebb"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#8bd24f"></path><path d="M12 11 C9 6 11 3 12 1 C14 4 14 8 12 11 Z" fill="#eafbe7"></path></svg>
+        </div>
+        <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9c9078;">3.0&quot; · merrowed</div>
+        <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#1f6b33;"><span style="width:8px; height:8px; border-radius:50%; background:#34a853;"></span>unique</span></div>
+      </div>
+      <!-- contributor merit badge (unique) -->
+      <div style="width:140px; display:flex; flex-direction:column; align-items:center; gap:10px;">
+        <div style="position:relative; width:118px; height:118px; border-radius:50%; background:repeating-linear-gradient(48deg, #1f3320 0 2px, #1b2d1c 2px 4px); border:6px solid #f5a623; box-shadow:0 0 0 2px #b87d12, 0 7px 14px rgba(30,42,24,0.26); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;">
+          <svg width="32" height="38" viewBox="0 0 24 28" fill="none" stroke="#0e1a0a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V13"></path><path d="M12 14 C8 12 6 9 7 6 C11 7 12 11 12 14 Z" fill="#b7f05a"></path><path d="M12 14 C16 12 18 9 17 6 C13 7 12 11 12 14 Z" fill="#8bd24f"></path></svg>
+          <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:11px; color:#ffe6b0; letter-spacing:0.02em; text-shadow:0 1px 0 rgba(0,0,0,0.3);">I TEND</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:7.5px; letter-spacing:0.14em; color:#f5c97a;">MERGED · 2026</span>
+        </div>
+        <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9c9078;">3.0&quot; · merrowed</div>
+        <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#1f6b33;"><span style="width:8px; height:8px; border-radius:50%; background:#34a853;"></span>unique · contributor</span></div>
+      </div>
+      <!-- SPROUT wordmark (unique) -->
+      <div style="width:150px; display:flex; flex-direction:column; align-items:center; gap:10px;">
+        <div style="position:relative; width:150px; height:60px; border-radius:11px; background:repeating-linear-gradient(48deg, #1e2a18 0 2px, #192414 2px 4px); border:5px solid #cdeebb; box-shadow:0 0 0 2px #2f7d3f, 0 7px 14px rgba(30,42,24,0.26); display:flex; align-items:center; justify-content:center; gap:9px;">
+          <svg width="22" height="26" viewBox="0 0 24 28" fill="none" stroke="#eafbe7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#eafbe7"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#eafbe7"></path></svg>
+          <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:24px; color:#eafbe7; letter-spacing:0.02em; text-shadow:0 1px 0 rgba(0,0,0,0.3);">Sprout</span>
+        </div>
+        <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9c9078;">3.5×1.4&quot; · heat-cut</div>
+        <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#1f6b33;"><span style="width:8px; height:8px; border-radius:50%; background:#34a853;"></span>unique</span></div>
+      </div>
+      <!-- tend well banner (shared) -->
+      <div style="width:150px; display:flex; flex-direction:column; align-items:center; gap:10px;">
+        <div style="position:relative; width:150px; height:54px; background:#34a853; border:5px solid #eafbe7; box-shadow:0 0 0 2px #2a8043, 0 7px 14px rgba(30,42,24,0.26); display:flex; align-items:center; justify-content:center; clip-path:polygon(0 0,100% 0,100% 70%,50% 100%,0 70%);">
+          <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:19px; color:#fff; text-shadow:0 1px 0 rgba(0,0,0,0.3); margin-bottom:6px;">tend well.</span>
+        </div>
+        <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9c9078;">3.5×1.4&quot; · heat-cut</div>
+        <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#8a9a78;"><span style="width:8px; height:8px; border-radius:50%; background:#fff; border:2px solid #c5d3b2;"></span>shared</span></div>
+      </div>
+      <!-- shield est badge (unique) -->
+      <div style="width:140px; display:flex; flex-direction:column; align-items:center; gap:10px;">
+        <div style="position:relative; width:104px; height:118px; background:repeating-linear-gradient(48deg, #0e7a86 0 2px, #0c6e79 2px 4px); border:5px solid #7fdce6; box-shadow:0 0 0 2px #0e7a86, 0 7px 14px rgba(30,42,24,0.26); clip-path:polygon(0 0,100% 0,100% 64%,50% 100%,0 64%); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding-top:6px;">
+          <svg width="30" height="36" viewBox="0 0 24 28" fill="none" stroke="#06343a" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 24 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#cdeebb"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#7fdce6"></path></svg>
+          <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:10px; color:#eafbff; text-shadow:0 1px 0 rgba(0,0,0,0.3);">EST. 2026</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:7px; letter-spacing:0.1em; color:#aee8ef;">WINDOWSILL</span>
+        </div>
+        <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9c9078;">2.8&quot; · heat-cut</div>
+        <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#1f6b33;"><span style="width:8px; height:8px; border-radius:50%; background:#34a853;"></span>unique</span></div>
+      </div>
+      <!-- plants with a pulse rocker (shared) -->
+      <div style="width:160px; display:flex; flex-direction:column; align-items:center; gap:10px;">
+        <div style="position:relative; width:158px; height:58px; border-radius:0 0 80px 80px / 0 0 46px 46px; background:repeating-linear-gradient(48deg, #7c5cff 0 2px, #6f51e8 2px 4px); border:5px solid #e7e1fb; box-shadow:0 0 0 2px #5b43c2, 0 7px 14px rgba(30,42,24,0.26); display:flex; align-items:flex-start; justify-content:center; padding-top:9px;">
+          <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:15px; color:#fff; text-shadow:0 1px 0 rgba(0,0,0,0.3);">plants with a pulse</span>
+        </div>
+        <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9c9078;">3.5×1.5&quot; · heat-cut</div>
+        <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#8a9a78;"><span style="width:8px; height:8px; border-radius:50%; background:#fff; border:2px solid #c5d3b2;"></span>shared</span></div>
+      </div>
+      <!-- drop emblem (unique) -->
+      <div style="width:140px; display:flex; flex-direction:column; align-items:center; gap:10px;">
+        <div style="position:relative; width:100px; height:118px; display:flex; align-items:center; justify-content:center;">
+          <div style="width:88px; height:104px; border-radius:0 50% 50% 50%; background:repeating-linear-gradient(48deg, #17b6c4 0 2px, #14a6b3 2px 4px); border:5px solid #cdf3f6; box-shadow:0 0 0 2px #0e7a86, 0 7px 14px rgba(30,42,24,0.26); transform:rotate(45deg); display:flex; align-items:center; justify-content:center;"><svg width="34" height="40" viewBox="0 0 24 28" fill="none" stroke="#06343a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(-45deg);"><path d="M12 26 V13"></path><path d="M12 14 C8 12 6 9 7 6 C11 7 12 11 12 14 Z" fill="#eafbff"></path><path d="M12 14 C16 12 18 9 17 6 C13 7 12 11 12 14 Z" fill="#7fdce6"></path></svg></div>
+        </div>
+        <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9c9078;">3.0&quot; · heat-cut</div>
+        <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#1f6b33;"><span style="width:8px; height:8px; border-radius:50%; background:#34a853;"></span>unique</span></div>
+      </div>
+      <!-- well watered laurel (unique) -->
+      <div style="width:140px; display:flex; flex-direction:column; align-items:center; gap:10px;">
+        <div style="position:relative; width:118px; height:118px; border-radius:50%; background:repeating-linear-gradient(48deg, #456b1f 0 2px, #3e611c 2px 4px); border:6px solid #a9da6e; box-shadow:0 0 0 2px #456b1f, 0 7px 14px rgba(30,42,24,0.26); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;">
+          <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:13px; color:#eafbe7; text-shadow:0 1px 0 rgba(0,0,0,0.3);">well</span>
+          <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:13px; color:#eafbe7; text-shadow:0 1px 0 rgba(0,0,0,0.3);">watered</span>
+        </div>
+        <div style="display:{{ specDisplay }}; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9c9078;">2.8&quot; · merrowed</div>
+        <div style="display:{{ tagDisplay }};"><span style="display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#1f6b33;"><span style="width:8px; height:8px; border-radius:50%; background:#34a853;"></span>unique</span></div>
+      </div>
+    </div>
+    <div style="margin-top:22px; padding-top:18px; border-top:1px dashed #e0d8c8; display:flex; gap:10px; align-items:flex-start;">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#9c9078; white-space:nowrap; padding-top:2px;">USE →</span>
+      <p style="margin:0; font-size:12.5px; color:#6f7e62; line-height:1.55;">The keepsake tier — for jackets, totes, and backpacks. The <strong style="color:#52614a;">contributor merit badge</strong> is the headline: earned, not bought, for a merged PR. The rest — crest, wordmark, shield — are <strong style="color:#52614a;">supporter</strong> and <strong style="color:#52614a;">promo</strong> staples that wear in beautifully.</p>
+    </div>
+  </div>
+
+  <!-- closing -->
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-top:34px; background:#1f3320; border-radius:20px; padding:26px 32px;">
+    <div style="display:flex; align-items:center; gap:18px;">
+      <svg width="44" height="52" viewBox="0 0 24 28" fill="none" stroke="#9ee04a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="mk-sway" style="flex-shrink:0;"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8bd24f" stroke="#9ee04a"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34a853" stroke="#9ee04a"></path></svg>
+      <div>
+        <div style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:22px; color:#eaf2e0;">Ready for the print shop.</div>
+        <div style="font-size:13px; color:#9fb094; margin-top:4px;">Every spec a vendor needs — sizes, cuts, colors, bleed, thread limits — lives in the production guide.</div>
+      </div>
+    </div>
+    <a href="Sprout%20Merch%20Production%20Spec.dc.html" style="text-decoration:none; flex-shrink:0; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; color:#1f3320; background:#9ee04a; border-radius:10px; padding:12px 18px;">open the production spec →</a>
+  </div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1200,&quot;height&quot;:1640},&quot;showSpecs&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;showTags&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  markPaths(v) {
+    if (v === 'droop1') return { stemD: 'M12 26 V14', lD: 'M12 15 C8 14 5 14 4 16 C8 18 11 17 12 15 Z', rD: 'M12 15 C16 14 19 14 20 16 C16 18 13 17 12 15 Z' };
+    if (v === 'droop2') return { stemD: 'M12 26 C12 20 12 18 12 16', lD: 'M12 16 C8 17 6 20 6 23 C10 22 12 19 12 16 Z', rD: 'M12 16 C16 17 18 20 18 23 C14 22 12 19 12 16 Z' };
+    return { stemD: 'M12 26 V12', lD: 'M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z', rD: 'M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z' };
+  }
+  buildMark(o) {
+    const p = this.markPaths(o.variant);
+    return Object.assign({
+      stemD: p.stemD, lD: p.lD, rD: p.rD,
+      tipD: o.tip ? 'M12 11 C9 6 11 3 12 1 C14 4 14 8 12 11 Z' : '',
+      tipFill: o.tip || 'none',
+      dropD: o.drop ? 'M12 3 C12 3 14.4 5.6 12 7 C9.6 5.6 12 3 12 3 Z' : '',
+      bg: o.dark ? '#16201a' : '#ffffff',
+      labelColor: o.dark ? '#9ee04a' : (o.labelColor || '#1f6b33'),
+      radius: o.radius || '50%',
+      size: o.size || '2.5"',
+      tagColor: o.tag === 'unique' ? '#1f6b33' : '#8a9a78',
+      tagDot: o.tag === 'unique' ? '#34a853' : '#fff',
+      tagBorder: o.tag === 'unique' ? 'none' : '2px solid #c5d3b2',
+      tagLabel: o.tag === 'unique' ? 'unique' : 'shared'
+    }, o);
+  }
+  renderVals() {
+    const A = [
+      { label: 'thriving', variant: 'up', stem: '#2F7D3F', sprout: '#8BD24F', leaf: '#34A853', tip: '#A9DA6E', size: '3.0"', tag: 'unique' },
+      { label: 'soaked', variant: 'up', stem: '#0E7A86', sprout: '#34A853', leaf: '#0E7A86', drop: true, size: '2.5"', tag: 'unique' },
+      { label: 'refreshed', variant: 'up', stem: '#0E7A86', sprout: '#8BD24F', leaf: '#17B6C4', size: '2.5"', tag: 'unique' },
+      { label: 'content', variant: 'up', stem: '#456B1F', sprout: '#A9DA6E', leaf: '#8BD24F', size: '2.5"', tag: 'unique' },
+      { label: 'thirsty', variant: 'droop1', stem: '#B07D12', sprout: '#F5C97A', leaf: '#F5A623', size: '2.5"', tag: 'unique', labelColor: '#9a6410' },
+      { label: 'parched', variant: 'droop2', stem: '#C2561F', sprout: '#F0A984', leaf: '#E8703A', size: '2.5"', tag: 'unique', labelColor: '#a3461a' },
+      { label: 'faint', variant: 'droop2', stem: '#B23B32', sprout: '#EAA39C', leaf: '#E0483D', size: '2.5"', tag: 'unique', labelColor: '#a3322b' },
+      { label: 'asleep', variant: 'droop2', stem: '#6f8a5a', sprout: '#4a6b3a', leaf: '#3a5a2a', dark: true, size: '2.5"', tag: 'unique' },
+      { label: 'the mark', variant: 'up', stem: '#247a3a', sprout: '#8bd24f', leaf: '#34a853', tip: '#a9da6e', size: '3.0"', tag: 'shared', labelColor: '#247a3a' }
+    ];
+    const mags = [
+      { label: 'thriving', variant: 'up', stem: '#2F7D3F', sprout: '#8BD24F', leaf: '#34A853', tip: '#A9DA6E', tag: 'shared' },
+      { label: 'thirsty', variant: 'droop1', stem: '#B07D12', sprout: '#F5C97A', leaf: '#F5A623', tag: 'shared', labelColor: '#9a6410' },
+      { label: 'asleep', variant: 'droop2', stem: '#6f8a5a', sprout: '#4a6b3a', leaf: '#3a5a2a', dark: true, tag: 'shared' },
+      { label: 'the mark', variant: 'up', stem: '#247a3a', sprout: '#8bd24f', leaf: '#34a853', tip: '#a9da6e', tag: 'shared', labelColor: '#247a3a' }
+    ];
+    const sayingsRaw = [
+      { text: 'tend well.', bg: '#34a853', fg: '#ffffff', mono: false },
+      { text: 'plants with a pulse', bg: '#0e7a86', fg: '#ffffff', mono: false },
+      { text: 'raw + band = truth', bg: '#1e2a18', fg: '#9ee04a', mono: true },
+      { text: 'tiny jungle', bg: '#8bd24f', fg: '#1e2a18', mono: false },
+      { text: 'know before they show', bg: '#7c5cff', fg: '#ffffff', mono: false },
+      { text: 'a little thirsty', bg: '#f5a623', fg: '#1e2a18', mono: false }
+    ];
+    const sayingsB = sayingsRaw.map(s => Object.assign({
+      font: s.mono ? "'JetBrains Mono',monospace" : "'Baloo 2',sans-serif",
+      fontSize: s.mono ? '16px' : '20px'
+    }, s));
+    const showSpecs = !(this.props && this.props.showSpecs === false);
+    const showTags = !(this.props && this.props.showTags === false);
+    return {
+      stickersA: A.map(o => this.buildMark(o)),
+      magnetMarks: mags.map(o => this.buildMark(o)),
+      sayingsB: sayingsB,
+      specDisplay: showSpecs ? 'block' : 'none',
+      tagDisplay: showTags ? 'block' : 'none'
+    };
+  }
+}
+</script>
+</body>
+</html>

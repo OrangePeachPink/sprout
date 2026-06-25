@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e4e8db; }
+  @keyframes sw-twinkle { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+  @keyframes sw-drift { 0% { transform: translateX(-30px); } 100% { transform: translateX(30px); } }
+  @keyframes sw-rain { 0% { transform: translateY(-22px) rotate(13deg); } 100% { transform: translateY(152px) rotate(13deg); } }
+  @keyframes sw-z { 0% { transform: translate(0,0) scale(0.7); opacity: 0; } 25% { opacity: 0.9; } 100% { transform: translate(18px,-42px) scale(1.1); opacity: 0; } }
+  @keyframes sw-headsway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+  @media (prefers-reduced-motion: reduce) { [data-deco] { animation: none !important; } }
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:radial-gradient(135% 100% at 50% -12%, #f2f4ec 0%, #e4e8db 66%, #dbe0d0 100%); padding:38px 30px 44px; font-family:'Hanken Grotesk',sans-serif;">
+  <div style="max-width:1200px; margin:0 auto;">
+
+    <!-- header -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+      <div style="display:flex; align-items:center; gap:11px;">
+        <svg width="25" height="29" viewBox="0 0 24 28" fill="none" stroke="#2F7D3F" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 27 V13"></path>
+          <g data-deco style="transform-box:fill-box; transform-origin:50% 100%; animation:sw-headsway 6.5s ease-in-out infinite;">
+            <path d="M12 14 C8 12 6 9 7 5.5 C11 6.5 12 10 12 14 Z" fill="#8BD24F"></path>
+            <path d="M12 14 C16 12 18 9 17 5.5 C13 6.5 12 10 12 14 Z" fill="#34A853"></path>
+            <path d="M12 10.5 C10 7 11.4 4.4 12 3 C13.4 5 13.2 8 12 10.5 Z" fill="#A9DA6E"></path>
+          </g>
+        </svg>
+        <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:22px; color:#1E2A18; letter-spacing:-0.01em;">Sprout</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#8a9a7c; letter-spacing:0.04em; margin-left:2px;">a day in the life</span>
+      </div>
+      <span style="font-family:'Hanken Grotesk',sans-serif; font-size:14px; font-weight:600; color:#5f7150;">Hi, I’m Sprout.</span>
+    </div>
+
+    <!-- SCENE -->
+    <div style="position:relative; width:100%; height:525px; border-radius:26px; overflow:hidden; box-shadow:0 20px 44px rgba(30,42,24,0.20); border:1px solid rgba(30,42,24,0.06); background:{{ skyStyle }};">
+
+      <!-- stars -->
+      <div style="position:absolute; inset:0; opacity:{{ starOpacity }}; pointer-events:none;">
+        <div data-deco style="position:absolute; left:9%; top:13%; width:3px; height:3px; border-radius:50%; background:#fff; animation:sw-twinkle 3.2s ease-in-out infinite;"></div>
+        <div data-deco style="position:absolute; left:18%; top:24%; width:2px; height:2px; border-radius:50%; background:#fff; animation:sw-twinkle 2.6s ease-in-out infinite 0.6s;"></div>
+        <div data-deco style="position:absolute; left:29%; top:9%; width:2.5px; height:2.5px; border-radius:50%; background:#fff; animation:sw-twinkle 3.6s ease-in-out infinite 1.1s;"></div>
+        <div data-deco style="position:absolute; left:43%; top:18%; width:2px; height:2px; border-radius:50%; background:#fff; animation:sw-twinkle 2.9s ease-in-out infinite 0.3s;"></div>
+        <div data-deco style="position:absolute; left:55%; top:11%; width:3px; height:3px; border-radius:50%; background:#fff; animation:sw-twinkle 3.1s ease-in-out infinite 1.6s;"></div>
+        <div data-deco style="position:absolute; left:66%; top:22%; width:2px; height:2px; border-radius:50%; background:#fff; animation:sw-twinkle 2.7s ease-in-out infinite 0.9s;"></div>
+        <div data-deco style="position:absolute; left:78%; top:14%; width:2.5px; height:2.5px; border-radius:50%; background:#fff; animation:sw-twinkle 3.4s ease-in-out infinite 0.4s;"></div>
+        <div data-deco style="position:absolute; left:88%; top:26%; width:2px; height:2px; border-radius:50%; background:#fff; animation:sw-twinkle 2.8s ease-in-out infinite 1.3s;"></div>
+        <div data-deco style="position:absolute; left:36%; top:30%; width:2px; height:2px; border-radius:50%; background:#fff; animation:sw-twinkle 3.0s ease-in-out infinite 0.8s;"></div>
+      </div>
+
+      <!-- moon -->
+      <div style="position:absolute; left:{{ moonX }}%; top:{{ moonY }}%; transform:translate(-50%,-50%); opacity:{{ moonOpacity }}; width:48px; height:48px; border-radius:50%; background:radial-gradient(circle at 38% 34%, #f4f1e2, #cdc7ad); box-shadow:0 0 26px rgba(232,228,202,0.5);"></div>
+      <!-- sun -->
+      <div style="position:absolute; left:{{ sunX }}%; top:{{ sunY }}%; transform:translate(-50%,-50%); opacity:{{ sunOpacity }}; width:76px; height:76px; border-radius:50%; background:radial-gradient(circle at 42% 38%, #fff4cf, #f5b13f); box-shadow:0 0 66px 16px rgba(245,170,50,0.40);"></div>
+
+      <!-- day clouds -->
+      <div style="position:absolute; left:14%; top:20%; opacity:{{ cloudOpacity }}; pointer-events:none;">
+        <div data-deco style="position:relative; width:118px; height:30px; animation:sw-drift 34s ease-in-out infinite alternate;">
+          <div style="position:absolute; left:0; bottom:0; width:118px; height:24px; background:rgba(255,255,255,0.92); border-radius:22px; filter:blur(2.5px);"></div>
+          <div style="position:absolute; left:30px; bottom:9px; width:52px; height:38px; background:rgba(255,255,255,0.92); border-radius:50%; filter:blur(2.5px);"></div>
+        </div>
+      </div>
+      <div style="position:absolute; left:60%; top:14%; opacity:{{ cloudOpacity }}; pointer-events:none;">
+        <div data-deco style="position:relative; width:90px; height:24px; animation:sw-drift 46s ease-in-out infinite alternate 2s;">
+          <div style="position:absolute; left:0; bottom:0; width:90px; height:19px; background:rgba(255,255,255,0.88); border-radius:18px; filter:blur(2.5px);"></div>
+          <div style="position:absolute; left:24px; bottom:7px; width:40px; height:30px; background:rgba(255,255,255,0.88); border-radius:50%; filter:blur(2.5px);"></div>
+        </div>
+      </div>
+
+      <!-- hills -->
+      <div style="position:absolute; left:-6%; right:-6%; bottom:92px; height:158px; background:{{ hillFar }}; border-radius:50% 50% 0 0 / 100% 100% 0 0;"></div>
+      <div style="position:absolute; left:-9%; right:-9%; bottom:100px; height:120px; background:{{ hillNear }}; border-radius:50% 50% 0 0 / 100% 100% 0 0;"></div>
+
+      <!-- soil -->
+      <div style="position:absolute; left:0; right:0; bottom:0; height:126px; background:{{ soilStyle }};"></div>
+      <div style="position:absolute; left:0; right:0; bottom:118px; height:14px; background:radial-gradient(72% 100% at 34% 0%, rgba(186,156,114,0.55), transparent 70%);"></div>
+
+      <!-- plant cluster -->
+      <div style="position:absolute; left:34%; bottom:92px; transform:translateX(-50%); width:300px; height:330px;">
+        <!-- moisture ring -->
+        <div style="position:absolute; left:50%; bottom:2px; transform:translateX(-50%); width:246px; height:246px; border-radius:50%; background:{{ ringStyle }}; -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px)); mask:radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px)); filter:drop-shadow(0 3px 8px rgba(0,0,0,0.16));"></div>
+
+        <!-- companion sprout (occasional bloom) -->
+        <div style="position:absolute; left:50%; bottom:6px; transform:translateX(-50%) translateX(88px) scale({{ compScale }}); transform-origin:50% 100%; opacity:{{ compOpacity }}; width:150px; height:200px;">
+          <svg width="150" height="190" viewBox="0 0 200 250">
+            <path d="M100 246 C99 200 101 168 100 126" fill="none" stroke="#2F7D3F" stroke-width="7" stroke-linecap="round"></path>
+            <g style="transform:{{ compFoliageTransform }}; transform-box:fill-box; transform-origin:50% 100%;">
+              <g style="transform:{{ compBreathe }}; transform-box:fill-box; transform-origin:50% 100%;">
+                <path d="M100 156 C66 146 44 114 50 76 C90 90 104 126 100 156 Z" fill="#8BD24F" stroke="#2F7D3F" stroke-width="3" stroke-linejoin="round"></path>
+                <path d="M100 156 C134 146 156 114 150 76 C110 90 96 126 100 156 Z" fill="#34A853" stroke="#2F7D3F" stroke-width="3" stroke-linejoin="round"></path>
+              </g>
+            </g>
+          </svg>
+          <div style="position:absolute; top:44px; left:50%; transform:translateX(-50%) scale({{ compFlowerScale }}); transform-origin:50% 100%; opacity:{{ compFlowerOpacity }};">
+            <svg width="30" height="30" viewBox="0 0 34 34">
+              <circle cx="17" cy="7" r="5.4" fill="#FBF6E2"></circle>
+              <circle cx="23.7" cy="11.8" r="5.4" fill="#FBF6E2"></circle>
+              <circle cx="21.1" cy="19.7" r="5.4" fill="#FBF6E2"></circle>
+              <circle cx="12.9" cy="19.7" r="5.4" fill="#FBF6E2"></circle>
+              <circle cx="10.3" cy="11.8" r="5.4" fill="#FBF6E2"></circle>
+              <circle cx="17" cy="14" r="4.6" fill="#F5C97A"></circle>
+            </svg>
+          </div>
+        </div>
+
+        <!-- main sprout -->
+        <div style="position:absolute; left:50%; bottom:6px; transform:translateX(-50%); width:200px; height:250px;">
+          <svg width="200" height="250" viewBox="0 0 200 250">
+            <path d="M100 246 C99 200 101 168 100 126" fill="none" stroke="{{ stemColor }}" stroke-width="7.5" stroke-linecap="round"></path>
+            <g style="transform:{{ foliageTransform }}; transform-box:fill-box; transform-origin:50% 100%;">
+              <g style="transform:{{ breatheTransform }}; transform-box:fill-box; transform-origin:50% 100%;">
+                <path d="M100 156 C66 146 44 114 50 76 C90 90 104 126 100 156 Z" fill="{{ sproutColor }}" stroke="{{ stemColor }}" stroke-width="3" stroke-linejoin="round"></path>
+                <path d="M100 156 C134 146 156 114 150 76 C110 90 96 126 100 156 Z" fill="{{ leafColor }}" stroke="{{ stemColor }}" stroke-width="3" stroke-linejoin="round"></path>
+                <path d="M100 128 C92 110 96 90 110 78 C116 98 112 118 100 128 Z" fill="{{ tipColor }}" stroke="{{ stemColor }}" stroke-width="2.5" stroke-linejoin="round" opacity="{{ tipOpacity }}"></path>
+              </g>
+            </g>
+          </svg>
+          <div style="position:absolute; top:52px; left:50%; transform:translateX(-50%) scale({{ flowerScale }}); transform-origin:50% 100%; opacity:{{ flowerOpacity }};">
+            <svg width="36" height="36" viewBox="0 0 34 34">
+              <circle cx="17" cy="7" r="5.4" fill="#FBF6E2"></circle>
+              <circle cx="23.7" cy="11.8" r="5.4" fill="#FBF6E2"></circle>
+              <circle cx="21.1" cy="19.7" r="5.4" fill="#FBF6E2"></circle>
+              <circle cx="12.9" cy="19.7" r="5.4" fill="#FBF6E2"></circle>
+              <circle cx="10.3" cy="11.8" r="5.4" fill="#FBF6E2"></circle>
+              <circle cx="17" cy="14" r="4.6" fill="#F5C97A"></circle>
+            </svg>
+          </div>
+        </div>
+
+        <!-- sleep z's -->
+        <div style="position:absolute; right:26px; top:42px; opacity:{{ sleepOpacity }}; pointer-events:none;">
+          <span data-deco style="position:absolute; font-family:'Baloo 2',sans-serif; font-weight:700; font-size:18px; color:#cfe0c2; animation:sw-z 2.8s ease-in-out infinite;">z</span>
+          <span data-deco style="position:absolute; font-family:'Baloo 2',sans-serif; font-weight:700; font-size:13px; color:#cfe0c2; animation:sw-z 2.8s ease-in-out infinite 1.2s;">z</span>
+        </div>
+      </div>
+
+      <!-- rain cloud + rain -->
+      <div style="position:absolute; left:9%; top:8%; width:48%; opacity:{{ rainCloudOpacity }}; pointer-events:none;">
+        <div style="position:relative; height:50px;">
+          <div style="position:absolute; left:8%; bottom:0; width:84%; height:26px; background:rgba(152,164,170,0.82); border-radius:26px; filter:blur(4px);"></div>
+          <div style="position:absolute; left:18%; bottom:11px; width:42%; height:38px; background:rgba(162,174,180,0.82); border-radius:50%; filter:blur(4px);"></div>
+          <div style="position:absolute; left:48%; bottom:8px; width:38%; height:34px; background:rgba(144,156,162,0.82); border-radius:50%; filter:blur(4px);"></div>
+        </div>
+      </div>
+      <div style="position:absolute; left:8%; top:8%; width:52%; height:74%; opacity:{{ rainOpacity }}; overflow:hidden; pointer-events:none; -webkit-mask:linear-gradient(180deg, transparent 0%, #000 14%, #000 86%, transparent 100%); mask:linear-gradient(180deg, transparent 0%, #000 14%, #000 86%, transparent 100%);">
+        <sc-for list="{{ rainDrops }}" as="drop" hint-placeholder-count="22">
+          <span data-deco style="position:absolute; top:{{ drop.topPct }}%; left:{{ drop.left }}%; width:2.4px; height:{{ drop.h }}px; border-radius:2px; background:linear-gradient(180deg, rgba(228,244,249,0.3), rgba(220,240,247,0.95)); opacity:0.92; animation:{{ drop.anim }};"></span>
+        </sc-for>
+      </div>
+
+      <!-- night overlay -->
+      <div style="position:absolute; inset:0; background:#0a1620; opacity:{{ nightOverlay }}; pointer-events:none;"></div>
+      <!-- vignette -->
+      <div style="position:absolute; inset:0; pointer-events:none; border-radius:26px; box-shadow:inset 0 0 130px rgba(8,14,10,0.30);"></div>
+
+      <!-- INSTRUMENT CARD (co-star) -->
+      <div style="position:absolute; top:54px; right:24px; width:338px; display:{{ hudDisplay }}; flex-direction:column; gap:8px; padding:14px 16px; border-radius:18px; background:{{ cardBg }}; border:1px solid {{ cardBorder }}; backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px); box-shadow:0 12px 30px rgba(10,16,12,0.20);">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <span style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; letter-spacing:0.09em; color:{{ cardInk }};">MONSTERA</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:11px; color:{{ cardMuted }};"><span style="width:7px; height:7px; border-radius:50%; background:{{ bandColor }}; box-shadow:0 0 7px {{ bandColor }};"></span>PIN 2</span>
+        </div>
+        <div style="display:flex; align-items:flex-end; justify-content:space-between;">
+          <div>
+            <div style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:27px; line-height:1; color:{{ bandColor }};">{{ bandName }}</div>
+            <div style="font-family:'Hanken Grotesk',sans-serif; font-size:12.5px; color:{{ cardMuted }}; margin-top:4px;">mood · {{ moodWord }}{{ asleepSuffix }}</div>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:600; color:{{ cardInk }}; letter-spacing:0.01em;">{{ clock }}</div>
+        </div>
+        <div style="display:flex; gap:9px;">
+          <div style="flex:1; display:flex; flex-direction:column; gap:1px; padding:7px 9px; border-radius:9px; background:{{ cardActiveBg }};">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:0.05em; color:{{ cardMuted }};">RAW · HIGHER=DRIER</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600; color:{{ cardInk }};">{{ raw }}</span>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; gap:1px; padding:7px 9px; border-radius:9px; background:{{ cardActiveBg }};">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:0.05em; color:{{ cardMuted }};">INDEX · RELATIVE</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600; color:{{ cardInk }};">{{ idxLabel }}</span>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:0.05em; color:{{ cardMuted }}; margin-bottom:1px;">MOISTURE BAND</span>
+          <sc-for list="{{ ladderRows }}" as="row" hint-placeholder-count="7">
+            <div style="display:flex; align-items:center; gap:9px; padding:2.5px 6px; border-radius:7px; background:{{ row.rowBg }};">
+              <span style="width:14px; height:14px; border-radius:4px; background:{{ row.color }}; opacity:{{ row.swatchOp }};"></span>
+              <span style="flex:1; font-family:'Hanken Grotesk',sans-serif; font-size:12.5px; font-weight:{{ row.weight }}; color:{{ row.nameColor }};">{{ row.name }}</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:{{ cardMuted }}; opacity:{{ row.swatchOp }};">{{ row.range }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:3px;">
+          <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:0.05em; color:{{ cardMuted }};">ONE DAY · SOIL SIGNAL</span>
+          <svg width="100%" height="34" viewBox="0 0 304 42" preserveAspectRatio="none" style="display:block;">
+            <path d="{{ sparkPath }}" fill="none" stroke="{{ cardMuted }}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"></path>
+            <circle cx="{{ sparkX }}" cy="{{ sparkY }}" r="3.6" fill="{{ bandColor }}"></circle>
+          </svg>
+        </div>
+      </div>
+
+      <!-- caption (Sprout's voice) -->
+      <div style="position:absolute; left:0; width:62%; bottom:30px; display:{{ capDisplay }}; justify-content:center; pointer-events:none;">
+        <div style="opacity:{{ captionOpacity }}; max-width:430px; text-align:center; font-family:'Baloo 2',sans-serif; font-weight:600; font-size:23px; line-height:1.22; color:{{ capColor }}; text-shadow:0 1px 16px rgba(8,14,10,0.34); text-wrap:balance;">{{ caption }}</div>
+      </div>
+
+    </div>
+
+    <!-- footnote -->
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-top:15px;">
+      <div style="font-family:'Hanken Grotesk',sans-serif; font-size:13px; color:#7a8a6e; line-height:1.5; max-width:800px;">My mood reads from the calibrated soil band — one of seven — never a made-up percentage. The index is a clearly-labelled <em>relative</em> figure between the wet and dry anchors; <strong style="color:#5f7150;">raw + band = truth.</strong></div>
+      <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9aa890; white-space:nowrap; padding-top:1px;">honest by default</span>
+    </div>
+    <div style="text-align:center; margin-top:16px; font-family:'Baloo 2',sans-serif; font-weight:600; font-size:14px; color:#9aa890; letter-spacing:0.05em;">tend well.</div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:770},&quot;loopSeconds&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:26,&quot;min&quot;:8,&quot;max&quot;:60,&quot;tsType&quot;:&quot;number&quot;},&quot;showReadout&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;showCaption&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { t: this.startT() };
+
+  startT() {
+    try {
+      const fz = localStorage.getItem('sprout_welcome_freeze');
+      if (fz !== null && fz !== '') { const v = parseFloat(fz); if (!isNaN(v)) { this._frozen = true; return this.clamp(v, 0, 0.999); } }
+      const sv = parseFloat(localStorage.getItem('sprout_welcome_t'));
+      if (!isNaN(sv)) return this.clamp(sv, 0, 0.999);
+    } catch (e) {}
+    return 0.16;
+  }
+
+  componentDidMount() {
+    this.reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    this.SPARK_W = 304;
+    this._sparkPath = this.buildSpark();
+    this._rain = Array.from({ length: 22 }, (_, i) => {
+      const dur = (0.7 + (i % 5) * 0.1).toFixed(2);
+      const delay = ((i * 0.11) % 1.0).toFixed(2);
+      return { left: (3 + i * 4.3 + (i % 4) * 1.2).toFixed(1), h: (13 + (i % 3) * 4), off: ((i * 0.137) % 1) };
+    });
+    this._phase = 0; this._loops = 0; this._bloom = false; this._save = 0;
+    try { if (localStorage.getItem('sprout_welcome_force_bloom') === '1') this._bloom = true; } catch (e) {}
+    if (this._frozen) return;
+    if (this.reduced) { this.setState({ t: 0.5 }); return; }
+    this._last = performance.now();
+    const loop = (now) => {
+      let dt = (now - this._last) / 1000; this._last = now; if (dt > 0.05) dt = 0.05;
+      const P = this.period();
+      let t = this.state.t + dt / P;
+      if (t >= 1) { t -= 1; this._loops++; this._bloom = (this._loops === 1) || (Math.random() < 0.3); }
+      this._phase += dt * this.omegaAt(t);
+      this.setState({ t });
+      if ((this._save = (this._save + 1) % 60) === 0) { try { localStorage.setItem('sprout_welcome_t', t.toFixed(4)); } catch (e) {} }
+      this._raf = requestAnimationFrame(loop);
+    };
+    this._raf = requestAnimationFrame(loop);
+  }
+  componentWillUnmount() {
+    if (this._raf) cancelAnimationFrame(this._raf);
+    try { localStorage.setItem('sprout_welcome_t', this.state.t.toFixed(4)); } catch (e) {}
+  }
+
+  period() { const p = Number(this.props && this.props.loopSeconds); return (p >= 8 && p <= 60) ? p : 26; }
+
+  clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  lerp(a, b, k) { return a + (b - a) * k; }
+  hx(h) { h = h.replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
+  mix(h1, h2, k) { const a = this.hx(h1), b = this.hx(h2); return 'rgb(' + Math.round(this.lerp(a[0], b[0], k)) + ',' + Math.round(this.lerp(a[1], b[1], k)) + ',' + Math.round(this.lerp(a[2], b[2], k)) + ')'; }
+  pw(t, p) { for (let i = 0; i < p.length - 1; i++) { if (t >= p[i][0] && t <= p[i + 1][0]) { const k = (t - p[i][0]) / ((p[i + 1][0] - p[i][0]) || 1); return this.lerp(p[i][1], p[i + 1][1], k); } } return p[p.length - 1][1]; }
+  ramp(t, s, key) { for (let i = 0; i < s.length - 1; i++) { if (t >= s[i].t && t <= s[i + 1].t) { const k = (t - s[i].t) / ((s[i + 1].t - s[i].t) || 1); return this.mix(s[i][key], s[i + 1][key], k); } } return s[s.length - 1][key]; }
+  mapTo(v, a, b, c, d) { const k = this.clamp((v - a) / ((b - a) || 1), 0, 1); return c + (d - c) * k; }
+  bump(t, s, e, fi, fo) { if (t < s || t > e) return 0; return this.clamp(Math.min((t - s) / (fi || 0.001), (e - t) / (fo || 0.001)), 0, 1); }
+  smooth(t, a, b) { const s = this.clamp((t - a) / ((b - a) || 1), 0, 1); return s * s * (3 - 2 * s); }
+
+  indexAt(t) { return this.pw(t, [[0, 58], [0.10, 54], [0.27, 47], [0.31, 46], [0.345, 49], [0.40, 86], [0.43, 89], [0.55, 76], [0.70, 65], [0.85, 59], [1.0, 58]]); }
+  bandFor(idx) {
+    const B = [[92, 'Saturated', 'soaked', '#0E7A86'], [80, 'Wet', 'refreshed', '#17B6C4'], [66, 'Moist', 'thriving', '#34A853'], [54, 'Ideal', 'content', '#8BD24F'], [42, 'Drying', 'thirsty', '#F5A623'], [30, 'Dry', 'parched', '#E8703A'], [0, 'Parched', 'faint', '#E0483D']];
+    for (const b of B) { if (idx >= b[0]) return { name: b[1], mood: b[2], color: b[3] }; }
+    return { name: 'Parched', mood: 'faint', color: '#E0483D' };
+  }
+  markAt(idx) {
+    const S = [
+      { x: 45, stem: '#B07D12', sprout: '#F5C97A', leaf: '#F5A623', tip: '#F7C46A' },
+      { x: 58, stem: '#456B1F', sprout: '#A9DA6E', leaf: '#8BD24F', tip: '#C7E89A' },
+      { x: 72, stem: '#2F7D3F', sprout: '#8BD24F', leaf: '#34A853', tip: '#A9DA6E' },
+      { x: 86, stem: '#0E7A86', sprout: '#8BD24F', leaf: '#17B6C4', tip: '#7FE3D8' }
+    ];
+    const c = this.clamp(idx, S[0].x, S[S.length - 1].x);
+    for (let i = 0; i < S.length - 1; i++) { if (c >= S[i].x && c <= S[i + 1].x) { const k = (c - S[i].x) / ((S[i + 1].x - S[i].x) || 1); return { stem: this.mix(S[i].stem, S[i + 1].stem, k), sprout: this.mix(S[i].sprout, S[i + 1].sprout, k), leaf: this.mix(S[i].leaf, S[i + 1].leaf, k), tip: this.mix(S[i].tip, S[i + 1].tip, k) }; } }
+    return S[S.length - 1];
+  }
+  omegaAt(t) { const m = this.bandFor(this.indexAt(t)).mood; if (m === 'thriving' || m === 'refreshed' || m === 'soaked') return 1.40; if (m === 'content') return 0.97; return 1.43; }
+  buildSpark() { let d = ''; const N = 80, W = this.SPARK_W; for (let i = 0; i <= N; i++) { const tt = i / N; const idx = this.indexAt(tt); const x = (tt * W).toFixed(1); const y = this.mapTo(idx, 40, 92, 37, 6).toFixed(1); d += (i ? 'L' : 'M') + x + ' ' + y + ' '; } return d.trim(); }
+
+  captionAt(t, bloom) {
+    const segs = [
+      { s: 0.90, e: 1.01, fi: 0.03, fo: 0, text: 'Asleep now — I’ll sip slowly till morning.' },
+      { s: -0.01, e: 0.06, fi: 0, fo: 0.03, text: 'Asleep now — I’ll sip slowly till morning.' },
+      { s: 0.105, e: 0.195, fi: 0.03, fo: 0.03, text: 'Good morning. I held a little water overnight.' },
+      { s: 0.225, e: 0.295, fi: 0.03, fo: 0.025, text: 'Getting a little thirsty — no rush, maybe soon.' },
+      { s: 0.41, e: 0.51, fi: 0.03, fo: 0.035, text: 'Ahh — a good, honest rain. That’s better.' },
+      { s: 0.55, e: 0.63, fi: 0.03, fo: 0.03, text: 'Thriving now. Plenty of sun.' },
+      { s: 0.66, e: 0.78, fi: 0.03, fo: 0.04, text: bloom ? 'Good rain today — we both grew a little.' : 'Comfortable and green. Just sipping slowly.' },
+      { s: 0.815, e: 0.885, fi: 0.03, fo: 0.03, text: 'Winding down with the light.' }
+    ];
+    for (const g of segs) {
+      if (t >= g.s && t <= g.e) {
+        let op = 1;
+        if (g.fi > 0) op = Math.min(op, this.clamp((t - g.s) / g.fi, 0, 1));
+        if (g.fo > 0) op = Math.min(op, this.clamp((g.e - t) / g.fo, 0, 1));
+        return { text: g.text, op };
+      }
+    }
+    return { text: '', op: 0 };
+  }
+
+  renderVals() {
+    const t = this.state.t;
+    const sky = [
+      { t: 0, top: '#0b1733', bot: '#122418' }, { t: 0.06, top: '#241f4a', bot: '#22302a' },
+      { t: 0.12, top: '#6b5a8f', bot: '#e7a96a' }, { t: 0.18, top: '#94b7df', bot: '#f5cf9a' },
+      { t: 0.30, top: '#bfe0f2', bot: '#f1f6e6' }, { t: 0.50, top: '#cdeaf6', bot: '#f7fbef' },
+      { t: 0.66, top: '#c2e4ef', bot: '#eef5dd' }, { t: 0.80, top: '#8f7bb0', bot: '#f0b06a' },
+      { t: 0.88, top: '#4a3f73', bot: '#b6603a' }, { t: 0.94, top: '#1c2148', bot: '#5a2f2a' },
+      { t: 1.0, top: '#0b1733', bot: '#122418' }
+    ];
+    let skyTop = this.ramp(t, sky, 'top'), skyBot = this.ramp(t, sky, 'bot');
+    const L = this.clamp(Math.sin(Math.PI * this.clamp((t - 0.06) / 0.86, 0, 1)), 0, 1);
+    const night = 1 - L;
+    const nightK = this.clamp((night - 0.22) / 0.6, 0, 1);
+
+    let sunO = 0, sunX = 50, sunY = 60;
+    { const s = 0.10, e = 0.90; if (t >= s && t <= e) { const p = (t - s) / (e - s); sunX = 8 + p * 84; sunY = 90 - Math.sin(p * Math.PI) * 76; sunO = this.clamp(Math.sin(p * Math.PI) * 1.5, 0, 1); } }
+    let moonO = 0, moonX = 50, moonY = 60, np = -1;
+    if (t > 0.90) np = (t - 0.90) / 0.20; else if (t < 0.10) np = (t + 0.10) / 0.20;
+    if (np >= 0) { moonX = 8 + np * 84; moonY = 88 - Math.sin(np * Math.PI) * 64; moonO = this.clamp(Math.sin(np * Math.PI) * 1.4, 0, 1); }
+
+    const rainO = this.bump(t, 0.30, 0.42, 0.035, 0.05);
+    const rainCloud = this.bump(t, 0.26, 0.46, 0.05, 0.07);
+    sunO *= (1 - 0.82 * rainCloud);
+    if (rainCloud > 0) { skyTop = this.mix(skyTop, '#a4b8c2', rainCloud * 0.26); skyBot = this.mix(skyBot, '#b6c2ba', rainCloud * 0.2); }
+
+    const idx = this.indexAt(t);
+    const band = this.bandFor(idx);
+    const mk = this.markAt(idx);
+    const deg = Math.round(this.clamp(idx, 0, 100) * 3.6);
+    const raw = Math.round(3400 - idx * 19);
+
+    const thirst = this.clamp((56 - idx) / 16, 0, 1);
+    const sleep = this.clamp((night - 0.32) / 0.5, 0, 1);
+    const perk = this.bump(t, 0.40, 0.52, 0.04, 0.07);
+
+    const o = Math.sin(this._phase || 0);
+    const m = band.mood;
+    let bAmt = 0.012, rAmt = 2.2;
+    if (m === 'thriving' || m === 'refreshed' || m === 'soaked') { bAmt = 0.05; rAmt = 0.7; }
+    else if (m === 'content') { bAmt = 0.012; rAmt = 2.4; }
+    else { bAmt = 0.0; rAmt = 1.0; }
+    const active = 1 - sleep;
+    const breatheScale = (1 + bAmt * o * active).toFixed(4);
+    const foliageRot = (rAmt * o * active + thirst * 6 * (1 - perk * 0.7) + sleep * 5 - perk * 4).toFixed(2);
+    const foliageY = (thirst * 8 * (1 - perk * 0.7) + sleep * 6 - perk * 5).toFixed(2);
+
+    const bloom = !!this._bloom;
+    const growC = bloom ? this.smooth(t, 0.46, 0.58) * (1 - this.smooth(t, 0.93, 0.99)) : 0;
+    const flowerOpen = bloom ? this.smooth(t, 0.55, 0.67) * (1 - this.smooth(t, 0.80, 0.90)) : 0;
+    const co = Math.sin((this._phase || 0) + 1.3);
+    const compRot = (1.6 * co * active + sleep * 4).toFixed(2);
+    const compFoliageTransform = 'translateY(' + (sleep * 5).toFixed(1) + 'px) rotate(' + compRot + 'deg)';
+    const compBreathe = 'scale(1, ' + (1 + 0.045 * co * active).toFixed(4) + ')';
+
+    const mins = Math.floor(t * 1440);
+    const hh = String(Math.floor(mins / 60) % 24).padStart(2, '0');
+    const mm = String(Math.floor(mins % 60)).padStart(2, '0');
+
+    const soilK = this.clamp((idx - 48) / 40, 0, 1);
+    const soilStyle = 'linear-gradient(180deg, ' + this.mix('#73512f', '#48311e', soilK) + ', ' + this.mix('#553b22', '#382616', soilK) + ')';
+
+    const cap = this.captionAt(t, bloom);
+
+    const cardInk = this.mix('#1E2A18', '#E9F1EB', nightK);
+    const cardMuted = this.mix('#627054', '#9fb0a3', nightK);
+    const cardBg = nightK > 0.45 ? 'rgba(16,24,20,0.50)' : 'rgba(255,255,255,0.60)';
+    const cardBorder = nightK > 0.45 ? 'rgba(255,255,255,0.10)' : 'rgba(30,42,24,0.10)';
+    const cardActiveBg = nightK > 0.45 ? 'rgba(255,255,255,0.09)' : 'rgba(30,42,24,0.05)';
+
+    const bandsArr = [['Saturated', '#0E7A86', '92+'], ['Wet', '#17B6C4', '80'], ['Moist', '#34A853', '66'], ['Ideal', '#8BD24F', '54'], ['Drying', '#F5A623', '42'], ['Dry', '#E8703A', '30'], ['Parched', '#E0483D', '–']];
+    const ladderRows = bandsArr.map((b) => {
+      const a = (b[0] === band.name);
+      return { name: b[0], color: b[1], range: b[2], swatchOp: a ? '1' : '0.4', weight: a ? '700' : '500', nameColor: a ? cardInk : cardMuted, rowBg: a ? cardActiveBg : 'transparent' };
+    });
+
+    const hudDisplay = (this.props && this.props.showReadout === false) ? 'none' : 'flex';
+    const capDisplay = (this.props && this.props.showCaption === false) ? 'none' : 'flex';
+
+    return {
+      skyStyle: 'linear-gradient(180deg, ' + skyTop + ' 0%, ' + skyBot + ' 100%)',
+      starOpacity: this.clamp((night - 0.4) * 2.2, 0, 1).toFixed(3),
+      sunX: sunX.toFixed(1), sunY: sunY.toFixed(1), sunOpacity: sunO.toFixed(3),
+      moonX: moonX.toFixed(1), moonY: moonY.toFixed(1), moonOpacity: moonO.toFixed(3),
+      cloudOpacity: (L * 0.45 * (1 - rainCloud)).toFixed(3),
+      rainOpacity: rainO.toFixed(3), rainCloudOpacity: rainCloud.toFixed(3),
+      hillFar: this.mix('#6f8c5f', '#101b22', nightK), hillNear: this.mix('#52743f', '#0b1410', nightK),
+      soilStyle: soilStyle,
+      nightOverlay: this.clamp(night * 0.62, 0, 0.62).toFixed(3),
+      ringStyle: 'conic-gradient(from -90deg, ' + band.color + ' 0deg ' + deg + 'deg, rgba(255,255,255,0.16) ' + deg + 'deg 360deg)',
+      stemColor: mk.stem, sproutColor: mk.sprout, leafColor: mk.leaf, tipColor: mk.tip,
+      tipOpacity: this.clamp((idx - 60) / 12, 0, 1).toFixed(3),
+      foliageTransform: 'translateY(' + foliageY + 'px) rotate(' + foliageRot + 'deg)',
+      breatheTransform: 'scale(1, ' + breatheScale + ')',
+      compScale: (0.7 * growC).toFixed(3), compOpacity: growC.toFixed(3),
+      compFoliageTransform: compFoliageTransform, compBreathe: compBreathe,
+      flowerScale: flowerOpen.toFixed(3), flowerOpacity: flowerOpen.toFixed(3),
+      compFlowerScale: (flowerOpen * 0.82).toFixed(3), compFlowerOpacity: flowerOpen.toFixed(3),
+      sleepOpacity: sleep.toFixed(3),
+      clock: hh + ':' + mm,
+      bandColor: band.color, bandName: band.name, moodWord: band.mood,
+      raw: raw, idxLabel: Math.round(idx),
+      asleepSuffix: sleep > 0.5 ? ' · asleep' : '',
+      sparkPath: this._sparkPath || '', sparkX: (t * (this.SPARK_W || 304)).toFixed(1), sparkY: this.mapTo(idx, 40, 92, 37, 6).toFixed(1),
+      ladderRows: ladderRows,
+      cardBg: cardBg, cardBorder: cardBorder, cardInk: cardInk, cardMuted: cardMuted, cardActiveBg: cardActiveBg,
+      hudDisplay: hudDisplay, capDisplay: capDisplay,
+      captionOpacity: cap.op.toFixed(3), caption: cap.text,
+      capColor: this.mix('#243018', '#eef5e6', nightK),
+      rainDrops: (this._rain || []).map((d) => ({ left: d.left, h: d.h, topPct: ((((t * 26) + d.off) % 1) * 122 - 12).toFixed(1) }))
+    };
+  }
+}
+</script>
+<template id="__bundler_thumbnail">
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100" height="100" rx="20" fill="#34A853"></rect>
+  <g transform="translate(50,52) scale(0.82)" fill="none" stroke="#0e3a1c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 24 V-2"></path>
+    <path d="M0 0 C-14 -6 -20 -18 -16 -30 C-2 -24 2 -10 0 0 Z" fill="#cdeebb"></path>
+    <path d="M0 0 C14 -6 20 -18 16 -30 C2 -24 -2 -10 0 0 Z" fill="#8BD24F"></path>
+  </g>
+</svg>
+</template>
+</body>
+</html>
