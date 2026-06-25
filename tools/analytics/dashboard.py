@@ -43,7 +43,7 @@ from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
 )
 
 _REPO = _HERE.parents[1]
-TOKENS_CSS = _REPO / "docs" / "design" / "sprout-tokens.css"
+TOKENS_CSS = _REPO / "docs" / "design" / "tokens" / "sprout-tokens.css"
 TEMPLATE = _HERE / "dashboard_template.html"
 DEFAULT_OUT = _REPO / "reports" / "plants_dashboard.html"
 # Vendored Chart.js -> inlined for a self-contained, offline dashboard. Falls
