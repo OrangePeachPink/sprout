@@ -85,7 +85,7 @@ typedef struct {
     uint16_t boundary[MOISTURE_BOUNDARY_COUNT];
 } moisture_cfg_t;
 
-/* 7-band defaults. Provisional middle bands; tighten from the dry-down log. */
+/* 7-band defaults; dry edge + wet floor reconciled to anchors (issue #3). */
 #define MOISTURE_CFG_DEFAULT {            \
     .sample_count    = 64,                \
     .trim_each_side  = 8,                 \
@@ -95,8 +95,8 @@ typedef struct {
     .confirm_ms_wet  = 3500,              \
     .loop_period_ms  = 1000,              \
     .spread_warn_raw = 250,               \
-    .boundary = { 2760, 2140, 1830,       \
-                  1520, 1260, 1030 }      \
+    .boundary = { 3050, 2140, 1830,       \
+                  1520, 1150, 1050 }      \
 }
 
 typedef struct {
