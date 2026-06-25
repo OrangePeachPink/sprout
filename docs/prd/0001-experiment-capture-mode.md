@@ -1,9 +1,9 @@
 # PRD: Experiment Capture Mode
 
-**Status:** Draft <!-- Draft → Accepted → Implemented -->
+**Status:** Accepted (maintainer-approved 2026-06-25) <!-- Draft → Accepted → Implemented -->
 **Date:** 2026-06-25
 **Owner:** Data lane (with Firmware: serial ownership + `set_cadence`)
-**Epic / issues:** *parent epic Issue to be cut from this PRD once Accepted*
+**Epic / issues:** epic + tracer-bullet sub-issues cut from this PRD; see the `epic` issue on the board.
 
 ---
 
