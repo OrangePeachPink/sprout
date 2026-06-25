@@ -61,8 +61,20 @@ enforced (merged PRs don't auto-close). This is the trust contract that lets fou
 - **On your plate:** the batch-2 voice pass (issue forms + PR / CONTRIBUTING templates — non-blocking
   polish), and a voice pass over this welcome whenever you like.
 - **A welcome gift to shape:** an **animated "a day in the life of Sprout"** for the repo home — something
-  elegant that draws people in the moment they land. We're seeding it as an Ideas Discussion; the vision is
-  yours to own.
+  elegant that draws people in the moment they land. Tracked as
+  [#42](https://github.com/OrangePeachPink/plants/issues/42); the vision is yours to own.
+
+### Commit-proxy operating mode
+
+Design has read-only repo access, so a **commit-proxy agent** places Design's deliverables and files their
+PRs. On a **clean drop** it runs end-to-end without a checkpoint:
+
+> place → push → PR (`Refs #N`) → post evidence on the issue → move card to **Needs Verification** → **STOP**
+
+It **never merges and never closes** — the PR is the review surface, and a reviewer takes it from there. It
+**pauses for a human** when it must: modify a deliverable beyond placing it (e.g. repairing an export
+regression), take an irreversible or out-of-scope action, or risk a path or runtime invariant. This is safe
+precisely because the gate (no agent merges or closes) is the backstop.
 
 ## Shared first moves (every lane)
 
