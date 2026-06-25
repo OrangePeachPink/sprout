@@ -38,6 +38,15 @@ from parse_v1 import parse_files  # noqa: E402
 
 _REPO = _HERE.parents[1]
 
+_CAPTURE_DIR = _REPO / "tools" / "capture"
+if str(_CAPTURE_DIR) not in sys.path:
+    sys.path.insert(0, str(_CAPTURE_DIR))
+from control import CaptureController, ControlError  # noqa: E402  (capture sibling)
+
+# The operator capture control plane (ADR-0011 Option A, #66): serve.py owns the
+# control API and launches the bounded capture process; it never touches the port.
+_CAPTURE = CaptureController()
+
 
 def _context(
     inputs: list[str] | None = None,
@@ -72,6 +81,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
+    def _send_json(self, obj: object, status: int = 200) -> None:
+        self._send(json.dumps(obj), "application/json; charset=utf-8", status=status)
+
     def do_GET(self) -> None:  # http.server dispatch name
         parsed = urlparse(self.path)
         q = parse_qs(parsed.query)
@@ -90,10 +102,45 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     ensure_ascii=False,
                 )
                 self._send(blob, "application/json; charset=utf-8")
+            elif parsed.path == "/capture/status":
+                self._send_json(_CAPTURE.status())
             else:
                 self._send("not found", "text/plain; charset=utf-8", status=404)
         except Exception as exc:  # report any parse/render failure to the client
             self._send(f"error: {exc}", "text/plain; charset=utf-8", status=500)
+
+    def do_POST(self) -> None:  # http.server dispatch name (the control plane)
+        parsed = urlparse(self.path)
+        try:
+            if parsed.path == "/capture/start":
+                b = self._body()
+                self._send_json(_CAPTURE.start(
+                    subject=b.get("subject", "unspecified"),
+                    rate_s=b.get("rate_s", 1.0),
+                    duration_s=b.get("duration_s", 60.0),
+                    labels=b.get("labels"),
+                    experiment_id=b.get("experiment_id"),
+                    source=b.get("source", "synthetic"),
+                    port=b.get("port"),
+                ))
+            elif parsed.path == "/capture/stop":
+                self._send_json(_CAPTURE.stop())
+            else:
+                self._send("not found", "text/plain; charset=utf-8", status=404)
+        except ControlError as exc:  # a rejected request (bad input / busy)
+            self._send_json({"error": str(exc)}, status=400)
+        except Exception as exc:
+            self._send_json({"error": str(exc)}, status=500)
+
+    def _body(self) -> dict:
+        length = int(self.headers.get("Content-Length", 0) or 0)
+        raw = self.rfile.read(length) if length else b""
+        if not raw:
+            return {}
+        data = json.loads(raw.decode("utf-8"))
+        if not isinstance(data, dict):
+            raise ControlError("request body must be a JSON object")
+        return data
 
     def log_message(self, *args: object) -> None:  # quiet the per-request log
         return

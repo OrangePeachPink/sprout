@@ -259,6 +259,7 @@ def run_capture(
     rate_s: float,
     duration_s: float,
     labels: dict[str, str],
+    stop_file: Path | None = None,
 ) -> dict:
     """Run a bounded capture; returns the manifest dict (also written to disk)."""
     writer = CaptureWriter(out_dir, experiment_id, subject, rate_s)
@@ -267,11 +268,15 @@ def run_capture(
     deadline = time.monotonic() + duration_s
     last_sensor: str | None = None
     sample_id = 0
+    stopped_by = "duration"
     try:
         reader.acquire()
         reader.set_cadence(rate_s)
         for text in reader.lines():
             if time.monotonic() >= deadline:  # fail-safe auto-stop (R3)
+                break
+            if stop_file is not None and stop_file.exists():  # operator stop (#66)
+                stopped_by = "operator"
                 break
             dev = parse_device_line(text)
             if dev is None:
@@ -300,6 +305,7 @@ def run_capture(
         "mode": EXPERIMENT_MODE,
         "sample_rate_s": rate_s,
         "duration_s": duration_s,
+        "stopped_by": stopped_by,  # "duration" (auto-stop) | "operator" (#66 stop)
         "labels": labels,
         "started_utc": iso_utc(started),
         "ended_utc": iso_utc(ended),
@@ -348,6 +354,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--out-dir", help="experiment root (default <repo>/experiments — never logs/)"
     )
+    ap.add_argument(
+        "--stop-file", help="cooperative stop: ends cleanly when this file appears"
+    )
     args = ap.parse_args(argv)
 
     out_dir = Path(args.out_dir) if args.out_dir else _REPO / "experiments"
@@ -365,6 +374,7 @@ def main(argv: list[str] | None = None) -> int:
         experiment_id=experiment_id, subject=args.subject,
         rate_s=args.rate_s, duration_s=args.duration_s,
         labels=_parse_labels(args.label),
+        stop_file=Path(args.stop_file) if args.stop_file else None,
     )
     t = manifest["transport"]
     print(
