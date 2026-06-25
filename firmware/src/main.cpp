@@ -13,7 +13,8 @@
  *   record_type,session_id,device_id,fw,millis_ms,sensor_model,sensor_id,
  *   sensor_position,channel,raw_value,value,unit,quality_flag,payload
  * A '#'-prefixed provenance header is emitted at boot and reprinted periodically.
- * Still NO pump/relay control - nothing actuates.
+ * Still NO pump/relay control - nothing actuates. The one inbound command is
+ * `!cad,<ms>*HH` (set the sweep cadence at runtime, ADR-0011 / #63) - cadence only.
  */
 
 #include <Arduino.h>
@@ -21,6 +22,7 @@
 #include <esp_timer.h>
 #include "config.h"
 #include "moisture_classifier.h"
+#include "serial_cmd.h"
 
 #ifndef GIT_REV
 #define GIT_REV "nogit"  // overridden by scripts/git_rev.py at build (commit hash + dirty)
@@ -30,6 +32,11 @@
 static uint64_t g_mac = 0;
 static char g_device_id[24]  = "plants_esp32_unknown";
 static char g_session_id[12] = "000000";
+
+// Sweep cadence (ms). Runtime-settable via the !cad command (ADR-0011 / #63);
+// RAM-only, so a reboot returns to READ_INTERVAL_MS. The loop gate and the header
+// read this, not the compile-time constant.
+static unsigned long g_cadence_ms = READ_INTERVAL_MS;
 
 // Shared classifier tuning - same boundaries for all channels for now. The module
 // takes a cfg per call, so this becomes a per-channel array when per-probe
@@ -89,7 +96,7 @@ static void printHeader() {
            g_device_id, (unsigned long long)g_mac, ESP.getChipModel());
   Serial.println(buf);
   snprintf(buf, sizeof(buf), "# session_id=%s  cadence_ms=%lu",
-           g_session_id, (unsigned long)READ_INTERVAL_MS);
+           g_session_id, g_cadence_ms);
   Serial.println(buf);
   n = snprintf(buf, sizeof(buf), "# sensors:");
   for (int i = 0; i < NUM_SENSORS && n < (int)sizeof(buf); i++)
@@ -148,11 +155,57 @@ void setup() {
   printHeader();
 }
 
+// Non-blocking host->device command RX. The device is otherwise write-only; this
+// is its one inbound path. v1 accepts a single command - set the sweep cadence,
+// `!cad,<ms>*HH` (ADR-0011 / #63) - applied at the next sweep boundary, never
+// mid-row. Touches cadence only; no actuation, boundaries, or schema.
+static void pollSerialCommand() {
+  static char cmdbuf[48];
+  static uint8_t cmdlen = 0;
+  while (Serial.available() > 0) {
+    int ci = Serial.read();
+    if (ci < 0) break;
+    char c = (char)ci;
+    if (c == '\n' || c == '\r') {
+      if (cmdlen == 0) continue;                 // ignore blank lines
+      cmdbuf[cmdlen] = '\0';
+      uint32_t ms = 0;
+      cadence_parse_t st =
+          cadence_cmd_parse(cmdbuf, CADENCE_FLOOR_MS, CADENCE_CEIL_MS, &ms);
+      char ackbuf[64];
+      if (st == CADENCE_OK) {
+        unsigned long prev = g_cadence_ms;
+        g_cadence_ms = ms;                         // next sweep uses the new period
+        snprintf(ackbuf, sizeof(ackbuf), "# ack cad=%lu prev=%lu floor=%lu",
+                 (unsigned long)ms, prev, (unsigned long)CADENCE_FLOOR_MS);
+        Serial.println(ackbuf);
+      } else if (st == CADENCE_ERR_RANGE) {
+        snprintf(ackbuf, sizeof(ackbuf), "# nak cad=%lu err=range floor=%lu",
+                 (unsigned long)ms, (unsigned long)CADENCE_FLOOR_MS);
+        Serial.println(ackbuf);
+      } else if (st != CADENCE_NOT_A_COMMAND) {
+        snprintf(ackbuf, sizeof(ackbuf), "# nak err=%s floor=%lu",
+                 cadence_err_name(st), (unsigned long)CADENCE_FLOOR_MS);
+        Serial.println(ackbuf);
+      }
+      cmdlen = 0;
+    } else if (cmdlen < sizeof(cmdbuf) - 1) {
+      cmdbuf[cmdlen++] = c;
+    } else {
+      cmdlen = 0;                                  // oversized line: drop it
+    }
+  }
+}
+
 void loop() {
-  // Non-blocking scheduler: one sweep of all channels every READ_INTERVAL_MS.
+  // Process any inbound !cad command first, so cadence changes are responsive at
+  // any cadence (this runs every loop iteration, not once per sweep).
+  pollSerialCommand();
+
+  // Non-blocking scheduler: one sweep of all channels every g_cadence_ms.
   static unsigned long lastRead = 0;
   unsigned long now = millis();
-  if (now - lastRead < READ_INTERVAL_MS) return;
+  if (now - lastRead < g_cadence_ms) return;
   lastRead = now;
 
   // Log uptime from the 64-bit esp_timer (us since boot), not millis(): millis()

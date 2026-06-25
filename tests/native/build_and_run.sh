@@ -11,9 +11,11 @@ OUT="$HERE/test_irrigation.exe"
 "$CC" -std=gnu11 -Wall -Wextra -O1 \
   -I"$ROOT/firmware/lib/irrigation" \
   -I"$ROOT/firmware/lib/moisture_classifier" \
+  -I"$ROOT/firmware/lib/serial_cmd" \
   "$HERE/test_irrigation.c" \
   "$ROOT/firmware/lib/irrigation/irrigation.c" \
   "$ROOT/firmware/lib/moisture_classifier/moisture_classifier.c" \
+  "$ROOT/firmware/lib/serial_cmd/serial_cmd.c" \
   -o "$OUT"
 
 "$OUT"
