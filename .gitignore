@@ -46,6 +46,9 @@ tests/native/*.o
 logs/
 _scratch/
 
+# Experiment-mode raw captures (Epic 1) - isolated from logs/, never tracked
+experiments/
+
 # Generated analysis output (derived from logs/, rebuilt by tools/analytics - never tracked)
 reports/
 
