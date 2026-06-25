@@ -63,6 +63,6 @@ v1↔v2 reconciliation this lane owns (executed deliberately, never silently).
 
 ## The register row (add)
 
-```
+```text
 | [0008](0008-design-system-v3-personality-layer.md) | Design system v3: the personality layer | **Accepted** | Design lane / design |
 ```

@@ -29,7 +29,7 @@ tooling sized to match, not over-engineered.
 
 ## How it works
 
-```
+```text
    probe          ESP32             classifier            Sprout
    ─────          ─────             ──────────            ──────
    capacitive  →  raw ADC count  →  seven moisture   →   a mood, a first-person line,
@@ -47,7 +47,9 @@ index.
   <img src="docs/design/screenshots/personality.png" alt="Sprout's plant-personality mood system" width="82%">
 </p>
 
-<p align="center"><sub>The live dashboard (light + soil mode) serves at <code>tools/analytics/serve.py</code>; the design system &amp; mood system live in <a href="docs/design/">docs/design/</a>.</sub></p>
+<p align="center"><sub>The live dashboard (light + soil mode) serves at
+<code>tools/analytics/serve.py</code>; the design system &amp; mood system live in
+<a href="docs/design/">docs/design/</a>.</sub></p>
 
 ## The brand
 
