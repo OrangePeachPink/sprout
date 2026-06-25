@@ -12,6 +12,7 @@
  * Device CSV columns (host prepends timestamp_utc,timestamp_local,sample_id,logger_version):
  *   record_type,session_id,device_id,fw,millis_ms,sensor_model,sensor_id,
  *   sensor_position,channel,raw_value,value,unit,quality_flag,payload
+ * (value/unit are emitted NULL - raw_value + band are authoritative, #38.)
  * A '#'-prefixed provenance header is emitted at boot and reprinted periodically.
  * Still NO pump/relay control - nothing actuates.
  */
@@ -100,8 +101,6 @@ static void printHeader() {
   n = snprintf(buf, sizeof(buf), "# cal bounds(dry>wet):");
   for (int i = 0; i < MOISTURE_BOUNDARY_COUNT && n < (int)sizeof(buf); i++)
     n += snprintf(buf + n, sizeof(buf) - n, " %u", (unsigned)cfg.boundary[i]);
-  if (n < (int)sizeof(buf))
-    snprintf(buf + n, sizeof(buf) - n, "  [moist%% %d..%d]", SENSOR_WET_RAW, SENSOR_DRY_RAW);
   Serial.println(buf);
   snprintf(buf, sizeof(buf),
            "# cfg: smp=%u trim=%u db=%u confirm_ms=%lu/%lu/%lu spr=%u discard=%u",
@@ -111,6 +110,8 @@ static void printHeader() {
   Serial.println(buf);
   Serial.println("# device_cols: record_type,session_id,device_id,fw,millis_ms,sensor_model,"
                  "sensor_id,sensor_position,channel,raw_value,value,unit,quality_flag,payload");
+  Serial.println("# authoritative: raw_value (ADC counts) + band (payload 'level'); value/unit are "
+                 "NULL - reserved for a future calibrated VWC, never an uncalibrated %.");
 }
 
 // Sample one channel into buf: select the pin, discard a few for the mux/S&H to
@@ -170,10 +171,6 @@ void loop() {
     moisture_level_t level = moisture_process(&state[ch], &cfg, samples, SAMPLES_PER_READ);
     uint16_t raw = state[ch].last_raw;
 
-    long pct = (long)(SENSOR_DRY_RAW - (int)raw) * 100 / (SENSOR_DRY_RAW - SENSOR_WET_RAW);
-    if (pct < 0)   pct = 0;
-    if (pct > 100) pct = 100;
-
     // Type-specific fields live in the payload (k=v, ';'-sep, no commas).
     char payload[64];
     snprintf(payload, sizeof(payload), "level=%s;role=%s;spread=%u;gpio=%d",
@@ -182,12 +179,15 @@ void loop() {
              (unsigned)state[ch].last_spread, SENSOR_PINS[ch]);
 
     // Compact device CSV row - host prepends time/sequence columns (B2).
+    // value + unit are emitted NULL (empty fields): raw_value (ADC counts) and the
+    // band (payload 'level') are authoritative; value/unit are reserved for a
+    // future calibrated VWC, never an uncalibrated moisture % (issue #38).
     char line[200];
     snprintf(line, sizeof(line),
-             "%s,%s,%s,%s,%llu,%s,%s,%s,%s,%u,%ld,%s,%s,%s",
+             "%s,%s,%s,%s,%llu,%s,%s,%s,%s,%u,,,%s,%s",
              RECORD_TYPE_SOIL, g_session_id, g_device_id, PLANTS_FW_VERSION,
              up_ms, SENSOR_MODEL, SENSOR_NAMES[ch], SENSOR_POSITION, SOIL_CHANNEL,
-             (unsigned)raw, pct, "pct", qualityFlag(&state[ch]), payload);
+             (unsigned)raw, qualityFlag(&state[ch]), payload);
     char crc[6];
     snprintf(crc, sizeof(crc), "*%02X", lineChecksum(line));
     Serial.print(line);

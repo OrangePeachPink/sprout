@@ -56,8 +56,8 @@ the cross-project core both repos carry.
 | 12 | `sensor_position` | dev | yes | `origplant` | placement; all four co-located now |
 | 13 | `channel` | dev | yes | `soil_moisture` | the measured quantity |
 | 14 | `raw_value` | dev | yes | `1493` | ADC counts (trimmed mean) |
-| 15 | `value` | dev | yes | `76` | interpreted value |
-| 16 | `unit` | dev | yes | `pct` | unit of `value` |
+| 15 | `value` | dev | yes | *(null)* | interpreted value — **null** until a calibrated VWC exists; never an uncalibrated % (#38). **`raw_value` + band are authoritative.** |
+| 16 | `unit` | dev | yes | *(null)* | unit of `value` (null while `value` is null) |
 | 17 | `quality_flag` | dev | yes | `OK` | shared enum, §4 |
 | 18 | `temp_context_c` | host/dev | yes | *(null)* | future env layer (C4) |
 | 19 | `rh_context_pct` | host/dev | yes | *(null)* | future env layer (C4) |
@@ -156,7 +156,7 @@ The MCU emits a **compact CSV line** of its `origin=dev` columns, prefixed by `r
 greppable, e.g.:
 
 ```text
-plants.soil,3f9a1c,plants_esp32_a4cf12,0.5.0,30000,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1493,76,pct,OK,level=well watered;role=disp;spread=48;gpio=36
+plants.soil,3f9a1c,plants_esp32_a4cf12,0.5.0,30000,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1493,,,OK,level=well watered;role=disp;spread=48;gpio=36
 ```
 
 Provenance/metadata still emit as `#`-prefixed lines at boot. The **host logger**:
