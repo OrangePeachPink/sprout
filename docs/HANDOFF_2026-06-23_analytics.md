@@ -99,7 +99,7 @@ Single list, priority-tagged; cross-team seams follow.
 8. **[P3] E3 predicted-vs-actual loop** — once pump logging (D1, firmware lane) exists, track forecast
    error and let it refine the per-plant model. Turns the engine from a one-shot estimate into a learner.
 9. **[P3] E5 parquet / DuckDB tier** — defer until multi-day volume justifies it; CSV re-parse is
-   sub-second for a day. Worth it for fast multi-day / cross-project (HotBoxAQ) queries.
+   sub-second for a day. Worth it for fast multi-day / cross-project (the sibling air-quality project) queries.
 
 ### Cross-team seams to keep aligned
 
