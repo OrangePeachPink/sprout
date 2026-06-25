@@ -43,8 +43,13 @@ index.
 
 ## A look
 
-<!-- The animated welcome loop (docs/design/motion/welcome-loop.gif) lands here via #42; the previous
-     personality.png preview was retired in the design-library consolidation (it returns to _archive). -->
+<p align="center">
+  <a href="docs/design/motion/Sprout%20Welcome.dc.html">
+    <img src="docs/design/motion/welcome-loop.gif"
+         alt="A day in the life of Sprout — the calibrated mood system in motion across one day"
+         width="100%">
+  </a>
+</p>
 
 <p align="center"><sub>The live dashboard (light + soil mode) serves at
 <code>tools/analytics/serve.py</code>; the design system &amp; mood system live in
