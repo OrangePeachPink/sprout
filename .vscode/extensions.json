@@ -1,0 +1,11 @@
+{
+  "// ": "Sprout recommends these so a contributor's editor helps from the first open (#110).",
+  "recommendations": [
+    "charliermarsh.ruff",
+    "ms-python.python",
+    "platformio.platformio-ide",
+    "editorconfig.editorconfig",
+    "davidanson.vscode-markdownlint",
+    "tamasfe.even-better-toml"
+  ]
+}
