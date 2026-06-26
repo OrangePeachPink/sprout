@@ -8,6 +8,7 @@
 
 # Binary assets (never normalize)
 *.png  binary
+*.ico  binary
 *.jpg  binary
 *.jpeg binary
 *.gif  binary
