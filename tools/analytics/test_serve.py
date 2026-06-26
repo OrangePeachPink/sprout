@@ -105,7 +105,9 @@ def test_port_in_use() -> None:
     try:
         out = subprocess.run(
             [sys.executable, str(_SERVE), "--port", str(port)],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         combined = (out.stdout + out.stderr).lower()
         check(out.returncode == 1, f"exit 1 on port-in-use (got {out.returncode})")
@@ -131,14 +133,18 @@ def test_restart_takes_over() -> None:
     port = _free_port()
     first = subprocess.Popen(
         [sys.executable, str(_SERVE), "--port", str(port)],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
     )
     second = None
     try:
         check(_wait_up(port, 8), "first server came up")
         second = subprocess.Popen(
             [sys.executable, str(_SERVE), "--port", str(port), "--restart"],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
         )
         code = None
         with contextlib.suppress(subprocess.TimeoutExpired):
