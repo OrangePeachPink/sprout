@@ -69,6 +69,7 @@ prototype's history honestly. (Execution belongs to the architecture/firmware la
 | [0010](0010-design-library-front-door.md) | The Design Library is the single front door for design assets | **Accepted** | Design lane |
 | [0011](0011-experiment-capture-control-plane.md) | Experiment capture control plane (browser→host) | **Proposed** — direction agreed (Firmware #57); detail at sub-issue cut | Data + Firmware lanes |
 | [0012](0012-experiment-data-architecture.md) | Experiment data architecture (extends ADR-0006) | **Proposed** — schema agreed (Firmware #57); detail at sub-issue cut | Data lane |
+| [0013](0013-environmental-data-architecture.md) | Environmental data architecture (extends ADR-0006) | **Proposed** — Data-led; on-device section co-authored with Firmware at sub-issue cut | Data lane |
 | — | *(archived)* [Sprout v0 combined architecture record](archive/sprout-v0-architecture.md) | Superseded by ADR-0001 | history |
 
 *New ADRs append a row here when proposed. Any lane may author an ADR for an ADR-sized decision in its
