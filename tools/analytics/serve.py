@@ -125,15 +125,17 @@ class DashboardHandler(BaseHTTPRequestHandler):
         try:
             if parsed.path == "/capture/start":
                 b = self._body()
-                self._send_json(_CAPTURE.start(
-                    subject=b.get("subject", "unspecified"),
-                    rate_s=b.get("rate_s", 1.0),
-                    duration_s=b.get("duration_s", 60.0),
-                    labels=b.get("labels"),
-                    experiment_id=b.get("experiment_id"),
-                    source=b.get("source", "synthetic"),
-                    port=b.get("port"),
-                ))
+                self._send_json(
+                    _CAPTURE.start(
+                        subject=b.get("subject", "unspecified"),
+                        rate_s=b.get("rate_s", 1.0),
+                        duration_s=b.get("duration_s", 60.0),
+                        labels=b.get("labels"),
+                        experiment_id=b.get("experiment_id"),
+                        source=b.get("source", "synthetic"),
+                        port=b.get("port"),
+                    )
+                )
             elif parsed.path == "/capture/stop":
                 self._send_json(_CAPTURE.stop())
             elif parsed.path == "/quit":
@@ -182,22 +184,28 @@ def main(argv: list[str] | None = None) -> int:
         "inputs", nargs="*", help="log files / dirs / globs (default: repo logs/)"
     )
     ap.add_argument(
-        "-p", "--port", type=int, default=DEFAULT_PORT,
+        "-p",
+        "--port",
+        type=int,
+        default=DEFAULT_PORT,
         help=f"port (default {DEFAULT_PORT})",
     )
     ap.add_argument(
         "--host", default=DEFAULT_HOST, help="bind host (default localhost)"
     )
     ap.add_argument(
-        "--open", action="store_true",
+        "--open",
+        action="store_true",
         help="open the dashboard in a browser once serving (the no-terminal door)",
     )
     ap.add_argument(
-        "--print-port", action="store_true",
+        "--print-port",
+        action="store_true",
         help="print the fixed port and exit (the launcher's single source of truth)",
     )
     ap.add_argument(
-        "--print-url", action="store_true",
+        "--print-url",
+        action="store_true",
         help="print the dashboard URL and exit (for `just start` / the launcher)",
     )
     args = ap.parse_args(argv)

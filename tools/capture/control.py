@@ -165,14 +165,22 @@ class CaptureController:
                 stop_file.unlink()  # a fresh run starts un-stopped
 
             cmd = [
-                self._python, str(self._capture_py),
-                "--source", source,
-                "--subject", subject,
-                "--experiment-id", eid,
-                "--rate-s", str(rate_s),
-                "--duration-s", str(duration_s),
-                "--out-dir", str(self._experiments_dir),
-                "--stop-file", str(stop_file),
+                self._python,
+                str(self._capture_py),
+                "--source",
+                source,
+                "--subject",
+                subject,
+                "--experiment-id",
+                eid,
+                "--rate-s",
+                str(rate_s),
+                "--duration-s",
+                str(duration_s),
+                "--out-dir",
+                str(self._experiments_dir),
+                "--stop-file",
+                str(stop_file),
             ]
             for key, val in (labels or {}).items():
                 k = _safe_token(key, "label key")
