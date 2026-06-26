@@ -68,6 +68,20 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
   text-transform: uppercase; color: var(--st-dry); border: 1px solid var(--st-dry);
   border-radius: var(--r-pill); padding: 1px 8px; vertical-align: middle; }
 
+/* experiment capture panel (#67) */
+.capform { display: flex; flex-wrap: wrap; gap: var(--space-md); margin-bottom: var(--space-sm); }
+.capf { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted);
+  text-transform: lowercase; }
+.capf input, .capf select { font-family: var(--font-ui); font-size: 13px; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px;
+  min-width: 96px; }
+.capf input:focus, .capf select:focus { outline: none; border-color: var(--leaf); }
+#capLabels .capf input { min-width: 64px; }
+.capctl { display: flex; align-items: center; gap: var(--space-md); margin-top: 2px; flex-wrap: wrap; }
+.capstatus { font-family: var(--font-data); font-size: 13px; color: var(--muted); }
+.capstatus.run { color: var(--leaf); font-weight: 600; }
+.capstatus.err { color: var(--st-dry); }
+
 /* summary cards */
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-md); }
 .scard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-tile);
@@ -190,6 +204,37 @@ footer.prov code { font-family: var(--font-data); }
       <button class="btn" id="themeBtn" type="button">soil mode</button>
     </div>
   </header>
+
+  <section class="card" id="captureCard">
+    <div class="panel-h">
+      <h2>Experiment Capture <span class="proposed" title="operator-driven; isolated from the monitor baseline">experiment mode</span></h2>
+      <span class="cap">writes an isolated <span class="mono">experiments/&lt;id&gt;/</span> capture — never the monitor <span class="mono">logs/</span></span>
+    </div>
+    <div class="capform">
+      <label class="capf">subject<input id="capSubject" type="text" value="common-cup" maxlength="40" spellcheck="false"></label>
+      <label class="capf">sample rate<select id="capRate">
+        <option value="5">5 s</option>
+        <option value="1" selected>1 s</option>
+        <option value="0.5">0.5 s</option>
+        <option value="15">15 s</option>
+        <option value="30">30 s</option>
+        <option value="60">60 s</option>
+        <option value="300">5 min</option>
+      </select></label>
+      <label class="capf">duration (s)<input id="capDuration" type="number" value="60" min="1" max="86400"></label>
+    </div>
+    <div class="capform" id="capLabels">
+      <label class="capf">s1<input class="caplabel" data-ch="s1" type="text" value="s1" maxlength="24" spellcheck="false"></label>
+      <label class="capf">s2<input class="caplabel" data-ch="s2" type="text" value="s2" maxlength="24" spellcheck="false"></label>
+      <label class="capf">s3<input class="caplabel" data-ch="s3" type="text" value="s3" maxlength="24" spellcheck="false"></label>
+      <label class="capf">s4<input class="caplabel" data-ch="s4" type="text" value="s4" maxlength="24" spellcheck="false"></label>
+    </div>
+    <div class="capctl">
+      <button class="btn" id="capStart" type="button">▶ Start capture</button>
+      <button class="btn" id="capStop" type="button" disabled>■ Stop</button>
+      <span class="capstatus" id="capStatus">idle</span>
+    </div>
+  </section>
 
   <div id="overview">
     <section class="card">
@@ -824,6 +869,60 @@ function applyStaticChannels(){  // file:// mode: show/hide datasets (spread can
   });
 }
 
+/* ---- experiment capture control (#67 -> serve.py /capture API) ---- */
+let capPollTimer = null;
+function capSetStatus(text, cls){
+  const s = document.getElementById('capStatus'); s.textContent = text;
+  s.className = 'capstatus' + (cls ? ' ' + cls : '');
+}
+function capRender(st){
+  const start = document.getElementById('capStart'), stop = document.getElementById('capStop');
+  if(st && st.state === 'running'){
+    start.disabled = true; stop.disabled = false;
+    capSetStatus(`running · ${st.experiment_id} @ ${st.rate_s}s`, 'run');
+  } else {
+    start.disabled = false; stop.disabled = true;
+    if(st && (st.state === 'done' || st.state === 'error')){
+      const t = st.transport || {};
+      const by = st.stopped_by ? ` (${st.stopped_by})` : '';
+      const rows = (t.rows != null) ? ` · ${t.rows} rows` : '';
+      capSetStatus(`${st.state}: ${st.experiment_id}${rows}${by}`, st.state === 'error' ? 'err' : null);
+    } else { capSetStatus('idle'); }
+  }
+}
+async function capPoll(){
+  try{
+    const st = await (await fetch('/capture/status', {cache:'no-store'})).json();
+    capRender(st);
+    if(st.state === 'running'){ if(!capPollTimer) capPollTimer = setInterval(capPoll, 1500); }
+    else if(capPollTimer){ clearInterval(capPollTimer); capPollTimer = null; }
+  }catch(e){ /* server gone -> keep the last shown state */ }
+}
+async function capStart(){
+  const labels = {};
+  document.querySelectorAll('#capLabels .caplabel').forEach(i=>{ labels[i.dataset.ch] = i.value.trim(); });
+  const payload = {
+    subject: document.getElementById('capSubject').value.trim() || 'unspecified',
+    rate_s: parseFloat(document.getElementById('capRate').value),
+    duration_s: parseFloat(document.getElementById('capDuration').value),
+    labels: labels,
+  };
+  capSetStatus('starting…');
+  try{
+    const r = await fetch('/capture/start', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload),
+    });
+    const data = await r.json();
+    if(!r.ok){ capSetStatus('refused: ' + (data.error || ('HTTP ' + r.status)), 'err'); return; }
+    capRender(data); capPoll();
+  }catch(e){ capSetStatus('start failed: ' + e, 'err'); }
+}
+async function capStop(){
+  capSetStatus('stopping…');
+  try{ capRender(await (await fetch('/capture/stop', {method:'POST'})).json()); }
+  catch(e){ capSetStatus('stop failed: ' + e, 'err'); }
+}
+
 /* ---- controls + boot ---- */
 (function(){
   const themeBtn=document.getElementById('themeBtn'), root=document.documentElement;
@@ -841,6 +940,16 @@ function applyStaticChannels(){  // file:// mode: show/hide datasets (spread can
   });
 
   document.querySelectorAll('.rangebtn').forEach(b=> b.addEventListener('click', ()=> setRange(b.dataset.r)));
+
+  const capStartBtn = document.getElementById('capStart'), capStopBtn = document.getElementById('capStop');
+  if(LIVE){
+    capStartBtn.addEventListener('click', capStart);
+    capStopBtn.addEventListener('click', capStop);
+    capPoll();  // reflect any in-flight capture on load
+  } else {
+    capStartBtn.disabled = true; capStopBtn.disabled = true;
+    capSetStatus('serve via serve.py for capture control');
+  }
 
   applyTheme();
   renderAll();
