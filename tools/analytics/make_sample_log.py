@@ -122,7 +122,8 @@ def main() -> None:
                 out.append(",".join(row))
         out.append("")  # blank line between segments
 
-    _OUT.write_text("\n".join(out).rstrip("\n") + "\n", encoding="utf-8")
+    # newline="\n": emit LF on every platform (repo policy; avoids a CRLF re-diff)
+    _OUT.write_text("\n".join(out).rstrip("\n") + "\n", encoding="utf-8", newline="\n")
     print(f"wrote {_OUT.relative_to(_REPO)} ({sid} data rows, 3 segments, no MAC)")
 
 
