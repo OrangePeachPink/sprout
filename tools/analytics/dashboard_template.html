@@ -901,13 +901,34 @@ function capRender(st){
     } else { capSetStatus('idle'); }
   }
 }
+// #115: a stale/incapable serve.py (no control plane) answers /capture with HTML or
+// text, not JSON. Detect that and degrade gracefully instead of throwing a raw
+// "Unexpected token '<'" SyntaxError at the operator.
+let capApiOk = true;
+async function capJson(url, opts){
+  const r = await fetch(url, opts);
+  if(!(r.headers.get('content-type') || '').includes('application/json')){
+    const err = new Error('capture API unavailable'); err.capDown = true; throw err;
+  }
+  return { ok: r.ok, status: r.status, data: await r.json() };
+}
+function capApiDown(){
+  capApiOk = false;
+  if(capPollTimer){ clearInterval(capPollTimer); capPollTimer = null; }
+  const start = document.getElementById('capStart'), stop = document.getElementById('capStop');
+  start.disabled = true; stop.disabled = true;
+  capSetStatus('capture API unavailable — relaunch Sprout from current code', 'err');
+}
 async function capPoll(){
   try{
-    const st = await (await fetch('/capture/status', {cache:'no-store'})).json();
+    const { data: st } = await capJson('/capture/status', {cache:'no-store'});
     capRender(st);
     if(st.state === 'running'){ if(!capPollTimer) capPollTimer = setInterval(capPoll, 1500); }
     else if(capPollTimer){ clearInterval(capPollTimer); capPollTimer = null; }
-  }catch(e){ /* server gone -> keep the last shown state */ }
+  }catch(e){
+    if(e.capDown){ capApiDown(); }  // stale serve.py -> say so + stop retrying
+    /* else a transient network error -> keep the last shown state */
+  }
 }
 async function capStart(){
   const labels = {};
@@ -925,20 +946,26 @@ async function capStart(){
     if(!port){ capSetStatus('serial source needs a port (e.g. COM6)', 'err'); return; }
     payload.port = port;
   }
+  if(!capApiOk){ capApiDown(); return; }
   capSetStatus('starting…');
   try{
-    const r = await fetch('/capture/start', {
+    const { ok, status, data } = await capJson('/capture/start', {
       method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload),
     });
-    const data = await r.json();
-    if(!r.ok){ capSetStatus('refused: ' + (data.error || ('HTTP ' + r.status)), 'err'); return; }
+    if(!ok){ capSetStatus('refused: ' + (data.error || ('HTTP ' + status)), 'err'); return; }
     capRender(data); capPoll();
-  }catch(e){ capSetStatus('start failed: ' + e, 'err'); }
+  }catch(e){
+    if(e.capDown){ capApiDown(); return; }
+    capSetStatus('start failed: ' + e, 'err');
+  }
 }
 async function capStop(){
   capSetStatus('stopping…');
-  try{ capRender(await (await fetch('/capture/stop', {method:'POST'})).json()); }
-  catch(e){ capSetStatus('stop failed: ' + e, 'err'); }
+  try{ const { data } = await capJson('/capture/stop', {method:'POST'}); capRender(data); }
+  catch(e){
+    if(e.capDown){ capApiDown(); return; }
+    capSetStatus('stop failed: ' + e, 'err');
+  }
 }
 let quitArmed = false;
 async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's not a 1-click kill
