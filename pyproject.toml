@@ -5,7 +5,7 @@
 
 [project]
 name = "sprout"
-version = "0.7.0"  # mirrors the firmware SemVer (ADR-0009); metadata only (package = false)
+version = "0.7.0"  # single product version line (ADR-0009 §1); synced repo-wide each release (§3)
 description = "Sprout — an honest capacitive soil-moisture + small-pump auto-waterer (host tooling)."
 requires-python = ">=3.11"
 dependencies = [
