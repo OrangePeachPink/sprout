@@ -101,7 +101,8 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .scard .rawu { color: var(--muted); font-size: 11px; }
 .pill { display: inline-block; color: #fff; font-weight: 600; font-size: 12px; border-radius: var(--r-pill); padding: 2px 10px; }
 .scard .meta { margin-top: 10px; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 12px; }
-.scard .meta .num { color: var(--ink); }
+.scard .meta > * { min-width: 0; }  /* let columns shrink to their track - never overflow + clip the card (#101) */
+.scard .meta .num { color: var(--ink); overflow-wrap: anywhere; }  /* a long value wraps, never bleeds across */
 
 /* ladder */
 .ladder { display: flex; flex-direction: column; gap: 3px; }
