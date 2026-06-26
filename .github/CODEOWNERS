@@ -1,0 +1,5 @@
+# CODEOWNERS — who gets review requests automatically (#112).
+# Sprout is maintainer-led today, so one owner covers everything; as lanes grow,
+# split by path (e.g. /firmware/ /tools/ /docs/design/) to route review to a lane.
+
+* @OrangePeachPink
