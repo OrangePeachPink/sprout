@@ -111,9 +111,9 @@ def test_sanitization() -> None:
             "path-traversal experiment_id refused",
         )
         raises(
-            lambda: c.start(subject="bad/slash", rate_s=1, duration_s=10),
+            lambda: c.start(subject="!!!", rate_s=1, duration_s=10),
             control.ControlError,
-            "slash in subject refused",
+            "all-punctuation subject (empty slug) refused",
         )
         raises(
             lambda: c.start(subject="ok", rate_s=99999, duration_s=10),
@@ -123,6 +123,33 @@ def test_sanitization() -> None:
         check(c.status()["state"] == "idle", "nothing was launched (still idle)")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_slug_and_title() -> None:
+    print("human subjects are slugified, the title is preserved (#150):")
+    check(
+        control._slugify("open bench", "subject") == "open_bench",
+        "'open bench' -> 'open_bench'",
+    )
+    check(
+        control._slugify("common-cup", "subject") == "common-cup",
+        "an already-valid token is unchanged",
+    )
+    check(control._slugify("a/b c", "subject") == "a_b_c", "slashes + spaces -> '_'")
+    check(
+        control._subject_title("open bench", "subject") == "open bench",
+        "the human title keeps its spaces",
+    )
+    raises(
+        lambda: control._slugify("...", "subject"),
+        control.ControlError,
+        "all-punctuation -> empty slug refused",
+    )
+    raises(
+        lambda: control._subject_title("a,b", "subject"),
+        control.ControlError,
+        "comma in title refused",
+    )
 
 
 def test_stop_idle() -> None:
@@ -169,6 +196,7 @@ if __name__ == "__main__":
     test_single_flight()
     test_auto_stop()
     test_sanitization()
+    test_slug_and_title()
     test_stop_idle()
     test_serial_gating()
     print()

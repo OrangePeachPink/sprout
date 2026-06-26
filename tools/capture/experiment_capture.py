@@ -356,6 +356,7 @@ def run_capture(
     *,
     experiment_id: str,
     subject: str,
+    title: str | None = None,
     rate_s: float,
     duration_s: float,
     labels: dict[str, str],
@@ -403,6 +404,7 @@ def run_capture(
     manifest = {
         "experiment_id": experiment_id,
         "subject": subject,
+        "title": title or subject,
         "schema_version": SCHEMA_VERSION,
         "mode": EXPERIMENT_MODE,
         "sample_rate_s": rate_s,
@@ -439,6 +441,7 @@ def _parse_labels(pairs: list[str] | None) -> dict[str, str]:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Run a bounded Experiment-mode capture.")
     ap.add_argument("--subject", default="unspecified", help="what's being measured")
+    ap.add_argument("--title", help="human display title (default: the subject)")
     ap.add_argument("--experiment-id", help="default: <UTC stamp>_<subject>")
     ap.add_argument("--rate-s", type=float, default=1.0, help="sample cadence, seconds")
     ap.add_argument(
@@ -482,6 +485,7 @@ def main(argv: list[str] | None = None) -> int:
             out_dir,
             experiment_id=experiment_id,
             subject=args.subject,
+            title=args.title,
             rate_s=args.rate_s,
             duration_s=args.duration_s,
             labels=_parse_labels(args.label),
