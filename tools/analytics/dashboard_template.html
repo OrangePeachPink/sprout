@@ -83,6 +83,7 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .capctl { display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;
   border-top: 1px solid var(--border); padding-top: var(--space-md); margin-top: var(--space-xs); }
 .capstatus { font-family: var(--font-data); font-size: 13px; color: var(--muted); }
+.caphint { font-family: var(--font-data); font-size: 10px; color: var(--muted); text-transform: none; min-height: 12px; }
 .capstatus.run { color: var(--leaf); font-weight: 600; }
 .capstatus.err { color: var(--st-dry); }
 
@@ -229,7 +230,7 @@ footer.prov code { font-family: var(--font-data); }
       <span class="cap">writes an isolated <span class="mono">experiments/&lt;id&gt;/</span> capture — never the monitor <span class="mono">logs/</span></span>
     </div>
     <div class="capform">
-      <label class="capf">subject<input id="capSubject" type="text" value="common-cup" maxlength="40" spellcheck="false"></label>
+      <label class="capf">subject<input id="capSubject" type="text" value="common-cup" maxlength="40" spellcheck="false"><small id="capSubjectHint" class="caphint"></small></label>
       <label class="capf">sample rate<select id="capRate">
         <option value="5">5 s</option>
         <option value="1" selected>1 s</option>
@@ -943,6 +944,14 @@ async function capPoll(){
     /* else a transient network error -> keep the last shown state */
   }
 }
+function capSlugify(s){  // mirrors control.py _slugify: human subject -> folder-safe slug
+  return s.trim().replace(/[^A-Za-z0-9._-]+/g,'_').replace(/^[._-]+|[._-]+$/g,'');
+}
+function capUpdateSubjectHint(){  // live "saves as" preview so the slug is no surprise (#150)
+  const raw = document.getElementById('capSubject').value;
+  const slug = capSlugify(raw), hint = document.getElementById('capSubjectHint');
+  hint.textContent = (slug && slug !== raw.trim()) ? 'saves as: ' + slug : '';
+}
 async function capStart(){
   const labels = {};
   document.querySelectorAll('#capLabels .caplabel').forEach(i=>{ labels[i.dataset.ch] = i.value.trim(); });
@@ -1081,6 +1090,8 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
     const capSource = document.getElementById('capSource'), capPortField = document.getElementById('capPortField');
     const syncSource = ()=>{ capPortField.hidden = (capSource.value !== 'serial'); };  // port only for serial
     capSource.addEventListener('change', syncSource); syncSource();
+    const capSubjectEl = document.getElementById('capSubject');
+    capSubjectEl.addEventListener('input', capUpdateSubjectHint); capUpdateSubjectHint();
     monStartBtn.addEventListener('click', monStart);
     monStopBtn.addEventListener('click', monStop);
     monPoll();  // reflect the logger's current state on load

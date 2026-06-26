@@ -43,6 +43,7 @@ import serial_lock  # noqa: E402  (sibling leaf — the #64 advisory-lock contra
 # no slashes. experiment_id / subject become a folder name, so this is the guard
 # against path traversal from a control-API request.
 _TOKEN_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+_SLUG_SUB = re.compile(r"[^A-Za-z0-9._-]+")  # runs of folder-unsafe chars -> "_"
 _SOURCES = ("synthetic", "serial")  # serial = real device, gated by the pre-check
 
 
@@ -55,6 +56,27 @@ def _safe_token(value: object, field: str) -> str:
     if ".." in s or not _TOKEN_RE.match(s):
         raise ControlError(f"invalid {field}: {value!r} (use letters/digits/.-_)")
     return s
+
+
+def _slugify(value: object, field: str) -> str:
+    """Folder/header-safe token from a human subject ('open bench' -> 'open_bench'):
+    runs of unsafe chars collapse to '_', leading/trailing separators are trimmed.
+    An already-valid token is returned unchanged."""
+    slug = _SLUG_SUB.sub("_", str(value).strip()).strip("._-")
+    if not slug or ".." in slug or not _TOKEN_RE.match(slug):
+        raise ControlError(f"invalid {field}: {value!r} (need a letter or digit)")
+    return slug
+
+
+def _subject_title(value: object, field: str) -> str:
+    """The human-entered title, kept for display - spaces are fine, but it must stay
+    CSV/JSON-safe (no comma, no control chars) and bounded."""
+    s = str(value).strip()
+    if not s:
+        raise ControlError(f"{field} must not be empty")
+    if "," in s or any(ord(c) < 32 for c in s):
+        raise ControlError(f"invalid {field}: {value!r} (no commas or control chars)")
+    return s[:80]
 
 
 def _bounded_float(value: object, lo: float, hi: float, field: str) -> float:
@@ -149,13 +171,16 @@ class CaptureController:
                         f"port held by {owner.get('mode')} (pid {owner.get('pid')}) "
                         "— stop the monitor first"
                     )
-            subject = _safe_token(subject, "subject")
+            # A human subject ('open bench') is accepted: the slug ('open_bench') is the
+            # folder/CSV-header-safe token; the title keeps the human form for display.
+            subject_slug = _slugify(subject, "subject")
+            subject_title = _subject_title(subject, "subject")
             rate_s = _bounded_float(rate_s, 0.05, 3600.0, "rate_s")
             duration_s = _bounded_float(duration_s, 1.0, 86400.0, "duration_s")
             eid = (
                 _safe_token(experiment_id, "experiment_id")
                 if experiment_id
-                else f"{_utc_stamp()}_{subject}"
+                else f"{_utc_stamp()}_{subject_slug}"
             )
 
             exp_dir = self._experiments_dir / eid
@@ -170,7 +195,9 @@ class CaptureController:
                 "--source",
                 source,
                 "--subject",
-                subject,
+                subject_slug,
+                "--title",
+                subject_title,
                 "--experiment-id",
                 eid,
                 "--rate-s",
@@ -195,7 +222,8 @@ class CaptureController:
             self._proc = proc
             self._meta = {
                 "experiment_id": eid,
-                "subject": subject,
+                "subject": subject_slug,
+                "title": subject_title,
                 "rate_s": rate_s,
                 "duration_s": duration_s,
                 "source": source,
