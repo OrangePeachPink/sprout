@@ -52,9 +52,19 @@ if str(_CAPTURE_DIR) not in sys.path:
     sys.path.insert(0, str(_CAPTURE_DIR))
 from control import CaptureController, ControlError  # noqa: E402  (capture sibling)
 
-# The operator capture control plane (ADR-0011 Option A, #66): serve.py owns the
-# control API and launches the bounded capture process; it never touches the port.
+_LOGGER_DIR = _REPO / "tools" / "logger"
+if str(_LOGGER_DIR) not in sys.path:
+    sys.path.insert(0, str(_LOGGER_DIR))
+from monitor_control import (  # noqa: E402  (logger sibling)
+    MonitorController,
+    MonitorError,
+)
+
+# The operator control plane (ADR-0011, extended #128): serve.py owns the lifecycle of
+# both modes - Experiment captures AND the Monitor logger - launching each as its own
+# process that owns the port. serve.py never touches the serial port itself.
 _CAPTURE = CaptureController()
+_MONITOR = MonitorController()
 
 # The fixed port (ADR-0005 §4/§5). Data owns it as the single source of truth: the
 # runner (`just start`) and the double-click launcher reference THIS value — via
@@ -119,6 +129,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send(blob, "application/json; charset=utf-8")
             elif parsed.path == "/capture/status":
                 self._send_json(_CAPTURE.status())
+            elif parsed.path == "/monitor/status":
+                self._send_json(_MONITOR.status())
             else:
                 self._send("not found", "text/plain; charset=utf-8", status=404)
         except Exception as exc:  # report any parse/render failure to the client
@@ -142,6 +154,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 )
             elif parsed.path == "/capture/stop":
                 self._send_json(_CAPTURE.stop())
+            elif parsed.path == "/monitor/start":
+                self._send_json(_MONITOR.start(port=self._body().get("port")))
+            elif parsed.path == "/monitor/stop":
+                self._send_json(_MONITOR.stop())
             elif parsed.path == "/quit":
                 # In-UI stop (ADR-0005 §4): a localhost-gated shutdown so the operator
                 # stops the server from the browser (no terminal to Ctrl-C when it was
@@ -159,7 +175,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 threading.Thread(target=_shutdown, daemon=True).start()
             else:
                 self._send("not found", "text/plain; charset=utf-8", status=404)
-        except ControlError as exc:  # a rejected request (bad input / busy)
+        except (ControlError, MonitorError) as exc:  # rejected (bad input / busy)
             self._send_json({"error": str(exc)}, status=400)
         except Exception as exc:
             self._send_json({"error": str(exc)}, status=500)
