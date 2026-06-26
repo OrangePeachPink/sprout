@@ -1,0 +1,20 @@
+version: 2
+
+# Right-sized dependency freshness (#112): just the two ecosystems we actually use —
+# the locked Python env and the CI actions. Weekly, grouped into one low-noise PR each.
+updates:
+  - package-ecosystem: "uv" # pyproject.toml + uv.lock (the locked dev env)
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      python:
+        patterns: ["*"]
+
+  - package-ecosystem: "github-actions" # the CI workflow's pinned actions
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]

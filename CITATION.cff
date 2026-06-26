@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use or reference Sprout, please cite it."
+title: "Sprout"
+abstract: >-
+  An honest capacitive soil-moisture monitor and small-pump auto-waterer:
+  ESP32 firmware plus host tooling, designed evidence-first (raw + band is truth,
+  a percentage is only a labelled index) with a zero-friction contributor setup.
+type: software
+# GitHub handle for now; swap to your real name (given-names / family-names) to
+# claim portfolio credit when the repo goes public.
+authors:
+  - name: "OrangePeachPink"
+repository-code: "https://github.com/OrangePeachPink/plants"
+url: "https://github.com/OrangePeachPink/plants"
+version: "0.7.0"
+keywords:
+  - soil-moisture
+  - esp32
+  - firmware
+  - capacitive-sensor
+  - irrigation
