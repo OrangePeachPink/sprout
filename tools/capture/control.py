@@ -124,6 +124,18 @@ class CaptureController:
         with self._lock:
             return self._status_locked()
 
+    def _live_rows(self, eid: str) -> int:
+        """Data rows written to the capture so far - cheap (bounded captures), and the
+        writer flushes every row, so it climbs live. -1 of the non-comment lines drops
+        the column header."""
+        csv_path = self._experiments_dir / eid / f"{eid}.csv"
+        try:
+            with csv_path.open("r", encoding="utf-8") as f:
+                n = sum(1 for line in f if line and not line.startswith("#"))
+        except OSError:
+            return 0
+        return max(0, n - 1)
+
     def _status_locked(self) -> dict:
         if self._proc is None or self._meta is None:
             return {"state": "idle"}
@@ -131,6 +143,7 @@ class CaptureController:
         out = dict(self._meta)
         if rc is None:
             out["state"] = "running"
+            out["rows"] = self._live_rows(out["experiment_id"])  # live progress (#162)
             return out
         out["exit_code"] = rc
         out["state"] = "done" if rc == 0 else "error"

@@ -84,8 +84,9 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
   border-top: 1px solid var(--border); padding-top: var(--space-md); margin-top: var(--space-xs); }
 .capstatus { font-family: var(--font-data); font-size: 13px; color: var(--muted); }
 .caphint { font-family: var(--font-data); font-size: 10px; color: var(--muted); text-transform: none; min-height: 12px; }
-.capstatus.run { color: var(--leaf); font-weight: 600; }
+.capstatus.run { color: var(--leaf); font-weight: 600; animation: caplive 1.4s ease-in-out infinite; }
 .capstatus.err { color: var(--st-dry); }
+@keyframes caplive { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 
 /* summary cards */
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-md); }
@@ -904,7 +905,11 @@ function capRender(st){
   const start = document.getElementById('capStart'), stop = document.getElementById('capStop');
   if(st && st.state === 'running'){
     start.disabled = true; stop.disabled = false;
-    capSetStatus(`running · ${st.experiment_id} @ ${st.rate_s}s`, 'run');
+    const el = st.started_utc ? Math.max(0, Math.round((Date.now() - Date.parse(st.started_utc))/1000)) : null;
+    const dur = (st.duration_s != null) ? Math.round(st.duration_s) : null;
+    const clock = (el != null && dur != null) ? ` · ${el}s/${dur}s` : (el != null ? ` · ${el}s` : '');
+    const rows = (st.rows != null) ? ` · ${st.rows} rows` : '';
+    capSetStatus(`● experiment mode · capturing @ ${st.rate_s}s${clock}${rows}`, 'run');
   } else {
     start.disabled = false; stop.disabled = true;
     if(st && (st.state === 'done' || st.state === 'error')){

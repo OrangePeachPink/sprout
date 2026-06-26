@@ -152,6 +152,27 @@ def test_slug_and_title() -> None:
     )
 
 
+def test_live_rows() -> None:
+    print("status reports a live, climbing row count while running (#162):")
+    tmp = Path(tempfile.mkdtemp(prefix="ctl_rows_"))
+    try:
+        c = control.CaptureController(experiments_dir=tmp)
+        c.start(subject="liverows", rate_s=0.1, duration_s=5)
+        got = _await(
+            lambda: isinstance(c.status().get("rows"), int)
+            and c.status().get("rows", 0) >= 1,
+            4.0,
+        )
+        st = c.status()
+        check(got and st.get("state") == "running", "running status carries rows >= 1")
+        check(isinstance(st.get("rows"), int), "'rows' is an int while running")
+        c.stop()
+        check("rows" not in c.status() or c.status().get("state") != "running",
+              "stopped -> no longer reports a running row count")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def test_stop_idle() -> None:
     print("stop when idle is a safe no-op:")
     tmp = Path(tempfile.mkdtemp(prefix="ctl_si_"))
@@ -197,6 +218,7 @@ if __name__ == "__main__":
     test_auto_stop()
     test_sanitization()
     test_slug_and_title()
+    test_live_rows()
     test_stop_idle()
     test_serial_gating()
     print()
