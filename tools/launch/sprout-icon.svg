@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 0 28 28" fill="none" stroke="#2F7D3F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Sprout's living mark, "thriving" state. Faithful export of the canonical paths +
+       tokens in docs/design/components/sprout-mark.js (the source of truth). Source for
+       sprout.ico; regenerate with the magick command in this folder's README. -->
+  <path d="M12 26 V12"/>
+  <path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8BD24F"/>
+  <path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34A853"/>
+  <path d="M12 11 C9 6 11 3 12 1 C14 4 14 8 12 11 Z" fill="#A9DA6E"/>
+</svg>
