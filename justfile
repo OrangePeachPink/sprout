@@ -44,9 +44,11 @@ dash *ARGS:
 # ============================================================================
 #  CAPTURE lane — host-side serial capture (the device-side runtime).
 # ============================================================================
+# Ctrl-C is the normal way to stop the logger; it archives + exits cleanly on its own, so the
+# leading `-` keeps `just` from flagging that expected interrupt as a recipe failure (#148).
 # Always-on Monitor mode: the baseline logger (auto-detects the port; pin with `--port COM6`).
 logger *ARGS:
-    {{py}} tools/logger/plants_logger.py {{ARGS}}
+    -{{py}} tools/logger/plants_logger.py {{ARGS}}
 
 # Experiment mode: a bounded, isolated capture (never stitched into the baseline).
 experiment *ARGS:

@@ -372,6 +372,7 @@ def run(port, baud, logdir, maxbytes):
                 ser.close()
             _lock_release()  # advisory: port released on clean stop (ADR-0011 #64)
             _archive_step(logdir, include_all=True)  # the active segment is now closed
+            print("[logger] stopped cleanly - data saved. Safe to close this window.")
             return
 
 
@@ -405,4 +406,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        # Ctrl-C is the normal way to stop the logger. If it lands mid-archive (after
+        # the loop's clean-stop handler has run), treat it as the intended stop, not a
+        # crash: fall through to a 0 exit so `just` / launchers don't surface a scary
+        # "recipe failed" on the expected way to stop (#148).
+        print("\n[logger] stopped - data saved. Safe to close this window.")
