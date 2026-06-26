@@ -44,6 +44,10 @@ from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
 
 _REPO = _HERE.parents[1]
 TOKENS_CSS = _REPO / "docs" / "design" / "tokens" / "sprout-tokens.css"
+# Brand fonts, base64-embedded (latin subsets, SIL OFL) so the dashboard renders
+# in-brand fully offline - no Google-Fonts CDN. Vendored beside Chart.js;
+# regenerate via tools/analytics/embed_fonts.py.
+FONTS_CSS = _HERE / "vendor" / "sprout-fonts.css"
 TEMPLATE = _HERE / "dashboard_template.html"
 DEFAULT_OUT = _REPO / "reports" / "plants_dashboard.html"
 # Vendored Chart.js -> inlined for a self-contained, offline dashboard. Falls
@@ -516,6 +520,7 @@ def _integrity(soil, sweeps, by_sensor, sensor_ids, sessions) -> dict:
 # --------------------------------------------------------------------------- #
 def render(ctx: dict) -> str:
     tokens = TOKENS_CSS.read_text(encoding="utf-8") if TOKENS_CSS.exists() else ""
+    fonts = FONTS_CSS.read_text(encoding="utf-8") if FONTS_CSS.exists() else ""
     template = TEMPLATE.read_text(encoding="utf-8")
     blob = json.dumps(ctx, separators=(",", ":"), ensure_ascii=False)
     if VENDOR_CHARTJS.exists():
@@ -525,7 +530,7 @@ def render(ctx: dict) -> str:
         chart_tag = f"<script>\n{lib}\n</script>"
     else:
         chart_tag = f'<script src="{CDN_CHARTJS}"></script>'
-    html = template.replace("/*__SPROUT_TOKENS__*/", tokens)
+    html = template.replace("/*__SPROUT_TOKENS__*/", fonts + "\n" + tokens)
     html = html.replace('"__DASH_JSON__"', blob)
     html = html.replace("<!--__CHARTJS__-->", chart_tag)
     return html
