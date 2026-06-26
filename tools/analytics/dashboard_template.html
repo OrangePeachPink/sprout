@@ -210,6 +210,19 @@ footer.prov code { font-family: var(--font-data); }
     </div>
   </header>
 
+  <section class="card" id="monitorCard">
+    <div class="panel-h">
+      <h2>Monitor <span class="proposed" title="the always-on baseline logger, appended to logs/">logging mode</span></h2>
+      <span class="cap">the always-on logger — appends to <span class="mono">logs/</span>; start/stop it here, no terminal</span>
+    </div>
+    <div class="capctl">
+      <span class="capstatus" id="monStatus">—</span>
+      <label class="capf">port<input id="monPort" type="text" value="COM6" maxlength="20" spellcheck="false"></label>
+      <button class="btn" id="monStart" type="button">▶ Start logging</button>
+      <button class="btn" id="monStop" type="button" disabled>■ Stop logging</button>
+    </div>
+  </section>
+
   <section class="card" id="captureCard">
     <div class="panel-h">
       <h2>Experiment Capture <span class="proposed" title="operator-driven; isolated from the monitor baseline">experiment mode</span></h2>
@@ -967,6 +980,38 @@ async function capStop(){
     capSetStatus('stop failed: ' + e, 'err');
   }
 }
+/* ---- Monitor mode (the always-on logger), driven through the control plane (#128) ---- */
+function monSetStatus(text, cls){
+  const s = document.getElementById('monStatus'); if(!s) return;
+  s.textContent = text; s.className = 'capstatus' + (cls ? ' ' + cls : '');
+}
+function monRender(st){
+  const start = document.getElementById('monStart'), stop = document.getElementById('monStop');
+  const running = !!(st && st.state === 'running');
+  start.disabled = running; stop.disabled = !running;
+  monSetStatus(running ? ('logging' + (st.port ? ' · ' + st.port : '')) : 'stopped', running ? 'run' : null);
+}
+async function monPoll(){
+  try{ monRender(await (await fetch('/monitor/status', {cache:'no-store'})).json()); }
+  catch(e){ /* keep the last shown state */ }
+}
+async function monStart(){
+  monSetStatus('starting…');
+  const port = document.getElementById('monPort').value.trim();
+  try{
+    const r = await fetch('/monitor/start', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({port: port || null}),
+    });
+    const data = await r.json();
+    if(!r.ok){ monSetStatus('refused: ' + (data.error || ('HTTP ' + r.status)), 'err'); return; }
+    monRender(data);
+  }catch(e){ monSetStatus('start failed: ' + e, 'err'); }
+}
+async function monStop(){
+  monSetStatus('stopping…');
+  try{ monRender(await (await fetch('/monitor/stop', {method:'POST'})).json()); }
+  catch(e){ monSetStatus('stop failed: ' + e, 'err'); }
+}
 let quitArmed = false;
 async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's not a 1-click kill
   const btn = document.getElementById('quitBtn');
@@ -1005,18 +1050,24 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
 
   const capStartBtn = document.getElementById('capStart'), capStopBtn = document.getElementById('capStop');
   const quitBtn = document.getElementById('quitBtn');
+  const monStartBtn = document.getElementById('monStart'), monStopBtn = document.getElementById('monStop');
   if(LIVE){
     capStartBtn.addEventListener('click', capStart);
     capStopBtn.addEventListener('click', capStop);
     const capSource = document.getElementById('capSource'), capPortField = document.getElementById('capPortField');
     const syncSource = ()=>{ capPortField.hidden = (capSource.value !== 'serial'); };  // port only for serial
     capSource.addEventListener('change', syncSource); syncSource();
+    monStartBtn.addEventListener('click', monStart);
+    monStopBtn.addEventListener('click', monStop);
+    monPoll();  // reflect the logger's current state on load
     quitBtn.hidden = false;  // the in-UI stop only applies to a live server
     quitBtn.addEventListener('click', quitServer);
     capPoll();  // reflect any in-flight capture on load
   } else {
     capStartBtn.disabled = true; capStopBtn.disabled = true;
+    monStartBtn.disabled = true; monStopBtn.disabled = true;
     capSetStatus('serve via serve.py for capture control');
+    monSetStatus('serve via serve.py for monitor control');
   }
 
   applyTheme();
