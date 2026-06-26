@@ -1,5 +1,5 @@
 {
-  "//": "Repo markdownlint rules. MD013 line-length relaxed to 120 (prose only). Disabled rules - each a deliberate fit for this repo, not a defect: MD060 (table-pipe spacing - we mix compact ADR + padded doc tables), MD036 (emphasis-as-heading - intentional bold labels like Do/Don't in style/brand docs), MD033 (inline HTML - the hero README needs <picture>/<img>/<p align> for the theme banner, badges, centering), MD041 (first-line-h1 - the README opens with the HTML banner, the PR template with ## Summary). Runner globs/ignores live in .markdownlint-cli2.jsonc.",
+  "//": "Repo markdownlint rules. MD013 line-length relaxed to 120 (prose only). Disabled rules - each a deliberate fit for this repo, not a defect: MD060 (table-column-style - we allow mixed compact-ADR + padded-doc tables; note MD055/table-pipe-style is the auto-fixable pipe rule and stays on, our pipe style being consistent), MD036 (emphasis-as-heading - intentional bold labels like Do/Don't in style/brand docs), MD033 (inline HTML - the hero README needs <picture>/<img>/<p align> for the theme banner, badges, centering), MD041 (first-line-h1 - the README opens with the HTML banner, the PR template with ## Summary). Runner globs/ignores live in .markdownlint-cli2.jsonc.",
   "default": true,
   "MD013": {
     "line_length": 120,
