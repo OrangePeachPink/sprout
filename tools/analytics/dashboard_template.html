@@ -223,6 +223,11 @@ footer.prov code { font-family: var(--font-data); }
         <option value="300">5 min</option>
       </select></label>
       <label class="capf">duration (s)<input id="capDuration" type="number" value="60" min="1" max="86400"></label>
+      <label class="capf">source<select id="capSource">
+        <option value="synthetic" selected>synthetic</option>
+        <option value="serial">serial (device)</option>
+      </select></label>
+      <label class="capf" id="capPortField" hidden>port<input id="capPort" type="text" value="COM6" maxlength="20" spellcheck="false" placeholder="COM6"></label>
     </div>
     <div class="capform" id="capLabels">
       <label class="capf">s1<input class="caplabel" data-ch="s1" type="text" value="s1" maxlength="24" spellcheck="false"></label>
@@ -902,12 +907,19 @@ async function capPoll(){
 async function capStart(){
   const labels = {};
   document.querySelectorAll('#capLabels .caplabel').forEach(i=>{ labels[i.dataset.ch] = i.value.trim(); });
+  const source = document.getElementById('capSource').value;
   const payload = {
     subject: document.getElementById('capSubject').value.trim() || 'unspecified',
     rate_s: parseFloat(document.getElementById('capRate').value),
     duration_s: parseFloat(document.getElementById('capDuration').value),
     labels: labels,
+    source: source,
   };
+  if(source === 'serial'){  // the device path — the control plane enforces the port mutex
+    const port = document.getElementById('capPort').value.trim();
+    if(!port){ capSetStatus('serial source needs a port (e.g. COM6)', 'err'); return; }
+    payload.port = port;
+  }
   capSetStatus('starting…');
   try{
     const r = await fetch('/capture/start', {
@@ -964,6 +976,9 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
   if(LIVE){
     capStartBtn.addEventListener('click', capStart);
     capStopBtn.addEventListener('click', capStop);
+    const capSource = document.getElementById('capSource'), capPortField = document.getElementById('capPortField');
+    const syncSource = ()=>{ capPortField.hidden = (capSource.value !== 'serial'); };  // port only for serial
+    capSource.addEventListener('change', syncSource); syncSource();
     quitBtn.hidden = false;  // the in-UI stop only applies to a live server
     quitBtn.addEventListener('click', quitServer);
     capPoll();  // reflect any in-flight capture on load
