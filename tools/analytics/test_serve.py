@@ -94,9 +94,29 @@ def test_in_ui_quit() -> None:
             proc.terminate()
 
 
+def test_port_in_use() -> None:
+    print("port-safety: a second start on a live port exits cleanly (no traceback):")
+    port = _free_port()
+    srv = socket.socket()
+    srv.bind(("127.0.0.1", port))
+    srv.listen()
+    try:
+        out = subprocess.run(
+            [sys.executable, str(_SERVE), "--port", str(port)],
+            capture_output=True, text=True, timeout=30,
+        )
+        combined = (out.stdout + out.stderr).lower()
+        check(out.returncode == 1, f"exit 1 on port-in-use (got {out.returncode})")
+        check("already running" in combined, "clean 'already running' message shown")
+        check("traceback" not in combined, "no traceback leaked to the operator")
+    finally:
+        srv.close()
+
+
 if __name__ == "__main__":
     test_port_ssot()
     test_in_ui_quit()
+    test_port_in_use()
     print()
     if _FAILS:
         print(f"FAILED ({len(_FAILS)}): " + "; ".join(_FAILS))

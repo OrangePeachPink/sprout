@@ -17,7 +17,9 @@ shareable one-file artifact; this is for live monitoring on the host.
 from __future__ import annotations
 
 import argparse
+import errno
 import json
+import socket
 import sys
 import threading
 import time
@@ -176,6 +178,15 @@ class DashboardHandler(BaseHTTPRequestHandler):
         return
 
 
+def _port_in_use(host: str, port: int) -> bool:
+    """True if something is already accepting connections on host:port. A connect
+    probe (not a bind) - reliable on Windows, where SO_REUSEADDR would otherwise let
+    a second server silently bind a port a zombie already holds."""
+    with socket.socket() as probe:
+        probe.settimeout(0.3)
+        return probe.connect_ex((host, port)) == 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Serve the live plants dashboard.")
     ap.add_argument(
@@ -210,10 +221,24 @@ def main(argv: list[str] | None = None) -> int:
         print(url)
         return 0
 
+    # Port-safety (#126): if a Sprout server is already on this port, don't half-bind
+    # behind it (Windows SO_REUSEADDR would let us) - say so plainly and exit.
+    if _port_in_use(args.host, args.port):
+        print(f"Sprout is already running at {url}")
+        print('  Open that tab, or stop it first ("Stop server" in the dashboard, '
+              "or close its window).")
+        return 1
+
     # Explicit CLI inputs are pinned; otherwise leave None so each request
     # re-discovers logs/ + the B8 archive (fix #39).
     DashboardHandler.inputs = args.inputs or None
-    httpd = ThreadingHTTPServer((args.host, args.port), DashboardHandler)
+    try:
+        httpd = ThreadingHTTPServer((args.host, args.port), DashboardHandler)
+    except OSError as exc:  # raced between the probe and the bind
+        if getattr(exc, "errno", None) == errno.EADDRINUSE:
+            print(f"Sprout is already running at {url} - stop it first.")
+            return 1
+        raise
     src = DashboardHandler.inputs or "logs/ + B8 archive (auto-discovered each request)"
     print(f"serving live dashboard at {url}  (inputs: {src})")
     print('stop from the dashboard ("Stop server") or with Ctrl-C')
