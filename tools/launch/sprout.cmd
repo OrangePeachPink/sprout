@@ -16,9 +16,12 @@ REM repo root = two levels up from tools\launch\ (works no matter where you laun
 cd /d "%~dp0..\.."
 
 REM Self-update so the icon never serves stale code (#127). Non-fatal: offline / a
-REM non-fast-forward tree just launches what's on disk.
+REM non-fast-forward tree just launches what's on disk. GIT_TERMINAL_PROMPT=0 means a
+REM credential prompt FAILS FAST instead of hanging - a launcher must never block entry
+REM (Firmware review catch, #132).
 echo [sprout] checking for updates...
-git pull --ff-only
+set GIT_TERMINAL_PROMPT=0
+git pull --ff-only 2>nul
 
 where just >nul 2>nul
 if %errorlevel%==0 (
