@@ -206,6 +206,7 @@ class SerialReader(Reader):
         self._ack_timeout_s = ack_timeout_s
         self._banner_timeout_s = banner_timeout_s
         self._ser = None
+        self._lock_held = False  # set after write_lock; release() gates on it
 
     def _default_open(self):
         import serial  # real-path only; tests inject open_fn
@@ -230,6 +231,7 @@ class SerialReader(Reader):
             ) from exc
         self._wait_for_banner()  # opening reset the device; wait until it's listening
         serial_lock.write_lock(self._port, "experiment", lock_dir=self._lock_dir)
+        self._lock_held = True
 
     def _wait_for_banner(self) -> None:
         deadline = time.monotonic() + self._banner_timeout_s
@@ -274,7 +276,11 @@ class SerialReader(Reader):
             with contextlib.suppress(Exception):  # release must never raise
                 self._ser.close()
             self._ser = None
-        serial_lock.clear_lock(lock_dir=self._lock_dir)
+        # Clear ONLY a lock this reader actually wrote. A failed/partial acquire
+        # (port busy, or open-but-no-banner) wrote none - don't wipe the monitor's.
+        if self._lock_held:
+            serial_lock.clear_lock(lock_dir=self._lock_dir)
+            self._lock_held = False
 
 
 # --------------------------------------------------------------------------- #
