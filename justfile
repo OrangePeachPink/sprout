@@ -26,8 +26,9 @@ default:
 #  desktop shortcut that runs `just start`.
 # ============================================================================
 # Launch Sprout — serve + open the browser at the fixed port (the zero-CLI door). The one operator entry.
+# --restart (#127) takes over a stale server so the icon always opens a fresh dashboard.
 start:
-    @just serve --open
+    @just serve --restart --open
 
 # ============================================================================
 #  DATA / ANALYTICS lane — the host application surface (ADR-0005; Data owns serve.py).

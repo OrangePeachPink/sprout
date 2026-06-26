@@ -17,12 +17,14 @@ shareable one-file artifact; this is for live monitoring on the host.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import errno
 import json
 import socket
 import sys
 import threading
 import time
+import urllib.request
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -187,6 +189,22 @@ def _port_in_use(host: str, port: int) -> bool:
         return probe.connect_ex((host, port)) == 0
 
 
+def _stop_existing(url: str, host: str, port: int) -> bool:
+    """Ask a Sprout server already on the port to shut down (its #96 /quit endpoint),
+    then wait for the port to free. Returns True if it released the port. Only stops a
+    server that answers /quit (a Sprout server) - it never force-kills anything."""
+    with contextlib.suppress(Exception):  # the server drops the conn as it exits
+        urllib.request.urlopen(
+            urllib.request.Request(url + "quit", method="POST"), timeout=3
+        )
+    deadline = time.monotonic() + 5.0
+    while time.monotonic() < deadline:
+        if not _port_in_use(host, port):
+            return True
+        time.sleep(0.2)
+    return False
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Serve the live plants dashboard.")
     ap.add_argument(
@@ -202,6 +220,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--open", action="store_true",
         help="open the dashboard in a browser once serving (the no-terminal door)",
+    )
+    ap.add_argument(
+        "--restart", action="store_true",
+        help="if a Sprout server already holds the port, ask it to /quit and take over "
+        "- used by the launcher so a stale server can't block entry",
     )
     ap.add_argument(
         "--print-port", action="store_true",
@@ -221,9 +244,12 @@ def main(argv: list[str] | None = None) -> int:
         print(url)
         return 0
 
-    # Port-safety (#126): if a Sprout server is already on this port, don't half-bind
-    # behind it (Windows SO_REUSEADDR would let us) - say so plainly and exit.
-    if _port_in_use(args.host, args.port):
+    # Port-safety (#126/#127): if a Sprout server is already on this port, don't
+    # half-bind behind it (Windows SO_REUSEADDR would let us). With --restart the
+    # launcher takes over by asking the old one to /quit; otherwise say so + exit.
+    if _port_in_use(args.host, args.port) and not (
+        args.restart and _stop_existing(url, args.host, args.port)
+    ):
         print(f"Sprout is already running at {url}")
         print('  Open that tab, or stop it first ("Stop server" in the dashboard, '
               "or close its window).")
