@@ -8,6 +8,14 @@ trim_trailing_whitespace = true
 indent_style = space
 indent_size = 2
 
+# Python is 4-space (PEP 8 / ruff) — keep the editor in step with the formatter.
+[*.py]
+indent_size = 4
+
+# Firmware C/C++ house style is 4-space.
+[*.{c,h,cpp}]
+indent_size = 4
+
 [*.{bat,cmd,url}]
 end_of_line = crlf
 

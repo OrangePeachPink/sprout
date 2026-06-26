@@ -46,8 +46,10 @@ maintainer confirms `area:` / `layer:` at triage.
 3. **Commit** with [Conventional Commits](https://www.conventionalcommits.org/):
    `type(scope): imperative subject`, where `type` is `feat | fix | docs | refactor | chore` (plus
    `test | ci | style` for finer changes). State the *result* in the subject when that's the point.
-4. **Run the checks** before pushing — see **Development & tooling** in the [README](README.md)
-   (ruff, clang-format / clang-tidy, markdownlint).
+4. **Run the checks** before pushing: **`just check`** (lint + format + tests — exactly what CI runs).
+   Even better, run **`uv run pre-commit install`** once and the format/lint runs automatically on every
+   commit. (First-time setup: `uv sync`, or open the repo in **Codespaces** — see the
+   [README quick start](../README.md#quick-start).)
 5. **Open a PR** and fill in the template. Link the issue with **`Refs #N`** or **`Part of #N`** —
    **not** `Closes #N` (see the gate below). Include how you verified the change.
 6. PRs are **squash-merged** — one clean commit per change; the branch auto-deletes after merge.

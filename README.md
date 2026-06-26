@@ -10,6 +10,8 @@
   <img src="https://img.shields.io/badge/platform-ESP32-17B6C4" alt="ESP32">
   <img src="https://img.shields.io/badge/firmware-v0.7.0-8BD24F" alt="firmware v0.7.0">
   <img src="https://img.shields.io/badge/soil-honest-E8703A" alt="honest by default">
+  <a href="https://github.com/OrangePeachPink/plants/actions/workflows/ci.yml"><img
+    src="https://github.com/OrangePeachPink/plants/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 </p>
 
 > **Hi, I'm Sprout.** I keep a windowsill of plants properly watered — and I tell you, in plain words, how
@@ -26,6 +28,20 @@ calibration is in) waters before a plant is ever in trouble.
 
 It's a learning-and-portfolio build, made to be **enjoyable to run and trustworthy to read** — process and
 tooling sized to match, not over-engineered.
+
+## Quick start
+
+```text
+git clone https://github.com/OrangePeachPink/plants && cd plants
+uv sync                     # reproduce the exact, locked dev environment
+uv run pre-commit install   # the conventions auto-apply on every commit
+just start                  # run Sprout — opens the dashboard in your browser
+```
+
+New here? You need only two tools — **[uv](https://docs.astral.sh/uv/)** (env + runner) and
+**[just](https://github.com/casey/just)** (the command menu) — or click **Open in Codespaces** for a
+ready-made env in the browser. Then `just` lists every command, and `just check` runs the same lint + format +
+tests that CI does.
 
 ## How it works
 
@@ -110,26 +126,30 @@ telemetry schema ([`docs/TELEMETRY_SCHEMA.md`](docs/TELEMETRY_SCHEMA.md)). Requi
 
 ## Development & tooling
 
-Code-quality tooling lives at the repo root and is enforced per language:
+One command sets up, one command checks — the conventions help you instead of getting in your way.
 
-| Area | Tool | Config | Run |
-| --- | --- | --- | --- |
-| Python | [ruff](https://docs.astral.sh/ruff/) — lint + format | [`ruff.toml`](ruff.toml) | `ruff check .` · `ruff check --fix .` · `ruff format .` |
-| C / C++ (firmware) | clang-format + clang-tidy | [`.clang-format`](.clang-format) · [`.clang-tidy`](.clang-tidy) | `clang-format -i FILE` · `clang-tidy FILE -- -Ifirmware/lib/...` |
-| Markdown | markdownlint | [`.markdownlint.json`](.markdownlint.json) | `npx markdownlint-cli2 "**/*.md"` (add `--fix` to autofix) |
-| Endings / encoding | git + EditorConfig | [`.gitattributes`](.gitattributes) · [`.editorconfig`](.editorconfig) | LF · UTF-8 · final newline |
+```text
+uv sync                     # the exact, locked dev env (Python, ruff, pytest, pre-commit)
+uv run pre-commit install   # auto-format + lint + hygiene on every commit
+just check                  # the full gate: pre-commit + tests — exactly what CI runs
+just                        # list every command
+```
 
-Ruff is the modern all-in-one (it replaces flake8 / isort / pyupgrade / black). The config selects a
-balanced, low-friction ruleset (`E/W/F/I/UP/B/C4/SIM/RUF`) and sets line length to `88`, in `ruff.toml`.
-Install with `pip install ruff` (or `pipx install ruff`). The Python here is the host logger plus a
-PlatformIO pre-build hook.
+`pre-commit` is the **single definition** of code quality — ruff lint + format, markdownlint, and
+whitespace/EOL hygiene — run identically on your machine and in CI, so style is something the repo handles
+*for* you, not a thing you have to remember. Per-language configs live at the repo root:
 
-For the firmware C, `clang-format` owns formatting and `clang-tidy` owns static analysis, both tuned to the
-existing house style (4-space indent, function brace on its own line, K&R control braces, 80 columns). The
-check set is bug/correctness-focused (`clang-analyzer`, `bugprone`, `cert`, `performance`, `portability`)
-and **advisory, not build-blocking** — the current `firmware/lib` sources pass it clean. Policy is **format
-new / changed files only**: clang-format collapses the firmware's manual column alignment, so we do not
-bulk-reformat the tree.
+| Area | Tool | Config |
+| --- | --- | --- |
+| Python | [ruff](https://docs.astral.sh/ruff/) — lint + format (all-in-one) | [`ruff.toml`](ruff.toml) |
+| Markdown | markdownlint-cli2 | [`.markdownlint.json`](.markdownlint.json) |
+| C / C++ (firmware) | clang-format + clang-tidy | [`.clang-format`](.clang-format) · [`.clang-tidy`](.clang-tidy) |
+| Endings / encoding | git + EditorConfig | [`.gitattributes`](.gitattributes) · [`.editorconfig`](.editorconfig) |
+
+Ruff is the modern all-in-one (it replaces flake8 / isort / pyupgrade / black), pinned in the locked env. The
+firmware C formatter is being re-introduced into the gate idempotently
+([#120](https://github.com/OrangePeachPink/plants/issues/120)); until then, format new / changed C by hand
+(`clang-tidy` static analysis stays advisory, not build-blocking).
 
 ## Where to look
 
