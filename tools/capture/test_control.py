@@ -21,6 +21,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 import control  # noqa: E402
+import serial_lock  # noqa: E402
 
 _FAILS: list[str] = []
 
@@ -131,12 +132,40 @@ def test_stop_idle() -> None:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def test_serial_gating() -> None:
+    print("serial source: needs a port; refused while the port is locked:")
+    tmp = Path(tempfile.mkdtemp(prefix="ctl_ser_"))
+    lockdir = Path(tempfile.mkdtemp(prefix="ctl_serlk_"))
+    try:
+        c = control.CaptureController(experiments_dir=tmp, lock_dir=lockdir)
+        raises(
+            lambda: c.start(subject="x", rate_s=1, duration_s=5, source="serial"),
+            control.ControlError, "serial without a port refused",
+        )
+        serial_lock.write_lock("COM6", "monitor", lock_dir=lockdir)  # a live owner
+        raises(
+            lambda: c.start(
+                subject="x", rate_s=1, duration_s=5, source="serial", port="COM6"
+            ),
+            control.ControlError, "serial refused while the port is locked",
+        )
+        check(c.status()["state"] == "idle", "nothing launched while refused")
+        serial_lock.clear_lock(lockdir)
+        c.start(subject="x", rate_s=1, duration_s=5, source="serial", port="COM_NX_99")
+        ended = _await(lambda: c.status()["state"] != "running", 8.0)
+        check(ended and c.status()["state"] == "error", "no-device launch -> error")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+        shutil.rmtree(lockdir, ignore_errors=True)
+
+
 if __name__ == "__main__":
     test_start_status_stop()
     test_single_flight()
     test_auto_stop()
     test_sanitization()
     test_stop_idle()
+    test_serial_gating()
     print()
     if _FAILS:
         print(f"FAILED ({len(_FAILS)}): " + "; ".join(_FAILS))
