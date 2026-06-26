@@ -68,16 +68,22 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
   text-transform: uppercase; color: var(--st-dry); border: 1px solid var(--st-dry);
   border-radius: var(--r-pill); padding: 1px 8px; vertical-align: middle; }
 
-/* experiment capture panel (#67) */
-.capform { display: flex; flex-wrap: wrap; gap: var(--space-md); margin-bottom: var(--space-sm); }
-.capf { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted);
-  text-transform: lowercase; }
+/* experiment capture panel (#67, #101 — aligned grid + grouped sections) */
+.capform { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-md); margin-bottom: var(--space-md); align-items: end; }
+.capf { display: flex; flex-direction: column; gap: var(--space-xs); font-size: 11px;
+  color: var(--muted); text-transform: lowercase; letter-spacing: .02em; }
+.capf[hidden] { display: none; }  /* the port field hides when source != serial */
 .capf input, .capf select { font-family: var(--font-ui); font-size: 13px; color: var(--ink);
-  background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px;
-  min-width: 96px; }
-.capf input:focus, .capf select:focus { outline: none; border-color: var(--leaf); }
-#capLabels .capf input { min-width: 64px; }
-.capctl { display: flex; align-items: center; gap: var(--space-md); margin-top: 2px; flex-wrap: wrap; }
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-control);
+  padding: 6px var(--space-sm); width: 100%; min-width: 0; box-sizing: border-box; }
+.capf input:focus, .capf select:focus { outline: none; border-color: var(--leaf);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--leaf) 18%, transparent); }
+.capgroup { font-size: 11px; color: var(--muted); text-transform: lowercase; letter-spacing: .04em;
+  margin-bottom: var(--space-xs); }
+#capLabels { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.capctl { display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;
+  border-top: 1px solid var(--border); padding-top: var(--space-md); margin-top: var(--space-xs); }
 .capstatus { font-family: var(--font-data); font-size: 13px; color: var(--muted); }
 .capstatus.run { color: var(--leaf); font-weight: 600; }
 .capstatus.err { color: var(--st-dry); }
@@ -229,6 +235,7 @@ footer.prov code { font-family: var(--font-data); }
       </select></label>
       <label class="capf" id="capPortField" hidden>port<input id="capPort" type="text" value="COM6" maxlength="20" spellcheck="false" placeholder="COM6"></label>
     </div>
+    <div class="capgroup">probe labels — name what each probe is measuring (optional)</div>
     <div class="capform" id="capLabels">
       <label class="capf">s1<input class="caplabel" data-ch="s1" type="text" value="s1" maxlength="24" spellcheck="false"></label>
       <label class="capf">s2<input class="caplabel" data-ch="s2" type="text" value="s2" maxlength="24" spellcheck="false"></label>
