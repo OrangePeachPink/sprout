@@ -3,8 +3,11 @@
 Thumbs.db
 desktop.ini
 
-# Editor / IDE
-.vscode/
+# Editor / IDE — ignore personal .vscode files, but COMMIT the two shared ones
+# (recommended extensions + format-on-save) so the editor helps every contributor.
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 .idea/
 *.swp
 *~
