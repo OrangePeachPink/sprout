@@ -6,6 +6,8 @@
   "words": [
     "AMS1117",
     "AOUT",
+    // "AUOT" is a genuine silkscreen typo (for "AOUT") on these capacitive-sensor
+    // boards - allowlisted on purpose so it isn't "corrected" out of wiring notes.
     "AUOT",
     "breadboard",
     "BRINGUP",
