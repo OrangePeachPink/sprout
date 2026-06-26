@@ -245,9 +245,10 @@ class RotatingCsv:
 
 def console_line(row):
     t = row["timestamp_local"][11:19]  # HH:MM:SS
+    # raw + band are the truth; no moisture-% (it was an uncalibrated remap, #38).
     return (
         f"{t}  {row['sensor_id']:<3}  raw={row['raw_value']:<4}  "
-        f"{row['value']:>3}%  {row['quality_flag']:<9}  "
+        f"{row['quality_flag']:<9}  "
         f"{payload_get(row['payload'], 'level')}"
     )
 
