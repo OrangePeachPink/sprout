@@ -205,12 +205,50 @@ def test_slow_cadence_autostop() -> None:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def test_release_preserves_foreign_lock() -> None:
+    print("release() clears ONLY a lock this reader wrote (the #87 mutex tidy-up):")
+    tmp = Path(tempfile.mkdtemp(prefix="serforeign_"))
+    try:
+        # case 1: the monitor holds the port + owns the lock; a 2nd open is refused,
+        # so acquire() raises before writing a lock -> release() must not wipe it.
+        serial_lock.write_lock("COM6", "monitor", lock_dir=tmp)
+
+        def busy_open():
+            raise OSError("COM6 busy (monitor holds it)")
+
+        r1 = ec.SerialReader("COM6", 19200, open_fn=busy_open, lock_dir=tmp)
+        raises(r1.acquire, ec.CaptureError, "port-busy open -> CaptureError")
+        r1.release()
+        owner = serial_lock.current_owner(tmp)
+        check(
+            owner is not None and owner["mode"] == "monitor",
+            "release after a port-busy open left the monitor's lock intact",
+        )
+
+        # case 2: open succeeds but no banner -> lock still never written -> a
+        # pre-existing foreign lock survives release() too.
+        r2 = ec.SerialReader(
+            "COM6", 19200, open_fn=lambda: FakeSerial(banner=False),
+            lock_dir=tmp, banner_timeout_s=0.1,
+        )
+        raises(r2.acquire, ec.CaptureError, "no-banner open -> CaptureError")
+        r2.release()
+        owner2 = serial_lock.current_owner(tmp)
+        check(
+            owner2 is not None and owner2["mode"] == "monitor",
+            "release after a no-banner open left the foreign lock intact",
+        )
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 if __name__ == "__main__":
     test_lock()
     test_serial_lifecycle_and_protocol()
     test_serial_errors()
     test_serial_capture_e2e()
     test_slow_cadence_autostop()
+    test_release_preserves_foreign_lock()
     print()
     if _FAILS:
         print(f"FAILED ({len(_FAILS)}): " + "; ".join(_FAILS))
