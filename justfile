@@ -20,13 +20,14 @@ default:
 
 # ============================================================================
 #  START — the single operator entry (ADR-0002 #4 / ADR-0005 §4–5).
-#  Runs Data's app surface; serve.py owns the fixed port 8765 + the in-UI stop, so the
-#  port literal lives there and is never duplicated here. The double-click launcher
-#  (#86 B) rides on top of this recipe and adds browser-auto-open.
+#  Runs Data's app surface via `serve.py --open` (Data, #96), which serves AND opens the
+#  browser at the fixed port 8765 and owns the in-UI stop — so the port literal lives
+#  there and is never duplicated here. The double-click launcher (#86 B) is then just a
+#  desktop shortcut that runs `just start`.
 # ============================================================================
-# Launch Sprout (the dashboard) — the one operator entry.
+# Launch Sprout — serve + open the browser at the fixed port (the zero-CLI door). The one operator entry.
 start:
-    @just serve
+    @just serve --open
 
 # ============================================================================
 #  DATA / ANALYTICS lane — the host application surface (ADR-0005; Data owns serve.py).
