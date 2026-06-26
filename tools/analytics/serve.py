@@ -7,9 +7,11 @@ the host logger as it appends. Read-only: it never writes the logs.
 
     python tools/analytics/serve.py                 # serve repo logs/ on :8765
     python tools/analytics/serve.py logs/ -p 8000   # custom inputs + port
+    python tools/analytics/serve.py --open          # serve + open the browser
 
-Stop with Ctrl-C. The static ``dashboard.py`` snapshot is still the right tool
-for a shareable one-file artifact; this is for live monitoring on the host.
+Stop it from the dashboard's "Stop server" control (the no-terminal door) or with
+Ctrl-C. The static ``dashboard.py`` snapshot is still the right tool for a
+shareable one-file artifact; this is for live monitoring on the host.
 """
 
 from __future__ import annotations
@@ -17,6 +19,9 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import threading
+import time
+import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import ClassVar
@@ -46,6 +51,12 @@ from control import CaptureController, ControlError  # noqa: E402  (capture sibl
 # The operator capture control plane (ADR-0011 Option A, #66): serve.py owns the
 # control API and launches the bounded capture process; it never touches the port.
 _CAPTURE = CaptureController()
+
+# The fixed port (ADR-0005 §4/§5). Data owns it as the single source of truth: the
+# runner (`just start`) and the double-click launcher reference THIS value — via
+# `--print-port` / `--print-url` — instead of re-typing the literal anywhere else.
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 8765
 
 
 def _context(
@@ -125,6 +136,21 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 ))
             elif parsed.path == "/capture/stop":
                 self._send_json(_CAPTURE.stop())
+            elif parsed.path == "/quit":
+                # In-UI stop (ADR-0005 §4): a localhost-gated shutdown so the operator
+                # stops the server from the browser (no terminal to Ctrl-C when it was
+                # launched by a double-click). Ack first, then shut down from a separate
+                # thread - serve_forever can't be stopped from its own request thread.
+                if not self._is_local():
+                    self._send_json({"error": "shutdown is localhost-only"}, status=403)
+                    return
+                self._send_json({"stopped": True})
+
+                def _shutdown() -> None:
+                    time.sleep(0.25)  # let the {stopped:true} ack flush to the browser
+                    self.server.shutdown()
+
+                threading.Thread(target=_shutdown, daemon=True).start()
             else:
                 self._send("not found", "text/plain; charset=utf-8", status=404)
         except ControlError as exc:  # a rejected request (bad input / busy)
@@ -142,6 +168,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             raise ControlError("request body must be a JSON object")
         return data
 
+    def _is_local(self) -> bool:  # loopback-only guard for the shutdown endpoint
+        host = self.client_address[0] if self.client_address else ""
+        return host in ("127.0.0.1", "::1", "::ffff:127.0.0.1")
+
     def log_message(self, *args: object) -> None:  # quiet the per-request log
         return
 
@@ -151,18 +181,44 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "inputs", nargs="*", help="log files / dirs / globs (default: repo logs/)"
     )
-    ap.add_argument("-p", "--port", type=int, default=8765, help="port (default 8765)")
-    ap.add_argument("--host", default="127.0.0.1", help="bind host (default localhost)")
+    ap.add_argument(
+        "-p", "--port", type=int, default=DEFAULT_PORT,
+        help=f"port (default {DEFAULT_PORT})",
+    )
+    ap.add_argument(
+        "--host", default=DEFAULT_HOST, help="bind host (default localhost)"
+    )
+    ap.add_argument(
+        "--open", action="store_true",
+        help="open the dashboard in a browser once serving (the no-terminal door)",
+    )
+    ap.add_argument(
+        "--print-port", action="store_true",
+        help="print the fixed port and exit (the launcher's single source of truth)",
+    )
+    ap.add_argument(
+        "--print-url", action="store_true",
+        help="print the dashboard URL and exit (for `just start` / the launcher)",
+    )
     args = ap.parse_args(argv)
+
+    url = f"http://{args.host}:{args.port}/"
+    if args.print_port:  # the launcher reads this; never retypes the port literal
+        print(args.port)
+        return 0
+    if args.print_url:
+        print(url)
+        return 0
 
     # Explicit CLI inputs are pinned; otherwise leave None so each request
     # re-discovers logs/ + the B8 archive (fix #39).
     DashboardHandler.inputs = args.inputs or None
     httpd = ThreadingHTTPServer((args.host, args.port), DashboardHandler)
-    url = f"http://{args.host}:{args.port}/"
     src = DashboardHandler.inputs or "logs/ + B8 archive (auto-discovered each request)"
     print(f"serving live dashboard at {url}  (inputs: {src})")
-    print("Ctrl-C to stop")
+    print('stop from the dashboard ("Stop server") or with Ctrl-C')
+    if args.open:  # the socket is bound + listening; the browser waits in the backlog
+        webbrowser.open(url)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

@@ -202,6 +202,7 @@ footer.prov code { font-family: var(--font-data); }
       <button class="btn" id="refreshBtn" type="button">↻ Refresh</button>
       <label class="auto" id="autoLbl"><input type="checkbox" id="autoChk"> auto</label>
       <button class="btn" id="themeBtn" type="button">soil mode</button>
+      <button class="btn" id="quitBtn" type="button" hidden>⏻ Stop server</button>
     </div>
   </header>
 
@@ -922,6 +923,23 @@ async function capStop(){
   try{ capRender(await (await fetch('/capture/stop', {method:'POST'})).json()); }
   catch(e){ capSetStatus('stop failed: ' + e, 'err'); }
 }
+let quitArmed = false;
+async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's not a 1-click kill
+  const btn = document.getElementById('quitBtn');
+  if(!quitArmed){
+    quitArmed = true; btn.textContent = '⏻ click to confirm';
+    setTimeout(()=>{ if(quitArmed){ quitArmed=false; btn.textContent='⏻ Stop server'; } }, 4000);
+    return;
+  }
+  quitArmed = false; btn.disabled = true; btn.textContent = 'stopping…';
+  if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
+  try{ await fetch('/quit', {method:'POST'}); }
+  catch(e){ /* the socket drops as the server exits - expected */ }
+  btn.textContent = '⏻ server stopped';
+  document.body.style.opacity = '0.55';
+  const sub = document.getElementById('subline');
+  if(sub) sub.textContent = 'server stopped — you can close this tab.';
+}
 
 /* ---- controls + boot ---- */
 (function(){
@@ -942,9 +960,12 @@ async function capStop(){
   document.querySelectorAll('.rangebtn').forEach(b=> b.addEventListener('click', ()=> setRange(b.dataset.r)));
 
   const capStartBtn = document.getElementById('capStart'), capStopBtn = document.getElementById('capStop');
+  const quitBtn = document.getElementById('quitBtn');
   if(LIVE){
     capStartBtn.addEventListener('click', capStart);
     capStopBtn.addEventListener('click', capStop);
+    quitBtn.hidden = false;  // the in-UI stop only applies to a live server
+    quitBtn.addEventListener('click', quitServer);
     capPoll();  // reflect any in-flight capture on load
   } else {
     capStartBtn.disabled = true; capStopBtn.disabled = true;
