@@ -465,13 +465,17 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"experiment '{experiment_id}': {args.subject} @ {args.rate_s}s "
           f"for {args.duration_s}s -> {out_dir / experiment_id} ({args.source})")
-    manifest = run_capture(
-        reader, out_dir,
-        experiment_id=experiment_id, subject=args.subject,
-        rate_s=args.rate_s, duration_s=args.duration_s,
-        labels=_parse_labels(args.label),
-        stop_file=Path(args.stop_file) if args.stop_file else None,
-    )
+    try:
+        manifest = run_capture(
+            reader, out_dir,
+            experiment_id=experiment_id, subject=args.subject,
+            rate_s=args.rate_s, duration_s=args.duration_s,
+            labels=_parse_labels(args.label),
+            stop_file=Path(args.stop_file) if args.stop_file else None,
+        )
+    except CaptureError as exc:  # port busy / no banner -> clean exit, no traceback
+        print(f"capture failed: {exc}", file=sys.stderr)
+        return 1
     t = manifest["transport"]
     print(
         f"done: {t['rows']} rows / {t['sweeps']} sweeps  "

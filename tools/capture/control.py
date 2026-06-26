@@ -35,11 +35,15 @@ _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
 _CAPTURE_PY = _HERE / "experiment_capture.py"
 
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+import serial_lock  # noqa: E402  (sibling leaf — the #64 advisory-lock contract)
+
 # A safe path/identifier token — letters, digits, dot, dash, underscore; no "..",
 # no slashes. experiment_id / subject become a folder name, so this is the guard
 # against path traversal from a control-API request.
 _TOKEN_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
-_SOURCES = ("synthetic",)  # "serial" lands with #75 (SerialReader + serial_lock)
+_SOURCES = ("synthetic", "serial")  # serial = real device, gated by the pre-check
 
 
 class ControlError(ValueError):
@@ -81,12 +85,14 @@ class CaptureController:
         experiments_dir: str | Path | None = None,
         python: str | None = None,
         capture_py: str | Path | None = None,
+        lock_dir: str | Path | None = None,
     ) -> None:
         self._experiments_dir = (
             Path(experiments_dir) if experiments_dir else _REPO / "experiments"
         )
         self._python = python or sys.executable
         self._capture_py = Path(capture_py) if capture_py else _CAPTURE_PY
+        self._lock_dir = lock_dir  # where the serial port pre-check reads the lock
         self._lock = threading.Lock()
         self._proc: subprocess.Popen | None = None
         self._meta: dict | None = None
@@ -130,9 +136,19 @@ class CaptureController:
             if self._proc is not None and self._proc.poll() is None:
                 raise ControlError("a capture is already running (single-flight)")
             if source not in _SOURCES:
-                raise ControlError(
-                    f"source {source!r} not available yet — serial lands with #75"
-                )
+                raise ControlError(f"unknown source {source!r}; use one of {_SOURCES}")
+            if source == "serial":
+                if not port:
+                    raise ControlError("serial source needs a 'port' (e.g. COM6)")
+                # the serial mutex: refuse rather than open (and reset) a held device.
+                # current_owner reads the advisory lock without opening; the OS
+                # exclusive open is the hard backstop if a lock is missing.
+                owner = serial_lock.current_owner(self._lock_dir)
+                if owner:
+                    raise ControlError(
+                        f"port held by {owner.get('mode')} (pid {owner.get('pid')}) "
+                        "— stop the monitor first"
+                    )
             subject = _safe_token(subject, "subject")
             rate_s = _bounded_float(rate_s, 0.05, 3600.0, "rate_s")
             duration_s = _bounded_float(duration_s, 1.0, 86400.0, "duration_s")
