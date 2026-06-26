@@ -967,6 +967,8 @@ async function capStart(){
     });
     if(!ok){ capSetStatus('refused: ' + (data.error || ('HTTP ' + status)), 'err'); return; }
     capRender(data); capPoll();
+    if(data.handoff){ monSetStatus('paused for this test · resumes after'); }  // #129 auto handoff
+    else { monPoll(); }
   }catch(e){
     if(e.capDown){ capApiDown(); return; }
     capSetStatus('start failed: ' + e, 'err');
@@ -1060,6 +1062,7 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
     monStartBtn.addEventListener('click', monStart);
     monStopBtn.addEventListener('click', monStop);
     monPoll();  // reflect the logger's current state on load
+    setInterval(monPoll, 5000);  // keep it live so the handoff pause/resume shows (#129)
     quitBtn.hidden = false;  // the in-UI stop only applies to a live server
     quitBtn.addEventListener('click', quitServer);
     capPoll();  // reflect any in-flight capture on load
