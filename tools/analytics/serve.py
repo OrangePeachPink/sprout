@@ -50,6 +50,7 @@ _REPO = _HERE.parents[1]
 _CAPTURE_DIR = _REPO / "tools" / "capture"
 if str(_CAPTURE_DIR) not in sys.path:
     sys.path.insert(0, str(_CAPTURE_DIR))
+import handoff  # noqa: E402  (capture sibling - the Monitor<->Experiment handoff, #129)
 from control import CaptureController, ControlError  # noqa: E402  (capture sibling)
 
 _LOGGER_DIR = _REPO / "tools" / "logger"
@@ -141,17 +142,18 @@ class DashboardHandler(BaseHTTPRequestHandler):
         try:
             if parsed.path == "/capture/start":
                 b = self._body()
-                self._send_json(
-                    _CAPTURE.start(
-                        subject=b.get("subject", "unspecified"),
-                        rate_s=b.get("rate_s", 1.0),
-                        duration_s=b.get("duration_s", 60.0),
-                        labels=b.get("labels"),
-                        experiment_id=b.get("experiment_id"),
-                        source=b.get("source", "synthetic"),
-                        port=b.get("port"),
-                    )
-                )
+                # Route through the handoff (#129): a serial start auto-pauses the
+                # monitor (frees COM6) and resumes it when the experiment ends.
+                self._send_json(handoff.start_experiment(
+                    _MONITOR, _CAPTURE,
+                    subject=b.get("subject", "unspecified"),
+                    rate_s=b.get("rate_s", 1.0),
+                    duration_s=b.get("duration_s", 60.0),
+                    labels=b.get("labels"),
+                    experiment_id=b.get("experiment_id"),
+                    source=b.get("source", "synthetic"),
+                    port=b.get("port"),
+                ))
             elif parsed.path == "/capture/stop":
                 self._send_json(_CAPTURE.stop())
             elif parsed.path == "/monitor/start":
