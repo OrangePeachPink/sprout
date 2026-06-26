@@ -262,8 +262,7 @@ def build_context(data: LogData) -> dict:
         by_sensor.setdefault(r.sensor_id, []).append(r)
     sensor_ids = sorted(by_sensor)
     colors = {
-        sid: SENSOR_COLORS[_channel_idx(sid) % len(SENSOR_COLORS)]
-        for sid in sensor_ids
+        sid: SENSOR_COLORS[_channel_idx(sid) % len(SENSOR_COLORS)] for sid in sensor_ids
     }
 
     sensors = []

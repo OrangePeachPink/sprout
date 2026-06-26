@@ -270,9 +270,7 @@ def write_csv(out: Path, header_lines: list[str], rows: list[dict[str, str]]) ->
     with out.open("w", encoding="utf-8", newline="") as fh:
         for line in header_lines:
             fh.write(line + "\n")  # LF per repo policy
-        writer = csv.DictWriter(
-            fh, fieldnames=CANONICAL_COLUMNS, lineterminator="\n"
-        )
+        writer = csv.DictWriter(fh, fieldnames=CANONICAL_COLUMNS, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -357,8 +355,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         if span:
             print(
-                f"  span (local): {span[0]:%Y-%m-%d %H:%M} -> "
-                f"{span[1]:%Y-%m-%d %H:%M}"
+                f"  span (local): {span[0]:%Y-%m-%d %H:%M} -> {span[1]:%Y-%m-%d %H:%M}"
             )
         print(
             f"  rows: parsed={stats.get('parsed', 0)} "

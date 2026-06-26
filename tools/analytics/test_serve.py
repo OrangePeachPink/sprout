@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Standalone tests for the serve.py launch seam (#86, ADR-0005 §4/§5):
 
-  * the fixed-port single-source-of-truth accessors (``--print-port`` /
-    ``--print-url``) the runner + launcher reference instead of retyping ``8765``,
-  * the localhost-gated in-UI shutdown (``POST /quit``) — the no-terminal stop.
+* the fixed-port single-source-of-truth accessors (``--print-port`` /
+  ``--print-url``) the runner + launcher reference instead of retyping ``8765``,
+* the localhost-gated in-UI shutdown (``POST /quit``) — the no-terminal stop.
 
-    python tools/analytics/test_serve.py
+  python tools/analytics/test_serve.py
 """
 
 from __future__ import annotations
@@ -33,7 +33,9 @@ def check(cond: bool, msg: str) -> None:
 def _run(*args: str) -> str:
     out = subprocess.run(
         [sys.executable, str(_SERVE), *args],
-        capture_output=True, text=True, timeout=60,
+        capture_output=True,
+        text=True,
+        timeout=60,
     )
     return out.stdout.strip()
 
@@ -60,7 +62,9 @@ def test_in_ui_quit() -> None:
     port = _free_port()
     proc = subprocess.Popen(
         [sys.executable, str(_SERVE), "--port", str(port)],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
     )
     try:
         up = False
@@ -75,9 +79,7 @@ def test_in_ui_quit() -> None:
 
         acked = None
         try:
-            req = urllib.request.Request(
-                f"http://127.0.0.1:{port}/quit", method="POST"
-            )
+            req = urllib.request.Request(f"http://127.0.0.1:{port}/quit", method="POST")
             with urllib.request.urlopen(req, timeout=3) as resp:
                 acked = json.loads(resp.read().decode()).get("stopped") is True
         except Exception:

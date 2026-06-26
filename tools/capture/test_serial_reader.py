@@ -174,9 +174,13 @@ def test_serial_capture_e2e() -> None:
     try:
         reader = _reader(FakeSerial(), lockdir, ack_timeout_s=0.5)
         manifest = ec.run_capture(
-            reader, tmp,
-            experiment_id="t_serial", subject="fake-bench",
-            rate_s=1.0, duration_s=0.3, labels={"s1": "ctrl"},
+            reader,
+            tmp,
+            experiment_id="t_serial",
+            subject="fake-bench",
+            rate_s=1.0,
+            duration_s=0.3,
+            labels={"s1": "ctrl"},
         )
         f = tmp / "t_serial" / "t_serial.csv"
         body = f.read_text(encoding="utf-8") if f.exists() else ""
@@ -195,9 +199,13 @@ def test_slow_cadence_autostop() -> None:
     try:
         t0 = time.monotonic()
         ec.run_capture(
-            ec.SyntheticReader(seed=2), tmp,
-            experiment_id="t_slow", subject="x",
-            rate_s=2.0, duration_s=0.4, labels={},
+            ec.SyntheticReader(seed=2),
+            tmp,
+            experiment_id="t_slow",
+            subject="x",
+            rate_s=2.0,
+            duration_s=0.4,
+            labels={},
         )
         elapsed = time.monotonic() - t0
         check(elapsed < 1.5, f"stopped at ~{elapsed:.2f}s, not the 2 s cadence")
@@ -228,8 +236,11 @@ def test_release_preserves_foreign_lock() -> None:
         # case 2: open succeeds but no banner -> lock still never written -> a
         # pre-existing foreign lock survives release() too.
         r2 = ec.SerialReader(
-            "COM6", 19200, open_fn=lambda: FakeSerial(banner=False),
-            lock_dir=tmp, banner_timeout_s=0.1,
+            "COM6",
+            19200,
+            open_fn=lambda: FakeSerial(banner=False),
+            lock_dir=tmp,
+            banner_timeout_s=0.1,
         )
         raises(r2.acquire, ec.CaptureError, "no-banner open -> CaptureError")
         r2.release()

@@ -448,7 +448,9 @@ def main(argv: list[str] | None = None) -> int:
         "--label", action="append", help="per-probe label, e.g. --label s1=control"
     )
     ap.add_argument(
-        "--source", choices=("synthetic", "serial"), default="synthetic",
+        "--source",
+        choices=("synthetic", "serial"),
+        default="synthetic",
         help="capture source (serial lands with #63/#64; synthetic = device-free)",
     )
     ap.add_argument("--port", help="serial port (serial source only)")
@@ -465,17 +467,23 @@ def main(argv: list[str] | None = None) -> int:
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     experiment_id = args.experiment_id or f"{stamp}_{args.subject}"
     reader: Reader = (
-        SyntheticReader() if args.source == "synthetic"
+        SyntheticReader()
+        if args.source == "synthetic"
         else SerialReader(args.port, args.baud)
     )
 
-    print(f"experiment '{experiment_id}': {args.subject} @ {args.rate_s}s "
-          f"for {args.duration_s}s -> {out_dir / experiment_id} ({args.source})")
+    print(
+        f"experiment '{experiment_id}': {args.subject} @ {args.rate_s}s "
+        f"for {args.duration_s}s -> {out_dir / experiment_id} ({args.source})"
+    )
     try:
         manifest = run_capture(
-            reader, out_dir,
-            experiment_id=experiment_id, subject=args.subject,
-            rate_s=args.rate_s, duration_s=args.duration_s,
+            reader,
+            out_dir,
+            experiment_id=experiment_id,
+            subject=args.subject,
+            rate_s=args.rate_s,
+            duration_s=args.duration_s,
             labels=_parse_labels(args.label),
             stop_file=Path(args.stop_file) if args.stop_file else None,
         )
