@@ -115,10 +115,47 @@ def test_port_in_use() -> None:
         srv.close()
 
 
+def _wait_up(port: int, timeout: float) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.3):
+                return True
+        except OSError:
+            time.sleep(0.1)
+    return False
+
+
+def test_restart_takes_over() -> None:
+    print("--restart: takes over from a running Sprout server via graceful /quit:")
+    port = _free_port()
+    first = subprocess.Popen(
+        [sys.executable, str(_SERVE), "--port", str(port)],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+    )
+    second = None
+    try:
+        check(_wait_up(port, 8), "first server came up")
+        second = subprocess.Popen(
+            [sys.executable, str(_SERVE), "--port", str(port), "--restart"],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+        )
+        code = None
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            code = first.wait(timeout=12)
+        check(code == 0, f"--restart stopped the first server cleanly (exit {code})")
+        check(_wait_up(port, 8), "the restart server now holds the port")
+    finally:
+        for p in (first, second):
+            if p and p.poll() is None:
+                p.terminate()
+
+
 if __name__ == "__main__":
     test_port_ssot()
     test_in_ui_quit()
     test_port_in_use()
+    test_restart_takes_over()
     print()
     if _FAILS:
         print(f"FAILED ({len(_FAILS)}): " + "; ".join(_FAILS))
