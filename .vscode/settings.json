@@ -1,0 +1,10 @@
+{
+  "//": "Shared editor defaults (#110): ruff formats Python on save; .editorconfig drives whitespace/indent/eol.",
+  "editor.formatOnSave": true,
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.ruff": "explicit"
+    }
+  }
+}
