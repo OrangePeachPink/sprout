@@ -15,7 +15,8 @@ desktop.ini
 # Secrets / local config (KEEP OUT OF GIT)
 .env
 .env.*
-!.env.example  # but DO commit the template (establishes the .env habit)
+# but DO commit the template (establishes the .env habit):
+!.env.example
 secrets.h
 wifi_credentials.h
 credentials.h
