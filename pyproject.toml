@@ -1,0 +1,23 @@
+# Sprout — host Python tooling environment (ADR-0002 #3).
+# `uv sync` reproduces this exact, locked dev env in one command. This repo is a
+# collection of host tools + firmware, not a distributable package, so package = false:
+# uv manages the environment; it does not build or install a wheel.
+
+[project]
+name = "sprout"
+version = "0.7.0"  # mirrors the firmware SemVer (ADR-0009); metadata only (package = false)
+description = "Sprout — an honest capacitive soil-moisture + small-pump auto-waterer (host tooling)."
+requires-python = ">=3.11"
+dependencies = [
+  "pyserial>=3.5",  # the host serial logger / experiment-capture runtime
+]
+
+[dependency-groups]
+dev = [
+  "ruff>=0.6",       # lint + format (policy lives in ruff.toml)
+  "pytest>=8",       # host test harness (ADR-0002 #11)
+  "pre-commit>=3.7", # the local enforcement layer (ADR-0002 #10)
+]
+
+[tool.uv]
+package = false
