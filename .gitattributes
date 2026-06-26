@@ -22,3 +22,9 @@
 *.JPEG binary
 *.JPG  binary
 *.MOV  binary
+
+# GitHub Linguist: keep the language bar honest — this is an embedded-C + Python
+# project, not a web app. Exclude design docs / generated pages / archives from stats.
+docs/design/**          linguist-documentation
+**/*.dc.html            linguist-generated
+docs/design/_archive/** linguist-vendored
