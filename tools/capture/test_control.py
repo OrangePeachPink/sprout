@@ -107,15 +107,18 @@ def test_sanitization() -> None:
         bad_id = "../evil"
         raises(
             lambda: c.start(subject="x", rate_s=1, duration_s=5, experiment_id=bad_id),
-            control.ControlError, "path-traversal experiment_id refused",
+            control.ControlError,
+            "path-traversal experiment_id refused",
         )
         raises(
             lambda: c.start(subject="bad/slash", rate_s=1, duration_s=10),
-            control.ControlError, "slash in subject refused",
+            control.ControlError,
+            "slash in subject refused",
         )
         raises(
             lambda: c.start(subject="ok", rate_s=99999, duration_s=10),
-            control.ControlError, "out-of-range rate refused",
+            control.ControlError,
+            "out-of-range rate refused",
         )
         check(c.status()["state"] == "idle", "nothing was launched (still idle)")
     finally:
@@ -140,14 +143,16 @@ def test_serial_gating() -> None:
         c = control.CaptureController(experiments_dir=tmp, lock_dir=lockdir)
         raises(
             lambda: c.start(subject="x", rate_s=1, duration_s=5, source="serial"),
-            control.ControlError, "serial without a port refused",
+            control.ControlError,
+            "serial without a port refused",
         )
         serial_lock.write_lock("COM6", "monitor", lock_dir=lockdir)  # a live owner
         raises(
             lambda: c.start(
                 subject="x", rate_s=1, duration_s=5, source="serial", port="COM6"
             ),
-            control.ControlError, "serial refused while the port is locked",
+            control.ControlError,
+            "serial refused while the port is locked",
         )
         check(c.status()["state"] == "idle", "nothing launched while refused")
         serial_lock.clear_lock(lockdir)
