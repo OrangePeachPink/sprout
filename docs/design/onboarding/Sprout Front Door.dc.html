@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --leaf:#34A853; --sprout:#8BD24F; --ink:#1E2A18; --muted:#6F7E62; --border:#E3E9D8;
+    --surface:#FFFFFF; --surface-2:#F7FAF2; --bg:#EEF4E6;
+    --st-watering:#17B6C4; --st-dry:#F5A623; --st-due:#E8703A; --st-fault:#E0483D; --st-predicted:#7C5CFF;
+    --band-saturated:#0E7A86; --band-wet:#17B6C4; --band-moist:#34A853; --band-ideal:#8BD24F;
+    --band-drying:#F5A623; --band-dry:#E8703A; --band-parched:#E0483D;
+    --font-display:"Baloo 2",sans-serif; --font-ui:"Hanken Grotesk",sans-serif; --font-data:"JetBrains Mono",monospace;
+    --r-control:8px; --r-tile:14px; --r-card:20px; --r-pill:999px;
+    --e1:0 1px 2px rgba(30,42,24,.06); --e2:0 6px 18px rgba(30,42,24,.08); --e3:0 16px 36px rgba(30,42,24,.14);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:var(--font-ui);}
+  .docwrap{display:flex; flex-direction:column; align-items:center; gap:60px; padding:56px 48px 120px; background:var(--bg); min-height:100vh;}
+  .frame{display:flex; flex-direction:column;}
+  .frameLabel{font-family:"JetBrains Mono",monospace; font-size:13px; color:#5b6b52; margin-bottom:12px; display:flex; align-items:center; gap:8px;}
+  .pageCard{width:1080px; max-width:100%; height:700px; background:var(--bg); border-radius:18px; box-shadow:0 8px 30px rgba(30,42,24,.13); overflow:hidden; position:relative; display:flex; flex-direction:column;}
+  .sectionhead{width:1080px; max-width:100%; display:flex; align-items:baseline; gap:14px; border-bottom:1px solid var(--border); padding-bottom:12px;}
+  .kicker{font-family:var(--font-data); font-size:13px; letter-spacing:.14em; color:var(--muted); font-weight:600; white-space:nowrap;}
+  .subhead{font-size:14px; color:var(--muted);}
+  .flowcol{display:flex; flex-direction:column; gap:48px; align-items:center;}
+  .dialrow{display:flex; gap:28px; flex-wrap:wrap; justify-content:center;}
+  .topbar{display:flex; align-items:center; justify-content:space-between; padding:26px 34px;}
+  .wordmark{display:flex; align-items:center; gap:9px; font-family:var(--font-display); font-weight:700; font-size:21px; color:var(--ink); letter-spacing:-0.01em;}
+  .dots{display:flex; gap:7px; align-items:center;}
+  .dot{width:8px; height:8px; border-radius:999px; background:var(--border);}
+  .dot.on{background:var(--leaf); width:22px;}
+  .pbtn{font-family:var(--font-ui); font-size:15px; font-weight:600; white-space:nowrap; border:1px solid var(--leaf); background:var(--leaf); color:#fff; border-radius:var(--r-pill); padding:11px 26px; cursor:pointer; box-shadow:var(--e1);}
+  .sbtn{font-family:var(--font-ui); font-size:15px; font-weight:600; white-space:nowrap; border:1px solid var(--border); background:var(--surface); color:var(--ink); border-radius:var(--r-pill); padding:11px 24px; cursor:pointer;}
+  .voice{font-family:var(--font-ui); font-style:italic; color:var(--muted); font-size:17px; line-height:1.5;}
+  @keyframes liveGlow{0%,100%{box-shadow:0 0 5px currentColor;}50%{box-shadow:0 0 12px currentColor;}}
+  @keyframes ringPulse{0%,100%{opacity:.5; transform:scale(1);}50%{opacity:.85; transform:scale(1.015);}}
+</style>
+</helmet>
+
+<div class="docwrap">
+
+  <!-- ===================== INTRO / LEGEND ===================== -->
+  <div class="frame" data-screen-label="Intro">
+    <div class="frameLabel">#134 · User Front Door</div>
+    <div style="width:1080px; max-width:100%; background:var(--surface); border-radius:18px; box-shadow:0 8px 30px rgba(30,42,24,.10); padding:40px 44px; display:flex; gap:48px; align-items:flex-start;">
+      <div style="flex:1; min-width:0;">
+        <div style="font-family:var(--font-data); font-size:12px; color:var(--st-predicted); font-weight:600; letter-spacing:.06em; margin-bottom:14px;">ONBOARDING VISUAL LANGUAGE · DESIGN ⇄ DX</div>
+        <h1 style="font-family:var(--font-display); font-weight:700; font-size:38px; line-height:1.1; margin:0 0 14px; letter-spacing:-0.01em; color:var(--ink);">The first run, where Sprout<br>introduces itself</h1>
+        <p style="margin:0 0 18px; font-size:16px; line-height:1.6; color:var(--muted); max-width:60ch;">A four-step takeover the operator meets once: <strong style="color:var(--ink); font-weight:600;">welcome → plug in a probe → name the probes → you're set.</strong> It carries the character where the brand boundary allows it (ADR-0007) and hands off to the instrument the moment real data exists. Built on the token contract and the living <span style="font-family:var(--font-data); color:var(--ink);">&lt;sprout-mark&gt;</span>.</p>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--leaf); background:color-mix(in srgb, var(--leaf) 12%, transparent); border-radius:var(--r-pill); padding:5px 13px; white-space:nowrap;">first-person voice</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--st-predicted); background:color-mix(in srgb, var(--st-predicted) 12%, transparent); border-radius:var(--r-pill); padding:5px 13px; white-space:nowrap;">character ↔ instrument boundary</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); border:1px solid var(--border); border-radius:var(--r-pill); padding:5px 13px; white-space:nowrap; font-family:var(--font-data);">token-faithful</span>
+        </div>
+      </div>
+      <div style="width:300px; flex-shrink:0; border-left:1px solid var(--border); padding-left:40px;">
+        <div style="font-family:var(--font-data); font-size:11px; color:var(--muted); letter-spacing:.06em; margin-bottom:14px;">THE CHARACTER DIAL</div>
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div style="display:flex; gap:12px; align-items:flex-start;"><span style="width:10px; height:10px; border-radius:999px; background:var(--leaf); margin-top:5px; flex-shrink:0;"></span><div><div style="font-weight:600; font-size:14px; color:var(--ink);">Full</div><div style="font-size:13px; color:var(--muted); line-height:1.45;">the living day-arc scene leads</div></div></div>
+          <div style="display:flex; gap:12px; align-items:flex-start;"><span style="width:10px; height:10px; border-radius:999px; background:var(--st-predicted); margin-top:5px; flex-shrink:0;"></span><div><div style="font-weight:600; font-size:14px; color:var(--ink);">Medium <span style="font-weight:600; color:var(--st-predicted); font-size:11px;">· recommended</span></div><div style="font-size:13px; color:var(--muted); line-height:1.45;">mark + a line, instrument primary</div></div></div>
+          <div style="display:flex; gap:12px; align-items:flex-start;"><span style="width:10px; height:10px; border-radius:999px; background:var(--muted); margin-top:5px; flex-shrink:0;"></span><div><div style="font-weight:600; font-size:14px; color:var(--ink);">Quiet</div><div style="font-size:13px; color:var(--muted); line-height:1.45;">a whisper of character, clean UI</div></div></div>
+        </div>
+        <div style="margin-top:18px; font-size:12.5px; color:var(--muted); line-height:1.5; border-top:1px solid var(--border); padding-top:14px;">The flow below runs at <strong style="color:var(--st-predicted);">Medium</strong>. The dial study sits beneath it.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== THE FLOW ===================== -->
+  <div class="sectionhead">
+    <span class="kicker">THE FLOW</span>
+    <span class="subhead">welcome → plug in → name → set · the four screens, top to bottom</span>
+  </div>
+
+  <div class="flowcol">
+
+    <!-- STEP 1 · WELCOME -->
+    <div class="frame" data-screen-label="Step 1 Welcome">
+      <div class="frameLabel"><span style="width:18px;height:18px;border-radius:999px;background:var(--leaf);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">1</span>Welcome</div>
+      <div class="pageCard">
+        <div style="position:absolute; inset:0; background:linear-gradient(180deg, #dCEbF5 0%, #E7F0E2 46%, var(--bg) 70%);"></div>
+        <div style="position:absolute; left:0; right:0; bottom:0; height:160px; background:linear-gradient(180deg, rgba(122,150,90,0) 0%, color-mix(in srgb, var(--leaf) 22%, var(--bg)) 100%);"></div>
+        <div class="topbar" style="position:relative; z-index:2;">
+          <div class="wordmark"><x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="ideal" size="22" static="" hint-size="19px,22px"></x-import>Sprout</div>
+          <div class="dots"><span class="dot on"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        </div>
+        <div style="position:relative; z-index:2; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 40px 30px;">
+          <div style="position:relative; width:240px; height:240px; display:flex; align-items:center; justify-content:center; margin-bottom:6px;">
+            <div style="position:absolute; inset:0; border-radius:999px; border:2px solid color-mix(in srgb, var(--leaf) 55%, transparent); animation:ringPulse 6s ease-in-out infinite;"></div>
+            <div style="position:absolute; inset:30px; border-radius:999px; background:radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--sprout) 30%, transparent), transparent 70%);"></div>
+            <x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="moist" size="132" hint-size="113px,132px"></x-import>
+          </div>
+          <h2 style="font-family:var(--font-display); font-weight:700; font-size:46px; line-height:1.05; margin:8px 0 14px; color:var(--ink); letter-spacing:-0.015em; white-space:nowrap;">Hi, I'm Sprout.</h2>
+          <p class="voice" style="max-width:34ch; font-size:19px;">Pop a probe in the soil and I'll take it from here.</p>
+        </div>
+        <div style="position:relative; z-index:2; display:flex; align-items:center; justify-content:center; gap:14px; padding:0 40px 44px;">
+          <button class="pbtn">Set up Sprout</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 · PLUG IN -->
+    <div class="frame" data-screen-label="Step 2 Plug in a probe">
+      <div class="frameLabel"><span style="width:18px;height:18px;border-radius:999px;background:var(--leaf);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">2</span>Plug in a probe</div>
+      <div class="pageCard">
+        <div class="topbar">
+          <div class="wordmark"><x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="ideal" size="22" static="" hint-size="19px,22px"></x-import>Sprout</div>
+          <div class="dots"><span class="dot"></span><span class="dot on"></span><span class="dot"></span><span class="dot"></span></div>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 40px 10px;">
+          <div style="margin-bottom:8px; line-height:0;"><x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="ideal" size="38" static="" hint-size="33px,38px"></x-import></div>
+          <h2 style="font-family:var(--font-display); font-weight:700; font-size:36px; line-height:1.1; margin:0 0 8px; color:var(--ink); letter-spacing:-0.01em; white-space:nowrap;">Plug in your probe</h2>
+          <p class="voice" style="margin:0 0 26px;">Plug the board in — I'll find it.</p>
+
+          <div style="width:560px; max-width:100%; height:150px; border-radius:var(--r-tile); border:1px dashed color-mix(in srgb, var(--muted) 45%, transparent); background:repeating-linear-gradient(135deg, var(--surface-2) 0 11px, color-mix(in srgb, var(--leaf) 7%, var(--surface-2)) 11px 22px); display:flex; align-items:center; justify-content:center; margin-bottom:22px;">
+            <span style="font-family:var(--font-data); font-size:12px; color:var(--muted); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-pill); padding:5px 14px;">board + 4 probes · drop device photo</span>
+          </div>
+
+          <div style="width:560px; max-width:100%; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); box-shadow:var(--e1); padding:16px 20px; display:flex; align-items:center; gap:16px; text-align:left;">
+            <span style="display:inline-flex; align-items:center; gap:8px; font-family:var(--font-data); font-size:14px; color:var(--leaf); font-weight:600;"><span style="width:9px; height:9px; border-radius:999px; background:currentColor; animation:liveGlow 1.8s ease-in-out infinite;"></span>connected</span>
+            <span style="height:20px; width:1px; background:var(--border);"></span>
+            <div style="display:flex; flex-direction:column;"><span style="font-size:11px; color:var(--muted); text-transform:lowercase;">port</span><span style="font-family:var(--font-data); font-size:14px; color:var(--ink);">COM6</span></div>
+            <div style="display:flex; flex-direction:column;"><span style="font-size:11px; color:var(--muted); text-transform:lowercase;">firmware</span><span style="font-family:var(--font-data); font-size:14px; color:var(--ink);">v1.4.0</span></div>
+            <div style="display:flex; flex-direction:column;"><span style="font-size:11px; color:var(--muted); text-transform:lowercase;">probes</span><span style="font-family:var(--font-data); font-size:14px; color:var(--ink);">s1 · s2 · s3 · s4</span></div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:center; gap:14px; padding:0 40px 40px;">
+          <button class="sbtn">I'll do this later</button>
+          <button class="pbtn">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 · NAME PROBES -->
+    <div class="frame" data-screen-label="Step 3 Name your probes">
+      <div class="frameLabel"><span style="width:18px;height:18px;border-radius:999px;background:var(--leaf);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">3</span>Name your probes</div>
+      <div class="pageCard">
+        <div class="topbar">
+          <div class="wordmark"><x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="ideal" size="22" static="" hint-size="19px,22px"></x-import>Sprout</div>
+          <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot on"></span><span class="dot"></span></div>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 40px;">
+          <h2 style="font-family:var(--font-display); font-weight:700; font-size:36px; line-height:1.1; margin:0 0 8px; color:var(--ink); letter-spacing:-0.01em; text-align:center; white-space:nowrap;">Name your probes</h2>
+          <p style="margin:0 0 30px; font-size:16px; color:var(--muted); text-align:center;">What's each probe measuring? You can rename anytime.</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; width:640px; max-width:100%;">
+            <label style="display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); box-shadow:var(--e1); padding:14px 16px;"><span style="width:12px; height:12px; border-radius:4px; background:var(--leaf); flex-shrink:0;"></span><span style="font-family:var(--font-data); font-size:13px; color:var(--muted); width:18px;">s1</span><input value="Monstera" readonly style="flex:1; min-width:0; font-family:var(--font-ui); font-size:15px; color:var(--ink); background:transparent; border:none; outline:none; font-weight:500;"></label>
+            <label style="display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); box-shadow:var(--e1); padding:14px 16px;"><span style="width:12px; height:12px; border-radius:4px; background:var(--st-watering); flex-shrink:0;"></span><span style="font-family:var(--font-data); font-size:13px; color:var(--muted); width:18px;">s2</span><input value="Basil" readonly style="flex:1; min-width:0; font-family:var(--font-ui); font-size:15px; color:var(--ink); background:transparent; border:none; outline:none; font-weight:500;"></label>
+            <label style="display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); box-shadow:var(--e1); padding:14px 16px;"><span style="width:12px; height:12px; border-radius:4px; background:var(--st-predicted); flex-shrink:0;"></span><span style="font-family:var(--font-data); font-size:13px; color:var(--muted); width:18px;">s3</span><input value="Fern" readonly style="flex:1; min-width:0; font-family:var(--font-ui); font-size:15px; color:var(--ink); background:transparent; border:none; outline:none; font-weight:500;"></label>
+            <label style="display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); box-shadow:var(--e1); padding:14px 16px;"><span style="width:12px; height:12px; border-radius:4px; background:var(--st-dry); flex-shrink:0;"></span><span style="font-family:var(--font-data); font-size:13px; color:var(--muted); width:18px;">s4</span><input value="control · cup" readonly style="flex:1; min-width:0; font-family:var(--font-ui); font-size:15px; color:var(--ink); background:transparent; border:none; outline:none; font-weight:500;"></label>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:center; gap:14px; padding:30px 40px 40px;">
+          <button class="sbtn">Skip</button>
+          <button class="pbtn">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 · YOU'RE SET -->
+    <div class="frame" data-screen-label="Step 4 You're set">
+      <div class="frameLabel"><span style="width:18px;height:18px;border-radius:999px;background:var(--leaf);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">4</span>You're set</div>
+      <div class="pageCard">
+        <div class="topbar">
+          <div class="wordmark"><x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="ideal" size="22" static="" hint-size="19px,22px"></x-import>Sprout</div>
+          <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot on"></span></div>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 40px;">
+          <div style="margin-bottom:4px; line-height:0;"><x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="moist" size="46" hint-size="39px,46px"></x-import></div>
+          <h2 style="font-family:var(--font-display); font-weight:700; font-size:36px; line-height:1.05; margin:0; color:var(--ink); letter-spacing:-0.01em; white-space:nowrap;">You're set.</h2>
+          <p class="voice" style="margin:8px 0 24px;">All good here — no notes.</p>
+
+          <!-- the handoff: character recedes, the instrument leads -->
+          <div style="width:560px; max-width:100%; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e2); padding:20px 22px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+              <span style="font-family:var(--font-data); font-size:12px; font-weight:600; letter-spacing:.06em; color:var(--ink);">MONSTERA</span>
+              <span style="display:inline-flex; align-items:center; gap:6px; font-family:var(--font-data); font-size:11px; color:var(--leaf);"><span style="width:7px; height:7px; border-radius:999px; background:currentColor; box-shadow:0 0 7px currentColor;"></span>pin 2</span>
+            </div>
+            <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:16px;">
+              <div style="display:flex; align-items:center; gap:10px;"><span style="width:14px; height:14px; border-radius:4px; background:var(--band-ideal);"></span><span style="font-family:var(--font-display); font-weight:700; font-size:30px; color:var(--leaf); line-height:1;">Ideal</span></div>
+              <div style="display:flex; gap:10px;">
+                <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-control); padding:6px 12px; text-align:right;"><div style="font-size:9px; color:var(--muted); font-family:var(--font-data); letter-spacing:.04em;">RAW · DRIER↑</div><div style="font-family:var(--font-data); font-weight:600; font-size:18px; color:var(--ink);">2298</div></div>
+                <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-control); padding:6px 12px; text-align:right;"><div style="font-size:9px; color:var(--muted); font-family:var(--font-data); letter-spacing:.04em;">INDEX</div><div style="font-family:var(--font-data); font-weight:600; font-size:18px; color:var(--ink);">58</div></div>
+              </div>
+            </div>
+            <div style="position:relative;">
+              <div style="position:absolute; left:calc(50% - 6px); top:-9px; width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:7px solid var(--ink);"></div>
+              <div style="display:flex; height:14px; border-radius:999px; overflow:hidden; gap:2px;">
+                <span style="flex:1; background:var(--band-saturated);"></span><span style="flex:1; background:var(--band-wet);"></span><span style="flex:1; background:var(--band-moist);"></span><span style="flex:1.1; background:var(--band-ideal); outline:2px solid var(--ink); outline-offset:-2px;"></span><span style="flex:1; background:var(--band-drying);"></span><span style="flex:1; background:var(--band-dry);"></span><span style="flex:1; background:var(--band-parched);"></span>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-top:5px; font-family:var(--font-data); font-size:10px; color:var(--muted);"><span>wet</span><span>dry</span></div>
+            </div>
+          </div>
+
+          <div style="font-size:13px; color:var(--muted); margin:22px 0 12px; font-family:var(--font-data); letter-spacing:.04em;">NOW CHOOSE HOW I RUN</div>
+        </div>
+        <div style="display:flex; align-items:stretch; justify-content:center; gap:14px; padding:0 40px 40px;">
+          <button class="pbtn" style="display:flex; flex-direction:column; align-items:flex-start; gap:2px; padding:13px 22px; border-left:5px solid color-mix(in srgb, #ffffff 55%, var(--leaf));"><span>Start monitoring</span><span style="font-size:12px; font-weight:500; opacity:.9;">the always-on baseline</span></button>
+          <button class="sbtn" style="display:flex; flex-direction:column; align-items:flex-start; gap:2px; padding:13px 22px; border-left:5px solid var(--st-predicted);"><span>Run an experiment</span><span style="font-size:12px; font-weight:500; color:var(--muted);">a bounded, isolated capture</span></button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===================== DIAL STUDY ===================== -->
+  <div class="sectionhead">
+    <span class="kicker">THE CHARACTER DIAL</span>
+    <span class="subhead">the welcome moment, three ways — full · medium · quiet</span>
+  </div>
+
+  <div class="dialrow">
+
+    <!-- FULL -->
+    <div class="frame" data-screen-label="Dial Full">
+      <div class="frameLabel"><span style="width:9px; height:9px; border-radius:999px; background:var(--leaf);"></span>Full · the scene leads</div>
+      <div style="width:600px; max-width:100%; height:560px; border-radius:18px; box-shadow:0 8px 30px rgba(30,42,24,.13); overflow:hidden; position:relative; display:flex; flex-direction:column;">
+        <div style="position:absolute; inset:0; background:linear-gradient(180deg, #d3e6F3 0%, #E3EEDE 50%, var(--bg) 72%);"></div>
+        <div style="position:absolute; left:0; right:0; bottom:0; height:130px; background:linear-gradient(180deg, rgba(122,150,90,0) 0%, color-mix(in srgb, var(--leaf) 30%, var(--bg)) 100%);"></div>
+        <div class="topbar" style="position:relative; z-index:2; padding:18px 24px;"><div class="wordmark" style="font-size:17px;"><x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="ideal" size="19" static="" hint-size="16px,19px"></x-import>Sprout</div></div>
+        <div style="position:relative; z-index:2; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 30px;">
+          <div style="position:relative; width:180px; height:180px; display:flex; align-items:center; justify-content:center;">
+            <div style="position:absolute; inset:0; border-radius:999px; border:2px solid color-mix(in srgb, var(--leaf) 55%, transparent); animation:ringPulse 6s ease-in-out infinite;"></div>
+            <x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="moist" size="104" hint-size="89px,104px"></x-import>
+          </div>
+          <p class="voice" style="font-size:16px; margin:14px 0 0; max-width:26ch;">Pop a probe in the soil and I'll take it from here.</p>
+        </div>
+        <div style="position:relative; z-index:2; display:flex; justify-content:center; padding:0 30px 34px;"><button class="pbtn" style="font-size:14px; padding:10px 22px;">Set up Sprout</button></div>
+      </div>
+    </div>
+
+    <!-- MEDIUM -->
+    <div class="frame" data-screen-label="Dial Medium">
+      <div class="frameLabel"><span style="width:9px; height:9px; border-radius:999px; background:var(--st-predicted);"></span>Medium · the flow's choice</div>
+      <div style="width:600px; max-width:100%; height:560px; border-radius:18px; box-shadow:0 8px 30px rgba(30,42,24,.13); overflow:hidden; position:relative; display:flex; flex-direction:column; background:var(--bg);">
+        <div class="topbar" style="padding:18px 24px;"><div class="wordmark" style="font-size:17px;"><x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="ideal" size="19" static="" hint-size="16px,19px"></x-import>Sprout</div></div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 30px;">
+          <x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="moist" size="86" hint-size="74px,86px"></x-import>
+          <h3 style="font-family:var(--font-display); font-weight:700; font-size:32px; margin:16px 0 10px; color:var(--ink); letter-spacing:-0.01em; white-space:nowrap;">Hi, I'm Sprout.</h3>
+          <p class="voice" style="font-size:16px; margin:0; max-width:26ch;">Pop a probe in the soil and I'll take it from here.</p>
+        </div>
+        <div style="display:flex; justify-content:center; padding:0 30px 34px;"><button class="pbtn" style="font-size:14px; padding:10px 22px;">Set up Sprout</button></div>
+      </div>
+    </div>
+
+    <!-- QUIET -->
+    <div class="frame" data-screen-label="Dial Quiet">
+      <div class="frameLabel"><span style="width:9px; height:9px; border-radius:999px; background:var(--muted);"></span>Quiet · a whisper</div>
+      <div style="width:600px; max-width:100%; height:560px; border-radius:18px; box-shadow:0 8px 30px rgba(30,42,24,.13); overflow:hidden; position:relative; display:flex; flex-direction:column; background:var(--surface);">
+        <div class="topbar" style="padding:18px 24px; border-bottom:1px solid var(--border);"><div class="wordmark" style="font-size:17px;"><x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="ideal" size="19" static="" hint-size="16px,19px"></x-import>Sprout</div></div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; text-align:left; padding:0 44px;">
+          <h3 style="font-family:var(--font-display); font-weight:700; font-size:30px; margin:0 0 12px; color:var(--ink); letter-spacing:-0.01em; white-space:nowrap;">Hi, I'm Sprout.</h3>
+          <p style="font-size:16px; color:var(--muted); line-height:1.55; margin:0 0 26px; max-width:34ch;">Pop a probe in the soil and I'll take it from here. Let's get you set up.</p>
+          <button class="pbtn" style="font-size:14px; padding:11px 24px;">Set up Sprout</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+</x-dc>
+</body>
+</html>
