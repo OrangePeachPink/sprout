@@ -147,6 +147,12 @@ static void allRelaysOff() {
   }
 }
 
+// Serial-command handlers (defined below, near pollSerialCommand) - forward-declared
+// so setup() can register them with the serial_cmd registry (#92).
+static void handleCad(const char *args, char *reply, size_t replen);
+static void handlePing(const char *args, char *reply, size_t replen);
+static void handleVer(const char *args, char *reply, size_t replen);
+
 void setup() {
   allRelaysOff();  // FIRST: actuators de-energized before anything else can run (#93)
 
@@ -166,6 +172,12 @@ void setup() {
 
   pinMode(LED_PIN, OUTPUT);
 
+  // Register the inbound serial commands (#92): one registration each; the registry
+  // owns re-sync, the *HH checksum, and dispatch.
+  serial_cmd_register("cad", handleCad);
+  serial_cmd_register("ping", handlePing);
+  serial_cmd_register("ver", handleVer);
+
   // Seed every channel from one burst so each boots in the right band.
   uint16_t seed[SAMPLES_PER_READ];
   for (int ch = 0; ch < NUM_SENSORS; ch++) {
@@ -184,10 +196,45 @@ void setup() {
   esp_task_wdt_add(NULL);  // watch this (the Arduino loop) task
 }
 
-// Non-blocking host->device command RX. The device is otherwise write-only; this
-// is its one inbound path. v1 accepts a single command - set the sweep cadence,
-// `!cad,<ms>*HH` (ADR-0011 / #63) - applied at the next sweep boundary, never
-// mid-row. Touches cadence only; no actuation, boundaries, or schema.
+// --- inbound serial command handlers (#92 registry) -------------------------
+// The device is otherwise write-only; this is its one inbound path. Each handler gets
+// the comma-args and writes a single '#' reply line; the registry (lib/serial_cmd)
+// owns the re-sync, the *HH checksum, and dispatch. No actuation, boundaries, or schema.
+
+// !cad,<ms> - set the sweep cadence at runtime (ADR-0011 / #63). Applied at the next
+// sweep boundary (g_cadence_ms is read there), never mid-row.
+static void handleCad(const char *args, char *reply, size_t replen) {
+  uint32_t ms;
+  if (!serial_cmd_parse_u32(args, &ms)) {
+    snprintf(reply, replen, "# nak err=parse floor=%lu", (unsigned long)CADENCE_FLOOR_MS);
+    return;
+  }
+  if (ms < CADENCE_FLOOR_MS || ms > CADENCE_CEIL_MS) {
+    snprintf(reply, replen, "# nak cad=%lu err=range floor=%lu",
+             (unsigned long)ms, (unsigned long)CADENCE_FLOOR_MS);
+    return;
+  }
+  unsigned long prev = g_cadence_ms;
+  g_cadence_ms = ms;  // next sweep uses the new period
+  snprintf(reply, replen, "# ack cad=%lu prev=%lu floor=%lu",
+           (unsigned long)ms, prev, (unsigned long)CADENCE_FLOOR_MS);
+}
+
+// !ping - liveness check.
+static void handlePing(const char *args, char *reply, size_t replen) {
+  (void)args;
+  snprintf(reply, replen, "# ack pong");
+}
+
+// !ver - identity / provenance (fw + device_id + git rev).
+static void handleVer(const char *args, char *reply, size_t replen) {
+  (void)args;
+  snprintf(reply, replen, "# ack ver fw=%s device_id=%s git=%s",
+           PLANTS_FW_VERSION, g_device_id, GIT_REV);
+}
+
+// Non-blocking host->device command RX: read whole lines and dispatch them through
+// the registry, printing the handler's (or dispatch's nak) reply.
 static void pollSerialCommand() {
   static char cmdbuf[48];
   static uint8_t cmdlen = 0;
@@ -196,32 +243,17 @@ static void pollSerialCommand() {
     if (ci < 0) break;
     char c = (char)ci;
     if (c == '\n' || c == '\r') {
-      if (cmdlen == 0) continue;                 // ignore blank lines
+      if (cmdlen == 0) continue;  // ignore blank lines
       cmdbuf[cmdlen] = '\0';
-      uint32_t ms = 0;
-      cadence_parse_t st =
-          cadence_cmd_parse(cmdbuf, CADENCE_FLOOR_MS, CADENCE_CEIL_MS, &ms);
-      char ackbuf[64];
-      if (st == CADENCE_OK) {
-        unsigned long prev = g_cadence_ms;
-        g_cadence_ms = ms;                         // next sweep uses the new period
-        snprintf(ackbuf, sizeof(ackbuf), "# ack cad=%lu prev=%lu floor=%lu",
-                 (unsigned long)ms, prev, (unsigned long)CADENCE_FLOOR_MS);
-        Serial.println(ackbuf);
-      } else if (st == CADENCE_ERR_RANGE) {
-        snprintf(ackbuf, sizeof(ackbuf), "# nak cad=%lu err=range floor=%lu",
-                 (unsigned long)ms, (unsigned long)CADENCE_FLOOR_MS);
-        Serial.println(ackbuf);
-      } else if (st != CADENCE_NOT_A_COMMAND) {
-        snprintf(ackbuf, sizeof(ackbuf), "# nak err=%s floor=%lu",
-                 cadence_err_name(st), (unsigned long)CADENCE_FLOOR_MS);
-        Serial.println(ackbuf);
+      char reply[96];
+      if (serial_cmd_dispatch(cmdbuf, reply, sizeof(reply)) != SERIAL_CMD_IGNORED) {
+        Serial.println(reply);
       }
       cmdlen = 0;
     } else if (cmdlen < sizeof(cmdbuf) - 1) {
       cmdbuf[cmdlen++] = c;
     } else {
-      cmdlen = 0;                                  // oversized line: drop it
+      cmdlen = 0;  // oversized line: drop it
     }
   }
 }
