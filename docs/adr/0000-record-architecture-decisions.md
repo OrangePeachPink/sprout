@@ -79,6 +79,7 @@ prototype's history honestly. (Execution belongs to the architecture/firmware la
 | [0012](0012-experiment-data-architecture.md) | Experiment data architecture (extends ADR-0006) | **Proposed** — schema agreed (Firmware #57); detail at sub-issue cut | Data lane |
 | [0013](0013-environmental-data-architecture.md) | Environmental data architecture (extends ADR-0006) | **Proposed** — Data-led; on-device section co-authored with Firmware at sub-issue cut | Data lane |
 | [0014](0014-operator-control-plane.md) | Operator control plane (Monitor + Experiment under one plane; extends ADR-0011) | **Proposed** — Operator-Experience epic #125 | Data lane |
+| [0015](0015-no-personal-information-policy.md) | No personal information policy (no PII / hardware identifiers collected, generated, committed, or published) | **Accepted** — drafted by Trellis, maintainer-ratified 2026-06-26 | Maintainer + Workflow / meta |
 | — | *(archived)* [Sprout v0 combined architecture record](archive/sprout-v0-architecture.md) | Superseded by ADR-0001 | history |
 
 *New ADRs append a row here when proposed. Any lane may author an ADR for an ADR-sized decision in its
