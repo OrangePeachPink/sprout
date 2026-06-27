@@ -47,12 +47,13 @@ constexpr const char *SOIL_CHANNEL     = "soil_moisture";    // the measured qua
 
 // --- Calibration: raw ADC -> moisture % (shared across channels for now) ---
 // Linear map, clamped: raw <= SENSOR_WET_RAW => 100%, raw >= SENSOR_DRY_RAW => 0%.
-// Endpoints are set a little OUTSIDE the observed range on purpose, for headroom:
-//   WET_RAW 900  sits just below the observed submerged floor (~947).
-//   DRY_RAW 3400 sits above the observed in-air ceiling (~3266), leaving room for very
-//                dry winter air. Tighten later from logged data. Each sensor can differ.
-constexpr int SENSOR_WET_RAW = 900;   // raw at/below this reads 100% moisture
-constexpr int SENSOR_DRY_RAW = 3400;  // raw at/above this reads 0% moisture
+// Endpoints sit a little OUTSIDE the observed range for headroom, confirmed by the #248
+// common-cup anchors (4-probe): WET_RAW 900 stays below the saturated anchors (center 978,
+// min probe 926); DRY_RAW 3400 stays above the air-dry anchors (center 3170, max probe
+// 3191), leaving room for very dry winter air. NOTE: value/unit (the moist%) are emitted
+// NULL (#38) - this linear map is reserved, never analysed; truth is raw_value + band.
+constexpr int SENSOR_WET_RAW = 900;   // raw at/below this would read 100% (reserved)
+constexpr int SENSOR_DRY_RAW = 3400;  // raw at/above this would read 0% (reserved)
 
 // Moisture level classification now lives in the moisture_classifier module
 // (lib/moisture_classifier). Its levels, boundaries, hysteresis, and confirmation

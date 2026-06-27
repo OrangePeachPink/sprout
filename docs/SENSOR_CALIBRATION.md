@@ -86,6 +86,15 @@ Chronology after the dry plant was watered thoroughly:
 These anchored the `0.3.1` boundaries. **Mid bands ("needs water" 1750–2200, "OK" 1450–1750) are
 interpolated** — no measured soil point yet; the current dry-down is capturing them.
 
+> **A2 endpoint update (#248).** A later **common-cup** characterization measured all four probes
+> *simultaneously* — **air-dry center 3,170** (per-probe 3,151–3,191), **saturated center 978**
+> (per-probe 926–1,020; **s2** the wet-biased min). These **ratify the firmware classifier's two
+> endpoints** (the A2 Data→Firmware handshake, ADR-0006 §6) — the boundaries are *unchanged*; #248
+> confirms they bracket reality. The **interior ladder stays proposed** pending a controlled dry-down.
+> Per-pin offset proved **state-dependent** (~94 counts in water vs ~40 in air, ordering flips) — a
+> single constant won't correct it, so per-channel work is **C1 / #170**, not A2. Full findings +
+> machine sidecar live under `docs/experiments/` (#248).
+
 ---
 
 ## Caveats (don't over-trust these numbers)
