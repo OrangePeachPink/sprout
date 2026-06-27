@@ -145,6 +145,11 @@ How any item travels, and the rule everyone follows:
 This is the process the whole team adopts; it will be surfaced to outside contributors via a
 `CONTRIBUTING.md` (a setup deliverable).
 
+**Attribution (2026-06-27):** all lanes post from the one `OrangePeachPink` account, so each **signs its
+work** — a `— <Lane>` sign-off on PRs, comments, ADRs, docs, and copy, plus a `Lane: <Lane>` commit
+trailer so attribution survives in `git log`/`git blame`. The operative convention lives in
+`AGENTS.md` § Lane attribution.
+
 ## 9. Milestones, releases, insights
 
 - **Milestones = builds**, SemVer (`v0.4.0`). Closing a milestone + cutting a **Release** generates

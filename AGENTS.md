@@ -40,6 +40,36 @@ Sprout is built by coordinated lanes. Stay in yours; route cross-lane needs thro
 | **Design** | design system, brand, voice (repo read-only; lands via commit-proxy) | ADR-0004, ADR-0007, ADR-0008 |
 | **Workflow** | issues, board, releases, process | .github/CONTRIBUTING.md, this file |
 
+## Lane attribution
+
+Every lane posts from the one `OrangePeachPink` account, so **sign your work** — it's the only way to see
+who did what at a glance.
+
+- **Sign-off:** end PR bodies, issue/PR comments, ADRs, docs, and copy decks with `— <Lane>` (emoji
+  optional). E.g. `— Firmware`, `— Data 🌱`, `— Trellis`. The maintainer signs merge/squash commits `-v`.
+- **Commit trailer:** add a `Lane: <Lane>` trailer alongside the `Co-Authored-By:` line, so attribution
+  lands in `git log` / `git blame` — machine-readable and permanent:
+
+  ```text
+  feat(actuators): wire the relay driver to a bounded pulse
+
+  Lane: Firmware
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  ```
+
+## Lane self-audit
+
+You don't merge here (the maintainer does), so "watch CI until it's green" doesn't apply. But when you
+review your own recent work — **especially before a status brief** — do **CI archeology** on your PRs:
+
+- `gh run list --branch <your-branch> --json conclusion,headSha,createdAt` — did any run go red? — then
+  `gh run view <id> --log-failed` for *why*.
+- **Classify each red:** **own-code** (your defect → tighten your process) · **shared-infra** (a gate-wide
+  break that caught you → note it, don't re-fix) · **cross-lane** (another lane's change broke yours → raise
+  it as a comms need).
+- Fold the finding into the brief's `Gate:` / `Flag:` lines. A green PR with reds in its history has a story
+  worth telling.
+
 ## Workflow & GitHub
 
 - **Issues are the ledger.** Every unit of work is an issue (open via the forms). IDs are `#N`.
