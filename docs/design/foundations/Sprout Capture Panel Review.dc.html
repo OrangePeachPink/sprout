@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --leaf:#34A853; --sprout:#8BD24F; --ink:#1E2A18; --muted:#6F7E62; --border:#E3E9D8;
+    --surface:#FFFFFF; --surface-2:#F7FAF2; --bg:#EEF4E6;
+    --st-watering:#17B6C4; --st-dry:#F5A623; --st-due:#E8703A; --st-fault:#E0483D; --st-predicted:#7C5CFF;
+    --font-display:"Baloo 2",sans-serif; --font-ui:"Hanken Grotesk",sans-serif; --font-data:"JetBrains Mono",monospace;
+    --space-xs:4px; --space-sm:8px; --space-md:16px; --space-lg:24px; --space-xl:40px;
+    --r-control:8px; --r-tile:14px; --r-card:20px; --r-pill:999px;
+    --e1:0 1px 2px rgba(30,42,24,.06); --e2:0 6px 18px rgba(30,42,24,.08);
+  }
+  [data-theme="soil"]{
+    --bg:#0C1311; --surface-2:#111A16; --surface:#18231F; --border:#29372F;
+    --ink:#E9F1EB; --muted:#8B9B90; --leaf:#93DD6A; --st-watering:#3FD0DE; --st-fault:#FF6B5E;
+  }
+  body{margin:0;}
+  @keyframes liveGlow{0%,100%{box-shadow:0 0 5px currentColor;}50%{box-shadow:0 0 11px currentColor;}}
+</style>
+</helmet>
+
+<div data-theme="{{ theme }}" style="background:var(--bg); color:var(--ink); font-family:var(--font-ui); min-height:100vh; padding:48px 40px; -webkit-font-smoothing:antialiased;">
+<div style="max-width:980px; margin:0 auto; display:flex; flex-direction:column; gap:var(--space-xl);">
+
+  <!-- ===== HEADER ===== -->
+  <header data-screen-label="Review header" style="display:flex; flex-direction:column; gap:var(--space-md);">
+    <div style="display:flex; align-items:center; gap:10px; font-family:var(--font-data); font-size:12px; color:var(--muted); letter-spacing:.04em;">
+      <span style="display:inline-flex; width:22px; height:22px; align-items:center; justify-content:center; border-radius:6px; background:var(--leaf); color:#fff; font-family:var(--font-display); font-weight:700;">S</span>
+      <span>design consistency review</span>
+      <span style="opacity:.5;">·</span>
+      <span style="color:var(--st-predicted); font-weight:600;">#99</span>
+      <span style="color:var(--st-predicted); font-weight:600;">#101</span>
+    </div>
+    <h1 style="font-family:var(--font-display); font-weight:700; font-size:40px; line-height:1.08; margin:0; letter-spacing:-0.01em;">The Experiment Capture panel,<br>read against the token contract</h1>
+    <p style="margin:0; font-size:16px; line-height:1.55; color:var(--muted); max-width:62ch;">The form layout landed correct in <span style="font-family:var(--font-data); color:var(--ink);">#105</span> — aligned grid, grouped sections. What's left is the half-styled read flagged on <span style="font-family:var(--font-data); color:var(--ink);">#101</span>: the panel uses the tokens but doesn't yet <em>speak</em> them. Six gaps, each a small, in-system fix.</p>
+    <div style="display:flex; flex-wrap:wrap; gap:var(--space-sm); margin-top:var(--space-xs);">
+      <span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--leaf); background:color-mix(in srgb, var(--leaf) 12%, transparent); border-radius:var(--r-pill); padding:4px 12px; white-space:nowrap;"><span style="width:7px;height:7px;border-radius:999px;background:var(--leaf);"></span>Form grid (#105) — correct</span>
+      <span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--st-dry); background:color-mix(in srgb, var(--st-dry) 12%, transparent); border-radius:var(--r-pill); padding:4px 12px; white-space:nowrap;"><span style="width:7px;height:7px;border-radius:999px;background:var(--st-dry);"></span>6 token gaps remain</span>
+      <span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); border:1px solid var(--border); border-radius:var(--r-pill); padding:4px 12px; font-family:var(--font-data); white-space:nowrap;">reviewed vs sprout-tokens.css</span>
+    </div>
+  </header>
+
+  <!-- ===== BEFORE / AFTER ===== -->
+  <section data-screen-label="Before and after" style="display:flex; flex-direction:column; gap:var(--space-md);">
+    <div style="display:flex; align-items:baseline; gap:10px;">
+      <h2 style="font-family:var(--font-display); font-weight:600; font-size:13px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin:0;">Before / after</h2>
+      <span style="font-size:13px; color:var(--muted);">same markup, same tokens — only the gaps closed</span>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-lg); align-items:start;">
+
+      <!-- BEFORE -->
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--st-fault); text-transform:uppercase; letter-spacing:.08em;">before</span>
+          <span style="height:1px; flex:1; background:var(--border);"></span>
+        </div>
+        <!-- the half-styled card -->
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:var(--space-lg);">
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:var(--space-md); margin-bottom:var(--space-md);">
+            <h3 style="font-family:var(--font-display); font-weight:600; font-size:17px; margin:0; line-height:1.15;">Experiment Capture <span style="display:inline-block; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--st-dry); border:1px solid var(--st-dry); border-radius:var(--r-pill); padding:1px 8px; vertical-align:middle;">experiment mode</span></h3>
+            <span style="color:var(--muted); font-size:12px; max-width:13ch;">writes an isolated <span style="font-family:var(--font-data);">experiments/&lt;id&gt;/</span></span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-md); margin-bottom:var(--space-md); align-items:end;">
+            <label style="display:flex; flex-direction:column; gap:var(--space-xs); font-size:11px; color:var(--muted); text-transform:lowercase; letter-spacing:.02em;">subject<input value="common-cup" readonly style="font-family:var(--font-ui); font-size:13px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-control); padding:6px var(--space-sm); width:100%; box-sizing:border-box;"></label>
+            <label style="display:flex; flex-direction:column; gap:var(--space-xs); font-size:11px; color:var(--muted); text-transform:lowercase; letter-spacing:.02em;">sample rate<input value="1 s" readonly style="font-family:var(--font-ui); font-size:13px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-control); padding:6px var(--space-sm); width:100%; box-sizing:border-box;"></label>
+          </div>
+          <div style="display:flex; align-items:center; gap:var(--space-md); flex-wrap:wrap; border-top:1px solid var(--border); padding-top:var(--space-md);">
+            <button style="font-family:var(--font-ui); font-size:12px; font-weight:600; border:1px solid var(--border); background:var(--surface); color:var(--ink); border-radius:var(--r-pill); padding:6px 14px;">▶ Start capture</button>
+            <button style="font-family:var(--font-ui); font-size:12px; font-weight:600; border:1px solid var(--border); background:var(--surface); color:var(--ink); border-radius:var(--r-pill); padding:6px 14px; opacity:.5;">■ Stop</button>
+            <span style="font-family:var(--font-data); font-size:13px; color:var(--muted);">idle</span>
+          </div>
+        </div>
+        <ul style="margin:6px 0 0; padding-left:18px; font-size:12.5px; line-height:1.6; color:var(--muted);">
+          <li>pill <strong style="color:var(--ink); font-weight:600;">wraps mid-word</strong> when the row tightens</li>
+          <li>Start and Stop are the <strong style="color:var(--ink); font-weight:600;">same neutral pill</strong> — no primary</li>
+          <li>status is <strong style="color:var(--ink); font-weight:600;">lonely mono text</strong>, not a state</li>
+        </ul>
+      </div>
+
+      <!-- AFTER -->
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--leaf); text-transform:uppercase; letter-spacing:.08em;">after</span>
+          <span style="height:1px; flex:1; background:var(--border);"></span>
+        </div>
+        <div style="position:relative; overflow:hidden; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e2); padding:var(--space-lg);">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--st-predicted);"></div>
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:var(--space-md); margin-bottom:var(--space-md);">
+            <h3 style="font-family:var(--font-display); font-weight:600; font-size:17px; margin:0; line-height:1.15; white-space:nowrap;">Experiment Capture <span style="display:inline-block; white-space:nowrap; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--st-predicted); border:1px solid var(--st-predicted); border-radius:var(--r-pill); padding:1px 8px; vertical-align:middle;">experiment mode</span></h3>
+            <span style="color:var(--muted); font-size:12px; max-width:13ch; text-align:right;">isolated <span style="font-family:var(--font-data);">experiments/</span></span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-md); margin-bottom:var(--space-md); align-items:end;">
+            <label style="display:flex; flex-direction:column; gap:var(--space-xs); font-size:11px; color:var(--muted); text-transform:lowercase; letter-spacing:.02em;">subject<input value="common-cup" readonly style="font-family:var(--font-ui); font-size:13px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-control); padding:6px var(--space-sm); width:100%; box-sizing:border-box;"></label>
+            <label style="display:flex; flex-direction:column; gap:var(--space-xs); font-size:11px; color:var(--muted); text-transform:lowercase; letter-spacing:.02em;">sample rate<input value="1 s" readonly style="font-family:var(--font-ui); font-size:13px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-control); padding:6px var(--space-sm); width:100%; box-sizing:border-box;"></label>
+          </div>
+          <div style="display:flex; align-items:center; gap:var(--space-md); flex-wrap:wrap; border-top:1px solid var(--border); padding-top:var(--space-md);">
+            <button style="font-family:var(--font-ui); font-size:12px; font-weight:600; white-space:nowrap; border:1px solid var(--leaf); background:var(--leaf); color:#fff; border-radius:var(--r-pill); padding:6px 16px; box-shadow:var(--e1);">▶ Start capture</button>
+            <button style="font-family:var(--font-ui); font-size:12px; font-weight:600; white-space:nowrap; border:1px solid var(--border); background:var(--surface); color:var(--ink); border-radius:var(--r-pill); padding:6px 14px;">■ Stop</button>
+            <span style="display:inline-flex; align-items:center; gap:7px; font-family:var(--font-data); font-size:13px; color:var(--leaf); font-weight:600; margin-left:auto;"><span style="width:8px; height:8px; border-radius:999px; background:currentColor; animation:liveGlow 1.8s ease-in-out infinite;"></span>recording</span>
+          </div>
+        </div>
+        <ul style="margin:6px 0 0; padding-left:18px; font-size:12.5px; line-height:1.6; color:var(--muted);">
+          <li>pill holds on one line — <span style="font-family:var(--font-data); color:var(--ink);">white-space:nowrap</span></li>
+          <li>Start fills <span style="font-family:var(--font-data); color:var(--ink);">--leaf</span>; Stop stays the neutral secondary</li>
+          <li>status is a <strong style="color:var(--ink); font-weight:600;">dot + live glow</strong> on <span style="font-family:var(--font-data); color:var(--ink);">--leaf</span></li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===== FINDINGS ===== -->
+  <section data-screen-label="Findings" style="display:flex; flex-direction:column; gap:var(--space-md);">
+    <div style="display:flex; align-items:baseline; gap:10px;">
+      <h2 style="font-family:var(--font-display); font-weight:600; font-size:13px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin:0;">The six gaps</h2>
+      <span style="font-size:13px; color:var(--muted);">each names the token it should already be honoring</span>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+
+      <!-- finding 1 -->
+      <div style="display:grid; grid-template-columns:34px 1fr; gap:var(--space-md); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); padding:var(--space-md) var(--space-lg);">
+        <span style="font-family:var(--font-display); font-weight:700; font-size:18px; color:var(--st-fault);">1</span>
+        <div>
+          <div style="font-weight:600; font-size:15px; margin-bottom:3px;">The “proposed” pills wrap mid-word</div>
+          <div style="font-size:13.5px; line-height:1.55; color:var(--muted);"><span style="color:var(--ink);">logging mode</span> / <span style="color:var(--ink);">experiment mode</span> break across two lines when <span style="font-family:var(--font-data); color:var(--ink);">.panel-h</span> tightens. A pill is an atom — it never wraps. <span style="font-family:var(--font-data); color:var(--st-predicted);">fix → white-space:nowrap on .proposed</span></div>
+        </div>
+      </div>
+
+      <!-- finding 2 -->
+      <div style="display:grid; grid-template-columns:34px 1fr; gap:var(--space-md); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); padding:var(--space-md) var(--space-lg);">
+        <span style="font-family:var(--font-display); font-weight:700; font-size:18px; color:var(--st-fault);">2</span>
+        <div>
+          <div style="font-weight:600; font-size:15px; margin-bottom:3px;">Button labels wrap too</div>
+          <div style="font-size:13.5px; line-height:1.55; color:var(--muted);"><span style="color:var(--ink);">Start logging</span> breaks to <span style="color:var(--ink);">Start / logging</span> in a tight row. <span style="font-family:var(--font-data); color:var(--st-predicted);">fix → white-space:nowrap on .btn</span></div>
+        </div>
+      </div>
+
+      <!-- finding 3 -->
+      <div style="display:grid; grid-template-columns:34px 1fr; gap:var(--space-md); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); padding:var(--space-md) var(--space-lg);">
+        <span style="font-family:var(--font-display); font-weight:700; font-size:18px; color:var(--st-dry);">3</span>
+        <div>
+          <div style="font-weight:600; font-size:15px; margin-bottom:3px;">No action hierarchy — every button is a neutral outline</div>
+          <div style="font-size:13.5px; line-height:1.55; color:var(--muted);">Start (constructive) and Stop read identically, so the primary action doesn't lead. The contract names <span style="font-family:var(--font-data); color:var(--ink);">--leaf</span> as the brand action. <span style="font-family:var(--font-data); color:var(--st-predicted);">fix → .btn.primary fills --leaf; Stop stays the secondary outline</span></div>
+        </div>
+      </div>
+
+      <!-- finding 4 -->
+      <div style="display:grid; grid-template-columns:34px 1fr; gap:var(--space-md); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); padding:var(--space-md) var(--space-lg);">
+        <span style="font-family:var(--font-display); font-weight:700; font-size:18px; color:var(--st-dry);">4</span>
+        <div>
+          <div style="font-weight:600; font-size:15px; margin-bottom:3px;">Status is text, not a state</div>
+          <div style="font-size:13.5px; line-height:1.55; color:var(--muted);"><span style="color:var(--ink);">idle / running / error</span> are core states but render as muted mono text. The system makes state a color, and the tokens note a live glow: <span style="font-family:var(--font-data); color:var(--ink);">box-shadow:0 0 8px currentColor</span>. <span style="font-family:var(--font-data); color:var(--st-predicted);">fix → dot + label; idle=--muted, running=--leaf (glow), error=--st-fault</span></div>
+        </div>
+      </div>
+
+      <!-- finding 5 -->
+      <div style="display:grid; grid-template-columns:34px 1fr; gap:var(--space-md); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); padding:var(--space-md) var(--space-lg);">
+        <span style="font-family:var(--font-display); font-weight:700; font-size:18px; color:var(--st-dry);">5</span>
+        <div>
+          <div style="font-weight:600; font-size:15px; margin-bottom:3px;">The Monitor row sits on three baselines</div>
+          <div style="font-size:13.5px; line-height:1.55; color:var(--muted);">In <span style="font-family:var(--font-data); color:var(--ink);">.capctl</span> the lone <span style="color:var(--ink);">—</span> status, the floating-label port field, and the two buttons each land at a different height. <span style="font-family:var(--font-data); color:var(--st-predicted);">fix → align-items:center; push status to its own end-slot (margin-left:auto)</span></div>
+        </div>
+      </div>
+
+      <!-- finding 6 -->
+      <div style="display:grid; grid-template-columns:34px 1fr; gap:var(--space-md); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); padding:var(--space-md) var(--space-lg);">
+        <span style="font-family:var(--font-display); font-weight:700; font-size:18px; color:var(--st-predicted);">6</span>
+        <div>
+          <div style="font-weight:600; font-size:15px; margin-bottom:3px;">The two modes don't read as a pair</div>
+          <div style="font-size:13.5px; line-height:1.55; color:var(--muted);">Monitor (the always-on baseline) and Experiment (bounded, isolated) are near-identical stacked cards — nothing signals which is the safe living logger vs the throwaway test. Reuse the device already on the summary cards: a 5px left accent. <span style="font-family:var(--font-data); color:var(--st-predicted);">fix → Monitor accent --leaf, Experiment accent --st-predicted</span></div>
+        </div>
+      </div>
+
+    </div>
+    <div style="display:flex; gap:10px; align-items:flex-start; background:color-mix(in srgb, var(--st-predicted) 8%, transparent); border-left:3px solid var(--st-predicted); border-radius:6px; padding:12px 14px; font-size:13px; line-height:1.55; color:var(--ink);">
+      <span style="font-weight:700; color:var(--st-predicted);">Also, beyond this panel —</span>
+      <span style="color:var(--muted);">the chart series use <span style="font-family:var(--font-data); color:var(--ink);">SENSOR_COLORS = ['#1E40AF','#7C5CFF'…]</span>, generic blues/purples that aren't in the token ramp. Out of scope for #101's form, but flagging for #99: series color should derive from the band ramp or a sanctioned categorical set so the dashboard reads as one palette.</span>
+    </div>
+  </section>
+
+  <!-- ===== LIFT THIS ===== -->
+  <sc-if value="{{ showCss }}" hint-placeholder-val="{{ true }}">
+  <section data-screen-label="Liftable CSS" style="display:flex; flex-direction:column; gap:var(--space-md);">
+    <div style="display:flex; align-items:baseline; gap:10px;">
+      <h2 style="font-family:var(--font-display); font-weight:600; font-size:13px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin:0;">Lift this</h2>
+      <span style="font-size:13px; color:var(--muted);">paste into dashboard_template.html's <span style="font-family:var(--font-data);">&lt;style&gt;</span> — pure token deltas, no new values</span>
+    </div>
+    <pre style="margin:0; background:#0C1311; color:#E9F1EB; border:1px solid var(--border); border-radius:var(--r-tile); padding:var(--space-lg); overflow:auto; white-space:pre-wrap; word-break:break-word; font-family:var(--font-data); font-size:12.5px; line-height:1.7; box-shadow:var(--e1);"><span style="color:#8B9B90;">/* 1 + 2 — pills and buttons are atoms; never wrap */</span>
+.proposed, .btn { white-space: nowrap; }
+
+<span style="color:#8B9B90;">/* 3 — primary action = the brand green; Stop stays the neutral outline */</span>
+.btn.primary { background: var(--leaf); border-color: var(--leaf); color: #fff; }
+.btn.primary:hover { background: #2C9247; border-color: #2C9247; }
+<span style="color:#8B9B90;">/* then give each Start: class="btn primary" */</span>
+
+<span style="color:#8B9B90;">/* 4 — status is a state: a dot + label, with the live glow from the tokens */</span>
+.capstatus { display: inline-flex; align-items: center; gap: 7px; margin-left: auto; }
+.capstatus::before { content: ""; width: 8px; height: 8px; border-radius: var(--r-pill);
+  background: currentColor; }
+.capstatus.run { color: var(--leaf); font-weight: 600; }
+.capstatus.run::before { box-shadow: 0 0 8px currentColor; }
+.capstatus.err { color: var(--st-fault); }
+
+<span style="color:#8B9B90;">/* 5 — one baseline for the control row */</span>
+.capctl { align-items: center; }
+
+<span style="color:#8B9B90;">/* 6 — the two modes read as a pair (same accent device as .scard) */</span>
+#monitorCard, #captureCard { position: relative; overflow: hidden; }
+#monitorCard::before, #captureCard::before { content: ""; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 5px; }
+#monitorCard::before  { background: var(--leaf); }          <span style="color:#8B9B90;">/* the living baseline */</span>
+#captureCard::before  { background: var(--st-predicted); }  <span style="color:#8B9B90;">/* the bounded test */</span></pre>
+  </section>
+  </sc-if>
+
+  <!-- ===== FOOTER ===== -->
+  <footer style="display:flex; align-items:center; justify-content:space-between; gap:var(--space-md); flex-wrap:wrap; border-top:1px solid var(--border); padding-top:var(--space-lg); font-size:12px; color:var(--muted); font-family:var(--font-data);">
+    <span>consistency pass · reviewed against <span style="color:var(--ink);">docs/design/tokens/sprout-tokens.css</span> · Design lane owns the verdict</span>
+    <span style="font-style:italic; font-family:var(--font-ui);">tend well.</span>
+  </footer>
+
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1060, &quot;height&quot;: 1500 },
+  &quot;theme&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;light&quot;, &quot;soil&quot;], &quot;default&quot;: &quot;light&quot;, &quot;tsType&quot;: &quot;\&quot;light\&quot; | \&quot;soil\&quot;&quot; },
+  &quot;showCss&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot; }
+}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      theme: this.props.theme ?? "light",
+      showCss: this.props.showCss ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>
