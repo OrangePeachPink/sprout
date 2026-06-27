@@ -81,6 +81,7 @@ prototype's history honestly. (Execution belongs to the architecture/firmware la
 | [0014](0014-operator-control-plane.md) | Operator control plane (Monitor + Experiment under one plane; extends ADR-0011) | **Proposed** — Operator-Experience epic #125 | Data lane |
 | [0015](0015-no-personal-information-policy.md) | No personal information policy (no PII / hardware identifiers collected, generated, committed, or published) | **Accepted** — drafted by Trellis, maintainer-ratified 2026-06-26 | Maintainer + Workflow / meta |
 | [0016](0016-actuation-wiring-seam.md) | Actuation wiring seam: the supervisor is the single sample & actuation authority (extends ADR-0001) | **Proposed** — drafted by Trellis; awaiting Workflow register + maintainer ratification | Firmware / architecture (Data co-owns telemetry-derivation + health rows) |
+| [0017](0017-experiment-notebook-and-notes-durability.md) | Experiment notebook data model + notes durability (extends ADR-0012 §5, ADR-0006) | **Accepted** — Data-led; ratified by Workflow on maintainer delegation 2026-06-27 | Data lane (Lab Notebook; model matches Design's notebook spec) |
 | — | *(archived)* [Sprout v0 combined architecture record](archive/sprout-v0-architecture.md) | Superseded by ADR-0001 | history |
 
 *New ADRs append a row here when proposed. Any lane may author an ADR for an ADR-sized decision in its
