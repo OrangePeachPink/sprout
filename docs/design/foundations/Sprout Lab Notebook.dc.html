@@ -256,7 +256,8 @@ class Component extends DCLogic {
     parched: { name: "parched", color: "var(--band-parched)" },
   };
   // sanctioned categorical series colors, drawn from the band ramp (the #99 direction)
-  SERIES = ["var(--band-wet)", "var(--band-moist)", "var(--band-ideal)", "var(--band-drying)"];
+  // canonical series palette — matches the #203 band-ramp delta (one palette, end to end)
+  SERIES = ["var(--band-wet)", "var(--band-ideal)", "var(--st-predicted)", "var(--band-drying)"];
 
   experiments = [
     {
