@@ -29,7 +29,7 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import ClassVar
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
@@ -44,6 +44,7 @@ from dashboard import (  # noqa: E402  (sibling import)
     render,
 )
 from experiments_catalog import load_catalog, render_catalog  # noqa: E402  (Lab #154)
+from lab_detail import render_detail  # noqa: E402  (Lab detail #157)
 from parse_v1 import parse_files  # noqa: E402
 
 _REPO = _HERE.parents[1]
@@ -137,6 +138,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send(render_catalog(load_catalog()), "text/html; charset=utf-8")
             elif parsed.path == "/lab/experiments.json":
                 self._send_json(load_catalog())
+            elif parsed.path.startswith("/lab/"):  # an experiment detail page (#157)
+                eid = unquote(parsed.path[len("/lab/") :])
+                page = render_detail(eid)
+                if page is None:
+                    self._send("experiment not found", "text/plain", status=404)
+                else:
+                    self._send(page, "text/html; charset=utf-8")
             else:
                 self._send("not found", "text/plain; charset=utf-8", status=404)
         except Exception as exc:  # report any parse/render failure to the client
