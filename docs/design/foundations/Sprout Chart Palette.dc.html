@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens/sprout-tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+</style>
+</helmet>
+<div data-theme="{{ themeAttr }}" style="min-height:100vh; background:var(--bg); color:var(--ink); font-family:var(--font-ui); -webkit-font-smoothing:antialiased; padding:36px 40px 56px;">
+  <div style="max-width:1000px; margin:0 auto;">
+
+    <header style="margin-bottom:26px;">
+      <div style="display:flex; align-items:center; gap:9px; font-family:var(--font-data); font-size:12px; color:var(--muted); margin-bottom:9px;">
+        <span style="width:24px; height:24px; border-radius:7px; background:var(--surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex:none;">
+          <svg width="13" height="16" viewBox="0 0 24 28" fill="none" stroke="var(--leaf)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="var(--sprout)"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="var(--leaf)"></path></svg>
+        </span>
+        <span>chart series palette</span>
+        <span style="opacity:.5;">·</span>
+        <span style="color:var(--st-predicted); font-weight:600;">#203</span>
+        <span style="opacity:.5;">·</span>
+        <span style="color:var(--st-predicted); font-weight:600;">#99</span>
+      </div>
+      <h1 style="font-family:var(--font-display); font-weight:700; font-size:38px; line-height:1.08; margin:0; letter-spacing:-0.01em;">Series color comes from the band ramp</h1>
+      <p style="margin:11px 0 0; font-size:15.5px; line-height:1.55; color:var(--muted); max-width:64ch;">The dashboard's <span style="font-family:var(--font-data); color:var(--ink);">SENSOR_COLORS</span> are generic blues and purples that aren't in the token ramp, so a multi-probe chart reads as a different palette than the rest of Sprout. Swap them for a sanctioned categorical set drawn from the band ramp — one palette, end to end.</p>
+    </header>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start; margin-bottom:22px;">
+
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:18px 20px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+          <span style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--st-fault); text-transform:uppercase; letter-spacing:.08em;">before</span>
+          <span style="height:1px; flex:1; background:var(--border);"></span>
+          <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted);">off-ramp</span>
+        </div>
+        <sc-for list="{{ before }}" as="c" hint-placeholder-count="6">
+          <div style="display:flex; align-items:center; gap:12px; padding:7px 0; border-top:1px solid var(--border);">
+            <span style="width:30px; height:18px; border-radius:5px; flex:none; border:1px solid rgba(0,0,0,.08); background:{{ c.hex }};"></span>
+            <span style="font-family:var(--font-data); font-size:12.5px; color:var(--ink); width:74px;">{{ c.hex }}</span>
+            <span style="font-size:12.5px; color:var(--muted);">{{ c.note }}</span>
+          </div>
+        </sc-for>
+      </section>
+
+      <section style="position:relative; overflow:hidden; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e2); padding:18px 20px;">
+        <div style="position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--leaf);"></div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+          <span style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--leaf); text-transform:uppercase; letter-spacing:.08em;">after</span>
+          <span style="height:1px; flex:1; background:var(--border);"></span>
+          <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted);">band ramp</span>
+        </div>
+        <sc-for list="{{ after }}" as="c" hint-placeholder-count="6">
+          <div style="display:flex; align-items:center; gap:12px; padding:7px 0; border-top:1px solid var(--border);">
+            <span style="width:30px; height:18px; border-radius:5px; flex:none; border:1px solid rgba(0,0,0,.08); background:{{ c.hex }};"></span>
+            <span style="font-family:var(--font-data); font-size:12.5px; color:var(--ink); width:74px;">{{ c.hex }}</span>
+            <span style="font-family:var(--font-data); font-size:12px; color:var(--muted);">{{ c.token }}</span>
+            <span style="font-size:12.5px; color:var(--muted); margin-left:auto;">{{ c.name }}</span>
+          </div>
+        </sc-for>
+      </section>
+    </div>
+
+    <section style="margin-bottom:22px;">
+      <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:10px;">
+        <h2 style="font-family:var(--font-display); font-weight:600; font-size:13px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin:0;">Lift this</h2>
+        <span style="font-size:13px; color:var(--muted);">replaces the <span style="font-family:var(--font-data);">SENSOR_COLORS</span> array in <span style="font-family:var(--font-data);">dashboard.py</span>, <span style="font-family:var(--font-data);">dashboard_template.html</span>, and the reports generator</span>
+      </div>
+      <pre style="margin:0; background:#0C1311; color:#E9F1EB; border:1px solid var(--border); border-radius:var(--r-tile); padding:18px 20px; overflow:auto; white-space:pre-wrap; word-break:break-word; font-family:var(--font-data); font-size:12.5px; line-height:1.7; box-shadow:var(--e1);"><span style="color:#8B9B90;">// Sprout series palette — a sanctioned categorical set from the band ramp.</span>
+<span style="color:#8B9B90;">// wet · ideal · predicted · drying · saturated · dry  (chanColor() stays as-is)</span>
+const SENSOR_COLORS = ['#17B6C4','#8BD24F','#7C5CFF','#F5A623','#0E7A86','#E8703A'];</pre>
+    </section>
+
+    <section>
+      <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:10px;">
+        <h2 style="font-family:var(--font-display); font-weight:600; font-size:13px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin:0;">Guardrails</h2>
+        <span style="font-size:13px; color:var(--muted);">so the chart stays honest and on-palette</span>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <sc-for list="{{ rules }}" as="r" hint-placeholder-count="3">
+          <div style="display:grid; grid-template-columns:26px 1fr; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); padding:12px 16px;">
+            <span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--leaf);">{{ r.n }}</span>
+            <div style="font-size:13.5px; line-height:1.55; color:var(--ink);">{{ r.text }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1000,&quot;height&quot;:860},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;soil&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Appearance&quot;}}">
+class Component extends DCLogic {
+  before = [
+    { hex: "#1E40AF", note: "generic blue — off-ramp" },
+    { hex: "#7C5CFF", note: "violet (≈ --st-predicted, the one near-match)" },
+    { hex: "#0E7A86", note: "≈ --band-saturated (the one already in-palette)" },
+    { hex: "#B91C1C", note: "generic red — reads as a fault state" },
+    { hex: "#0F766E", note: "generic teal — off-ramp" },
+    { hex: "#9333EA", note: "generic purple — off-ramp" },
+  ];
+  after = [
+    { token: "--band-wet", hex: "#17B6C4", name: "wet · cyan" },
+    { token: "--band-ideal", hex: "#8BD24F", name: "ideal · green" },
+    { token: "--st-predicted", hex: "#7C5CFF", name: "predicted · violet" },
+    { token: "--band-drying", hex: "#F5A623", name: "drying · amber" },
+    { token: "--band-saturated", hex: "#0E7A86", name: "saturated · deep teal" },
+    { token: "--band-dry", hex: "#E8703A", name: "dry · orange" },
+  ];
+  rules = [
+    { n: "1", text: "Reserve --band-parched / --st-fault (#E0483D) for fault and alarm — never a series color, so a probe line can never read as an alarm." },
+    { n: "2", text: "A series color is the probe's identity, not its current band. Don't double-encode — band shading already carries wet→dry; the line color just says which probe." },
+    { n: "3", text: "Past six co-located probes, cycle the set and distinguish the overflow with a dash pattern — never reach for a new off-palette hue." },
+  ];
+  renderVals() {
+    return {
+      themeAttr: (this.props.theme ?? "light") === "soil" ? "dark" : "light",
+      before: this.before,
+      after: this.after,
+      rules: this.rules,
+    };
+  }
+}
+</script>
+</body>
+</html>
