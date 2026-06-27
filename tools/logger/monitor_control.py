@@ -97,5 +97,7 @@ class MonitorController:
 
     def _status_locked(self) -> dict:
         running = self._proc is not None and self._proc.poll() is None
-        return {"state": "running" if running else "stopped",
-                "port": self._port if running else None}
+        return {
+            "state": "running" if running else "stopped",
+            "port": self._port if running else None,
+        }

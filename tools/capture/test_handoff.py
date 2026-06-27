@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tests for the Monitor->Experiment handoff (#129), with fake controllers (no device).
 
-    python tools/capture/test_handoff.py
+python tools/capture/test_handoff.py
 """
 
 from __future__ import annotations
