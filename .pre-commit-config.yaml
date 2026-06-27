@@ -46,3 +46,15 @@ repos:
         language: system
         types: [markdown]
         pass_filenames: false
+
+  # cspell — prose spelling, driven by the repo's own cspell.json dictionary (#109). Scoped to
+  # Markdown (docs/design/** is cspell-ignored — Design's brand words). Same system-npx pattern
+  # as markdownlint, so local == CI with no package.json. (Python/firmware scope is a later
+  # step — checking code identifiers needs its own tuning to avoid false positives.)
+  - repo: local
+    hooks:
+      - id: cspell
+        name: cspell
+        entry: npx --yes cspell lint --no-progress --no-summary --no-must-find-files
+        language: system
+        types: [markdown]
