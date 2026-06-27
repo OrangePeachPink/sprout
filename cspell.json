@@ -8,11 +8,6 @@
     "docs/design/**"
   ],
   "words": [
-    // Intentional prose coinages from the developer front door (#219): "dogfood"
-    // (the design-dogfooding concept) and "contributable" (DX's voice). Allowlisted
-    // so cspell --all-files passes; reword the prose and drop these if voice changes.
-    "contributable",
-    "dogfood",
     "AMS1117",
     "AOUT",
     // "AUOT" is a genuine silkscreen typo (for "AOUT") on these capacitive-sensor
@@ -94,6 +89,7 @@
     "datasheets",
     "deadband",
     "dfrobot",
+    "dogfood",
     "duckdb",
     "electrolyzes",
     "electroniclinic",
