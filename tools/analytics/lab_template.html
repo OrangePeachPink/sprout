@@ -17,8 +17,11 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f
 .back:hover { color: var(--leaf); }
 .egrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 14px; }
-.ecard { background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-tile); padding: 14px 16px; box-shadow: var(--e1); }
+.ecard { display: block; text-decoration: none; color: inherit;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-tile); padding: 14px 16px; box-shadow: var(--e1);
+  transition: border-color .12s, box-shadow .12s, transform .12s; }
+.ecard:hover { border-color: var(--leaf); box-shadow: var(--e2); transform: translateY(-2px); }
 .ecard-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .ecard-h > * { min-width: 0; }
 .ecard-h h3 { font-family: var(--font-display); font-size: 16px; margin: 0;

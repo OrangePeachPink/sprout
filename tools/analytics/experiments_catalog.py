@@ -103,15 +103,16 @@ def _card(e: dict) -> str:
         quality.append(f"{e['crc_fail']} crc")
     if e.get("stopped_by"):
         quality.append(esc(str(e["stopped_by"])))
+    eid = esc(str(e["experiment_id"]))
     return (
-        '<article class="ecard">'
+        f'<a class="ecard" href="/lab/{eid}">'  # click -> detail (#157)
         f'<div class="ecard-h"><h3>{esc(str(e["title"]))}</h3>'
         f'<span class="ewhen">{esc(_fmt_when(e.get("started_utc")))}</span></div>'
         f'<div class="emeta">{dur} · {esc(samples)}{esc(rate)}</div>'
         f'<div class="echips">{chips}</div>'
-        f'<div class="efoot"><span class="eid">{esc(str(e["experiment_id"]))}</span>'
+        f'<div class="efoot"><span class="eid">{eid}</span>'
         f'<span class="equal">{esc(" · ".join(quality))}</span></div>'
-        "</article>"
+        "</a>"
     )
 
 
