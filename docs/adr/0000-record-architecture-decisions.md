@@ -31,9 +31,17 @@ Use a **numbered Architecture Decision Record (ADR) series** under `docs/adr/`.
      process, and tooling decisions share one sequence; they are not sub-numbered per category.
    - The **first real decision is `0001`**.
 3. **One decision per file.** Keep each ADR focused; don't bundle unrelated decisions.
-4. **Status lifecycle:** `Proposed → Accepted → Superseded by ADR-NNNN` (or `Deprecated`). ADRs are
-   **append-only history**: never edit a past decision's substance or delete it — supersede it with a
-   new ADR that links back. An ADR is a dated snapshot with revisit triggers, not a permanent contract.
+4. **Status lifecycle & editing policy:** `Proposed → Accepted` (or `Rejected` / `Deprecated`).
+   **Pre-1.0 (current): ADRs are living documents — edit them in place** to keep them clean, current,
+   and consistent; the **git history is the decision trail** (every change is a dated commit + diff +
+   message — that *is* the "what changed and why"). Do **not** create in-document amendment chains or
+   `Superseded by` stubs for ordinary pre-1.0 iteration. When you materially change an *accepted*
+   decision: (a) write a clear commit message capturing the why, and (b) tell the lanes building
+   against it. **At 1.0 / first public release the policy flips to append-only** — from then a
+   substantive decision is *superseded by a new ADR* (linked back), so external readers get the
+   lineage in the document, not only in git; a one-time "clean read" precedes the flip. Genuinely
+   meaningful archived snapshots (e.g. the v0 record) are kept — this stops *new* churn, it does not
+   erase real history.
 5. **Each ADR names an Owner and a Lane.** A cross-lane ADR may assign a **per-row owner** so each lane
    confirms only its own rows.
 6. **Format:** Context → Decision → Consequences → Revisit triggers.

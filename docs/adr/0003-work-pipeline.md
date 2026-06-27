@@ -158,6 +158,14 @@ rung** of the change ladder (commit → issue + PR → ADR), reserved for decisi
 will need the *why* for. **Any lane may author an ADR** for an ADR-sized decision in its own area,
 under the same numbered series + [register](0000-record-architecture-decisions.md).
 
+**The decision-vehicle ladder** (lightest → heaviest — pick the lightest that fits):
+
+- **Just the change** — reversible, low-stakes, obvious. The git diff is the record.
+- **Issue (+ its comments)** — a scoped change, bug, or task; the thread is the record.
+- **Discussion** — open-ended exploration ("should we…?"), *before* there is a decision (the ideas inbox).
+- **PRD** (`docs/prd/`) — a feature's *what + why* (requirements + acceptance), before the *how*.
+- **ADR** (`docs/adr/`) — an architecturally-significant, durable, cross-cutting *decision of record*.
+
 **Write an ADR when any of these is true:**
 
 - **Hard or expensive to reverse** — architecture, data substrate, a public schema/API, repo
@@ -183,8 +191,9 @@ under the same numbered series + [register](0000-record-architecture-decisions.m
 - A reversible, low-stakes tweak (rename a var, nudge a threshold) → just the change.
 - A routine choice with no real alternative → no record needed.
 - Restating a decision already in another ADR → **link it**, don't duplicate.
-- A how-to, runbook, or frequently-edited reference → **docs**, not an ADR (ADRs are
-  append-only/superseded, not living documents).
+- A how-to, runbook, or frequently-edited reference → **docs**, not an ADR (an ADR is a *decision*,
+  not a living reference — though pre-1.0 the ADR text itself is editable in place; see
+  [ADR-0000 §4](0000-record-architecture-decisions.md)).
 
 Rule of thumb: *if you'll edit it often, it's a doc; if you'll defend it later, it's an ADR.*
 
