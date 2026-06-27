@@ -174,6 +174,8 @@ typedef struct {
     uint32_t     phase_start_ms;
     uint32_t     next_sample_ms;
     int          last_served;            /* rotation pointer for fairness       */
+    uint32_t     active_dose_ms;         /* length of the in-flight dose, resolved at
+                                            grant: forced_ms (clamped) or chan dose_ms */
 
     /* per-channel runtime */
     irrig_chan_status_t status[IRRIG_CHANNELS];
@@ -191,6 +193,8 @@ typedef struct {
                                                          latches at max_health_warn (A1) */
     uint32_t            last_water_ms[IRRIG_CHANNELS];/* millis() at the last dose-off;
                                                          interval telemetry (D1/E3)  */
+    bool                forced[IRRIG_CHANNELS];       /* operator forced-dose pending (ADR-0016) */
+    uint32_t            forced_ms[IRRIG_CHANNELS];    /* requested dose length; 0 = use chan dose_ms */
 } irrig_ctrl_t;
 
 /* -------------------------------------------------------------------------- */
@@ -214,6 +218,22 @@ void irrig_tick(irrig_ctrl_t *c, uint32_t now_ms);
 
 /* Clear a latched HARD fault after you've fixed the tube/tank/pump. */
 void irrig_clear_fault(irrig_ctrl_t *c, int ch);
+
+/* Operator-forced dose (ADR-0016): express a manual !water as a request INTO the
+ * supervisor, not a second relay driver. Queues a one-shot dose on `ch` for `ms`
+ * (0 = the channel's configured dose_ms), granted on the next SYS_SAMPLING tick with
+ * priority over autonomous wants. Bypasses the moisture-level decision, the per-read
+ * health veto, and the soak lockout (operator intent) but still honors the hard
+ * invariants: at most one pump at a time, the pump_max_ms ceiling (the request is
+ * clamped to it), and the HARD fault latch (a faulted channel is refused - clear it
+ * first). One-shot: the request is consumed when the dose is granted. */
+typedef enum {
+    IRRIG_DOSE_QUEUED = 0,    /* accepted; granted on the next SYS_SAMPLING tick */
+    IRRIG_DOSE_BAD_CHANNEL,   /* ch out of [0, IRRIG_CHANNELS)                    */
+    IRRIG_DOSE_FAULTED        /* channel hard-faulted - clear it first            */
+} irrig_dose_result_t;
+
+irrig_dose_result_t irrig_request_dose(irrig_ctrl_t *c, int ch, uint32_t ms);
 
 /* introspection for logging / UI */
 irrig_mode_t        irrig_mode(const irrig_ctrl_t *c);
