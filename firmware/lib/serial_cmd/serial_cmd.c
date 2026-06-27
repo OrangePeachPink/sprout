@@ -2,6 +2,7 @@
  * serial_cmd.c - see serial_cmd.h.
  */
 #include "serial_cmd.h"
+#include <stdio.h>
 #include <string.h>
 
 static uint8_t hexval(char c)
@@ -12,52 +13,95 @@ static uint8_t hexval(char c)
     return 0xFF;
 }
 
-cadence_parse_t cadence_cmd_parse(const char *line, uint32_t floor_ms,
-                                  uint32_t ceil_ms, uint32_t *ms_out)
+/* --- the registry --------------------------------------------------------- */
+typedef struct {
+    const char          *name;
+    serial_cmd_handler_t handler;
+} serial_cmd_entry_t;
+
+static serial_cmd_entry_t s_cmds[SERIAL_CMD_MAX];
+static int                s_count = 0;
+
+void serial_cmd_reset(void) { s_count = 0; }
+
+int serial_cmd_register(const char *name, serial_cmd_handler_t handler)
 {
-    if (line == NULL) return CADENCE_NOT_A_COMMAND;
-
-    /* Re-sync past any leading UART noise: the command starts at "!cad,". */
-    const char *cmd = strstr(line, "!cad,");
-    if (cmd == NULL) return CADENCE_NOT_A_COMMAND;
-
-    const char *body = cmd + 1;                 /* checksum covers "cad,<ms>"  */
-    const char *star = strchr(cmd, '*');
-    if (star == NULL || star <= body) return CADENCE_ERR_PARSE;
-
-    /* Validate the "*HH" checksum suffix (both hex digits must be present). */
-    if (star[1] == '\0' || star[2] == '\0') return CADENCE_ERR_PARSE;
-    uint8_t hi = hexval(star[1]);
-    uint8_t lo = hexval(star[2]);
-    if (hi == 0xFF || lo == 0xFF) return CADENCE_ERR_PARSE;
-    uint8_t want = (uint8_t)((hi << 4) | lo);
-    uint8_t got = 0;
-    for (const char *p = body; p < star; p++) got ^= (uint8_t)*p;
-    if (got != want) return CADENCE_ERR_CHECKSUM;
-
-    /* Parse the integer ms between "!cad," and "*". */
-    const char *num = cmd + 5;                  /* skip "!cad,"                 */
-    if (num >= star) return CADENCE_ERR_PARSE;
-    uint32_t ms = 0;
-    int digits = 0;
-    for (const char *p = num; p < star; p++) {
-        if (*p < '0' || *p > '9') return CADENCE_ERR_PARSE;
-        ms = ms * 10u + (uint32_t)(*p - '0');
-        if (++digits > 9) return CADENCE_ERR_PARSE;   /* overflow guard        */
-    }
-    if (digits == 0) return CADENCE_ERR_PARSE;
-
-    if (ms_out) *ms_out = ms;                   /* report value even out of range */
-    if (ms < floor_ms || ms > ceil_ms) return CADENCE_ERR_RANGE;
-    return CADENCE_OK;
+    if (name == NULL || handler == NULL || s_count >= SERIAL_CMD_MAX) return -1;
+    for (int i = 0; i < s_count; i++)
+        if (strcmp(s_cmds[i].name, name) == 0) return -1; /* no duplicates */
+    s_cmds[s_count].name    = name;
+    s_cmds[s_count].handler = handler;
+    s_count++;
+    return 0;
 }
 
-const char *cadence_err_name(cadence_parse_t status)
+int serial_cmd_parse_u32(const char *s, uint32_t *out)
 {
-    switch (status) {
-        case CADENCE_ERR_CHECKSUM: return "checksum";
-        case CADENCE_ERR_RANGE:    return "range";
-        case CADENCE_ERR_PARSE:    return "parse";
-        default:                   return "";
+    if (s == NULL || *s == '\0') return 0;
+    uint32_t v = 0;
+    int digits = 0;
+    for (const char *p = s; *p; p++) {
+        if (*p < '0' || *p > '9') return 0;
+        v = v * 10u + (uint32_t)(*p - '0');
+        if (++digits > 9) return 0; /* overflow guard (fits uint32) */
     }
+    if (out) *out = v;
+    return 1;
+}
+
+static serial_cmd_result_t nak(char *reply, size_t replen, const char *err)
+{
+    if (reply && replen) snprintf(reply, replen, "# nak err=%s", err);
+    return (strcmp(err, "checksum") == 0) ? SERIAL_CMD_ERR_CHECKSUM : SERIAL_CMD_ERR_UNKNOWN;
+}
+
+serial_cmd_result_t serial_cmd_dispatch(const char *line, char *reply, size_t replen)
+{
+    if (reply && replen) reply[0] = '\0';
+    if (line == NULL) return SERIAL_CMD_IGNORED;
+
+    /* Re-sync past any leading UART noise: a command starts at '!'. */
+    const char *cmd = strchr(line, '!');
+    if (cmd == NULL) return SERIAL_CMD_IGNORED;
+    const char *body = cmd + 1; /* checksum covers the body after '!' */
+
+    /* Validate the trailing "*HH" checksum over the body (both hex digits present). */
+    const char *star = strchr(cmd, '*');
+    if (star == NULL || star <= body) return nak(reply, replen, "checksum");
+    if (star[1] == '\0' || star[2] == '\0') return nak(reply, replen, "checksum");
+    uint8_t hi = hexval(star[1]);
+    uint8_t lo = hexval(star[2]);
+    if (hi == 0xFF || lo == 0xFF) return nak(reply, replen, "checksum");
+    uint8_t want = (uint8_t)((hi << 4) | lo);
+    uint8_t got  = 0;
+    for (const char *p = body; p < star; p++) got ^= (uint8_t)*p;
+    if (got != want) return nak(reply, replen, "checksum");
+
+    /* Split the body into name + args at the first ','. */
+    const char *comma = NULL;
+    for (const char *p = body; p < star; p++) {
+        if (*p == ',') { comma = p; break; }
+    }
+    const char *name_end = comma ? comma : star;
+    size_t      name_len = (size_t)(name_end - body);
+
+    /* Copy the args (after the comma, up to '*') into a null-terminated buffer. */
+    char argbuf[32];
+    argbuf[0] = '\0';
+    if (comma) {
+        size_t alen = (size_t)(star - (comma + 1));
+        if (alen >= sizeof(argbuf)) alen = sizeof(argbuf) - 1;
+        memcpy(argbuf, comma + 1, alen);
+        argbuf[alen] = '\0';
+    }
+
+    /* Look up the command by exact name and run it. */
+    for (int i = 0; i < s_count; i++) {
+        if (strlen(s_cmds[i].name) == name_len &&
+            strncmp(s_cmds[i].name, body, name_len) == 0) {
+            s_cmds[i].handler(argbuf, reply, replen);
+            return SERIAL_CMD_OK;
+        }
+    }
+    return nak(reply, replen, "unknown");
 }

@@ -266,62 +266,76 @@ static void t_band_anchors(void)
     CHECK(band_of(1010) == MOIST_SUBMERGED,         "standing water ~1010 -> submerged");
 }
 
-/* Issue #63: the host->device `!cad,<ms>*HH` command parser - valid / checksum /
- * range / parse paths, the v1 tiers (incl. 0.5 s at the floor and the slow tiers),
- * and re-sync past leading UART noise. */
-static void make_cad(char *out, size_t n, uint32_t ms)
+/* #92: the host->device command registry + dispatcher - register/dispatch, the *HH
+ * checksum, the name+args split, unknown/ignored paths, the shared parse_u32, and
+ * re-sync past leading UART noise. (#63 set_cadence is now a registered handler.) */
+static void make_cmd(char *out, size_t n, const char *body)
 {
-    char body[32];
-    snprintf(body, sizeof(body), "cad,%lu", (unsigned long)ms);
     uint8_t x = 0;
     for (const char *p = body; *p; p++) x ^= (uint8_t)*p;
     snprintf(out, n, "!%s*%02X", body, x);
 }
 
-static void t_set_cadence_cmd(void)
+/* a numeric test handler standing in for !cad: records the args + parses a uint32 */
+static char     g_th_args[32];
+static uint32_t g_th_num;
+static int      g_th_num_ok;
+static void th_num(const char *args, char *reply, size_t replen)
 {
-    printf("  set_cadence command parser (#63)\n");
-    const uint32_t FLOOR = 500, CEIL = 3600000;
-    char buf[40];
-    uint32_t ms = 0;
+    snprintf(g_th_args, sizeof(g_th_args), "%s", args);
+    g_th_num_ok = serial_cmd_parse_u32(args, &g_th_num);
+    snprintf(reply, replen, "# ack num=%s", args);
+}
+static void th_ping(const char *args, char *reply, size_t replen)
+{
+    (void)args;
+    snprintf(reply, replen, "# ack pong");
+}
 
-    make_cad(buf, sizeof(buf), 1000);
-    CHECK(cadence_cmd_parse(buf, FLOOR, CEIL, &ms) == CADENCE_OK && ms == 1000,
-          "valid !cad,1000 -> OK");
-    make_cad(buf, sizeof(buf), 500);
-    CHECK(cadence_cmd_parse(buf, FLOOR, CEIL, &ms) == CADENCE_OK && ms == 500,
-          "0.5 s tier (500) accepted at the floor");
-    make_cad(buf, sizeof(buf), 300000);
-    CHECK(cadence_cmd_parse(buf, FLOOR, CEIL, &ms) == CADENCE_OK,
-          "slow tier (5 min) accepted");
+static void t_serial_cmd_registry(void)
+{
+    printf("  serial command registry + dispatch (#92)\n");
+    char buf[40], reply[96];
 
-    make_cad(buf, sizeof(buf), 250);
-    CHECK(cadence_cmd_parse(buf, FLOOR, CEIL, &ms) == CADENCE_ERR_RANGE && ms == 250,
-          "sub-floor (250) -> range (value still reported)");
-    make_cad(buf, sizeof(buf), 7200000);
-    CHECK(cadence_cmd_parse(buf, FLOOR, CEIL, &ms) == CADENCE_ERR_RANGE,
-          "above ceil -> range");
+    serial_cmd_reset();
+    CHECK(serial_cmd_register("cad", th_num) == 0, "register cad");
+    CHECK(serial_cmd_register("ping", th_ping) == 0, "register ping");
+    CHECK(serial_cmd_register("cad", th_num) == -1, "duplicate name refused");
 
-    CHECK(cadence_cmd_parse("!cad,1000*00", FLOOR, CEIL, &ms) == CADENCE_ERR_CHECKSUM,
-          "wrong checksum -> checksum");
-    /* malformed integer but VALID checksum, so it reaches the int-parse path */
-    {
-        const char *bad = "cad,12x4";
-        uint8_t x = 0;
-        for (const char *p = bad; *p; p++) x ^= (uint8_t)*p;
-        char m[24];
-        snprintf(m, sizeof(m), "!%s*%02X", bad, x);
-        CHECK(cadence_cmd_parse(m, FLOOR, CEIL, &ms) == CADENCE_ERR_PARSE,
-              "non-digit body -> parse");
-    }
-    CHECK(cadence_cmd_parse("plants.soil,s3,...", FLOOR, CEIL, &ms) == CADENCE_NOT_A_COMMAND,
-          "telemetry row -> not a command");
+    CHECK(serial_cmd_dispatch("plants.soil,s3,...", reply, sizeof(reply)) == SERIAL_CMD_IGNORED &&
+              reply[0] == '\0',
+          "telemetry row (no '!') -> ignored, no reply");
 
-    make_cad(buf, sizeof(buf), 1000);
+    make_cmd(buf, sizeof(buf), "cad,1000");
+    CHECK(serial_cmd_dispatch(buf, reply, sizeof(reply)) == SERIAL_CMD_OK &&
+              strcmp(g_th_args, "1000") == 0 && g_th_num_ok && g_th_num == 1000,
+          "valid !cad,1000 -> OK, handler got args '1000'");
+
+    make_cmd(buf, sizeof(buf), "ping");
+    CHECK(serial_cmd_dispatch(buf, reply, sizeof(reply)) == SERIAL_CMD_OK &&
+              strcmp(reply, "# ack pong") == 0,
+          "no-arg !ping -> # ack pong");
+
+    CHECK(serial_cmd_dispatch("!cad,1000*00", reply, sizeof(reply)) == SERIAL_CMD_ERR_CHECKSUM &&
+              strstr(reply, "checksum") != NULL,
+          "wrong checksum -> nak checksum (handler never runs)");
+
+    make_cmd(buf, sizeof(buf), "nope,1");
+    CHECK(serial_cmd_dispatch(buf, reply, sizeof(reply)) == SERIAL_CMD_ERR_UNKNOWN &&
+              strstr(reply, "unknown") != NULL,
+          "valid-checksum unknown command -> nak unknown");
+
+    make_cmd(buf, sizeof(buf), "cad,1000");
     char noisy[48];
     snprintf(noisy, sizeof(noisy), "\xff\xfe%s", buf);
-    CHECK(cadence_cmd_parse(noisy, FLOOR, CEIL, &ms) == CADENCE_OK && ms == 1000,
-          "leading UART noise re-syncs to !cad");
+    CHECK(serial_cmd_dispatch(noisy, reply, sizeof(reply)) == SERIAL_CMD_OK,
+          "leading UART noise re-syncs to '!'");
+
+    uint32_t v = 0;
+    CHECK(serial_cmd_parse_u32("250", &v) && v == 250, "parse_u32 250 -> ok");
+    CHECK(!serial_cmd_parse_u32("12x4", &v), "parse_u32 non-digit -> fail");
+    CHECK(!serial_cmd_parse_u32("", &v), "parse_u32 empty -> fail");
+    CHECK(!serial_cmd_parse_u32("1234567890", &v), "parse_u32 >9 digits -> fail");
 }
 
 int main(void)
@@ -334,7 +348,7 @@ int main(void)
     t_overrun_failsafe();
     t_last_water_ms();
     t_band_anchors();
-    t_set_cadence_cmd();
+    t_serial_cmd_registry();
     printf("\n%d checks, %d failed\n", TESTS, FAILS);
     return FAILS ? 1 : 0;
 }
