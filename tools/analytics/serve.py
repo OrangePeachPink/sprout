@@ -43,6 +43,7 @@ from dashboard import (  # noqa: E402  (sibling import)
     gather_inputs,
     render,
 )
+from experiments_catalog import load_catalog, render_catalog  # noqa: E402  (Lab #154)
 from parse_v1 import parse_files  # noqa: E402
 
 _REPO = _HERE.parents[1]
@@ -132,6 +133,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json(_CAPTURE.status())
             elif parsed.path == "/monitor/status":
                 self._send_json(_MONITOR.status())
+            elif parsed.path == "/lab":  # the Lab Notebook catalog (#154)
+                self._send(
+                    render_catalog(load_catalog()), "text/html; charset=utf-8"
+                )
+            elif parsed.path == "/lab/experiments.json":
+                self._send_json(load_catalog())
             else:
                 self._send("not found", "text/plain; charset=utf-8", status=404)
         except Exception as exc:  # report any parse/render failure to the client

@@ -40,7 +40,7 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .controls .refreshed { color: var(--muted); font-size: 11px; font-family: var(--font-data); max-width: 210px; text-align: right; }
 .btn { font-family: var(--font-ui); font-size: 12px; font-weight: 600; cursor: pointer;
   border: 1px solid var(--border); background: var(--surface); color: var(--ink);
-  border-radius: var(--r-pill); padding: 6px 14px; }
+  border-radius: var(--r-pill); padding: 6px 14px; text-decoration: none; }
 .btn:hover { border-color: var(--leaf); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 .btn.busy { opacity: .6; }
@@ -209,6 +209,7 @@ footer.prov code { font-family: var(--font-data); }
       <button class="btn" id="refreshBtn" type="button">↻ Refresh</button>
       <label class="auto" id="autoLbl"><input type="checkbox" id="autoChk"> auto</label>
       <button class="btn" id="themeBtn" type="button">soil mode</button>
+      <a class="btn" href="/lab" title="Experiment catalog — past captures, isolated from the monitor log">🧪 Experiments</a>
       <button class="btn" id="quitBtn" type="button" hidden>⏻ Stop server</button>
     </div>
   </header>

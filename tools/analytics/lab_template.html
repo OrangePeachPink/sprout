@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Experiments · Sprout Lab</title>
+<style>
+/*__SPROUT_TOKENS__*/
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-ui);
+  padding: 24px; max-width: 1100px; margin-inline: auto; }
+.top { display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  margin-bottom: 18px; }
+.top h1 { font-family: var(--font-display); font-size: 26px; margin: 0; }
+.top .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.back { color: var(--muted); font-size: 13px; text-decoration: none; white-space: nowrap; }
+.back:hover { color: var(--leaf); }
+.egrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px; }
+.ecard { background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-tile); padding: 14px 16px; box-shadow: var(--e1); }
+.ecard-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ecard-h > * { min-width: 0; }
+.ecard-h h3 { font-family: var(--font-display); font-size: 16px; margin: 0;
+  overflow-wrap: anywhere; }
+.ewhen { color: var(--muted); font-size: 11px; font-family: var(--font-data);
+  white-space: nowrap; }
+.emeta { font-family: var(--font-data); font-size: 13px; color: var(--ink); margin-top: 6px; }
+.echips { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px; }
+.lchip { font-size: 11px; font-family: var(--font-data); color: var(--muted);
+  background: var(--bg); border: 1px solid var(--border); border-radius: 999px;
+  padding: 1px 8px; }
+.efoot { margin-top: 10px; display: flex; justify-content: space-between; gap: 10px;
+  font-size: 11px; font-family: var(--font-data); color: var(--muted); }
+.efoot > * { min-width: 0; overflow-wrap: anywhere; }
+.empty { color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div>
+      <h1>🌱 Experiments</h1>
+      <div class="sub"><!--__COUNT__--> capture(s) · newest first · isolated from the monitor log</div>
+    </div>
+    <a class="back" href="/">← dashboard</a>
+  </div>
+  <main class="egrid"><!--__CARDS__--></main>
+</body>
+</html>
