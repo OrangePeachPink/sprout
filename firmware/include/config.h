@@ -85,7 +85,20 @@ constexpr int SAMPLES_PER_READ = 100;
 constexpr int SAMPLES_TRIM     = 15;  // dropped from EACH end (keeps the middle 70)
 static_assert(SAMPLES_PER_READ > 2 * SAMPLES_TRIM, "trimmed mean needs samples left after trimming");
 
-// 4 relay channels - the CW-022 board is active-LOW. Output-capable GPIOs that
-// avoid the strapping pins (0, 2, 12, 15):
-//   GPIO 25, 26, 27, 32
-// constexpr int RELAY_PINS[4] = {25, 26, 27, 32};
+// --- Actuation safety: relays + watchdog + fail-safe-off (#93) --------------
+// No pump actuates yet (read-only firmware). This is the safety SCAFFOLD that must
+// exist BEFORE any relay toggles (the #94 actuation gate): any reset/boot lands
+// every relay de-energized, and a wedged loop resets rather than stranding a pump on.
+//
+// 4 relay channels - the CW-022 board is active-LOW (driving the pin LOW energizes
+// the coil), so de-energized = HIGH. Output-capable GPIOs that avoid the strapping
+// pins (0, 2, 12, 15) and the input-only ADC pins (34/35/36/39). Bench-verify the
+// polarity before connecting a pump.
+constexpr int  RELAY_PINS[NUM_SENSORS] = {25, 26, 27, 32};       // ch0..ch3
+constexpr bool RELAY_ACTIVE_LOW = true;                          // CW-022 module
+constexpr int  RELAY_OFF_LEVEL  = RELAY_ACTIVE_LOW ? HIGH : LOW; // the de-energized level
+
+// Task-watchdog timeout (ms): the main loop must feed the WDT within this window or
+// the device resets - so a hung loop can't strand a pump on. Generous vs a sweep
+// (~330 ms); loop() still spins + feeds between the slow (30 s) sweeps.
+constexpr uint32_t WDT_TIMEOUT_MS = 8000;
