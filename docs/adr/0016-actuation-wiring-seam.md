@@ -1,7 +1,7 @@
 # ADR-0016 — Actuation wiring seam: the supervisor is the single sample & actuation authority
 
-**Status:** Proposed (drafted by Trellis, architecture & gap review; awaiting Workflow register + maintainer
-ratification)
+**Status:** Accepted (2026-06-27) — ratified by the maintainer (Veronica); Firmware + Data confirmed their
+register rows (#94 / #232). Drafted by Trellis.
 **Date:** 2026-06-27
 **Owner:** Firmware lane / architecture (Data lane co-owns the telemetry-derivation + health-signal rows)
 **Lane:** architecture / firmware (cross-lane: Data)
@@ -72,6 +72,10 @@ veto-blocks-dose, forced-dose-respects-ceiling).
   manual and autonomous actuation — not by convention.
 - Telemetry and control share one sample and one health signal, so the log always reflects what the pump
   actually saw.
+- **Soil-row telemetry has intentional gaps during a dose:** rows emit only while `irrig_mode() == SYS_SAMPLING`,
+  so `SYS_WATERING` / `SYS_SETTLE` windows produce pump events, not soil rows. Correct-by-design (invariant #2) —
+  `TELEMETRY_SCHEMA` and any dashboard "missing data?" logic must **expect** the gap, not flag it (Firmware's
+  flag on the Data row).
 - The autonomous slice becomes a **disciplined refactor** (delete the second sampler; fold the pulse into the
   supervisor) rather than new logic — the brain is already built and host-tested.
 - Small migration cost: the #222 manual-pulse path is re-expressed as a supervisor forced-dose, and `!cad` is
