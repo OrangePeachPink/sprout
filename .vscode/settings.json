@@ -5,6 +5,15 @@
     "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.codeActionsOnSave": {
       "source.organizeImports.ruff": "explicit"
-    }
+    },
+    "editor.rulers": [88]
+  },
+  "// expert": "(#138) complements .editorconfig (which owns eol/newline/trim/indent); below is only what it doesn't cover.",
+  "editor.rulers": [120],
+  "[yaml]": { "editor.defaultFormatter": "redhat.vscode-yaml" },
+  "[toml]": { "editor.defaultFormatter": "tamasfe.even-better-toml" },
+  "search.exclude": {
+    "**/.venv": true,
+    "**/__pycache__": true
   }
 }
