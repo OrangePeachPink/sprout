@@ -36,12 +36,30 @@ OFFSETS = (0.0, 2.1, 2.2, 4.3)  # seconds between probes inside one burst
 
 # Three rotation segments illustrating the band range: Moist -> Drying -> Parched.
 SEGMENTS = (
-    {"start": "2026-06-23T21:09:10Z", "session": "demo001", "level": "well watered",
-     "base": 1305, "spread": (24, 31), "step": (7, 18, -6, 21)},
-    {"start": "2026-06-24T00:00:11Z", "session": "demo002", "level": "needs water",
-     "base": 1980, "spread": (22, 30), "step": (9, 24, -5, 16)},
-    {"start": "2026-06-25T00:00:06Z", "session": "demo003", "level": "air-dry",
-     "base": 3168, "spread": (26, 38), "step": (5, 11, -4, 14)},
+    {
+        "start": "2026-06-23T21:09:10Z",
+        "session": "demo001",
+        "level": "well watered",
+        "base": 1305,
+        "spread": (24, 31),
+        "step": (7, 18, -6, 21),
+    },
+    {
+        "start": "2026-06-24T00:00:11Z",
+        "session": "demo002",
+        "level": "needs water",
+        "base": 1980,
+        "spread": (22, 30),
+        "step": (9, 24, -5, 16),
+    },
+    {
+        "start": "2026-06-25T00:00:06Z",
+        "session": "demo003",
+        "level": "air-dry",
+        "base": 3168,
+        "spread": (26, 38),
+        "step": (5, 11, -4, 14),
+    },
 )
 
 # pct is a labelled *index* over the moist window [900, 3400], not a measurement.
@@ -114,10 +132,29 @@ def main() -> None:
                 spread = seg["spread"][sweep % 2]
                 payload = f"level={seg['level']};role=diag;spread={spread};gpio={gpio}"
                 row = [
-                    "plants.soil", _iso(ts), _local(ts), str(sid), seg["session"],
-                    "plants_esp32_demo01", "0.7.0", "plants_logger_0_4", "30000",
-                    "UMLIFE_v2_TLC555", sensor, "origplant", "soil_moisture",
-                    str(raw), str(_pct(raw)), "pct", "OK", "", "", "", "", payload, "",
+                    "plants.soil",
+                    _iso(ts),
+                    _local(ts),
+                    str(sid),
+                    seg["session"],
+                    "plants_esp32_demo01",
+                    "0.7.0",
+                    "plants_logger_0_4",
+                    "30000",
+                    "UMLIFE_v2_TLC555",
+                    sensor,
+                    "origplant",
+                    "soil_moisture",
+                    str(raw),
+                    str(_pct(raw)),
+                    "pct",
+                    "OK",
+                    "",
+                    "",
+                    "",
+                    "",
+                    payload,
+                    "",
                 ]
                 out.append(",".join(row))
         out.append("")  # blank line between segments
