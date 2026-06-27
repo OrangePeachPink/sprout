@@ -97,11 +97,26 @@ human confirmation *is* the gate, which is why PRs say `Refs #N`, not `Closes #N
 
 It isn't bureaucracy — it's how Sprout stays honest about what's *really* done versus merely merged.
 
-## A note on the green check
+## The green check
 
-You may notice the CI badge isn't green yet — that's a known, temporary billing pause on Actions, not anything
-about your change. Your local `just check` is the real signal today; the badge lights up on the first PR after
-the reset. Don't chase it.
+When you open a PR, CI runs the *same* gate you ran locally (`just check` — lint, format, hygiene, tests) and
+reports back with a green check. Green means your change passed exactly what every contributor runs; if it's red,
+open **Details** to see which step, fix it, and push again. Because CI mirrors your machine, there are no
+surprises.
+
+## New to any of this?
+
+No shame in looking things up — a few good starting points for the concepts above:
+
+- **Pull requests & the GitHub flow** — start with
+  [GitHub's guide](https://docs.github.com/en/get-started/using-github/github-flow), then try the interactive
+  [GitHub Skills](https://skills.github.com) courses.
+- **Git itself** — the free [Pro Git book](https://git-scm.com/book/en/v2); chapters 1–3 cover everything used here.
+- **Conventional Commits** — the [one-page spec](https://www.conventionalcommits.org/).
+- **`uv` and `pre-commit`** — the [uv docs](https://docs.astral.sh/uv/) and [pre-commit.com](https://pre-commit.com).
+
+Prefer video? Search *"GitHub flow tutorial"* or *"your first pull request"* — GitHub's own channel and
+freeCodeCamp both have short, friendly walkthroughs.
 
 ## That's it
 
