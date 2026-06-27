@@ -24,6 +24,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 from dashboard import FONTS_CSS, TOKENS_CSS, build_context  # noqa: E402
 from experiments_catalog import _fmt_dur, _fmt_when  # noqa: E402
+from lab_notes import load_notes  # noqa: E402  (Lab notes #158)
 from parse_v1 import parse_files  # noqa: E402
 
 
@@ -134,6 +135,14 @@ def render_detail(
     )
     title = html.escape(str(m.get("title") or m.get("subject") or experiment_id))
 
+    notes = load_notes(experiment_id)  # the living log, from the tracked sidecar (#158)
+    ver = notes.get("version") or 0
+    saved = (
+        f"saved {html.escape(str(notes.get('saved_at')))} · v{ver}"
+        if ver
+        else "not saved yet"
+    )
+
     template = _TEMPLATE.read_text(encoding="utf-8")
     tokens = TOKENS_CSS.read_text(encoding="utf-8") if TOKENS_CSS.exists() else ""
     fonts = FONTS_CSS.read_text(encoding="utf-8") if FONTS_CSS.exists() else ""
@@ -144,4 +153,9 @@ def render_detail(
         .replace("<!--__FACTS__-->", facts_html)
         .replace("<!--__SVG__-->", svg)
         .replace("<!--__CARDS__-->", cards)
+        .replace("<!--__SAVED__-->", saved)
+        .replace("<!--__HYP__-->", html.escape(str(notes.get("hypothesis", ""))))
+        .replace("<!--__MET__-->", html.escape(str(notes.get("method", ""))))
+        .replace("<!--__FIN__-->", html.escape(str(notes.get("findings", ""))))
+        .replace("<!--__CON__-->", html.escape(str(notes.get("conclusion", ""))))
     )
