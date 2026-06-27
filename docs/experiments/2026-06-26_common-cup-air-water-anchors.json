@@ -1,0 +1,145 @@
+{
+  "experiment_id": "2026-06-26_common-cup-air-water-anchors",
+  "title": "Common-cup air-dry + saturated calibration anchors",
+  "rig": "4x UMLIFE_v2_TLC555 capacitive probes, ESP32 plants_esp32_f4e9d4 fw 0.7.0, GPIO 34/35/36/39, one shared cup",
+  "notes": {
+    "hypothesis": "With all 4 probes in one medium at one moisture, the only variable is probe+ADC pin; air and water bracket the sensor's full raw-ADC range and fix the Saturated floor and air-dry ceiling.",
+    "method": "4 probes co-located: open air on a paper towel (2 chunks, 5h downtime between) then fully submerged in one shared cup of water from ~23:21 to now. Monitor logs at 30s; segmented by raw value + time gap; 90s handling transients trimmed.",
+    "findings": "Air-dry center 3170 (pins 3151-3191); saturated center 978 (pins 926-1020); dynamic range ~2192. Pin spread is state-dependent: ~94 in water vs ~40 in air, and the pin ordering flips between states. Both air chunks agree within ~5 counts. The afternoon skylight bump is ESP32 self-heating (no soil/plant present), not moisture.",
+    "conclusion": "Placeholder Saturated (900-1050) and Parched (3050-3400) bands correctly bracket reality; this fixes the two endpoints (saturated ~978, air-dry ~3169) and the one robust wet|dry divide ~2096. Interior boundaries (moist/ideal/drying/dry) still require a controlled dry-down. Per-pin offset is NOT a single constant - it is state-dependent."
+  },
+  "probe_notes": {
+    "s2": {
+      "gpio": 35,
+      "history": "reverse-polarity recovered; historically read above the pack in soil (+90)",
+      "clean_finding": "lowest in both same-medium states: air -26, water -69 (wet-biased)",
+      "interpretation": "soil +90 was microsite-confounded (4 different pot spots); common-cup is the first microsite-free look. Bias is non-constant (larger at wet end) -> needs two-point/gain+offset correction, not a single per-pin constant.",
+      "span": "926-3151 (vs pack ~995-3177)",
+      "health": "OK quality, low noise (std ~6), flat in cup - functional",
+      "caveat": "no same-medium reading predates this run -> microsite-confound-lifting vs real-drift not separable yet"
+    }
+  },
+  "states": {
+    "air_dry": {
+      "per_sensor": {
+        "s1": {
+          "gpio": 34,
+          "n": 1642,
+          "median": 3191.0,
+          "mean": 3190.8,
+          "min": 3146,
+          "max": 3203,
+          "std": 5.2,
+          "slope_per_hr": 0.43
+        },
+        "s2": {
+          "gpio": 35,
+          "n": 1642,
+          "median": 3151.0,
+          "mean": 3151.2,
+          "min": 3135,
+          "max": 3160,
+          "std": 2.9,
+          "slope_per_hr": 0.17
+        },
+        "s3": {
+          "gpio": 36,
+          "n": 1643,
+          "median": 3166.0,
+          "mean": 3165.6,
+          "min": 3157,
+          "max": 3180,
+          "std": 3.2,
+          "slope_per_hr": 0.33
+        },
+        "s4": {
+          "gpio": 39,
+          "n": 1641,
+          "median": 3174.0,
+          "mean": 3173.3,
+          "min": 3143,
+          "max": 3186,
+          "std": 6.4,
+          "slope_per_hr": 0.72
+        }
+      },
+      "center": 3170,
+      "cross_channel_spread_mean": 39.6
+    },
+    "saturated": {
+      "per_sensor": {
+        "s1": {
+          "gpio": 34,
+          "n": 2058,
+          "median": 977.0,
+          "mean": 977.6,
+          "min": 967,
+          "max": 1011,
+          "std": 5.6,
+          "slope_per_hr": 0.28
+        },
+        "s2": {
+          "gpio": 35,
+          "n": 2057,
+          "median": 926.0,
+          "mean": 926.1,
+          "min": 915,
+          "max": 962,
+          "std": 6.1,
+          "slope_per_hr": 0.23
+        },
+        "s3": {
+          "gpio": 36,
+          "n": 2057,
+          "median": 1020.0,
+          "mean": 1019.9,
+          "min": 1010,
+          "max": 1052,
+          "std": 5.1,
+          "slope_per_hr": 0.32
+        },
+        "s4": {
+          "gpio": 39,
+          "n": 2056,
+          "median": 988.0,
+          "mean": 987.9,
+          "min": 979,
+          "max": 1013,
+          "std": 4.6,
+          "slope_per_hr": -0.01
+        }
+      },
+      "center": 978,
+      "cross_channel_spread_mean": 93.7
+    }
+  },
+  "proposed": {
+    "saturated_center": 978,
+    "air_dry_center": 3170,
+    "wet_dry_boundary": 2096,
+    "dynamic_range": 2192
+  },
+  "placeholder_comparison": {
+    "saturated_band": "900-1050 (observed submerged 915-1052: matches)",
+    "parched_band": "3050-3400 (observed air-dry 3135-3203: sits in lower half)"
+  },
+  "provenance": {
+    "source_logs": [
+      "plants_esp32_f4e9d4_20260623_210910.csv",
+      "plants_esp32_f4e9d4_20260624_000011.csv",
+      "plants_esp32_f4e9d4_20260624_003852.csv",
+      "plants_esp32_f4e9d4_20260624_162835.csv",
+      "plants_esp32_f4e9d4_20260625_000006.csv",
+      "plants_esp32_f4e9d4_20260626_091415.csv",
+      "plants_esp32_f4e9d4_20260626_094047.csv",
+      "plants_esp32_f4e9d4_20260626_161131.csv",
+      "plants_esp32_f4e9d4_20260626_161357.csv",
+      "plants_esp32_f4e9d4_20260626_212149.csv",
+      "plants_esp32_f4e9d4_20260627_000019.csv",
+      "plants_esp32_f4e9d4_20260627_042110.csv"
+    ],
+    "extracted_by": "Data lane",
+    "segmentation": "raw value + time-gap state detection over monitor logs/"
+  },
+  "authority": "PROPOSED - calibration evidence for the Data<->Firmware A2 reconciliation (ADR-0006 \u00a75-6). Not authoritative; Firmware ratifies."
+}
