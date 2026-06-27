@@ -1,6 +1,6 @@
 # PRD: Operator Experience — one launcher, in-app mode switching, no manual port juggling
 
-**Status:** Draft — **ready for review** (maintainer-requested 2026-06-26)
+**Status:** Implemented (2026-06-26 — Operator Experience epic #125 + slices #126–#130 shipped via PRs #131/#132/#135/#145/#146)
 **Date:** 2026-06-26
 **Owner:** Data lane (with Firmware + Design)
 **Epic / issues:** *cut from this PRD via `/to-issues` into tracer-bullet slices*
