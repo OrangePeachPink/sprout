@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --leaf:#34A853; --sprout:#8BD24F; --ink:#1E2A18; --muted:#6F7E62; --border:#E3E9D8;
+    --surface:#FFFFFF; --surface-2:#F7FAF2; --bg:#EEF4E6;
+    --st-watering:#17B6C4; --st-dry:#F5A623; --st-due:#E8703A; --st-fault:#E0483D; --st-predicted:#7C5CFF;
+    --band-saturated:#0E7A86; --band-wet:#17B6C4; --band-moist:#34A853; --band-ideal:#8BD24F;
+    --band-drying:#F5A623; --band-dry:#E8703A; --band-parched:#E0483D;
+    --q-suspect:#F5A623;
+    --font-display:"Baloo 2",sans-serif; --font-ui:"Hanken Grotesk",sans-serif; --font-data:"JetBrains Mono",monospace;
+    --r-control:8px; --r-tile:14px; --r-card:20px; --r-pill:999px;
+    --e1:0 1px 2px rgba(30,42,24,.06); --e2:0 6px 18px rgba(30,42,24,.08); --e3:0 16px 36px rgba(30,42,24,.14);
+    /* soil / dark surfaces (ADR-0008) for the instrument sections */
+    --d-bg:#0C1311; --d-surface:#18231F; --d-surface-2:#111A16; --d-border:#29372F; --d-ink:#E9F1EB; --d-muted:#8B9B90; --d-leaf:#93DD6A;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:var(--font-ui);}
+  .docwrap{display:flex; flex-direction:column; align-items:center; gap:58px; padding:54px 48px 120px; background:var(--bg); min-height:100vh;}
+  .frame{display:flex; flex-direction:column;}
+  .frameLabel{font-family:var(--font-data); font-size:13px; color:#5b6b52; margin-bottom:12px; display:flex; align-items:center; gap:8px;}
+  .sectionhead{width:1140px; max-width:100%; display:flex; align-items:baseline; gap:14px; border-bottom:1px solid var(--border); padding-bottom:12px;}
+  .kicker{font-family:var(--font-data); font-size:13px; letter-spacing:.14em; color:var(--muted); font-weight:600; white-space:nowrap;}
+  .subhead{font-size:14px; color:var(--muted);}
+  .row{display:flex; gap:26px; flex-wrap:wrap; justify-content:center;}
+  .topbar{display:flex; align-items:center; justify-content:space-between; padding:18px 22px;}
+  .wordmark{display:flex; align-items:center; gap:9px; font-family:var(--font-display); font-weight:700; font-size:18px; color:var(--ink); letter-spacing:-0.01em;}
+  .pbtn{font-family:var(--font-ui); font-size:15px; font-weight:600; white-space:nowrap; border:1px solid var(--leaf); background:var(--leaf); color:#fff; border-radius:var(--r-pill); padding:11px 26px; cursor:pointer; box-shadow:var(--e1);}
+  .sbtn{font-family:var(--font-ui); font-size:14px; font-weight:600; white-space:nowrap; border:1px solid var(--border); background:var(--surface); color:var(--ink); border-radius:var(--r-pill); padding:10px 22px; cursor:pointer;}
+  .voice{font-family:var(--font-ui); font-style:italic; color:var(--muted); font-size:16px; line-height:1.5;}
+  .mono{font-family:var(--font-data);}
+  .phone{width:296px; height:606px; border-radius:40px; background:#0c0f0e; padding:9px; box-shadow:0 18px 40px rgba(30,42,24,.22); flex-shrink:0;}
+  .screen{width:100%; height:100%; border-radius:32px; overflow:hidden; position:relative; display:flex; flex-direction:column; background:var(--bg);}
+  .statusbar{display:flex; align-items:center; justify-content:space-between; padding:13px 22px 6px; font-family:var(--font-data); font-size:12px; color:var(--ink); flex-shrink:0;}
+  .gb{width:11px; height:11px; border-radius:3px; display:inline-block;}
+  @keyframes liveGlow{0%,100%{box-shadow:0 0 5px currentColor;}50%{box-shadow:0 0 12px currentColor;}}
+  @keyframes ringPulse{0%,100%{opacity:.5; transform:scale(1);}50%{opacity:.85; transform:scale(1.015);}}
+  @keyframes syncSpin{to{transform:rotate(360deg);}}
+  @keyframes barFill{0%,100%{opacity:.35;}50%{opacity:1;}}
+</style>
+</helmet>
+
+<div class="docwrap">
+
+  <!-- ===================== INTRO ===================== -->
+  <div class="frame" data-screen-label="Intro">
+    <div class="frameLabel">#243 · Untethered Sprout — Design input</div>
+    <div style="width:1140px; max-width:100%; background:var(--surface); border-radius:18px; box-shadow:0 8px 30px rgba(30,42,24,.10); padding:42px 46px; display:flex; gap:46px; align-items:flex-start;">
+      <div style="flex:1; min-width:0;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+          <span style="font-family:var(--font-data); font-size:12px; color:var(--st-predicted); font-weight:600; letter-spacing:.06em;">DESIGN ROW · #243 · CONFIG TIERS + SENSOR MATRIX</span>
+          <span style="font-family:var(--font-data); font-size:10.5px; font-weight:600; color:var(--st-dry); background:color-mix(in srgb, var(--st-dry) 14%, transparent); border-radius:var(--r-pill); padding:3px 11px; letter-spacing:.06em;">PROPOSED · feeds PRD</span>
+        </div>
+        <h1 style="font-family:var(--font-display); font-weight:700; font-size:40px; line-height:1.06; margin:0 0 16px; letter-spacing:-0.015em; color:var(--ink);">Sprout, off the tether</h1>
+        <p style="margin:0 0 16px; font-size:16px; line-height:1.62; color:var(--muted); max-width:64ch;">No PC, no cable. You power the board, meet Sprout on its own little Wi-Fi, and hand it your network from your phone. From then on it runs on its own and serves its dashboard straight from the device. The product grows in <strong style="color:var(--ink); font-weight:600;">tiers</strong> — start by just watching, add watering when you're ready.</p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--leaf); background:color-mix(in srgb, var(--leaf) 12%, transparent); border-radius:var(--r-pill); padding:6px 14px;">Tier 0 → Tier N</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--st-watering); background:color-mix(in srgb, var(--st-watering) 12%, transparent); border-radius:var(--r-pill); padding:6px 14px;">phone-first · captive portal</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--st-predicted); background:color-mix(in srgb, var(--st-predicted) 12%, transparent); border-radius:var(--r-pill); padding:6px 14px;">offline ≠ blind</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted); border:1px solid var(--border); border-radius:var(--r-pill); padding:6px 14px; font-family:var(--font-data);">on-device dashboard</span>
+        </div>
+      </div>
+      <div style="width:312px; flex-shrink:0; border-left:1px solid var(--border); padding-left:40px;">
+        <div style="font-family:var(--font-data); font-size:11px; color:var(--muted); letter-spacing:.06em; margin-bottom:14px;">THIS ROW COVERS</div>
+        <div style="display:flex; flex-direction:column; gap:11px;">
+          <div style="display:flex; gap:11px; align-items:flex-start;"><span style="font-family:var(--font-data); font-size:11px; color:var(--leaf); margin-top:2px;">01</span><div style="font-size:13.5px; color:var(--ink); line-height:1.45;">The tier model + Tier-0 <strong>"what you need"</strong> matrix, in Sprout's voice</div></div>
+          <div style="display:flex; gap:11px; align-items:flex-start;"><span style="font-family:var(--font-data); font-size:11px; color:var(--leaf); margin-top:2px;">02</span><div style="font-size:13.5px; color:var(--ink); line-height:1.45;">Capacitive vs resistive sensor matrix (Firmware classifies; Design surfaces)</div></div>
+          <div style="display:flex; gap:11px; align-items:flex-start;"><span style="font-family:var(--font-data); font-size:11px; color:var(--leaf); margin-top:2px;">03</span><div style="font-size:13.5px; color:var(--ink); line-height:1.45;">Captive-portal onboarding — no PC, phone-first</div></div>
+          <div style="display:flex; gap:11px; align-items:flex-start;"><span style="font-family:var(--font-data); font-size:11px; color:var(--leaf); margin-top:2px;">04</span><div style="font-size:13.5px; color:var(--ink); line-height:1.45;">Offline / online / syncing states + on-device dashboard</div></div>
+        </div>
+        <div style="margin-top:16px; border-top:1px solid var(--border); padding-top:14px;">
+          <div style="font-family:var(--font-data); font-size:11px; color:var(--st-due); letter-spacing:.06em; margin-bottom:8px;">OPEN SEAMS</div>
+          <div style="font-size:12.5px; color:var(--muted); line-height:1.5;">Sync UI is drawn <strong style="color:var(--ink);">transport-agnostic</strong> — the on-device-store vs hub vs device-served call is Data's #243 row. Tier auto-detect rides Firmware's capability abstraction. Binds <span class="mono" style="color:var(--ink);">ADR-0016 / 0017</span>.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== THE TIERS ===================== -->
+  <div class="sectionhead">
+    <span class="kicker">THE TIERS</span>
+    <span class="subhead">one device, grows with you — start by watching, add watering when ready</span>
+  </div>
+
+  <div class="row" style="align-items:stretch;">
+    <!-- TIER 0 -->
+    <div class="frame" data-screen-label="Tier 0 monitor">
+      <div class="frameLabel"><span style="width:10px; height:10px; border-radius:3px; background:var(--leaf);"></span>Tier 0 · monitor-only · the baseline</div>
+      <div style="width:360px; max-width:100%; background:var(--surface); border:1px solid var(--border); border-top:4px solid var(--leaf); border-radius:var(--r-card); box-shadow:var(--e2); padding:24px 24px 26px; display:flex; flex-direction:column; height:100%;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+          <span class="mono" style="font-size:12px; color:var(--leaf); font-weight:600; letter-spacing:.06em;">TIER 0</span>
+          <span class="mono" style="font-size:11px; color:var(--muted);">ships first</span>
+        </div>
+        <h3 style="font-family:var(--font-display); font-weight:700; font-size:25px; margin:0 0 4px; color:var(--ink); letter-spacing:-0.01em;">I watch and tell you</h3>
+        <p class="voice" style="margin:0 0 18px;">Pop a probe in — I'll read the soil and keep you posted.</p>
+        <div style="display:flex; flex-direction:column; gap:9px;">
+          <div style="display:flex; gap:9px; align-items:flex-start; font-size:13.5px; color:var(--ink); line-height:1.4;"><span style="color:var(--leaf); font-weight:700;">+</span>Soil moisture, calibrated bands &amp; index</div>
+          <div style="display:flex; gap:9px; align-items:flex-start; font-size:13.5px; color:var(--ink); line-height:1.4;"><span style="color:var(--leaf); font-weight:700;">+</span>Sprout's voice + thirsty notifications</div>
+          <div style="display:flex; gap:9px; align-items:flex-start; font-size:13.5px; color:var(--ink); line-height:1.4;"><span style="color:var(--leaf); font-weight:700;">+</span>1–4 probes, on-device dashboard</div>
+        </div>
+        <div style="margin-top:auto; padding-top:18px;"><div class="mono" style="font-size:11px; color:var(--muted); letter-spacing:.04em;">NEEDS · board + probe + Wi-Fi + power</div></div>
+      </div>
+    </div>
+
+    <!-- TIER 1 -->
+    <div class="frame" data-screen-label="Tier 1 watering">
+      <div class="frameLabel"><span style="width:10px; height:10px; border-radius:3px; background:var(--st-watering);"></span>Tier 1 · watering</div>
+      <div style="width:360px; max-width:100%; background:var(--surface); border:1px solid var(--border); border-top:4px solid var(--st-watering); border-radius:var(--r-card); box-shadow:var(--e2); padding:24px 24px 26px; display:flex; flex-direction:column; height:100%;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+          <span class="mono" style="font-size:12px; color:var(--st-watering); font-weight:600; letter-spacing:.06em;">TIER 1</span>
+          <span class="mono" style="font-size:11px; color:var(--muted);">add-on</span>
+        </div>
+        <h3 style="font-family:var(--font-display); font-weight:700; font-size:25px; margin:0 0 4px; color:var(--ink); letter-spacing:-0.01em;">I can drink on my own</h3>
+        <p class="voice" style="margin:0 0 18px;">Give me a pump and water — I'll sip when I'm dry.</p>
+        <div style="display:flex; flex-direction:column; gap:9px;">
+          <div style="display:flex; gap:9px; align-items:flex-start; font-size:13.5px; color:var(--ink); line-height:1.4;"><span style="color:var(--st-watering); font-weight:700;">+</span>Everything in Tier 0</div>
+          <div style="display:flex; gap:9px; align-items:flex-start; font-size:13.5px; color:var(--ink); line-height:1.4;"><span style="color:var(--st-watering); font-weight:700;">+</span>Pump + reservoir — manual or scheduled</div>
+          <div style="display:flex; gap:9px; align-items:flex-start; font-size:13.5px; color:var(--ink); line-height:1.4;"><span style="color:var(--st-watering); font-weight:700;">+</span>Band-triggered auto-watering, with limits</div>
+        </div>
+        <div style="margin-top:auto; padding-top:18px;"><div class="mono" style="font-size:11px; color:var(--muted); letter-spacing:.04em;">ADDS · pump + reservoir + tubing</div></div>
+      </div>
+    </div>
+
+    <!-- TIER N -->
+    <div class="frame" data-screen-label="Tier N full">
+      <div class="frameLabel"><span style="width:10px; height:10px; border-radius:3px; background:var(--st-predicted);"></span>Tier N · full</div>
+      <div style="width:360px; max-width:100%; background:var(--surface); border:1px solid var(--border); border-top:4px solid var(--st-predicted); border-radius:var(--r-card); box-shadow:var(--e2); padding:24px 24px 26px; display:flex; flex-direction:column; height:100%;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+          <span class="mono" style="font-size:12px; color:var(--st-predicted); font-weight:600; letter-spacing:.06em;">TIER N</span>
+          <span class="mono" style="font-size:11px; color:var(--muted);">later</span>
+        </div>
+        <h3 style="font-family:var(--font-display); font-weight:700; font-size:25px; margin:0 0 4px; color:var(--ink); letter-spacing:-0.01em;">The whole garden</h3>
+        <p class="voice" style="margin:0 0 18px;">More zones, more senses — I'll coordinate it all.</p>
+        <div style="display:flex; flex-direction:column; gap:9px;">
+          <div style="display:flex; gap:9px; align-items:flex-start; font-size:13.5px; color:var(--ink); line-height:1.4;"><span style="color:var(--st-predicted); font-weight:700;">+</span>Multiple zones &amp; valves, schedules</div>
+          <div style="display:flex; gap:9px; align-items:flex-start; font-size:13.5px; color:var(--ink); line-height:1.4;"><span style="color:var(--st-predicted); font-weight:700;">+</span>Light / temp sensors, multi-device</div>
+          <div style="display:flex; gap:9px; align-items:flex-start; font-size:13.5px; color:var(--ink); line-height:1.4;"><span style="color:var(--st-predicted); font-weight:700;">+</span>Optional hub for sync &amp; history</div>
+        </div>
+        <div style="margin-top:auto; padding-top:18px;"><div class="mono" style="font-size:11px; color:var(--muted); letter-spacing:.04em;">ADDS · zones + valves + sensors</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== TIER 0 — WHAT YOU NEED ===================== -->
+  <div class="sectionhead">
+    <span class="kicker">WHAT TIER 0 NEEDS</span>
+    <span class="subhead">the "what you need" checklist + the soil-sensor matrix — Sprout asking for what it needs</span>
+  </div>
+
+  <div class="row" style="align-items:flex-start;">
+    <!-- WHAT YOU NEED CHECKLIST -->
+    <div class="frame" data-screen-label="What you need">
+      <div class="frameLabel"><span style="width:9px; height:9px; border-radius:999px; background:var(--leaf);"></span>"Here's what I need to start watching"</div>
+      <div style="width:560px; max-width:100%; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e2); overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:12px; padding:18px 22px; background:var(--surface-2); border-bottom:1px solid var(--border);">
+          <x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="ideal" size="30" static="" hint-size="26px,30px"></x-import>
+          <p class="voice" style="margin:0; font-size:15px; color:var(--ink);">Four things and we're off. No computer needed.</p>
+        </div>
+        <div style="padding:6px 22px 12px;">
+          <!-- row -->
+          <div style="display:flex; align-items:center; gap:16px; padding:15px 0; border-bottom:1px solid var(--border);">
+            <span class="mono" style="width:22px; font-size:13px; color:var(--muted); flex-shrink:0;">01</span>
+            <div style="flex:1;"><div style="font-weight:600; font-size:15px; color:var(--ink);">A Sprout board</div><div style="font-size:13px; color:var(--muted);">Wi-Fi microcontroller — the brain + radio</div></div>
+            <span class="mono" style="font-size:11px; color:var(--leaf); font-weight:600; background:color-mix(in srgb, var(--leaf) 12%, transparent); border-radius:var(--r-pill); padding:4px 11px;">required</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:16px; padding:15px 0; border-bottom:1px solid var(--border);">
+            <span class="mono" style="width:22px; font-size:13px; color:var(--muted); flex-shrink:0;">02</span>
+            <div style="flex:1;"><div style="font-weight:600; font-size:15px; color:var(--ink);">A soil probe</div><div style="font-size:13px; color:var(--muted);">capacitive or resistive — see the matrix →</div></div>
+            <span class="mono" style="font-size:11px; color:var(--leaf); font-weight:600; background:color-mix(in srgb, var(--leaf) 12%, transparent); border-radius:var(--r-pill); padding:4px 11px;">required</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:16px; padding:15px 0; border-bottom:1px solid var(--border);">
+            <span class="mono" style="width:22px; font-size:13px; color:var(--muted); flex-shrink:0;">03</span>
+            <div style="flex:1;"><div style="font-weight:600; font-size:15px; color:var(--ink);">2.4GHz Wi-Fi</div><div style="font-size:13px; color:var(--muted);">to go online — without it I still run on my own hotspot</div></div>
+            <span class="mono" style="font-size:11px; color:var(--st-dry); font-weight:600; background:color-mix(in srgb, var(--st-dry) 14%, transparent); border-radius:var(--r-pill); padding:4px 11px;">to sync</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:16px; padding:15px 0;">
+            <span class="mono" style="width:22px; font-size:13px; color:var(--muted); flex-shrink:0;">04</span>
+            <div style="flex:1;"><div style="font-weight:600; font-size:15px; color:var(--ink);">USB or wall power</div><div style="font-size:13px; color:var(--muted);">always-on; any phone is your screen</div></div>
+            <span class="mono" style="font-size:11px; color:var(--leaf); font-weight:600; background:color-mix(in srgb, var(--leaf) 12%, transparent); border-radius:var(--r-pill); padding:4px 11px;">required</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SENSOR MATRIX -->
+    <div class="frame" data-screen-label="Sensor matrix">
+      <div class="frameLabel"><span style="width:9px; height:9px; border-radius:999px; background:var(--st-predicted);"></span>Soil sensor matrix · capacitive vs resistive</div>
+      <div style="width:540px; max-width:100%; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e2); padding:22px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+          <!-- capacitive -->
+          <div style="border:1.5px solid var(--leaf); border-radius:var(--r-tile); padding:16px; background:color-mix(in srgb, var(--leaf) 5%, var(--surface));">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+              <span style="font-family:var(--font-display); font-weight:700; font-size:17px; color:var(--ink);">Capacitive</span>
+              <span class="mono" style="font-size:10px; color:var(--leaf); font-weight:600; background:color-mix(in srgb, var(--leaf) 14%, transparent); border-radius:var(--r-pill); padding:3px 9px;">PICK ME</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:7px; font-size:12.5px; color:var(--ink); line-height:1.4;">
+              <div style="display:flex; gap:7px;"><span style="color:var(--leaf);">●</span>No exposed metal — won't corrode</div>
+              <div style="display:flex; gap:7px;"><span style="color:var(--leaf);">●</span>Stable for the long haul</div>
+              <div style="display:flex; gap:7px;"><span style="color:var(--muted);">○</span>Costs a little more</div>
+            </div>
+            <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--border);"><span class="mono" style="font-size:11px; color:var(--leaf);">trust: long-term</span></div>
+          </div>
+          <!-- resistive -->
+          <div style="border:1px solid var(--border); border-radius:var(--r-tile); padding:16px; background:var(--surface);">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+              <span style="font-family:var(--font-display); font-weight:700; font-size:17px; color:var(--ink);">Resistive</span>
+              <span class="mono" style="font-size:10px; color:var(--st-dry); font-weight:600; background:color-mix(in srgb, var(--st-dry) 14%, transparent); border-radius:var(--r-pill); padding:3px 9px;">BUDGET</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:7px; font-size:12.5px; color:var(--ink); line-height:1.4;">
+              <div style="display:flex; gap:7px;"><span style="color:var(--leaf);">●</span>Cheap and everywhere</div>
+              <div style="display:flex; gap:7px;"><span style="color:var(--st-dry);">●</span>Two bare probes — corrodes over weeks</div>
+              <div style="display:flex; gap:7px;"><span style="color:var(--st-dry);">●</span>Drifts as it ages</div>
+            </div>
+            <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--border);"><span class="mono" style="font-size:11px; color:var(--st-dry);">trust: watch for drift</span></div>
+          </div>
+        </div>
+        <!-- honesty note -->
+        <div style="display:flex; gap:12px; align-items:flex-start; margin-top:16px; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:14px 16px;">
+          <span style="width:8px; height:8px; border-radius:999px; background:var(--st-predicted); margin-top:6px; flex-shrink:0; box-shadow:0 0 7px var(--st-predicted);"></span>
+          <div>
+            <div style="font-size:11px; color:var(--muted); font-family:var(--font-data); letter-spacing:.05em; margin-bottom:4px;">FIRMWARE CLASSIFIES · DESIGN SURFACES</div>
+            <p style="margin:0; font-size:13px; color:var(--ink); line-height:1.5;">Sprout detects which probe you plugged in and badges it. On resistive, it quietly keeps a drift-watch — the honesty thread, not a downgrade. <span class="voice" style="font-size:13px;">"These work — I'll just keep an eye on them for you."</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== CAPTIVE-PORTAL ONBOARDING ===================== -->
+  <div class="sectionhead">
+    <span class="kicker">CAPTIVE-PORTAL ONBOARDING</span>
+    <span class="subhead">no PC, phone-first · power on → join Sprout's Wi-Fi → hand over your network → online</span>
+  </div>
+
+  <div class="row">
+
+    <!-- CP1 power on -->
+    <div class="frame" data-screen-label="Portal 1 Power on">
+      <div class="frameLabel"><span style="width:18px;height:18px;border-radius:999px;background:var(--leaf);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">1</span>Power on</div>
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span style="display:flex; gap:5px; align-items:center;"><span class="gb" style="background:var(--ink);"></span><span class="gb" style="background:var(--ink); opacity:.5;"></span><span style="font-size:11px;">▮</span></span></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 26px;">
+            <div style="position:relative; width:150px; height:150px; display:flex; align-items:center; justify-content:center; margin-bottom:18px;">
+              <div style="position:absolute; inset:0; border-radius:999px; border:2px solid color-mix(in srgb, var(--leaf) 50%, transparent); animation:ringPulse 6s ease-in-out infinite;"></div>
+              <x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="moist" size="86" hint-size="74px,86px"></x-import>
+            </div>
+            <h3 style="font-family:var(--font-display); font-weight:700; font-size:23px; margin:0 0 8px; color:var(--ink); letter-spacing:-0.01em;">Plug me in</h3>
+            <p class="voice" style="margin:0; font-size:15px; max-width:24ch;">I'll raise my own little Wi-Fi so we can meet.</p>
+            <div style="margin-top:22px; display:flex; align-items:center; gap:9px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-pill); padding:8px 15px; box-shadow:var(--e1);">
+              <span style="width:8px; height:8px; border-radius:999px; background:var(--st-watering); box-shadow:0 0 7px var(--st-watering); animation:liveGlow 1.8s ease-in-out infinite;"></span>
+              <span class="mono" style="font-size:12.5px; color:var(--ink);">Sprout-7A3C</span>
+              <span class="mono" style="font-size:11px; color:var(--muted);">· broadcasting</span>
+            </div>
+          </div>
+          <div style="padding:0 26px 30px; text-align:center;"><div class="mono" style="font-size:11px; color:var(--muted);">no app · no cable</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CP2 join wifi -->
+    <div class="frame" data-screen-label="Portal 2 Join Wi-Fi">
+      <div class="frameLabel"><span style="width:18px;height:18px;border-radius:999px;background:var(--leaf);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">2</span>Join my Wi-Fi</div>
+      <div class="phone">
+        <div class="screen" style="background:#eef0ec;">
+          <div class="statusbar"><span>9:41</span><span style="display:flex; gap:5px; align-items:center;"><span class="gb" style="background:var(--ink);"></span><span class="gb" style="background:var(--ink); opacity:.5;"></span><span style="font-size:11px;">▮</span></span></div>
+          <div style="padding:8px 20px 4px;"><div style="font-family:var(--font-display); font-weight:700; font-size:21px; color:var(--ink);">Wi-Fi</div></div>
+          <div style="padding:8px 16px; flex:1;">
+            <div style="font-size:11px; color:var(--muted); font-family:var(--font-data); letter-spacing:.04em; padding:8px 10px 6px;">SET UP NEW DEVICE</div>
+            <!-- selected: Sprout AP -->
+            <div style="display:flex; align-items:center; gap:12px; background:var(--surface); border:1.5px solid var(--leaf); border-radius:12px; padding:14px 14px; box-shadow:0 2px 8px rgba(52,168,83,.14); margin-bottom:14px;">
+              <span style="width:10px; height:10px; border-radius:999px; background:var(--st-watering); box-shadow:0 0 7px var(--st-watering); flex-shrink:0;"></span>
+              <div style="flex:1;"><div style="font-weight:600; font-size:14.5px; color:var(--ink);">Sprout-7A3C</div><div style="font-size:11.5px; color:var(--leaf);">tap to set me up</div></div>
+              <span style="color:var(--leaf); font-size:18px;">✓</span>
+            </div>
+            <div style="font-size:11px; color:var(--muted); font-family:var(--font-data); letter-spacing:.04em; padding:2px 10px 6px;">OTHER NETWORKS</div>
+            <div style="background:var(--surface); border:1px solid #dfe3da; border-radius:12px; overflow:hidden;">
+              <div style="display:flex; align-items:center; gap:12px; padding:13px 14px; border-bottom:1px solid #eceee9;"><span style="color:var(--muted);">🔒</span><span style="flex:1; font-size:14px; color:var(--ink);">Home-5G</span><span style="color:var(--muted); font-size:13px;">📶</span></div>
+              <div style="display:flex; align-items:center; gap:12px; padding:13px 14px;"><span style="color:var(--muted);">🔒</span><span style="flex:1; font-size:14px; color:var(--ink);">Apt-2.4</span><span style="color:var(--muted); font-size:13px;">📶</span></div>
+            </div>
+            <p class="voice" style="margin:18px 10px 0; font-size:13.5px;">Open Wi-Fi and tap my name — your phone will pop my setup page right open.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CP3 portal form -->
+    <div class="frame" data-screen-label="Portal 3 Pick network">
+      <div class="frameLabel"><span style="width:18px;height:18px;border-radius:999px;background:var(--leaf);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">3</span>Pick your network</div>
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span style="display:flex; gap:5px; align-items:center;"><span class="gb" style="background:var(--ink);"></span><span class="gb" style="background:var(--ink); opacity:.5;"></span><span style="font-size:11px;">▮</span></span></div>
+          <!-- browser chrome -->
+          <div style="margin:4px 14px 0; display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-pill); padding:7px 14px;">
+            <span style="width:7px; height:7px; border-radius:999px; background:var(--leaf); flex-shrink:0;"></span>
+            <span class="mono" style="font-size:11.5px; color:var(--muted);">192.168.4.1</span>
+          </div>
+          <div style="flex:1; padding:18px 22px; display:flex; flex-direction:column;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;"><x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="ideal" size="26" static="" hint-size="22px,26px"></x-import><span style="font-family:var(--font-display); font-weight:700; font-size:17px; color:var(--ink);">Sprout setup</span></div>
+            <h3 style="font-family:var(--font-display); font-weight:700; font-size:20px; margin:0 0 4px; color:var(--ink); letter-spacing:-0.01em;">Which Wi-Fi is yours?</h3>
+            <p class="voice" style="margin:0 0 16px; font-size:13.5px;">Pick the network I should join.</p>
+            <!-- network list -->
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); overflow:hidden; margin-bottom:14px;">
+              <div style="display:flex; align-items:center; gap:10px; padding:13px 14px; background:color-mix(in srgb, var(--leaf) 8%, var(--surface)); border-bottom:1px solid var(--border);"><span style="width:8px;height:8px;border-radius:999px;background:var(--leaf);"></span><span style="flex:1; font-size:14px; font-weight:600; color:var(--ink);">Home-5G</span><span class="mono" style="font-size:11px; color:var(--muted);">strong</span></div>
+              <div style="display:flex; align-items:center; gap:10px; padding:13px 14px;"><span style="width:8px;height:8px;border-radius:999px;background:var(--border);"></span><span style="flex:1; font-size:14px; color:var(--ink);">Apt-2.4</span><span class="mono" style="font-size:11px; color:var(--muted);">ok</span></div>
+            </div>
+            <!-- password -->
+            <div style="display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-control); padding:12px 14px; margin-bottom:16px;"><span style="color:var(--muted); font-size:13px;">🔒</span><span class="mono" style="flex:1; font-size:14px; color:var(--ink); letter-spacing:.18em;">••••••••</span></div>
+            <button class="pbtn" style="width:100%; justify-content:center;">Join &amp; connect me</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CP4 online -->
+    <div class="frame" data-screen-label="Portal 4 Online">
+      <div class="frameLabel"><span style="width:18px;height:18px;border-radius:999px;background:var(--leaf);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">4</span>I'm online</div>
+      <div class="phone">
+        <div class="screen">
+          <div style="position:absolute; inset:0; background:linear-gradient(180deg, #dCEbF5 0%, #E7F0E2 50%, var(--bg) 74%);"></div>
+          <div class="statusbar" style="position:relative; z-index:2;"><span>9:41</span><span style="display:flex; gap:5px; align-items:center;"><span class="gb" style="background:var(--ink);"></span><span class="gb" style="background:var(--ink); opacity:.5;"></span><span style="font-size:11px;">▮</span></span></div>
+          <div style="position:relative; z-index:2; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 26px;">
+            <x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="moist" size="92" hint-size="78px,92px"></x-import>
+            <h3 style="font-family:var(--font-display); font-weight:700; font-size:23px; margin:16px 0 8px; color:var(--ink); letter-spacing:-0.01em;">I'm online</h3>
+            <p class="voice" style="margin:0; font-size:15px; max-width:24ch;">Joined Home-5G — you can find me from anywhere now.</p>
+            <div style="margin-top:20px; display:flex; align-items:center; gap:9px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-pill); padding:8px 16px; box-shadow:var(--e1);">
+              <span style="width:8px; height:8px; border-radius:999px; background:var(--leaf); box-shadow:0 0 7px var(--leaf);"></span>
+              <span class="mono" style="font-size:12.5px; color:var(--ink);">online · synced</span>
+            </div>
+          </div>
+          <div style="position:relative; z-index:2; padding:0 26px 28px; text-align:center;"><p class="voice" style="margin:0; font-size:12.5px; color:var(--muted);">No Wi-Fi? I'll keep running right here on my own.</p></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===================== CONNECTION STATES ===================== -->
+  <div class="sectionhead">
+    <span class="kicker">CONNECTION STATES</span>
+    <span class="subhead">offline · online · syncing — state lives in a chip + one line, never in the numbers (ADR-0007 boundary)</span>
+  </div>
+
+  <div class="row">
+    <!-- ONLINE -->
+    <div class="frame" data-screen-label="State Online">
+      <div class="frameLabel"><span style="width:9px; height:9px; border-radius:999px; background:var(--leaf);"></span>Online · synced</div>
+      <div style="width:340px; height:240px; border-radius:var(--r-card); overflow:hidden; background:var(--d-surface); border:1px solid var(--d-border); box-shadow:0 10px 28px rgba(0,0,0,.32); display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid var(--d-border);">
+          <span style="display:inline-flex; align-items:center; gap:8px; font-family:var(--font-data); font-size:12px; color:var(--d-leaf);"><span style="width:8px; height:8px; border-radius:999px; background:currentColor; box-shadow:0 0 8px currentColor;"></span>online · synced</span>
+          <span class="mono" style="font-size:11px; color:var(--d-muted);">just now</span>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:0 20px;">
+          <x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="ideal" size="42" static="" hint-size="36px,42px"></x-import>
+          <p class="voice" style="margin:0; font-size:14.5px; color:var(--d-ink); text-align:center;">All caught up — readings are live.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- OFFLINE -->
+    <div class="frame" data-screen-label="State Offline">
+      <div class="frameLabel"><span style="width:9px; height:9px; border-radius:999px; background:var(--st-dry);"></span>Offline · on its own</div>
+      <div style="width:340px; height:240px; border-radius:var(--r-card); overflow:hidden; background:var(--d-surface); border:1px solid var(--d-border); box-shadow:0 10px 28px rgba(0,0,0,.32); display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid var(--d-border);">
+          <span style="display:inline-flex; align-items:center; gap:8px; font-family:var(--font-data); font-size:12px; color:var(--st-dry);"><span style="width:8px; height:8px; border-radius:999px; background:currentColor;"></span>offline · on device</span>
+          <span class="mono" style="font-size:11px; color:var(--d-muted);">holding 142</span>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:0 22px;">
+          <x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="moist" size="42" static="" hint-size="36px,42px"></x-import>
+          <p class="voice" style="margin:0; font-size:14px; color:var(--d-ink); text-align:center;">Off the network, but I'm still watching — I'll catch you up when we're back.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SYNCING -->
+    <div class="frame" data-screen-label="State Syncing">
+      <div class="frameLabel"><span style="width:9px; height:9px; border-radius:999px; background:var(--st-watering);"></span>Syncing · catching up</div>
+      <div style="width:340px; height:240px; border-radius:var(--r-card); overflow:hidden; background:var(--d-surface); border:1px solid var(--d-border); box-shadow:0 10px 28px rgba(0,0,0,.32); display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid var(--d-border);">
+          <span style="display:inline-flex; align-items:center; gap:8px; font-family:var(--font-data); font-size:12px; color:var(--st-watering);"><span style="width:11px; height:11px; border-radius:999px; border:2px solid currentColor; border-top-color:transparent; animation:syncSpin .9s linear infinite;"></span>syncing</span>
+          <span class="mono" style="font-size:11px; color:var(--d-muted);">98 / 142</span>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:0 22px;">
+          <x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="ideal" size="42" static="" hint-size="36px,42px"></x-import>
+          <p class="voice" style="margin:0; font-size:14px; color:var(--d-ink); text-align:center;">Back online — catching you up on what you missed.</p>
+          <div style="width:180px; height:4px; border-radius:999px; background:var(--d-border); overflow:hidden;"><div style="width:69%; height:100%; background:var(--st-watering); border-radius:999px;"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== ON-DEVICE DASHBOARD ===================== -->
+  <div class="sectionhead">
+    <span class="kicker">ON-DEVICE DASHBOARD</span>
+    <span class="subhead">served straight from the board · Tier 0 monitor-only · one Sprout line up top, the numbers stay clean below</span>
+  </div>
+
+  <div class="frame" data-screen-label="On-device dashboard">
+    <div class="frameLabel"><span style="width:9px; height:9px; border-radius:999px; background:var(--d-leaf);"></span>sprout.local · Tier 0 · soil (dark) mode</div>
+    <div style="width:1140px; max-width:100%; background:var(--d-bg); border:1px solid var(--d-border); border-radius:18px; box-shadow:0 16px 40px rgba(0,0,0,.34); overflow:hidden;">
+      <!-- header -->
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 28px; border-bottom:1px solid var(--d-border);">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="moist" size="30" static="" hint-size="26px,30px"></x-import>
+          <div style="font-family:var(--font-display); font-weight:700; font-size:19px; color:var(--d-ink); letter-spacing:-0.01em;">Sprout</div>
+          <span class="mono" style="font-size:10.5px; color:var(--d-leaf); border:1px solid color-mix(in srgb, var(--d-leaf) 40%, transparent); border-radius:var(--r-pill); padding:3px 10px; letter-spacing:.06em;">TIER 0 · MONITOR</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:18px;">
+          <span style="display:inline-flex; align-items:center; gap:7px; font-family:var(--font-data); font-size:11.5px; color:var(--d-leaf);"><span style="width:7px; height:7px; border-radius:999px; background:currentColor; box-shadow:0 0 7px currentColor;"></span>online · synced</span>
+          <span class="mono" style="font-size:11.5px; color:var(--d-muted);">192.168.4.1</span>
+        </div>
+      </div>
+      <!-- sprout line (character beside instrument; numbers below stay clean) -->
+      <div style="display:flex; align-items:center; gap:12px; padding:16px 28px; background:var(--d-surface-2); border-bottom:1px solid var(--d-border);">
+        <span style="width:8px; height:8px; border-radius:999px; background:var(--d-leaf); box-shadow:0 0 7px var(--d-leaf); flex-shrink:0;"></span>
+        <p class="voice" style="margin:0; font-size:15px; color:var(--d-ink);">Three of us thriving, Basil's getting thirsty — no rush, maybe tomorrow.</p>
+      </div>
+      <!-- channel grid -->
+      <div style="padding:24px 28px;">
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px;">
+          <!-- CH card factory -->
+          <div style="background:var(--d-surface); border:1px solid var(--d-border); border-radius:var(--r-tile); padding:16px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;"><span class="mono" style="font-size:12px; font-weight:600; color:var(--d-ink);">Monstera</span><span class="mono" style="font-size:10px; color:var(--d-muted);">s1</span></div>
+            <div style="display:flex; align-items:center; gap:14px;">
+              <div style="position:relative; width:74px; height:74px; border-radius:50%; background:conic-gradient(var(--band-ideal) 0deg 209deg, var(--d-border) 209deg 360deg); flex-shrink:0; box-shadow:0 0 16px color-mix(in srgb, var(--band-ideal) 30%, transparent);">
+                <div style="position:absolute; inset:9px; border-radius:50%; background:var(--d-surface); display:flex; flex-direction:column; align-items:center; justify-content:center;"><span class="mono" style="font-size:17px; font-weight:600; color:var(--d-ink);">58</span><span class="mono" style="font-size:8px; color:var(--d-muted);">INDEX</span></div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:5px;">
+                <span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--d-leaf); line-height:1;">Ideal</span>
+                <span class="mono" style="font-size:10.5px; color:var(--d-muted);">raw 2298</span>
+                <span class="mono" style="font-size:9.5px; color:var(--d-leaf); border:1px solid color-mix(in srgb,var(--d-leaf) 35%,transparent); border-radius:999px; padding:1px 7px; width:fit-content;">capacitive</span>
+              </div>
+            </div>
+          </div>
+          <!-- CH2 -->
+          <div style="background:var(--d-surface); border:1px solid var(--d-border); border-radius:var(--r-tile); padding:16px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;"><span class="mono" style="font-size:12px; font-weight:600; color:var(--d-ink);">Basil</span><span class="mono" style="font-size:10px; color:var(--d-muted);">s2</span></div>
+            <div style="display:flex; align-items:center; gap:14px;">
+              <div style="position:relative; width:74px; height:74px; border-radius:50%; background:conic-gradient(var(--band-drying) 0deg 104deg, var(--d-border) 104deg 360deg); flex-shrink:0; box-shadow:0 0 16px color-mix(in srgb, var(--band-drying) 30%, transparent);">
+                <div style="position:absolute; inset:9px; border-radius:50%; background:var(--d-surface); display:flex; flex-direction:column; align-items:center; justify-content:center;"><span class="mono" style="font-size:17px; font-weight:600; color:var(--d-ink);">29</span><span class="mono" style="font-size:8px; color:var(--d-muted);">INDEX</span></div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:5px;">
+                <span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--st-dry); line-height:1;">Drying</span>
+                <span class="mono" style="font-size:10.5px; color:var(--d-muted);">raw 3110</span>
+                <span class="mono" style="font-size:9.5px; color:var(--d-leaf); border:1px solid color-mix(in srgb,var(--d-leaf) 35%,transparent); border-radius:999px; padding:1px 7px; width:fit-content;">capacitive</span>
+              </div>
+            </div>
+          </div>
+          <!-- CH3 -->
+          <div style="background:var(--d-surface); border:1px solid var(--d-border); border-radius:var(--r-tile); padding:16px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;"><span class="mono" style="font-size:12px; font-weight:600; color:var(--d-ink);">Fern</span><span class="mono" style="font-size:10px; color:var(--d-muted);">s3</span></div>
+            <div style="display:flex; align-items:center; gap:14px;">
+              <div style="position:relative; width:74px; height:74px; border-radius:50%; background:conic-gradient(var(--band-moist) 0deg 248deg, var(--d-border) 248deg 360deg); flex-shrink:0; box-shadow:0 0 16px color-mix(in srgb, var(--band-moist) 30%, transparent);">
+                <div style="position:absolute; inset:9px; border-radius:50%; background:var(--d-surface); display:flex; flex-direction:column; align-items:center; justify-content:center;"><span class="mono" style="font-size:17px; font-weight:600; color:var(--d-ink);">69</span><span class="mono" style="font-size:8px; color:var(--d-muted);">INDEX</span></div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:5px;">
+                <span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--band-moist); line-height:1;">Moist</span>
+                <span class="mono" style="font-size:10.5px; color:var(--d-muted);">raw 1980</span>
+                <span class="mono" style="font-size:9.5px; color:var(--st-dry); border:1px solid color-mix(in srgb,var(--st-dry) 35%,transparent); border-radius:999px; padding:1px 7px; width:fit-content;">resistive · drift</span>
+              </div>
+            </div>
+          </div>
+          <!-- CH4 -->
+          <div style="background:var(--d-surface); border:1px solid var(--d-border); border-radius:var(--r-tile); padding:16px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;"><span class="mono" style="font-size:12px; font-weight:600; color:var(--d-ink);">Pothos</span><span class="mono" style="font-size:10px; color:var(--d-muted);">s4</span></div>
+            <div style="display:flex; align-items:center; gap:14px;">
+              <div style="position:relative; width:74px; height:74px; border-radius:50%; background:conic-gradient(var(--band-wet) 0deg 284deg, var(--d-border) 284deg 360deg); flex-shrink:0; box-shadow:0 0 16px color-mix(in srgb, var(--band-wet) 30%, transparent);">
+                <div style="position:absolute; inset:9px; border-radius:50%; background:var(--d-surface); display:flex; flex-direction:column; align-items:center; justify-content:center;"><span class="mono" style="font-size:17px; font-weight:600; color:var(--d-ink);">79</span><span class="mono" style="font-size:8px; color:var(--d-muted);">INDEX</span></div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:5px;">
+                <span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--band-wet); line-height:1;">Wet</span>
+                <span class="mono" style="font-size:10.5px; color:var(--d-muted);">raw 1620</span>
+                <span class="mono" style="font-size:9.5px; color:var(--d-leaf); border:1px solid color-mix(in srgb,var(--d-leaf) 35%,transparent); border-radius:999px; padding:1px 7px; width:fit-content;">capacitive</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- footer: tier-0 has no pump; show the upgrade affordance, ghosted -->
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:20px; padding-top:18px; border-top:1px solid var(--d-border);">
+          <span class="mono" style="font-size:11px; color:var(--d-muted); letter-spacing:.04em;">MONITOR-ONLY · no pump connected</span>
+          <span style="display:inline-flex; align-items:center; gap:8px; font-family:var(--font-ui); font-size:13px; font-weight:600; color:var(--d-muted); border:1px dashed var(--d-border); border-radius:var(--r-pill); padding:8px 16px;">+ Add watering · Tier 1</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== OPEN SEAMS / HANDOFF ===================== -->
+  <div class="sectionhead">
+    <span class="kicker">OPEN SEAMS</span>
+    <span class="subhead">what this input leaves for the PRD + other lanes — drawn so the architecture call doesn't redraw it</span>
+  </div>
+
+  <div style="width:1140px; max-width:100%; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e2); padding:28px 32px;">
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:26px;">
+      <div>
+        <div class="mono" style="font-size:11px; color:var(--st-watering); letter-spacing:.06em; margin-bottom:8px;">→ DATA · telemetry transport</div>
+        <p style="margin:0; font-size:13.5px; color:var(--ink); line-height:1.55;">"Synced" is drawn the same whether sync is on-device store+sync, a hub, or device-served. Your #243 call sets <em>what</em> the chip points at — the chip stays.</p>
+      </div>
+      <div>
+        <div class="mono" style="font-size:11px; color:var(--st-dry); letter-spacing:.06em; margin-bottom:8px;">→ FIRMWARE · capability + classifier</div>
+        <p style="margin:0; font-size:13.5px; color:var(--ink); line-height:1.55;">Tier badge + the capacitive/resistive badge read from your capability abstraction &amp; classifier. Design owns the drift-watch surface on resistive.</p>
+      </div>
+      <div>
+        <div class="mono" style="font-size:11px; color:var(--st-predicted); letter-spacing:.06em; margin-bottom:8px;">→ WORKFLOW · binds ADRs</div>
+        <p style="margin:0; font-size:13.5px; color:var(--ink); line-height:1.55;">Dual-mode (AP ↔ joined) + tier model are ADR-bound — Trellis pre-reviewing. Folds into the Untethered Sprout PRD. <span class="mono" style="color:var(--muted);">ADR-0016 / 0017</span>.</p>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-top:24px; padding-top:18px; border-top:1px solid var(--border); flex-wrap:wrap; gap:12px;">
+      <p style="margin:0; font-size:13px; color:var(--muted); line-height:1.5; max-width:70ch;">Built on the token contract + the living <span class="mono" style="color:var(--ink);">&lt;sprout-mark&gt;</span>. One voice, one palette, raw + band truth, character beside the instrument — never inside the numbers. Status: <strong style="color:var(--st-dry);">PROPOSED</strong> · design input to #243, not a ratified system page.</p>
+      <span style="font-family:var(--font-display); font-weight:700; font-size:15px; color:var(--leaf); white-space:nowrap;">— Design 🌱</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
