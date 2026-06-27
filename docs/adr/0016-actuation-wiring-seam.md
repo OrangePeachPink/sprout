@@ -42,7 +42,7 @@ loop.** Concretely:
 1. **Single sample owner.** The supervisor owns ADC sampling via `read_raw`; the standalone telemetry sweep in
    `main.cpp` is removed. Telemetry rows are **derived from supervisor state** (`irrig_level` / `last_raw` /
    `last_spread` / `irrig_health_warn`) and emitted **only while `irrig_mode() == SYS_SAMPLING`** (pumps off),
-   preserving invariant #2 structurally. The runtime cadence command (`!cad`) retunes the supervisor's
+   preserving invariant #2 structurally. The runtime cadence command (`!cad`) updates the supervisor's
    `sys.sample_period_ms`, not a separate gate.
 2. **Single actuation authority.** All relay drives go through the supervisor. The manual pulse (`!water` /
    `!stop`) is expressed as a **forced-dose request into the supervisor**, not a second independent driver — so
@@ -75,7 +75,7 @@ veto-blocks-dose, forced-dose-respects-ceiling).
 - The autonomous slice becomes a **disciplined refactor** (delete the second sampler; fold the pulse into the
   supervisor) rather than new logic — the brain is already built and host-tested.
 - Small migration cost: the #222 manual-pulse path is re-expressed as a supervisor forced-dose, and `!cad` is
-  repointed at `sys.sample_period_ms`.
+  pointed at `sys.sample_period_ms`.
 - Provisional dose / soak / max-on config ships conservative until per-channel calibration (#170 / #192)
   tightens it.
 
