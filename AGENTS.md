@@ -57,6 +57,19 @@ who did what at a glance.
   Co-Authored-By: Claude <noreply@anthropic.com>
   ```
 
+## Lane self-audit
+
+You don't merge here (the maintainer does), so "watch CI until it's green" doesn't apply. But when you
+review your own recent work — **especially before a status brief** — do **CI archeology** on your PRs:
+
+- `gh run list --branch <your-branch> --json conclusion,headSha,createdAt` — did any run go red? — then
+  `gh run view <id> --log-failed` for *why*.
+- **Classify each red:** **own-code** (your defect → tighten your process) · **shared-infra** (a gate-wide
+  break that caught you → note it, don't re-fix) · **cross-lane** (another lane's change broke yours → raise
+  it as a comms need).
+- Fold the finding into the brief's `Gate:` / `Flag:` lines. A green PR with reds in its history has a story
+  worth telling.
+
 ## Workflow & GitHub
 
 - **Issues are the ledger.** Every unit of work is an issue (open via the forms). IDs are `#N`.
