@@ -1,6 +1,6 @@
 # PRD: Environmental Context & Correlation
 
-**Status:** Draft — **ready for review** (Epic 1 complete; Epic 2 now active)
+**Status:** Accepted (2026-06-26) — optionality / offline-first folded in (R9 + a non-goal + an open question)
 **Date:** 2026-06-25 (revised 2026-06-26)
 **Owner:** Data lane
 **Epic / issues:** *not yet cut — accept this PRD, then Workflow cuts the epic + tracer-bullet sub-issues*
@@ -45,6 +45,9 @@ place** so the explanation is visible, and the H1/H2 question becomes answerable
   *earned* by a named gap (the H1/H2 loop is the candidate that could earn it, not a starting assumption).
 - Not a weather dashboard — weather is **context for soil**, never a product in itself.
 - Not real-time/operational forecasting — this is explanatory analysis over recorded data first.
+- **Nothing here is ever required.** Weather, connectivity (WiFi/HTTP/TCP-IP), and on-device sensors are
+  all **optional** layers — core function (soil capture + the offline trajectory) never assumes any of
+  them (see R9).
 
 ## Requirements
 
@@ -72,6 +75,15 @@ place** so the explanation is visible, and the H1/H2 question becomes answerable
 - **R8 *(later)* — On-device environmental sensor.** Temp + lux/UV on the controller (Firmware + a part):
   `record_type=env` rows per ADR-0006's trigger. **Temp doubles as calibration input** — it *separates*
   capacitive thermal drift from real moisture change, feeding ADR-0006 §5–6, not only weather colour.
+- **R9 — Optional & offline-first (no assumed connectivity).** The whole environmental layer is
+  **optional** — Sprout stays fully comfortable to use without it, and **no network is ever required**
+  (not WiFi, not HTTP, not TCP/IP). The current host-tethered, offline model is the **baseline**;
+  weather/solar is an **additive layer** that degrades cleanly — full (cached weather + computed solar)
+  → **solar-only** (R1: zero-dependency, always available) → none — with no broken UI and no nagging.
+  The on-device sensors (R8) are **equally optional**: not everyone has, wants, or can configure them,
+  and Sprout must read fine without them. *(Broader: how Sprout treats connectivity across the whole
+  product — today it's host-tethered — is its own design question; this epic only commits the
+  weather/sensor layers to never assume it.)*
 
 ### Lane split
 
@@ -108,6 +120,9 @@ place** so the explanation is visible, and the H1/H2 question becomes answerable
   one model.
 - **Temp = confound, not just colour** → on-board temp feeds **back into ADR-0006 calibration** (separates
   thermal drift from moisture), so R8 is dual-purpose. (ADR-0013 §5.)
+- **Local read vs. net pull priority** *(deferred — decide at the junction)* → once on-device
+  environmental reads (R8) and net weather (R2) **both** exist, does the **local on-device read take
+  priority** over the network pull? Leaning **yes (local-first)**, but not decided until both are real.
 
 ## Out of scope / later
 
@@ -116,6 +131,9 @@ place** so the explanation is visible, and the H1/H2 question becomes answerable
   baseline (ADR-0006 §7 earns it).
 - A **DuckDB/parquet** tier for cross-source queries → when CSV/JSON re-parse gets slow (ADR-0006 ladder).
 - **Operational forecasting / watering decisions** from weather → a separate, later decision.
+- A **product-wide connectivity model** (whether/how Sprout ever uses a network beyond this optional
+  layer, vs. staying host-tethered) → flagged as future design thinking, **out of scope here** — R9 only
+  commits *this* epic to never assume connectivity.
 
 ## Phasing (tracer bullets)
 
