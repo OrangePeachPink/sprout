@@ -15,6 +15,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f
 .top .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
 .back { color: var(--muted); font-size: 13px; text-decoration: none; white-space: nowrap; }
 .back:hover { color: var(--leaf); }
+.topnav { display: flex; gap: 14px; align-items: baseline; }
 .egrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 14px; }
 .ecard { display: block; text-decoration: none; color: inherit;
@@ -45,7 +46,10 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f
       <h1>🌱 Experiments</h1>
       <div class="sub"><!--__COUNT__--> capture(s) · newest first · isolated from the monitor log</div>
     </div>
-    <a class="back" href="/">← dashboard</a>
+    <div class="topnav">
+      <a class="back" href="/lab/studies">studies →</a>
+      <a class="back" href="/">← dashboard</a>
+    </div>
   </div>
   <main class="egrid"><!--__CARDS__--></main>
 </body>
