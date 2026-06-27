@@ -151,16 +151,19 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 b = self._body()
                 # Route through the handoff (#129): a serial start auto-pauses the
                 # monitor (frees COM6) and resumes it when the experiment ends.
-                self._send_json(handoff.start_experiment(
-                    _MONITOR, _CAPTURE,
-                    subject=b.get("subject", "unspecified"),
-                    rate_s=b.get("rate_s", 1.0),
-                    duration_s=b.get("duration_s", 60.0),
-                    labels=b.get("labels"),
-                    experiment_id=b.get("experiment_id"),
-                    source=b.get("source", "synthetic"),
-                    port=b.get("port"),
-                ))
+                self._send_json(
+                    handoff.start_experiment(
+                        _MONITOR,
+                        _CAPTURE,
+                        subject=b.get("subject", "unspecified"),
+                        rate_s=b.get("rate_s", 1.0),
+                        duration_s=b.get("duration_s", 60.0),
+                        labels=b.get("labels"),
+                        experiment_id=b.get("experiment_id"),
+                        source=b.get("source", "synthetic"),
+                        port=b.get("port"),
+                    )
+                )
             elif parsed.path == "/capture/stop":
                 self._send_json(_CAPTURE.stop())
             elif parsed.path == "/monitor/start":
@@ -253,12 +256,14 @@ def main(argv: list[str] | None = None) -> int:
         help="open the dashboard in a browser once serving (the no-terminal door)",
     )
     ap.add_argument(
-        "--restart", action="store_true",
+        "--restart",
+        action="store_true",
         help="if a Sprout server already holds the port, ask it to /quit and take over "
         "- used by the launcher so a stale server can't block entry",
     )
     ap.add_argument(
-        "--print-port", action="store_true",
+        "--print-port",
+        action="store_true",
         help="print the fixed port and exit (the launcher's single source of truth)",
     )
     ap.add_argument(
@@ -283,8 +288,10 @@ def main(argv: list[str] | None = None) -> int:
         args.restart and _stop_existing(url, args.host, args.port)
     ):
         print(f"Sprout is already running at {url}")
-        print('  Open that tab, or stop it first ("Stop server" in the dashboard, '
-              "or close its window).")
+        print(
+            '  Open that tab, or stop it first ("Stop server" in the dashboard, '
+            "or close its window)."
+        )
         return 1
 
     # Explicit CLI inputs are pinned; otherwise leave None so each request
