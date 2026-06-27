@@ -56,7 +56,11 @@
     "UMLIFE",
     "VCP",
     "Wago",
-    "WROOM"
+    "WROOM",
+    // user-guide hardware/source terms (docs/user/trust-your-sensor.md, #142):
+    "Flaura",
+    "silkscreen",
+    "Uhlmann"
   ],
   "flagWords": []
 }
