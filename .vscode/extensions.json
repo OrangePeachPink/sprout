@@ -6,6 +6,13 @@
     "platformio.platformio-ide",
     "editorconfig.editorconfig",
     "davidanson.vscode-markdownlint",
-    "tamasfe.even-better-toml"
+    "tamasfe.even-better-toml",
+    // Expert tier (#138) — match the repo's own tooling so the editor agrees with the gate:
+    "github.vscode-pull-request-github",
+    "github.vscode-github-actions",
+    "streetsidesoftware.code-spell-checker",
+    "ms-vscode-remote.remote-containers",
+    "redhat.vscode-yaml",
+    "ms-vscode.cpptools"
   ]
 }
