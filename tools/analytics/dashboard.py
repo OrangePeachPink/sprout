@@ -94,9 +94,11 @@ BAND_NAMES_DRY_TO_WET = [
     "submerged",
 ]
 
-# series colors - saturated/distinct so lines pop over pastel band shading and
-# are not confused with the band palette.
-SENSOR_COLORS = ["#1E40AF", "#7C5CFF", "#0E7A86", "#B91C1C", "#0F766E", "#9333EA"]
+# series colors - the sanctioned categorical set drawn from the band ramp, so the
+# dashboard reads as one palette (#203 / design review #99 / #156:
+# --band-wet/moist/ideal/drying). Hex, not the CSS vars: the canvas chart's hexA()
+# needs resolved colors, and the band tokens are theme-stable.
+SENSOR_COLORS = ["#17B6C4", "#34A853", "#8BD24F", "#F5A623"]
 
 QUALITY_COLOR = {
     "OK": "#34A853",
