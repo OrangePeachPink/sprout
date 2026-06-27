@@ -81,6 +81,18 @@ It is cosmetic — the pin works fine. Power-pin mislabels happen too.
 The lesson for a careful owner: **trust the pin's position and the chip markings, not the printed text** — and
 when in doubt, meter it. That habit is the whole point of this guide: trust, or distrust, your own hardware.
 
+## New to the tools?
+
+This guide asks you to use a **multimeter** (Step 2) and, for the fix, a **soldering iron**. If either is new:
+
+- **Using a multimeter** (resistance + continuity — exactly Step 2) — SparkFun's
+  [How to Use a Multimeter](https://learn.sparkfun.com/tutorials/how-to-use-a-multimeter).
+- **Through-hole soldering** (for the 1 MΩ fix) — Adafruit's
+  [Guide to Excellent Soldering](https://learn.adafruit.com/adafruit-guide-excellent-soldering).
+
+The **Flaura teardown video** linked just below is the friendliest ~10-minute intro to how these sensors work —
+and why so many are faulty.
+
 ## Where this comes from
 
 - [`SENSOR_QA.md`](../../SENSOR_QA.md) — Sprout's own bench checks on its four sensors, the authoritative source
