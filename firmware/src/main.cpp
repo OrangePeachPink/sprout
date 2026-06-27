@@ -74,15 +74,22 @@ static moisture_cfg_t cfg = {
   2000,                                              // confirm_ms_wet  (TESTING; prod 3500)
   READ_INTERVAL_MS,                                  // loop_period_ms
   250,                                               // spread_warn_raw (0 disables)
-  // boundary (descending raw): 7-band scheme, reconciled 2026-06-25 (issue #3)
-  // against the 2026-06-21 anchors (docs/SENSOR_CALIBRATION.md):
-  //   [0] air-dry|DRY 3050 - air ~3180 vs bone-dry soil ~2440-2920, so a parched
-  //       pot now WATERS instead of misreading "out of soil" (the fail-to-water fix).
-  //   [4] ww|over 1150, [5] over|sub 1050 - field capacity ~1140-1435 reads
-  //       well-watered; saturated soil / standing water (~970-1065) fire the
-  //       "too wet / check probe" diagnostic. The wet split is below the ~60-count
-  //       noise floor (saturated soil == standing water to a capacitive probe), so
-  //       treat anything < ~1150 as ONE "too wet" condition. [1..3] interpolated.
+  // boundary (descending raw): 7-band scheme (issue #3). ENDPOINTS RATIFIED against the
+  // #248 common-cup anchors (4-probe, measured simultaneously; the A2 Data->Firmware
+  // handshake, ADR-0006 §6). Values UNCHANGED - #248 confirms the placeholders bracket
+  // reality; this fixes provenance, not numbers:
+  //   [0] air-dry|DRY 3050 - air-dry center 3170 (per-probe 3151..3191), bone-dry soil
+  //       ~2440-2920; 3050 sits in that gap, so a parched pot WATERS instead of misreading
+  //       "out of soil" (the fail-to-water fix) AND real air (>=3151) still reads air-dry.
+  //   [4] ww|over 1150, [5] over|sub 1050 - saturated center 978 (per-probe 926..1020, s2
+  //       the wet-biased min); all < 1050 -> submerged. Field capacity ~1140-1435 reads
+  //       well-watered. Saturated soil == standing water to a capacitive probe (no air gap),
+  //       so anything < ~1150 is ONE "too wet" condition.
+  //   [1..3] (2140/1830/1520) STILL INTERPOLATED - PROPOSED, pending a controlled dry-down.
+  //       #248 fixed the endpoints + a coarse wet<->dry divide (~2096), not the interior
+  //       ladder; the watering threshold (OK|NEEDS_WATER) lives here and is not yet ratified.
+  //   Per-pin offset is STATE-DEPENDENT (~94 counts in water, ~40 in air, ordering flips),
+  //   not a constant - so per-channel boundaries are C1/#170, not A2.
   {3050, 2140, 1830, 1520, 1150, 1050},
 };
 
