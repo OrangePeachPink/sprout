@@ -35,6 +35,10 @@ _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
 _CAPTURE_PY = _HERE / "experiment_capture.py"
 
+# Spawn the capture as a quiet child of serve.py - no extra console window on
+# Windows; 0 elsewhere (#183).
+_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 import serial_lock  # noqa: E402  (sibling leaf — the #64 advisory-lock contract)
@@ -230,7 +234,10 @@ class CaptureController:
                 cmd += ["--port", _safe_token(port, "port")]
 
             proc = subprocess.Popen(
-                cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=_NO_WINDOW,
             )
             self._proc = proc
             self._meta = {

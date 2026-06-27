@@ -22,6 +22,10 @@ _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
 _LOGGER_PY = _HERE / "plants_logger.py"
 
+# Spawn the logger as a quiet child of serve.py - no second console window on Windows
+# (the Monitor card promises "no terminal"); 0 elsewhere (#183).
+_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
 # serial_lock (the #64 advisory-lock contract) lives in the capture leaf.
 _CAPTURE_DIR = _REPO / "tools" / "capture"
 if str(_CAPTURE_DIR) not in sys.path:
@@ -68,7 +72,12 @@ class MonitorController:
                 argv += ["--port", port]
             if self._logdir:
                 argv += ["--logdir", str(self._logdir)]
-            self._proc = subprocess.Popen(argv)
+            self._proc = subprocess.Popen(
+                argv,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=_NO_WINDOW,
+            )
             self._port = port
             return self._status_locked()
 
