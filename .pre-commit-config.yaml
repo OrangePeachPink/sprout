@@ -55,6 +55,6 @@ repos:
     hooks:
       - id: cspell
         name: cspell
-        entry: npx --yes cspell lint --no-progress --no-summary --no-must-find-files
+        entry: npx --yes cspell@10.0.1 lint --no-progress --no-summary --no-must-find-files
         language: system
         types: [markdown]
