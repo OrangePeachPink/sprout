@@ -139,6 +139,52 @@ cross-channel **spread recomputes** over the selected probes (s1/s3/s4 vs all fo
 re-fits, and the stats follow; as a static file it hides the lines + bars (its spread stays 4-channel).
 Colours are stable per sensor id so they don't shuffle when a channel is excluded.
 
+## Experiment Lab Notebook (`/lab`, epic #153)
+
+The **read/review** side of Experiment Capture — see, analyse, and keep a living log of your
+experiments. Captures land in gitignored `experiments/<id>/` (a CSV + `manifest.json`); these tools
+turn them into a reviewable record. Served by `serve.py`; the store + calibration also run from the CLI.
+
+### Catalog + detail (`experiments_catalog.py`, `lab_detail.py`)
+
+```text
+http://127.0.0.1:8765/lab                     # catalog — every capture: title / date / duration / samples
+http://127.0.0.1:8765/lab/<experiment_id>     # one capture: per-probe stats + an inline-SVG trajectory
+http://127.0.0.1:8765/lab/experiments.json    # the catalog as JSON
+```
+
+Read-only — the catalog reads each `manifest.json` (no CSV re-parse to list); the detail view reuses
+`build_context` for the per-probe stats. A running capture also charts itself live in the dashboard's
+capture panel (`/capture/status` carries the live `trace`).
+
+### Analysis store (`analysis_store.py`) — the DuckDB tier
+
+A derived, **rebuildable** columnar store (`reports/plants.duckdb`, gitignored) over the captures:
+`readings` (every probe-sample + a calendar layer — month / hour / season / is_daylight) and
+`experiment_features` (one engineered row per experiment × probe — n / median / min-max / spread /
+slope-per-hour / band / quality).
+
+```text
+python tools/analytics/analysis_store.py                                # (re)build + a summary
+python tools/analytics/analysis_store.py --query "SELECT * FROM experiment_features"
+```
+
+Derived + gitignored + rebuilt fresh from raw each run — **never the source of truth**.
+
+### Calibration workbench (`calibration.py`)
+
+Proposes refined band boundaries from captured experiments and exports a candidate config for the
+Data↔Firmware **A2 handshake** (the dashboard ladder is "placeholders pending A2"):
+
+```text
+python tools/analytics/calibration.py            # propose + print per-band centres + boundaries
+python tools/analytics/calibration.py --export   # write reports/calibration_candidate.json
+```
+
+It **proposes from evidence; firmware ratifies** — never authoritative alone. Needs experiments
+spanning several states (the common-cup wet/dry/air-dry characterization) — one band can't define a
+boundary.
+
 ## The `value` column is the legacy moist% — do not analyse on it (B2 / C2)
 
 Every row carries `value`/`unit` (e.g. `value=83, unit=pct`). That is the legacy linear map
