@@ -128,6 +128,16 @@ static void printHeader() {
   if (n < (int)sizeof(buf))
     snprintf(buf + n, sizeof(buf) - n, "  (model=%s pos=%s)", SENSOR_MODEL, SENSOR_POSITION);
   Serial.println(buf);
+  // Per-channel health (#2): a floating / shorted probe announces itself here instead of
+  // quietly reading a plausible "dry". NO_SIGNAL/SUSPECT is what the autonomous supervisor
+  // (#94) vetoes watering on (sustained for IRRIG_MAX_HEALTH_WARN sweeps -> hard latch).
+  n = snprintf(buf, sizeof(buf), "# health:");
+  for (int i = 0; i < NUM_SENSORS && n < (int)sizeof(buf); i++)
+    n += snprintf(buf + n, sizeof(buf) - n, " ch%d=%s", i, qualityFlag(&state[i]));
+  if (n < (int)sizeof(buf))
+    snprintf(buf + n, sizeof(buf) - n, "  (NO_SIGNAL/SUSPECT = probe fault; supervisor won't water it, latch x%u)",
+             (unsigned)IRRIG_MAX_HEALTH_WARN);
+  Serial.println(buf);
   n = snprintf(buf, sizeof(buf), "# cal bounds(dry>wet):");
   for (int i = 0; i < MOISTURE_BOUNDARY_COUNT && n < (int)sizeof(buf); i++)
     n += snprintf(buf + n, sizeof(buf) - n, " %u", (unsigned)cfg.boundary[i]);

@@ -114,3 +114,13 @@ constexpr uint32_t PUMP_PULSE_DEFAULT_MS = 1500;
 constexpr uint32_t PUMP_PULSE_MAX_MS     = 5000;
 static_assert(PUMP_PULSE_MAX_MS < WDT_TIMEOUT_MS,
               "a pump pulse must finish within the watchdog window (watchdog is the backstop)");
+
+// --- Health veto threshold (#2) ---------------------------------------------
+// The autonomous supervisor (#94) refuses to water a channel whose probe reads
+// unhealthy (NO_SIGNAL / SUSPECT): a floating or shorted probe can report a plausible
+// "dry," so watering on it would trip a pump into unknown soil. The per-read veto is
+// immediate; a sustained warning for this many consecutive sweeps latches a HARD fault
+// (this is the engine's max_health_warn, BACKLOG A1 - already implemented + native-tested
+// in lib/irrigation). The live firmware surfaces per-channel health in the boot banner
+// today; the supervisor folds this threshold in when the autonomous loop is wired (#94).
+constexpr uint8_t IRRIG_MAX_HEALTH_WARN = 3;
