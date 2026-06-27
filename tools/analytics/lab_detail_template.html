@@ -37,6 +37,27 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f
 .scard .smeta .k { color: var(--muted); }
 .scard .smeta .num { color: var(--ink); font-family: var(--font-data); overflow-wrap: anywhere; }
 .empty { color: var(--muted); }
+.notes { background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-tile); padding: 14px 16px; margin-top: 16px; }
+.notes .nhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.notes h2 { font-family: var(--font-display); font-size: 16px; margin: 0; }
+.notes .saved { color: var(--muted); font-size: 11px; font-family: var(--font-data); }
+.notes .nfields { display: grid; gap: 12px; margin-top: 12px; }
+.notes label { display: block; }
+.notes label > span { display: block; font-family: var(--font-display); font-weight: 600;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .1em;
+  color: var(--st-predicted); margin-bottom: 5px; }
+.notes textarea { width: 100%; min-height: 52px; resize: vertical; font-family: var(--font-ui);
+  font-size: 14px; line-height: 1.5; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--border); border-radius: var(--r-pill, 8px); padding: 8px 10px; }
+.notes textarea:focus { outline: none; border-color: var(--leaf); }
+.notes .nactions { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.notes .nbtn { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: #fff;
+  background: var(--leaf); border: none; border-radius: var(--r-pill, 999px);
+  padding: 7px 16px; cursor: pointer; white-space: nowrap; }
+.notes .nbtn:disabled { opacity: .6; cursor: default; }
+.notes .nhint { color: var(--muted); font-size: 11px; }
+.notes .nhint code { font-family: var(--font-data); }
 </style>
 </head>
 <body>
@@ -53,5 +74,57 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f
     <!--__SVG__-->
   </div>
   <div class="scards"><!--__CARDS__--></div>
+
+  <section class="notes" id="notes" data-eid="<!--__EID__-->">
+    <div class="nhead">
+      <h2>Lab notes</h2>
+      <span class="saved" id="nsaved"><!--__SAVED__--></span>
+    </div>
+    <div class="nfields">
+      <label><span>Hypothesis</span><textarea data-f="hypothesis" rows="2"><!--__HYP__--></textarea></label>
+      <label><span>Method</span><textarea data-f="method" rows="2"><!--__MET__--></textarea></label>
+      <label><span>Findings</span><textarea data-f="findings" rows="2"><!--__FIN__--></textarea></label>
+      <label><span>Conclusion</span><textarea data-f="conclusion" rows="2"><!--__CON__--></textarea></label>
+    </div>
+    <div class="nactions">
+      <button id="nsave" class="nbtn" type="button">Save notes</button>
+      <span class="nhint">writes <code>docs/experiments/<!--__EID__-->.json</code> · commit to back it up</span>
+    </div>
+  </section>
+
+  <script>
+    (function () {
+      var sec = document.getElementById("notes");
+      var eid = sec.dataset.eid;
+      var btn = document.getElementById("nsave");
+      var saved = document.getElementById("nsaved");
+      btn.addEventListener("click", function () {
+        var body = {};
+        sec.querySelectorAll("textarea[data-f]").forEach(function (t) {
+          body[t.dataset.f] = t.value;
+        });
+        btn.disabled = true;
+        btn.textContent = "Saving…";
+        fetch("/lab/" + encodeURIComponent(eid) + "/notes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (n) {
+            if (n && n.version) {
+              saved.textContent = "saved " + (n.saved_at || "") + " · v" + n.version;
+            } else {
+              saved.textContent = "save failed";
+            }
+          })
+          .catch(function () { saved.textContent = "save failed"; })
+          .finally(function () {
+            btn.disabled = false;
+            btn.textContent = "Save notes";
+          });
+      });
+    })();
+  </script>
 </body>
 </html>

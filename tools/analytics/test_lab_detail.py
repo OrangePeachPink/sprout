@@ -71,7 +71,10 @@ def test_render_real_capture() -> None:
         assert "testcap" in out  # title
         assert "<polyline" in out  # trajectory rendered
         assert "median" in out and "samples" in out  # per-probe stat cards
+        assert "Lab notes" in out and "Save notes" in out  # notes editor (#158)
+        assert "not saved yet" in out  # fresh capture has no notes yet
         assert "__SVG__" not in out and "__CARDS__" not in out  # placeholders filled
+        assert "__HYP__" not in out and "__SAVED__" not in out  # notes placeholders too
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

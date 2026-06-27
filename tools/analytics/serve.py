@@ -46,6 +46,7 @@ from dashboard import (  # noqa: E402  (sibling import)
 )
 from experiments_catalog import load_catalog, render_catalog  # noqa: E402  (Lab #154)
 from lab_detail import render_detail  # noqa: E402  (Lab detail #157)
+from lab_notes import load_notes, save_notes  # noqa: E402  (Lab notes #158)
 from parse_v1 import parse_files  # noqa: E402
 
 _REPO = _HERE.parents[1]
@@ -161,6 +162,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send(render_catalog(load_catalog()), "text/html; charset=utf-8")
             elif parsed.path == "/lab/experiments.json":
                 self._send_json(load_catalog())
+            elif parsed.path.startswith("/lab/") and parsed.path.endswith("/notes"):
+                eid = unquote(parsed.path[len("/lab/") : -len("/notes")])  # notes #158
+                self._send_json(load_notes(eid))
             elif parsed.path.startswith("/lab/"):  # an experiment detail page (#157)
                 eid = unquote(parsed.path[len("/lab/") :])
                 page = render_detail(eid)
@@ -199,6 +203,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json(_MONITOR.start(port=self._body().get("port")))
             elif parsed.path == "/monitor/stop":
                 self._send_json(_MONITOR.stop())
+            elif parsed.path.startswith("/lab/") and parsed.path.endswith("/notes"):
+                eid = unquote(parsed.path[len("/lab/") : -len("/notes")])  # notes #158
+                self._send_json(save_notes(eid, self._body()))
             elif parsed.path == "/quit":
                 # In-UI stop (ADR-0005 §4): a localhost-gated shutdown so the operator
                 # stops the server from the browser (no terminal to Ctrl-C when it was
