@@ -251,7 +251,7 @@ static moisture_level_t band_of(uint16_t raw)
 
 static void t_band_anchors(void)
 {
-    printf("  reconciled band boundaries vs calibration anchors (issue #3)\n");
+    printf("  band boundaries vs calibration anchors (issue #3; #248 endpoints ratified)\n");
     /* probe in air -> air-dry diagnostic (never waters) */
     CHECK(band_of(3180) == MOIST_AIR_DRY,           "air ~3180 -> air-dry (out of soil)");
     /* THE FIX: bone-dry / parched soil now reads DRY, not air-dry. 2760 was the
@@ -265,6 +265,16 @@ static void t_band_anchors(void)
     /* saturated soil / standing water -> the 'too wet / check probe' diagnostics */
     CHECK(band_of(1060) == MOIST_OVERWATERED,       "saturated soil ~1060 -> overwatered");
     CHECK(band_of(1010) == MOIST_SUBMERGED,         "standing water ~1010 -> submerged");
+
+    /* #248 ratified ENDPOINTS (common-cup, 4-probe measured): the endpoint bands must
+     * bracket the real anchors. Air-dry center 3170 (per-probe 3151..3191) and saturated
+     * center 978 (per-probe 926..1020, s2 the wet-biased min) - the boundaries are
+     * unchanged; these assertions are what take "proposed" off the endpoints + guard them. */
+    CHECK(band_of(3170) == MOIST_AIR_DRY,           "#248 air-dry center 3170 -> air-dry");
+    CHECK(band_of(3151) == MOIST_AIR_DRY,           "#248 air-dry min (s2 3151) -> air-dry");
+    CHECK(band_of(978)  == MOIST_SUBMERGED,         "#248 saturated center 978 -> submerged");
+    CHECK(band_of(926)  == MOIST_SUBMERGED,         "#248 saturated min (s2 wet-bias 926) -> submerged");
+    CHECK(band_of(1020) == MOIST_SUBMERGED,         "#248 saturated max (s3 1020) -> submerged");
 }
 
 /* #92: the host->device command registry + dispatcher - register/dispatch, the *HH
