@@ -55,6 +55,9 @@ repos:
     hooks:
       - id: cspell
         name: cspell
-        entry: npx --yes cspell lint --no-progress --no-summary --no-must-find-files
+        # Repo-wide on every commit (pass_filenames:false + always_run) so LOCAL scope == CI's
+        # `pre-commit run --all-files`; pinned (#226) so the toolchain resolves the same version every run.
+        entry: npx --yes cspell@10.0.1 lint --no-progress --no-summary --no-must-find-files "**/*.md"
         language: system
-        types: [markdown]
+        pass_filenames: false
+        always_run: true
