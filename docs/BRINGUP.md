@@ -1,5 +1,8 @@
 # Bring-up checklist - plants controller
 
+> **Historical — point-in-time bring-up record (firmware 0.2-era, Rung 1–3).** Superseded by
+> **[STATUS.md](STATUS.md)** for current state (firmware is now 0.7.0). Kept verbatim as history.
+
 **Last updated:** 2026-06-21
 **Status:** **Rung 3 complete** - one capacitive sensor (V2.0.0 / TLC555) reads cleanly on GPIO36.
 Bench-verified raw 12-bit endpoints: **dry/air ~3150, wet/submerged ~1000** (~2150-count swing;

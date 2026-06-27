@@ -1,5 +1,8 @@
 # Wiring & Power - plants controller
 
+> **Historical — point-in-time design baseline (pre-bring-up, firmware 0.2-era).** Superseded by
+> **[STATUS.md](STATUS.md)** for current state (firmware is now 0.7.0). Kept verbatim as history.
+
 **Last updated:** 2026-06-21
 **Status:** design baseline, pre-bring-up. **Nothing is wired yet.** Pin numbers and the relay
 trigger polarity are *candidates to confirm at the bench* (see "Open items" at the end).
