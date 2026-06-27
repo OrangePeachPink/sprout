@@ -24,6 +24,8 @@
 #include <esp_system.h>
 #include <esp_timer.h>
 #include <esp_task_wdt.h>
+#include <Preferences.h>
+#include <string.h>
 #include "config.h"
 #include "moisture_classifier.h"
 #include "serial_cmd.h"
@@ -32,15 +34,25 @@
 #define GIT_REV "nogit"  // overridden by scripts/git_rev.py at build (commit hash + dirty)
 #endif
 
-// Per-boot identity - filled in setup() before the first header is printed.
-static uint64_t g_mac = 0;
-static char g_device_id[24]  = "plants_esp32_unknown";
-static char g_session_id[12] = "000000";
+// Per-boot identity (#188): a human-readable name, never a hardware fingerprint. No MAC,
+// eFuse, or chip serial is ever read - privacy by construction (ADR-0015). device_id is
+// the pretty chip-model default (set in configLoad) or an operator's custom name persisted
+// in NVS (#90); session_id is a fresh per-boot RNG nonce (not a hardware id).
+static char g_device_id[32]    = "Sprout ESP32";  // replaced in setup(): NVS custom or derived default
+static bool g_device_id_custom = false;           // header provenance: custom name vs derived default
+static char g_session_id[12]   = "000000";
 
-// Sweep cadence (ms). Runtime-settable via the !cad command (ADR-0011 / #63);
-// RAM-only, so a reboot returns to READ_INTERVAL_MS. The loop gate and the header
-// read this, not the compile-time constant.
+// Sweep cadence (ms). Runtime-settable via !cad (ADR-0011 / #63) and now persisted to
+// NVS (#90): a reboot restores the last set cadence (validated against the floor/ceil
+// on load; an empty/corrupt store falls back to READ_INTERVAL_MS). The loop gate and
+// the header read this, not the compile-time constant.
 static unsigned long g_cadence_ms = READ_INTERVAL_MS;
+static bool          g_cadence_from_nvs = false;  // header provenance: loaded from NVS?
+
+// Persisted runtime config store (#90). Opened once for the session: read on boot,
+// written on a successful !cad, cleared by !cfg,reset.
+static Preferences g_prefs;
+static const char *CFG_NS = "plants";
 
 // Shared classifier tuning - same boundaries for all channels for now. The module
 // takes a cfg per call, so this becomes a per-channel array when per-probe
@@ -96,11 +108,11 @@ static void printHeader() {
   snprintf(buf, sizeof(buf), "# fw=%s  git=%s  built=%s  run=%s",
            PLANTS_FW_VERSION, GIT_REV, __DATE__ " " __TIME__, RUN_LABEL);
   Serial.println(buf);
-  snprintf(buf, sizeof(buf), "# device_id=%s  mac=%012llx  chip=%s  adc=ADC1,12bit,11dB,eFuseCal=off",
-           g_device_id, (unsigned long long)g_mac, ESP.getChipModel());
+  snprintf(buf, sizeof(buf), "# device_id=%s (%s)  chip=%s  adc=ADC1,12bit,11dB,eFuseCal=off",
+           g_device_id, g_device_id_custom ? "custom" : "default", ESP.getChipModel());
   Serial.println(buf);
-  snprintf(buf, sizeof(buf), "# session_id=%s  cadence_ms=%lu",
-           g_session_id, g_cadence_ms);
+  snprintf(buf, sizeof(buf), "# session_id=%s  cadence_ms=%lu (%s)",
+           g_session_id, g_cadence_ms, g_cadence_from_nvs ? "nvs" : "default");
   Serial.println(buf);
   n = snprintf(buf, sizeof(buf), "# sensors:");
   for (int i = 0; i < NUM_SENSORS && n < (int)sizeof(buf); i++)
@@ -147,11 +159,53 @@ static void allRelaysOff() {
   }
 }
 
+// Derive the friendly default device name from the chip *model* only (#188) - e.g.
+// "ESP32" from "ESP32-D0WD-V3" -> "Sprout ESP32". The model is a board *type* shared by
+// millions of chips ("Honda Civic," not the VIN): no MAC, eFuse, or serial is read.
+// Finer distinctions (S3 vs classic, or multiple identical boards) are the custom name's
+// job, not this default's - keeping the zero-setup path clean.
+static void deriveDefaultDeviceId(char *out, size_t outlen) {
+  const char *model = ESP.getChipModel();  // e.g. "ESP32-D0WD-V3", "ESP32-S3"
+  char family[16];
+  size_t i = 0;
+  for (; model[i] && model[i] != '-' && i < sizeof(family) - 1; i++) family[i] = model[i];
+  family[i] = '\0';
+  if (family[0] == '\0') snprintf(out, outlen, "Sprout MCU");        // defensive fallback
+  else                   snprintf(out, outlen, "Sprout %s", family);  // "Sprout ESP32"
+}
+
+// Load the persisted runtime config from NVS (#90), validating each value against its
+// bounds so a stale/corrupt store can never push the device out of safe range. Also
+// resolves the device identity (#188): a persisted custom name wins, else the pretty
+// default. Called in setup() before the header is printed.
+static void configLoad() {
+  g_prefs.begin(CFG_NS, false);                        // rw namespace, kept open for the session
+  uint32_t saved = g_prefs.getULong("cadence_ms", 0);  // 0 = "unset" sentinel
+  if (saved >= CADENCE_FLOOR_MS && saved <= CADENCE_CEIL_MS) {
+    g_cadence_ms = saved;                              // valid persisted cadence
+    g_cadence_from_nvs = true;
+  }                                                    // else keep the READ_INTERVAL_MS default
+
+  // Device identity (#188): an operator's custom name (persisted) wins; else derive the
+  // pretty chip-model default. Never reads a hardware id either way.
+  char name[sizeof(g_device_id)];
+  size_t n = g_prefs.getString("device_name", name, sizeof(name));
+  if (n > 0 && name[0] != '\0') {
+    strncpy(g_device_id, name, sizeof(g_device_id) - 1);
+    g_device_id[sizeof(g_device_id) - 1] = '\0';
+    g_device_id_custom = true;
+  } else {
+    deriveDefaultDeviceId(g_device_id, sizeof(g_device_id));
+  }
+}
+
 // Serial-command handlers (defined below, near pollSerialCommand) - forward-declared
 // so setup() can register them with the serial_cmd registry (#92).
 static void handleCad(const char *args, char *reply, size_t replen);
 static void handlePing(const char *args, char *reply, size_t replen);
 static void handleVer(const char *args, char *reply, size_t replen);
+static void handleCfg(const char *args, char *reply, size_t replen);
+static void handleName(const char *args, char *reply, size_t replen);
 
 void setup() {
   allRelaysOff();  // FIRST: actuators de-energized before anything else can run (#93)
@@ -159,10 +213,9 @@ void setup() {
   Serial.begin(SERIAL_BAUD);
   delay(200);
 
-  // Per-boot identity: device_id from the eFuse MAC (free unique board id),
-  // session_id a fresh nonce so a reboot is a clean boundary in the data.
-  g_mac = ESP.getEfuseMac();
-  snprintf(g_device_id, sizeof(g_device_id), "plants_esp32_%06x", (unsigned)(g_mac & 0xFFFFFF));
+  // Per-boot session nonce (#188): a fresh RNG value (not a hardware id) so a reboot is a
+  // clean boundary in the data. device_id is resolved by configLoad() below (the persisted
+  // custom name or the pretty chip-model default) - no MAC/eFuse/serial is read.
   snprintf(g_session_id, sizeof(g_session_id), "%06x", (unsigned)(esp_random() & 0xFFFFFF));
 
   Serial.println();
@@ -177,6 +230,11 @@ void setup() {
   serial_cmd_register("cad", handleCad);
   serial_cmd_register("ping", handlePing);
   serial_cmd_register("ver", handleVer);
+  serial_cmd_register("cfg", handleCfg);
+  serial_cmd_register("name", handleName);
+
+  // Load any persisted runtime config (#90) so the header + first sweep reflect it.
+  configLoad();
 
   // Seed every channel from one burst so each boots in the right band.
   uint16_t seed[SAMPLES_PER_READ];
@@ -215,7 +273,9 @@ static void handleCad(const char *args, char *reply, size_t replen) {
     return;
   }
   unsigned long prev = g_cadence_ms;
-  g_cadence_ms = ms;  // next sweep uses the new period
+  g_cadence_ms = ms;                     // next sweep uses the new period
+  g_prefs.putULong("cadence_ms", ms);    // persist across reboots (#90)
+  g_cadence_from_nvs = true;
   snprintf(reply, replen, "# ack cad=%lu prev=%lu floor=%lu",
            (unsigned long)ms, prev, (unsigned long)CADENCE_FLOOR_MS);
 }
@@ -231,6 +291,48 @@ static void handleVer(const char *args, char *reply, size_t replen) {
   (void)args;
   snprintf(reply, replen, "# ack ver fw=%s device_id=%s git=%s",
            PLANTS_FW_VERSION, g_device_id, GIT_REV);
+}
+
+// !cfg,reset - clear the persisted config so the next boot uses compile-time defaults,
+// and apply the default cadence now (#90). Future !cfg subcommands register alongside.
+static void handleCfg(const char *args, char *reply, size_t replen) {
+  if (strcmp(args, "reset") == 0) {
+    g_prefs.clear();                  // wipe the NVS namespace (cadence + custom name)
+    g_cadence_ms = READ_INTERVAL_MS;  // apply the default immediately
+    g_cadence_from_nvs = false;
+    deriveDefaultDeviceId(g_device_id, sizeof(g_device_id));  // identity back to default (#188)
+    g_device_id_custom = false;
+    snprintf(reply, replen, "# ack cfg reset cad=%lu device_id=%s",
+             (unsigned long)READ_INTERVAL_MS, g_device_id);
+  } else {
+    snprintf(reply, replen, "# nak err=cfg (use: !cfg,reset)");
+  }
+}
+
+// !name,<string> - set a friendly custom device name (#188), persisted to NVS (#90) so it
+// survives reboots; an empty arg clears it back to the pretty chip-model default. The name
+// is sanitized for the CSV telemetry field (commas + control chars -> '_') so it can never
+// break a row. Never reads or encodes a hardware id.
+static void handleName(const char *args, char *reply, size_t replen) {
+  if (args[0] == '\0') {
+    g_prefs.remove("device_name");
+    deriveDefaultDeviceId(g_device_id, sizeof(g_device_id));
+    g_device_id_custom = false;
+    snprintf(reply, replen, "# ack name device_id=%s (default)", g_device_id);
+    return;
+  }
+  char   clean[sizeof(g_device_id)];
+  size_t j = 0;
+  for (size_t i = 0; args[i] && j < sizeof(clean) - 1; i++) {
+    char c     = args[i];
+    clean[j++] = (c == ',' || c < 0x20 || c == 0x7f) ? '_' : c;  // keep the CSV row intact
+  }
+  clean[j] = '\0';
+  strncpy(g_device_id, clean, sizeof(g_device_id) - 1);
+  g_device_id[sizeof(g_device_id) - 1] = '\0';
+  g_prefs.putString("device_name", g_device_id);  // persist across reboots
+  g_device_id_custom = true;
+  snprintf(reply, replen, "# ack name device_id=%s (custom)", g_device_id);
 }
 
 // Non-blocking host->device command RX: read whole lines and dispatch them through
