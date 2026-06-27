@@ -93,6 +93,26 @@ The **CO2 ↔ watering** correlation you want is: co-deploy the sibling air-qual
 join `plants.soil`/`plants.pump` against `aq.gas` rows **on `timestamp_utc`**. The shared time axis +
 namespaced `record_type` are the only mandatory pieces that makes that join trivial.
 
+### 3.1 Sampling pauses during a dose (by design)
+
+`plants.soil` rows are emitted **only while the controller is in `SYS_SAMPLING`** (pumps off). During a dose
+(`SYS_WATERING`) the supervisor — the single sample + actuation authority
+([ADR-0016](adr/0016-actuation-wiring-seam.md) §1, §4) — pauses ADC soil reads, so **no `plants.soil` rows
+are produced for the duration of the dose**. This is a hard invariant ("no sampling while pumping") —
+**not data loss and not a logging interruption**.
+
+Serial output itself is not gated — only ADC reads are — so `plants.pump` events still emit during the dose
+and **bracket** the gap. That makes a by-design watering gap distinguishable from a real one:
+
+- **By-design (watering):** the `plants.soil` gap is **bracketed by `plants.pump` on/off events** and is
+  bounded by the supervisor's hard max-on ceiling (short).
+- **Real interruption (logger down, restart, unplug):** the gap has **no bracketing `plants.pump` events**.
+
+Analysis never stitches across either gap — raw stays immutable ([ADR-0006](adr/0006-data-architecture.md)) —
+and gap-surfacing should treat a pump-bracketed gap as **expected**, not an interruption. *(The dashboard
+cross-references `plants.pump` to suppress these once pump logging is live — D1; until then a long-enough
+dose may surface as an interruption, which is honest, not wrong.)*
+
 ---
 
 ## 4. `quality_flag` enum (shared, from the sibling air-quality project)
