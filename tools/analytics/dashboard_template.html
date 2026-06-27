@@ -82,14 +82,29 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 #capLabels { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
 .capctl { display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;
   border-top: 1px solid var(--border); padding-top: var(--space-md); margin-top: var(--space-xs); }
-.capstatus { font-family: var(--font-data); font-size: 13px; color: var(--muted); }
+.capstatus { font-family: var(--font-data); font-size: 13px; color: var(--muted);
+  display: inline-flex; align-items: center; gap: 7px; margin-left: auto; }
+.capstatus::before { content: ""; width: 8px; height: 8px; border-radius: var(--r-pill);
+  background: currentColor; }
 .caphint { font-family: var(--font-data); font-size: 10px; color: var(--muted); text-transform: none; min-height: 12px; }
-.capstatus.run { color: var(--leaf); font-weight: 600; animation: caplive 1.4s ease-in-out infinite; }
-.capstatus.err { color: var(--st-dry); }
+.capstatus.run { color: var(--leaf); font-weight: 600; }
+.capstatus.run::before { box-shadow: 0 0 8px currentColor;
+  animation: caplive 1.4s ease-in-out infinite; }
+.capstatus.err { color: var(--st-fault); }
 .captrace { margin-top: 12px; }
 .captrace-svg { width: 100%; height: 120px; display: block; background: var(--bg);
   border: 1px solid var(--border); border-radius: var(--r-tile); }
 @keyframes caplive { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+/* #101 capture-panel review (#99): pills/buttons never wrap; primary = brand green;
+   the two modes paired by an accent bar (baseline green vs bounded-test purple). */
+.proposed, .btn { white-space: nowrap; }
+.btn.primary { background: var(--leaf); border-color: var(--leaf); color: #fff; }
+.btn.primary:hover { background: #2C9247; border-color: #2C9247; }
+#monitorCard, #captureCard { position: relative; overflow: hidden; }
+#monitorCard::before, #captureCard::before { content: ""; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 5px; }
+#monitorCard::before { background: var(--leaf); }
+#captureCard::before { background: var(--st-predicted); }
 
 /* summary cards */
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-md); }
@@ -223,10 +238,10 @@ footer.prov code { font-family: var(--font-data); }
       <span class="cap">the always-on logger — appends to <span class="mono">logs/</span>; start/stop it here, no terminal</span>
     </div>
     <div class="capctl">
-      <span class="capstatus" id="monStatus">—</span>
       <label class="capf">port<input id="monPort" type="text" value="COM6" maxlength="20" spellcheck="false"></label>
-      <button class="btn" id="monStart" type="button">▶ Start logging</button>
+      <button class="btn primary" id="monStart" type="button">▶ Start logging</button>
       <button class="btn" id="monStop" type="button" disabled>■ Stop logging</button>
+      <span class="capstatus" id="monStatus">—</span>
     </div>
   </section>
 
@@ -261,7 +276,7 @@ footer.prov code { font-family: var(--font-data); }
       <label class="capf">s4<input class="caplabel" data-ch="s4" type="text" value="s4" maxlength="24" spellcheck="false"></label>
     </div>
     <div class="capctl">
-      <button class="btn" id="capStart" type="button">▶ Start capture</button>
+      <button class="btn primary" id="capStart" type="button">▶ Start capture</button>
       <button class="btn" id="capStop" type="button" disabled>■ Stop</button>
       <span class="capstatus" id="capStatus">idle</span>
     </div>
@@ -933,7 +948,7 @@ function capRender(st){
     const dur = (st.duration_s != null) ? Math.round(st.duration_s) : null;
     const clock = (el != null && dur != null) ? ` · ${el}s/${dur}s` : (el != null ? ` · ${el}s` : '');
     const rows = (st.rows != null) ? ` · ${st.rows} rows` : '';
-    capSetStatus(`● experiment mode · capturing @ ${st.rate_s}s${clock}${rows}`, 'run');
+    capSetStatus(`experiment mode · capturing @ ${st.rate_s}s${clock}${rows}`, 'run');
     capDrawTrace(st.trace);
   } else {
     start.disabled = false; stop.disabled = true;
