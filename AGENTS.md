@@ -40,6 +40,23 @@ Sprout is built by coordinated lanes. Stay in yours; route cross-lane needs thro
 | **Design** | design system, brand, voice (repo read-only; lands via commit-proxy) | ADR-0004, ADR-0007, ADR-0008 |
 | **Workflow** | issues, board, releases, process | .github/CONTRIBUTING.md, this file |
 
+## Lane attribution
+
+Every lane posts from the one `OrangePeachPink` account, so **sign your work** — it's the only way to see
+who did what at a glance.
+
+- **Sign-off:** end PR bodies, issue/PR comments, ADRs, docs, and copy decks with `— <Lane>` (emoji
+  optional). E.g. `— Firmware`, `— Data 🌱`, `— Trellis`. The maintainer signs merge/squash commits `-v`.
+- **Commit trailer:** add a `Lane: <Lane>` trailer alongside the `Co-Authored-By:` line, so attribution
+  lands in `git log` / `git blame` — machine-readable and permanent:
+
+  ```text
+  feat(actuators): wire the relay driver to a bounded pulse
+
+  Lane: Firmware
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  ```
+
 ## Workflow & GitHub
 
 - **Issues are the ledger.** Every unit of work is an issue (open via the forms). IDs are `#N`.
