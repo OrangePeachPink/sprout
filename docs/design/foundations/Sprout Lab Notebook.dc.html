@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens/sprout-tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  @keyframes labGlow { 0%,100% { box-shadow: 0 0 0 currentColor; opacity: .75; } 50% { box-shadow: 0 0 8px currentColor; opacity: 1; } }
+  @keyframes labSway { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+</helmet>
+<div data-theme="{{ themeAttr }}" style="min-height:100vh; background:var(--bg); color:var(--ink); font-family:var(--font-ui); -webkit-font-smoothing:antialiased;">
+
+  <header style="position:sticky; top:0; z-index:20; background:color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--border);">
+    <div style="max-width:1180px; margin:0 auto; padding:14px 28px; display:flex; align-items:center; gap:18px;">
+      <div style="display:flex; align-items:center; gap:11px; min-width:0;">
+        <span style="width:34px; height:34px; border-radius:10px; background:var(--surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex:none;">
+          <svg width="18" height="22" viewBox="0 0 24 28" fill="none" stroke="var(--leaf)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="var(--sprout)" style="transform-origin:12px 13px; animation:labSway 6s ease-in-out infinite;"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="var(--leaf)"></path></svg>
+        </span>
+        <div style="min-width:0;">
+          <div style="font-family:var(--font-display); font-weight:700; font-size:18px; line-height:1.05;">Lab Notebook</div>
+          <div style="font-family:var(--font-data); font-size:10.5px; color:var(--muted); letter-spacing:.04em;">experiments · isolated from the monitor log</div>
+        </div>
+      </div>
+
+      <nav style="margin-left:auto; display:flex; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-pill); padding:4px;">
+        <button onClick="{{ goCatalog }}" style="font-family:var(--font-ui); font-size:13px; font-weight:600; border:none; cursor:pointer; border-radius:var(--r-pill); padding:7px 16px; background:{{ catalogTabBg }}; color:{{ catalogTabFg }}; box-shadow:{{ catalogTabSh }};">Experiments</button>
+        <button onClick="{{ goStudies }}" style="font-family:var(--font-ui); font-size:13px; font-weight:600; border:none; cursor:pointer; border-radius:var(--r-pill); padding:7px 16px; background:{{ studiesTabBg }}; color:{{ studiesTabFg }}; box-shadow:{{ studiesTabSh }};">Studies</button>
+      </nav>
+    </div>
+  </header>
+
+  <sc-if value="{{ showVoice }}" hint-placeholder-val="{{ true }}">
+  <div style="max-width:1180px; margin:0 auto; padding:16px 28px 0; display:flex; align-items:center; gap:9px; color:var(--muted); font-size:13.5px;">
+    <svg width="13" height="16" viewBox="0 0 24 28" fill="none" stroke="var(--leaf)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="var(--sprout)"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="var(--leaf)"></path></svg>
+    <span style="font-style:italic;">Here's everything we've tried — and what it taught us. The numbers are mine; the conclusions are yours.</span>
+  </div>
+  </sc-if>
+
+  <main style="max-width:1180px; margin:0 auto; padding:22px 28px 64px;">
+
+    <sc-if value="{{ isCatalog }}" hint-placeholder-val="{{ true }}">
+    <section data-screen-label="Catalog">
+      <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:18px; flex-wrap:wrap;">
+        <div>
+          <h1 style="font-family:var(--font-display); font-weight:700; font-size:27px; margin:0;">Every experiment</h1>
+          <div style="color:var(--muted); font-size:13px; margin-top:3px;">{{ countLabel }}</div>
+        </div>
+        <div style="display:flex; gap:7px; align-items:center; flex-wrap:wrap;">
+          <span style="font-family:var(--font-data); font-size:11px; color:var(--muted); margin-right:2px;">sort</span>
+          <span style="font-family:var(--font-ui); font-size:12px; font-weight:600; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-pill); padding:5px 13px;">newest</span>
+          <span style="font-family:var(--font-ui); font-size:12px; color:var(--muted); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-pill); padding:5px 13px;">subject</span>
+          <span style="font-family:var(--font-ui); font-size:12px; color:var(--muted); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-pill); padding:5px 13px;">study</span>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(330px,1fr)); gap:16px;">
+        <sc-for list="{{ cards }}" as="c" hint-placeholder-count="5">
+          <article onClick="{{ c.open }}" style="cursor:pointer; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); padding:18px 20px 16px; box-shadow:var(--e1); position:relative; overflow:hidden;" style-hover="box-shadow:var(--e2); border-color:color-mix(in srgb, var(--leaf) 40%, var(--border)); transform:translateY(-2px)">
+            <div style="position:absolute; left:0; top:0; bottom:0; width:4px; background:{{ c.bandColor }};"></div>
+            <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
+              <h3 style="font-family:var(--font-display); font-weight:600; font-size:17px; margin:0; line-height:1.15; overflow-wrap:anywhere;">{{ c.title }}</h3>
+              <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted); white-space:nowrap;">{{ c.when }}</span>
+            </div>
+            <div style="margin-top:5px; display:flex; align-items:center; gap:8px;">
+              <span style="display:inline-flex; align-items:center; gap:6px; font-family:var(--font-data); font-size:11px; font-weight:600; color:{{ c.bandColor }};"><span style="width:8px; height:8px; border-radius:50%; background:{{ c.bandColor }};"></span>{{ c.bandName }}</span>
+              <span style="color:var(--border);">·</span>
+              <span style="font-family:var(--font-data); font-size:11.5px; color:var(--muted);">{{ c.subject }}</span>
+            </div>
+            <div style="margin-top:12px; display:flex; gap:18px; font-family:var(--font-data); font-size:12px;">
+              <div><div style="font-size:9.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em;">duration</div><div style="font-weight:600; margin-top:1px;">{{ c.dur }}</div></div>
+              <div><div style="font-size:9.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em;">samples</div><div style="font-weight:600; margin-top:1px;">{{ c.samples }}</div></div>
+              <div><div style="font-size:9.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em;">rate</div><div style="font-weight:600; margin-top:1px;">{{ c.rate }}</div></div>
+            </div>
+            <div style="margin-top:13px; display:flex; flex-wrap:wrap; gap:5px;">
+              <sc-for list="{{ c.chips }}" as="ch" hint-placeholder-count="4">
+                <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-pill); padding:2px 9px;">{{ ch }}</span>
+              </sc-for>
+            </div>
+            <div style="margin-top:13px; padding-top:11px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px;">
+              <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted); overflow-wrap:anywhere;">{{ c.id }}</span>
+              <span style="display:inline-flex; align-items:center; gap:6px; font-family:var(--font-data); font-size:10.5px; color:{{ c.qualColor }};"><span style="width:6px; height:6px; border-radius:50%; background:{{ c.qualColor }};"></span>{{ c.qual }}</span>
+            </div>
+          </article>
+        </sc-for>
+      </div>
+    </section>
+    </sc-if>
+
+    <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ true }}">
+    <section data-screen-label="Experiment detail">
+      <button onClick="{{ sel.back }}" style="font-family:var(--font-data); font-size:12px; color:var(--muted); background:none; border:none; cursor:pointer; padding:0; margin-bottom:14px;" style-hover="color:var(--leaf)">← all experiments</button>
+
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:20px;">
+        <div style="min-width:0;">
+          <h1 style="font-family:var(--font-display); font-weight:700; font-size:26px; margin:0; line-height:1.1;">{{ sel.title }}</h1>
+          <div style="display:flex; align-items:center; gap:9px; margin-top:7px; flex-wrap:wrap;">
+            <span style="display:inline-flex; align-items:center; gap:6px; font-family:var(--font-data); font-size:12px; font-weight:600; color:{{ sel.bandColor }};"><span style="width:9px; height:9px; border-radius:50%; background:{{ sel.bandColor }};"></span>{{ sel.bandName }}</span>
+            <span style="color:var(--border);">·</span>
+            <span style="font-family:var(--font-data); font-size:12px; color:var(--muted);">{{ sel.subject }}</span>
+            <span style="color:var(--border);">·</span>
+            <span style="font-family:var(--font-data); font-size:12px; color:var(--muted);">{{ sel.when }}</span>
+          </div>
+        </div>
+        <sc-if value="{{ sel.hasStudy }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ sel.openStudy }}" style="font-family:var(--font-ui); font-size:12px; font-weight:600; color:var(--st-predicted); background:color-mix(in srgb, var(--st-predicted) 10%, transparent); border:1px solid color-mix(in srgb, var(--st-predicted) 35%, transparent); border-radius:var(--r-pill); padding:6px 14px; cursor:pointer; white-space:nowrap;">part of {{ sel.studyName }} →</button>
+        </sc-if>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1.55fr 1fr; gap:18px; align-items:start;">
+
+        <div style="display:flex; flex-direction:column; gap:18px; min-width:0;">
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); padding:18px 20px; box-shadow:var(--e1);">
+            <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:14px;">
+              <h2 style="font-family:var(--font-display); font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin:0;">Trajectory</h2>
+              <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted);">raw counts · drier ↑</span>
+            </div>
+            <div style="width:100%;">{{ sel.chartEl }}</div>
+            <div style="display:flex; flex-wrap:wrap; gap:14px; margin-top:13px; padding-top:12px; border-top:1px solid var(--border);">
+              <sc-for list="{{ sel.legend }}" as="pl" hint-placeholder-count="4">
+                <span style="display:inline-flex; align-items:center; gap:6px; font-family:var(--font-data); font-size:11px; color:var(--muted);"><span style="width:14px; height:3px; border-radius:2px; background:{{ pl.color }};"></span>{{ pl.label }}</span>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); padding:18px 20px; box-shadow:var(--e1);">
+            <h2 style="font-family:var(--font-display); font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin:0 0 12px;">Per-probe stats</h2>
+            <div style="font-family:var(--font-data); font-size:12px;">
+              <div style="display:flex; gap:12px; padding-bottom:6px; font-size:9.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">
+                <span style="flex:1.5; min-width:0;">probe</span>
+                <span style="flex:1; text-align:right;">median</span>
+                <span style="flex:1; text-align:right;">spread</span>
+                <span style="flex:1.3; text-align:right;">range</span>
+                <span style="flex:1; text-align:right;">slope</span>
+                <span style="flex:1; text-align:right;">band</span>
+              </div>
+              <sc-for list="{{ sel.probes }}" as="p" hint-placeholder-count="4">
+                <div style="display:flex; gap:12px; align-items:center; padding:8px 0; border-top:1px solid var(--border);">
+                  <span style="flex:1.5; min-width:0; display:flex; align-items:center; gap:7px; overflow-wrap:anywhere;"><span style="width:10px; height:3px; border-radius:2px; background:{{ p.series }}; flex:none;"></span>{{ p.label }}</span>
+                  <span style="flex:1; text-align:right; font-weight:600;">{{ p.median }}</span>
+                  <span style="flex:1; text-align:right; color:var(--muted);">{{ p.spread }}</span>
+                  <span style="flex:1.3; text-align:right; color:var(--muted);">{{ p.range }}</span>
+                  <span style="flex:1; text-align:right; color:var(--muted);">{{ p.slope }}</span>
+                  <span style="flex:1; text-align:right; color:{{ p.bandColor }}; font-weight:600;">{{ p.bandName }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-card); padding:18px 20px; box-shadow:var(--e1);">
+          <h2 style="font-family:var(--font-display); font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin:0 0 4px;">Manifest</h2>
+          <div style="font-family:var(--font-data); font-size:10px; color:var(--muted); margin-bottom:12px;">read from manifest.json · the truth, not re-parsed</div>
+          <div style="display:flex; flex-direction:column;">
+            <sc-for list="{{ sel.facts }}" as="f" hint-placeholder-count="9">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:7px 0; border-top:1px solid var(--border);">
+                <span style="font-family:var(--font-data); font-size:11px; color:var(--muted); white-space:nowrap;">{{ f.k }}</span>
+                <span style="font-family:var(--font-data); font-size:12px; color:var(--ink); font-weight:500; text-align:right; overflow-wrap:anywhere;">{{ f.v }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:18px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:10px; padding:15px 20px; border-bottom:1px solid var(--border); border-left:4px solid var(--st-predicted);">
+          <h2 style="font-family:var(--font-display); font-weight:700; font-size:16px; margin:0;">Lab notes</h2>
+          <span style="font-family:var(--font-data); font-size:10.5px; color:var(--st-predicted); background:color-mix(in srgb, var(--st-predicted) 10%, transparent); border-radius:var(--r-pill); padding:2px 9px;">interpretation layer · never edits the capture</span>
+          <span style="margin-left:auto; font-family:var(--font-data); font-size:10.5px; color:var(--muted);">saved {{ sel.notes.savedAt }} · v{{ sel.notes.version }}</span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--border);">
+          <div style="background:var(--surface); padding:16px 20px;">
+            <div style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--st-predicted); margin-bottom:7px;">Hypothesis</div>
+            <p style="margin:0; font-size:14px; line-height:1.6; color:var(--ink);">{{ sel.notes.hypothesis }}</p>
+          </div>
+          <div style="background:var(--surface); padding:16px 20px;">
+            <div style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--st-predicted); margin-bottom:7px;">Method</div>
+            <p style="margin:0; font-size:14px; line-height:1.6; color:var(--ink);">{{ sel.notes.method }}</p>
+          </div>
+          <div style="background:var(--surface); padding:16px 20px;">
+            <div style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--st-predicted); margin-bottom:7px;">Findings</div>
+            <p style="margin:0; font-size:14px; line-height:1.6; color:var(--ink);">{{ sel.notes.findings }}</p>
+          </div>
+          <div style="background:var(--surface); padding:16px 20px;">
+            <div style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--st-predicted); margin-bottom:7px;">Conclusion</div>
+            <p style="margin:0; font-size:14px; line-height:1.6; color:var(--ink);">{{ sel.notes.conclusion }}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+    </sc-if>
+
+    <sc-if value="{{ isStudies }}" hint-placeholder-val="{{ true }}">
+    <section data-screen-label="Studies">
+      <div style="margin-bottom:18px;">
+        <h1 style="font-family:var(--font-display); font-weight:700; font-size:27px; margin:0;">Studies</h1>
+        <div style="color:var(--muted); font-size:13px; margin-top:3px;">grouped experiments → one finding: we thought X, tried Y1/Y2/Y3, concluded Z</div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:18px;">
+        <sc-for list="{{ studyList }}" as="st" hint-placeholder-count="1">
+          <article style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); overflow:hidden;">
+            <div style="padding:18px 22px; border-bottom:1px solid var(--border);">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                <h2 style="font-family:var(--font-display); font-weight:700; font-size:19px; margin:0;">{{ st.name }}</h2>
+                <span style="font-family:var(--font-data); font-size:11px; color:var(--muted);">{{ st.subject }} · {{ st.countLabel }}</span>
+              </div>
+              <p style="margin:9px 0 0; font-size:13.5px; line-height:1.6; color:var(--muted); max-width:74ch;">{{ st.thesis }}</p>
+            </div>
+            <div style="padding:16px 22px; display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:12px;">
+              <sc-for list="{{ st.members }}" as="m" hint-placeholder-count="3">
+                <button onClick="{{ m.open }}" style="text-align:left; cursor:pointer; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:13px 15px; position:relative; overflow:hidden;" style-hover="border-color:color-mix(in srgb, var(--leaf) 40%, var(--border)); box-shadow:var(--e1)">
+                  <span style="position:absolute; left:0; top:0; bottom:0; width:4px; background:{{ m.bandColor }};"></span>
+                  <div style="font-family:var(--font-ui); font-weight:600; font-size:13.5px; line-height:1.2;">{{ m.title }}</div>
+                  <div style="display:flex; align-items:center; gap:7px; margin-top:8px; font-family:var(--font-data); font-size:11px;">
+                    <span style="display:inline-flex; align-items:center; gap:5px; color:{{ m.bandColor }}; font-weight:600;"><span style="width:7px; height:7px; border-radius:50%; background:{{ m.bandColor }};"></span>{{ m.bandName }}</span>
+                    <span style="color:var(--muted);">{{ m.median }} {{ m.spread }}</span>
+                  </div>
+                </button>
+              </sc-for>
+            </div>
+            <div style="margin:0 22px 20px; padding:15px 18px; background:color-mix(in srgb, var(--leaf) 7%, transparent); border:1px solid color-mix(in srgb, var(--leaf) 24%, transparent); border-radius:var(--r-tile);">
+              <div style="font-family:var(--font-display); font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--leaf); margin-bottom:6px;">Conclusion</div>
+              <p style="margin:0; font-size:14px; line-height:1.6; color:var(--ink);">{{ st.conclusion }}</p>
+            </div>
+          </article>
+        </sc-for>
+      </div>
+    </section>
+    </sc-if>
+
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1180,&quot;height&quot;:880},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;soil&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Appearance&quot;},&quot;voice&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Appearance&quot;}}">
+class Component extends DCLogic {
+  state = { view: "catalog", selectedId: "four_up_openbench" };
+
+  BAND = {
+    saturated: { name: "saturated", color: "var(--band-saturated)" },
+    wet: { name: "wet", color: "var(--band-wet)" },
+    moist: { name: "moist", color: "var(--band-moist)" },
+    ideal: { name: "ideal", color: "var(--band-ideal)" },
+    drying: { name: "drying", color: "var(--band-drying)" },
+    dry: { name: "dry", color: "var(--band-dry)" },
+    parched: { name: "parched", color: "var(--band-parched)" },
+  };
+  // sanctioned categorical series colors, drawn from the band ramp (the #99 direction)
+  SERIES = ["var(--band-wet)", "var(--band-moist)", "var(--band-ideal)", "var(--band-drying)"];
+
+  experiments = [
+    {
+      id: "four_up_openbench", subject: "openbench", title: "Four-up pin variance",
+      started_utc: "2026-06-26T16:25:52Z", ended_utc: "2026-06-26T16:26:52Z",
+      duration_s: 60, sample_rate_s: 0.5, stopped_by: "duration",
+      labels: { s1: "GPIO36", s2: "GPIO39", s3: "GPIO34", s4: "GPIO35" },
+      sweeps: 117, rows: 467, dropped: 40, crc_fail: 0, study: null, band: "moist",
+      probes: [
+        { id: "s1", label: "GPIO36", median: 1582, spread: 41, lo: 1551, hi: 1604, slope: "+1.8/min", band: "moist" },
+        { id: "s2", label: "GPIO39", median: 1601, spread: 38, lo: 1572, hi: 1619, slope: "+1.5/min", band: "moist" },
+        { id: "s3", label: "GPIO34", median: 1560, spread: 52, lo: 1524, hi: 1612, slope: "+2.4/min", band: "moist" },
+        { id: "s4", label: "GPIO35", median: 1663, spread: 44, lo: 1631, hi: 1690, slope: "+1.9/min", band: "ideal" },
+      ],
+      notes: {
+        hypothesis: "The four probes read within ~100 counts when all on GPIO36. Moving each to its own ADC1 channel (36/39/34/35) should reveal whether pin choice — not probe or plant — drives the residual spread.",
+        method: "All four probes in the same cup of moist soil, 0.5 s sweep for 60 s. Identical soil, identical depth; only the GPIO/channel differs per probe.",
+        findings: "Medians span 1560–1663 (~103 counts). GPIO35 (s4) sits highest and drifts ideal; GPIO34 (s3) is noisiest (spread 52). 40 sweeps dropped at burst-start — the known idle-to-burst framing glitch, not signal.",
+        conclusion: "Pin-to-pin offset is real and ~the size of the cross-probe spread. Per-channel boundary calibration is warranted before trusting absolute bands across pins. Re-run with probes rotated across pins to separate pin from probe.",
+        savedAt: "2026-06-26 17:40 UTC", version: 3,
+      },
+    },
+    {
+      id: "pothos_repot", subject: "pothos", title: "Pothos — post-repot dry-down",
+      started_utc: "2026-06-25T09:02:00Z", ended_utc: "2026-06-27T09:02:00Z",
+      duration_s: 172800, sample_rate_s: 30, stopped_by: "operator",
+      labels: { s1: "pothos · 4cm" }, sweeps: 5760, rows: 5760, dropped: 11, crc_fail: 0, study: null, band: "ideal",
+      probes: [{ id: "s1", label: "pothos · 4cm", median: 1980, spread: 64, lo: 1402, hi: 2210, slope: "+18/h", band: "ideal" }],
+      notes: {
+        hypothesis: "After repotting into fresh mix, the dry-down rate should be slower and steadier than the old root-bound pot.",
+        method: "Single probe at 4 cm, 30 s cadence over 48 h in the south window box.",
+        findings: "Smooth field-capacity-to-ideal descent at ~18 counts/h; no diurnal overshoot beyond noise.",
+        conclusion: "Fresh mix holds water more evenly. Use this curve as the pothos baseline for the next-watering predictor.",
+        savedAt: "2026-06-27 09:30 UTC", version: 2,
+      },
+    },
+    {
+      id: "cup_wet", subject: "common-cup", title: "Common-cup — wet reference",
+      started_utc: "2026-06-24T14:10:00Z", ended_utc: "2026-06-24T14:15:00Z",
+      duration_s: 300, sample_rate_s: 1, stopped_by: "duration",
+      labels: { s1: "cup · saturated" }, sweeps: 300, rows: 300, dropped: 2, crc_fail: 0,
+      study: "cup_char", band: "wet",
+      probes: [{ id: "s1", label: "cup · saturated", median: 1188, spread: 22, lo: 1170, hi: 1214, slope: "+0.2/min", band: "wet" }],
+      notes: { hypothesis: "", method: "Probe in a cup of fully-watered soil, 1 s for 5 min.", findings: "Stable at ~1188, spread 22.", conclusion: "Wet anchor for the cup-characterization study.", savedAt: "2026-06-24 14:20 UTC", version: 1 },
+    },
+    {
+      id: "cup_airdry", subject: "common-cup", title: "Common-cup — air-dry baseline",
+      started_utc: "2026-06-24T13:40:00Z", ended_utc: "2026-06-24T13:45:00Z",
+      duration_s: 300, sample_rate_s: 1, stopped_by: "duration",
+      labels: { s1: "cup · air" }, sweeps: 300, rows: 300, dropped: 0, crc_fail: 0,
+      study: "cup_char", band: "dry",
+      probes: [{ id: "s1", label: "cup · air", median: 2740, spread: 18, lo: 2724, hi: 2761, slope: "0/min", band: "dry" }],
+      notes: { hypothesis: "", method: "Probe held in open air, 1 s for 5 min.", findings: "Flat at ~2740 — the dry electrical ceiling.", conclusion: "Air-dry anchor; the dry edge of the cup study.", savedAt: "2026-06-24 13:50 UTC", version: 1 },
+    },
+    {
+      id: "cup_dry", subject: "common-cup", title: "Common-cup — dry soil reference",
+      started_utc: "2026-06-24T13:05:00Z", ended_utc: "2026-06-24T13:10:00Z",
+      duration_s: 300, sample_rate_s: 1, stopped_by: "duration",
+      labels: { s1: "cup · dry soil" }, sweeps: 300, rows: 300, dropped: 5, crc_fail: 0,
+      study: "cup_char", band: "parched",
+      probes: [{ id: "s1", label: "cup · dry soil", median: 2980, spread: 31, lo: 2951, hi: 3012, slope: "-0.4/min", band: "parched" }],
+      notes: { hypothesis: "", method: "Probe in long-unwatered dry soil, 1 s for 5 min.", findings: "~2980, just under the air ceiling.", conclusion: "Parched soil anchor; with wet + air it brackets the cup's full range.", savedAt: "2026-06-24 13:15 UTC", version: 1 },
+    },
+  ];
+
+  studies = [
+    {
+      id: "cup_char", name: "Common-cup characterization", subject: "common-cup",
+      members: ["cup_wet", "cup_airdry", "cup_dry"],
+      thesis: "Bracket one cup of soil across its full moisture range — saturated, dry soil, and open air — to calibrate where the bands actually sit for this probe.",
+      conclusion: "The cup spans ~1188 (saturated) → ~2980 (dry soil) → ~2740 (air). Dry soil reads *above* air-dry: soil salts conduct less than expected, so the dry edge belongs near 2980, not the air ceiling. Boundaries set from this hold for the cup; re-bracket per pot.",
+    },
+  ];
+
+  fmtWhen(iso) {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    if (isNaN(d)) return iso;
+    const p = (n) => String(n).padStart(2, "0");
+    return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())} UTC`;
+  }
+  fmtDur(s) {
+    if (s == null) return "—";
+    if (s < 60) return `${Math.round(s)}s`;
+    if (s < 3600) return `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`;
+    if (s < 86400) return `${(s / 3600).toFixed(1)}h`;
+    return `${(s / 86400).toFixed(1)}d`;
+  }
+  fmtRate(r) { return r == null ? "—" : (r < 1 ? `${r * 1000}ms` : `${r}s`); }
+  qual(e) {
+    const bits = [];
+    if (e.dropped) bits.push(`${e.dropped} dropped`);
+    if (e.crc_fail) bits.push(`${e.crc_fail} crc`);
+    if (e.stopped_by) bits.push(e.stopped_by);
+    const dropRate = e.sweeps ? e.dropped / e.sweeps : 0;
+    const color = e.crc_fail ? "var(--q-suspect)" : dropRate > 0.2 ? "var(--q-suspect)" : "var(--q-ok)";
+    return { text: bits.join(" · ") || "clean", color };
+  }
+
+  card(e) {
+    const b = this.BAND[e.band] || this.BAND.moist;
+    const q = this.qual(e);
+    const chips = Object.entries(e.labels).map(([k, v]) => (k === v ? k : `${k} · ${v}`));
+    return {
+      id: e.id, title: e.title, subject: e.subject, when: this.fmtWhen(e.started_utc),
+      dur: this.fmtDur(e.duration_s), samples: `${e.sweeps} sw`, rate: this.fmtRate(e.sample_rate_s),
+      bandName: b.name, bandColor: b.color, chips, qual: q.text, qualColor: q.color,
+      open: () => this.setState({ view: "detail", selectedId: e.id }),
+    };
+  }
+
+  chartFor(e) {
+    const h = React.createElement;
+    const W = 640, H = 200, pad = 14, rmin = 1000, rmax = 3100;
+    const y = (r) => pad + (1 - (r - rmin) / (rmax - rmin)) * (H - 2 * pad);
+    const ticks = [1200, 1800, 2400, 3000].map((r, i) =>
+      h("line", { key: "t" + i, x1: 0, y1: y(r), x2: W, y2: y(r), stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "3 4" })
+    );
+    const legend = [];
+    const polys = e.probes.map((p, i) => {
+      const n = 32, amp = Math.max(p.spread / 2, 8);
+      const trend = (p.slope || "").indexOf("-") === 0 ? -0.9 : (parseFloat(p.slope) || 0) > 5 ? 1.1 : 0.18;
+      const pts = [];
+      for (let k = 0; k < n; k++) {
+        const t = k / (n - 1);
+        const raw = p.median + Math.sin(t * 9.4 + i * 1.7) * amp * 0.55 + (t - 0.5) * amp * trend * 2.2;
+        pts.push(`${(t * W).toFixed(1)},${y(raw).toFixed(1)}`);
+      }
+      const color = this.SERIES[i % this.SERIES.length];
+      legend.push({ color, label: p.label });
+      return h("polyline", { key: "p" + i, points: pts.join(" "), fill: "none", stroke: color, strokeWidth: 2, strokeLinejoin: "round", strokeLinecap: "round" });
+    });
+    const el = h("svg", { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none", style: { width: "100%", height: "188px", display: "block" } }, [...ticks, ...polys]);
+    return { el, legend };
+  }
+
+  detailVM() {
+    const e = this.experiments.find((x) => x.id === this.state.selectedId) || this.experiments[0];
+    const b = this.BAND[e.band] || this.BAND.moist;
+    const study = e.study ? this.studies.find((s) => s.id === e.study) : null;
+    const facts = [
+      ["experiment_id", e.id], ["subject", e.subject],
+      ["started", this.fmtWhen(e.started_utc)], ["ended", this.fmtWhen(e.ended_utc)],
+      ["duration", this.fmtDur(e.duration_s)], ["sample rate", this.fmtRate(e.sample_rate_s)],
+      ["stopped by", e.stopped_by || "—"], ["sweeps · rows", `${e.sweeps} · ${e.rows}`],
+      ["dropped · crc", `${e.dropped} · ${e.crc_fail}`],
+    ].map(([k, v]) => ({ k, v }));
+    const probes = e.probes.map((p, i) => {
+      const pb = this.BAND[p.band] || this.BAND.moist;
+      return { label: p.label, median: String(p.median), spread: "±" + p.spread, range: `${p.lo}–${p.hi}`, slope: p.slope, bandName: pb.name, bandColor: pb.color, series: this.SERIES[i % this.SERIES.length] };
+    });
+    const chart = this.chartFor(e);
+    return {
+      id: e.id, title: e.title, subject: e.subject, when: this.fmtWhen(e.started_utc),
+      bandName: b.name, bandColor: b.color,
+      studyName: study ? study.name : null, hasStudy: !!study,
+      facts, probes, chartEl: chart.el, legend: chart.legend, notes: e.notes,
+      back: () => this.setState({ view: "catalog" }),
+      openStudy: () => this.setState({ view: "studies" }),
+    };
+  }
+
+  studyVMs() {
+    return this.studies.map((s) => {
+      const members = s.members.map((id) => {
+        const e = this.experiments.find((x) => x.id === id);
+        if (!e) return null;
+        const b = this.BAND[e.band] || this.BAND.moist;
+        return { id: e.id, title: e.title, bandName: b.name, bandColor: b.color, median: String(e.probes[0].median), spread: "±" + e.probes[0].spread, when: this.fmtWhen(e.started_utc), open: () => this.setState({ view: "detail", selectedId: e.id }) };
+      }).filter(Boolean);
+      return { id: s.id, name: s.name, subject: s.subject, thesis: s.thesis, conclusion: s.conclusion, members, countLabel: `${members.length} experiments` };
+    });
+  }
+
+  renderVals() {
+    const theme = this.props.theme ?? "light";
+    const view = this.state.view;
+    const sorted = [...this.experiments].sort((a, b) => (a.started_utc < b.started_utc ? 1 : -1));
+    const tab = (active) => ({
+      bg: active ? "var(--surface)" : "transparent",
+      fg: active ? "var(--ink)" : "var(--muted)",
+      sh: active ? "var(--e1)" : "none",
+    });
+    const cat = tab(view === "catalog" || view === "detail");
+    const stu = tab(view === "studies");
+    return {
+      themeAttr: theme === "soil" ? "dark" : "light",
+      showVoice: this.props.voice ?? true,
+      isCatalog: view === "catalog",
+      isDetail: view === "detail",
+      isStudies: view === "studies",
+      goCatalog: () => this.setState({ view: "catalog" }),
+      goStudies: () => this.setState({ view: "studies" }),
+      catalogTabBg: cat.bg, catalogTabFg: cat.fg, catalogTabSh: cat.sh,
+      studiesTabBg: stu.bg, studiesTabFg: stu.fg, studiesTabSh: stu.sh,
+      cards: sorted.map((e) => this.card(e)),
+      count: this.experiments.length,
+      countLabel: `${this.experiments.length} captures · newest first · isolated from the monitor log`,
+      sel: this.detailVM(),
+      studyList: this.studyVMs(),
+    };
+  }
+}
+</script>
+</body>
+</html>
