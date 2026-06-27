@@ -25,6 +25,30 @@ enabled by default. Secrets (e.g. any WiFi credentials) are kept out of git
 (`.gitignore`). Reports about credential handling, the localhost control
 endpoints, or dependency vulnerabilities are all welcome.
 
+## Hardware & physical safety
+
+Sprout will eventually switch water near electronics, so a few safety expectations
+are part of the design — not afterthoughts:
+
+- **Low-voltage DC only — never mains.** The pumps are small DC units (~2.5–6 V),
+  and the relays in this build switch only that low-voltage pump power. Do not wire
+  mains voltage through this project.
+- **Water near electronics.** Keep the ESP32, relay board, and wiring above and away
+  from the reservoir; use drip loops; only the rated submersible pump goes in water.
+- **Fail-safe actuation.** Pumps default **off** at boot, on reset, and on watchdog
+  timeout — a power loss or hung controller returns to "no water flowing," never
+  "pump stuck on" (see #93, #181).
+- **Watering stays gated.** No pump runs until per-probe calibration and the safety
+  bench pass (#94 / #191 / #93). Until then the firmware is read-only and nothing
+  actuates.
+- **Not a safety-certified product.** This is a hobby / portfolio build with no UL/CE
+  listing; don't rely on it unattended for anything that matters, and supervise early
+  pump testing.
+
+Report a hardware or physical-safety concern the same private way as a security
+issue (above): a private vulnerability report, or a private message to
+[@OrangePeachPink](https://github.com/OrangePeachPink).
+
 ## Supported versions
 
 Sprout is pre-1.0 and ships from `main`; fixes land on `main`. There are no
