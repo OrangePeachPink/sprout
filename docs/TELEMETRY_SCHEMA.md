@@ -47,7 +47,7 @@ the cross-project core both repos carry.
 | 3 | `timestamp_local` | host | yes | `2026-06-23 09:05:30.123` | host TZ, human |
 | 4 | `sample_id` | host | yes | `12345` | logger monotonic counter |
 | 5 | `session_id` | dev | yes **[propose→sibling-AQ]** | `3f9a1c` | per-boot; reboot = new id |
-| 6 | `device_id` | dev | yes | `plants_esp32_a4cf12` | friendly + MAC suffix |
+| 6 | `device_id` | dev | yes | `Sprout ESP32` | pretty default (chip model), or a user-set `!name` (NVS); no MAC |
 | 7 | `firmware_version` | dev | yes | `0.5.0` | |
 | 8 | `logger_version` | host | yes | `plants_logger_0_1` | |
 | 9 | `millis_ms` | dev | yes | `30000` | device monotonic ms since boot; 64-bit via `esp_timer` — no 49.7-day wrap (B4/B5) |
@@ -138,7 +138,7 @@ and the first `=` splits key/value, so values *may* contain spaces (e.g. `level=
 - **Delimiter** comma; **null** empty field; **RFC-4180** quoting (only `notes` is likely to need it).
 - **Header block** at the top of every file (and re-emitted at each rotation segment so each file is
   independently self-describing): `#`-prefixed provenance lines — `schema_version`, contract version,
-  firmware version + **git commit hash + build time**, `device_id` + MAC + chip/ADC config, run label,
+  firmware version + **git commit hash + build time**, `device_id` + chip/ADC config, run label,
   per-sensor map, column legend — then the CSV **column-name header row**, then data rows.
 - **Naming** `plants_<device_id>_<YYYYMMDD>_<HHMMSS>.csv` (boot/segment start in the name).
 - **Rotation** daily and/or by size (default: new file each calendar day, UTC); optionally gzip closed
@@ -156,7 +156,7 @@ The MCU emits a **compact CSV line** of its `origin=dev` columns, prefixed by `r
 greppable, e.g.:
 
 ```text
-plants.soil,3f9a1c,plants_esp32_a4cf12,0.5.0,30000,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1493,,,OK,level=well watered;role=disp;spread=48;gpio=36
+plants.soil,3f9a1c,Sprout ESP32,0.5.0,30000,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1493,,,OK,level=well watered;role=disp;spread=48;gpio=36
 ```
 
 Provenance/metadata still emit as `#`-prefixed lines at boot. The **host logger**:
@@ -183,7 +183,9 @@ prefix-corruption. **Recommendation: device emits CSV.**
 ## 9. Open decisions (confirm before firmware Phase 2)
 
 1. **Device line format:** CSV (recommended, §8) vs. keep pretty human columns.
-2. **`device_id` scheme:** `plants_esp32_<last3 MAC bytes hex>` (recommended) vs. a fixed friendly id.
+2. **`device_id` scheme:** RESOLVED (#188 / #205) — a **pretty default** (`Sprout ESP32`, from the
+   chip model) or an optional **user-set name** (`!name`, NVS-persisted, CSV-sanitized). No MAC, and no
+   MAC-derived suffix.
 3. **Firmware version:** bump to **v0.5.0** for the reshape (recommended — distinct named feature) vs.
    fold into the still-unflashed v0.4.0.
 4. **Host logger location / log dir:** `tools/logger/plants_logger.py` writing to repo-root `logs/`
