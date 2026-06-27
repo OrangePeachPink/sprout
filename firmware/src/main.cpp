@@ -113,6 +113,9 @@ static void printHeader() {
   int n;
   Serial.println();
   Serial.println("# plants telemetry  schema_version=1  contract=docs/TELEMETRY_SCHEMA.md@v1");
+#ifdef WDT_WEDGE_TEST
+  Serial.println("# *** WDT WEDGE-TEST BUILD (esp32dev_wdttest) *** !wedge strands ch0 + hangs the loop -> watchdog must reset. NOT a ship build.");
+#endif
   snprintf(buf, sizeof(buf), "# fw=%s  git=%s  built=%s  run=%s",
            PLANTS_FW_VERSION, GIT_REV, __DATE__ " " __TIME__, RUN_LABEL);
   Serial.println(buf);
@@ -235,6 +238,9 @@ static void handleCfg(const char *args, char *reply, size_t replen);
 static void handleName(const char *args, char *reply, size_t replen);
 static void handleWater(const char *args, char *reply, size_t replen);
 static void handleStop(const char *args, char *reply, size_t replen);
+#ifdef WDT_WEDGE_TEST
+static void handleWedge(const char *args, char *reply, size_t replen);
+#endif
 
 void setup() {
   allRelaysOff();  // FIRST: actuators de-energized before anything else can run (#93)
@@ -263,6 +269,9 @@ void setup() {
   serial_cmd_register("name", handleName);
   serial_cmd_register("water", handleWater);  // #215 manual bounded pump pulse
   serial_cmd_register("stop", handleStop);    // #215 abort
+#ifdef WDT_WEDGE_TEST
+  serial_cmd_register("wedge", handleWedge);  // #191/#93 watchdog wedge test (test build only)
+#endif
 
   // Prime the manual pump-pulse actuator (#215): bounded, default OFF. Relays are
   // already de-energized (allRelaysOff at the top of setup); this only inits FSM state.
@@ -422,6 +431,24 @@ static void handleStop(const char *args, char *reply, size_t replen) {
   if (was) snprintf(reply, replen, "# ack stop ch=%d", ch);
   else     snprintf(reply, replen, "# ack stop idle");
 }
+
+#ifdef WDT_WEDGE_TEST
+// !wedge - WATCHDOG WEDGE-TEST BUILD ONLY (#191 / #93). Strands relay ch0 ON, then spins
+// forever WITHOUT feeding the task watchdog: the chip must reset within ~WDT_TIMEOUT_MS,
+// and the reboot's allRelaysOff() must leave ch0 de-energized - proving a hung loop can
+// never strand a pump on. Intentionally never returns; only exists when WDT_WEDGE_TEST is
+// defined (the esp32dev_wdttest env), never in a shipped build.
+static void handleWedge(const char *args, char *reply, size_t replen) {
+  (void)args;
+  (void)reply;
+  (void)replen;
+  pumpSet(0, true);  // strand a pump ON so the watchdog reset is observably de-energizing
+  Serial.printf("# ack wedge ch0=ON - hanging the loop; watchdog must reset in <=%lums\n",
+                (unsigned long)WDT_TIMEOUT_MS);
+  Serial.flush();    // get the line out before we stop servicing anything
+  for (;;) { /* no esp_task_wdt_reset() here -> the task watchdog fires -> reset */ }
+}
+#endif
 
 // Non-blocking host->device command RX: read whole lines and dispatch them through
 // the registry, printing the handler's (or dispatch's nak) reply.
