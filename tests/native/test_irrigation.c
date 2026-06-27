@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include "irrigation.h"
 #include "serial_cmd.h"
+#include "pump_pulse.h"
 
 /* -------------------------------------------------------------------------- */
 /* synthetic rig: ADC source + pump observer + event sink                     */
@@ -338,6 +339,47 @@ static void t_serial_cmd_registry(void)
     CHECK(!serial_cmd_parse_u32("1234567890", &v), "parse_u32 >9 digits -> fail");
 }
 
+static void t_pump_pulse(void)
+{
+    printf("  manual bounded pump pulse (#215)\n");
+    pump_pulse_t p;
+    pump_pulse_init(&p, 4, 1500, 5000);  /* channels/default/max mirror config.h */
+    CHECK(!pump_pulse_active(&p) && pump_pulse_channel(&p) == -1, "init -> idle, no channel");
+
+    /* arm with the default duration */
+    CHECK(pump_pulse_arm(&p, 1, 0, 10000) == PUMP_PULSE_ARMED, "arm ch1 default -> ARMED");
+    CHECK(pump_pulse_active(&p) && pump_pulse_channel(&p) == 1, "active on ch1");
+    CHECK(pump_pulse_armed_ms(&p) == 1500, "omitted duration -> default 1500");
+
+    /* second arm while busy is rejected; the first pulse is untouched */
+    CHECK(pump_pulse_arm(&p, 2, 500, 10100) == PUMP_PULSE_ERR_BUSY, "arm while busy -> ERR_BUSY");
+    CHECK(pump_pulse_channel(&p) == 1, "busy reject leaves ch1 pulse intact");
+
+    /* service before/at/after expiry (10000 + 1500 = 11500) */
+    CHECK(!pump_pulse_service(&p, 11000) && pump_pulse_active(&p), "service before expiry -> still on");
+    CHECK(pump_pulse_service(&p, 11500), "service at expiry -> OFF signal (fires once)");
+    CHECK(!pump_pulse_active(&p) && pump_pulse_channel(&p) == -1, "expired -> idle");
+    CHECK(!pump_pulse_service(&p, 11600), "service after expiry -> no repeat signal");
+
+    /* an over-ceiling request is clamped to max */
+    CHECK(pump_pulse_arm(&p, 0, 99999, 20000) == PUMP_PULSE_ARMED, "arm over-ceiling -> ARMED");
+    CHECK(pump_pulse_armed_ms(&p) == 5000, "request clamped to the hard max (5000)");
+    CHECK(pump_pulse_stop(&p), "stop while active -> was-active true");
+    CHECK(!pump_pulse_active(&p), "stop -> idle");
+    CHECK(!pump_pulse_stop(&p), "stop when idle -> false");
+
+    /* out-of-range channels are rejected and leave it idle */
+    CHECK(pump_pulse_arm(&p, 4, 0, 30000) == PUMP_PULSE_ERR_CHANNEL, "arm ch4 (n=4) -> ERR_CHANNEL");
+    CHECK(pump_pulse_arm(&p, -1, 0, 30000) == PUMP_PULSE_ERR_CHANNEL, "arm ch-1 -> ERR_CHANNEL");
+    CHECK(!pump_pulse_active(&p), "bad-channel arm leaves it idle");
+
+    /* uint32 millis() rollover: off_at wraps past 0, expiry still detected */
+    pump_pulse_init(&p, 4, 1500, 5000);
+    CHECK(pump_pulse_arm(&p, 3, 1000, 0xFFFFFE00u) == PUMP_PULSE_ARMED, "arm near uint32 max -> ARMED");
+    CHECK(!pump_pulse_service(&p, 0xFFFFFF00u) && pump_pulse_active(&p), "pre-expiry across wrap -> still on");
+    CHECK(pump_pulse_service(&p, 0x00000300u), "post-wrap expiry -> OFF (rollover-safe)");
+}
+
 int main(void)
 {
     printf("native irrigation FSM tests\n");
@@ -349,6 +391,7 @@ int main(void)
     t_last_water_ms();
     t_band_anchors();
     t_serial_cmd_registry();
+    t_pump_pulse();
     printf("\n%d checks, %d failed\n", TESTS, FAILS);
     return FAILS ? 1 : 0;
 }
