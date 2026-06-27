@@ -1,4 +1,4 @@
-# ADR-0016 — Experiment notebook data model and notes durability
+# ADR-0017 — Experiment notebook data model and notes durability
 
 **Status:** Proposed — *awaiting ratification (Veronica + Design); the notes home and the
 gitignore re-anchor are the human-decision points*
