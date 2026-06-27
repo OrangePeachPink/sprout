@@ -34,6 +34,10 @@ Hold the board up and find two parts near the cable end:
   - **`TLC555`** is good: it runs down to about 3 V, so it is happy on a 3.3 V board.
   - **`NE555`** is trouble: it needs about 4.5 V, so it is unreliable (or dead) at 3.3 V. *(This is Flaw 2.)*
 
+**Ignore the version number.** `v1.2` vs `v2.0` printed on the board is *marketing, not quality* — per the
+Flaura teardown they're often the exact same product from one of ~five factories. Judge a board by its parts
+(regulator + timer + the meter test), never by its printed version.
+
 > Sprout's own four sensors carry the `662K` regulator **and** a genuine `TLC555` — the well-made variant. We
 > checked all four; see [`SENSOR_QA.md`](../../SENSOR_QA.md).
 
@@ -71,6 +75,30 @@ If a board fails, you have three honest choices:
 - **Power it differently.** For Flaw 1, feed it a steady voltage; for Flaw 2, run it at 4.5 V or more.
 - **Reorder — carefully.** Zoom all the way into the product photos first and confirm a `662K` regulator, a
   `TLC555` (not an `NE555`), and the small via sitting *between* the two output resistors.
+
+> **A slow sensor isn't automatically trash — try it before buying a replacement.** A board that *fails the meter
+> test* (Flaw 3) reacts sluggishly: no quick swing when you push it into wet soil. But soil changes slowly
+> and Sprout reads on plant-time (every few hours), not by the second — so if you let each reading settle and
+> don't lean on rapid 5-in-a-row averaging, a slow board can still tell "dry" from "watered" usefully. Meter
+> it, know its limit, then either live with the slow cadence or do the cheap fix above. *"Use what you have"*
+> beats a landfill sensor — just remember the fast-averaging caveat from Flaw 3.
+
+## Match your board's voltage (the kit won't tell you)
+
+A sensor and a microcontroller (MCU) only get along if their voltages agree — and the kit usually says
+nothing about either. Two things to check:
+
+- **Your board's logic voltage.** Most modern Wi-Fi boards — **ESP32** (all variants) and **ESP8266** — run
+  at **3.3 V**. Classic **Arduino** boards (Uno, Nano, Mega) run at **5 V**. Not all Arduino boards match,
+  though — a Nano 33 or a Nano ESP32 is 3.3 V — so check *your* board's spec.
+- **What that means for the sensor:**
+  - An **`NE555`** sensor needs about **4.5 V**: fine on a 5 V Arduino, **dead on a 3.3 V ESP32** (Flaw 2
+    again). A `TLC555` runs on either.
+  - A **regulated** board caps its output at ~**0–3.0 V** whatever you feed it, so it reads safely on a
+    3.3 V ADC with no extra parts. An **unregulated** board fed 5 V can push its output **above 3.3 V** —
+    past an ESP32's input range, which can damage the pin. Regulate it, or use a voltage divider.
+
+A voltage mismatch isn't a defect — it's a pairing problem. Match the parts, or swap one.
 
 ## The silkscreen lesson: trust the position, not the label
 
