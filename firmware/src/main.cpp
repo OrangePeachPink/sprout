@@ -14,13 +14,16 @@
  *   sensor_position,channel,raw_value,value,unit,quality_flag,payload
  * (value/unit are emitted NULL - raw_value + band are authoritative, #38.)
  * A '#'-prefixed provenance header is emitted at boot and reprinted periodically.
- * Still NO pump/relay control - nothing actuates. The one inbound command is
- * `!cad,<ms>*HH` (set the sweep cadence at runtime, ADR-0011 / #63) - cadence only.
+ * Relays are now defined and driven to their fail-safe OFF state at boot, and a task
+ * watchdog resets a hung loop (the #93 safety scaffold) - but NOTHING actuates yet (no
+ * pump logic). The one inbound command is `!cad,<ms>*HH` (set the sweep cadence at
+ * runtime, ADR-0011 / #63) - cadence only.
  */
 
 #include <Arduino.h>
 #include <esp_system.h>
 #include <esp_timer.h>
+#include <esp_task_wdt.h>
 #include "config.h"
 #include "moisture_classifier.h"
 #include "serial_cmd.h"
@@ -115,6 +118,10 @@ static void printHeader() {
            (unsigned long)cfg.confirm_ms_soil, (unsigned long)cfg.confirm_ms_dry,
            (unsigned long)cfg.confirm_ms_wet, (unsigned)cfg.spread_warn_raw, (unsigned)ADC_DISCARD);
   Serial.println(buf);
+  snprintf(buf, sizeof(buf),
+           "# safety: actuators fail-safe OFF (4ch CW-022 active-low, off=HIGH)  task-wdt=%lums",
+           (unsigned long)WDT_TIMEOUT_MS);
+  Serial.println(buf);
   Serial.println("# device_cols: record_type,session_id,device_id,fw,millis_ms,sensor_model,"
                  "sensor_id,sensor_position,channel,raw_value,value,unit,quality_flag,payload");
   Serial.println("# authoritative: raw_value (ADC counts) + band (payload 'level'); value/unit are "
@@ -129,7 +136,20 @@ static void sampleChannel(int ch, uint16_t *buf) {
   for (int i = 0; i < SAMPLES_PER_READ; i++) buf[i] = (uint16_t)analogRead(pin);
 }
 
+// Fail-safe: drive every relay to its de-energized level. Called FIRST in setup() so
+// any reset/boot lands actuators OFF before anything else runs, and reused by the
+// irrigation supervisor on every fault/stop once pumps land. No pump exists yet -
+// this just guarantees the safe state from the very first instruction (#93).
+static void allRelaysOff() {
+  for (int ch = 0; ch < NUM_SENSORS; ch++) {
+    pinMode(RELAY_PINS[ch], OUTPUT);
+    digitalWrite(RELAY_PINS[ch], RELAY_OFF_LEVEL);
+  }
+}
+
 void setup() {
+  allRelaysOff();  // FIRST: actuators de-energized before anything else can run (#93)
+
   Serial.begin(SERIAL_BAUD);
   delay(200);
 
@@ -142,7 +162,7 @@ void setup() {
   Serial.println();
   Serial.print("# boot plants controller fw=");
   Serial.print(PLANTS_FW_VERSION);
-  Serial.println(" - Rung 4 schema v1, four soil sensors (read-only)");
+  Serial.println(" - Rung 4 schema v1, four soil sensors (read-only; actuators fail-safe OFF)");
 
   pinMode(LED_PIN, OUTPUT);
 
@@ -154,6 +174,14 @@ void setup() {
     moisture_init(&state[ch], &cfg, s0);
   }
   printHeader();
+
+  // Task watchdog LAST, so setup()'s own work can't trip it; loop() feeds it every
+  // iteration. A hung loop now resets the chip - and the reboot re-runs allRelaysOff()
+  // - so a fault can never strand a pump on (#93). This platform's Arduino-ESP32 uses
+  // the classic esp_task_wdt API (timeout in SECONDS, panic on stall); init is harmless
+  // if the framework already started the TWDT, then we subscribe the loop task.
+  esp_task_wdt_init(WDT_TIMEOUT_MS / 1000UL, true);
+  esp_task_wdt_add(NULL);  // watch this (the Arduino loop) task
 }
 
 // Non-blocking host->device command RX. The device is otherwise write-only; this
@@ -199,6 +227,8 @@ static void pollSerialCommand() {
 }
 
 void loop() {
+  esp_task_wdt_reset();  // feed the watchdog every iteration; a wedged loop -> reset (#93)
+
   // Process any inbound !cad command first, so cadence changes are responsive at
   // any cadence (this runs every loop iteration, not once per sweep).
   pollSerialCommand();
