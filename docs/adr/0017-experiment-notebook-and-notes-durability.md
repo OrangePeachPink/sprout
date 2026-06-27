@@ -1,7 +1,9 @@
 # ADR-0017 — Experiment notebook data model and notes durability
 
-**Status:** Proposed — *awaiting ratification (Veronica + Design); the notes home and the
-gitignore re-anchor are the human-decision points*
+**Status:** Accepted (2026-06-27) — *ratified by Workflow on Veronica's AFK delegation. Both decision
+points are resolved: the notes home is `docs/experiments/` (now tracked via the #245 gitignore re-anchor),
+and the data model is built to match Design's shipped notebook spec (#156). Maintainer review pending on
+return — minimal-tweak welcome.*
 **Date:** 2026-06-26
 **Owner:** Data lane
 **Lane:** data/analytics (Lab Notebook — the read/review side of experiments)
