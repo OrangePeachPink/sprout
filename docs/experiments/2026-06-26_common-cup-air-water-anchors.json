@@ -8,6 +8,17 @@
     "findings": "Air-dry center 3170 (pins 3151-3191); saturated center 978 (pins 926-1020); dynamic range ~2192. Pin spread is state-dependent: ~94 in water vs ~40 in air, and the pin ordering flips between states. Both air chunks agree within ~5 counts. The afternoon skylight bump is ESP32 self-heating (no soil/plant present), not moisture.",
     "conclusion": "Placeholder Saturated (900-1050) and Parched (3050-3400) bands correctly bracket reality; this fixes the two endpoints (saturated ~978, air-dry ~3169) and the one robust wet|dry divide ~2096. Interior boundaries (moist/ideal/drying/dry) still require a controlled dry-down. Per-pin offset is NOT a single constant - it is state-dependent."
   },
+  "probe_notes": {
+    "s2": {
+      "gpio": 35,
+      "history": "reverse-polarity recovered; historically read above the pack in soil (+90)",
+      "clean_finding": "lowest in both same-medium states: air -26, water -69 (wet-biased)",
+      "interpretation": "soil +90 was microsite-confounded (4 different pot spots); common-cup is the first microsite-free look. Bias is non-constant (larger at wet end) -> needs two-point/gain+offset correction, not a single per-pin constant.",
+      "span": "926-3151 (vs pack ~995-3177)",
+      "health": "OK quality, low noise (std ~6), flat in cup - functional",
+      "caveat": "no same-medium reading predates this run -> microsite-confound-lifting vs real-drift not separable yet"
+    }
+  },
   "states": {
     "air_dry": {
       "per_sensor": {

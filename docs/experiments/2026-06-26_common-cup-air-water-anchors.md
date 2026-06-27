@@ -49,6 +49,20 @@ Raw ADC, higher = drier. Per-probe medians at each state:
   artifact, not a drying signal. Good to know the bands must tolerate it.
 - Probes were near-flat within each state (|slope| < 0.8 counts/h) — clean, trustworthy anchors.
 
+## Per-probe note: s2 (GPIO 35) reads wet-biased
+
+s2 — the reverse-polarity-recovered probe — was flagged as no longer reading above the pack. The clean
+data confirms a **reframe**, not a drift. In **soil** s2 read **highest** (+90 vs the others), but the four
+probes sit in four different spots in the pot, so that gap is **microsite-confounded**. In the microsite-free
+common cup, s2 reads **lowest in both states**: **−26 counts in air, −69 in water** (its bias is larger at
+the wet end). So the historical "s2 offset" was largely the pot spot, not the sensor — this is the first
+clean look, and it shows s2 shifted **low and slightly wider-range** (span 926→3,151 vs the pack ~995→3,177).
+
+Implication for A2: s2 needs a **two-point (wet+dry) / gain+offset** correction, not a single per-pin
+constant, and its interior boundaries will diverge most from the pack on the next dry-down. s2 is otherwise
+healthy — OK quality, low noise (std ~6), flat in the cup. *(Caveat: no same-medium reading of s2 predates
+this run, so whether this is the microsite confound lifting or real drift can't be fully separated yet.)*
+
 ## Conclusion
 
 - The **placeholder Saturated (900–1050)** and **Parched (3050–3400)** bands **correctly bracket reality** —
