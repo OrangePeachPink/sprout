@@ -64,3 +64,6 @@ reports/
 *.mov
 *.MOV
 .gstack/
+
+# Retired flat backlog (migrated to GitHub Issues; carried a name leak) — untracked, kept on disk only
+BACKLOG.md

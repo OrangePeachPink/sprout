@@ -54,7 +54,8 @@ Design*, not invented here.
 Operator self-serve, never "ask an agent to start the server":
 
 - **Fixed port** (8765) so the operator always knows the URL.
-- **Operator-launched** via a single command.
+- **Operator-launched** via a single command (`just start`) — or, for zero-CLI, a **double-click
+  launcher icon** that wraps it (#100 / #102).
 - **In-UI stop** — a control in the app (a `localhost`-gated shutdown endpoint) so the operator can
   stop it from the UI, not only by hunting down a terminal.
 
