@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens/sprout-tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  @keyframes dfdSway { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+</helmet>
+<div data-theme="{{ themeAttr }}" style="min-height:100vh; background:var(--bg); color:var(--ink); font-family:var(--font-ui); -webkit-font-smoothing:antialiased;">
+  <div style="max-width:1000px; margin:0 auto; padding:48px 40px 80px;">
+
+    <header style="margin-bottom:40px;">
+      <div style="display:flex; align-items:center; gap:11px; margin-bottom:26px;">
+        <span style="width:36px; height:36px; border-radius:10px; background:var(--surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex:none;">
+          <svg width="19" height="23" viewBox="0 0 24 28" fill="none" stroke="var(--leaf)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="var(--sprout)" style="transform-origin:12px 13px; animation:dfdSway 6s ease-in-out infinite;"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="var(--leaf)"></path></svg>
+        </span>
+        <span style="font-family:var(--font-display); font-weight:700; font-size:20px;">Sprout</span>
+        <span style="font-family:var(--font-data); font-size:11px; color:var(--muted); border:1px solid var(--border); border-radius:var(--r-pill); padding:3px 11px; letter-spacing:.04em;">developer front door</span>
+      </div>
+
+      <div style="font-family:var(--font-data); font-size:12px; color:var(--muted); letter-spacing:.04em; margin-bottom:12px;">START HERE — FOR DEVELOPERS</div>
+      <h1 style="font-family:var(--font-display); font-weight:700; font-size:42px; line-height:1.07; margin:0; letter-spacing:-0.015em; max-width:20ch;">Sprout — the friendliest repo you'll contribute to today.</h1>
+      <p style="margin:16px 0 0; font-size:17px; line-height:1.6; color:var(--muted); max-width:64ch;">A small, honest, self-watering plant project: embedded C on an ESP32, Python on the host, and a design system that actually gets eaten as dogfood. However you arrive — fixing a typo, wiring a sensor, or just curious — there's a place for you. <span style="font-style:italic; color:var(--ink);">Tend well.</span></p>
+
+      <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:24px;">
+        <a href="../../../.github/CONTRIBUTING.md" style="text-decoration:none; font-family:var(--font-ui); font-size:14px; font-weight:600; color:#fff; background:var(--leaf); border:1px solid var(--leaf); border-radius:var(--r-pill); padding:10px 20px; box-shadow:var(--e1); white-space:nowrap;" style-hover="filter:brightness(1.04)">Read CONTRIBUTING</a>
+        <a href="https://github.com/users/OrangePeachPink/projects/2" style="text-decoration:none; font-family:var(--font-ui); font-size:14px; font-weight:600; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-pill); padding:10px 20px; white-space:nowrap;" style-hover="border-color:var(--leaf)">Open the board</a>
+        <a href="../../adr/" style="text-decoration:none; font-family:var(--font-ui); font-size:14px; font-weight:600; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-pill); padding:10px 20px; white-space:nowrap;" style-hover="border-color:var(--leaf)">Browse the ADRs</a>
+      </div>
+    </header>
+
+    <main style="display:flex; flex-direction:column; gap:16px;">
+
+      <!-- 1 · What Sprout is -->
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:22px 24px;">
+        <div style="display:flex; align-items:center; gap:13px; margin-bottom:11px;">
+          <span style="font-family:var(--font-display); font-weight:700; font-size:17px; color:#fff; background:var(--leaf); width:30px; height:30px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; flex:none;">1</span>
+          <h2 style="font-family:var(--font-display); font-weight:700; font-size:22px; margin:0; line-height:1.1;">What Sprout is</h2>
+        </div>
+        <p style="margin:0 0 0 43px; font-size:15px; line-height:1.65; color:var(--muted); max-width:72ch;">Sprout keeps houseplants alive and is honest about how. It reads soil moisture, will water on a schedule it can defend, and never pretends a reading is better than the sensor that made it. It's also a teaching project: every part is built to be picked up, understood, and improved by the next person — including you.</p>
+      </section>
+
+      <!-- 2 · How it's built -->
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:22px 24px;">
+        <div style="display:flex; align-items:center; gap:13px; margin-bottom:6px;">
+          <span style="font-family:var(--font-display); font-weight:700; font-size:17px; color:#fff; background:var(--leaf); width:30px; height:30px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; flex:none;">2</span>
+          <h2 style="font-family:var(--font-display); font-weight:700; font-size:22px; margin:0; line-height:1.1;">How it's built <span style="font-weight:500; font-size:15px; color:var(--muted);">— find your corner</span></h2>
+        </div>
+        <p style="margin:0 0 16px 43px; font-size:14px; color:var(--muted);">Four areas, each contributable on its own:</p>
+        <div style="margin-left:43px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div style="background:var(--surface-2); border:1px solid var(--border); border-left:3px solid var(--leaf); border-radius:var(--r-tile); padding:13px 16px;"><div style="font-family:var(--font-display); font-weight:700; font-size:15px;">Firmware</div><div style="font-size:13.5px; line-height:1.5; color:var(--muted); margin-top:3px;">the ESP32 controller (C / PlatformIO): sensing, the watering logic, the safety gate.</div></div>
+          <div style="background:var(--surface-2); border:1px solid var(--border); border-left:3px solid var(--st-watering); border-radius:var(--r-tile); padding:13px 16px;"><div style="font-family:var(--font-display); font-weight:700; font-size:15px;">Capture</div><div style="font-size:13.5px; line-height:1.5; color:var(--muted); margin-top:3px;">host-side logging that turns the serial stream into honest, timestamped data.</div></div>
+          <div style="background:var(--surface-2); border:1px solid var(--border); border-left:3px solid var(--st-predicted); border-radius:var(--r-tile); padding:13px 16px;"><div style="font-family:var(--font-display); font-weight:700; font-size:15px;">Analytics</div><div style="font-size:13.5px; line-height:1.5; color:var(--muted); margin-top:3px;">the dashboard and the analysis tier that make the data readable.</div></div>
+          <div style="background:var(--surface-2); border:1px solid var(--border); border-left:3px solid var(--st-due); border-radius:var(--r-tile); padding:13px 16px;"><div style="font-family:var(--font-display); font-weight:700; font-size:15px;">Design</div><div style="font-size:13.5px; line-height:1.5; color:var(--muted); margin-top:3px;">the Sprout design system and the front doors (this page is one of them).</div></div>
+        </div>
+        <p style="margin:14px 0 0 43px; font-size:13.5px; color:var(--muted);">Not sure where you fit? That's exactly what <a href="https://github.com/OrangePeachPink/plants/discussions" style="color:var(--leaf); font-weight:600; text-decoration:none;">Discussions</a> are for.</p>
+      </section>
+
+      <!-- 3 · Where work lives -->
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:22px 24px;">
+        <div style="display:flex; align-items:center; gap:13px; margin-bottom:6px;">
+          <span style="font-family:var(--font-display); font-weight:700; font-size:17px; color:#fff; background:var(--leaf); width:30px; height:30px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; flex:none;">3</span>
+          <h2 style="font-family:var(--font-display); font-weight:700; font-size:22px; margin:0; line-height:1.1;">Where work lives</h2>
+        </div>
+        <p style="margin:0 0 15px 43px; font-size:14px; color:var(--muted);">One clean path from idea to merge:</p>
+        <div style="margin-left:43px; display:flex; flex-direction:column; gap:10px;">
+          <div style="display:grid; grid-template-columns:130px 1fr; gap:14px; align-items:baseline;"><span style="font-family:var(--font-data); font-size:12.5px; font-weight:600; color:var(--leaf);">Discussions</span><span style="font-size:14px; line-height:1.55; color:var(--muted);">questions and “should we…?” ideas. No setup question is too small.</span></div>
+          <div style="display:grid; grid-template-columns:130px 1fr; gap:14px; align-items:baseline;"><span style="font-family:var(--font-data); font-size:12.5px; font-weight:600; color:var(--st-watering);">Issues + board</span><span style="font-size:14px; line-height:1.55; color:var(--muted);">concrete, shippable work; look for <span style="font-family:var(--font-data); font-size:12px; color:var(--ink); background:var(--surface-2); border:1px solid var(--border); border-radius:5px; padding:1px 6px;">good first issue</span>.</span></div>
+          <div style="display:grid; grid-template-columns:130px 1fr; gap:14px; align-items:baseline;"><span style="font-family:var(--font-data); font-size:12.5px; font-weight:600; color:var(--sprout);">Pull requests</span><span style="font-size:14px; line-height:1.55; color:var(--muted);">your change; we squash-merge to one tidy commit.</span></div>
+          <div style="display:grid; grid-template-columns:130px 1fr; gap:14px; align-items:baseline; background:color-mix(in srgb, var(--st-predicted) 7%, transparent); border:1px solid color-mix(in srgb, var(--st-predicted) 24%, transparent); border-radius:var(--r-tile); padding:12px 14px;"><span style="font-family:var(--font-data); font-size:12.5px; font-weight:700; color:var(--st-predicted);">The gate</span><span style="font-size:14px; line-height:1.55; color:var(--ink);">merging a PR doesn't auto-close its issue. A reviewer confirms the change did what was asked, <em>then</em> closes it. That human confirmation is the point — it's how Sprout stays honest about what's really done versus merely merged.</span></div>
+        </div>
+      </section>
+
+      <!-- 4 · Start in five minutes -->
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:22px 24px;">
+        <div style="display:flex; align-items:center; gap:13px; margin-bottom:14px;">
+          <span style="font-family:var(--font-display); font-weight:700; font-size:17px; color:#fff; background:var(--leaf); width:30px; height:30px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; flex:none;">4</span>
+          <h2 style="font-family:var(--font-display); font-weight:700; font-size:22px; margin:0; line-height:1.1;">Start in about five minutes</h2>
+        </div>
+        <pre style="margin:0 0 0 43px; background:#0C1311; color:#E9F1EB; border:1px solid var(--border); border-radius:var(--r-tile); padding:18px 20px; overflow:auto; white-space:pre-wrap; word-break:break-word; font-family:var(--font-data); font-size:12.5px; line-height:1.85; box-shadow:var(--e1);">git clone https://github.com/OrangePeachPink/plants &amp;&amp; cd plants
+uv sync                     <span style="color:#8B9B90;"># the exact, locked dev environment</span>
+uv run pre-commit install   <span style="color:#8B9B90;"># quality checks run themselves on every commit</span>
+just start                  <span style="color:#8B9B90;"># launch Sprout — opens the dashboard</span></pre>
+        <p style="margin:13px 0 0 43px; font-size:13.5px; line-height:1.55; color:var(--muted);">Prefer zero install? Open it in <strong style="color:var(--ink); font-weight:600;">GitHub Codespaces</strong> — the environment builds itself in the browser.</p>
+      </section>
+
+      <!-- 5 · Then what -->
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:22px 24px;">
+        <div style="display:flex; align-items:center; gap:13px; margin-bottom:14px;">
+          <span style="font-family:var(--font-display); font-weight:700; font-size:17px; color:#fff; background:var(--leaf); width:30px; height:30px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; flex:none;">5</span>
+          <h2 style="font-family:var(--font-display); font-weight:700; font-size:22px; margin:0; line-height:1.1;">Then what</h2>
+        </div>
+        <div style="margin-left:43px; display:flex; flex-direction:column; gap:9px;">
+          <a href="../../contributing/your-first-pr.md" style="display:flex; align-items:baseline; gap:12px; text-decoration:none; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:12px 15px;" style-hover="border-color:var(--leaf)"><span style="font-family:var(--font-ui); font-weight:600; font-size:14px; color:var(--ink);">Your first change, walked through gently</span><span style="font-family:var(--font-data); font-size:11.5px; color:var(--leaf); margin-left:auto;">your-first-pr.md →</span></a>
+          <a href="../../../.github/CONTRIBUTING.md" style="display:flex; align-items:baseline; gap:12px; text-decoration:none; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:12px 15px;" style-hover="border-color:var(--leaf)"><span style="font-family:var(--font-ui); font-weight:600; font-size:14px; color:var(--ink);">The full contributor reference</span><span style="font-family:var(--font-data); font-size:11.5px; color:var(--leaf); margin-left:auto;">CONTRIBUTING.md →</span></a>
+          <a href="../../adr/" style="display:flex; align-items:baseline; gap:12px; text-decoration:none; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:12px 15px;" style-hover="border-color:var(--leaf)"><span style="font-family:var(--font-ui); font-weight:600; font-size:14px; color:var(--ink);">Why things are the way they are</span><span style="font-family:var(--font-data); font-size:11.5px; color:var(--leaf); margin-left:auto;">the ADRs →</span></a>
+          <div style="display:flex; align-items:baseline; gap:12px; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:12px 15px;"><span style="font-family:var(--font-ui); font-weight:600; font-size:14px; color:var(--ink);">Run the checks exactly like CI does</span><span style="font-family:var(--font-data); font-size:12px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:5px; padding:2px 8px; margin-left:auto;">just check</span></div>
+        </div>
+      </section>
+
+      <!-- 6 · The promise -->
+      <section style="background:color-mix(in srgb, var(--leaf) 7%, var(--surface)); border:1px solid color-mix(in srgb, var(--leaf) 26%, var(--border)); border-radius:var(--r-card); box-shadow:var(--e1); padding:22px 24px;">
+        <div style="display:flex; align-items:center; gap:13px; margin-bottom:11px;">
+          <span style="font-family:var(--font-display); font-weight:700; font-size:17px; color:#fff; background:var(--leaf); width:30px; height:30px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; flex:none;">6</span>
+          <h2 style="font-family:var(--font-display); font-weight:700; font-size:22px; margin:0; line-height:1.1;">The promise</h2>
+        </div>
+        <p style="margin:0 0 0 43px; font-size:15.5px; line-height:1.65; color:var(--ink); max-width:72ch;">Sprout designs the <em>arrival</em> for everyone who shows up — designers, the people who run it, and you, the developer. Most projects make you fend for yourself at the door; this one made you a place. Welcome in. 🌱</p>
+      </section>
+
+    </main>
+
+    <footer style="margin-top:36px; padding-top:20px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+      <span style="font-family:var(--font-display); font-style:italic; color:var(--muted); font-size:15px;">Tend well.</span>
+      <span style="font-family:var(--font-data); font-size:11px; color:var(--muted);">Developer Front Door · copy #219 · #136 · epic #133</span>
+    </footer>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1000,&quot;height&quot;:1180},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;soil&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Appearance&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      themeAttr: (this.props.theme ?? "light") === "soil" ? "dark" : "light",
+    };
+  }
+}
+</script>
+</body>
+</html>
