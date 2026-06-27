@@ -380,6 +380,69 @@ static void t_pump_pulse(void)
     CHECK(pump_pulse_service(&p, 0x00000300u), "post-wrap expiry -> OFF (rollover-safe)");
 }
 
+static void t_forced_dose(void)
+{
+    printf("  operator forced dose into the supervisor (#227 / ADR-0016)\n");
+
+    /* (a) a forced dose overrides "nothing wants water" - all channels well-watered. */
+    base_cfg(/*mhw*/3, /*mdoses*/3, /*pmax*/5000, /*dose*/2000);
+    start();
+    step(SYS.sample_period_ms);                          /* sweep: nobody wants water */
+    CHECK(irrig_active_pump(&CTRL) == -1,                "well-watered -> no autonomous dose");
+    CHECK(irrig_request_dose(&CTRL, 2, 0) == IRRIG_DOSE_QUEUED, "request ch2 -> queued");
+    step(SYS.sample_period_ms);                          /* next sweep grants the forced dose */
+    CHECK(irrig_active_pump(&CTRL) == 2 && irrig_mode(&CTRL) == SYS_WATERING,
+          "forced dose granted on ch2 despite well-watered");
+    CHECK(RIG.pump_on_count[2] == 1,                     "ch2 pump ran once");
+    step(2000);                                          /* ms=0 -> chan dose_ms = 2000 */
+    CHECK(RIG.pump_on[2] == false && RIG.pumps_on_now == 0, "forced dose ends at dose_ms");
+
+    /* (b) forced_ms clamps to pump_max_ms WITHOUT tripping the overrun fault. */
+    base_cfg(3, 3, /*pmax*/5000, /*dose*/2000);
+    start();
+    step(SYS.sample_period_ms);
+    CHECK(irrig_request_dose(&CTRL, 0, 99999) == IRRIG_DOSE_QUEUED, "request ch0 ms=99999");
+    step(SYS.sample_period_ms);                          /* grant */
+    CHECK(irrig_active_pump(&CTRL) == 0,                 "ch0 forced dose granted");
+    step(5000);                                          /* run to the ceiling */
+    CHECK(RIG.pumps_on_now == 0,                         "clamped dose ended at pump_max_ms");
+    CHECK(irrig_status(&CTRL, 0) != CH_FAULT,            "clamped dose did NOT trip an overrun fault");
+
+    /* (c) a hard-faulted channel refuses a forced dose (clear it first). */
+    base_cfg(3, 3, 5000, 2000);
+    start();
+    CTRL.faulted[1] = true;
+    CHECK(irrig_request_dose(&CTRL, 1, 0) == IRRIG_DOSE_FAULTED, "faulted channel -> refused");
+    CHECK(CTRL.forced[1] == false,                       "refused request leaves no pending dose");
+
+    /* (d) out-of-range channel rejected. */
+    CHECK(irrig_request_dose(&CTRL, IRRIG_CHANNELS, 0) == IRRIG_DOSE_BAD_CHANNEL, "ch=N -> bad channel");
+    CHECK(irrig_request_dose(&CTRL, -1, 0) == IRRIG_DOSE_BAD_CHANNEL,            "ch=-1 -> bad channel");
+
+    /* (e) one-pump invariant holds: a 2nd forced request mid-dose never opens a 2nd
+       pump; it's granted only after the first dose + settle release the token. */
+    base_cfg(3, 3, 5000, /*dose*/2000);
+    start();
+    step(SYS.sample_period_ms);
+    irrig_request_dose(&CTRL, 0, 0);
+    step(SYS.sample_period_ms);                          /* ch0 dosing */
+    CHECK(irrig_active_pump(&CTRL) == 0,                 "ch0 dosing");
+    irrig_request_dose(&CTRL, 1, 0);                     /* queue ch1 mid-dose */
+    step(500);                                           /* still within ch0's dose */
+    CHECK(RIG.pumps_on_now == 1 && RIG.max_pumps_on == 1, "2nd forced request never opens a 2nd pump");
+    step(2000); step(500); step(SYS.sample_period_ms);   /* ch0 dose + settle + re-sample */
+    CHECK(RIG.pump_on_count[1] == 1 && RIG.max_pumps_on == 1,
+          "ch1 dosed only after ch0 released the token");
+
+    /* (f) a forced dose takes priority over an autonomous-wanting (drier) channel. */
+    base_cfg(3, 3, 5000, 2000);
+    RIG.sim[0] = (chan_sim_t){ .target_raw = 2400, .noisy = false };  /* ch0 genuinely DRY */
+    start();
+    irrig_request_dose(&CTRL, 3, 0);                     /* force ch3 (well-watered) */
+    step(SYS.sample_period_ms);
+    CHECK(irrig_active_pump(&CTRL) == 3,                 "forced ch3 beats autonomous-dry ch0");
+}
+
 int main(void)
 {
     printf("native irrigation FSM tests\n");
@@ -392,6 +455,7 @@ int main(void)
     t_band_anchors();
     t_serial_cmd_registry();
     t_pump_pulse();
+    t_forced_dose();
     printf("\n%d checks, %d failed\n", TESTS, FAILS);
     return FAILS ? 1 : 0;
 }

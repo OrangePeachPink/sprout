@@ -63,6 +63,12 @@ static moisture_level_t sample_channel(irrig_ctrl_t *c, int ch)
  * rotating start index so ties don't always favor channel 0 (anti-starvation). */
 static int choose_channel(irrig_ctrl_t *c)
 {
+    /* Operator forced doses (ADR-0016) take priority over autonomous wants; a
+     * hard-faulted channel is never granted (clear it first). Rotate for fairness. */
+    for (int k = 0; k < IRRIG_CHANNELS; k++) {
+        int ch = (c->last_served + 1 + k) % IRRIG_CHANNELS;
+        if (c->forced[ch] && !c->faulted[ch]) return ch;
+    }
     int best = -1;
     for (int k = 0; k < IRRIG_CHANNELS; k++) {
         int ch = (c->last_served + 1 + k) % IRRIG_CHANNELS;
@@ -209,6 +215,8 @@ void irrig_init(irrig_ctrl_t *c,
         c->prev_health_warn[ch] = false;
         c->warn_count[ch]       = 0;
         c->last_water_ms[ch]    = now_ms;
+        c->forced[ch]           = false;
+        c->forced_ms[ch]        = 0;
     }
 
     c->mode           = SYS_SAMPLING;
@@ -216,6 +224,7 @@ void irrig_init(irrig_ctrl_t *c,
     c->phase_start_ms = now_ms;
     c->next_sample_ms = now_ms;             /* sample on the first tick */
     c->last_served    = IRRIG_CHANNELS - 1; /* so rotation starts at ch 0 */
+    c->active_dose_ms = 0;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -233,6 +242,19 @@ void irrig_tick(irrig_ctrl_t *c, uint32_t now)
 
         int ch = choose_channel(c);
         if (ch >= 0) {
+            /* Resolve the dose length: an operator forced dose (ADR-0016) uses its
+             * requested ms (0 = the channel default), clamped to pump_max_ms so the
+             * ceiling holds WITHOUT tripping the overrun fault; autonomous uses the
+             * channel's dose_ms. Consume the one-shot forced request here. */
+            uint32_t dose = c->chan_cfg[ch].dose_ms;
+            if (c->forced[ch]) {
+                dose = c->forced_ms[ch] ? c->forced_ms[ch] : c->chan_cfg[ch].dose_ms;
+                if (dose > c->sys->pump_max_ms) dose = c->sys->pump_max_ms;
+                c->forced[ch]    = false;
+                c->forced_ms[ch] = 0;
+            }
+            c->active_dose_ms  = dose;
+
             /* grant the single pump token; remember the pre-dose raw so the next
              * sweep can judge whether this dose actually wetted the soil */
             c->active_ch       = ch;
@@ -253,7 +275,7 @@ void irrig_tick(irrig_ctrl_t *c, uint32_t now)
     case SYS_WATERING: {
         int ch = c->active_ch;
         uint32_t run = now - c->phase_start_ms;
-        bool dose_done = run >= c->chan_cfg[ch].dose_ms;
+        bool dose_done = run >= c->active_dose_ms;
         bool overrun   = run >= c->sys->pump_max_ms;
 
         if (dose_done || overrun) {
@@ -302,6 +324,18 @@ void irrig_clear_fault(irrig_ctrl_t *c, int ch)
     c->warn_count[ch] = 0;
     c->status[ch]     = CH_OK;
     emit(c, ch, IRRIG_EV_FAULT_CLEARED, c->phase_start_ms);
+}
+
+/* Operator forced dose (ADR-0016): queue a one-shot dose on `ch`. Granted on the next
+ * SYS_SAMPLING tick (choose_channel gives it priority); the dose length + ceiling clamp
+ * are resolved there. Refused for a bad channel or a hard-faulted one. */
+irrig_dose_result_t irrig_request_dose(irrig_ctrl_t *c, int ch, uint32_t ms)
+{
+    if (ch < 0 || ch >= IRRIG_CHANNELS) return IRRIG_DOSE_BAD_CHANNEL;
+    if (c->faulted[ch])                 return IRRIG_DOSE_FAULTED;   /* clear it first */
+    c->forced[ch]    = true;
+    c->forced_ms[ch] = ms;   /* 0 = the channel's configured dose_ms; clamped at grant */
+    return IRRIG_DOSE_QUEUED;
 }
 
 irrig_mode_t        irrig_mode(const irrig_ctrl_t *c)           { return c->mode; }
