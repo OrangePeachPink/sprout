@@ -159,16 +159,20 @@ def test_live_rows() -> None:
         c = control.CaptureController(experiments_dir=tmp)
         c.start(subject="liverows", rate_s=0.1, duration_s=5)
         got = _await(
-            lambda: isinstance(c.status().get("rows"), int)
-            and c.status().get("rows", 0) >= 1,
+            lambda: (
+                isinstance(c.status().get("rows"), int)
+                and c.status().get("rows", 0) >= 1
+            ),
             4.0,
         )
         st = c.status()
         check(got and st.get("state") == "running", "running status carries rows >= 1")
         check(isinstance(st.get("rows"), int), "'rows' is an int while running")
         c.stop()
-        check("rows" not in c.status() or c.status().get("state") != "running",
-              "stopped -> no longer reports a running row count")
+        check(
+            "rows" not in c.status() or c.status().get("state") != "running",
+            "stopped -> no longer reports a running row count",
+        )
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

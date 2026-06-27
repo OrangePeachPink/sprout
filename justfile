@@ -8,10 +8,10 @@
 #   Then just run:       just            # lists every recipe
 #                        just start      # launches Sprout (the dashboard)
 #
-# Python is routed through {{py}} so that when the uv environment lands (ADR-0002 #3) it
-# becomes "uv run python" in ONE place. Same idea for {{pio}}.
+# Python runs through uv (ADR-0002 #3): `uv run python` uses the locked env and
+# auto-syncs it on first use, so every recipe gets reproducible deps. One place to change.
 
-py  := "python"
+py  := "uv run python"
 pio := "pio"
 
 # Show the menu (every recipe + its one-line summary).
@@ -84,12 +84,16 @@ test-host:
 # ============================================================================
 #  QUALITY — lint + the pre-merge gate (ADR-0002 #10/#12; harness here, lanes plug in).
 # ============================================================================
-# Python lint/format check (the host baseline).
+# Quick Python lint (fast inner loop); the full gate runs every hook via `just check`.
 lint:
     {{py}} -m ruff check .
 
-# The pre-merge gate — everything that must be green before a PR merges (mirrors CI, #89).
-check: lint test
+# Run every pre-commit hook across the repo — the single definition of lint/format/hygiene.
+pre-commit:
+    uv run pre-commit run --all-files
+
+# The pre-merge gate: all hooks + the tests. Exactly what CI runs (mirrors #89).
+check: pre-commit test
 
 # Release ritual — not wired until the first release (see ADR-0009 versioning & release policy).
 ship:
