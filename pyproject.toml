@@ -10,6 +10,8 @@ description = "Sprout — an honest capacitive soil-moisture + small-pump auto-w
 requires-python = ">=3.11"
 dependencies = [
   "pyserial>=3.5",  # the host serial logger / experiment-capture runtime
+  "duckdb>=1.0",    # the Lab Notebook analysis store (derived/rebuildable tier, #155)
+  "pandas>=2.0",    # ingestion into the store + query results
 ]
 
 [dependency-groups]
