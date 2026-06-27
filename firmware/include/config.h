@@ -97,8 +97,20 @@ static_assert(SAMPLES_PER_READ > 2 * SAMPLES_TRIM, "trimmed mean needs samples l
 constexpr int  RELAY_PINS[NUM_SENSORS] = {25, 26, 27, 32};       // ch0..ch3
 constexpr bool RELAY_ACTIVE_LOW = true;                          // CW-022 module
 constexpr int  RELAY_OFF_LEVEL  = RELAY_ACTIVE_LOW ? HIGH : LOW; // the de-energized level
+constexpr int  RELAY_ON_LEVEL   = RELAY_ACTIVE_LOW ? LOW  : HIGH;// the energized level (#215)
 
 // Task-watchdog timeout (ms): the main loop must feed the WDT within this window or
 // the device resets - so a hung loop can't strand a pump on. Generous vs a sweep
 // (~330 ms); loop() still spins + feeds between the slow (30 s) sweeps.
 constexpr uint32_t WDT_TIMEOUT_MS = 8000;
+
+// --- Manual bounded pump pulse (#215, first actuation slice) ----------------
+// Operator-commanded single pulse via !water,<ch>[,<ms>] (#92 registry) - NOT
+// autonomous dosing (the irrig_tick engine is the next slice, #94). Every pulse is
+// bounded by PUMP_PULSE_MAX_MS, a HARD ceiling kept well under WDT_TIMEOUT_MS so the
+// watchdog remains a true independent backstop, and defaults to PUMP_PULSE_DEFAULT_MS
+// when no duration is given. Conservative to start; tune both from the #191 bench.
+constexpr uint32_t PUMP_PULSE_DEFAULT_MS = 1500;
+constexpr uint32_t PUMP_PULSE_MAX_MS     = 5000;
+static_assert(PUMP_PULSE_MAX_MS < WDT_TIMEOUT_MS,
+              "a pump pulse must finish within the watchdog window (watchdog is the backstop)");

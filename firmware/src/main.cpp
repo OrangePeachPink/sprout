@@ -14,10 +14,13 @@
  *   sensor_position,channel,raw_value,value,unit,quality_flag,payload
  * (value/unit are emitted NULL - raw_value + band are authoritative, #38.)
  * A '#'-prefixed provenance header is emitted at boot and reprinted periodically.
- * Relays are now defined and driven to their fail-safe OFF state at boot, and a task
- * watchdog resets a hung loop (the #93 safety scaffold) - but NOTHING actuates yet (no
- * pump logic). The one inbound command is `!cad,<ms>*HH` (set the sweep cadence at
- * runtime, ADR-0011 / #63) - cadence only.
+ * Relays are defined and driven to their fail-safe OFF state at boot, with a task
+ * watchdog that resets a hung loop (the #93 safety scaffold). Actuation is the manual,
+ * bounded, single-channel `!water,<ch>[,<ms>]` pulse only (#215): default OFF, a hard
+ * max-on ceiling, one pump at a time, and the probe sweep is suppressed while it runs.
+ * NO autonomous dosing yet (that is epic #94). Inbound commands (all `!name[,args]*HH`,
+ * checksum-gated): !cad (cadence), !water / !stop (manual pulse), !ping, !ver, !cfg,
+ * !name.
  */
 
 #include <Arduino.h>
@@ -29,6 +32,7 @@
 #include "config.h"
 #include "moisture_classifier.h"
 #include "serial_cmd.h"
+#include "pump_pulse.h"
 
 #ifndef GIT_REV
 #define GIT_REV "nogit"  // overridden by scripts/git_rev.py at build (commit hash + dirty)
@@ -53,6 +57,10 @@ static bool          g_cadence_from_nvs = false;  // header provenance: loaded f
 // written on a successful !cad, cleared by !cfg,reset.
 static Preferences g_prefs;
 static const char *CFG_NS = "plants";
+
+// Manual bounded pump-pulse actuator (#215): operator-commanded, single-channel,
+// bounded !water pulses. NOT autonomous dosing - see pump_pulse.h / epic #94.
+static pump_pulse_t g_pump;
 
 // Shared classifier tuning - same boundaries for all channels for now. The module
 // takes a cfg per call, so this becomes a per-channel array when per-probe
@@ -131,8 +139,9 @@ static void printHeader() {
            (unsigned long)cfg.confirm_ms_wet, (unsigned)cfg.spread_warn_raw, (unsigned)ADC_DISCARD);
   Serial.println(buf);
   snprintf(buf, sizeof(buf),
-           "# safety: actuators fail-safe OFF (4ch CW-022 active-low, off=HIGH)  task-wdt=%lums",
-           (unsigned long)WDT_TIMEOUT_MS);
+           "# safety: actuators fail-safe OFF (4ch CW-022 active-low, off=HIGH)  task-wdt=%lums  "
+           "pump=manual(!water) bounded<=%lums",
+           (unsigned long)WDT_TIMEOUT_MS, (unsigned long)PUMP_PULSE_MAX_MS);
   Serial.println(buf);
   Serial.println("# device_cols: record_type,session_id,device_id,fw,millis_ms,sensor_model,"
                  "sensor_id,sensor_position,channel,raw_value,value,unit,quality_flag,payload");
@@ -157,6 +166,14 @@ static void allRelaysOff() {
     pinMode(RELAY_PINS[ch], OUTPUT);
     digitalWrite(RELAY_PINS[ch], RELAY_OFF_LEVEL);
   }
+}
+
+// Drive ONE channel's relay on/off, honoring the module's active-low polarity (#215).
+// The single point that can energize a pump - the pulse path and any future engine
+// both route through here.
+static void pumpSet(int ch, bool on) {
+  if (ch < 0 || ch >= NUM_SENSORS) return;
+  digitalWrite(RELAY_PINS[ch], on ? RELAY_ON_LEVEL : RELAY_OFF_LEVEL);
 }
 
 // Derive the friendly default device name from the chip *model* only (#188) - e.g.
@@ -206,6 +223,8 @@ static void handlePing(const char *args, char *reply, size_t replen);
 static void handleVer(const char *args, char *reply, size_t replen);
 static void handleCfg(const char *args, char *reply, size_t replen);
 static void handleName(const char *args, char *reply, size_t replen);
+static void handleWater(const char *args, char *reply, size_t replen);
+static void handleStop(const char *args, char *reply, size_t replen);
 
 void setup() {
   allRelaysOff();  // FIRST: actuators de-energized before anything else can run (#93)
@@ -221,7 +240,7 @@ void setup() {
   Serial.println();
   Serial.print("# boot plants controller fw=");
   Serial.print(PLANTS_FW_VERSION);
-  Serial.println(" - Rung 4 schema v1, four soil sensors (read-only; actuators fail-safe OFF)");
+  Serial.println(" - Rung 4 schema v1, four soil sensors (manual bounded pump pulse; fail-safe OFF)");
 
   pinMode(LED_PIN, OUTPUT);
 
@@ -232,6 +251,12 @@ void setup() {
   serial_cmd_register("ver", handleVer);
   serial_cmd_register("cfg", handleCfg);
   serial_cmd_register("name", handleName);
+  serial_cmd_register("water", handleWater);  // #215 manual bounded pump pulse
+  serial_cmd_register("stop", handleStop);    // #215 abort
+
+  // Prime the manual pump-pulse actuator (#215): bounded, default OFF. Relays are
+  // already de-energized (allRelaysOff at the top of setup); this only inits FSM state.
+  pump_pulse_init(&g_pump, NUM_SENSORS, PUMP_PULSE_DEFAULT_MS, PUMP_PULSE_MAX_MS);
 
   // Load any persisted runtime config (#90) so the header + first sweep reflect it.
   configLoad();
@@ -335,6 +360,59 @@ static void handleName(const char *args, char *reply, size_t replen) {
   snprintf(reply, replen, "# ack name device_id=%s (custom)", g_device_id);
 }
 
+// !water,<ch>[,<ms>] - arm ONE bounded manual pump pulse on channel <ch> (#215). With no
+// <ms> it uses PUMP_PULSE_DEFAULT_MS; any value is clamped to PUMP_PULSE_MAX_MS (the hard
+// ceiling). Rejected if a pulse is already running (one pump at a time) or <ch> is out of
+// range. The loop turns the relay OFF when the pulse expires - default OFF, bounded, with
+// the #93 watchdog as the independent backstop. NOT autonomous dosing (that is epic #94).
+static void handleWater(const char *args, char *reply, size_t replen) {
+  // args is "<ch>" or "<ch>,<ms>" - split at the first comma.
+  char        chbuf[12];
+  uint32_t    ms    = 0;  // 0 -> the pulse module substitutes PUMP_PULSE_DEFAULT_MS
+  const char *comma = strchr(args, ',');
+  size_t      chlen = comma ? (size_t)(comma - args) : strlen(args);
+  if (chlen == 0 || chlen >= sizeof(chbuf)) {
+    snprintf(reply, replen, "# nak err=parse (use: !water,<ch>[,<ms>])");
+    return;
+  }
+  memcpy(chbuf, args, chlen);
+  chbuf[chlen] = '\0';
+  uint32_t ch;
+  if (!serial_cmd_parse_u32(chbuf, &ch) ||
+      (comma && comma[1] != '\0' && !serial_cmd_parse_u32(comma + 1, &ms))) {
+    snprintf(reply, replen, "# nak err=parse (use: !water,<ch>[,<ms>])");
+    return;
+  }
+  switch (pump_pulse_arm(&g_pump, (int)ch, ms, millis())) {
+    case PUMP_PULSE_ARMED:
+      pumpSet((int)ch, true);  // energize now; the loop turns it off at expiry
+      snprintf(reply, replen, "# ack water ch=%lu ms=%lu max=%lu",
+               (unsigned long)ch, (unsigned long)pump_pulse_armed_ms(&g_pump),
+               (unsigned long)PUMP_PULSE_MAX_MS);
+      break;
+    case PUMP_PULSE_ERR_BUSY:
+      snprintf(reply, replen, "# nak err=busy ch=%d", pump_pulse_channel(&g_pump));
+      break;
+    case PUMP_PULSE_ERR_CHANNEL:
+      snprintf(reply, replen, "# nak err=channel ch=%lu n=%d", (unsigned long)ch, NUM_SENSORS);
+      break;
+    default:  // PUMP_PULSE_ERR_DURATION
+      snprintf(reply, replen, "# nak err=duration");
+      break;
+  }
+}
+
+// !stop - force any active pump pulse OFF now (operator abort / safety, #215).
+static void handleStop(const char *args, char *reply, size_t replen) {
+  (void)args;
+  int  ch  = pump_pulse_channel(&g_pump);
+  bool was = pump_pulse_stop(&g_pump);
+  if (was && ch >= 0) pumpSet(ch, false);
+  allRelaysOff();  // belt-and-suspenders: every channel de-energized regardless
+  if (was) snprintf(reply, replen, "# ack stop ch=%d", ch);
+  else     snprintf(reply, replen, "# ack stop idle");
+}
+
 // Non-blocking host->device command RX: read whole lines and dispatch them through
 // the registry, printing the handler's (or dispatch's nak) reply.
 static void pollSerialCommand() {
@@ -366,6 +444,16 @@ void loop() {
   // Process any inbound !cad command first, so cadence changes are responsive at
   // any cadence (this runs every loop iteration, not once per sweep).
   pollSerialCommand();
+
+  // Service the manual pump pulse every iteration (#215): the instant the bounded
+  // pulse expires, drive its relay OFF. Capture the channel before service() clears it.
+  int pulse_ch = pump_pulse_channel(&g_pump);
+  if (pump_pulse_service(&g_pump, millis())) pumpSet(pulse_ch, false);
+
+  // HARD INVARIANT (irrigation.h): never sample a probe while a pump runs. While a
+  // pulse is active, suppress the telemetry sweep - just feed the wdt + the pulse timer.
+  // Keeps the pump's electrical noise off the ADC and bounds the pulse-off latency.
+  if (pump_pulse_active(&g_pump)) return;
 
   // Non-blocking scheduler: one sweep of all channels every g_cadence_ms.
   static unsigned long lastRead = 0;

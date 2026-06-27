@@ -26,8 +26,9 @@
 extern "C" {
 #endif
 
-/* Registry capacity - plenty for the v1 command set (cad, ping, ver, ...). */
-#define SERIAL_CMD_MAX 8
+/* Registry capacity - v1 set is cad/ping/ver/cfg/name/water/stop (7), with headroom
+ * for the actuation epic's additions (#94). */
+#define SERIAL_CMD_MAX 12
 
 typedef enum {
     SERIAL_CMD_IGNORED = 0,  /* no '!' command in the line - ignore it, no reply  */
