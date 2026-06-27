@@ -24,6 +24,8 @@
 #include <esp_system.h>
 #include <esp_timer.h>
 #include <esp_task_wdt.h>
+#include <Preferences.h>
+#include <string.h>
 #include "config.h"
 #include "moisture_classifier.h"
 #include "serial_cmd.h"
@@ -37,10 +39,17 @@ static uint64_t g_mac = 0;
 static char g_device_id[24]  = "plants_esp32_unknown";
 static char g_session_id[12] = "000000";
 
-// Sweep cadence (ms). Runtime-settable via the !cad command (ADR-0011 / #63);
-// RAM-only, so a reboot returns to READ_INTERVAL_MS. The loop gate and the header
-// read this, not the compile-time constant.
+// Sweep cadence (ms). Runtime-settable via !cad (ADR-0011 / #63) and now persisted to
+// NVS (#90): a reboot restores the last set cadence (validated against the floor/ceil
+// on load; an empty/corrupt store falls back to READ_INTERVAL_MS). The loop gate and
+// the header read this, not the compile-time constant.
 static unsigned long g_cadence_ms = READ_INTERVAL_MS;
+static bool          g_cadence_from_nvs = false;  // header provenance: loaded from NVS?
+
+// Persisted runtime config store (#90). Opened once for the session: read on boot,
+// written on a successful !cad, cleared by !cfg,reset.
+static Preferences g_prefs;
+static const char *CFG_NS = "plants";
 
 // Shared classifier tuning - same boundaries for all channels for now. The module
 // takes a cfg per call, so this becomes a per-channel array when per-probe
@@ -99,8 +108,8 @@ static void printHeader() {
   snprintf(buf, sizeof(buf), "# device_id=%s  mac=%012llx  chip=%s  adc=ADC1,12bit,11dB,eFuseCal=off",
            g_device_id, (unsigned long long)g_mac, ESP.getChipModel());
   Serial.println(buf);
-  snprintf(buf, sizeof(buf), "# session_id=%s  cadence_ms=%lu",
-           g_session_id, g_cadence_ms);
+  snprintf(buf, sizeof(buf), "# session_id=%s  cadence_ms=%lu (%s)",
+           g_session_id, g_cadence_ms, g_cadence_from_nvs ? "nvs" : "default");
   Serial.println(buf);
   n = snprintf(buf, sizeof(buf), "# sensors:");
   for (int i = 0; i < NUM_SENSORS && n < (int)sizeof(buf); i++)
@@ -147,11 +156,24 @@ static void allRelaysOff() {
   }
 }
 
+// Load the persisted runtime config from NVS (#90), validating each value against its
+// bounds so a stale/corrupt store can never push the device out of safe range. Called
+// in setup() before the header is printed.
+static void configLoad() {
+  g_prefs.begin(CFG_NS, false);                        // rw namespace, kept open for the session
+  uint32_t saved = g_prefs.getULong("cadence_ms", 0);  // 0 = "unset" sentinel
+  if (saved >= CADENCE_FLOOR_MS && saved <= CADENCE_CEIL_MS) {
+    g_cadence_ms = saved;                              // valid persisted cadence
+    g_cadence_from_nvs = true;
+  }                                                    // else keep the READ_INTERVAL_MS default
+}
+
 // Serial-command handlers (defined below, near pollSerialCommand) - forward-declared
 // so setup() can register them with the serial_cmd registry (#92).
 static void handleCad(const char *args, char *reply, size_t replen);
 static void handlePing(const char *args, char *reply, size_t replen);
 static void handleVer(const char *args, char *reply, size_t replen);
+static void handleCfg(const char *args, char *reply, size_t replen);
 
 void setup() {
   allRelaysOff();  // FIRST: actuators de-energized before anything else can run (#93)
@@ -177,6 +199,10 @@ void setup() {
   serial_cmd_register("cad", handleCad);
   serial_cmd_register("ping", handlePing);
   serial_cmd_register("ver", handleVer);
+  serial_cmd_register("cfg", handleCfg);
+
+  // Load any persisted runtime config (#90) so the header + first sweep reflect it.
+  configLoad();
 
   // Seed every channel from one burst so each boots in the right band.
   uint16_t seed[SAMPLES_PER_READ];
@@ -215,7 +241,9 @@ static void handleCad(const char *args, char *reply, size_t replen) {
     return;
   }
   unsigned long prev = g_cadence_ms;
-  g_cadence_ms = ms;  // next sweep uses the new period
+  g_cadence_ms = ms;                     // next sweep uses the new period
+  g_prefs.putULong("cadence_ms", ms);    // persist across reboots (#90)
+  g_cadence_from_nvs = true;
   snprintf(reply, replen, "# ack cad=%lu prev=%lu floor=%lu",
            (unsigned long)ms, prev, (unsigned long)CADENCE_FLOOR_MS);
 }
@@ -231,6 +259,19 @@ static void handleVer(const char *args, char *reply, size_t replen) {
   (void)args;
   snprintf(reply, replen, "# ack ver fw=%s device_id=%s git=%s",
            PLANTS_FW_VERSION, g_device_id, GIT_REV);
+}
+
+// !cfg,reset - clear the persisted config so the next boot uses compile-time defaults,
+// and apply the default cadence now (#90). Future !cfg subcommands register alongside.
+static void handleCfg(const char *args, char *reply, size_t replen) {
+  if (strcmp(args, "reset") == 0) {
+    g_prefs.clear();                  // wipe the NVS namespace
+    g_cadence_ms = READ_INTERVAL_MS;  // apply the default immediately
+    g_cadence_from_nvs = false;
+    snprintf(reply, replen, "# ack cfg reset cad=%lu", (unsigned long)READ_INTERVAL_MS);
+  } else {
+    snprintf(reply, replen, "# nak err=cfg (use: !cfg,reset)");
+  }
 }
 
 // Non-blocking host->device command RX: read whole lines and dispatch them through
