@@ -32,8 +32,8 @@ The earlier policy versioned the runtime **per snapshot** — `sprout-v2/`, `spr
 runtime they shipped with, and drift between them was treated as honest provenance. The front-door reorg
 (ADR-0010) dissolved the version folders into function shelves for ease of entry, so that snapshot-provenance
 rationale no longer applies to the active tree. **The original version snapshots — with their original
-runtimes intact — are preserved in `_archive/` (`pre-v3-originals/`, `phase1-brand/`, `phase2-brand/`, and the
-old handoffs).** Provenance lives there; the active tree runs one current runtime.
+runtimes intact — live in the canonical repo's Git history** (the pre-prune `_archive/` commits); the
+not-taken reasoning is distilled in `_archive/roads-not-taken.md`. The active tree runs one current runtime.
 
 ## Manifest practice
 
