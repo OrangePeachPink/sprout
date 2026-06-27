@@ -55,6 +55,13 @@ the vehicle that *executes* this list at release time; this doc is the source-of
 - [ ] **Org migration** (#58) — optional; structure is owner-agnostic, so deferrable. URL / board / Pages re-point at transfer.
 - [ ] **Confirm no ADRs left `Proposed`** that should be `Accepted`.
 
+## Onboarding & contributor validation
+
+- [ ] **Clean second-machine install test** (#186) — the "three installs → it works" claim verified on
+  fresh hardware, docs-only, no undocumented step.
+- [ ] **New-contributor field test** (#187) — a real novice completes a first PR cold; friction captured
+  + fixed (expect several rounds; first tester TBD).
+
 ---
 
 *This list is the connective tissue for going public. Workflow keeps it current; #59 executes it.*
