@@ -20,6 +20,7 @@ import argparse
 import contextlib
 import errno
 import json
+import re
 import socket
 import sys
 import threading
@@ -73,6 +74,25 @@ _MONITOR = MonitorController()
 # `--print-port` / `--print-url` — instead of re-typing the literal anywhere else.
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
+
+_EID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")  # no traversal from a status id
+
+
+def _live_trace(eid: str | None, experiments_dir: object = None) -> list[dict]:
+    """The running capture's per-probe trajectory, re-parsed from its (live) CSV, so the
+    capture panel can chart the sub-second data as it lands (#161). Cheap (a bounded
+    capture, flushed per row); returns [] on any error - never breaks the poll."""
+    if not eid or not _EID_RE.match(eid) or ".." in eid:
+        return []
+    root = Path(experiments_dir) if experiments_dir else _REPO / "experiments"
+    csv = root / eid / f"{eid}.csv"
+    if not csv.exists():
+        return []
+    try:
+        ctx = build_context(parse_files([str(csv)]))
+        return ctx.get("trajectory", {}).get("datasets", [])
+    except Exception:  # a partial mid-write read must not break the status poll
+        return []
 
 
 def _context(
@@ -130,7 +150,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 )
                 self._send(blob, "application/json; charset=utf-8")
             elif parsed.path == "/capture/status":
-                self._send_json(_CAPTURE.status())
+                st = _CAPTURE.status()
+                if st.get("state") == "running":  # live trajectory for the panel (#161)
+                    st = {**st, "trace": _live_trace(st.get("experiment_id"))}
+                self._send_json(st)
             elif parsed.path == "/monitor/status":
                 self._send_json(_MONITOR.status())
             elif parsed.path == "/lab":  # the Lab Notebook catalog (#154)

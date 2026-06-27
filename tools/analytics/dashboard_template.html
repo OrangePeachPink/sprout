@@ -86,6 +86,9 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .caphint { font-family: var(--font-data); font-size: 10px; color: var(--muted); text-transform: none; min-height: 12px; }
 .capstatus.run { color: var(--leaf); font-weight: 600; animation: caplive 1.4s ease-in-out infinite; }
 .capstatus.err { color: var(--st-dry); }
+.captrace { margin-top: 12px; }
+.captrace-svg { width: 100%; height: 120px; display: block; background: var(--bg);
+  border: 1px solid var(--border); border-radius: var(--r-tile); }
 @keyframes caplive { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 
 /* summary cards */
@@ -262,6 +265,7 @@ footer.prov code { font-family: var(--font-data); }
       <button class="btn" id="capStop" type="button" disabled>■ Stop</button>
       <span class="capstatus" id="capStatus">idle</span>
     </div>
+    <div id="capTrace" class="captrace" hidden></div>
   </section>
 
   <div id="overview">
@@ -903,6 +907,24 @@ function capSetStatus(text, cls){
   const s = document.getElementById('capStatus'); s.textContent = text;
   s.className = 'capstatus' + (cls ? ' ' + cls : '');
 }
+function capSvg(ds){  // a mini live trajectory of the running capture (#161)
+  const pts = (ds||[]).flatMap(d=>d.points||[]);
+  if(!pts.length) return '';
+  const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y);
+  const xmin=Math.min(...xs), xmax=Math.max(...xs), ymin=Math.min(...ys), ymax=Math.max(...ys);
+  const xr=(xmax-xmin)||1, yr=(ymax-ymin)||1, W=600, H=120, pad=6;
+  const sx=x=>pad+(x-xmin)/xr*(W-2*pad), sy=y=>H-pad-(y-ymin)/yr*(H-2*pad);
+  const lines=(ds||[]).map(d=>{
+    const pp=(d.points||[]).map(p=>sx(p.x).toFixed(1)+','+sy(p.y).toFixed(1)).join(' ');
+    return pp ? `<polyline fill="none" stroke="${d.color||'#888'}" stroke-width="1.4" points="${pp}"/>` : '';
+  }).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="captrace-svg" role="img" aria-label="live capture trajectory">${lines}</svg>`;
+}
+function capDrawTrace(ds){
+  const el = document.getElementById('capTrace'); if(!el) return;
+  const svg = capSvg(ds);
+  if(svg){ el.innerHTML = svg; el.hidden = false; } else { el.hidden = true; el.innerHTML = ''; }
+}
 function capRender(st){
   const start = document.getElementById('capStart'), stop = document.getElementById('capStop');
   if(st && st.state === 'running'){
@@ -912,8 +934,10 @@ function capRender(st){
     const clock = (el != null && dur != null) ? ` · ${el}s/${dur}s` : (el != null ? ` · ${el}s` : '');
     const rows = (st.rows != null) ? ` · ${st.rows} rows` : '';
     capSetStatus(`● experiment mode · capturing @ ${st.rate_s}s${clock}${rows}`, 'run');
+    capDrawTrace(st.trace);
   } else {
     start.disabled = false; stop.disabled = true;
+    capDrawTrace(null);
     if(st && (st.state === 'done' || st.state === 'error')){
       const t = st.transport || {};
       const by = st.stopped_by ? ` (${st.stopped_by})` : '';
