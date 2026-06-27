@@ -134,9 +134,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif parsed.path == "/monitor/status":
                 self._send_json(_MONITOR.status())
             elif parsed.path == "/lab":  # the Lab Notebook catalog (#154)
-                self._send(
-                    render_catalog(load_catalog()), "text/html; charset=utf-8"
-                )
+                self._send(render_catalog(load_catalog()), "text/html; charset=utf-8")
             elif parsed.path == "/lab/experiments.json":
                 self._send_json(load_catalog())
             else:

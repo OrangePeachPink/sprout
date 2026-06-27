@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tests for the experiment catalog (Lab Notebook #154).
 
-    python tools/analytics/test_experiments_catalog.py
+python tools/analytics/test_experiments_catalog.py
 """
 
 from __future__ import annotations
@@ -29,17 +29,32 @@ def _mk(root: Path, name: str, manifest: dict | None) -> Path:
 def test_load_sorts_and_maps() -> None:
     tmp = Path(tempfile.mkdtemp())
     try:
-        _mk(tmp, "20260101_000000_old", {
-            "experiment_id": "20260101_000000_old", "subject": "old",
-            "started_utc": "2026-01-01T00:00:00Z", "duration_s": 30,
-            "sample_rate_s": 1.0, "stopped_by": "duration", "labels": {"s1": "a"},
-            "transport": {"rows": 10, "sweeps": 3, "dropped": 0, "crc_fail": 0},
-        })
-        _mk(tmp, "20260626_120000_new", {
-            "experiment_id": "20260626_120000_new", "title": "open bench",
-            "subject": "open_bench", "started_utc": "2026-06-26T12:00:00Z",
-            "duration_s": 60, "transport": {"rows": 20, "sweeps": 5},
-        })
+        _mk(
+            tmp,
+            "20260101_000000_old",
+            {
+                "experiment_id": "20260101_000000_old",
+                "subject": "old",
+                "started_utc": "2026-01-01T00:00:00Z",
+                "duration_s": 30,
+                "sample_rate_s": 1.0,
+                "stopped_by": "duration",
+                "labels": {"s1": "a"},
+                "transport": {"rows": 10, "sweeps": 3, "dropped": 0, "crc_fail": 0},
+            },
+        )
+        _mk(
+            tmp,
+            "20260626_120000_new",
+            {
+                "experiment_id": "20260626_120000_new",
+                "title": "open bench",
+                "subject": "open_bench",
+                "started_utc": "2026-06-26T12:00:00Z",
+                "duration_s": 60,
+                "transport": {"rows": 20, "sweeps": 5},
+            },
+        )
         c = cat.load_catalog(tmp)
         assert len(c) == 2
         assert c[0]["experiment_id"] == "20260626_120000_new"  # newest first
@@ -74,11 +89,18 @@ def test_empty_and_missing_dir() -> None:
 def test_render_smoke() -> None:
     tmp = Path(tempfile.mkdtemp())
     try:
-        _mk(tmp, "20260626_120000_x", {
-            "experiment_id": "20260626_120000_x", "title": "my <test>",
-            "subject": "x", "started_utc": "2026-06-26T12:00:00Z",
-            "duration_s": 60, "transport": {"rows": 20, "sweeps": 5},
-        })
+        _mk(
+            tmp,
+            "20260626_120000_x",
+            {
+                "experiment_id": "20260626_120000_x",
+                "title": "my <test>",
+                "subject": "x",
+                "started_utc": "2026-06-26T12:00:00Z",
+                "duration_s": 60,
+                "transport": {"rows": 20, "sweeps": 5},
+            },
+        )
         out = cat.render_catalog(cat.load_catalog(tmp))
         assert "__SPROUT_TOKENS__" not in out  # token placeholder filled
         assert "__CARDS__" not in out and "__COUNT__" not in out

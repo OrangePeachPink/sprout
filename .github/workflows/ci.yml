@@ -1,0 +1,45 @@
+name: CI
+
+# The pre-merge gate (#89): one fast job that runs the SAME checks you run locally
+# (`just check` = `pre-commit run --all-files` + `just test`), so CI and your machine
+# never drift. Right-sized per ADR-0002 #12 — deliberately NOT here: coverage gates,
+# mypy, SBOM, security scanners, multi-OS matrices. Add one only when a real need shows up.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# One run per ref; a newer push cancels the in-flight run (no wasted minutes).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: CI only needs to read the code.
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: lint + tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv (+ the locked Python)
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up just
+        uses: extractions/setup-just@v2
+
+      - name: Sync the locked environment
+        run: uv sync
+
+      # The single definition of lint/format/hygiene — identical to a local commit.
+      - name: Lint + format + hygiene (pre-commit)
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+
+      - name: Tests — native C firmware logic + host Python
+        run: just test
