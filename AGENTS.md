@@ -70,6 +70,16 @@ review your own recent work — **especially before a status brief** — do **CI
 - Fold the finding into the brief's `Gate:` / `Flag:` lines. A green PR with reds in its history has a story
   worth telling.
 
+## Lane routing
+
+When an issue comes up mid-lane and can't route through Workflow first, tag it `for:<lane>` to flag a
+**first-approximate recipient** — a best-guess owner so it doesn't sit without one. The family:
+`for:firmware` · `for:data` · `for:design` · `for:dx` · `for:ingest` · `for:trellis` · `for:workflow`.
+
+- It's a routing **hint**, not an assignment or a commitment — Workflow still triages, slices, and gates.
+- Use `for:workflow` when you're unsure, or when an item explicitly needs the pipeline (e.g. "please slice
+  this"); `for:trellis` flags an architecture / gap review.
+
 ## Workflow & GitHub
 
 - **Issues are the ledger.** Every unit of work is an issue (open via the forms). IDs are `#N`.
