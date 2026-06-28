@@ -1,0 +1,8 @@
+{
+  "_note": "TEMPLATE. Copy to config/location.local.json (gitignored) and put your rig's real coordinates there. Coordinates are the operator's home and MUST NEVER be committed (PRD-0002 R6 / ADR-0013 §3). These are placeholder city-center values.",
+  "name": "my windowsill",
+  "latitude": 41.8781,
+  "longitude": -87.6298,
+  "tz_offset_hours": -5,
+  "skylight_window_local": ["13:00", "14:00"]
+}
