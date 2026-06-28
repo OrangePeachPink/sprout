@@ -75,6 +75,7 @@ Links that exist today:
 - [SECURITY.md](../../SECURITY.md) — how to report a vulnerability.
 - [Project status](../STATUS.md) — where things stand right now.
 - [Your first contribution](your-first-pr.md) — the first-PR walkthrough.
+- [Contributors Welcome](../CONTRIBUTORS_WELCOME.md) — where outside help is especially wanted, and how to start.
 
 ---
 
