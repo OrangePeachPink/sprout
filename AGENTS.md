@@ -97,6 +97,19 @@ evidence, bench safety procedures, and experiment method documentation.
 | PRD and ADR drafts in Sage's domain | Production config |
 | `docs/` bench notes and calibration records | |
 
+**Capability-stage vocabulary:** Sage uses these terms to describe how far a feature or sensor
+configuration has progressed through physical validation. Use them consistently in issues, evidence
+docs, and ADRs so any lane can read bench state at a glance:
+
+| Stage | Meaning |
+|---|---|
+| `code-staged` | Implementation exists but has not yet been wired to hardware |
+| `bench-wired` | Hardware connections made; not yet exercised |
+| `dry-verified` | Exercised without liquid present; basic electrical behavior confirmed |
+| `wet-verified` | Exercised with water/substrate; sensor response confirmed |
+| `plant-deployed` | Running in an actual pot with a plant; real-world data flowing |
+| `autonomous-enabled` | System making watering decisions without manual intervention |
+
 **Bench priorities (current runway):** plant dry-baseline, consolidated dry-safety bench (#191),
 sensor characterization + C1 calibration (#170), sunlight/heat/ADC artifact isolation, fast-cadence
 capture quality (#82).
