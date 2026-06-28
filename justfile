@@ -71,6 +71,12 @@ flash *ARGS:
 test-native:
     sh tests/native/build_and_run.sh
 
+# C/C++ format check via clang-format v22.1.5 (pinned by pre-commit, #120).
+# Applies fixes in place; exits non-zero if any file was changed (re-stage + recommit).
+# Identical to what CI runs — local == CI.
+lint-fw:
+    uv run pre-commit run clang-format --all-files
+
 # ============================================================================
 #  TEST — the whole harness (ADR-0002 #11). Lanes plug their suites in here.
 # ============================================================================
