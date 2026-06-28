@@ -3,9 +3,11 @@
 # 4-space indent, function brace on its own line, K&R control braces,
 # 80 columns, pointer binds to the name.
 #
-# Light touch: format NEW / CHANGED files; we do NOT bulk-reformat the tree.
-#   clang-format -i path/to/file.c        # format in place
-#   clang-format --dry-run -Werror FILE   # check only (CI-friendly)
+# Pinned for idempotency with clang-format v22 (mirrors-clang-format v22.1.5,
+# the version wired in .pre-commit-config.yaml). Two options added vs the
+# original draft to prevent oscillation (#120):
+#   AlignTrailingComments:false — comment-alignment re-aligns on every pass
+#   ReflowComments:false        — block-comment word-wrap re-wraps on every pass
 ---
 Language: Cpp
 BasedOnStyle: LLVM
@@ -20,5 +22,7 @@ AllowShortIfStatementsOnASingleLine: WithoutElse
 AllowShortLoopsOnASingleLine: false
 KeepEmptyLinesAtTheStartOfBlocks: false
 SpaceAfterCStyleCast: false
+AlignTrailingComments: false
+ReflowComments: false
 # Keep include order as written - C headers can be order-sensitive.
 SortIncludes: false
