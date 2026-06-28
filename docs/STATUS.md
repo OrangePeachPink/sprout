@@ -8,13 +8,15 @@ look next. For *why* decisions were made, see the ADRs; for the live working vie
 ## In one line
 
 Four co-located capacitive probes log soil moisture honestly (raw ADC counts plus a calibrated
-seven-band classifier); a Python logger and a served dashboard render it. Operator-commanded bounded pump pulses (`!water` / `!stop`) exist via the actuation supervisor;
+seven-band classifier); a Python logger and a served dashboard render it.
+Operator-commanded bounded pump pulses (`!water` / `!stop`) exist via the actuation supervisor;
 the relay path is **bench-unverified** (#191) and autonomous watering is gated (#94).
 
 ## What runs today
 
 - **Firmware 0.7.0** (`firmware/`, PlatformIO, classic ESP32) — sweeps four soil sensors on ADC1,
-  classifies each into seven moisture bands, and emits schema-v1 telemetry. Operator-commanded bounded pulses via `!water <ch>` / `!stop` — wired through the actuation
+  classifies each into seven moisture bands, and emits schema-v1 telemetry.
+  Operator-commanded bounded pulses via `!water <ch>` / `!stop` — wired through the actuation
   supervisor (ADR-0016); relay path **bench-unverified** (#191). Autonomous watering not yet wired.
   Commands: set sweep cadence at runtime (ADR-0011).
 - **Host logger** (`tools/logger/plants_logger.py`) — stamps each row with UTC time and writes a
