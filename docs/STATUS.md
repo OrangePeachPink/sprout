@@ -3,19 +3,20 @@
 **The single "where are we" page.** What runs today, what's intentionally not built yet, and where to
 look next. For *why* decisions were made, see the ADRs; for the live working view, see the board.
 
-**Last updated:** 2026-06-26 · **Firmware:** 0.7.0 · **Stage:** read-only observation (watering gated)
+**Last updated:** 2026-06-27 · **Firmware:** 0.7.0 · **Stage:** relay-capable; autonomous watering gated
 
 ## In one line
 
 Four co-located capacitive probes log soil moisture honestly (raw ADC counts plus a calibrated
-seven-band classifier); a Python logger and a served dashboard render it. **No pump actuates yet** —
-watering is deliberately gated behind real per-probe calibration and a safety bench.
+seven-band classifier); a Python logger and a served dashboard render it. Operator-commanded bounded pump pulses (`!water` / `!stop`) exist via the actuation supervisor;
+the relay path is **bench-unverified** (#191) and autonomous watering is gated (#94).
 
 ## What runs today
 
 - **Firmware 0.7.0** (`firmware/`, PlatformIO, classic ESP32) — sweeps four soil sensors on ADC1,
-  classifies each into seven moisture bands, and emits schema-v1 telemetry. Read-only: no relay / pump
-  control. One inbound command — set the sweep cadence at runtime (ADR-0011).
+  classifies each into seven moisture bands, and emits schema-v1 telemetry. Operator-commanded bounded pulses via `!water <ch>` / `!stop` — wired through the actuation
+  supervisor (ADR-0016); relay path **bench-unverified** (#191). Autonomous watering not yet wired.
+  Commands: set sweep cadence at runtime (ADR-0011).
 - **Host logger** (`tools/logger/plants_logger.py`) — stamps each row with UTC time and writes a
   rotating, self-describing CSV under `logs/` per the shared telemetry schema.
 - **Dashboard** (`tools/analytics/serve.py`) — serves the live soil view; binds to localhost.
@@ -28,9 +29,10 @@ watering is deliberately gated behind real per-probe calibration and a safety be
 
 ## What is intentionally NOT built yet
 
-- **Pump actuation / the watering loop (#94).** Nothing switches water. This is gated on purpose, in
-  safety order — *make watering correct before it's possible*: per-probe calibration (#170), then the
-  safety bench (#191) and fail-safe actuator-off (#93), then actuation.
+- **Autonomous pump actuation / the watering loop (#94).** `irrig_tick` is not yet wired. Manual
+  operator commands (`!water`/`!stop`) exist but the relay path is bench-unverified (#191).
+  Autonomous dosing stays gated in safety order — *make watering correct before it's possible*:
+  per-probe calibration (#170), then the safety bench (#191) and fail-safe actuator-off (#93).
 - **Per-channel calibration (#170).** All four channels currently share one provisional classifier
   config; per-probe boundaries are pending real potted-soil data.
 - **Environmental / weather correlation (PRD-0002)** — parked behind the capture work.
