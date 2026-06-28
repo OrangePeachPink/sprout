@@ -22,6 +22,10 @@ this repository.** Specifically:
 
 - **Identities** — no real personal names, emails, phone numbers, or addresses in tracked files. Use the
   GitHub handle or "the maintainer".
+- **Location** — the operator's real coordinates / address are PI. They live **only** in gitignored config
+  (`config/location.local.json`), never in tracked files, code comments, or git history. Committed templates use
+  **placeholder city-center** values; tools **hash coordinates out of any cached filename** so even filenames
+  leak nothing (PRD-0002 R6 / ADR-0013 §3).
 - **Device identity** — public artifacts (sample logs, fixtures, docs, screenshots) carry only **synthetic
   or pseudonymous** device IDs: never a real MAC, and never a `device_id` derived from a real MAC. Internal
   / gitignored logs may carry real identifiers; the host **scrubs them on any public export**.
@@ -29,7 +33,8 @@ this repository.** Specifically:
   must not emit real PI; public-facing output is synthetic / pseudonymized **by construction**, not by
   after-the-fact cleanup.
 - **Enforcement** — a publish-scrub checklist (`#173`) plus, where feasible, a **pre-commit / CI
-  check** that greps for the known PI classes (personal name, raw-MAC pattern, emails, home paths)
+  check** that greps for the known PI classes (personal name, raw-MAC pattern, emails, home paths, operator
+  coordinates / location)
   and fails on a hit. The pre-1.0 checklist includes a one-time **git-history scrub** (a working-tree
   scrub is not a history scrub).
 
