@@ -15,14 +15,14 @@
 # device_cols: record_type,session_id,device_id,fw,millis_ms,sensor_model,sensor_id,sensor_position,channel,raw_value,value,unit,quality_flag,payload
 record_type,timestamp_utc,timestamp_local,sample_id,session_id,device_id,firmware_version,logger_version,millis_ms,sensor_model,sensor_id,sensor_position,channel,raw_value,value,unit,quality_flag,temp_context_c,rh_context_pct,pressure_context_hpa,event_id,payload,notes
 
-plants.soil,2026-06-23T21:09:10.000Z,2026-06-23 16:09:10.000,1,demo001,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1312,84,pct,OK,,,,,level=well watered;role=diag;spread=24;gpio=36,
-plants.soil,2026-06-23T21:09:12.100Z,2026-06-23 16:09:12.100,2,demo001,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,1323,83,pct,OK,,,,,level=well watered;role=diag;spread=24;gpio=39,
-plants.soil,2026-06-23T21:09:12.200Z,2026-06-23 16:09:12.200,3,demo001,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,1299,84,pct,OK,,,,,level=well watered;role=diag;spread=24;gpio=34,
-plants.soil,2026-06-23T21:09:14.300Z,2026-06-23 16:09:14.300,4,demo001,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,1326,83,pct,OK,,,,,level=well watered;role=diag;spread=24;gpio=35,
-plants.soil,2026-06-23T21:09:40.000Z,2026-06-23 16:09:40.000,5,demo001,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1313,83,pct,OK,,,,,level=well watered;role=diag;spread=31;gpio=36,
-plants.soil,2026-06-23T21:09:42.100Z,2026-06-23 16:09:42.100,6,demo001,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,1324,83,pct,OK,,,,,level=well watered;role=diag;spread=31;gpio=39,
-plants.soil,2026-06-23T21:09:42.200Z,2026-06-23 16:09:42.200,7,demo001,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,1300,84,pct,OK,,,,,level=well watered;role=diag;spread=31;gpio=34,
-plants.soil,2026-06-23T21:09:44.300Z,2026-06-23 16:09:44.300,8,demo001,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,1327,83,pct,OK,,,,,level=well watered;role=diag;spread=31;gpio=35,
+plants.soil,2026-06-23T21:09:10.000Z,2026-06-23 16:09:10.000,1,demo001,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1312,,,OK,,,,,level=well watered;role=diag;spread=24;gpio=36,
+plants.soil,2026-06-23T21:09:12.100Z,2026-06-23 16:09:12.100,2,demo001,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,1323,,,OK,,,,,level=well watered;role=diag;spread=24;gpio=39,
+plants.soil,2026-06-23T21:09:12.200Z,2026-06-23 16:09:12.200,3,demo001,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,1299,,,OK,,,,,level=well watered;role=diag;spread=24;gpio=34,
+plants.soil,2026-06-23T21:09:14.300Z,2026-06-23 16:09:14.300,4,demo001,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,1326,,,OK,,,,,level=well watered;role=diag;spread=24;gpio=35,
+plants.soil,2026-06-23T21:09:40.000Z,2026-06-23 16:09:40.000,5,demo001,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1313,,,OK,,,,,level=well watered;role=diag;spread=31;gpio=36,
+plants.soil,2026-06-23T21:09:42.100Z,2026-06-23 16:09:42.100,6,demo001,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,1324,,,OK,,,,,level=well watered;role=diag;spread=31;gpio=39,
+plants.soil,2026-06-23T21:09:42.200Z,2026-06-23 16:09:42.200,7,demo001,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,1300,,,OK,,,,,level=well watered;role=diag;spread=31;gpio=34,
+plants.soil,2026-06-23T21:09:44.300Z,2026-06-23 16:09:44.300,8,demo001,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,1327,,,OK,,,,,level=well watered;role=diag;spread=31;gpio=35,
 
 # log_start_utc=2026-06-24T00:00:11.000Z  tz_offset=-05:00  logger=plants_logger_0_4  schema_version=1
 # boot plants controller fw=0.7.0 - Rung 4 schema v1, four soil sensors (read-only)
@@ -36,14 +36,14 @@ plants.soil,2026-06-23T21:09:44.300Z,2026-06-23 16:09:44.300,8,demo001,plants_es
 # device_cols: record_type,session_id,device_id,fw,millis_ms,sensor_model,sensor_id,sensor_position,channel,raw_value,value,unit,quality_flag,payload
 record_type,timestamp_utc,timestamp_local,sample_id,session_id,device_id,firmware_version,logger_version,millis_ms,sensor_model,sensor_id,sensor_position,channel,raw_value,value,unit,quality_flag,temp_context_c,rh_context_pct,pressure_context_hpa,event_id,payload,notes
 
-plants.soil,2026-06-24T00:00:11.000Z,2026-06-23 19:00:11.000,9,demo002,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1989,56,pct,OK,,,,,level=needs water;role=diag;spread=22;gpio=36,
-plants.soil,2026-06-24T00:00:13.100Z,2026-06-23 19:00:13.100,10,demo002,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,2004,56,pct,OK,,,,,level=needs water;role=diag;spread=22;gpio=39,
-plants.soil,2026-06-24T00:00:13.200Z,2026-06-23 19:00:13.200,11,demo002,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,1975,57,pct,OK,,,,,level=needs water;role=diag;spread=22;gpio=34,
-plants.soil,2026-06-24T00:00:15.300Z,2026-06-23 19:00:15.300,12,demo002,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,1996,56,pct,OK,,,,,level=needs water;role=diag;spread=22;gpio=35,
-plants.soil,2026-06-24T00:00:41.000Z,2026-06-23 19:00:41.000,13,demo002,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1990,56,pct,OK,,,,,level=needs water;role=diag;spread=30;gpio=36,
-plants.soil,2026-06-24T00:00:43.100Z,2026-06-23 19:00:43.100,14,demo002,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,2005,56,pct,OK,,,,,level=needs water;role=diag;spread=30;gpio=39,
-plants.soil,2026-06-24T00:00:43.200Z,2026-06-23 19:00:43.200,15,demo002,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,1976,57,pct,OK,,,,,level=needs water;role=diag;spread=30;gpio=34,
-plants.soil,2026-06-24T00:00:45.300Z,2026-06-23 19:00:45.300,16,demo002,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,1997,56,pct,OK,,,,,level=needs water;role=diag;spread=30;gpio=35,
+plants.soil,2026-06-24T00:00:11.000Z,2026-06-23 19:00:11.000,9,demo002,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1989,,,OK,,,,,level=needs water;role=diag;spread=22;gpio=36,
+plants.soil,2026-06-24T00:00:13.100Z,2026-06-23 19:00:13.100,10,demo002,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,2004,,,OK,,,,,level=needs water;role=diag;spread=22;gpio=39,
+plants.soil,2026-06-24T00:00:13.200Z,2026-06-23 19:00:13.200,11,demo002,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,1975,,,OK,,,,,level=needs water;role=diag;spread=22;gpio=34,
+plants.soil,2026-06-24T00:00:15.300Z,2026-06-23 19:00:15.300,12,demo002,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,1996,,,OK,,,,,level=needs water;role=diag;spread=22;gpio=35,
+plants.soil,2026-06-24T00:00:41.000Z,2026-06-23 19:00:41.000,13,demo002,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1990,,,OK,,,,,level=needs water;role=diag;spread=30;gpio=36,
+plants.soil,2026-06-24T00:00:43.100Z,2026-06-23 19:00:43.100,14,demo002,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,2005,,,OK,,,,,level=needs water;role=diag;spread=30;gpio=39,
+plants.soil,2026-06-24T00:00:43.200Z,2026-06-23 19:00:43.200,15,demo002,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,1976,,,OK,,,,,level=needs water;role=diag;spread=30;gpio=34,
+plants.soil,2026-06-24T00:00:45.300Z,2026-06-23 19:00:45.300,16,demo002,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,1997,,,OK,,,,,level=needs water;role=diag;spread=30;gpio=35,
 
 # log_start_utc=2026-06-25T00:00:06.000Z  tz_offset=-05:00  logger=plants_logger_0_4  schema_version=1
 # boot plants controller fw=0.7.0 - Rung 4 schema v1, four soil sensors (read-only)
@@ -57,11 +57,11 @@ plants.soil,2026-06-24T00:00:45.300Z,2026-06-23 19:00:45.300,16,demo002,plants_e
 # device_cols: record_type,session_id,device_id,fw,millis_ms,sensor_model,sensor_id,sensor_position,channel,raw_value,value,unit,quality_flag,payload
 record_type,timestamp_utc,timestamp_local,sample_id,session_id,device_id,firmware_version,logger_version,millis_ms,sensor_model,sensor_id,sensor_position,channel,raw_value,value,unit,quality_flag,temp_context_c,rh_context_pct,pressure_context_hpa,event_id,payload,notes
 
-plants.soil,2026-06-25T00:00:06.000Z,2026-06-24 19:00:06.000,17,demo003,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,3173,9,pct,OK,,,,,level=air-dry;role=diag;spread=26;gpio=36,
-plants.soil,2026-06-25T00:00:08.100Z,2026-06-24 19:00:08.100,18,demo003,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,3179,9,pct,OK,,,,,level=air-dry;role=diag;spread=26;gpio=39,
-plants.soil,2026-06-25T00:00:08.200Z,2026-06-24 19:00:08.200,19,demo003,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,3164,9,pct,OK,,,,,level=air-dry;role=diag;spread=26;gpio=34,
-plants.soil,2026-06-25T00:00:10.300Z,2026-06-24 19:00:10.300,20,demo003,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,3182,9,pct,OK,,,,,level=air-dry;role=diag;spread=26;gpio=35,
-plants.soil,2026-06-25T00:00:36.000Z,2026-06-24 19:00:36.000,21,demo003,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,3174,9,pct,OK,,,,,level=air-dry;role=diag;spread=38;gpio=36,
-plants.soil,2026-06-25T00:00:38.100Z,2026-06-24 19:00:38.100,22,demo003,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,3180,9,pct,OK,,,,,level=air-dry;role=diag;spread=38;gpio=39,
-plants.soil,2026-06-25T00:00:38.200Z,2026-06-24 19:00:38.200,23,demo003,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,3165,9,pct,OK,,,,,level=air-dry;role=diag;spread=38;gpio=34,
-plants.soil,2026-06-25T00:00:40.300Z,2026-06-24 19:00:40.300,24,demo003,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,3183,9,pct,OK,,,,,level=air-dry;role=diag;spread=38;gpio=35,
+plants.soil,2026-06-25T00:00:06.000Z,2026-06-24 19:00:06.000,17,demo003,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,3173,,,OK,,,,,level=air-dry;role=diag;spread=26;gpio=36,
+plants.soil,2026-06-25T00:00:08.100Z,2026-06-24 19:00:08.100,18,demo003,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,3179,,,OK,,,,,level=air-dry;role=diag;spread=26;gpio=39,
+plants.soil,2026-06-25T00:00:08.200Z,2026-06-24 19:00:08.200,19,demo003,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,3164,,,OK,,,,,level=air-dry;role=diag;spread=26;gpio=34,
+plants.soil,2026-06-25T00:00:10.300Z,2026-06-24 19:00:10.300,20,demo003,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,3182,,,OK,,,,,level=air-dry;role=diag;spread=26;gpio=35,
+plants.soil,2026-06-25T00:00:36.000Z,2026-06-24 19:00:36.000,21,demo003,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,3174,,,OK,,,,,level=air-dry;role=diag;spread=38;gpio=36,
+plants.soil,2026-06-25T00:00:38.100Z,2026-06-24 19:00:38.100,22,demo003,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,3180,,,OK,,,,,level=air-dry;role=diag;spread=38;gpio=39,
+plants.soil,2026-06-25T00:00:38.200Z,2026-06-24 19:00:38.200,23,demo003,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,3165,,,OK,,,,,level=air-dry;role=diag;spread=38;gpio=34,
+plants.soil,2026-06-25T00:00:40.300Z,2026-06-24 19:00:40.300,24,demo003,plants_esp32_demo01,0.7.0,plants_logger_0_4,30000,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,3183,,,OK,,,,,level=air-dry;role=diag;spread=38;gpio=35,

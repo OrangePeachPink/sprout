@@ -62,13 +62,6 @@ SEGMENTS = (
     },
 )
 
-# pct is a labelled *index* over the moist window [900, 3400], not a measurement.
-_PCT_LO, _PCT_HI = 900, 3400
-
-
-def _pct(raw: int) -> int:
-    return max(0, min(100, round(100 * (_PCT_HI - raw) / (_PCT_HI - _PCT_LO))))
-
 
 def _header(start: datetime, session: str) -> str:
     return "\n".join(
@@ -146,8 +139,8 @@ def main() -> None:
                     "origplant",
                     "soil_moisture",
                     str(raw),
-                    str(_pct(raw)),
-                    "pct",
+                    "",  # value: NULL — device never emits pct (#38)
+                    "",  # unit: NULL — matches real device output
                     "OK",
                     "",
                     "",
