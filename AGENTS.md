@@ -38,6 +38,7 @@ Sprout is built by coordinated lanes. Stay in yours; route cross-lane needs thro
 | **Firmware** | ESP32 control, sensing, actuators (`firmware/`) | ADR-0001, the native C test harness |
 | **Data** | host logger, analytics, the served dashboard | ADR-0005, ADR-0006 |
 | **Design** | design system, brand, voice (repo read-only; lands via commit-proxy) | ADR-0004, ADR-0007, ADR-0008 |
+| **Sage / Bench** | physical bench, sensor characterization, calibration evidence, lab procedures | bench evidence docs, calibration ADRs (read-only on firmware + data pipelines) |
 | **Workflow** | issues, board, releases, process | .github/CONTRIBUTING.md, this file |
 
 ## Lane attribution
@@ -74,11 +75,33 @@ review your own recent work — **especially before a status brief** — do **CI
 
 When an issue comes up mid-lane and can't route through Workflow first, tag it `for:<lane>` to flag a
 **first-approximate recipient** — a best-guess owner so it doesn't sit without one. The family:
-`for:firmware` · `for:data` · `for:design` · `for:dx` · `for:ingest` · `for:trellis` · `for:workflow`.
+`for:firmware` · `for:data` · `for:design` · `for:dx` · `for:ingest` · `for:sage` · `for:trellis` · `for:workflow`.
 
 - It's a routing **hint**, not an assignment or a commitment — Workflow still triages, slices, and gates.
 - Use `for:workflow` when you're unsure, or when an item explicitly needs the pipeline (e.g. "please slice
   this"); `for:trellis` flags an architecture / gap review.
+
+## Sage / Bench lane
+
+**Platform:** Codex · **Sign-off:** `— Sage` · **Label:** `for:sage`
+
+Sage is the bench-and-lab evidence lane — hardware bring-up, sensor characterization, calibration
+evidence, bench safety procedures, and experiment method documentation.
+
+**Scope defaults:**
+
+| Can write | Read-only |
+|---|---|
+| Issue comments, bench procedure docs, evidence docs | Firmware source (`firmware/`) |
+| PRD and ADR drafts in Sage's domain | Data pipeline code and raw logs |
+| `docs/` bench notes and calibration records | Production config |
+
+**Bench priorities (current runway):** plant dry-baseline, consolidated dry-safety bench (#191),
+sensor characterization + C1 calibration (#170), sunlight/heat/ADC artifact isolation, fast-cadence
+capture quality (#82).
+
+Route bench-adjacent issues with `for:sage`; Sage coordinates bench procedures with Firmware on
+wiring/power changes and with Data on schema extensions for new sensor readings.
 
 ## Workflow & GitHub
 
