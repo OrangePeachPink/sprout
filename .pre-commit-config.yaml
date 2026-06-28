@@ -30,11 +30,16 @@ repos:
       - id: check-added-large-files
         args: [--maxkb=1024]
 
-  # NOTE: clang-format (C/C++) is intentionally NOT wired here yet. The current
-  # clang-format + .clang-format combo is non-idempotent (it reformats on every run),
-  # which would make the gate never pass, and it sweeps design-candidate C files. Wiring
-  # it needs a pinned, idempotent clang-format version + a scoped file set — tracked
-  # separately so this hook config stays green.
+  # C/C++ formatting via clang-format (#120). Pinned to v22.1.5 — idempotency
+  # verified: a second pass on any firmware file produces zero replacements.
+  # Excludes docs/reference/ design-candidate C files (frozen provenance) in
+  # addition to the global docs/design/_archive exclusion above.
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v22.1.5
+    hooks:
+      - id: clang-format
+        types_or: [c, c++]
+        exclude: '^docs/reference/'
 
   # markdownlint via the repo's own .markdownlint-cli2.jsonc (globs + ignores), so it
   # behaves identically to just / CI. Uses system npx (node is a standard dev tool).
