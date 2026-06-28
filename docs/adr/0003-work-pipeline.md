@@ -142,6 +142,16 @@ How any item travels, and the rule everyone follows:
    issue's **technical, functional, and quality** intent, then closes it (`Closes #N` is the reviewer's
    to use). Otherwise the card goes back with notes.
 
+**Stacked-PR discipline (post-mortem #216):** two rules that must not be skipped when PRs build on each
+other:
+
+- **Land base-first.** Merge the bottom PR to `main` first, then rebase the next onto `main`, then
+  merge that, and so on. Never merge a child into its parent branch and close the parent unmerged — the
+  child's changes go nowhere and any issues closed on the child are falsely marked Done.
+- **Verify on `main` before closing an issue.** An issue is not Done until its code is confirmed on the
+  default branch (`git log origin/main` or `git show origin/main:<file>`). "Merged into some branch" is
+  not enough. The reviewer owns this check at close time.
+
 This is the process the whole team adopts; it will be surfaced to outside contributors via a
 `CONTRIBUTING.md` (a setup deliverable).
 
