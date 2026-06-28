@@ -82,11 +82,13 @@ de-risks the effort and scopes it cleanly.
 - **R6 — Durable local storage (capability-honest).** Storage scales with the board: AVR ≈ none (tethered-only
   Tier 0); ESP32 flash ≈ ~a day of buffer (store-and-forward); **+ microSD ≈ months–years** (true standalone
   long-run). The "what you need" matrix states the honest storage expectation per board. *(Firmware + Data)*
-- **R7 — Capacitive + resistive sensor matrix.** Support both probe types via a per-channel `sensor_type` profile
-  (the classifier already takes a per-call cfg): type selects boundary direction (capacitive: higher = drier;
-  resistive: inverted), calibration curve, and read strategy (resistive needs power-only-during-read excitation and
-  corrodes). **Resistive ships PROVISIONAL / untested** until a probe is in hand. *(Firmware classifies → Design
-  badges + drift-watch)*
+- **R7 — Sensor-type seam (capacitive committed; resistive designed-for).** The classifier takes a per-channel
+  `sensor_type` profile (it already accepts a per-call cfg) that selects boundary direction (capacitive: higher =
+  drier; resistive: inverted), calibration curve, and read strategy (resistive needs power-only-during-read
+  excitation and corrodes). **Capacitive is the committed v1 path** (calibrated from the common-cup anchors).
+  **Resistive is architecture-ready but *not* v1-committed** — the team has no resistive probes to baseline, so it
+  ships nothing calibrated for them; it's a **[Contributors Welcome](../CONTRIBUTORS_WELCOME.md)** item (the seam
+  exists; a contributor adds the profile + a calibration run). *(Firmware classifies → Design badges + drift-watch)*
 - **R8 — Untethered presentation.** Design surfaces for the untethered states: captive-portal screens, an
   **on-device dashboard** (Tier-0 glance) or a "your Sprout is online" view, and **offline / online / syncing**
   states — all token-faithful, in Sprout's voice. Sync UI drawn **transport-agnostic** so Data's transport choice
