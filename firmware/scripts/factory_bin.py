@@ -11,9 +11,11 @@
 # Uses the same esptool (tool-esptoolpy) the upload already uses, so the merge matches a
 # real flash exactly. Skips the wedge test build - that image is never distributed.
 #
+import hashlib
 import json
 import os
 import re
+import subprocess
 
 Import("env")  # noqa: F821 - injected by PlatformIO
 
@@ -27,6 +29,30 @@ def _fw_version():
         return m.group(1) if m else "0.0.0"
     except OSError:
         return "0.0.0"
+
+
+def _git_rev():
+    """Short HEAD (+ "+dirty") for provenance - mirrors scripts/git_rev.py."""
+    root = env.subst("$PROJECT_DIR")  # noqa: F821
+    try:
+        rev = (
+            subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"],
+                cwd=root,
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .strip()
+        )
+        dirty = (
+            subprocess.call(
+                ["git", "diff", "--quiet"], cwd=root, stderr=subprocess.DEVNULL
+            )
+            != 0
+        )
+        return rev + ("+dirty" if dirty else "")
+    except (OSError, subprocess.SubprocessError):
+        return "nogit"
 
 
 def make_factory(source, target, env):
@@ -60,6 +86,16 @@ def make_factory(source, target, env):
         )
     )
 
+    # SHA256 + size of the EXACT image the user flashes - real provenance for the page.
+    with open(factory, "rb") as fh:
+        data = fh.read()
+    digest = hashlib.sha256(data).hexdigest()
+    size = len(data)
+
+    # Standard checksum sidecar (release-attachable; `sha256sum -c`-friendly).
+    with open(factory + ".sha256", "w", encoding="utf-8") as fh:
+        fh.write(f"{digest}  {os.path.basename(factory)}\n")
+
     manifest = {
         "name": "Sprout",
         "version": _fw_version(),
@@ -70,11 +106,19 @@ def make_factory(source, target, env):
                 "parts": [{"path": "sprout-esp32-factory.bin", "offset": 0}],
             }
         ],
+        # Extra fields (ESP Web Tools ignores them); the flasher page reads these to
+        # show real provenance BEFORE Install (#271, Design ask).
+        "provenance": {
+            "artifact": os.path.basename(factory),
+            "sha256": digest,
+            "bytes": size,
+            "git": _git_rev(),
+        },
     }
     manifest_path = os.path.join(build_dir, "manifest.json")
     with open(manifest_path, "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2)
-    print(f"ESP Web Tools manifest -> {manifest_path}")
+    print(f"ESP Web Tools manifest -> {manifest_path}  (sha256 {digest[:12]}...)")
 
 
 env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", make_factory)  # noqa: F821

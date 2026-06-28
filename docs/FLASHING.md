@@ -25,9 +25,29 @@ That's it — no IDE, no `pio`, no compiler. ESP Web Tools talks to the board ov
 first flash needs a real computer + Chromium browser. (After the first flash, updates go over
 WiFi — see OTA below — so the computer is a one-time thing.)
 
+## What the flash looks like — the prompts (pre-explain these)
+
+The flow has a couple of browser prompts that surprise first-timers. In order:
+
+1. **Click Install** → the browser shows a **serial-port chooser**: *"&lt;site&gt; wants to connect to
+   a serial port"* with a list. Pick the ESP32 — it's usually labeled by its USB-serial chip, e.g.
+   **"CP2102 USB to UART Bridge"** / **"Silicon Labs CP210x"**, or **"USB-SERIAL CH340"**. This is the
+   browser's own **Web Serial** permission prompt (not ours), and it's the one step a newcomer needs
+   told about: *which* entry to pick.
+2. **Connecting…** → ESP Web Tools puts the board into download mode automatically (DTR/RTS) on most
+   dev boards — no BOOT button needed; a few clones need BOOT held while connecting.
+3. **"Erase device?"** → our manifest sets `new_install_prompt_erase`, so a first install offers a
+   clean **erase + install**. Confirm it for a fresh board.
+4. **Installing…** progress → **"installation complete"** → the board reboots running Sprout (you'll
+   see telemetry on a serial monitor at 19200 baud).
+
+**Driver note:** the USB-serial chip may need a driver — macOS/Linux usually have it built in, Windows
+10/11 usually auto-installs, but **CH340** boards sometimes need the WCH driver. If **no port appears**
+in step 1, that's the cause.
+
 ## The firmware artifacts (how the image is built)
 
-`pio run -e esp32dev` produces two files in `firmware/.pio/build/esp32dev/` via the post-build
+`pio run -e esp32dev` produces three files in `firmware/.pio/build/esp32dev/` via the post-build
 [`scripts/factory_bin.py`](../firmware/scripts/factory_bin.py):
 
 - **`sprout-esp32-factory.bin`** — bootloader + partitions + boot_app0 + app **merged into one
@@ -35,7 +55,15 @@ WiFi — see OTA below — so the computer is a one-time thing.)
   the merge matches a hardware flash exactly.
 - **`manifest.json`** — the [ESP Web Tools](https://esphome.github.io/esp-web-tools/) manifest
   (`chipFamily: ESP32`, the factory image at offset 0; `version` is read from `PLANTS_FW_VERSION`
-  in `config.h`, so it never drifts).
+  in `config.h`, so it never drifts). It also carries a **`provenance`** block — `sha256`, `bytes`,
+  and `git` of the exact image — that the flasher page reads to show real provenance **before**
+  Install (ESP Web Tools ignores the extra field). **#271 / Design.**
+- **`sprout-esp32-factory.bin.sha256`** — the checksum sidecar (`sha256sum -c`-friendly) for release
+  attachment + CLI verification.
+
+> The `.bin` embeds `GIT_REV` + a build timestamp, so its SHA256 is **per-build** — always read the
+> hash from the build's own `manifest.json` / `.sha256`, generated against that exact image. (A
+> byte-reproducible build is a later option if we want a fixed published hash per commit.)
 
 Both are **build artifacts** (git-ignored), never committed. To publish a flashable release: build,
 then attach `sprout-esp32-factory.bin` + `manifest.json` as **release assets** (or copy them next to
