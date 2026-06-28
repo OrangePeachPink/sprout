@@ -116,6 +116,16 @@ constexpr uint32_t PUMP_PULSE_MAX_MS     = 5000;
 static_assert(PUMP_PULSE_MAX_MS < WDT_TIMEOUT_MS,
               "a pump pulse must finish within the watchdog window (watchdog is the backstop)");
 
+// --- Fast health tick (#4) --------------------------------------------------
+// A cheap spread-only check runs every HEALTH_CADENCE_MS — much faster than
+// the slow data cadence — so probe faults (floating probe, near-rail raw)
+// appear in the health banner and future status indicators (D3) / served page
+// (D4) with minimal lag. Uses HEALTH_SAMPLES per channel (trim_each=1).
+// Skips ADC while a pump is active (avoids relay-switching noise on the ADC).
+// Does NOT feed the classifier — committed band and last_raw are untouched.
+constexpr unsigned long HEALTH_CADENCE_MS = 2000UL; // 2 s between checks
+constexpr int           HEALTH_SAMPLES    = 8;       // cheap burst; trim_each=1 keeps 6
+
 // --- Health veto threshold (#2) ---------------------------------------------
 // The autonomous supervisor (#94) refuses to water a channel whose probe reads
 // unhealthy (NO_SIGNAL / SUSPECT): a floating or shorted probe can report a plausible
