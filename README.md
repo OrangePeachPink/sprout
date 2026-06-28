@@ -176,6 +176,10 @@ Work is proposed, tracked, and merged through GitHub — **Issues** are the ledg
 (branch → PR with `Refs #N` → the review-before-close **verification gate**) lives in
 **[CONTRIBUTING.md](.github/CONTRIBUTING.md)**.
 
+Looking for somewhere to jump in? **[Contributors Welcome](docs/CONTRIBUTORS_WELCOME.md)** is our running list
+of things we'd love a hand with — resistive-sensor support, board configs beyond ESP32 + Arduino, and a
+host-the-stack tier.
+
 ---
 
 <p align="center"><sub>Sprout · plants with a pulse · <b>tend well.</b></sub></p>
