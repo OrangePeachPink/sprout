@@ -32,45 +32,46 @@
 extern "C" {
 #endif
 
-#define MOISTURE_LEVEL_COUNT     7
-#define MOISTURE_BOUNDARY_COUNT  6   /* == MOISTURE_LEVEL_COUNT - 1 */
+#define MOISTURE_LEVEL_COUNT 7
+#define MOISTURE_BOUNDARY_COUNT 6 /* == MOISTURE_LEVEL_COUNT - 1 */
 
-/* Driest (idx 0) -> wettest (idx 6). 7-band scheme (moisture_classifier_spec). */
+/* Driest (idx 0) -> wettest (idx 6). 7-band scheme (moisture_classifier_spec).
+ */
 typedef enum {
-    MOIST_AIR_DRY = 0,         /* diagnostic: probe in air / air gap          */
-    MOIST_DRY,                 /* display:   soil too dry (top of soil range) */
-    MOIST_NEEDS_WATER,         /* display                                     */
-    MOIST_OK,                  /* display:   healthy band                     */
-    MOIST_WELL_WATERED,        /* display:   field capacity                   */
-    MOIST_OVERWATERED,         /* display:   saturated / fresh over-soak      */
-    MOIST_SUBMERGED            /* diagnostic: standing water                  */
+    MOIST_AIR_DRY = 0, /* diagnostic: probe in air / air gap          */
+    MOIST_DRY, /* display:   soil too dry (top of soil range) */
+    MOIST_NEEDS_WATER, /* display                                     */
+    MOIST_OK, /* display:   healthy band                     */
+    MOIST_WELL_WATERED, /* display:   field capacity                   */
+    MOIST_OVERWATERED, /* display:   saturated / fresh over-soak      */
+    MOIST_SUBMERGED /* diagnostic: standing water                  */
 } moisture_level_t;
 
 /* Confirm-window class. Entering a level uses the window for that level's
  * class, so submersion is recognized fast while soil bands settle slowly. */
 typedef enum {
-    MCLASS_DRY_DIAG = 0,   /* idx 0    (air-dry)   */
-    MCLASS_SOIL,           /* idx 1..5 (soil)      */
-    MCLASS_WET_DIAG        /* idx 6    (submerged) */
+    MCLASS_DRY_DIAG = 0, /* idx 0    (air-dry)   */
+    MCLASS_SOIL, /* idx 1..5 (soil)      */
+    MCLASS_WET_DIAG /* idx 6    (submerged) */
 } moisture_class_t;
 
 typedef struct {
     /* --- acquisition --- */
-    uint16_t sample_count;     /* samples per measurement (your 64)            */
-    uint8_t  trim_each_side;   /* drop this many high AND low (8 -> 48/64)      */
+    uint16_t sample_count; /* samples per measurement (your 64)            */
+    uint8_t trim_each_side; /* drop this many high AND low (8 -> 48/64)      */
 
     /* --- hysteresis --- */
-    uint16_t deadband_raw;     /* total dead-band width in raw counts (~60)    */
+    uint16_t deadband_raw; /* total dead-band width in raw counts (~60)    */
 
     /* --- persistence (confirmation), in milliseconds --- */
-    uint32_t confirm_ms_soil;  /* display bands idx 1..5  (~8000)              */
-    uint32_t confirm_ms_dry;   /* air-dry diagnostic idx 0                     */
-    uint32_t confirm_ms_wet;   /* submerged diagnostic idx 6 (~3500)           */
-    uint32_t loop_period_ms;   /* measurement cadence; ms->count uses this     */
+    uint32_t confirm_ms_soil; /* display bands idx 1..5  (~8000)              */
+    uint32_t confirm_ms_dry; /* air-dry diagnostic idx 0                     */
+    uint32_t confirm_ms_wet; /* submerged diagnostic idx 6 (~3500)           */
+    uint32_t loop_period_ms; /* measurement cadence; ms->count uses this     */
 
     /* --- health --- */
-    uint16_t spread_warn_raw;  /* trimmed-set range above this flags a fault;
-                                  0 disables the check                         */
+    uint16_t spread_warn_raw; /* trimmed-set range above this flags a fault;
+                                 0 disables the check                         */
 
     /* --- calibration thresholds (DESCENDING) ---
      * boundary[i] separates level i from level i+1.
@@ -86,26 +87,24 @@ typedef struct {
 } moisture_cfg_t;
 
 /* 7-band defaults; dry edge + wet floor reconciled to anchors (issue #3). */
-#define MOISTURE_CFG_DEFAULT {            \
-    .sample_count    = 64,                \
-    .trim_each_side  = 8,                 \
-    .deadband_raw    = 60,                \
-    .confirm_ms_soil = 8000,              \
-    .confirm_ms_dry  = 8000,              \
-    .confirm_ms_wet  = 3500,              \
-    .loop_period_ms  = 1000,              \
-    .spread_warn_raw = 250,               \
-    .boundary = { 3050, 2140, 1830,       \
-                  1520, 1150, 1050 }      \
-}
+#define MOISTURE_CFG_DEFAULT                                                   \
+    {.sample_count = 64,                                                       \
+     .trim_each_side = 8,                                                      \
+     .deadband_raw = 60,                                                       \
+     .confirm_ms_soil = 8000,                                                  \
+     .confirm_ms_dry = 8000,                                                   \
+     .confirm_ms_wet = 3500,                                                   \
+     .loop_period_ms = 1000,                                                   \
+     .spread_warn_raw = 250,                                                   \
+     .boundary = {3050, 2140, 1830, 1520, 1150, 1050}}
 
 typedef struct {
-    moisture_level_t committed;     /* the level you act on / display          */
-    moisture_level_t pending;       /* candidate awaiting confirmation         */
-    uint16_t         confirm_count; /* consecutive measurements on pending     */
-    uint16_t         last_raw;      /* last trimmed-mean value                 */
-    uint16_t         last_spread;   /* range of the kept (trimmed) samples     */
-    bool             health_warn;   /* last measurement exceeded spread_warn   */
+    moisture_level_t committed; /* the level you act on / display          */
+    moisture_level_t pending; /* candidate awaiting confirmation         */
+    uint16_t confirm_count; /* consecutive measurements on pending     */
+    uint16_t last_raw; /* last trimmed-mean value                 */
+    uint16_t last_spread; /* range of the kept (trimmed) samples     */
+    bool health_warn; /* last measurement exceeded spread_warn   */
 } moisture_state_t;
 
 /* ---- lifecycle ---------------------------------------------------------- */
@@ -119,8 +118,9 @@ void moisture_init(moisture_state_t *st, const moisture_cfg_t *cfg,
 
 /* Trimmed-mean the buffer, run the two-stage gate, update health, return the
  * committed level. NOTE: sorts `samples` in place (pass a scratch buffer). */
-moisture_level_t moisture_process(moisture_state_t *st, const moisture_cfg_t *cfg,
-                                  uint16_t *samples, uint16_t n);
+moisture_level_t moisture_process(moisture_state_t *st,
+                                  const moisture_cfg_t *cfg, uint16_t *samples,
+                                  uint16_t n);
 
 /* ---- pieces, if you want them separately -------------------------------- */
 
@@ -131,14 +131,15 @@ uint16_t moisture_trimmed_mean(uint16_t *s, uint16_t n, uint8_t trim_each,
                                uint16_t *spread_out);
 
 /* Run dead-band + persistence on an already-filtered raw value. */
-moisture_level_t moisture_update(moisture_state_t *st, const moisture_cfg_t *cfg,
+moisture_level_t moisture_update(moisture_state_t *st,
+                                 const moisture_cfg_t *cfg,
                                  uint16_t raw_filtered);
 
 /* ---- helpers ------------------------------------------------------------ */
 
-bool             moisture_level_is_display(moisture_level_t l); /* idx 1..5 */
+bool moisture_level_is_display(moisture_level_t l); /* idx 1..5 */
 moisture_class_t moisture_class_of(moisture_level_t l);
-const char      *moisture_level_name(moisture_level_t l);
+const char *moisture_level_name(moisture_level_t l);
 
 #ifdef __cplusplus
 } /* extern "C" */

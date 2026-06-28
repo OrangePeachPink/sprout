@@ -14,22 +14,30 @@ bool moisture_level_is_display(moisture_level_t l)
 
 moisture_class_t moisture_class_of(moisture_level_t l)
 {
-    if (l <= MOIST_AIR_DRY)   return MCLASS_DRY_DIAG;   /* idx 0    */
-    if (l >= MOIST_SUBMERGED) return MCLASS_WET_DIAG;   /* idx 6    */
-    return MCLASS_SOIL;                                 /* idx 1..5 */
+    if (l <= MOIST_AIR_DRY) return MCLASS_DRY_DIAG; /* idx 0    */
+    if (l >= MOIST_SUBMERGED) return MCLASS_WET_DIAG; /* idx 6    */
+    return MCLASS_SOIL; /* idx 1..5 */
 }
 
 const char *moisture_level_name(moisture_level_t l)
 {
     switch (l) {
-        case MOIST_AIR_DRY:      return "air-dry";
-        case MOIST_DRY:          return "dry";
-        case MOIST_NEEDS_WATER:  return "needs water";
-        case MOIST_OK:           return "OK";
-        case MOIST_WELL_WATERED: return "well watered";
-        case MOIST_OVERWATERED:  return "overwatered";
-        case MOIST_SUBMERGED:    return "submerged";
-        default:                 return "?";
+    case MOIST_AIR_DRY:
+        return "air-dry";
+    case MOIST_DRY:
+        return "dry";
+    case MOIST_NEEDS_WATER:
+        return "needs water";
+    case MOIST_OK:
+        return "OK";
+    case MOIST_WELL_WATERED:
+        return "well watered";
+    case MOIST_OVERWATERED:
+        return "overwatered";
+    case MOIST_SUBMERGED:
+        return "submerged";
+    default:
+        return "?";
     }
 }
 
@@ -40,12 +48,18 @@ static uint16_t confirm_samples(moisture_level_t lvl, const moisture_cfg_t *cfg)
 {
     uint32_t ms;
     switch (moisture_class_of(lvl)) {
-        case MCLASS_WET_DIAG: ms = cfg->confirm_ms_wet;  break;
-        case MCLASS_DRY_DIAG: ms = cfg->confirm_ms_dry;  break;
-        default:              ms = cfg->confirm_ms_soil; break;
+    case MCLASS_WET_DIAG:
+        ms = cfg->confirm_ms_wet;
+        break;
+    case MCLASS_DRY_DIAG:
+        ms = cfg->confirm_ms_dry;
+        break;
+    default:
+        ms = cfg->confirm_ms_soil;
+        break;
     }
     uint32_t period = cfg->loop_period_ms ? cfg->loop_period_ms : 1u;
-    uint32_t n = (ms + period - 1u) / period;            /* ceil */
+    uint32_t n = (ms + period - 1u) / period; /* ceil */
     return (uint16_t)(n < 1u ? 1u : n);
 }
 
@@ -60,7 +74,7 @@ static moisture_level_t classify_hyst(uint16_t raw, moisture_level_t committed,
     int band = 0;
     for (int i = 0; i < MOISTURE_BOUNDARY_COUNT; i++) {
         int eff = (int)b[i] + ((i < (int)committed) ? half : -half);
-        if ((int)raw < eff) band++;     /* each boundary crossed -> 1 wetter */
+        if ((int)raw < eff) band++; /* each boundary crossed -> 1 wetter */
     }
     return (moisture_level_t)band;
 }
@@ -72,22 +86,30 @@ static moisture_level_t classify_hyst(uint16_t raw, moisture_level_t committed,
 uint16_t moisture_trimmed_mean(uint16_t *s, uint16_t n, uint8_t trim_each,
                                uint16_t *spread_out)
 {
-    if (n == 0) { if (spread_out) *spread_out = 0; return 0; }
+    if (n == 0) {
+        if (spread_out) *spread_out = 0;
+        return 0;
+    }
 
     /* insertion sort — n is small (~64), avoids qsort/recursion overhead */
     for (uint16_t i = 1; i < n; i++) {
         uint16_t key = s[i];
         int j = (int)i - 1;
-        while (j >= 0 && s[j] > key) { s[j + 1] = s[j]; j--; }
+        while (j >= 0 && s[j] > key) {
+            s[j + 1] = s[j];
+            j--;
+        }
         s[j + 1] = key;
     }
 
     uint16_t lo = trim_each;
-    uint16_t hi = (n > 2 * trim_each) ? (uint16_t)(n - trim_each) : n;  /* exclusive */
-    if (n <= 2 * trim_each) lo = 0;        /* not enough to trim -> plain mean */
+    uint16_t hi =
+        (n > 2 * trim_each) ? (uint16_t)(n - trim_each) : n; /* exclusive */
+    if (n <= 2 * trim_each) lo = 0; /* not enough to trim -> plain mean */
 
     uint32_t sum = 0;
-    for (uint16_t i = lo; i < hi; i++) sum += s[i];
+    for (uint16_t i = lo; i < hi; i++)
+        sum += s[i];
     uint16_t kept = (uint16_t)(hi - lo);
 
     if (spread_out) *spread_out = (uint16_t)(s[hi - 1] - s[lo]);
@@ -98,13 +120,14 @@ uint16_t moisture_trimmed_mean(uint16_t *s, uint16_t n, uint8_t trim_each,
 /* two-stage gate                                                             */
 /* -------------------------------------------------------------------------- */
 
-moisture_level_t moisture_update(moisture_state_t *st, const moisture_cfg_t *cfg,
+moisture_level_t moisture_update(moisture_state_t *st,
+                                 const moisture_cfg_t *cfg,
                                  uint16_t raw_filtered)
 {
     st->last_raw = raw_filtered;
 
-    moisture_level_t candidate =
-        classify_hyst(raw_filtered, st->committed, cfg->boundary, cfg->deadband_raw);
+    moisture_level_t candidate = classify_hyst(
+        raw_filtered, st->committed, cfg->boundary, cfg->deadband_raw);
 
     if (candidate == st->committed) {
         /* back home — cancel any in-progress transition */
@@ -135,22 +158,25 @@ void moisture_init(moisture_state_t *st, const moisture_cfg_t *cfg,
 {
     /* deadband 0 + neutral committed -> plain classification for the seed */
     moisture_level_t lvl = classify_hyst(raw_seed, MOIST_OK, cfg->boundary, 0);
-    st->committed     = lvl;
-    st->pending       = lvl;
+    st->committed = lvl;
+    st->pending = lvl;
     st->confirm_count = 0;
-    st->last_raw      = raw_seed;
-    st->last_spread   = 0;
-    st->health_warn   = false;
+    st->last_raw = raw_seed;
+    st->last_spread = 0;
+    st->health_warn = false;
 }
 
-moisture_level_t moisture_process(moisture_state_t *st, const moisture_cfg_t *cfg,
-                                  uint16_t *samples, uint16_t n)
+moisture_level_t moisture_process(moisture_state_t *st,
+                                  const moisture_cfg_t *cfg, uint16_t *samples,
+                                  uint16_t n)
 {
     uint16_t spread = 0;
-    uint16_t raw = moisture_trimmed_mean(samples, n, cfg->trim_each_side, &spread);
+    uint16_t raw =
+        moisture_trimmed_mean(samples, n, cfg->trim_each_side, &spread);
 
     st->last_spread = spread;
-    st->health_warn = (cfg->spread_warn_raw > 0) && (spread > cfg->spread_warn_raw);
+    st->health_warn =
+        (cfg->spread_warn_raw > 0) && (spread > cfg->spread_warn_raw);
 
     return moisture_update(st, cfg, raw);
 }
