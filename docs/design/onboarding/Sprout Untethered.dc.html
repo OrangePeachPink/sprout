@@ -403,7 +403,7 @@
   <!-- ===================== ON-DEVICE DASHBOARD ===================== -->
   <div class="sectionhead">
     <span class="kicker">ON-DEVICE DASHBOARD</span>
-    <span class="subhead">served straight from the board · Tier 0 monitor-only · one Sprout line up top, the numbers stay clean below</span>
+    <span class="subhead">served straight from the board · Tier 0 monitor-only · numbers stay clean — and missing data reads honestly: live · no-signal · stale</span>
   </div>
 
   <div class="frame" data-screen-label="On-device dashboard">
@@ -424,7 +424,7 @@
       <!-- sprout line (character beside instrument; numbers below stay clean) -->
       <div style="display:flex; align-items:center; gap:12px; padding:16px 28px; background:var(--d-surface-2); border-bottom:1px solid var(--d-border);">
         <span style="width:8px; height:8px; border-radius:999px; background:var(--d-leaf); box-shadow:0 0 7px var(--d-leaf); flex-shrink:0;"></span>
-        <p class="voice" style="margin:0; font-size:15px; color:var(--d-ink);">Three of us thriving, Basil's getting thirsty — no rush, maybe tomorrow.</p>
+        <p class="voice" style="margin:0; font-size:15px; color:var(--d-ink);">Monstera and Fern are content — I can't feel Basil's probe, and I've not heard from Pothos in a while.</p>
       </div>
       <!-- channel grid -->
       <div style="padding:24px 28px;">
@@ -443,17 +443,17 @@
               </div>
             </div>
           </div>
-          <!-- CH2 -->
+          <!-- CH2 · NO-SIGNAL (probe slipped / disconnected) -->
           <div style="background:var(--d-surface); border:1px solid var(--d-border); border-radius:var(--r-tile); padding:16px;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;"><span class="mono" style="font-size:12px; font-weight:600; color:var(--d-ink);">Basil</span><span class="mono" style="font-size:10px; color:var(--d-muted);">s2</span></div>
             <div style="display:flex; align-items:center; gap:14px;">
-              <div style="position:relative; width:74px; height:74px; border-radius:50%; background:conic-gradient(var(--band-drying) 0deg 104deg, var(--d-border) 104deg 360deg); flex-shrink:0; box-shadow:0 0 16px color-mix(in srgb, var(--band-drying) 30%, transparent);">
-                <div style="position:absolute; inset:9px; border-radius:50%; background:var(--d-surface); display:flex; flex-direction:column; align-items:center; justify-content:center;"><span class="mono" style="font-size:17px; font-weight:600; color:var(--d-ink);">29</span><span class="mono" style="font-size:8px; color:var(--d-muted);">INDEX</span></div>
+              <div style="position:relative; width:74px; height:74px; border-radius:50%; background:var(--d-surface-2); border:2px dashed color-mix(in srgb, #9A8480 70%, transparent); flex-shrink:0;">
+                <div style="position:absolute; inset:9px; border-radius:50%; background:var(--d-surface); display:flex; flex-direction:column; align-items:center; justify-content:center;"><span class="mono" style="font-size:22px; font-weight:600; color:#9A8480; line-height:1;">—</span><span class="mono" style="font-size:8px; color:var(--d-muted);">NO SIG</span></div>
               </div>
               <div style="display:flex; flex-direction:column; gap:5px;">
-                <span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--st-dry); line-height:1;">Drying</span>
-                <span class="mono" style="font-size:10.5px; color:var(--d-muted);">raw 3110</span>
-                <span class="mono" style="font-size:9.5px; color:var(--d-leaf); border:1px solid color-mix(in srgb,var(--d-leaf) 35%,transparent); border-radius:999px; padding:1px 7px; width:fit-content;">capacitive</span>
+                <span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:#9A8480; line-height:1;">No signal</span>
+                <span class="mono" style="font-size:10.5px; color:var(--d-muted);">raw —</span>
+                <span class="mono" style="font-size:9.5px; color:#9A8480; border:1px solid color-mix(in srgb,#9A8480 45%,transparent); border-radius:999px; padding:1px 7px; width:fit-content;">probe slipped</span>
               </div>
             </div>
           </div>
@@ -471,20 +471,27 @@
               </div>
             </div>
           </div>
-          <!-- CH4 -->
+          <!-- CH4 · STALE (last reading aged out — held, muted) -->
           <div style="background:var(--d-surface); border:1px solid var(--d-border); border-radius:var(--r-tile); padding:16px;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;"><span class="mono" style="font-size:12px; font-weight:600; color:var(--d-ink);">Pothos</span><span class="mono" style="font-size:10px; color:var(--d-muted);">s4</span></div>
             <div style="display:flex; align-items:center; gap:14px;">
-              <div style="position:relative; width:74px; height:74px; border-radius:50%; background:conic-gradient(var(--band-wet) 0deg 284deg, var(--d-border) 284deg 360deg); flex-shrink:0; box-shadow:0 0 16px color-mix(in srgb, var(--band-wet) 30%, transparent);">
-                <div style="position:absolute; inset:9px; border-radius:50%; background:var(--d-surface); display:flex; flex-direction:column; align-items:center; justify-content:center;"><span class="mono" style="font-size:17px; font-weight:600; color:var(--d-ink);">79</span><span class="mono" style="font-size:8px; color:var(--d-muted);">INDEX</span></div>
+              <div style="position:relative; width:74px; height:74px; border-radius:50%; background:conic-gradient(color-mix(in srgb, var(--band-wet) 40%, var(--d-border)) 0deg 284deg, var(--d-border) 284deg 360deg); flex-shrink:0; opacity:.7;">
+                <div style="position:absolute; inset:9px; border-radius:50%; background:var(--d-surface); display:flex; flex-direction:column; align-items:center; justify-content:center;"><span class="mono" style="font-size:17px; font-weight:600; color:var(--d-muted);">79</span><span class="mono" style="font-size:8px; color:var(--d-muted);">HELD</span></div>
               </div>
               <div style="display:flex; flex-direction:column; gap:5px;">
-                <span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--band-wet); line-height:1;">Wet</span>
+                <span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--d-muted); line-height:1;">Wet</span>
                 <span class="mono" style="font-size:10.5px; color:var(--d-muted);">raw 1620</span>
-                <span class="mono" style="font-size:9.5px; color:var(--d-leaf); border:1px solid color-mix(in srgb,var(--d-leaf) 35%,transparent); border-radius:999px; padding:1px 7px; width:fit-content;">capacitive</span>
+                <span class="mono" style="font-size:9.5px; color:var(--d-muted); border:1px solid var(--d-border); border-radius:999px; padding:1px 7px; width:fit-content;">stale · last seen 3h</span>
               </div>
             </div>
           </div>
+        </div>
+        <!-- legend: the three channel states (gap-note fold-in) -->
+        <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin-top:18px;">
+          <span class="mono" style="font-size:10px; color:var(--d-muted); letter-spacing:.06em;">CHANNEL STATES</span>
+          <span style="display:inline-flex; align-items:center; gap:7px; font-family:var(--font-data); font-size:11px; color:var(--d-ink);"><span style="width:8px; height:8px; border-radius:999px; background:var(--d-leaf); box-shadow:0 0 7px var(--d-leaf);"></span>live</span>
+          <span style="display:inline-flex; align-items:center; gap:7px; font-family:var(--font-data); font-size:11px; color:var(--d-ink);"><span style="width:9px; height:9px; border-radius:999px; border:1.5px dashed #9A8480;"></span>no-signal · shows —</span>
+          <span style="display:inline-flex; align-items:center; gap:7px; font-family:var(--font-data); font-size:11px; color:var(--d-ink);"><span style="width:8px; height:8px; border-radius:999px; background:linear-gradient(90deg, var(--d-muted) 50%, transparent 50%); border:1px solid var(--d-muted);"></span>stale · held + last seen</span>
         </div>
         <!-- footer: tier-0 has no pump; show the upgrade affordance, ghosted -->
         <div style="display:flex; align-items:center; justify-content:space-between; margin-top:20px; padding-top:18px; border-top:1px solid var(--d-border);">
