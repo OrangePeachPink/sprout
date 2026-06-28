@@ -84,6 +84,12 @@ That's why PRs use `Refs #N` (a non-closing link) rather than `Closes #N`, and w
 
 Priority, Size, and Verification are **board fields**, not labels — see [The board](#the-board).
 
+## Where we'd love help
+
+**[Contributors Welcome](../docs/CONTRIBUTORS_WELCOME.md)** is our living list of things the project would
+genuinely love a hand with — resistive-sensor support, board configs beyond ESP32 + Arduino, and a
+host-the-stack tier. At launch these graduate into `help wanted` issues; until then, the list is the map.
+
 ## Questions?
 
 Ask in [**Discussions → Q&A**](https://github.com/OrangePeachPink/plants/discussions/categories/q-a).
