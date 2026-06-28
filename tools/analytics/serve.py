@@ -47,6 +47,12 @@ from dashboard import (  # noqa: E402  (sibling import)
 from experiments_catalog import load_catalog, render_catalog  # noqa: E402  (Lab #154)
 from lab_detail import render_detail  # noqa: E402  (Lab detail #157)
 from lab_notes import load_notes, save_notes  # noqa: E402  (Lab notes #158)
+from lab_studies import (  # noqa: E402  (Lab studies #159)
+    list_studies,
+    render_studies_catalog,
+    render_study_detail,
+    save_study,
+)
 from parse_v1 import parse_files  # noqa: E402
 
 _REPO = _HERE.parents[1]
@@ -162,6 +168,18 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send(render_catalog(load_catalog()), "text/html; charset=utf-8")
             elif parsed.path == "/lab/experiments.json":
                 self._send_json(load_catalog())
+            elif parsed.path == "/lab/studies":  # the studies catalog (#159)
+                self._send(
+                    render_studies_catalog(list_studies()),
+                    "text/html; charset=utf-8",
+                )
+            elif parsed.path.startswith("/lab/study/"):  # a study detail (#159)
+                sid = unquote(parsed.path[len("/lab/study/") :])
+                page = render_study_detail(sid)
+                if page is None:
+                    self._send("study not found", "text/plain", status=404)
+                else:
+                    self._send(page, "text/html; charset=utf-8")
             elif parsed.path.startswith("/lab/") and parsed.path.endswith("/notes"):
                 eid = unquote(parsed.path[len("/lab/") : -len("/notes")])  # notes #158
                 self._send_json(load_notes(eid))
@@ -203,6 +221,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json(_MONITOR.start(port=self._body().get("port")))
             elif parsed.path == "/monitor/stop":
                 self._send_json(_MONITOR.stop())
+            elif parsed.path.startswith("/lab/study/"):  # save a study (#159)
+                sid = unquote(parsed.path[len("/lab/study/") :])
+                self._send_json(save_study(sid, self._body()))
             elif parsed.path.startswith("/lab/") and parsed.path.endswith("/notes"):
                 eid = unquote(parsed.path[len("/lab/") : -len("/notes")])  # notes #158
                 self._send_json(save_notes(eid, self._body()))

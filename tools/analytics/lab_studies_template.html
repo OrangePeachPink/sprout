@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><!--__TITLE__--> · Sprout Lab</title>
+<style>
+/*__SPROUT_TOKENS__*/
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-ui);
+  padding: 24px; max-width: 1100px; margin-inline: auto; }
+.top { display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  margin-bottom: 18px; }
+.top h1 { font-family: var(--font-display); font-size: 24px; margin: 0; }
+.top .sub { color: var(--muted); font-size: 12px; margin-top: 3px; }
+.back { color: var(--muted); font-size: 13px; text-decoration: none; white-space: nowrap; }
+.back:hover { color: var(--leaf); }
+.empty { color: var(--muted); }
+h2.mtitle { font-family: var(--font-display); font-size: 16px; margin: 22px 0 10px; }
+/* studies catalog */
+.scards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.scard { display: block; text-decoration: none; color: inherit; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r-tile); padding: 14px 16px; }
+.scard:hover { border-color: var(--leaf); }
+.scard .sh { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.scard h3 { font-family: var(--font-display); font-size: 15px; margin: 0; }
+.scard .scount { color: var(--muted); font-size: 11px; font-family: var(--font-data); white-space: nowrap; }
+.scard .sthesis { margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: var(--muted);
+  overflow-wrap: anywhere; }
+.newstudy { display: flex; gap: 10px; margin-top: 18px; }
+.newstudy input { flex: 1; font-family: var(--font-ui); font-size: 14px; color: var(--ink);
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-pill, 8px);
+  padding: 8px 12px; }
+.newstudy input:focus { outline: none; border-color: var(--leaf); }
+/* study detail editor */
+.study { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-tile);
+  padding: 14px 16px; display: grid; gap: 12px; }
+.study label.block { display: block; }
+.study label > span { display: block; font-family: var(--font-display); font-weight: 600;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--st-predicted);
+  margin-bottom: 5px; }
+.study input, .study textarea { width: 100%; font-family: var(--font-ui); font-size: 14px;
+  line-height: 1.5; color: var(--ink); background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--r-pill, 8px); padding: 8px 10px; }
+.study textarea { resize: vertical; min-height: 46px; }
+.study input:focus, .study textarea:focus { outline: none; border-color: var(--leaf); }
+.study .sactions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.nbtn { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: #fff;
+  background: var(--leaf); border: none; border-radius: var(--r-pill, 999px); padding: 7px 16px;
+  cursor: pointer; white-space: nowrap; }
+.nbtn:disabled { opacity: .6; cursor: default; }
+.saved { color: var(--muted); font-size: 11px; font-family: var(--font-data); }
+.nhint { color: var(--muted); font-size: 11px; }
+.nhint code { font-family: var(--font-data); }
+/* members side-by-side */
+.mcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.mcard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-tile);
+  padding: 12px 14px; }
+.mcard.missing { opacity: .65; }
+.mcard .mh { font-family: var(--font-display); font-weight: 700; font-size: 14px; }
+.mcard .mh a { color: inherit; text-decoration: none; }
+.mcard .mh a:hover { color: var(--leaf); }
+.mcard .mmeta { display: flex; gap: 10px; flex-wrap: wrap; margin: 5px 0 8px; font-size: 11px; }
+.mcard .msub { color: var(--muted); }
+.mcard .mstat { font-family: var(--font-data); color: var(--ink); }
+.mcard .mconcl { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink); overflow-wrap: anywhere; }
+.mcard .mconcl.empty { color: var(--muted); }
+</style>
+</head>
+<body>
+<!--__CONTENT__-->
+</body>
+</html>
