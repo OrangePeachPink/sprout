@@ -77,7 +77,7 @@ CANONICAL_COLUMNS = [
 
 # Firmware classifier band names, wettest -> driest, and the as-flashed cal
 # boundaries (dry > wet, descending). The boundaries are the *un-reconciled*
-# spec (backlog A2): dry edge 2760, wet split 1030 - treat bands as proposed.
+# A2 interior bands are proposed; endpoints are firmware-ratified (common-cup #255).
 BANDS_WET_TO_DRY = [
     "submerged",
     "overwatered",
@@ -88,7 +88,9 @@ BANDS_WET_TO_DRY = [
     "air-dry",
 ]
 BANDS_DRY_TO_WET = list(reversed(BANDS_WET_TO_DRY))
-DEFAULT_CAL_BOUNDS = (2760, 2140, 1830, 1520, 1260, 1030)
+# Reconciled firmware values (main.cpp:63, #255). Used only when a segment's
+# provenance header lacks a "cal bounds" line; prefer header-derived bounds always.
+DEFAULT_CAL_BOUNDS = (3050, 2140, 1830, 1520, 1150, 1050)
 
 _KV_RE = re.compile(r"(\w+)=(.*?)(?=\s+\w+=|$)")
 _SENSOR_RE = re.compile(r"ch(\d+)=GPIO(\d+)/(\S+)")
@@ -203,6 +205,7 @@ class SegmentHeader:
     cadence_ms: int | None = None
     sensors: dict[str, dict[str, object]] = field(default_factory=dict)
     cal_bounds: list[int] = field(default_factory=list)
+    cal_bounds_source: str = ""  # "header" | "default" — set by _parse_header_lines
     moist_range: tuple[int, int] | None = None
     cfg: dict[str, str] = field(default_factory=dict)
     source: str | None = None
@@ -415,6 +418,11 @@ def _parse_header_lines(
         elif "=" in body and _looks_structured(body):
             kv.update(_kv(body))
     _apply_kv(h, kv)
+    if h.cal_bounds:
+        h.cal_bounds_source = "header"
+    else:
+        h.cal_bounds = list(DEFAULT_CAL_BOUNDS)
+        h.cal_bounds_source = "default"
     return h
 
 
@@ -571,9 +579,14 @@ def _summarize(data: LogData) -> str:
         out.append(
             f"  latest segment: fw={seg.firmware_version} git={seg.git} run={seg.run}"
         )
+        bounds_note = (
+            " !! fallback default (no cal bounds in header)"
+            if seg.cal_bounds_source == "default"
+            else ""
+        )
         out.append(
-            f"    cal_bounds={seg.cal_bounds} moist_range={seg.moist_range} "
-            f"cadence_ms={seg.cadence_ms}"
+            f"    cal_bounds={seg.cal_bounds} [{seg.cal_bounds_source}]"
+            f"{bounds_note} moist_range={seg.moist_range} cadence_ms={seg.cadence_ms}"
         )
         if seg.sensors:
             chmap = " ".join(
