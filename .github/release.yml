@@ -1,0 +1,20 @@
+changelog:
+  exclude:
+    labels:
+      - type:chore
+  categories:
+    - title: "✨ Features"
+      labels:
+        - type:feat
+    - title: "🐛 Bug fixes"
+      labels:
+        - type:fix
+    - title: "♻️ Refactors"
+      labels:
+        - type:refactor
+    - title: "📖 Documentation"
+      labels:
+        - type:docs
+    - title: "⚙️ Chores"
+      labels:
+        - type:chore
