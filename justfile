@@ -66,10 +66,10 @@ build:
 flash *ARGS:
     {{pio}} run -d firmware -t upload {{ARGS}}
 
-# Needs a host C compiler: gcc on PATH, or  CC=/path/to/gcc just test-native  (e.g. a winget MinGW gcc.exe).
-# Native host C unit tests for the firmware logic — no ESP32, no flash.
+# Native host C unit tests for the firmware logic — no ESP32, no flash. (#260)
+# Runs via PlatformIO env:native (Unity framework, host compiler).
 test-native:
-    sh tests/native/build_and_run.sh
+    {{pio}} test -d firmware -e native
 
 # ============================================================================
 #  TEST — the whole harness (ADR-0002 #11). Lanes plug their suites in here.
