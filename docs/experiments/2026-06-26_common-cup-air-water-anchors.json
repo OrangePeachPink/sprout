@@ -11,6 +11,8 @@
   "probe_notes": {
     "s2": {
       "gpio": 35,
+      "classification": "C1 / #170 (per-channel offset), NOT A2 (shared band boundaries) - per Firmware",
+      "drydown_guidance": "derive interior A2 anchors from a clean probe (s3/s4); track s2 separately as the C1 offset case",
       "history": "reverse-polarity recovered; historically read above the pack in soil (+90)",
       "clean_finding": "lowest in both same-medium states: air -26, water -69 (wet-biased)",
       "interpretation": "soil +90 was microsite-confounded (4 different pot spots); common-cup is the first microsite-free look. Bias is non-constant (larger at wet end) -> needs two-point/gain+offset correction, not a single per-pin constant.",

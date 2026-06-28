@@ -45,6 +45,15 @@ For each state, in the **Experiment Capture** panel:
 Leave the always-on **Monitor** logging running if you want the continuous dry-down recorded too — the
 handoff frees COM6 for the capture and resumes logging after.
 
+### Which probe defines the interior boundaries (Firmware guidance)
+
+The shared band boundaries (A2) should come from a **clean probe**. From the air/water anchors,
+[**s2 (GPIO 35) reads wet-biased**](2026-06-26_common-cup-air-water-anchors.md) — so when the dry-down
+sweeps the interior bands (Moist / Ideal / Drying / Dry), **derive those A2 anchors from a clean probe
+(s3 or s4)**, not from the 4-probe average, so s2's offset doesn't skew the shared boundaries. **Track s2
+separately** as the per-channel-offset case — that is **C1 / #170** (per-channel calibration), distinct from
+the A2 boundary reconciliation. (Capture all four as usual; just anchor the boundaries on the clean probe.)
+
 ## Turn the captures into a candidate calibration
 
 Once you've captured the states, at the desk (no rig needed):

@@ -58,10 +58,13 @@ common cup, s2 reads **lowest in both states**: **−26 counts in air, −69 in 
 the wet end). So the historical "s2 offset" was largely the pot spot, not the sensor — this is the first
 clean look, and it shows s2 shifted **low and slightly wider-range** (span 926→3,151 vs the pack ~995→3,177).
 
-Implication for A2: s2 needs a **two-point (wet+dry) / gain+offset** correction, not a single per-pin
-constant, and its interior boundaries will diverge most from the pack on the next dry-down. s2 is otherwise
-healthy — OK quality, low noise (std ~6), flat in the cup. *(Caveat: no same-medium reading of s2 predates
-this run, so whether this is the microsite confound lifting or real drift can't be fully separated yet.)*
+**Classification (per Firmware): this is C1 / #170 input, not A2.** The shared band boundaries are A2; a
+per-probe offset is **per-channel calibration (C1)**. s2 needs a **two-point (wet+dry) / gain+offset**
+correction, not a single per-pin constant. **For the next dry-down, take the interior A2 anchors off a clean
+probe (s3/s4)** so the shared boundaries aren't skewed by s2's wet bias, and **track s2 separately as the
+per-channel-offset (C1/#170) case** — that is why "s2 is the one to watch." s2 is otherwise healthy — OK
+quality, low noise (std ~6), flat in the cup. *(Caveat: no same-medium reading of s2 predates this run, so
+whether this is the microsite confound lifting or real drift can't be fully separated yet.)*
 
 ## Conclusion
 
@@ -72,9 +75,10 @@ this run, so whether this is the microsite confound lifting or real drift can't 
   **wet ↔ dry divide at ~2,096** (the midpoint the workbench proposes between the two observed bands).
 - **It does not calibrate the interior ladder** (Moist / Ideal / Drying / Dry). That needs a controlled
   **dry-down** through the middle — the next characterization run.
-- **For Firmware (A2):** treat ~978 and ~3,170 as the anchored endpoints; carry the placeholder interior
-  boundaries until a dry-down dataset exists. Per-pin correction should be modeled per-medium, not as a
-  constant.
+- **For Firmware:** the ~978 and ~3,170 endpoints are **A2-ratified**; carry the placeholder interior
+  boundaries until a dry-down dataset exists, and **derive those interior A2 anchors from a clean probe
+  (s3/s4)**. The per-channel / per-medium offset (s2) is the **C1 / #170** track — tracked separately from
+  the shared A2 boundaries, not modeled as a single constant.
 
 ## Provenance
 
