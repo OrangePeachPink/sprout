@@ -38,9 +38,10 @@ are part of the design — not afterthoughts:
 - **Fail-safe actuation.** Pumps default **off** at boot, on reset, and on watchdog
   timeout — a power loss or hung controller returns to "no water flowing," never
   "pump stuck on" (see #93, #181).
-- **Watering stays gated.** No pump runs until per-probe calibration and the safety
-  bench pass (#94 / #191 / #93). Until then the firmware is read-only and nothing
-  actuates.
+- **Watering is operator-gated, not autonomous.** Manual operator commands (`!water` / `!stop`)
+  are wired through the actuation supervisor but the relay path is **bench-unverified** (#191).
+  No autonomous dosing runs until per-probe calibration and the safety bench pass
+  (#94 / #191 / #93).
 - **Not a safety-certified product.** This is a hobby / portfolio build with no UL/CE
   listing; don't rely on it unattended for anything that matters, and supervise early
   pump testing.
