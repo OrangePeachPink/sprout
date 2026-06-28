@@ -9,8 +9,9 @@ Honesty rules baked in:
 
 * **raw + band are the truth.** The legacy moist% ``value`` column is never
   plotted (B2/C2).
-* **bands are proposed, not validated.** The 7-band boundaries are the
-  un-reconciled spec (A2); the UI labels them as such.
+* **interior bands are proposed, not validated.** The endpoints (saturated +
+  air-dry) are firmware-ratified from the common-cup anchors; the interior
+  boundaries are the un-reconciled A2 spec, and the UI labels them as such.
 * **no fabricated light cycle.** Day/night shading needs the real light
   schedule, which is not in the data, so it is omitted; overall drying slope
   is shown instead.
