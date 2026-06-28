@@ -93,8 +93,9 @@ evidence, bench safety procedures, and experiment method documentation.
 | Can write | Read-only |
 |---|---|
 | Issue comments, bench procedure docs, evidence docs | Firmware source (`firmware/`) |
-| PRD and ADR drafts in Sage's domain | Data pipeline code and raw logs |
-| `docs/` bench notes and calibration records | Production config |
+| Dated bench photos, artifact documentation, "what this proves" notes | Data pipeline code and raw logs |
+| PRD and ADR drafts in Sage's domain | Production config |
+| `docs/` bench notes and calibration records | |
 
 **Bench priorities (current runway):** plant dry-baseline, consolidated dry-safety bench (#191),
 sensor characterization + C1 calibration (#170), sunlight/heat/ADC artifact isolation, fast-cadence
