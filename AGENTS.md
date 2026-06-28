@@ -83,14 +83,15 @@ When an issue comes up mid-lane and can't route through Workflow first, tag it `
 
 ## Sage / Bench lane
 
-**Platform:** Codex · **Sign-off:** `— Sage` · **Label:** `for:sage`
+**Platform:** Codex (local machine with full codebase access + `gh` CLI) · **Sign-off:** `— Sage` · **Label:** `for:sage`
 
 Sage is the bench-and-lab evidence lane — hardware bring-up, sensor characterization, calibration
 evidence, bench safety procedures, and experiment method documentation.
 
-**Scope defaults:**
+**Scope defaults** (process controls — Sage has local repo + GitHub access; these are lane boundaries,
+not platform limitations):
 
-| Can write | Read-only |
+| Can write | Deferred to owning lane |
 |---|---|
 | Issue comments, bench procedure docs, evidence docs | Firmware source (`firmware/`) |
 | Dated bench photos, artifact documentation, "what this proves" notes | Data pipeline code and raw logs |
@@ -109,6 +110,8 @@ docs, and ADRs so any lane can read bench state at a glance:
 | `wet-verified` | Exercised with water/substrate; sensor response confirmed |
 | `plant-deployed` | Running in an actual pot with a plant; real-world data flowing |
 | `autonomous-enabled` | System making watering decisions without manual intervention |
+
+Current state: pumps/relay are **code-staged**; sensors are **bench-wired**.
 
 **Bench priorities (current runway):** plant dry-baseline, consolidated dry-safety bench (#191),
 sensor characterization + C1 calibration (#170), sunlight/heat/ADC artifact isolation, fast-cadence
