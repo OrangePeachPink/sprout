@@ -37,9 +37,27 @@ jobs:
       - name: Sync the locked environment
         run: uv sync
 
+      # PlatformIO — needed for native unit tests (pio test -e native) and the
+      # ESP32 compile-verify (pio run -e esp32dev). Cached by platformio.ini hash
+      # so re-installs only when the toolchain config changes.
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+          restore-keys: pio-${{ runner.os }}-
+
       # The single definition of lint/format/hygiene — identical to a local commit.
       - name: Lint + format + hygiene (pre-commit)
         run: uv run pre-commit run --all-files --show-diff-on-failure
 
       - name: Tests — native C firmware logic + host Python
         run: just test
+
+      # Compile the ESP32 firmware so regressions in src/ are caught before flash.
+      # Runs after tests so a fast logic failure surfaces first. (#260)
+      - name: Compile firmware (ESP32 — catch src/ regressions)
+        run: just build
