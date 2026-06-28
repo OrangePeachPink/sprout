@@ -100,6 +100,15 @@ ship:
     @echo "ship: not wired yet — see ADR-0009 (versioning & release policy)."
 
 # ============================================================================
+#  DX lane — developer experience tooling.
+# ============================================================================
+# Serve a .dc.html design page over http so its components load (file:// blocks fetch).
+# Usage: just preview "docs/design/motion/Sprout Welcome.dc.html"
+# Opens the browser automatically; Ctrl-C to stop.  --no-open to skip the browser.
+preview *ARGS:
+    {{py}} tools/preview.py {{ARGS}}
+
+# ============================================================================
 #  LANES: register your recipes in your section above. Pattern:
 #     # One-line summary (this exact line shows in `just --list`).
 #     <verb> *ARGS:
@@ -107,7 +116,7 @@ ship:
 #
 #  Slots other lanes will likely fill — kept as a checklist, not stubs that lie:
 #   • #10 lint lane : lint-md (markdownlint-cli2), lint-spell (cspell), lint-fw (clang-format --dry-run)
-#   • Design lane   : token build / design-library preview runner
+#   • Design lane   : token build (design-library CSS output)
 #   • Data lane     : analytics/forecast batch jobs, the DuckDB/parquet build, archive tooling
 #  Add each as a real recipe once that lane confirms the command + args.
 # ============================================================================
