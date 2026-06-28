@@ -51,7 +51,7 @@ Two active violations also need naming:
 
 ### 1. parse_v1 is the contract boundary
 
-`tools/analytics/parse_v1.py` is the **single authorised entry point** for all telemetry reads
+`tools/analytics/parse_v1.py` is the **single authorized entry point** for all telemetry reads
 inside Sprout. No other module in `tools/` reads raw telemetry CSV (`logs/*.csv`, `logs/*.csv.gz`,
 or any equivalent) directly. Schema knowledge -- column layout, provenance header parsing, band
 classification, cal bounds -- lives in `parse_v1`, not scattered across callers.
