@@ -146,10 +146,9 @@ class SyntheticReader(Reader):
 
     def _device_line(self, sensor: str, millis: int) -> str:
         raw = 1360 + self._rng.randint(-8, 8) + (40 if sensor == "s2" else 0)
-        value = round((3400 - raw) / 2500 * 100)
         body = (
             f"plants.soil,{self._session},plants_esp32_synthetic,0.7.0,{millis},"
-            f"UMLIFE_v2_TLC555,{sensor},origplant,soil_moisture,{raw},{value},pct,OK,"
+            f"UMLIFE_v2_TLC555,{sensor},origplant,soil_moisture,{raw},,,OK,"
             f"level=well watered;role=disp;spread={self._rng.randint(8, 22)};"
             f"gpio={_GPIO[sensor]}"
         )
