@@ -13,6 +13,9 @@
     // so cspell --all-files passes; reword the prose and drop these if voice changes.
     "contributable",
     "dogfood",
+    "hotspot",
+    "flasher",
+    "untethered",
     "ESP8266",
     "MCU",
     "Uno",
