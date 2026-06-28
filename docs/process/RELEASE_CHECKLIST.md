@@ -18,7 +18,10 @@ the vehicle that *executes* this list at release time; this doc is the source-of
   *tree*, not from *history*. Decide: scrub, or accept and publish.
 - [ ] **Secrets scan** — `gitleaks detect --no-banner` (or `trufflehog`) clean, current files *and* history.
 - [ ] **Personal-info grep** — name / email / home-path / address fragments across files *and* history.
-- [ ] **`.gitignore` audit** — `.env*`, secrets, build outputs, local-only folders all covered.
+- [ ] **Location/coordinates grep** — no real lat/lon decimals, no committed `config/location.local.json`, no
+  operator coordinates in tracked files *or* history. Templates carry placeholder city-center values only
+  (PRD-0002 R6 / ADR-0013 §3 / ADR-0015).
+- [ ] **`.gitignore` audit** — `.env*`, secrets, build outputs, `config/location.local.json`, local-only folders all covered.
 
 ## Legal & community-health
 
