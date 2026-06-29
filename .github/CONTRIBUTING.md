@@ -67,18 +67,31 @@ maintainer confirms `area:` / `layer:` at triage.
 > commit. **Update your branch** (merge or rebase `main`) so CI re-checks against the fixed base. That's the
 > "Attempt #2 / #3" trap.
 
-## The verification gate (why issues aren't auto-closed)
+## The verification gate (two stages: Workflow certifies, then Veronica merges)
 
-Sprout uses a **review-before-close** gate: merging a PR does **not** close its issue. Instead:
+Sprout uses a **two-stage gate** — a PR is never merged until **Workflow** has certified it. The pipeline:
+**Backlog → In Progress → In Review → Needs Verification → Ready to Merge → Done.**
 
-1. The implementer posts **evidence** on the issue (what was built, how it was verified), moves it to
-   **Needs Verification**, and adds the `needs-verification` label — but does **not** close it.
-2. A **reviewer** checks the change against the issue's **technical, functional, and quality** intent,
-   records a disposition in the **Verification** field (Approved / Conditional / Changes requested), and
-   *then* — as a separate, deliberate step — closes it.
+1. **The implementer posts evidence on the issue**, moves the card to **Needs Verification**, and **stops**.
+   Evidence is a **requirement-by-requirement map**: for each acceptance criterion in the issue body, show
+   *how* it's met with a concrete artifact — PR # + commit SHA, the file/function (`path:line`), the test
+   that covers it *and that it passes*, CI status, plus any manual/bench check. Not "defaults fixed ✓" —
+   instead `AC #1 (serial default) → dashboard_template.html:265 (serial selected) +
+   test_control.py::test_serial_default passing, PR #338 @d4315ef`. **Needs Verification is Workflow's
+   review inbox, not the maintainer's.**
+2. **Workflow** pulls the item, confirms it is substantively correct, meets the requirement *as written*,
+   and has no bugs / errors / build issues — then posts a **Ready to Merge certification** (naming which
+   lanes approved the design + what Workflow verified, with merge-order notes) and moves the card to
+   **Ready to Merge**. Strong evidence certifies fast; weak evidence bounces back.
+3. **Veronica merges only from the Ready to Merge column** — that's the maintainer's queue, the
+   "finished, waiting on me" list. Nothing is merged before it's certified.
 
-That's why PRs use `Refs #N` (a non-closing link) rather than `Closes #N`, and why the repo's
-"auto-close issues with merged linked PRs" setting is **off**. The human confirmation *is* the gate.
+PRs use `Refs #N` (a non-closing link), never `Closes #N`, and the repo's auto-close setting stays **off**.
+
+**Partials:** if a merged PR met an issue's *core* requirement but a clean, separable follow-on fell out,
+Workflow spins a **new issue** for the remainder (linked both ways, with the context of what fell out) and
+closes the original — so a tail never gets swept into the merge dustbin and lost. A PR that misses the
+issue's *main point* is not closed — it's flagged back.
 
 ## Labels (quick reference)
 

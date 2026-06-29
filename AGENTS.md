@@ -9,9 +9,10 @@ Operating rules for any agent (or human) working in this repository.
 >   logger → analytics dashboard, with a brand character that speaks for the plant.
 > - **Work lives in GitHub Issues** on the [project board][board] — not in files.
 >   `BACKLOG.md` is retired.
-> - **The gate:** do the work on a branch, open a PR with **`Refs #N`** (never
->   `Closes`), post evidence, move the card to **Needs Verification**, and **stop**.
->   A reviewer merges and closes. **Never close your own issue.**
+> - **The gate (two stages):** do the work on a branch, open a PR with **`Refs #N`** (never
+>   `Closes`), post a **requirement-by-requirement evidence map**, move the card to **Needs Verification**,
+>   and **stop** — that's **Workflow's** inbox. Workflow certifies → **Ready to Merge** → **Veronica merges
+>   only from that column.** **Never merge or close your own issue.**
 > - **Honest data is law:** raw counts + the calibrated **band** are truth; any
 >   percentage is a *labelled index*, never real moisture. Mood, status, and watering
 >   follow the band, never the index.
@@ -123,14 +124,18 @@ wiring/power changes and with Data on schema extensions for new sensor readings.
 ## Workflow & GitHub
 
 - **Issues are the ledger.** Every unit of work is an issue (open via the forms). IDs are `#N`.
-- **The [board][board]** is the working view. Fields: **Status** (Backlog → In Progress →
-  In Review → Needs Verification → Done / Won't Do) · **Priority** (P0–P3, execution order) ·
+- **The [board][board]** is the working view. Fields: **Status** (Backlog → In Progress → In Review →
+  Needs Verification → **Ready to Merge** → Done / Won't Do) · **Priority** (P0–P3, execution order) ·
   **Size** (XS–XL) · **Verification** (Pending / Approved / Conditional / Changes requested).
 - **Discussions** = the idea inbox · **PRDs** (`docs/prd/`) = specs for larger features ·
   **ADRs** (`docs/adr/`) = significant or hard-to-reverse decisions (any lane may author one in its area).
-- **The verification gate (the rule that matters most):** the implementer posts evidence
-  and moves the card to **Needs Verification**; a **reviewer** confirms and closes. PRs use
-  **`Refs #N`** / `Part of #N`, **never `Closes #N`**. Merged PRs do not auto-close issues.
+- **The verification gate (the rule that matters most), two stages:** the implementer posts a
+  **requirement-by-requirement evidence map** and moves the card to **Needs Verification** —
+  **Workflow's review inbox.** Workflow confirms it's substantively correct + meets the requirement as
+  written + no bugs/build issues, posts a **Ready to Merge certification** (who approved the design + what
+  was verified + merge-order), and moves it to **Ready to Merge** — **the maintainer merges only from
+  there.** Partials spin a new linked issue for the tail before the original closes. PRs use **`Refs #N`** /
+  `Part of #N`, **never `Closes #N`**; merged PRs do not auto-close issues.
 - **`main` is protected:** PR required, squash-merge, no direct pushes, no force-push/deletion.
 - **Gate labels** `blocks:pumps` / `blocks:public-release` / `blocks:data-integrity` mark
   milestone gates, independent of Priority.
