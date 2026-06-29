@@ -1,7 +1,7 @@
 /*
  * test_irrigation.c - host-native unit tests for the irrigation supervisor FSM,
- * the moisture-classifier band boundaries (#3), and the set_cadence command
- * parser (#63).
+ * the moisture-classifier band boundaries (#3), the set_cadence command
+ * parser (#63), and the run-metadata !label / !pos handlers (#321).
  *
  * The engine is framework-agnostic C, so we compile it for the host alongside a
  * synthetic ADC+pump rig and drive it with a fake millisecond clock - no ESP32,
@@ -19,6 +19,7 @@
 #include "irrigation.h"
 #include "serial_cmd.h"
 #include "pump_pulse.h"
+#include "run_meta.h"
 
 /* -------------------------------------------------------------------------- */
 /* synthetic rig: ADC source + pump observer + event sink                     */
@@ -581,6 +582,92 @@ void t_forced_dose(void)
 }
 
 /* -------------------------------------------------------------------------- */
+/* run metadata: !label / !pos runtime handlers (#321)                        */
+/* -------------------------------------------------------------------------- */
+
+void t_run_meta(void)
+{
+    run_meta_t m;
+    char       rep[96];
+
+    /* init seeds the label and EVERY channel's position from the defaults */
+    run_meta_init(&m, "4probe-coloc-origplant", "origplant", 4);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("4probe-coloc-origplant",
+                                     run_meta_label(&m), "init label");
+    for (int ch = 0; ch < 4; ch++)
+        TEST_ASSERT_EQUAL_STRING_MESSAGE(
+            "origplant", run_meta_position(&m, ch), "init seeds all channels");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("", run_meta_position(&m, 4),
+                                     "position ch out of range -> \"\"");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("", run_meta_position(&m, -1),
+                                     "position ch negative -> \"\"");
+
+    /* !label updates the label (ack) */
+    TEST_ASSERT_TRUE_MESSAGE(
+        run_meta_set_label(&m, "4probe-drypass1", rep, sizeof(rep)),
+        "set_label valid -> ok");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("4probe-drypass1", run_meta_label(&m),
+                                     "label updated");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(rep, "# ack label"),
+                                 "set_label ack reply");
+
+    /* empty label is rejected and leaves the prior label intact */
+    TEST_ASSERT_TRUE_MESSAGE(!run_meta_set_label(&m, "", rep, sizeof(rep)),
+                             "empty label -> nak");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("4probe-drypass1", run_meta_label(&m),
+                                     "nak leaves label unchanged");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(rep, "nak"), "empty label nak reply");
+
+    /* label sanitizes CSV-hostile bytes (comma + control -> '_') */
+    run_meta_set_label(&m, "a,b\tc", rep, sizeof(rep));
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("a_b_c", run_meta_label(&m),
+                                     "label comma/control sanitized");
+
+    /* !pos updates ONE channel; the others are untouched */
+    TEST_ASSERT_TRUE_MESSAGE(
+        run_meta_set_position(&m, "0,s3-origplant", rep, sizeof(rep)),
+        "set_position ch0 -> ok");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("s3-origplant", run_meta_position(&m, 0),
+                                     "ch0 position updated");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("origplant", run_meta_position(&m, 1),
+                                     "ch1 position untouched");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(rep, "# ack pos"),
+                                 "set_position ack reply");
+
+    /* a comma inside the position name is sanitized (CSV safety) */
+    run_meta_set_position(&m, "1,a,b", rep, sizeof(rep));
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("a_b", run_meta_position(&m, 1),
+                                     "position comma sanitized");
+
+    /* nak paths: missing comma / non-numeric ch / out-of-range / empty name */
+    TEST_ASSERT_TRUE_MESSAGE(!run_meta_set_position(&m, "2", rep, sizeof(rep)),
+                             "no comma -> nak");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(rep, "err=parse"), "no-comma parse nak");
+    TEST_ASSERT_TRUE_MESSAGE(
+        !run_meta_set_position(&m, "x,foo", rep, sizeof(rep)),
+        "non-numeric channel -> nak");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(rep, "err=parse"),
+                                 "non-numeric parse nak");
+    TEST_ASSERT_TRUE_MESSAGE(
+        !run_meta_set_position(&m, "4,foo", rep, sizeof(rep)),
+        "channel 4 (n=4) -> nak");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(rep, "err=channel"),
+                                 "out-of-range channel nak");
+    TEST_ASSERT_TRUE_MESSAGE(
+        !run_meta_set_position(&m, "0,", rep, sizeof(rep)), "empty name -> nak");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("s3-origplant", run_meta_position(&m, 0),
+                                     "empty-name nak leaves ch0 unchanged");
+
+    /* init clamps an over-large channel count to RUN_META_MAX_CH */
+    run_meta_t big;
+    run_meta_init(&big, "L", "P", 99);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("P", run_meta_position(&big, 3),
+                                     "clamped count still seeds ch3");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("", run_meta_position(&big, 4),
+                                     "clamp keeps ch4 out of range");
+}
+
+/* -------------------------------------------------------------------------- */
 /* runner                                                                     */
 /* -------------------------------------------------------------------------- */
 
@@ -597,5 +684,6 @@ int main(void)
     RUN_TEST(t_serial_cmd_registry);
     RUN_TEST(t_pump_pulse);
     RUN_TEST(t_forced_dose);
+    RUN_TEST(t_run_meta);
     return UNITY_END();
 }

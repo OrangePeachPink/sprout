@@ -27,6 +27,7 @@
 #include "pump_pulse.h"
 #include "telemetry.h"
 #include "commands.h"
+#include "run_meta.h"
 
 #ifndef GIT_REV
 #define GIT_REV "nogit"  /* overridden by scripts/git_rev.py at build */
@@ -46,6 +47,11 @@ static Preferences g_prefs;
 
 /* Manual bounded pump-pulse actuator (#215): one channel at a time, default OFF. */
 static pump_pulse_t g_pump;
+
+/* Run metadata (#321): run_label + per-channel sensor_position, seeded from the
+ * config.h defaults and updated at runtime via !label / !pos so the bench can
+ * move probes between plants without reflashing (stale metadata = join hazard). */
+static run_meta_t g_run_meta;
 
 /* Shared classifier config — same boundaries all channels for now (C1/#170 later). */
 static moisture_cfg_t cfg = {
@@ -92,7 +98,7 @@ static void sampleChannel(int ch, uint16_t *buf) {
 /* ---- provenance header -------------------------------------------------- */
 
 static void printHeader() {
-    char buf[200];
+    char buf[256];  /* per-channel name@position can run long on the sensors line */
     int  n;
     Serial.println();
     Serial.println(
@@ -103,7 +109,8 @@ static void printHeader() {
         "!wedge strands ch0 + hangs the loop -> watchdog must reset. NOT a ship build.");
 #endif
     snprintf(buf, sizeof(buf), "# fw=%s  git=%s  built=%s  run=%s",
-             PLANTS_FW_VERSION, GIT_REV, __DATE__ " " __TIME__, RUN_LABEL);
+             PLANTS_FW_VERSION, GIT_REV, __DATE__ " " __TIME__,
+             run_meta_label(&g_run_meta));
     Serial.println(buf);
     snprintf(buf, sizeof(buf),
              "# device_id=%s (%s)  chip=%s  adc=ADC1,12bit,11dB,eFuseCal=off",
@@ -115,11 +122,11 @@ static void printHeader() {
     Serial.println(buf);
     n = snprintf(buf, sizeof(buf), "# sensors:");
     for (int i = 0; i < NUM_SENSORS && n < (int)sizeof(buf); i++)
-        n += snprintf(buf + n, sizeof(buf) - n, " ch%d=GPIO%d/%s",
-                      i, SENSOR_PINS[i], SENSOR_NAMES[i]);
+        n += snprintf(buf + n, sizeof(buf) - n, " ch%d=GPIO%d/%s@%s",
+                      i, SENSOR_PINS[i], SENSOR_NAMES[i],
+                      run_meta_position(&g_run_meta, i));
     if (n < (int)sizeof(buf))
-        snprintf(buf + n, sizeof(buf) - n, "  (model=%s pos=%s)",
-                 SENSOR_MODEL, SENSOR_POSITION);
+        snprintf(buf + n, sizeof(buf) - n, "  (model=%s)", SENSOR_MODEL);
     Serial.println(buf);
     n = snprintf(buf, sizeof(buf), "# health:");
     for (int i = 0; i < NUM_SENSORS && n < (int)sizeof(buf); i++)
@@ -180,6 +187,9 @@ void setup() {
     /* Prime the pump-pulse FSM before commands_init so !water is immediately safe. */
     pump_pulse_init(&g_pump, NUM_SENSORS, PUMP_PULSE_DEFAULT_MS, PUMP_PULSE_MAX_MS);
 
+    /* Seed run metadata from the config defaults before !label/!pos are registered. */
+    run_meta_init(&g_run_meta, RUN_LABEL, SENSOR_POSITION, NUM_SENSORS);
+
     /* Wire command module: load NVS config (cadence + identity) + register handlers. */
     commands_ctx_t cmd_ctx = {
         g_device_id, sizeof(g_device_id), &g_device_id_custom,
@@ -187,6 +197,7 @@ void setup() {
         &g_prefs, &g_pump, pumpSet, allRelaysOff,
         CADENCE_FLOOR_MS, CADENCE_CEIL_MS, READ_INTERVAL_MS,
         PLANTS_FW_VERSION, PUMP_PULSE_MAX_MS, NUM_SENSORS, WDT_TIMEOUT_MS,
+        &g_run_meta, printHeader,
     };
     commands_init(&cmd_ctx);
 
@@ -264,8 +275,8 @@ void loop() {
         char line[200];
         telemetry_soil_row_t row = {
             RECORD_TYPE_SOIL, g_session_id, g_device_id, PLANTS_FW_VERSION,
-            up_ms, SENSOR_MODEL, SENSOR_NAMES[ch], SENSOR_POSITION, SOIL_CHANNEL,
-            SENSOR_PINS[ch], state[ch].last_raw, level, &state[ch],
+            up_ms, SENSOR_MODEL, SENSOR_NAMES[ch], run_meta_position(&g_run_meta, ch),
+            SOIL_CHANNEL, SENSOR_PINS[ch], state[ch].last_raw, level, &state[ch],
         };
         if (telemetry_format_soil_row(line, sizeof(line), &row) >= 0) {
             char crc[6];
