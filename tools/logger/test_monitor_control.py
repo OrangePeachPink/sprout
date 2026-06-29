@@ -74,9 +74,47 @@ def test_mutex() -> None:
         shutil.rmtree(lockdir, ignore_errors=True)
 
 
+def test_stop_clears_monitor_marker() -> None:
+    print("monitor: stop clears a monitor-owned marker (Windows hard-kill case, #330):")
+    tmp = Path(tempfile.mkdtemp(prefix="mon3_"))
+    lockdir = Path(tempfile.mkdtemp(prefix="monlk3_"))
+    try:
+        c = mc.MonitorController(logger_py=_fake_logger(tmp), lock_dir=lockdir)
+        c.start(port="COM_FAKE")
+        # The real logger child writes this on open; the fake one doesn't, so stand in
+        # for it — terminate() can't run the child's clean-stop release on Windows.
+        serial_lock.write_lock("COM_FAKE", "monitor", lock_dir=lockdir)
+        c.stop()
+        remaining = serial_lock.read_lock(lock_dir=lockdir)
+        assert remaining is None, f"monitor marker not cleared: {remaining}"
+        check(True, "stop() cleared the monitor marker")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+        shutil.rmtree(lockdir, ignore_errors=True)
+
+
+def test_stop_preserves_experiment_marker() -> None:
+    print("monitor: stop never clears an experiment's marker (only its own):")
+    tmp = Path(tempfile.mkdtemp(prefix="mon4_"))
+    lockdir = Path(tempfile.mkdtemp(prefix="monlk4_"))
+    try:
+        c = mc.MonitorController(logger_py=_fake_logger(tmp), lock_dir=lockdir)
+        c.start(port="COM_FAKE")
+        serial_lock.write_lock("COM6", "experiment", lock_dir=lockdir)  # another lane's
+        c.stop()
+        lock = serial_lock.read_lock(lock_dir=lockdir)
+        assert lock is not None and lock.get("mode") == "experiment", lock
+        check(True, "experiment marker preserved through a monitor stop")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+        shutil.rmtree(lockdir, ignore_errors=True)
+
+
 if __name__ == "__main__":
     test_start_stop()
     test_mutex()
+    test_stop_clears_monitor_marker()
+    test_stop_preserves_experiment_marker()
     print()
     if _FAILS:
         print(f"FAILED ({len(_FAILS)}): " + "; ".join(_FAILS))

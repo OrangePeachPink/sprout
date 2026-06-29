@@ -60,12 +60,14 @@ class MonitorController:
         with self._lock:
             if self._proc is not None and self._proc.poll() is None:
                 raise MonitorError("monitor is already running")
-            # The serial mutex: don't start logging while an experiment holds the port.
+            # The serial mutex: refuse to start while ANY live owner holds the port
+            # (#330). A stale lock (dead owner) is ignored by current_owner(), so it
+            # never blocks a legitimate start — only a truly live holder does.
             owner = serial_lock.current_owner(self._lock_dir)
-            if owner and owner.get("mode") == "experiment":
+            if owner:
                 raise MonitorError(
-                    f"port held by an experiment (pid {owner.get('pid')}) "
-                    "- stop the capture first"
+                    f"port held by {owner.get('mode')} (pid {owner.get('pid')}) "
+                    "- stop it first"
                 )
             argv = [self._python, str(self._logger_py)]
             if port:
@@ -89,6 +91,14 @@ class MonitorController:
                     self._proc.wait(timeout=5)
             self._proc = None
             self._port = None
+            # Clear the monitor's advisory marker (#330). On Windows terminate() is a
+            # hard kill, so the logger's own clean-stop release never runs and the
+            # marker goes stale. serve.py knows the monitor is stopped, so it clears
+            # it here — but ONLY a monitor-owned marker, never an experiment's lock.
+            with contextlib.suppress(Exception):
+                lock = serial_lock.read_lock(self._lock_dir)
+                if lock is not None and lock.get("mode") == "monitor":
+                    serial_lock.clear_lock(self._lock_dir)
             return self._status_locked()
 
     def status(self) -> dict:
