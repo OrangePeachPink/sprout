@@ -67,6 +67,10 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f
 .notes .nbtn:disabled { opacity: .6; cursor: default; }
 .notes .nhint { color: var(--muted); font-size: 11px; }
 .notes .nhint code { font-family: var(--font-data); }
+.notes a.nhint { text-decoration: underline; }
+.notes .nerr { margin-top: 10px; font-size: 12px; color: var(--st-fault, #c0392b);
+  background: color-mix(in srgb, var(--st-fault, #c0392b) 8%, transparent);
+  border: 1px solid var(--st-fault, #c0392b); border-radius: 6px; padding: 8px 12px; }
 </style>
 </head>
 <body>
@@ -97,21 +101,52 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f
     </div>
     <div class="nactions">
       <button id="nsave" class="nbtn" type="button">Save notes</button>
+      <a class="nhint" id="njson" href="/lab/<!--__EID__-->/notes" target="_blank" rel="noopener">view note JSON</a>
       <span class="nhint">writes <code>docs/experiments/<!--__EID__-->.json</code> · commit to back it up</span>
     </div>
+    <div class="nerr" id="nerr" hidden></div>
   </section>
 
   <script>
     (function () {
+      // #327: save resilience — never lose typed text to a failed save / stale server.
       var sec = document.getElementById("notes");
       var eid = sec.dataset.eid;
       var btn = document.getElementById("nsave");
       var saved = document.getElementById("nsaved");
+      var errEl = document.getElementById("nerr");
+      var areas = Array.prototype.slice.call(sec.querySelectorAll("textarea[data-f]"));
+      var DRAFT = "sprout-notes-draft-" + eid;
+
+      function readFields() {
+        var b = {};
+        areas.forEach(function (t) { b[t.dataset.f] = t.value; });
+        return b;
+      }
+      function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+      function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+      function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
+      function showErr(msg) { if (errEl) { errEl.textContent = msg; errEl.hidden = false; } }
+      function clearErr() { if (errEl) { errEl.hidden = true; errEl.textContent = ""; } }
+
+      // Restore an unsaved draft (e.g. a prior save failed, or the server had restarted)
+      var draft = lsGet(DRAFT);
+      if (draft) {
+        try {
+          var d = JSON.parse(draft);
+          areas.forEach(function (t) { if (d[t.dataset.f] != null) t.value = d[t.dataset.f]; });
+          saved.textContent = "restored unsaved draft — review and Save";
+        } catch (e) {}
+      }
+      // Keep a live draft so typed text survives a crash / restart / accidental reload
+      areas.forEach(function (t) {
+        t.addEventListener("input", function () { lsSet(DRAFT, JSON.stringify(readFields())); });
+      });
+
       btn.addEventListener("click", function () {
-        var body = {};
-        sec.querySelectorAll("textarea[data-f]").forEach(function (t) {
-          body[t.dataset.f] = t.value;
-        });
+        var body = readFields();
+        lsSet(DRAFT, JSON.stringify(body));  // persist before the network call
+        clearErr();
         btn.disabled = true;
         btn.textContent = "Saving…";
         fetch("/lab/" + encodeURIComponent(eid) + "/notes", {
@@ -119,15 +154,23 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         })
-          .then(function (r) { return r.json(); })
-          .then(function (n) {
-            if (n && n.version) {
-              saved.textContent = "saved " + (n.saved_at || "") + " · v" + n.version;
+          .then(function (r) { return r.json().then(function (n) { return { ok: r.ok, n: n }; }); })
+          .then(function (res) {
+            var n = res.n || {};
+            if (res.ok && n.version) {
+              saved.textContent = "saved " + (n.path || "") + " · " + (n.saved_at || "") + " · v" + n.version;
+              lsDel(DRAFT);  // safely persisted -> drop the local draft
             } else {
-              saved.textContent = "save failed";
+              // failure: keep text + draft, show why and where it tried to write
+              var where = n.path ? (" — couldn't write " + n.path) : "";
+              showErr("save failed: " + (n.error || "unknown error") + where + " · your text is kept; click Save to retry");
+              saved.textContent = "unsaved";
             }
           })
-          .catch(function () { saved.textContent = "save failed"; })
+          .catch(function (e) {
+            showErr("save failed: " + e + " · server may be down; your text is kept — retry when it's back");
+            saved.textContent = "unsaved";
+          })
           .finally(function () {
             btn.disabled = false;
             btn.textContent = "Save notes";

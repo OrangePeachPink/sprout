@@ -76,12 +76,53 @@ def test_preserves_existing_sidecar_keys() -> None:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def test_notes_rel_path() -> None:
+    # #327: the UI shows the save target on success + failure
+    assert lab_notes.notes_rel_path("expA") == "docs/experiments/expA.json"
+    assert lab_notes.notes_rel_path("../etc") is None  # bad id -> no path
+    assert lab_notes.notes_rel_path("a/b") is None
+
+
+def test_save_stays_pure() -> None:
+    # save_notes returns the persisted notes only (no transient 'path'); serve.py adds
+    # the save path to the response, keeping save==load symmetric (#327).
+    tmp = Path(tempfile.mkdtemp())
+    try:
+        n = lab_notes.save_notes("expB", {"hypothesis": "h"}, tmp)
+        assert "path" not in n
+        assert lab_notes.load_notes("expB", tmp) == n
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_save_failure_path_raises() -> None:
+    # #327 failure path: an unwritable target (docs_dir is a FILE) raises, so the
+    # endpoint reports {error, path} and the client keeps the typed text to retry.
+    tmp = Path(tempfile.mkdtemp())
+    try:
+        blocker = tmp / "not_a_dir"
+        blocker.write_text("x", encoding="utf-8")  # parent can't be a directory
+        raised = False
+        try:
+            lab_notes.save_notes("expC", {"hypothesis": "h"}, blocker)
+        except OSError:
+            raised = True
+        assert raised, "save into a non-directory must raise (the failure path)"
+        # the target path is still computable for the error message
+        assert lab_notes.notes_rel_path("expC", blocker).endswith("expC.json")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 if __name__ == "__main__":
     for fn in (
         test_empty_when_missing,
         test_guards,
         test_save_load_roundtrip_and_version_bump,
         test_preserves_existing_sidecar_keys,
+        test_notes_rel_path,
+        test_save_stays_pure,
+        test_save_failure_path_raises,
     ):
         fn()
         print(f"  PASS  {fn.__name__}")
