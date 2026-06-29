@@ -1,11 +1,21 @@
 # .clang-format - C/C++ formatting policy for the plants firmware.
-# Tool: clang-format (LLVM). Tuned to the existing firmware house style:
-# 4-space indent, function brace on its own line, K&R control braces,
-# 80 columns, pointer binds to the name.
+# Tool: clang-format, pinned to v22.1.5 (the pre-commit mirror rev). Tuned to the
+# existing firmware house style: 4-space indent, function brace on its own line,
+# K&R control braces, 80 columns, pointer binds to the name.
 #
-# Light touch: format NEW / CHANGED files; we do NOT bulk-reformat the tree.
-#   clang-format -i path/to/file.c        # format in place
-#   clang-format --dry-run -Werror FILE   # check only (CI-friendly)
+# CHANGED-SCOPE, NEVER BULK (AGENTS.md §code-style + #120). The firmware carries
+# intentional manual column alignment; a full-tree reformat would destroy it. So
+# clang-format runs on NEW / CHANGED files only (pre-commit hook + the CI step) —
+# it is the one deliberate exception to the repo's otherwise --all-files gate.
+#   just lint-fw            # check the C/C++ files you've changed vs main
+#   just lint-fw --fix      # apply the formatting to them
+#
+# Idempotent with v22.1.5 (a second pass produces zero changes):
+#   - AlignTrailingComments: Leave  -> keep existing trailing-comment columns as
+#     written (never re-flow them into a new column => no oscillation, and the
+#     hand-aligned columns survive an edit).
+#   - ReflowComments: false         -> never re-wrap comment prose.
+# Two LLVM-default behaviours otherwise re-format on every pass (#120).
 ---
 Language: Cpp
 BasedOnStyle: LLVM
@@ -20,5 +30,7 @@ AllowShortIfStatementsOnASingleLine: WithoutElse
 AllowShortLoopsOnASingleLine: false
 KeepEmptyLinesAtTheStartOfBlocks: false
 SpaceAfterCStyleCast: false
+AlignTrailingComments: Leave
+ReflowComments: false
 # Keep include order as written - C headers can be order-sensitive.
 SortIncludes: false
