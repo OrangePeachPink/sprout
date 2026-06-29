@@ -20,6 +20,10 @@
 #include "serial_cmd.h"
 #include "pump_pulse.h"
 #include "run_meta.h"
+#include "env_i2c.h"
+#include "sht45.h"
+#include "as7263.h"
+#include "telemetry.h"
 
 /* -------------------------------------------------------------------------- */
 /* synthetic rig: ADC source + pump observer + event sink                     */
@@ -27,18 +31,18 @@
 
 typedef struct {
     uint16_t target_raw; /* trimmed-mean raw this channel reports          */
-    bool noisy;          /* inject a wide spread -> classifier health_warn */
-    uint32_t reads;      /* free-running per-channel sample counter         */
+    bool noisy; /* inject a wide spread -> classifier health_warn */
+    uint32_t reads; /* free-running per-channel sample counter         */
 } chan_sim_t;
 
 typedef struct {
     chan_sim_t sim[IRRIG_CHANNELS];
     bool pump_on[IRRIG_CHANNELS];
     int pump_on_count[IRRIG_CHANNELS]; /* OFF->ON transitions               */
-    int pumps_on_now;                  /* currently energized               */
-    int max_pumps_on;                  /* high-water mark (invariant 1)      */
-    bool read_during_pump;             /* sampled while a pump ran? (inv 2)  */
-    int ev[16];                        /* event counts by irrig_event_code_t */
+    int pumps_on_now; /* currently energized               */
+    int max_pumps_on; /* high-water mark (invariant 1)      */
+    bool read_during_pump; /* sampled while a pump ran? (inv 2)  */
+    int ev[16]; /* event counts by irrig_event_code_t */
 } rig_t;
 
 static uint16_t sim_read(int ch, void *user)
@@ -560,7 +564,7 @@ void t_forced_dose(void)
     step(SYS.sample_period_ms); /* ch0 dosing */
     TEST_ASSERT_TRUE_MESSAGE(irrig_active_pump(&CTRL) == 0, "ch0 dosing");
     irrig_request_dose(&CTRL, 1, 0); /* queue ch1 mid-dose */
-    step(500);                       /* still within ch0's dose */
+    step(500); /* still within ch0's dose */
     TEST_ASSERT_TRUE_MESSAGE(RIG.pumps_on_now == 1 && RIG.max_pumps_on == 1,
                              "2nd forced request never opens a 2nd pump");
     step(2000);
@@ -588,15 +592,15 @@ void t_forced_dose(void)
 void t_run_meta(void)
 {
     run_meta_t m;
-    char       rep[96];
+    char rep[96];
 
     /* init seeds the label and EVERY channel's position from the defaults */
     run_meta_init(&m, "4probe-coloc-origplant", "origplant", 4);
     TEST_ASSERT_EQUAL_STRING_MESSAGE("4probe-coloc-origplant",
                                      run_meta_label(&m), "init label");
     for (int ch = 0; ch < 4; ch++)
-        TEST_ASSERT_EQUAL_STRING_MESSAGE(
-            "origplant", run_meta_position(&m, ch), "init seeds all channels");
+        TEST_ASSERT_EQUAL_STRING_MESSAGE("origplant", run_meta_position(&m, ch),
+                                         "init seeds all channels");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("", run_meta_position(&m, 4),
                                      "position ch out of range -> \"\"");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("", run_meta_position(&m, -1),
@@ -642,7 +646,8 @@ void t_run_meta(void)
     /* nak paths: missing comma / non-numeric ch / out-of-range / empty name */
     TEST_ASSERT_TRUE_MESSAGE(!run_meta_set_position(&m, "2", rep, sizeof(rep)),
                              "no comma -> nak");
-    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(rep, "err=parse"), "no-comma parse nak");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(rep, "err=parse"),
+                                 "no-comma parse nak");
     TEST_ASSERT_TRUE_MESSAGE(
         !run_meta_set_position(&m, "x,foo", rep, sizeof(rep)),
         "non-numeric channel -> nak");
@@ -653,8 +658,8 @@ void t_run_meta(void)
         "channel 4 (n=4) -> nak");
     TEST_ASSERT_NOT_NULL_MESSAGE(strstr(rep, "err=channel"),
                                  "out-of-range channel nak");
-    TEST_ASSERT_TRUE_MESSAGE(
-        !run_meta_set_position(&m, "0,", rep, sizeof(rep)), "empty name -> nak");
+    TEST_ASSERT_TRUE_MESSAGE(!run_meta_set_position(&m, "0,", rep, sizeof(rep)),
+                             "empty name -> nak");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("s3-origplant", run_meta_position(&m, 0),
                                      "empty-name nak leaves ch0 unchanged");
 
@@ -665,6 +670,178 @@ void t_run_meta(void)
                                      "clamped count still seeds ch3");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("", run_meta_position(&big, 4),
                                      "clamp keeps ch4 out of range");
+}
+
+/* -------------------------------------------------------------------------- */
+/* bench env sensors: SHT45 + AS7263 (#373/#374)                              */
+/* -------------------------------------------------------------------------- */
+
+static void mock_delay(uint32_t ms, void *user)
+{
+    (void)ms;
+    (void)user;
+}
+
+/* --- SHT45 mock bus: a canned 6-byte response with valid CRCs --- */
+typedef struct {
+    uint8_t resp[6];
+    bool write_fail;
+    bool read_fail;
+} sht45_mock_t;
+
+static int sht45_mock_write(uint8_t a, const uint8_t *b, size_t n, void *u)
+{
+    (void)a;
+    (void)b;
+    (void)n;
+    return ((sht45_mock_t *)u)->write_fail ? -1 : 0;
+}
+static int sht45_mock_read(uint8_t a, uint8_t *b, size_t n, void *u)
+{
+    (void)a;
+    sht45_mock_t *m = (sht45_mock_t *)u;
+    if (m->read_fail || n != 6) return -1;
+    memcpy(b, m->resp, 6);
+    return 0;
+}
+static void sht45_set_word(uint8_t *p, uint16_t raw)
+{
+    p[0] = (uint8_t)(raw >> 8);
+    p[1] = (uint8_t)(raw & 0xFF);
+    p[2] = sht45_crc8(p, 2);
+}
+
+void t_sht45(void)
+{
+    /* Sensirion CRC-8 test vector: CRC(0xBE,0xEF) = 0x92 */
+    uint8_t v[2] = {0xBE, 0xEF};
+    TEST_ASSERT_EQUAL_HEX8_MESSAGE(0x92, sht45_crc8(v, 2),
+                                   "Sensirion CRC vector");
+
+    /* fixed-point conversion endpoints */
+    TEST_ASSERT_EQUAL_INT_MESSAGE(-4500, sht45_temp_centi(0), "T(0)=-45.00C");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(13000, sht45_temp_centi(65535),
+                                  "T(max)=130.00C");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(5000, sht45_rh_centi(29359), "RH~50.00%");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, sht45_rh_centi(0), "RH clamps low");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(10000, sht45_rh_centi(65535),
+                                  "RH clamps high");
+
+    /* full read over the mock bus */
+    sht45_mock_t m;
+    memset(&m, 0, sizeof m);
+    sht45_set_word(&m.resp[0], 0x6666);
+    sht45_set_word(&m.resp[3], 0x8000);
+    env_i2c_t bus = {sht45_mock_write, sht45_mock_read, mock_delay, &m};
+    sht45_reading_t r;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(SHT45_OK, sht45_read(&bus, &r), "read OK");
+    TEST_ASSERT_EQUAL_HEX16_MESSAGE(0x6666, r.temp_raw, "temp raw");
+    TEST_ASSERT_EQUAL_HEX16_MESSAGE(0x8000, r.rh_raw, "rh raw");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(sht45_temp_centi(0x6666), r.temp_c_centi,
+                                  "temp convert");
+
+    /* a flipped CRC byte -> CRC error */
+    m.resp[2] ^= 0xFF;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(SHT45_ERR_CRC, sht45_read(&bus, &r),
+                                  "bad CRC -> ERR_CRC");
+    m.resp[2] ^= 0xFF;
+
+    /* bus failure -> I2C error */
+    m.write_fail = true;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(SHT45_ERR_I2C, sht45_read(&bus, &r),
+                                  "bus fail -> ERR_I2C");
+}
+
+/* --- AS7263 mock bus: models the virtual-register TX/RX handshake --- */
+typedef struct {
+    uint8_t vreg[0x80]; /* canned virtual-register values        */
+    uint8_t read_reg; /* last physical reg targeted for a read */
+    int pending; /* vreg queued for READ, or -1           */
+    uint8_t write_vreg; /* vreg addressed by a write (vreg|0x80) */
+    bool expect_val; /* next WRITE byte is the value          */
+} as7263_mock_t;
+
+static int as7263_mock_write(uint8_t a, const uint8_t *b, size_t n, void *u)
+{
+    (void)a;
+    as7263_mock_t *m = (as7263_mock_t *)u;
+    if (n == 1) {
+        m->read_reg = b[0];
+        return 0;
+    } /* set up a phys read */
+    if (n == 2 && b[0] == AS7263_REG_WRITE) { /* phys write to WRITE */
+        uint8_t val = b[1];
+        if (m->expect_val) {
+            m->vreg[m->write_vreg] = val;
+            m->expect_val = false;
+        } else if (val & 0x80) {
+            m->write_vreg = val & 0x7F;
+            m->expect_val = true;
+        } else {
+            m->pending = val;
+        } /* a read request */
+    }
+    return 0;
+}
+static int as7263_mock_read(uint8_t a, uint8_t *b, size_t n, void *u)
+{
+    (void)a;
+    as7263_mock_t *m = (as7263_mock_t *)u;
+    if (n != 1) return -1;
+    if (m->read_reg == AS7263_REG_STATUS)
+        b[0] = (uint8_t)(m->pending >= 0 ? AS7263_RX_VALID
+                                         : 0); /* TX always clear */
+    else if (m->read_reg == AS7263_REG_READ) {
+        b[0] = (m->pending >= 0) ? m->vreg[m->pending] : 0;
+        m->pending = -1;
+    } else
+        b[0] = 0;
+    return 0;
+}
+
+void t_as7263(void)
+{
+    as7263_mock_t m;
+    memset(&m, 0, sizeof m);
+    m.pending = -1;
+    m.vreg[AS7263_HW_VERSION] = 0x3E; /* nonzero -> device present */
+    env_i2c_t bus = {as7263_mock_write, as7263_mock_read, mock_delay, &m};
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        AS7263_OK, as7263_init(&bus, AS7263_GAIN_64X, 50), "init OK");
+
+    m.vreg[AS7263_CONTROL_SETUP] = AS7263_DATA_RDY; /* conversion ready */
+    for (int i = 0; i < 6; i++) { /* six 16-bit channels */
+        m.vreg[AS7263_R_HIGH + i * 2] = (uint8_t)(0x10 + i);
+        m.vreg[AS7263_R_HIGH + i * 2 + 1] = (uint8_t)(0x20 + i);
+    }
+    as7263_reading_t r;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(AS7263_OK, as7263_read(&bus, &r), "read OK");
+    TEST_ASSERT_EQUAL_HEX16_MESSAGE(0x1020, r.nm610, "ch0 = hi<<8|lo");
+    TEST_ASSERT_EQUAL_HEX16_MESSAGE(0x1121, r.nm680, "ch1 assembled");
+    TEST_ASSERT_EQUAL_HEX16_MESSAGE(0x1525, r.nm860, "ch5 assembled");
+}
+
+void t_env_row(void)
+{
+    telemetry_env_row_t row = {
+        "plants.env",   "3f9a1c",
+        "Sprout ESP32", "0.7.0",
+        123456ULL,      "SHT45",
+        "sht45",        "breadboard",
+        "ambient_temp", "26214",
+        "24.99",        "C",
+        "OK",           "mount=breadboard_near_esp32;not_canopy"};
+    char buf[256];
+    TEST_ASSERT_TRUE_MESSAGE(telemetry_format_env_row(buf, sizeof(buf), &row) >
+                                 0,
+                             "env row formatted");
+    TEST_ASSERT_NOT_NULL_MESSAGE(
+        strstr(buf, "plants.env,3f9a1c,Sprout ESP32,0.7.0,123456,SHT45,sht45,"
+                    "breadboard,ambient_temp,26214,24.99,C,OK,"),
+        "env row columns in order");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, "not_canopy"),
+                                 "placement note in payload");
 }
 
 /* -------------------------------------------------------------------------- */
@@ -685,5 +862,8 @@ int main(void)
     RUN_TEST(t_pump_pulse);
     RUN_TEST(t_forced_dose);
     RUN_TEST(t_run_meta);
+    RUN_TEST(t_sht45);
+    RUN_TEST(t_as7263);
+    RUN_TEST(t_env_row);
     return UNITY_END();
 }
