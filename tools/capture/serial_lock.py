@@ -108,3 +108,44 @@ def current_owner(lock_dir: str | Path | None = None) -> dict | None:
     if lock and pid_alive(lock.get("pid")):
         return lock
     return None
+
+
+def owner_status(lock_dir: str | Path | None = None) -> dict:
+    """Full owner status for the UI (#330): present / live / stale + the lock fields.
+
+    - ``present``: a lock file exists.
+    - ``live``:    its pid is still running (the port is genuinely held).
+    - ``stale``:   a lock exists but its owner is gone (OS freed the port; the
+                   marker is just litter a crashed/hard-killed owner left behind).
+    """
+    lock = read_lock(lock_dir)
+    if lock is None:
+        return {"present": False, "live": False, "stale": False}
+    live = pid_alive(lock.get("pid"))
+    return {
+        "present": True,
+        "live": live,
+        "stale": not live,
+        "pid": lock.get("pid"),
+        "mode": lock.get("mode"),
+        "port": lock.get("port"),
+        "opened_utc": lock.get("opened_utc"),
+    }
+
+
+def clear_if_stale(lock_dir: str | Path | None = None) -> dict:
+    """Clear the marker **only if its owner is dead** — never free a live port (#330).
+
+    Returns ``{"cleared": bool, "reason": str}``. Refusing to clear a live lock is
+    the safety: a real process still holds the port, so removing the marker would
+    invite a second opener (and a device reset)."""
+    status = owner_status(lock_dir)
+    if not status["present"]:
+        return {"cleared": False, "reason": "no lock present"}
+    if status["live"]:
+        return {
+            "cleared": False,
+            "reason": f"owner is live (pid {status.get('pid')}, {status.get('mode')})",
+        }
+    clear_lock(lock_dir)
+    return {"cleared": True, "reason": "stale lock removed"}

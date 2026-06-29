@@ -91,6 +91,14 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .capstatus.run::before { box-shadow: 0 0 8px currentColor;
   animation: caplive 1.4s ease-in-out infinite; }
 .capstatus.err { color: var(--st-fault); }
+/* serial-owner surface (#330): stale-marker warning + recovery action */
+.serialowner { margin-top: var(--space-md); font-family: var(--font-data); font-size: 12px;
+  border-radius: var(--r-tile); padding: 8px 12px; display: flex; align-items: center;
+  gap: 10px; flex-wrap: wrap; }
+.serialowner.stale { background: color-mix(in srgb, var(--st-dry) 14%, transparent);
+  border: 1px solid var(--st-dry); color: var(--ink); }
+.serialowner.live { background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+.serialowner .btn { margin-left: auto; }
 .captrace { margin-top: 12px; }
 .captrace-svg { width: 100%; height: 120px; display: block; background: var(--bg);
   border: 1px solid var(--border); border-radius: var(--r-tile); }
@@ -243,6 +251,7 @@ footer.prov code { font-family: var(--font-data); }
       <button class="btn" id="monStop" type="button" disabled>■ Stop logging</button>
       <span class="capstatus" id="monStatus">—</span>
     </div>
+    <div id="serialOwner" class="serialowner" hidden></div>
   </section>
 
   <section class="card" id="captureCard">
@@ -1069,9 +1078,38 @@ function monApiDown(){
   if(stop) stop.disabled = true;
   monSetStatus('monitor control unavailable — relaunch Sprout from current code', 'err');
 }
+function monRenderOwner(o){  // #330: surface a stale marker (+ recovery) or a live holder
+  const el = document.getElementById('serialOwner'); if(!el) return;
+  if(!o || !o.present){ el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  const who = `${o.mode || '?'} · pid ${o.pid} · ${o.port || 'port ?'}`;
+  const when = o.opened_utc ? ` · opened ${o.opened_utc}` : '';
+  if(o.stale){
+    el.className = 'serialowner stale';
+    el.innerHTML = `<span>⚠ stale port marker — owner is gone: ${who}${when}. `
+      + `The port is free; this marker is just litter.</span>`
+      + `<button class="btn" id="ownerClear" type="button">Clear stale marker</button>`;
+    const b = document.getElementById('ownerClear');
+    if(b) b.addEventListener('click', ownerClear);
+  } else {  // live holder — informational, never offer to clear (would free a held port)
+    el.className = 'serialowner live';
+    el.innerHTML = `<span>● port held by ${who}${when}</span>`;
+  }
+}
+async function ownerPoll(){
+  try{ monRenderOwner((await apiJson('/serial/owner', {cache:'no-store'})).data); }
+  catch(e){ /* transient/owner endpoint absent on old server — leave last state */ }
+}
+async function ownerClear(){
+  const b = document.getElementById('ownerClear'); if(b){ b.disabled = true; b.textContent = 'clearing…'; }
+  try{ await apiJson('/serial/owner/clear', {method:'POST'}); }
+  catch(e){ /* surfaced by the re-poll below */ }
+  ownerPoll();
+}
 async function monPoll(){
   try{ monRender((await apiJson('/monitor/status', {cache:'no-store'})).data); }
   catch(e){ if(e.apiDown){ monApiDown(); } /* else transient — keep last state */ }
+  ownerPoll();  // refresh the port-owner surface alongside monitor status
 }
 async function monStart(){
   if(!monApiOk){ monApiDown(); return; }
