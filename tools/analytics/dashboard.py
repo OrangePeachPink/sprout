@@ -29,7 +29,7 @@ import argparse
 import json
 import statistics
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
@@ -240,6 +240,127 @@ def _gaps(sweeps: list, start: datetime) -> list[dict]:
 
 
 # --------------------------------------------------------------------------- #
+# environmental join (PRD-0002 R3, #368): align located weather + computed solar
+# onto the soil timeline (timestamp UTC + place), so the overlay (#198) and the
+# decomposition (#199) can plot soil behaviour against measured conditions.
+# --------------------------------------------------------------------------- #
+# Standard sunrise/sunset: geometric centre 0.833 deg below the horizon (matches
+# env_solar). Below this the sun is down -> a night band.
+_HORIZON_DEG = -0.833
+
+
+def _night_bands(
+    solar_pts: list[dict], start: datetime, end_utc: datetime
+) -> list[dict]:
+    """Night windows as {x0, x1} in hours-since-start, from a 10-min solar series."""
+    if not solar_pts:
+        return []
+    bands: list[dict] = []
+    in_night = False
+    band_start: datetime | None = None
+    for pt in solar_pts:
+        t: datetime = pt["t"]
+        night = pt["elevation_deg"] <= _HORIZON_DEG
+        if night and not in_night:
+            in_night, band_start = True, t
+        elif not night and in_night:
+            in_night = False
+            bands.append(
+                {
+                    "x0": round((band_start - start).total_seconds() / 3600, 4),
+                    "x1": round((t - start).total_seconds() / 3600, 4),
+                }
+            )
+    if in_night and band_start is not None:
+        bands.append(
+            {
+                "x0": round((band_start - start).total_seconds() / 3600, 4),
+                "x1": round((end_utc - start).total_seconds() / 3600, 4),
+            }
+        )
+    return bands
+
+
+def _weather_hourly_join(
+    hourly: list[dict], start: datetime, end_utc: datetime
+) -> list[dict]:
+    """Weather windowed to [start, end_utc] as {x, cloud_cover, radiation}.
+
+    The join key is timestamp (UTC): each hourly record is placed on the soil
+    timeline by hours-since-start. Open-Meteo returns time_utc as an ISO string
+    (no Z); parsed to UTC. Out-of-window hours are dropped (not extrapolated)."""
+    out = []
+    for h in hourly:
+        ts = h.get("time_utc")
+        if ts is None:
+            continue
+        try:
+            t = datetime.fromisoformat(str(ts)).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+        if t < start or t > end_utc:
+            continue
+        out.append(
+            {
+                "x": round((t - start).total_seconds() / 3600, 4),
+                "cloud_cover": h.get("cloud_cover"),
+                "radiation": h.get("shortwave_radiation"),
+            }
+        )
+    return out
+
+
+def build_env_context(start: datetime, end_utc: datetime) -> dict:
+    """Solar + optional weather joined onto the [start, end_utc] soil window (R3).
+
+    Offline-first (R9): returns ``{"available": False}`` when no location config is
+    present (so the dashboard simply omits the overlay — never a broken UI), and
+    degrades to **solar-only** when the weather cache is absent / a fetch fails.
+    Never commits or logs coordinates (R6 / ADR-0013): coords stay in the gitignored
+    config and only the *derived* solar/weather series cross into the context."""
+    try:
+        import env_solar
+    except ImportError:
+        return {"available": False}
+
+    loc = env_solar.load_location()
+    if loc is None:
+        return {"available": False}
+
+    lat = float(loc["latitude"])
+    lon = float(loc["longitude"])
+    tz_off = float(loc.get("tz_offset_hours", 0))
+
+    solar_pts = env_solar.solar_series(lat, lon, start, end_utc, step_min=10)
+    night_bands = _night_bands(solar_pts, start, end_utc)
+    tz = timezone(timedelta(hours=tz_off))
+    start_local_date = start.astimezone(tz).strftime("%Y-%m-%d")
+    sun_ev = env_solar.sun_events(lat, lon, start_local_date, tz_off)
+
+    weather_hourly: list[dict] = []
+    weather_source: dict | None = None
+    try:
+        import env_weather
+
+        wd = env_weather.get_weather(
+            lat, lon, start.strftime("%Y-%m-%d"), end_utc.strftime("%Y-%m-%d")
+        )
+        weather_hourly = _weather_hourly_join(wd["hourly"], start, end_utc)
+        weather_source = wd.get("source")
+    except Exception:
+        pass
+
+    return {
+        "available": True,
+        "night_bands": night_bands,
+        "sun_events": sun_ev,
+        "weather_hourly": weather_hourly,
+        "weather_source": weather_source,  # registry entry (derived/model) or None
+        "solar_source": "derived/computed (solar algorithm; not authoritative)",
+    }
+
+
+# --------------------------------------------------------------------------- #
 # context build
 # --------------------------------------------------------------------------- #
 def build_context(data: LogData) -> dict:
@@ -413,9 +534,14 @@ def build_context(data: LogData) -> dict:
         "calibration": "uncalibrated (raw + band only; per-channel cal #170)",
     }
 
+    # PRD-0002 R3 (#368): join solar + optional weather onto the soil window. Offline-
+    # first — {"available": False} when no location config, so the UI just omits it.
+    env = build_env_context(start, soil[-1].timestamp_utc)
+
     return {
         "meta": meta,
         "provenance": provenance_block,
+        "env": env,
         "cal": {"bounds": bounds, "moist_range": list(mrange), "bands": bands},
         "sensors": sensors,
         "trajectory": {
