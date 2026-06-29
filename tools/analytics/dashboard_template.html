@@ -106,11 +106,25 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .captrace-svg .cax { stroke: var(--border); stroke-width: 1; }
 .captrace-svg .cylab { fill: var(--muted); font-family: var(--font-data); font-size: 9px; text-anchor: end; }
 .captrace-svg .cxlab { fill: var(--muted); font-family: var(--font-data); font-size: 9px; }
-.capstats { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-size: 11px;
-  font-family: var(--font-data); color: var(--ink); align-items: center; }
-.capstats .cst { display: inline-flex; align-items: center; gap: 5px; }
-.capstats .cdot { width: 8px; height: 8px; border-radius: var(--r-pill); display: inline-block; }
-.capstats .capnote { color: var(--muted); margin-left: auto; }
+.cdot { width: 8px; height: 8px; border-radius: var(--r-pill); display: inline-block; }
+/* #334 live channel cards (active capture) + the "experiment live" badge */
+.capbadge { margin-top: 8px; font-size: 11px; font-weight: 600; color: var(--st-predicted);
+  text-transform: lowercase; letter-spacing: .03em; }
+.caplivecards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px; margin-top: 6px; }
+.clcard { border: 1px solid var(--border); border-left: 4px solid var(--accent);
+  border-radius: var(--r-tile); padding: 8px 10px; background: var(--surface); }
+.clhead { display: flex; align-items: center; gap: 6px; font-family: var(--font-data);
+  font-size: 12px; font-weight: 600; }
+.clfresh { margin-left: auto; font-size: 10px; font-weight: 600; padding: 1px 6px;
+  border-radius: var(--r-pill); }
+.clfresh.fresh { color: #fff; background: var(--leaf); }
+.clfresh.stale { color: #fff; background: var(--st-fault, #c0392b); }
+.clraw { font-family: var(--font-data); font-weight: 700; font-size: 26px; line-height: 1.1; margin: 4px 0 0; }
+.clraw .clu { font-size: 11px; font-weight: 400; color: var(--muted); }
+.clmeta { font-family: var(--font-data); font-size: 11px; color: var(--muted); margin-top: 2px; }
+/* monitor cards dim while a capture owns the live view, so stale values don't mislead */
+.cards.dimmed { opacity: .4; filter: grayscale(.4); transition: opacity .2s; }
 @keyframes caplive { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 /* #101 capture-panel review (#99): pills/buttons never wrap; primary = brand green;
    the two modes paired by an accent bar (baseline green vs bounded-test purple). */
@@ -1003,20 +1017,36 @@ function capSvg(ds){  // a mini live trajectory as an instrument (#161, #325)
   }).join('');
   return `<svg viewBox="0 0 ${W} ${H}" class="captrace-svg" role="img" aria-label="live raw ADC trajectory">${g}${lines}</svg>`;
 }
-function capStatsHtml(ds){  // #325 per-channel live stats, in RAW units (never %)
-  const rows=(ds||[]).map(d=>{
+// #334: per-channel LIVE cards from the active capture stream — current raw + min/max
+// + slope + freshness, clearly badged "experiment live" so it's never confused with the
+// (dimmed) monitor cards. _capLivePrev tracks sample counts across polls for freshness.
+let _capLivePrev = {};
+function capLiveCards(ds){  // raw ADC only (honest-data law); never a %
+  const cards=(ds||[]).map(d=>{
     const ys=(d.points||[]).map(p=>p.y); if(!ys.length) return '';
-    const cur=ys[ys.length-1], lo=Math.min(...ys), hi=Math.max(...ys);
+    const cur=ys[ys.length-1], lo=Math.min(...ys), hi=Math.max(...ys), n=ys.length;
     const sl=(d.trend && typeof d.trend.slope==='number') ? (d.trend.slope>=0?'+':'')+d.trend.slope.toFixed(1)+'/h' : '—';
-    return `<span class="cst"><span class="cdot" style="background:${d.color||'#888'}"></span>`
-      + `${d.id}: <b>${cur}</b> raw · ${lo}–${hi} · ${sl}</span>`;
+    const fresh = (_capLivePrev[d.id]==null) || (n > _capLivePrev[d.id]);  // new sample since last poll?
+    _capLivePrev[d.id]=n;
+    const fcls = fresh ? 'fresh' : 'stale', ftxt = fresh ? 'live' : 'stale — no new sample';
+    return `<div class="clcard" style="--accent:${d.color||'#888'}">`
+      + `<div class="clhead"><span class="cdot" style="background:${d.color||'#888'}"></span>${d.id}`
+      + `<span class="clfresh ${fcls}">${ftxt}</span></div>`
+      + `<div class="clraw">${cur}<span class="clu"> raw</span></div>`
+      + `<div class="clmeta">min–max ${lo}–${hi} · ${sl}</div></div>`;
   }).join('');
-  return rows ? `<div class="capstats">${rows}<span class="capnote">raw ADC · higher = drier · no %</span></div>` : '';
+  return cards
+    ? `<div class="capbadge">experiment live · latest raw per probe · higher = drier · no %</div>`
+      + `<div class="caplivecards">${cards}</div>`
+    : '';
 }
 function capDrawTrace(ds){
   const el = document.getElementById('capTrace'); if(!el) return;
   const svg = capSvg(ds);
-  if(svg){ el.innerHTML = svg + capStatsHtml(ds); el.hidden = false; } else { el.hidden = true; el.innerHTML = ''; }
+  if(svg){ el.innerHTML = svg + capLiveCards(ds); el.hidden = false; } else { el.hidden = true; el.innerHTML = ''; }
+}
+function capSetCardsDimmed(on){  // #334: dim the monitor cards while a capture owns the live view
+  const c = document.getElementById('cards'); if(c) c.classList.toggle('dimmed', !!on);
 }
 function capRender(st){
   const start = document.getElementById('capStart'), stop = document.getElementById('capStop');
@@ -1028,8 +1058,11 @@ function capRender(st){
     const rows = (st.rows != null) ? ` · ${st.rows} rows` : '';
     capSetStatus(`experiment mode · capturing @ ${st.rate_s}s${clock}${rows}`, 'run');
     capDrawTrace(st.trace);
+    capSetCardsDimmed(true);  // #334: monitor cards are stale during capture — dim them
   } else {
     start.disabled = false; stop.disabled = true;
+    _capLivePrev = {};  // #334: reset freshness tracking when the capture ends
+    capSetCardsDimmed(false);
     capDrawTrace(null);
     if(st && (st.state === 'done' || st.state === 'error')){
       const t = st.transport || {};
