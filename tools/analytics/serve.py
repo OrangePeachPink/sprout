@@ -61,6 +61,7 @@ _CAPTURE_DIR = _REPO / "tools" / "capture"
 if str(_CAPTURE_DIR) not in sys.path:
     sys.path.insert(0, str(_CAPTURE_DIR))
 import handoff  # noqa: E402  (capture sibling - the Monitor<->Experiment handoff, #129)
+import serial_lock  # noqa: E402  (capture sibling - the #64 advisory-lock contract)
 from control import CaptureController, ControlError  # noqa: E402  (capture sibling)
 
 _LOGGER_DIR = _REPO / "tools" / "logger"
@@ -164,6 +165,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json(st)
             elif parsed.path == "/monitor/status":
                 self._send_json(_MONITOR.status())
+            elif parsed.path == "/serial/owner":  # who holds the port (#330)
+                self._send_json(serial_lock.owner_status())
             elif parsed.path == "/lab":  # the Lab Notebook catalog (#154)
                 self._send(render_catalog(load_catalog()), "text/html; charset=utf-8")
             elif parsed.path == "/lab/experiments.json":
@@ -221,6 +224,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json(_MONITOR.start(port=self._body().get("port")))
             elif parsed.path == "/monitor/stop":
                 self._send_json(_MONITOR.stop())
+            elif parsed.path == "/serial/owner/clear":  # clear a STALE marker (#330)
+                self._send_json(serial_lock.clear_if_stale())
             elif parsed.path.startswith("/lab/study/"):  # save a study (#159)
                 sid = unquote(parsed.path[len("/lab/study/") :])
                 self._send_json(save_study(sid, self._body()))
