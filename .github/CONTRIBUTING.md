@@ -54,6 +54,11 @@ maintainer confirms `area:` / `layer:` at triage.
    **not** `Closes #N` (see the gate below). Include how you verified the change.
 6. PRs are **squash-merged** — one clean commit per change; the branch auto-deletes after merge.
 
+> **Why CI runs everything on every PR:** `just check` (what CI runs) is the same full gate as your machine —
+> on purpose. Hooks are *type*-scoped for speed (a docs change never runs firmware tests locally); CI runs
+> everything for predictability and to prevent local≠remote drift. Path-filtering would re-introduce exactly
+> the class of surprise we deliberately closed.
+>
 > **If CI goes red after a base fix:** re-running the job alone isn't enough — it replays the *stale* merge
 > commit. **Update your branch** (merge or rebase `main`) so CI re-checks against the fixed base. That's the
 > "Attempt #2 / #3" trap.
@@ -83,6 +88,12 @@ That's why PRs use `Refs #N` (a non-closing link) rather than `Closes #N`, and w
 - `good first issue` / `help wanted` — welcoming places to start
 
 Priority, Size, and Verification are **board fields**, not labels — see [The board](#the-board).
+
+## Where we'd love help
+
+**[Contributors Welcome](../docs/CONTRIBUTORS_WELCOME.md)** is our living list of things the project would
+genuinely love a hand with — resistive-sensor support, board configs beyond ESP32 + Arduino, and a
+host-the-stack tier. At launch these graduate into `help wanted` issues; until then, the list is the map.
 
 ## Questions?
 

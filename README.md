@@ -163,8 +163,9 @@ firmware C formatter is being re-introduced into the gate idempotently
 
 ## Status
 
-Currently **read-only observation** — four co-located probes capturing a full day at a time. Watering is
-intentionally gated behind real per-probe calibration (the safety-first order: *make watering correct before
+Four co-located probes observe soil moisture. The firmware ships a **manual operator-commanded bounded pump
+pulse** (`!water` / `!stop`), but the relay path is **bench-unverified** (issue #191) and autonomous watering
+is gated behind real per-probe calibration (issue #94 — the safety-first order: *make watering correct before
 it's possible*). The firmware roadmap and current standing live in the
 [handoff notes](docs/HANDOFF_2026-06-23.md).
 
@@ -175,6 +176,10 @@ Work is proposed, tracked, and merged through GitHub — **Issues** are the ledg
 **[Discussions](https://github.com/OrangePeachPink/plants/discussions)** are the idea inbox. The full loop
 (branch → PR with `Refs #N` → the review-before-close **verification gate**) lives in
 **[CONTRIBUTING.md](.github/CONTRIBUTING.md)**.
+
+Looking for somewhere to jump in? **[Contributors Welcome](docs/CONTRIBUTORS_WELCOME.md)** is our running list
+of things we'd love a hand with — resistive-sensor support, board configs beyond ESP32 + Arduino, and a
+host-the-stack tier.
 
 ---
 

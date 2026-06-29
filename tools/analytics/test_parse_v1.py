@@ -1,0 +1,111 @@
+"""Tests for parse_v1 — targeted assertions for the cal-bounds contract (#295).
+
+The comprehensive golden round-trip suite (plants_logger + parse_v1) lives in #291.
+"""
+
+from __future__ import annotations
+
+import sys
+import textwrap
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from parse_v1 import DEFAULT_CAL_BOUNDS, parse_file
+
+# --------------------------------------------------------------------------- #
+# fixtures — minimal column set; parse_v1 maps by name so a subset CSV is valid
+# --------------------------------------------------------------------------- #
+
+# Short column header + one data row — well under the 88-char line limit.
+_COLS = "record_type,timestamp_utc,session_id,raw_value,quality_flag,payload"
+_ROW = "plants.soil,2026-06-27T00:00:30.000Z,sess001,1312,OK,level=well watered;gpio=36"
+
+_HEADER_WITH_BOUNDS = textwrap.dedent(f"""\
+    # log_start_utc=2026-06-27T00:00:00Z  tz_offset=-05:00
+    # logger=plants_logger_0_4  schema_version=1
+    # plants telemetry  schema_version=1
+    # fw=0.7.0  git=test0000  run=test
+    # session_id=sess001  cadence_ms=30000
+    # cal bounds(dry>wet): 3050 2140 1830 1520 1150 1050  [moist% 900..3400]
+    {_COLS}
+    {_ROW}
+""")
+
+_HEADER_WITHOUT_BOUNDS = textwrap.dedent(f"""\
+    # log_start_utc=2026-06-27T00:00:00Z  tz_offset=-05:00
+    # logger=plants_logger_0_4  schema_version=1
+    # plants telemetry  schema_version=1
+    # fw=0.7.0  git=test0000  run=test
+    # session_id=sess002  cadence_ms=30000
+    {_COLS}
+    {_ROW.replace("sess001", "sess002")}
+""")
+
+
+@pytest.fixture()
+def csv_with_bounds(tmp_path: Path) -> Path:
+    p = tmp_path / "with_bounds.csv"
+    p.write_text(_HEADER_WITH_BOUNDS, encoding="utf-8")
+    return p
+
+
+@pytest.fixture()
+def csv_without_bounds(tmp_path: Path) -> Path:
+    p = tmp_path / "without_bounds.csv"
+    p.write_text(_HEADER_WITHOUT_BOUNDS, encoding="utf-8")
+    return p
+
+
+# --------------------------------------------------------------------------- #
+# DEFAULT_CAL_BOUNDS sanity
+# --------------------------------------------------------------------------- #
+
+
+def test_default_cal_bounds_matches_firmware() -> None:
+    """DEFAULT_CAL_BOUNDS must match the reconciled firmware values."""
+    assert DEFAULT_CAL_BOUNDS == (3050, 2140, 1830, 1520, 1150, 1050)
+
+
+# --------------------------------------------------------------------------- #
+# header-derived bounds win
+# --------------------------------------------------------------------------- #
+
+
+def test_header_bounds_are_used_when_present(csv_with_bounds: Path) -> None:
+    data = parse_file(csv_with_bounds)
+    assert len(data.segments) == 1
+    seg = data.segments[0]
+    assert seg.cal_bounds == [3050, 2140, 1830, 1520, 1150, 1050]
+    assert seg.cal_bounds_source == "header"
+
+
+def test_header_bounds_win_over_default(csv_with_bounds: Path) -> None:
+    """Header-derived bounds must be used even when they match the default."""
+    data = parse_file(csv_with_bounds)
+    assert data.segments[0].cal_bounds_source == "header"
+
+
+# --------------------------------------------------------------------------- #
+# missing header → flagged default
+# --------------------------------------------------------------------------- #
+
+
+def test_default_bounds_used_when_header_absent(csv_without_bounds: Path) -> None:
+    data = parse_file(csv_without_bounds)
+    seg = data.segments[0]
+    assert seg.cal_bounds == list(DEFAULT_CAL_BOUNDS)
+    assert seg.cal_bounds_source == "default"
+
+
+def test_default_bounds_always_populated(csv_without_bounds: Path) -> None:
+    """cal_bounds is never empty after parsing — always header or default."""
+    data = parse_file(csv_without_bounds)
+    assert data.segments[0].cal_bounds  # non-empty
+
+
+def test_summary_flags_default_bounds(csv_without_bounds: Path) -> None:
+    data = parse_file(csv_without_bounds)
+    summary = data.summary()
+    assert "fallback default" in summary

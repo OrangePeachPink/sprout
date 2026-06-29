@@ -211,16 +211,40 @@ void loop() {
 
     commands_poll();  /* non-blocking: read one line + dispatch if complete */
 
-    /* Service the manual pump pulse: turn relay off the instant the pulse expires. */
+    unsigned long now = millis();  /* shared timestamp for all loop schedulers */
+
+    /* Service the manual pump pulse: turn relay off the instant the bounded pulse
+     * expires (#215). Capture the channel before service() clears it. */
     int pulse_ch = pump_pulse_channel(&g_pump);
-    if (pump_pulse_service(&g_pump, millis())) pumpSet(pulse_ch, false);
+    if (pump_pulse_service(&g_pump, now)) pumpSet(pulse_ch, false);
+
+    /* Fast health tick (#4): cheap HEALTH_SAMPLES-burst spread check per channel.
+     * Refreshes last_spread + health_warn so probe faults show up quickly in the
+     * health banner and future status indicators (D3) / served page (D4).
+     * Does NOT update the classifier - committed band + last_raw are unchanged.
+     * Skips ADC when a pump is active (relay switching injects noise onto ADC bus). */
+    static unsigned long lastHealth = 0;
+    if (now - lastHealth >= HEALTH_CADENCE_MS) {
+        lastHealth = now;
+        if (!pump_pulse_active(&g_pump)) {
+            uint16_t quick[HEALTH_SAMPLES];
+            for (int ch = 0; ch < NUM_SENSORS; ch++) {
+                int pin = SENSOR_PINS[ch];
+                for (int d = 0; d < ADC_DISCARD; d++) (void)analogRead(pin);
+                for (int i = 0; i < HEALTH_SAMPLES; i++) quick[i] = (uint16_t)analogRead(pin);
+                uint16_t sp = 0;
+                moisture_trimmed_mean(quick, HEALTH_SAMPLES, 1, &sp);
+                state[ch].last_spread = sp;
+                state[ch].health_warn = sp >= (uint16_t)cfg.spread_warn_raw;
+            }
+        }
+    }
 
     /* HARD INVARIANT: never sample while a pump runs — keeps noise off the ADC. */
     if (pump_pulse_active(&g_pump)) return;
 
     /* Non-blocking scheduler: one sweep every g_cadence_ms. */
     static unsigned long lastRead = 0;
-    unsigned long now = millis();
     if (now - lastRead < g_cadence_ms) return;
     lastRead = now;
 

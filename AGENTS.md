@@ -38,6 +38,7 @@ Sprout is built by coordinated lanes. Stay in yours; route cross-lane needs thro
 | **Firmware** | ESP32 control, sensing, actuators (`firmware/`) | ADR-0001, the native C test harness |
 | **Data** | host logger, analytics, the served dashboard | ADR-0005, ADR-0006 |
 | **Design** | design system, brand, voice (repo read-only; lands via commit-proxy) | ADR-0004, ADR-0007, ADR-0008 |
+| **Sage / Bench** | physical bench, sensor characterization, calibration evidence, lab procedures | bench evidence docs, calibration ADRs (read-only on firmware + data pipelines) |
 | **Workflow** | issues, board, releases, process | .github/CONTRIBUTING.md, this file |
 
 ## Lane attribution
@@ -74,11 +75,50 @@ review your own recent work — **especially before a status brief** — do **CI
 
 When an issue comes up mid-lane and can't route through Workflow first, tag it `for:<lane>` to flag a
 **first-approximate recipient** — a best-guess owner so it doesn't sit without one. The family:
-`for:firmware` · `for:data` · `for:design` · `for:dx` · `for:ingest` · `for:trellis` · `for:workflow`.
+`for:firmware` · `for:data` · `for:design` · `for:dx` · `for:ingest` · `for:sage` · `for:trellis` · `for:workflow`.
 
 - It's a routing **hint**, not an assignment or a commitment — Workflow still triages, slices, and gates.
 - Use `for:workflow` when you're unsure, or when an item explicitly needs the pipeline (e.g. "please slice
   this"); `for:trellis` flags an architecture / gap review.
+
+## Sage / Bench lane
+
+**Platform:** Codex (local machine with full codebase access + `gh` CLI) · **Sign-off:** `— Sage` · **Label:** `for:sage`
+
+Sage is the bench-and-lab evidence lane — hardware bring-up, sensor characterization, calibration
+evidence, bench safety procedures, and experiment method documentation.
+
+**Scope defaults** (process controls — Sage has local repo + GitHub access; these are lane boundaries,
+not platform limitations):
+
+| Can write | Deferred to owning lane |
+|---|---|
+| Issue comments, bench procedure docs, evidence docs | Firmware source (`firmware/`) |
+| Dated bench photos, artifact documentation, "what this proves" notes | Data pipeline code and raw logs |
+| PRD and ADR drafts in Sage's domain | Production config |
+| `docs/` bench notes and calibration records | |
+
+**Capability-stage vocabulary:** Sage uses these terms to describe how far a feature or sensor
+configuration has progressed through physical validation. Use them consistently in issues, evidence
+docs, and ADRs so any lane can read bench state at a glance:
+
+| Stage | Meaning |
+|---|---|
+| `code-staged` | Implementation exists but has not yet been wired to hardware |
+| `bench-wired` | Hardware connections made; not yet exercised |
+| `dry-verified` | Exercised without liquid present; basic electrical behavior confirmed |
+| `wet-verified` | Exercised with water/substrate; sensor response confirmed |
+| `plant-deployed` | Running in an actual pot with a plant; real-world data flowing |
+| `autonomous-enabled` | System making watering decisions without manual intervention |
+
+Current state: pumps/relay are **code-staged**; sensors are **bench-wired**.
+
+**Bench priorities (current runway):** plant dry-baseline, consolidated dry-safety bench (#191),
+sensor characterization + C1 calibration (#170), sunlight/heat/ADC artifact isolation, fast-cadence
+capture quality (#82).
+
+Route bench-adjacent issues with `for:sage`; Sage coordinates bench procedures with Firmware on
+wiring/power changes and with Data on schema extensions for new sensor readings.
 
 ## Workflow & GitHub
 
