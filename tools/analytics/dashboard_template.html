@@ -209,6 +209,15 @@ table.grid tr:last-child td { border-bottom: none; }
 
 footer.prov { color: var(--muted); font-size: 11px; line-height: 1.6; margin-top: var(--space-md); }
 footer.prov code { font-family: var(--font-data); }
+/* #324 bench-provenance panel — compact, screenshot-friendly key/value groups */
+.provgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-md); }
+.provgrp { border: 1px solid var(--border); border-radius: var(--r-tile); padding: var(--space-sm) var(--space-md); }
+.provgrp h3 { font-size: 12px; color: var(--muted); text-transform: lowercase; letter-spacing: .04em; margin-bottom: 6px; }
+.provgrp .row { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 12px; }
+.provgrp .pk { color: var(--muted); }
+.provgrp .pv { font-family: var(--font-data); overflow-wrap: anywhere; text-align: right; }
+.provgrp .pv.warn { color: var(--st-fault); font-weight: 600; }
+.provgrp .pv.ok { color: var(--leaf); }
 .note { background: color-mix(in srgb, var(--st-dry) 9%, transparent); border-left: 3px solid var(--st-dry);
   padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-top: var(--space-sm); }
 </style>
@@ -329,6 +338,11 @@ footer.prov code { font-family: var(--font-data); }
     <section class="card">
       <div class="panel-h"><h2>Data integrity</h2><span class="cap">what the capture actually contains — gaps surfaced, not hidden</span></div>
       <div id="integrity"></div>
+    </section>
+
+    <section class="card" id="provenanceCard">
+      <div class="panel-h"><h2>Bench provenance</h2><span class="cap">what produced this data — screenshot-ready · <span class="mono">—</span> = unavailable, fills in as #329/#273/#274 land</span></div>
+      <div id="provenance" class="provgrid"></div>
     </section>
 
     <footer class="prov" id="prov"></footer>
@@ -628,11 +642,39 @@ function renderProv(){
     `Day/night shading is omitted — it needs the real light schedule, which is not in the data.`;
 }
 
+function renderProvenance(){  // #324 bench-evidence panel
+  const wrap = document.getElementById('provenance'); if(!wrap) return;
+  const p = DASH.provenance; if(!p){ wrap.innerHTML = ''; return; }
+  const dash = v => (v===null || v===undefined || v==='') ? '—' : v;
+  const grp = (title, rows) => {
+    const cells = rows.map(([k,v,cls]) =>
+      `<span class="pk">${k}</span><span class="pv${cls?(' '+cls):''}">${dash(v)}</span>`).join('');
+    return `<div class="provgrp"><h3>${title}</h3><div class="row">${cells}</div></div>`;
+  };
+  const s = p.server || {}, d = p.device || {}, c = p.contract || {};
+  const sha = s.app_git_sha + (s.dirty ? ' +dirty' : '');
+  const staleRow = s.stale
+    ? ['running', `STALE — server predates ${dash(s.head_git_sha)}`, 'warn']
+    : ['running', 'current', 'ok'];
+  wrap.innerHTML =
+    grp('server / app', [
+      ['app git', sha], ['branch', s.branch], ['started', s.start_utc], staleRow,
+    ]) +
+    grp('device / firmware', [
+      ['device id', d.device_id], ['firmware', d.fw], ['fw git', d.fw_git],
+      ['schema', d.schema_version], ['logger', d.logger_version], ['tz offset', d.tz_offset],
+    ]) +
+    grp('contract / calibration', [
+      ['value/unit', c.label, c.raw_only ? 'ok' : 'warn'],
+      ['calibration', p.calibration],
+    ]);
+}
+
 function renderOverview(){
   destroyCharts();
   renderHeader(); renderCards(); renderLadder();
   renderTraj(); renderSpread(); renderDist();
-  renderQuality(); renderIntegrity(); renderProv();
+  renderQuality(); renderIntegrity(); renderProvenance(); renderProv();
   if(!LIVE) applyStaticChannels();
 }
 

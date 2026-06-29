@@ -36,6 +36,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+import provenance  # noqa: E402  (sibling - server/app provenance for the panel, #324)
 from forecast import fit_line, forecast_payload  # noqa: E402
 from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
     DEFAULT_CAL_BOUNDS,
@@ -383,8 +384,35 @@ def build_context(data: LogData) -> dict:
         ),
     }
 
+    # #324 provenance panel: server/app + device/log + the honest-data contract state.
+    # raw_only is computed from the data itself — if any row carried a value/unit, the
+    # contract is violated and we say so (surface gaps, never smooth them).
+    raw_only_ok = all(r.value is None and (r.unit or "") == "" for r in soil)
+    provenance_block = {
+        "server": provenance.server_provenance(),
+        "device": {
+            "device_id": meta["device_id"],
+            "fw": meta["fw"],
+            "fw_git": meta["git"],
+            "schema_version": meta["schema_version"],
+            "logger_version": getattr(last_seg, "logger_version", None),
+            "tz_offset": meta["tz_offset"],
+        },
+        "contract": {
+            "raw_only": raw_only_ok,
+            "label": (
+                "raw counts + band only (value/unit empty)"
+                if raw_only_ok
+                else "CONTRACT VIOLATION — a value/unit is populated"
+            ),
+        },
+        # Always uncalibrated today: raw + band are the truth; per-channel cal is #170.
+        "calibration": "uncalibrated (raw + band only; per-channel cal #170)",
+    }
+
     return {
         "meta": meta,
+        "provenance": provenance_block,
         "cal": {"bounds": bounds, "moist_range": list(mrange), "bands": bands},
         "sensors": sensors,
         "trajectory": {
