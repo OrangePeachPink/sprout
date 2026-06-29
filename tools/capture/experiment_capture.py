@@ -43,6 +43,7 @@ import csv
 import json
 import os
 import random
+import re
 import sys
 import time
 from abc import ABC, abstractmethod
@@ -104,6 +105,34 @@ def _nmea_crc(body: str) -> str:
     return f"{calc:02X}"
 
 
+# Firmware provenance keys carried by the boot banner's `# fw=.. git=.. built=.. run=..`
+# line (firmware/src/main.cpp). Same kv grammar parse_v1 uses, so a value with spaces
+# (built="Jun 28 2026 12:34:56") is captured whole, up to the next `key=`.
+_PROVENANCE_KEYS = ("fw", "git", "built", "run")
+_PROVENANCE_RE = re.compile(r"(\w+)=(.*?)(?=\s+\w+=|$)")
+
+
+def _empty_provenance() -> dict[str, str | None]:
+    return dict.fromkeys(_PROVENANCE_KEYS, None)
+
+
+def _parse_provenance(header_lines: list[str]) -> dict[str, str | None]:
+    """Extract fw / git / built / run from captured `#` banner lines.
+
+    The device emits firmware version on the `# boot` line and the full
+    `# fw=.. git=.. built=.. run=..` provenance line right after it. We scan all
+    captured header lines so a later line's value wins (the provenance line's `fw`
+    overrides the boot line's). Missing keys stay None -> reported "unavailable"."""
+    prov = _empty_provenance()
+    for line in header_lines:
+        body = line.lstrip("#").strip()
+        for m in _PROVENANCE_RE.finditer(body):
+            key, val = m.group(1), m.group(2).strip()
+            if key in prov and val:
+                prov[key] = val
+    return prov
+
+
 # --------------------------------------------------------------------------- #
 # the pluggable source seam (Firmware #63 set_cadence + #64 port-handoff land here)
 # --------------------------------------------------------------------------- #
@@ -123,6 +152,13 @@ class Reader(ABC):
 
     @abstractmethod
     def release(self) -> None: ...
+
+    def firmware_provenance(self) -> dict[str, str | None]:
+        """fw / git / built / run for the connected device, captured at acquire().
+
+        Default: all None (unknown). Subclasses that see a boot banner override it.
+        Read *after* ``acquire()`` — that's when the banner has arrived (#329)."""
+        return _empty_provenance()
 
 
 class SyntheticReader(Reader):
@@ -176,6 +212,11 @@ class SyntheticReader(Reader):
     def release(self) -> None:
         return None
 
+    def firmware_provenance(self) -> dict[str, str | None]:
+        # A device-free source: the synthetic line carries fw=0.7.0 but there is no
+        # real build, so git/built/run are genuinely unavailable (#329).
+        return {"fw": "0.7.0", "git": None, "built": None, "run": None}
+
 
 class SerialReader(Reader):
     """Real serial source implementing the ADR-0011 host contract:
@@ -206,6 +247,8 @@ class SerialReader(Reader):
         self._banner_timeout_s = banner_timeout_s
         self._ser = None
         self._lock_held = False  # set after write_lock; release() gates on it
+        self._pending: str | None = None  # first data line read while capturing banner
+        self._firmware = _empty_provenance()  # filled by _wait_for_banner (#329)
 
     def _default_open(self):
         import serial  # real-path only; tests inject open_fn
@@ -234,11 +277,33 @@ class SerialReader(Reader):
 
     def _wait_for_banner(self) -> None:
         deadline = time.monotonic() + self._banner_timeout_s
+        header_lines: list[str] = []
         while time.monotonic() < deadline:
             line = self._readline()
+            if line.startswith("#"):
+                header_lines.append(line)
             if line.startswith("# boot") and "fw=" in line:
+                # Boot seen — success contract preserved. Now capture the rest of
+                # the header block (the `# fw=.. git=..` line) before data (#329).
+                self._capture_header_tail(header_lines, deadline)
                 return
         raise CaptureError("no boot banner after open (device didn't reset / boot?)")
+
+    def _capture_header_tail(self, header_lines: list[str], deadline: float) -> None:
+        """After the boot line, read the remaining `#` header lines (where git/built/run
+        live) until the first data row, which is buffered so ``lines()`` won't drop it.
+        Bounded so a slow/quiet device can't stall acquire (#329)."""
+        grace = min(deadline, time.monotonic() + 2.0)
+        while time.monotonic() < grace:
+            line = self._readline()
+            if not line:
+                continue
+            if line.startswith("#"):
+                header_lines.append(line)
+                continue
+            self._pending = line  # first real data line — don't lose it
+            break
+        self._firmware = _parse_provenance(header_lines)
 
     def set_cadence(self, rate_s: float) -> None:
         ms = max(1, round(rate_s * 1000))
@@ -267,8 +332,14 @@ class SerialReader(Reader):
         return "timeout"
 
     def lines(self) -> Iterator[str]:
+        if self._pending is not None:  # the data line read during banner capture (#329)
+            pending, self._pending = self._pending, None
+            yield pending
         while True:
             yield self._readline()  # "" on idle -> run_capture ticks the deadline
+
+    def firmware_provenance(self) -> dict[str, str | None]:
+        return dict(self._firmware)
 
     def release(self) -> None:
         if self._ser is not None:
@@ -289,24 +360,41 @@ class CaptureWriter:
     """Writes one self-describing schema_version=2 CSV under
     ``experiments/<experiment_id>/`` — never ``logs/``."""
 
-    def __init__(self, out_dir: Path, experiment_id: str, subject: str, rate_s: float):
+    def __init__(
+        self,
+        out_dir: Path,
+        experiment_id: str,
+        subject: str,
+        rate_s: float,
+        firmware: dict[str, str | None] | None = None,
+    ):
         self.dir = out_dir / experiment_id
         self.dir.mkdir(parents=True, exist_ok=True)
         self.path = self.dir / f"{experiment_id}.csv"
         self.experiment_id = experiment_id
         self.subject = subject
         self.rate_s = rate_s
+        self.firmware = firmware or _empty_provenance()
         self._fh = self.path.open("w", encoding="utf-8", newline="")
         self._writer = csv.writer(self._fh, lineterminator="\n")
         self._fh.write(self._header(datetime.now(timezone.utc)))
         self._writer.writerow(EXPERIMENT_COLS)
 
     def _header(self, now: datetime) -> str:
+        # Firmware provenance line, same `# fw=.. git=..` grammar the monitor log uses,
+        # so parse_v1 lifts git/built/run into the segment header for free (#329). Only
+        # available keys are emitted; a missing git simply isn't here (shown
+        # "unavailable" downstream), never a fabricated value.
+        prov_tokens = " ".join(
+            f"{k}={self.firmware[k]}" for k in _PROVENANCE_KEYS if self.firmware.get(k)
+        )
+        prov_line = f"# {prov_tokens}\n" if prov_tokens else ""
         return (
             f"# plants telemetry experiment - schema_version={SCHEMA_VERSION} "
             f"mode={EXPERIMENT_MODE} experiment_id={self.experiment_id} "
             f"subject={self.subject} sample_rate_s={self.rate_s} "
             f"logger={CAPTURE_VERSION}\n"
+            f"{prov_line}"
             f"# log_start_utc={iso_utc(now)} tz_offset={tz_offset(now)} "
             f"mode={EXPERIMENT_MODE} - isolated experiment capture; NOT a monitor log "
             f"(never stitch into the baseline)\n"
@@ -362,16 +450,21 @@ def run_capture(
     stop_file: Path | None = None,
 ) -> dict:
     """Run a bounded capture; returns the manifest dict (also written to disk)."""
-    writer = CaptureWriter(out_dir, experiment_id, subject, rate_s)
+    writer: CaptureWriter | None = None
+    firmware = _empty_provenance()
     counts = {"rows": 0, "sweeps": 0, "dropped": 0, "crc_fail": 0, "noise": 0}
     started = datetime.now(timezone.utc)
-    deadline = time.monotonic() + duration_s
     last_sensor: str | None = None
     sample_id = 0
     stopped_by = "duration"
     try:
         reader.acquire()
+        # Capture firmware provenance from the boot banner before writing the header,
+        # so the experiment file carries the same git rev the monitor log would (#329).
+        firmware = reader.firmware_provenance()
         reader.set_cadence(rate_s)
+        writer = CaptureWriter(out_dir, experiment_id, subject, rate_s, firmware)
+        deadline = time.monotonic() + duration_s  # clock starts after the banner wait
         for text in reader.lines():
             if time.monotonic() >= deadline:  # fail-safe auto-stop (R3)
                 break
@@ -397,8 +490,12 @@ def run_capture(
             writer.write(dev, sample_id, label, datetime.now(timezone.utc))
     finally:
         reader.release()
-        writer.close()
+        if writer is not None:
+            writer.close()
     ended = datetime.now(timezone.utc)
+
+    if writer is None:  # acquire failed before any file (port busy / no banner)
+        raise CaptureError("capture did not start (port busy or no boot banner)")
 
     manifest = {
         "experiment_id": experiment_id,
@@ -413,6 +510,14 @@ def run_capture(
         "started_utc": iso_utc(started),
         "ended_utc": iso_utc(ended),
         "capture_version": CAPTURE_VERSION,
+        # Firmware provenance (#329): version + git rev (build time, run label) from the
+        # boot banner. null where the device didn't report it -> shown "unavailable".
+        "firmware": {
+            "version": firmware.get("fw"),
+            "git": firmware.get("git"),
+            "built": firmware.get("built"),
+            "run": firmware.get("run"),
+        },
         "file": writer.path.name,
         "transport": {  # the error-rate-vs-cadence signal (R9)
             "rows": counts["rows"],

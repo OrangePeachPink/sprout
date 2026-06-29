@@ -115,6 +115,7 @@ def render_detail(
             svg = '<p class="empty">could not parse the capture</p>'
 
     t = m.get("transport") or {}
+    fw = m.get("firmware") or {}  # #329: firmware version + git rev, shown separately
     facts = [
         ("started", _fmt_when(m.get("started_utc"))),
         ("duration", _fmt_dur(m.get("duration_s"))),
@@ -124,6 +125,9 @@ def render_detail(
         ("dropped", str(t.get("dropped", "—"))),
         ("crc", str(t.get("crc_fail", "—"))),
         ("stopped", str(m.get("stopped_by", "—"))),
+        # provenance: explicit "unavailable" when the device didn't report it
+        ("firmware", str(fw.get("version") or "unavailable")),
+        ("git", str(fw.get("git") or "unavailable")),
     ]
     facts_html = "".join(
         f'<span class="fk">{html.escape(k)}</span>'
