@@ -343,7 +343,7 @@ const LIVE = location.protocol === 'http:' || location.protocol === 'https:';
 const AUTO_MS = 30000;
 let autoTimer = null;
 let currentDetail = null;
-let curRange = '24h';
+let curRange = '7d';  // #30: default to the 7-day window (one-click zoom to 24h)
 let connOk = true;          // did the last /data.json fetch succeed? (live mode)
 let lastOkMs = Date.now();  // when we last had good data, for the disconnect notice
 let activeChannels = null;  // Set of active sensor ids; null = all (E10)
