@@ -65,8 +65,9 @@ in step 1, that's the cause.
 > hash from the build's own `manifest.json` / `.sha256`, generated against that exact image. (A
 > byte-reproducible build is a later option if we want a fixed published hash per commit.)
 
-Both are **build artifacts** (git-ignored), never committed. To publish a flashable release: build,
-then attach `sprout-esp32-factory.bin` + `manifest.json` as **release assets** (or copy them next to
+All three are **build artifacts** (git-ignored), never committed. To publish a flashable release: build,
+then attach `sprout-esp32-factory.bin`, `manifest.json`, and `sprout-esp32-factory.bin.sha256` as
+**release assets** (or copy them next to
 the flasher page); the page points `<esp-web-install-button manifest="manifest.json">` at the
 manifest, which points at the binary. **(→ DX / release: that hosting plus the page is the DX half
 of this slice.)** Automating the build-and-attach in CI is a sensible fast-follow (mind the Actions
