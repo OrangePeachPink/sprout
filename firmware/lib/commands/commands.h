@@ -34,7 +34,8 @@ typedef struct {
     size_t         device_id_len;
     bool          *device_id_custom; /* true when operator set a custom name       */
     uint32_t      *sample_period_ms; /* &g_sys.sample_period_ms — the FSM idle cadence (#227); !cad / !cfg retune it */
-    bool          *cadence_from_nvs; /* true when the cadence was loaded from NVS   */
+    bool          *cadence_from_nvs; /* true when the persisted default came from NVS */
+    bool          *cadence_temp;     /* true when the live cadence is a session-only !cad,temp — no NVS write (#322) */
     void          *prefs_handle;     /* opaque: Preferences* — the NVS store       */
     irrig_ctrl_t  *irrig;            /* the watering supervisor: single sample & actuation authority (ADR-0016).
                                         !water -> forced dose, !stop -> abort, !auto -> arm gate (#227) */
