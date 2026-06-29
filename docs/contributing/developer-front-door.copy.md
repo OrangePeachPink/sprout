@@ -59,6 +59,13 @@ just start                  # launch Sprout — opens the dashboard
 
 Prefer zero install? Open it in **GitHub Codespaces** — the environment builds itself in the browser.
 
+**On the firmware side, it's just as gentle — and there's no Arduino IDE.** The ESP32 firmware is a
+**PlatformIO** project (it builds the Arduino framework underneath, so you write Arduino-API code without the
+IDE or a cross-compiler). Open in **Codespaces** and the toolchain is already there; locally it's three:
+`just build` (compile) · `just test-native` (test — no board) · `just flash` (upload to the ESP32). Only the
+flash step needs a board on USB — everything else, including CI, runs hardware-free. First flash?
+[FLASHING.md](../FLASHING.md) walks you in.
+
 ## 5. Where the work lives
 
 - **Discussions** — questions and "should we…?" ideas. No setup question is too small.

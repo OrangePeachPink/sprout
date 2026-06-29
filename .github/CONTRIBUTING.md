@@ -67,6 +67,34 @@ maintainer confirms `area:` / `layer:` at triage.
 > commit. **Update your branch** (merge or rebase `main`) so CI re-checks against the fixed base. That's the
 > "Attempt #2 / #3" trap.
 
+## Firmware — build, test, flash (no Arduino IDE)
+
+Picking up a firmware issue? You **never touch the Arduino IDE**, and you never learn a cross-compiler. Sprout's
+firmware is a **PlatformIO** project — it builds the Arduino framework underneath, so you write Arduino-API
+firmware while PlatformIO fetches the toolchain for you.
+
+**Zero local setup — open in Codespaces.** *Open in Codespaces* → the devcontainer builds the toolchain in the
+browser → `just check` runs green. Nothing installed on your machine. This is the recommended path for a first
+firmware contribution.
+
+**Local — three commands** (the `just` recipes run them from the right place, so you can't get the directory
+wrong):
+
+| Do | Command | Needs the board? |
+|---|---|---|
+| **Build** (compile) | `just build` | no |
+| **Test** (native host logic) | `just test-native` | no |
+| **Flash** (upload to the ESP32) | `just flash` | yes — board on USB |
+
+Build and test need **no hardware** — so most firmware work, and all of CI, happens without a board plugged in.
+You only need the ESP32 on USB for the flash step. *(Under the hood these are plain PlatformIO from the
+`firmware/` folder: `pio run` · `pio test -e native` · `pio run -t upload` — the `just` recipes just add
+`-d firmware` so the path is always right.)*
+
+**What you need:** an ESP32, a USB cable, and one tool (PlatformIO — already in the Codespace, or
+`pip install platformio` locally). That's the whole list. To put firmware on a board you've never flashed, see
+**[FLASHING.md](../docs/FLASHING.md)**.
+
 ## The verification gate (why issues aren't auto-closed)
 
 Sprout uses a **review-before-close** gate: merging a PR does **not** close its issue. Instead:
