@@ -99,6 +99,14 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
   border: 1px solid var(--st-dry); color: var(--ink); }
 .serialowner.live { background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
 .serialowner .btn { margin-left: auto; }
+/* #326 agent-draft row + plan preview */
+.capdraft { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: var(--space-md);
+  padding-bottom: var(--space-sm); border-bottom: 1px dashed var(--border); }
+.capdraft .capdraftlbl { font-size: 11px; color: var(--muted); text-transform: lowercase; letter-spacing: .04em; }
+.capdraft select { font-family: var(--font-ui); font-size: 13px; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r-control); padding: 6px var(--space-sm); }
+.capplan { font-size: 11px; color: var(--muted); background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--r-tile); padding: 8px 12px; margin-bottom: var(--space-md); }
 .captrace { margin-top: 12px; }
 .captrace-svg { width: 100%; height: 140px; display: block; background: var(--bg);
   border: 1px solid var(--border); border-radius: var(--r-tile); }
@@ -291,6 +299,13 @@ footer.prov code { font-family: var(--font-data); }
       <h2>Experiment Capture <span class="proposed" title="operator-driven; isolated from the monitor baseline">experiment mode</span></h2>
       <span class="cap">writes an isolated <span class="mono">experiments/&lt;id&gt;/</span> capture — never the monitor <span class="mono">logs/</span></span>
     </div>
+    <div class="capdraft" id="capDraftRow" hidden>
+      <span class="capdraftlbl">agent draft</span>
+      <select id="capDraftSel" class="capf"></select>
+      <button class="btn" id="capDraftLoad" type="button">Load draft</button>
+      <span class="caphint" id="capDraftHint">prefills the form — you still press Start</span>
+    </div>
+    <div class="capplan" id="capPlan" hidden></div>
     <div class="capform">
       <label class="capf">subject<input id="capSubject" type="text" value="common-cup" maxlength="100" spellcheck="false" placeholder="e.g. s1 dry to wet after max-fill cold refill"><small id="capSubjectHint" class="caphint"></small></label>
       <label class="capf">sample rate<select id="capRate">
@@ -1110,6 +1125,55 @@ function capUpdateSubjectHint(){  // live "saves as" preview so the slug is no s
   const slug = capSlugify(raw), hint = document.getElementById('capSubjectHint');
   hint.textContent = (slug && slug !== raw.trim()) ? 'saves as: ' + slug : '';
 }
+// #326 agent drafts: populate the selector + prefill the form from a chosen draft.
+// Loading a draft NEVER starts capture — the operator still presses Start.
+async function capLoadDraftList(){
+  var row = document.getElementById('capDraftRow'); if(!row) return;
+  try{
+    var { data } = await apiJson('/lab/drafts', {cache:'no-store'});
+    var drafts = (data && data.drafts) || [];
+    if(!drafts.length){ row.hidden = true; return; }
+    var sel = document.getElementById('capDraftSel');
+    sel.innerHTML = drafts.map(function(d){
+      var label = d.name + (d.subject ? ' — ' + d.subject : '');
+      return '<option value="'+encodeURIComponent(d.name)+'">'+label+'</option>';
+    }).join('');
+    row.hidden = false;
+  }catch(e){ row.hidden = true; }  // no control plane / no drafts -> just hide
+}
+function capApplyDraft(d){
+  if(!d) return;
+  if(d.subject!=null){ document.getElementById('capSubject').value = d.subject; capUpdateSubjectHint(); }
+  if(d.rate_s!=null){ var r=document.getElementById('capRate'); var v=String(d.rate_s);
+    if([].some.call(r.options,function(o){return o.value===v;})) r.value=v; }
+  if(d.duration_s!=null){ document.getElementById('capDuration').value = Math.round(d.duration_s); }
+  if(d.source!=null){ var s=document.getElementById('capSource'); s.value=d.source;
+    var pf=document.getElementById('capPortField'); if(pf) pf.hidden=(s.value!=='serial'); }
+  if(d.port){ document.getElementById('capPort').value = d.port; }
+  if(d.labels){ document.querySelectorAll('#capLabels .caplabel').forEach(function(i){
+    if(d.labels[i.dataset.ch]!=null) i.value = d.labels[i.dataset.ch]; }); }
+  capShowPlan(d.notes||{});
+}
+function capShowPlan(notes){  // read-only preview of the planned notes + @t+ interventions
+  var el = document.getElementById('capPlan'); if(!el) return;
+  var method = notes.method || '';
+  var ivs = (method.match(/@t?\+?\d+\s*s?[^\n]*/gi) || []);
+  var parts = [];
+  if(notes.hypothesis) parts.push('<b>hypothesis</b> ' + esc(notes.hypothesis));
+  if(method) parts.push('<b>method</b> ' + esc(method));
+  if(ivs.length) parts.push('<b>planned markers</b> ' + ivs.map(esc).join(' · '));
+  if(!parts.length){ el.hidden = true; el.innerHTML=''; return; }
+  el.innerHTML = 'draft plan (applied to the run’s notes after you Start): ' + parts.join(' &nbsp;·&nbsp; ');
+  el.hidden = false;
+}
+function esc(s){ var d=document.createElement('div'); d.textContent=String(s); return d.innerHTML; }
+async function capDraftLoad(){
+  var sel = document.getElementById('capDraftSel'); if(!sel || !sel.value) return;
+  try{
+    var { ok, data } = await apiJson('/lab/draft/' + sel.value, {cache:'no-store'});
+    if(ok && data && !data.error){ capApplyDraft(data); }
+  }catch(e){ /* transient -> leave the form as-is */ }
+}
 async function capStart(){
   const labels = {};
   document.querySelectorAll('#capLabels .caplabel').forEach(i=>{ labels[i.dataset.ch] = i.value.trim(); });
@@ -1279,6 +1343,8 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
     capSource.addEventListener('change', syncSource); syncSource();
     const capSubjectEl = document.getElementById('capSubject');
     capSubjectEl.addEventListener('input', capUpdateSubjectHint); capUpdateSubjectHint();
+    const capDraftBtn = document.getElementById('capDraftLoad');  // #326 agent drafts
+    if(capDraftBtn){ capDraftBtn.addEventListener('click', capDraftLoad); capLoadDraftList(); }
     monStartBtn.addEventListener('click', monStart);
     monStopBtn.addEventListener('click', monStop);
     monPoll();  // reflect the logger's current state on load

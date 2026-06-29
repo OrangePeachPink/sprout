@@ -46,6 +46,7 @@ from dashboard import (  # noqa: E402  (sibling import)
 )
 from experiments_catalog import load_catalog, render_catalog  # noqa: E402  (Lab #154)
 from lab_detail import render_detail  # noqa: E402  (Lab detail #157)
+from lab_drafts import list_drafts, load_draft  # noqa: E402  (agent drafts #326)
 from lab_notes import (  # noqa: E402  (Lab notes #158; path for save resilience #327)
     load_notes,
     notes_rel_path,
@@ -175,6 +176,15 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send(render_catalog(load_catalog()), "text/html; charset=utf-8")
             elif parsed.path == "/lab/experiments.json":
                 self._send_json(load_catalog())
+            elif parsed.path == "/lab/drafts":  # agent-prepared draft list (#326)
+                self._send_json({"drafts": list_drafts()})
+            elif parsed.path.startswith("/lab/draft/"):  # one draft, for prefill (#326)
+                name = unquote(parsed.path[len("/lab/draft/") :])
+                draft = load_draft(name)
+                if draft is None:
+                    self._send_json({"error": "draft not found"}, status=404)
+                else:
+                    self._send_json(draft)
             elif parsed.path == "/lab/studies":  # the studies catalog (#159)
                 self._send(
                     render_studies_catalog(list_studies()),
