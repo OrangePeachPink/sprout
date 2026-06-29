@@ -67,6 +67,39 @@ maintainer confirms `area:` / `layer:` at triage.
 > commit. **Update your branch** (merge or rebase `main`) so CI re-checks against the fixed base. That's the
 > "Attempt #2 / #3" trap.
 
+## Firmware — build, test, flash (no Arduino IDE)
+
+Picking up a firmware issue? You **never touch the Arduino IDE** — Sprout dropped it project-wide. The firmware
+is a **PlatformIO** project (it builds the Arduino framework underneath, so you write Arduino-API firmware
+without the IDE or a hand-assembled cross-compiler). **Two first-class ways in — pick whichever fits you:**
+
+- **VS Code + PlatformIO (local).** Install the PlatformIO extension; it fetches the ESP32 toolchain for you.
+  Your own editor, full local control, the board on your own USB.
+- **GitHub Codespaces (browser).** *Open in Codespaces* → the devcontainer builds the toolchain for you →
+  `just check` runs green. Zero local install — ideal for editing, building, and the native tests; flashing a
+  board you're holding stays a local USB step.
+
+Neither is "the" way. Once you're in, the commands are identical:
+
+| Do | Command | Needs the board? |
+|---|---|---|
+| **Build** (compile) | `just build` | no |
+| **Test** (native host logic) | `just test-native` | no |
+| **Flash** (upload to the ESP32) | `just flash` | yes — board on USB |
+
+Build and test need **no hardware** — so most firmware work, and all of CI, happens without a board plugged in.
+You only need the ESP32 on USB for the flash step. *(Under the hood these are plain PlatformIO from the
+`firmware/` folder: `pio run` · `pio test -e native` · `pio run -t upload` — the `just` recipes add
+`-d firmware` so the path is always right.)*
+
+**What you need:** an ESP32, a USB cable, and one tool — **PlatformIO** (the VS Code extension, or it's already
+in the Codespace). That's the whole list. First flash on a fresh board? **[FLASHING.md](../docs/FLASHING.md)**
+walks you in.
+
+> **Brand-new to microcontrollers?** A gentle, deliberately-separate Arduino starter on-ramp is on the way
+> ([#387](https://github.com/OrangePeachPink/plants/issues/387)) — it hands back the tunable constants and
+> shared terms, then graduates you to this VS Code / Codespaces project.
+
 ## The verification gate (two stages: Workflow certifies, then Veronica merges)
 
 Sprout uses a **two-stage gate** — a PR is never merged until **Workflow** has certified it. The pipeline:
