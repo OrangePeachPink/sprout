@@ -44,6 +44,20 @@ def _notes_path(eid: str, docs_dir: str | Path | None) -> Path | None:
     return root / f"{eid}.json"
 
 
+def notes_rel_path(eid: str, docs_dir: str | Path | None = None) -> str | None:
+    """The save target as a repo-relative POSIX path, for the UI (#327).
+
+    Shown on success ("saved <path>") and on failure ("couldn't write <path>") so
+    the operator always knows exactly which file the save targeted."""
+    p = _notes_path(eid, docs_dir)
+    if p is None:
+        return None
+    try:
+        return p.resolve().relative_to(_REPO).as_posix()
+    except ValueError:
+        return p.as_posix()
+
+
 def load_notes(eid: str, docs_dir: str | Path | None = None) -> dict:
     """The notes object for an experiment (ADR-0017 shape), or empty defaults.
 
@@ -91,4 +105,5 @@ def save_notes(eid: str, fields: dict, docs_dir: str | Path | None = None) -> di
     doc["notes"] = notes
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8", newline="\n")
+    # pure persisted notes; serve.py adds the save path to the response (#327)
     return notes

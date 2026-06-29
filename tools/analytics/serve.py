@@ -46,7 +46,11 @@ from dashboard import (  # noqa: E402  (sibling import)
 )
 from experiments_catalog import load_catalog, render_catalog  # noqa: E402  (Lab #154)
 from lab_detail import render_detail  # noqa: E402  (Lab detail #157)
-from lab_notes import load_notes, save_notes  # noqa: E402  (Lab notes #158)
+from lab_notes import (  # noqa: E402  (Lab notes #158; path for save resilience #327)
+    load_notes,
+    notes_rel_path,
+    save_notes,
+)
 from lab_studies import (  # noqa: E402  (Lab studies #159)
     list_studies,
     render_studies_catalog,
@@ -231,7 +235,15 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json(save_study(sid, self._body()))
             elif parsed.path.startswith("/lab/") and parsed.path.endswith("/notes"):
                 eid = unquote(parsed.path[len("/lab/") : -len("/notes")])  # notes #158
-                self._send_json(save_notes(eid, self._body()))
+                try:
+                    result = save_notes(eid, self._body())
+                    result["path"] = notes_rel_path(eid)  # #327: show where it landed
+                    self._send_json(result)
+                except Exception as exc:  # #327: surface the failed target path so the
+                    # operator knows what failed; client keeps the text + retries
+                    self._send_json(
+                        {"error": str(exc), "path": notes_rel_path(eid)}, status=500
+                    )
             elif parsed.path == "/quit":
                 # In-UI stop (ADR-0005 §4): a localhost-gated shutdown so the operator
                 # stops the server from the browser (no terminal to Ctrl-C when it was
