@@ -64,12 +64,28 @@ def _safe_token(value: object, field: str) -> str:
 
 def _slugify(value: object, field: str) -> str:
     """Folder/header-safe token from a human subject ('open bench' -> 'open_bench'):
-    runs of unsafe chars collapse to '_', leading/trailing separators are trimmed.
-    An already-valid token is returned unchanged."""
+    runs of unsafe chars collapse to '_', leading/trailing separators are trimmed,
+    and the result is length-bounded so a long descriptive subject still yields a
+    filesystem-safe, reasonable folder name (#336). An already-valid token is
+    returned unchanged."""
     slug = _SLUG_SUB.sub("_", str(value).strip()).strip("._-")
+    slug = slug[:48].strip("._-")  # bound the folder/id length (#336)
     if not slug or ".." in slug or not _TOKEN_RE.match(slug):
         raise ControlError(f"invalid {field}: {value!r} (need a letter or digit)")
     return slug
+
+
+def _label_value(value: object, field: str) -> str:
+    """A human probe label kept for display ('s1 - recheck, redried') (#336).
+
+    The label *key* stays a safe token (it's the join key); the *value* is for
+    humans, so spaces and common punctuation are fine. It must stay CSV/JSON-safe
+    (no comma, no control chars) and bounded. Empty falls back to '' (caller may
+    default to the sensor id)."""
+    s = str(value).strip()
+    if "," in s or any(ord(c) < 32 for c in s):
+        raise ControlError(f"invalid {field}: {value!r} (no commas or control chars)")
+    return s[:48]
 
 
 def _subject_title(value: object, field: str) -> str:
@@ -227,9 +243,10 @@ class CaptureController:
                 str(stop_file),
             ]
             for key, val in (labels or {}).items():
-                k = _safe_token(key, "label key")
-                v = _safe_token(val, "label value")
-                cmd += ["--label", f"{k}={v}"]
+                k = _safe_token(key, "label key")  # the stable join key (sensor id)
+                v = _label_value(val, "label value")  # the human label (#336)
+                if v:  # skip empties; the capture defaults an unlabeled probe to its id
+                    cmd += ["--label", f"{k}={v}"]
             if port:
                 cmd += ["--port", _safe_token(port, "port")]
 
