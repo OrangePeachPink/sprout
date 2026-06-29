@@ -253,9 +253,9 @@ footer.prov code { font-family: var(--font-data); }
     <div class="capform">
       <label class="capf">subject<input id="capSubject" type="text" value="common-cup" maxlength="40" spellcheck="false"><small id="capSubjectHint" class="caphint"></small></label>
       <label class="capf">sample rate<select id="capRate">
-        <option value="5">5 s</option>
-        <option value="1" selected>1 s</option>
         <option value="0.5">0.5 s</option>
+        <option value="1" selected>1 s</option>
+        <option value="5">5 s</option>
         <option value="15">15 s</option>
         <option value="30">30 s</option>
         <option value="60">60 s</option>
@@ -263,8 +263,8 @@ footer.prov code { font-family: var(--font-data); }
       </select></label>
       <label class="capf">duration (s)<input id="capDuration" type="number" value="60" min="1" max="86400"></label>
       <label class="capf">source<select id="capSource">
-        <option value="synthetic" selected>synthetic</option>
-        <option value="serial">serial (device)</option>
+        <option value="serial" selected>serial (device)</option>
+        <option value="synthetic">synthetic</option>
       </select></label>
       <label class="capf" id="capPortField" hidden>port<input id="capPort" type="text" value="COM6" maxlength="20" spellcheck="false" placeholder="COM6"></label>
     </div>
