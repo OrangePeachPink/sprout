@@ -13,11 +13,13 @@ OUT="$HERE/test_irrigation.exe"
   -I"$ROOT/firmware/lib/moisture_classifier" \
   -I"$ROOT/firmware/lib/serial_cmd" \
   -I"$ROOT/firmware/lib/pump_pulse" \
+  -I"$ROOT/firmware/lib/telemetry" \
   "$HERE/test_irrigation.c" \
   "$ROOT/firmware/lib/irrigation/irrigation.c" \
   "$ROOT/firmware/lib/moisture_classifier/moisture_classifier.c" \
   "$ROOT/firmware/lib/serial_cmd/serial_cmd.c" \
   "$ROOT/firmware/lib/pump_pulse/pump_pulse.c" \
+  "$ROOT/firmware/lib/telemetry/telemetry.c" \
   -o "$OUT"
 
 "$OUT"
