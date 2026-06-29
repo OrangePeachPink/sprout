@@ -105,18 +105,31 @@ def render_detail(
 
     csv = exp / (m.get("file") or f"{experiment_id}.csv")
     sensors: list[dict] = []
+    prov: dict = {}  # #324: server/app + contract/calibration, from build_context
     svg = '<p class="empty">capture file missing</p>'
     if csv.exists():
         try:
             ctx = build_context(parse_files([str(csv)]))
             sensors = ctx.get("sensors") or []
+            prov = ctx.get("provenance") or {}
             svg = _svg(ctx.get("trajectory", {}).get("datasets", []))
         except Exception:  # a corrupt capture must not 500 the page
             svg = '<p class="empty">could not parse the capture</p>'
 
     t = m.get("transport") or {}
     fw = m.get("firmware") or {}  # #329: firmware version + git rev, shown separately
+    srv = prov.get("server") or {}  # #324: app provenance (git SHA, staleness)
+    contract = prov.get("contract") or {}
+    _app_sha = srv.get("app_git_sha")
+    _app = (f"{_app_sha}{' +dirty' if srv.get('dirty') else ''}") if _app_sha else "—"
+    _stale = "stale (predates checkout)" if srv.get("stale") else "current"
     facts = [
+        # capture identity (#324: screenshot-friendly provenance)
+        ("capture", experiment_id),
+        ("file", str(m.get("file") or "—")),
+        ("subject", str(m.get("subject") or "—")),
+        ("schema", str(m.get("schema_version", "—"))),
+        ("capture ver", str(m.get("capture_version") or "—")),
         ("started", _fmt_when(m.get("started_utc"))),
         ("duration", _fmt_dur(m.get("duration_s"))),
         ("rate", f"{m.get('sample_rate_s', '—')}s"),
@@ -125,9 +138,14 @@ def render_detail(
         ("dropped", str(t.get("dropped", "—"))),
         ("crc", str(t.get("crc_fail", "—"))),
         ("stopped", str(m.get("stopped_by", "—"))),
-        # provenance: explicit "unavailable" when the device didn't report it
+        # firmware provenance: explicit "unavailable" when the device didn't report it
         ("firmware", str(fw.get("version") or "unavailable")),
         ("git", str(fw.get("git") or "unavailable")),
+        # app + honest-data contract state (#324)
+        ("app git", _app),
+        ("server", _stale),
+        ("value/unit", str(contract.get("label") or "raw counts + band only")),
+        ("calibration", str(prov.get("calibration") or "uncalibrated")),
     ]
     facts_html = "".join(
         f'<span class="fk">{html.escape(k)}</span>'
