@@ -38,12 +38,34 @@ static void derive_default_id(char *out, size_t outlen) {
 
 /* ---- command handlers (#92 registry) ------------------------------------ */
 
-/* !cad,<ms> - retune the supervisor's idle sweep cadence at runtime (#63 / #227:
- * the FSM owns sample_period_ms now). */
+/* !cad,<ms>[,temp] - retune the supervisor's idle sweep cadence (#63 / #227: the
+ * FSM owns sample_period_ms now).
+ *   !cad,<ms>       persists to NVS — the operator's deliberate default (survives reboot).
+ *   !cad,<ms>,temp  SESSION-ONLY: set live, NO NVS write; reverts to the saved/compiled
+ *                   default on reset. Experiments use this so a fast capture rate can
+ *                   never leak into the next monitor run (#322). */
 static void handle_cad(const char *args, char *reply, size_t replen) {
-    uint32_t ms;
-    if (!serial_cmd_parse_u32(args, &ms)) {
-        snprintf(reply, replen, "# nak err=parse floor=%lu", s_ctx.cadence_floor_ms);
+    char        msbuf[12];
+    const char *comma = strchr(args, ',');
+    size_t      mslen = comma ? (size_t)(comma - args) : strlen(args);
+    uint32_t    ms;
+    if (mslen == 0 || mslen >= sizeof(msbuf)) {
+        snprintf(reply, replen,
+                 "# nak err=parse (use: !cad,<ms>[,temp]) floor=%lu",
+                 s_ctx.cadence_floor_ms);
+        return;
+    }
+    memcpy(msbuf, args, mslen);
+    msbuf[mslen] = '\0';
+    if (!serial_cmd_parse_u32(msbuf, &ms)) {
+        snprintf(reply, replen,
+                 "# nak err=parse (use: !cad,<ms>[,temp]) floor=%lu",
+                 s_ctx.cadence_floor_ms);
+        return;
+    }
+    bool temp = (comma && strcmp(comma + 1, "temp") == 0);
+    if (comma && !temp) {  /* a second arg that isn't exactly "temp" */
+        snprintf(reply, replen, "# nak err=scope (use: !cad,<ms>[,temp])");
         return;
     }
     if (ms < s_ctx.cadence_floor_ms || ms > s_ctx.cadence_ceil_ms) {
@@ -53,10 +75,17 @@ static void handle_cad(const char *args, char *reply, size_t replen) {
     }
     unsigned long prev      = (unsigned long)*s_ctx.sample_period_ms;
     *s_ctx.sample_period_ms = ms;
-    *s_ctx.cadence_from_nvs = true;
-    prefs()->putULong("cadence_ms", ms);
-    snprintf(reply, replen, "# ack cad=%lu prev=%lu floor=%lu",
-             (unsigned long)ms, prev, s_ctx.cadence_floor_ms);
+    *s_ctx.cadence_temp     = temp;
+    if (temp) {
+        /* session-only: never touch NVS, so it can't leak into the next boot (#322) */
+        snprintf(reply, replen, "# ack cad=%lu prev=%lu src=temp (reverts on reset)",
+                 (unsigned long)ms, prev);
+    } else {
+        *s_ctx.cadence_from_nvs = true;
+        prefs()->putULong("cadence_ms", ms);
+        snprintf(reply, replen, "# ack cad=%lu prev=%lu src=nvs floor=%lu",
+                 (unsigned long)ms, prev, s_ctx.cadence_floor_ms);
+    }
 }
 
 /* !ping - liveness check. */
@@ -78,6 +107,7 @@ static void handle_cfg(const char *args, char *reply, size_t replen) {
         prefs()->clear();
         *s_ctx.sample_period_ms = (uint32_t)s_ctx.cadence_default_ms;
         *s_ctx.cadence_from_nvs = false;
+        *s_ctx.cadence_temp     = false;
         derive_default_id(s_ctx.device_id, s_ctx.device_id_len);
         *s_ctx.device_id_custom = false;
         snprintf(reply, replen, "# ack cfg reset cad=%lu device_id=%s",

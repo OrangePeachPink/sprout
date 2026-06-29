@@ -54,6 +54,9 @@ static char g_session_id[12]   = "000000";
  * runtime-settable via !cad (#63), persisted to NVS (#90). This flag only tracks
  * whether the live value came from NVS, for the header. */
 static bool g_cadence_from_nvs = false;
+/* true when the live cadence is a session-only !cad,temp override — not persisted,
+ * reverts to the saved/compiled default on reset (#322). */
+static bool g_cadence_temp = false;
 
 /* NVS store: opened once in commands_init(), kept open for the session (#90). */
 static Preferences g_prefs;
@@ -308,9 +311,10 @@ static void printHeader() {
              g_device_id, g_device_id_custom ? "custom" : "default",
              ESP.getChipModel());
     Serial.println(buf);
-    snprintf(buf, sizeof(buf), "# session_id=%s  cadence_ms=%lu (%s)",
+    snprintf(buf, sizeof(buf), "# session_id=%s  cadence_ms=%lu  cadence_src=%s",
              g_session_id, (unsigned long)g_sys.sample_period_ms,
-             g_cadence_from_nvs ? "nvs" : "default");
+             g_cadence_temp ? "temp"
+                            : (g_cadence_from_nvs ? "nvs" : "default"));
     Serial.println(buf);
     n = snprintf(buf, sizeof(buf), "# sensors:");
     for (int i = 0; i < NUM_SENSORS && n < (int)sizeof(buf); i++)
@@ -413,7 +417,7 @@ void setup() {
      * !water/!stop/!auto act on g_irrig. */
     commands_ctx_t cmd_ctx = {
         g_device_id, sizeof(g_device_id), &g_device_id_custom,
-        &g_sys.sample_period_ms, &g_cadence_from_nvs,
+        &g_sys.sample_period_ms, &g_cadence_from_nvs, &g_cadence_temp,
         &g_prefs, &g_irrig, pumpSet, allRelaysOff,
         CADENCE_FLOOR_MS, CADENCE_CEIL_MS, READ_INTERVAL_MS,
         PLANTS_FW_VERSION, PUMP_PULSE_MAX_MS, NUM_SENSORS, WDT_TIMEOUT_MS,
