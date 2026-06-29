@@ -56,6 +56,13 @@ architecture → assurance.
 | **19** | Code intelligence | Editor LSP + GitHub code navigation (zero setup); a code-graph tool earned later by a named navigation/impact pain | ✅ Firmware | 📋 default — nothing to set up |
 | **20** | Security & compliance | Native only: secret scanning + dependency alerts (not maximal tooling); **configs here (gitleaks/Dependabot), repo-level toggles Maintainer's** | ✅ Firmware / Maintainer | 📋 credentials gitignored; secret-scan hook to confirm |
 
+> **Note on #10 — the clang-format exception (#343):** clang-format runs at **changed scope** (not
+> `--all-files`), as the deliberate exception to the otherwise repo-wide pre-commit convention, because the
+> firmware carries intentional manual column alignment (AGENTS.md §code-style). `ruff` / `cspell` /
+> `markdownlint` stay `--all-files`. This is Firmware exercising the "each lane plugs in its own checks"
+> ownership row #10 already grants — a **specificity note, not a reversal**. v1 is changed-*files* (#343); the
+> changed-*lines* purity upgrade tracks to #352.
+
 ## Consequences
 
 - The project gains a recorded, right-sized process baseline instead of an implicit one.
