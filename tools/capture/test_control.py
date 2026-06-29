@@ -152,6 +152,39 @@ def test_slug_and_title() -> None:
     )
 
 
+def test_slug_bounded_and_labels() -> None:
+    print("long subjects yield a bounded slug; human probe labels are accepted (#336):")
+    long_subj = "s1 dry to wet test after max-fill cold refill and a long tail xxxxxxxx"
+    slug = control._slugify(long_subj, "subject")
+    check(len(slug) <= 48, f"slug bounded to <=48 (got {len(slug)})")
+    check(control._TOKEN_RE.match(slug) is not None, "bounded slug still a safe token")
+    check(not slug.endswith(("_", ".", "-")), "no trailing separator after the cut")
+    # human probe labels: spaces + common punctuation are fine, comma/control are not
+    check(
+        control._label_value("s1 full wipe + air dry", "label value")
+        == "s1 full wipe + air dry",
+        "spaces + '+' allowed in a probe label",
+    )
+    check(
+        control._label_value("s1 - recheck redried", "label value")
+        == "s1 - recheck redried",
+        "spaces + '-' allowed in a probe label",
+    )
+    raises(
+        lambda: control._label_value("a,b", "label value"),
+        control.ControlError,
+        "comma in a label value refused (CSV-safety)",
+    )
+    check(
+        len(control._label_value("z" * 100, "label value")) == 48,
+        "label bounded to 48",
+    )
+    check(
+        control._label_value("", "label value") == "",
+        "empty label -> '' (caller defaults to the sensor id)",
+    )
+
+
 def test_live_rows() -> None:
     print("status reports a live, climbing row count while running (#162):")
     tmp = Path(tempfile.mkdtemp(prefix="ctl_rows_"))
@@ -222,6 +255,7 @@ if __name__ == "__main__":
     test_auto_stop()
     test_sanitization()
     test_slug_and_title()
+    test_slug_bounded_and_labels()
     test_live_rows()
     test_stop_idle()
     test_serial_gating()
