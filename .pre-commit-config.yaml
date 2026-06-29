@@ -30,11 +30,24 @@ repos:
       - id: check-added-large-files
         args: [--maxkb=1024]
 
-  # NOTE: clang-format (C/C++) is intentionally NOT wired here yet. The current
-  # clang-format + .clang-format combo is non-idempotent (it reformats on every run),
-  # which would make the gate never pass, and it sweeps design-candidate C files. Wiring
-  # it needs a pinned, idempotent clang-format version + a scoped file set — tracked
-  # separately so this hook config stays green.
+  # C/C++ formatting via clang-format (#120). Pinned to v22.1.5 — idempotent with
+  # our .clang-format (a second pass produces zero changes). The mirror bundles the
+  # binary, so a contributor needs no manual C toolchain — `just check` just works.
+  #
+  # CHANGED-SCOPE — the ONE deliberate exception to the repo's --all-files gate
+  # (AGENTS.md §code-style + ADR-0002 #10): the firmware carries intentional manual
+  # column alignment a full-tree reformat would destroy, so clang-format touches
+  # NEW / CHANGED files only. A normal hook (no always_run, not pass_filenames:false)
+  # already does this on commit — it sees only the staged files. In CI it must stay
+  # OUT of `pre-commit run --all-files` (run via `SKIP=clang-format`); a dedicated
+  # ci.yml step then formats only the PR's changed C/C++ files. See ci.yml + `just
+  # lint-fw` — all three route through this same pinned hook so local == CI.
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v22.1.5
+    hooks:
+      - id: clang-format
+        files: '\.(c|cpp|h)$'
+        exclude: '^docs/reference/'
 
   # markdownlint via the repo's own .markdownlint-cli2.jsonc (globs + ignores), so it
   # behaves identically to just / CI. Uses system npx (node is a standard dev tool).

@@ -88,6 +88,15 @@ test-host:
 lint:
     {{py}} -m ruff check .
 
+# Format the C/C++ files changed on this branch vs main (clang-format v22.1.5 — the
+# changed-scope gate, #120). Routes through the pinned pre-commit hook, so there's no
+# C toolchain to install; it applies the formatting in place, then reports — review the
+# diff and commit. Same invocation CI runs, so local == CI.
+#   just lint-fw              # vs origin/main
+#   just lint-fw <base-ref>   # vs another base (e.g. a fork point)
+lint-fw base="origin/main":
+    uv run pre-commit run clang-format --from-ref {{base}} --to-ref HEAD --show-diff-on-failure
+
 # Run every pre-commit hook across the repo — the single definition of lint/format/hygiene.
 pre-commit:
     uv run pre-commit run --all-files
@@ -115,7 +124,7 @@ preview *ARGS:
 #         {{py}} path/to/tool.py {{ARGS}}
 #
 #  Slots other lanes will likely fill — kept as a checklist, not stubs that lie:
-#   • #10 lint lane : lint-md (markdownlint-cli2), lint-spell (cspell), lint-fw (clang-format --dry-run)
+#   • #10 lint lane : lint-md (markdownlint-cli2), lint-spell (cspell)  [lint-fw done — QUALITY above]
 #   • Design lane   : token build (design-library CSS output)
 #   • Data lane     : analytics/forecast batch jobs, the DuckDB/parquet build, archive tooling
 #  Add each as a real recipe once that lane confirms the command + args.
