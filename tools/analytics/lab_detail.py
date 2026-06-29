@@ -27,9 +27,34 @@ from experiments_catalog import _fmt_dur, _fmt_when  # noqa: E402
 from lab_notes import load_notes  # noqa: E402  (Lab notes #158)
 from parse_v1 import parse_files  # noqa: E402
 
+_INTERVENTION_RE = re.compile(r"@t?\+?(\d+)\s*s?\b\s*[:\-]?\s*(.*)", re.IGNORECASE)
 
-def _svg(datasets: list[dict]) -> str:
-    """A per-probe raw trajectory as one inline SVG (higher raw = drier = up)."""
+
+def _parse_interventions(text: str | None) -> list[dict]:
+    """Operator interventions from the method notes, no schema change (#325).
+
+    Convention the operator types in the notes, e.g. ``@t+180s shade removed``
+    (also ``@180 ...`` / ``@t+180 ...``). Each becomes a vertical marker on the
+    chart at that elapsed second. The notes editor (#158) already persists method
+    text; a richer entry UI can land with #327."""
+    out: list[dict] = []
+    for line in (text or "").splitlines():
+        m = _INTERVENTION_RE.search(line)
+        if not m:
+            continue
+        label = m.group(2).strip() or "intervention"
+        out.append({"t_s": int(m.group(1)), "label": label})
+    return out
+
+
+def _elapsed_label(seconds: float) -> str:
+    return f"{seconds:.0f}s" if seconds < 120 else f"{seconds / 60:.1f}m"
+
+
+def _svg(datasets: list[dict], interventions: list[dict] | None = None) -> str:
+    """Per-probe raw trajectory as a measuring instrument (#325): raw-ADC y-axis with
+    min/max, elapsed-time x-axis, and operator-intervention markers. Higher raw =
+    drier = up. Honest-data law: this is raw ADC + band color, never a moisture %."""
     pts_all = [p for d in datasets for p in d.get("points", [])]
     if not pts_all:
         return '<p class="empty">no trajectory</p>'
@@ -38,28 +63,73 @@ def _svg(datasets: list[dict]) -> str:
     xmin, xmax, ymin, ymax = min(xs), max(xs), min(ys), max(ys)
     xr = (xmax - xmin) or 1.0
     yr = (ymax - ymin) or 1.0
-    w, h, pad = 720, 220, 10
+    # padding leaves room for axis labels: left for raw values, bottom for elapsed
+    w, h = 760, 250
+    padl, padr, padt, padb = 52, 14, 14, 28
 
     def sx(x: float) -> float:
-        return pad + (x - xmin) / xr * (w - 2 * pad)
+        return padl + (x - xmin) / xr * (w - padl - padr)
 
     def sy(y: float) -> float:
-        return h - pad - (y - ymin) / yr * (h - 2 * pad)
+        return h - padb - (y - ymin) / yr * (h - padt - padb)
 
-    lines = []
+    el = html.escape
+    parts: list[str] = []
+    # axis frame
+    parts.append(
+        f'<line x1="{padl}" y1="{padt}" x2="{padl}" y2="{h - padb}" '
+        'class="axis"/>'
+        f'<line x1="{padl}" y1="{h - padb}" x2="{w - padr}" y2="{h - padb}" '
+        'class="axis"/>'
+    )
+    # y-axis: raw min / mid / max (raw ADC scale)
+    ymid = (ymin + ymax) / 2
+    for val in (ymax, ymid, ymin):
+        yp = sy(val)
+        parts.append(
+            f'<line x1="{padl - 4}" y1="{yp:.1f}" x2="{w - padr}" y2="{yp:.1f}" '
+            'class="grid"/>'
+            f'<text x="{padl - 7}" y="{yp + 3:.1f}" class="ylab">{val:.0f}</text>'
+        )
+    parts.append(f'<text x="10" y="{padt + 4}" class="axttl">raw ADC</text>')
+    # x-axis: elapsed time (start .. end), shown in s or m
+    for frac in (0.0, 0.5, 1.0):
+        x = xmin + frac * xr
+        xp = sx(x)
+        secs = (x - xmin) * 3600.0
+        parts.append(
+            f'<text x="{xp:.1f}" y="{h - padb + 16:.1f}" class="xlab" '
+            f'text-anchor="middle">{el(_elapsed_label(secs))}</text>'
+        )
+    # data polylines (one per probe; color carries the channel, not a value)
     for d in datasets:
         pts = " ".join(
             f"{sx(p['x']):.1f},{sy(p['y']):.1f}" for p in d.get("points", [])
         )
         if pts:
-            color = html.escape(str(d.get("color", "#888")))
-            lines.append(
+            color = el(str(d.get("color", "#888")))
+            parts.append(
                 f'<polyline fill="none" stroke="{color}" stroke-width="1.5" '
                 f'points="{pts}"/>'
             )
+    # operator-intervention markers (vertical dashed line + label at the elapsed time)
+    for iv in interventions or []:
+        x_h = xmin + (iv["t_s"] / 3600.0)
+        if not (xmin <= x_h <= xmax):
+            continue  # outside the captured window -> don't draw a misleading line
+        xp = sx(x_h)
+        parts.append(
+            f'<line x1="{xp:.1f}" y1="{padt}" x2="{xp:.1f}" y2="{h - padb}" '
+            'class="ivmark"/>'
+            f'<text x="{xp + 3:.1f}" y="{padt + 10:.1f}" class="ivlab">'
+            f"{el(iv['label'])}</text>"
+        )
     return (
-        f'<svg viewBox="0 0 {w} {h}" class="etrace" preserveAspectRatio="none" '
-        f'role="img" aria-label="raw trajectory per probe">{"".join(lines)}</svg>'
+        f'<svg viewBox="0 0 {w} {h}" class="etrace" role="img" '
+        f'aria-label="raw ADC trajectory per probe with elapsed-time axis">'
+        f"{''.join(parts)}</svg>"
+        '<p class="chartcap">raw ADC counts · higher = drier · color = probe · '
+        "band by color, <b>not</b> a calibrated moisture %</p>"
     )
 
 
@@ -71,8 +141,10 @@ def _stat_card(s: dict) -> str:
     rng = f"{esc(str(s.get('raw_min', '—')))}-{esc(str(s.get('raw_max', '—')))}"
     rows = [
         ("band", band),
+        ("current", esc(str(s.get("raw_last", "—")))),
+        ("min/max", rng),
         ("median", esc(str(s.get("raw_median", "—")))),
-        ("range", rng),
+        ("mean", esc(str(s.get("raw_mean", "—")))),
         ("slope", esc(slope)),
         ("samples", esc(str(s.get("n", "—")))),
     ]
@@ -103,6 +175,9 @@ def render_detail(
     except (json.JSONDecodeError, OSError):
         return None
 
+    notes = load_notes(experiment_id)  # the living log, from the tracked sidecar (#158)
+    interventions = _parse_interventions(notes.get("method"))  # #325 chart markers
+
     csv = exp / (m.get("file") or f"{experiment_id}.csv")
     sensors: list[dict] = []
     prov: dict = {}  # #324: server/app + contract/calibration, from build_context
@@ -112,7 +187,7 @@ def render_detail(
             ctx = build_context(parse_files([str(csv)]))
             sensors = ctx.get("sensors") or []
             prov = ctx.get("provenance") or {}
-            svg = _svg(ctx.get("trajectory", {}).get("datasets", []))
+            svg = _svg(ctx.get("trajectory", {}).get("datasets", []), interventions)
         except Exception:  # a corrupt capture must not 500 the page
             svg = '<p class="empty">could not parse the capture</p>'
 
@@ -157,7 +232,6 @@ def render_detail(
     )
     title = html.escape(str(m.get("title") or m.get("subject") or experiment_id))
 
-    notes = load_notes(experiment_id)  # the living log, from the tracked sidecar (#158)
     ver = notes.get("version") or 0
     saved = (
         f"saved {html.escape(str(notes.get('saved_at')))} · v{ver}"

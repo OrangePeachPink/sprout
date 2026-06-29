@@ -100,8 +100,17 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .serialowner.live { background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
 .serialowner .btn { margin-left: auto; }
 .captrace { margin-top: 12px; }
-.captrace-svg { width: 100%; height: 120px; display: block; background: var(--bg);
+.captrace-svg { width: 100%; height: 140px; display: block; background: var(--bg);
   border: 1px solid var(--border); border-radius: var(--r-tile); }
+/* #325 live-trace instrument: axes + per-channel raw stats */
+.captrace-svg .cax { stroke: var(--border); stroke-width: 1; }
+.captrace-svg .cylab { fill: var(--muted); font-family: var(--font-data); font-size: 9px; text-anchor: end; }
+.captrace-svg .cxlab { fill: var(--muted); font-family: var(--font-data); font-size: 9px; }
+.capstats { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-size: 11px;
+  font-family: var(--font-data); color: var(--ink); align-items: center; }
+.capstats .cst { display: inline-flex; align-items: center; gap: 5px; }
+.capstats .cdot { width: 8px; height: 8px; border-radius: var(--r-pill); display: inline-block; }
+.capstats .capnote { color: var(--muted); margin-left: auto; }
 @keyframes caplive { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 /* #101 capture-panel review (#99): pills/buttons never wrap; primary = brand green;
    the two modes paired by an accent bar (baseline green vs bounded-test purple). */
@@ -973,23 +982,41 @@ function capSetStatus(text, cls){
   const s = document.getElementById('capStatus'); s.textContent = text;
   s.className = 'capstatus' + (cls ? ' ' + cls : '');
 }
-function capSvg(ds){  // a mini live trajectory of the running capture (#161)
+function capSvg(ds){  // a mini live trajectory as an instrument (#161, #325)
   const pts = (ds||[]).flatMap(d=>d.points||[]);
   if(!pts.length) return '';
   const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y);
   const xmin=Math.min(...xs), xmax=Math.max(...xs), ymin=Math.min(...ys), ymax=Math.max(...ys);
-  const xr=(xmax-xmin)||1, yr=(ymax-ymin)||1, W=600, H=120, pad=6;
-  const sx=x=>pad+(x-xmin)/xr*(W-2*pad), sy=y=>H-pad-(y-ymin)/yr*(H-2*pad);
+  const xr=(xmax-xmin)||1, yr=(ymax-ymin)||1, W=600, H=140;
+  const padl=46, padr=8, padt=8, padb=20;
+  const sx=x=>padl+(x-xmin)/xr*(W-padl-padr), sy=y=>H-padb-(y-ymin)/yr*(H-padt-padb);
+  const elS = s => s<120 ? s.toFixed(0)+'s' : (s/60).toFixed(1)+'m';
+  let g = `<line x1="${padl}" y1="${padt}" x2="${padl}" y2="${H-padb}" class="cax"/>`
+        + `<line x1="${padl}" y1="${H-padb}" x2="${W-padr}" y2="${H-padb}" class="cax"/>`;
+  [ymax,(ymin+ymax)/2,ymin].forEach(v=>{ const yp=sy(v);
+    g += `<text x="${padl-5}" y="${(yp+3).toFixed(1)}" class="cylab">${v.toFixed(0)}</text>`; });
+  [0,0.5,1].forEach(f=>{ const x=xmin+f*xr, xp=sx(x), s=(x-xmin)*3600;
+    g += `<text x="${xp.toFixed(1)}" y="${H-padb+14}" class="cxlab" text-anchor="middle">${elS(s)}</text>`; });
   const lines=(ds||[]).map(d=>{
     const pp=(d.points||[]).map(p=>sx(p.x).toFixed(1)+','+sy(p.y).toFixed(1)).join(' ');
     return pp ? `<polyline fill="none" stroke="${d.color||'#888'}" stroke-width="1.4" points="${pp}"/>` : '';
   }).join('');
-  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="captrace-svg" role="img" aria-label="live capture trajectory">${lines}</svg>`;
+  return `<svg viewBox="0 0 ${W} ${H}" class="captrace-svg" role="img" aria-label="live raw ADC trajectory">${g}${lines}</svg>`;
+}
+function capStatsHtml(ds){  // #325 per-channel live stats, in RAW units (never %)
+  const rows=(ds||[]).map(d=>{
+    const ys=(d.points||[]).map(p=>p.y); if(!ys.length) return '';
+    const cur=ys[ys.length-1], lo=Math.min(...ys), hi=Math.max(...ys);
+    const sl=(d.trend && typeof d.trend.slope==='number') ? (d.trend.slope>=0?'+':'')+d.trend.slope.toFixed(1)+'/h' : '—';
+    return `<span class="cst"><span class="cdot" style="background:${d.color||'#888'}"></span>`
+      + `${d.id}: <b>${cur}</b> raw · ${lo}–${hi} · ${sl}</span>`;
+  }).join('');
+  return rows ? `<div class="capstats">${rows}<span class="capnote">raw ADC · higher = drier · no %</span></div>` : '';
 }
 function capDrawTrace(ds){
   const el = document.getElementById('capTrace'); if(!el) return;
   const svg = capSvg(ds);
-  if(svg){ el.innerHTML = svg; el.hidden = false; } else { el.hidden = true; el.innerHTML = ''; }
+  if(svg){ el.innerHTML = svg + capStatsHtml(ds); el.hidden = false; } else { el.hidden = true; el.innerHTML = ''; }
 }
 function capRender(st){
   const start = document.getElementById('capStart'), stop = document.getElementById('capStop');
