@@ -4,8 +4,15 @@
   "version": "0.2",
   "language": "en",
   // Design owns docs/design/** (its own brand vocabulary); spell-check the rest.
+  // docs/experiments/** is bench evidence — capture-id slugs, device codes, and
+  // technique shorthand by nature (a fresh slug every session, e.g. "...-recov",
+  // "...-platepaper"). cspell's always-run scan would block EVERY lane's commit on
+  // every bench session, so it's excluded like design rather than allowlisting each
+  // slug. Trade-off: prose typos in bench logs aren't caught — acceptable for
+  // factual evidence records (#332/#333 bench-procedure wave).
   "ignorePaths": [
-    "docs/design/**"
+    "docs/design/**",
+    "docs/experiments/**"
   ],
   "words": [
     // Intentional prose coinages from the developer front door (#219): "dogfood"
