@@ -173,7 +173,11 @@ static void do_sweep(irrig_ctrl_t *c, uint32_t now)
         }
 
         c->status[ch] = CH_OK;
-        c->wants[ch]  = true;
+        /* dry enough to want water — but only ACT autonomously when armed (#227).
+         * Disarmed: the channel is still monitored (CH_OK); a pump is granted only
+         * for an operator forced dose. choose_channel ignores wants[] anyway when
+         * this is false, so the dry decision never reaches the relay. */
+        c->wants[ch]  = c->autonomous_enabled;
     }
 }
 
@@ -219,6 +223,7 @@ void irrig_init(irrig_ctrl_t *c,
         c->forced_ms[ch]        = 0;
     }
 
+    c->autonomous_enabled = false;          /* arm gate OFF by default (#227) */
     c->mode           = SYS_SAMPLING;
     c->active_ch      = -1;
     c->phase_start_ms = now_ms;
@@ -236,7 +241,13 @@ void irrig_tick(irrig_ctrl_t *c, uint32_t now)
     switch (c->mode) {
 
     case SYS_SAMPLING: {
-        if ((int32_t)(now - c->next_sample_ms) < 0) return;   /* not due yet */
+        /* An operator forced dose (ADR-0016) sweeps immediately so manual !water
+         * is responsive at any idle cadence; otherwise wait for the next sweep. */
+        bool forced_pending = false;
+        for (int ch = 0; ch < IRRIG_CHANNELS; ch++)
+            if (c->forced[ch]) { forced_pending = true; break; }
+        if (!forced_pending && (int32_t)(now - c->next_sample_ms) < 0)
+            return; /* not due yet */
 
         do_sweep(c, now);
 
@@ -336,6 +347,32 @@ irrig_dose_result_t irrig_request_dose(irrig_ctrl_t *c, int ch, uint32_t ms)
     c->forced[ch]    = true;
     c->forced_ms[ch] = ms;   /* 0 = the channel's configured dose_ms; clamped at grant */
     return IRRIG_DOSE_QUEUED;
+}
+
+void irrig_set_autonomous(irrig_ctrl_t *c, bool enabled) { c->autonomous_enabled = enabled; }
+bool irrig_autonomous(const irrig_ctrl_t *c)             { return c->autonomous_enabled; }
+
+bool irrig_abort(irrig_ctrl_t *c, uint32_t now_ms)
+{
+    bool was = (c->mode == SYS_WATERING && c->active_ch >= 0);
+    if (was) {
+        int ch = c->active_ch;
+        c->io.set_pump(ch, false, c->io.user);
+        c->active_ch         = -1;
+        c->last_water_ms[ch] = now_ms;
+        emit(c, ch, IRRIG_EV_PUMP_OFF, now_ms);
+        c->soak_until_ms[ch] = now_ms + c->chan_cfg[ch].soak_ms;
+        c->status[ch]        = CH_SOAKING;
+    }
+    /* operator abort cancels any queued forced dose, too */
+    for (int ch = 0; ch < IRRIG_CHANNELS; ch++) {
+        c->forced[ch]    = false;
+        c->forced_ms[ch] = 0;
+    }
+    all_pumps_off(c);                 /* every relay de-energized (belt + suspenders) */
+    c->mode           = SYS_SETTLE;   /* honor a settle before the next sample */
+    c->phase_start_ms = now_ms;
+    return was;
 }
 
 irrig_mode_t        irrig_mode(const irrig_ctrl_t *c)           { return c->mode; }

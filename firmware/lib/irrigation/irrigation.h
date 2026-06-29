@@ -169,6 +169,13 @@ typedef struct {
     irrig_io_t              io;
 
     /* global runtime */
+    bool         autonomous_enabled;     /* arm gate (#227 / ADR-0016): false =
+                                            monitor-only — the sweep never sets an
+                                            autonomous `want`, so no pump is granted
+                                            on a dry reading. Operator forced doses
+                                            (irrig_request_dose) are honored either
+                                            way. Defaults OFF at init (fail-safe);
+                                            the bench arms it after the safety trio. */
     irrig_mode_t mode;
     int          active_ch;              /* -1 = none; the single running pump  */
     uint32_t     phase_start_ms;
@@ -234,6 +241,20 @@ typedef enum {
 } irrig_dose_result_t;
 
 irrig_dose_result_t irrig_request_dose(irrig_ctrl_t *c, int ch, uint32_t ms);
+
+/* Operator e-stop (#215 !stop, single-authority via ADR-0016): force the active
+ * pump OFF immediately, cancel any pending forced doses, drive every relay to its
+ * de-energized level, and enter SETTLE. Returns true if a pump was actually
+ * running. Safe to call in any mode. */
+bool irrig_abort(irrig_ctrl_t *c, uint32_t now_ms);
+
+/* Arm gate (#227 / ADR-0016): enable/disable AUTONOMOUS dosing at runtime. When
+ * disabled (the init default), the supervisor still samples, classifies, vetoes,
+ * logs, and honors operator forced doses — it just never grants a pump on its own
+ * "this channel is dry" decision. main.cpp ships disarmed; the bench arms it (e.g.
+ * via !auto) only once the dry-safety chain (#93/#191/#2/#215) has passed. */
+void irrig_set_autonomous(irrig_ctrl_t *c, bool enabled);
+bool irrig_autonomous(const irrig_ctrl_t *c);
 
 /* introspection for logging / UI */
 irrig_mode_t        irrig_mode(const irrig_ctrl_t *c);
