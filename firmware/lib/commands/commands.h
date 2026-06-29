@@ -13,6 +13,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include "pump_pulse.h"
+#include "run_meta.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,6 +46,10 @@ typedef struct {
     uint32_t       pump_max_ms;      /* PUMP_PULSE_MAX_MS — reported in !water ack */
     int            num_channels;     /* NUM_SENSORS — reported in !water nak       */
     uint32_t       wdt_timeout_ms;   /* WDT_TIMEOUT_MS — reported in !wedge msg    */
+    /* Mutable run metadata (#321): !label / !pos read+write this. Lives in
+     * main.cpp; reprint_header re-emits the provenance header after !label. */
+    run_meta_t    *run_meta;
+    void          (*reprint_header)(void);
 } commands_ctx_t;
 
 /*

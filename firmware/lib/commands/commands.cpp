@@ -157,6 +157,26 @@ static void handle_water(const char *args, char *reply, size_t replen) {
     }
 }
 
+/*
+ * !label,<run_label> - update the active run label at runtime (#321). The label
+ * lives only in the provenance header, so reprint it on success: the operator
+ * (and Data, which joins on run_label) sees the change immediately.
+ */
+static void handle_label(const char *args, char *reply, size_t replen) {
+    if (run_meta_set_label(s_ctx.run_meta, args, reply, replen) &&
+        s_ctx.reprint_header)
+        s_ctx.reprint_header();
+}
+
+/*
+ * !pos,<ch>,<name> - update one channel's sensor_position at runtime (#321).
+ * It's a per-row field, so the next soil row for that channel carries it; no
+ * header reprint needed (the ack confirms, and the periodic header catches up).
+ */
+static void handle_pos(const char *args, char *reply, size_t replen) {
+    run_meta_set_position(s_ctx.run_meta, args, reply, replen);
+}
+
 /* !stop - force any active pump pulse OFF now (operator abort / safety, #215). */
 static void handle_stop(const char *args, char *reply, size_t replen) {
     (void)args;
@@ -220,6 +240,8 @@ void commands_init(commands_ctx_t *ctx) {
     serial_cmd_register("name",  handle_name);
     serial_cmd_register("water", handle_water);
     serial_cmd_register("stop",  handle_stop);
+    serial_cmd_register("label", handle_label);
+    serial_cmd_register("pos",   handle_pos);
 #ifdef WDT_WEDGE_TEST
     serial_cmd_register("wedge", handle_wedge);
 #endif
