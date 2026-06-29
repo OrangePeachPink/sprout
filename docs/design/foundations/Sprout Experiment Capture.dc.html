@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --leaf:#34A853; --sprout:#8BD24F; --ink:#1E2A18; --muted:#6F7E62; --border:#E3E9D8;
+    --surface:#FFFFFF; --surface-2:#F7FAF2; --bg:#EEF4E6;
+    --st-watering:#17B6C4; --st-dry:#F5A623; --st-due:#E8703A; --st-fault:#E0483D; --st-predicted:#7C5CFF;
+    --band-saturated:#0E7A86; --band-wet:#17B6C4; --band-moist:#34A853; --band-ideal:#8BD24F;
+    --band-drying:#F5A623; --band-dry:#E8703A; --band-parched:#E0483D;
+    --q-nosignal:#9A8480;
+    --font-display:"Baloo 2",sans-serif; --font-ui:"Hanken Grotesk",sans-serif; --font-data:"JetBrains Mono",monospace;
+    --r-control:8px; --r-tile:14px; --r-card:20px; --r-pill:999px;
+    --e1:0 1px 2px rgba(30,42,24,.06); --e2:0 6px 18px rgba(30,42,24,.08); --e3:0 16px 36px rgba(30,42,24,.14);
+  }
+  [data-theme="soil"]{
+    --bg:#0C1311; --surface-2:#111A16; --surface:#18231F; --border:#29372F;
+    --ink:#E9F1EB; --muted:#8B9B90; --leaf:#93DD6A; --st-watering:#3FD0DE; --st-fault:#FF6B5E;
+    --e1:0 1px 2px rgba(0,0,0,.4); --e2:0 6px 18px rgba(0,0,0,.5); --e3:0 16px 36px rgba(0,0,0,.6);
+  }
+  body{margin:0;}
+  @keyframes liveGlow{0%,100%{box-shadow:0 0 5px currentColor;}50%{box-shadow:0 0 12px currentColor;}}
+  @keyframes armPulse{0%,100%{opacity:.5;}50%{opacity:1;}}
+</style>
+</helmet>
+
+<div data-theme="{{ themeAttr }}" style="background:var(--bg); color:var(--ink); font-family:var(--font-ui); min-height:100vh; padding:34px 26px;">
+<div style="max-width:1000px; margin:0 auto; display:flex; flex-direction:column; gap:16px;">
+
+  <!-- ================= TOP BAR ================= -->
+  <div data-screen-label="Instrument header" style="display:flex; align-items:center; gap:13px; flex-wrap:wrap;">
+    <span style="display:inline-flex; width:30px; height:30px; align-items:center; justify-content:center; border-radius:9px; background:var(--leaf); color:#fff; font-family:var(--font-display); font-weight:700; font-size:17px; flex-shrink:0;">S</span>
+    <div style="display:flex; flex-direction:column; gap:2px; min-width:0;">
+      <div style="display:flex; align-items:center; gap:9px;">
+        <h1 style="font-family:var(--font-display); font-weight:700; font-size:22px; line-height:1.05; margin:0; letter-spacing:-0.01em; white-space:nowrap;">Experiment Capture</h1>
+        <span style="white-space:nowrap; font-size:9.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--st-predicted); border:1px solid var(--st-predicted); border-radius:var(--r-pill); padding:2px 9px;">experiment mode</span>
+      </div>
+      <div style="font-family:var(--font-data); font-size:11px; color:var(--muted);">a bench instrument · raw readings preserved · isolated from the living log</div>
+    </div>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+      <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted);">app v0.7.1</span>
+      <button onClick="{{ toggleTheme }}" style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-pill); padding:5px 13px; cursor:pointer;">{{ themeLabel }}</button>
+    </div>
+  </div>
+
+  <!-- ================= DEVICE / PORT OWNERSHIP RIBBON ================= -->
+  <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); box-shadow:var(--e1); padding:10px 16px;">
+    <span style="display:inline-flex; align-items:center; gap:7px; font-family:var(--font-data); font-size:12px; color:var(--ink);"><span style="width:8px; height:8px; border-radius:2px; background:var(--leaf);"></span>{{ port }}</span>
+    <span style="font-family:var(--font-data); font-size:11px; color:var(--muted);">ESP32 · 4 probes</span>
+    <span style="font-family:var(--font-data); font-size:11px; color:var(--muted);">115200 baud</span>
+    <span style="margin-left:auto; display:inline-flex; align-items:center; gap:7px; font-family:var(--font-data); font-size:11px; font-weight:600; color:{{ ownerColor }};"><span style="width:7px; height:7px; border-radius:999px; background:currentColor;"></span>{{ ownerLabel }}</span>
+  </div>
+
+  <!-- ================= MOVEMENT RAIL ================= -->
+  <div style="display:flex; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); box-shadow:var(--e1); overflow:hidden;">
+    <button onClick="{{ goPlan }}" style="flex:1; display:flex; flex-direction:column; gap:5px; align-items:flex-start; background:transparent; border:none; border-right:1px solid var(--border); padding:13px 18px 0; cursor:pointer; text-align:left;">
+      <div style="display:flex; align-items:center; gap:9px;"><span style="display:inline-flex; width:21px; height:21px; align-items:center; justify-content:center; border-radius:999px; background:var(--st-predicted); color:#fff; font-family:var(--font-data); font-weight:700; font-size:11px;">1</span><span style="font-family:var(--font-display); font-weight:600; font-size:15px; color:var(--ink);">Plan</span><sc-if value="{{ planDone }}" hint-placeholder-val="{{ false }}"><span style="font-family:var(--font-data); font-size:12px; color:var(--leaf);">✓</span></sc-if></div>
+      <span style="font-size:11.5px; color:var(--muted);">subject · sampling · source · destination</span>
+      <div style="height:3px; align-self:stretch; margin-top:2px;"><sc-if value="{{ isPlan }}" hint-placeholder-val="{{ true }}"><div style="height:3px; border-radius:3px 3px 0 0; background:var(--st-predicted);"></div></sc-if></div>
+    </button>
+    <button onClick="{{ goCapture }}" style="flex:1; display:flex; flex-direction:column; gap:5px; align-items:flex-start; background:transparent; border:none; border-right:1px solid var(--border); padding:13px 18px 0; cursor:pointer; text-align:left;">
+      <div style="display:flex; align-items:center; gap:9px;"><span style="display:inline-flex; width:21px; height:21px; align-items:center; justify-content:center; border-radius:999px; background:var(--st-predicted); color:#fff; font-family:var(--font-data); font-weight:700; font-size:11px;">2</span><span style="font-family:var(--font-display); font-weight:600; font-size:15px; color:var(--ink);">Capture</span><sc-if value="{{ captureDone }}" hint-placeholder-val="{{ false }}"><span style="font-family:var(--font-data); font-size:12px; color:var(--leaf);">✓</span></sc-if></div>
+      <span style="font-size:11.5px; color:var(--muted);">live channels · raw trace · provenance</span>
+      <div style="height:3px; align-self:stretch; margin-top:2px;"><sc-if value="{{ isCapture }}" hint-placeholder-val="{{ false }}"><div style="height:3px; border-radius:3px 3px 0 0; background:var(--st-predicted);"></div></sc-if></div>
+    </button>
+    <button onClick="{{ goNotes }}" style="flex:1; display:flex; flex-direction:column; gap:5px; align-items:flex-start; background:transparent; border:none; padding:13px 18px 0; cursor:pointer; text-align:left;">
+      <div style="display:flex; align-items:center; gap:9px;"><span style="display:inline-flex; width:21px; height:21px; align-items:center; justify-content:center; border-radius:999px; background:var(--st-predicted); color:#fff; font-family:var(--font-data); font-weight:700; font-size:11px;">3</span><span style="font-family:var(--font-display); font-weight:600; font-size:15px; color:var(--ink);">Notes</span></div>
+      <span style="font-size:11.5px; color:var(--muted);">interpret · save · keep the raw intact</span>
+      <div style="height:3px; align-self:stretch; margin-top:2px;"><sc-if value="{{ isNotes }}" hint-placeholder-val="{{ false }}"><div style="height:3px; border-radius:3px 3px 0 0; background:var(--st-predicted);"></div></sc-if></div>
+    </button>
+  </div>
+
+  <!-- ================= PERSISTENT PROVENANCE (once a run exists) ================= -->
+  <sc-if value="{{ provVisible }}" hint-placeholder-val="{{ false }}">
+  <div style="background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--st-predicted); border-radius:var(--r-tile); box-shadow:var(--e1); overflow:hidden;">
+    <div style="display:flex; align-items:center; gap:8px 14px; flex-wrap:wrap; padding:11px 16px; font-family:var(--font-data); font-size:11.5px;">
+      <span style="font-size:9.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--st-predicted);">provenance</span>
+      <span style="color:var(--ink); font-weight:600;">{{ expId }}</span>
+      <span style="color:var(--muted);">{{ startLocal }}</span>
+      <span style="color:var(--muted);">{{ durationLabel }}</span>
+      <span style="color:var(--muted);">{{ rateLabel }}</span>
+      <span style="color:{{ sourceColor }}; font-weight:600;">{{ sourceLabel }}</span>
+      <span style="color:var(--muted);">fw {{ fwVersion }}</span>
+      <span style="color:var(--muted);">app v0.7.1</span>
+      <span style="color:var(--muted);">raw {{ rawRangeLabel }}</span>
+      <button onClick="{{ toggleProv }}" style="margin-left:auto; font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--st-predicted); background:color-mix(in srgb, var(--st-predicted) 10%, transparent); border:none; border-radius:var(--r-pill); padding:4px 12px; cursor:pointer;">{{ provToggleLabel }}</button>
+    </div>
+    <sc-if value="{{ provExpanded }}" hint-placeholder-val="{{ false }}">
+    <div style="border-top:1px solid var(--border); padding:13px 16px; display:grid; grid-template-columns:1fr 1fr; gap:9px 28px;">
+      <sc-for list="{{ provDetails }}" as="row" hint-placeholder-count="6">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; font-family:var(--font-data); font-size:11.5px; border-bottom:1px dotted var(--border); padding-bottom:6px;">
+          <span style="color:var(--muted);">{{ row.label }}</span>
+          <span style="color:{{ row.color }}; text-align:right;">{{ row.val }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="border-top:1px solid var(--border); padding:9px 16px; font-family:var(--font-data); font-size:10.5px; color:var(--muted); line-height:1.5;">Fields marked <span style="color:var(--st-predicted);">— unavailable</span> are designed-in but not yet emitted by the capture stream; they fill in when their slice lands (no redesign). Times: local Chicago for the human, UTC for machines.</div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <!-- ============================================================ -->
+  <!-- ====================== PLAN ====================== -->
+  <!-- ============================================================ -->
+  <sc-if value="{{ isPlan }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="Plan" style="display:flex; flex-direction:column; gap:14px;">
+
+    <!-- load-draft seam (#326) -->
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:var(--surface-2); border:1px dashed var(--border); border-radius:var(--r-tile); padding:11px 16px;">
+      <span style="font-family:var(--font-data); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); border:1px solid var(--border); border-radius:var(--r-pill); padding:2px 8px;">soon</span>
+      <span style="font-size:12.5px; color:var(--muted); line-height:1.4;">Start from an <span style="color:var(--ink); font-weight:600;">agent-drafted plan</span> — a suggested subject, rate, and hypothesis you review before arming.</span>
+      <button onClick="{{ loadDraft }}" style="margin-left:auto; font-family:var(--font-ui); font-size:12px; font-weight:600; color:var(--muted); background:transparent; border:1px solid var(--border); border-radius:var(--r-pill); padding:6px 14px; cursor:pointer; white-space:nowrap;">Load draft</button>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1.35fr 1fr; gap:14px; align-items:start;">
+
+      <!-- LEFT: subject + intent + sampling -->
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:18px 20px; display:flex; flex-direction:column; gap:14px;">
+          <div style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">What you're capturing</div>
+          <label style="display:flex; flex-direction:column; gap:5px;"><span style="font-size:12px; color:var(--muted);">Subject</span><input value="{{ subject }}" onChange="{{ setSubject }}" placeholder="common-cup" style="font-family:var(--font-data); font-size:14px; color:var(--ink); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-control); padding:9px 11px; outline:none;" style-focus="border-color:var(--st-predicted);"></label>
+          <label style="display:flex; flex-direction:column; gap:5px;"><span style="font-size:12px; color:var(--muted);">Intent <span style="color:var(--st-predicted);">— what you expect to see</span></span><textarea onChange="{{ setIntent }}" rows="3" placeholder="Characterize probe response across air → water → soil…" style="font-family:var(--font-ui); font-size:13.5px; line-height:1.5; color:var(--ink); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-control); padding:9px 11px; outline:none; resize:vertical;" value="{{ intent }}" style-focus="border-color:var(--st-predicted);"></textarea></label>
+        </div>
+
+        <!-- sampling (#323 ordered rates) -->
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:18px 20px; display:flex; flex-direction:column; gap:11px;">
+          <div style="display:flex; align-items:baseline; gap:9px;"><div style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">Sample rate</div><span style="font-size:11.5px; color:var(--muted);">faster → finer detail, bigger file</span></div>
+          <div style="display:flex; gap:7px; flex-wrap:wrap;">
+            <sc-for list="{{ rateOptions }}" as="r" hint-placeholder-count="4">
+              <button onClick="{{ r.pick }}" style="font-family:var(--font-data); font-size:12.5px; font-weight:600; color:{{ r.fg }}; background:{{ r.bg }}; border:1px solid {{ r.bd }}; border-radius:var(--r-pill); padding:7px 15px; cursor:pointer;">{{ r.label }}</button>
+            </sc-for>
+          </div>
+          <div style="font-size:12.5px; color:var(--muted); line-height:1.5; background:var(--surface-2); border-radius:var(--r-control); padding:9px 12px;"><span style="color:var(--st-predicted); font-weight:600;">Why {{ rateLabel }}? </span>{{ rateWhy }}</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: source + destination + port -->
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <!-- source (#323 serial default) -->
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:18px 20px; display:flex; flex-direction:column; gap:11px;">
+          <div style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">Source</div>
+          <div style="display:flex; gap:8px;">
+            <button onClick="{{ setSourceDevice }}" style="flex:1; display:flex; flex-direction:column; gap:3px; align-items:flex-start; font-family:var(--font-ui); color:{{ devFg }}; background:{{ devBg }}; border:1px solid {{ devBd }}; border-radius:var(--r-control); padding:10px 13px; cursor:pointer; text-align:left;"><span style="font-size:13px; font-weight:700; white-space:nowrap;">⚡ Serial device</span><span style="font-size:11px; opacity:.85; white-space:nowrap;">real bench · default</span></button>
+            <button onClick="{{ setSourceSynthetic }}" style="flex:1; display:flex; flex-direction:column; gap:3px; align-items:flex-start; font-family:var(--font-ui); color:{{ synFg }}; background:{{ synBg }}; border:1px solid {{ synBd }}; border-radius:var(--r-control); padding:10px 13px; cursor:pointer; text-align:left;"><span style="font-size:13px; font-weight:700; white-space:nowrap;">Synthetic</span><span style="font-size:11px; opacity:.85; white-space:nowrap;">demo only</span></button>
+          </div>
+          <sc-if value="{{ sourceIsSynthetic }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; gap:8px; align-items:flex-start; font-size:12px; line-height:1.45; color:var(--st-fault); background:color-mix(in srgb, var(--st-fault) 10%, transparent); border-radius:var(--r-control); padding:9px 11px;"><span style="font-weight:700;">⚠</span><span>Synthetic data is <strong>excluded from evidence</strong> and never used for real bench work. The capture is tagged <span style="font-family:var(--font-data);">source=synthetic</span> so it can't be mistaken for a reading.</span></div>
+          </sc-if>
+        </div>
+
+        <!-- destination + port ownership (#335/#327 guards, shown) -->
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:18px 20px; display:flex; flex-direction:column; gap:12px;">
+          <div style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">Destination</div>
+          <div style="display:flex; align-items:center; gap:9px; font-family:var(--font-data); font-size:12.5px;"><span style="color:var(--leaf);">🛡</span><span style="color:var(--ink);">{{ destPath }}</span></div>
+          <div style="font-size:12px; color:var(--muted); line-height:1.5;">Isolated — your <span style="color:var(--leaf); font-weight:600;">living monitor log is never touched</span>. <span style="color:var(--leaf); font-weight:600;">{{ overwriteNote }}</span></div>
+          <div style="border-top:1px solid var(--border); padding-top:11px; display:flex; flex-direction:column; gap:9px;">
+            <div style="display:flex; align-items:center; gap:8px; font-family:var(--font-data); font-size:11.5px; color:{{ ownerColor }}; font-weight:600;"><span style="width:7px; height:7px; border-radius:999px; background:currentColor;"></span>{{ ownerLabel }}</div>
+            <sc-if value="{{ portHeldByMonitor }}" hint-placeholder-val="{{ true }}">
+              <div style="font-size:12px; color:var(--muted); line-height:1.5;">The Monitor logger holds {{ port }} for the living baseline. Capture needs <strong style="color:var(--ink);">exclusive ownership</strong> so the two streams can't silently contaminate each other.</div>
+              <button onClick="{{ releaseMonitor }}" style="align-self:flex-start; font-family:var(--font-ui); font-size:12px; font-weight:600; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-pill); padding:7px 14px; cursor:pointer;">Release Monitor → take the port</button>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- arm / armed -->
+    <sc-if value="{{ showArmButton }}" hint-placeholder-val="{{ true }}">
+      <button onClick="{{ arm }}" disabled="{{ armDisabled }}" style="align-self:flex-start; font-family:var(--font-ui); font-size:14px; font-weight:700; color:{{ armFg }}; background:{{ armBg }}; border:1px solid {{ armBg }}; border-radius:var(--r-pill); padding:11px 26px; cursor:{{ armCursor }}; box-shadow:var(--e1);">Arm capture →</button>
+    </sc-if>
+    <sc-if value="{{ armed }}" hint-placeholder-val="{{ false }}">
+      <div style="background:var(--surface); border:1px solid var(--st-predicted); border-radius:var(--r-card); box-shadow:var(--e2); padding:18px 20px; display:flex; flex-direction:column; gap:13px;">
+        <div style="display:flex; align-items:center; gap:9px;"><span style="display:inline-flex; align-items:center; gap:7px; font-family:var(--font-data); font-size:12px; font-weight:700; color:var(--st-predicted);"><span style="width:9px; height:9px; border-radius:999px; background:currentColor; animation:armPulse 1.6s ease-in-out infinite;"></span>ARMED</span><span style="font-size:13px; color:var(--muted);">review, then begin — nothing is recorded until you confirm.</span></div>
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--r-control); overflow:hidden;">
+          <div style="background:var(--surface); padding:9px 12px;"><div style="font-family:var(--font-data); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">subject</div><div style="font-family:var(--font-data); font-size:13px; color:var(--ink); margin-top:2px;">{{ subject }}</div></div>
+          <div style="background:var(--surface); padding:9px 12px;"><div style="font-family:var(--font-data); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">rate</div><div style="font-family:var(--font-data); font-size:13px; color:var(--ink); margin-top:2px;">{{ rateLabel }}</div></div>
+          <div style="background:var(--surface); padding:9px 12px;"><div style="font-family:var(--font-data); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">source</div><div style="font-family:var(--font-data); font-size:13px; color:{{ sourceColor }}; margin-top:2px;">{{ sourceShort }}</div></div>
+          <div style="background:var(--surface); padding:9px 12px;"><div style="font-family:var(--font-data); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">writes to</div><div style="font-family:var(--font-data); font-size:13px; color:var(--ink); margin-top:2px;">{{ destPath }}</div></div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <button onClick="{{ beginRecording }}" style="font-family:var(--font-ui); font-size:14px; font-weight:700; color:#fff; background:var(--leaf); border:1px solid var(--leaf); border-radius:var(--r-pill); padding:11px 26px; cursor:pointer; box-shadow:var(--e1);">● Begin recording</button>
+          <button onClick="{{ disarm }}" style="font-family:var(--font-ui); font-size:13px; font-weight:600; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-pill); padding:10px 20px; cursor:pointer;">Back to plan</button>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <!-- ============================================================ -->
+  <!-- ====================== CAPTURE ====================== -->
+  <!-- ============================================================ -->
+  <sc-if value="{{ isCapture }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Capture" style="display:flex; flex-direction:column; gap:14px;">
+
+    <!-- status + primary reading -->
+    <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:16px 20px;">
+      <span style="display:inline-flex; align-items:center; gap:8px; font-family:var(--font-data); font-size:13px; font-weight:700; color:{{ statusColor }};"><span style="width:9px; height:9px; border-radius:999px; background:currentColor; {{ statusGlow }}"></span>{{ statusLabel }}</span>
+      <div style="display:flex; align-items:baseline; gap:8px;"><span style="font-family:var(--font-data); font-weight:700; font-size:34px; line-height:1; color:var(--ink);">{{ curRaw }}</span><span style="font-family:var(--font-data); font-size:12px; color:var(--muted);">raw · #3</span></div>
+      <span style="display:inline-flex; align-items:center; gap:7px; font-family:var(--font-ui); font-size:13px; font-weight:600; color:{{ curBandColor }}; background:color-mix(in srgb, {{ curBandColor }} 13%, transparent); border-radius:var(--r-pill); padding:5px 13px;">{{ curBandName }}</span>
+      <span style="margin-left:auto; font-family:var(--font-data); font-size:13px; color:var(--muted);">{{ elapsedLabel }} · {{ sampleCount }} samples</span>
+    </div>
+
+    <!-- live channel cards (#334) -->
+    <div>
+      <div style="display:flex; align-items:baseline; gap:9px; margin-bottom:8px;"><div style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">Live channels</div><span style="font-size:11.5px; color:var(--muted);">all four probes in the common cup · raw counts</span></div>
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
+        <sc-for list="{{ channels }}" as="c" hint-placeholder-count="4">
+          <div style="position:relative; overflow:hidden; background:var(--surface); border:1px solid {{ c.borderColor }}; border-radius:var(--r-tile); box-shadow:var(--e1); padding:12px 13px; display:flex; flex-direction:column; gap:7px;">
+            <div style="position:absolute; left:0; top:0; bottom:0; width:4px; background:{{ c.seriesColor }};"></div>
+            <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:var(--font-data); font-size:12px; font-weight:700; color:var(--ink);">{{ c.id }}</span><span style="font-family:var(--font-data); font-size:10px; color:var(--muted);">{{ c.gpio }}</span></div>
+            <div style="font-family:var(--font-data); font-weight:700; font-size:24px; line-height:1; color:var(--ink);">{{ c.raw }}</div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;"><span style="font-family:var(--font-ui); font-size:11px; font-weight:600; color:{{ c.bandColor }};">{{ c.bandName }}</span><span style="font-family:var(--font-data); font-size:10px; color:var(--muted);">±{{ c.spread }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- the honest chart (#325) -->
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:16px 18px;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+        <div style="font-family:var(--font-data); font-size:11.5px; color:var(--muted);">raw ADC · 12-bit (0–4095) · <span style="color:var(--ink);">HIGH = drier</span> · no calibrated %, ever</div>
+        <div style="font-family:var(--font-data); font-size:11px; color:var(--muted);">primary <span style="color:var(--st-predicted); font-weight:600;">#3 / GPIO36</span></div>
+      </div>
+      <svg viewBox="0 0 768 300" style="width:100%; height:auto; display:block;" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="capFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--st-predicted)" stop-opacity="0.20"></stop>
+            <stop offset="100%" stop-color="var(--st-predicted)" stop-opacity="0.01"></stop>
+          </linearGradient>
+        </defs>
+        <!-- band zones (full width, faint) -->
+        <rect x="64" y="16" width="688" height="20.7" fill="var(--band-parched)" opacity="0.10"></rect>
+        <rect x="64" y="36.7" width="688" height="87.8" fill="var(--band-dry)" opacity="0.10"></rect>
+        <rect x="64" y="124.5" width="688" height="46.5" fill="var(--band-drying)" opacity="0.10"></rect>
+        <rect x="64" y="171" width="688" height="31" fill="var(--band-ideal)" opacity="0.16"></rect>
+        <rect x="64" y="202" width="688" height="38.2" fill="var(--band-moist)" opacity="0.10"></rect>
+        <rect x="64" y="240.2" width="688" height="18.6" fill="var(--band-wet)" opacity="0.10"></rect>
+        <rect x="64" y="258.8" width="688" height="5.2" fill="var(--band-saturated)" opacity="0.12"></rect>
+        <!-- gutter ramp -->
+        <rect x="51" y="16" width="9" height="20.7" fill="var(--band-parched)"></rect>
+        <rect x="51" y="36.7" width="9" height="87.8" fill="var(--band-dry)"></rect>
+        <rect x="51" y="124.5" width="9" height="46.5" fill="var(--band-drying)"></rect>
+        <rect x="51" y="171" width="9" height="31" fill="var(--band-ideal)"></rect>
+        <rect x="51" y="202" width="9" height="38.2" fill="var(--band-moist)"></rect>
+        <rect x="51" y="240.2" width="9" height="18.6" fill="var(--band-wet)"></rect>
+        <rect x="51" y="258.8" width="9" height="5.2" fill="var(--band-saturated)"></rect>
+        <!-- boundary labels -->
+        <g font-family="JetBrains Mono, monospace" font-size="9" fill="var(--muted)" text-anchor="end">
+          <text x="46" y="40">3050</text><text x="46" y="128">2200</text><text x="46" y="174">1750</text>
+          <text x="46" y="205">1450</text><text x="46" y="243">1080</text><text x="46" y="262">900</text>
+        </g>
+        <!-- frame -->
+        <line x1="64" y1="16" x2="64" y2="264" stroke="var(--border)" stroke-width="1"></line>
+        <line x1="64" y1="264" x2="752" y2="264" stroke="var(--border)" stroke-width="1"></line>
+        <!-- empty state -->
+        <sc-if value="{{ noSamples }}" hint-placeholder-val="{{ false }}"><text x="408" y="150" font-family="JetBrains Mono, monospace" font-size="13" fill="var(--muted)" text-anchor="middle">waiting for {{ port }} …</text></sc-if>
+        <!-- series -->
+        <sc-if value="{{ hasSamples }}" hint-placeholder-val="{{ false }}">
+          <polygon points="{{ areaPoints }}" fill="url(#capFill)"></polygon>
+          <sc-for list="{{ series }}" as="s" hint-placeholder-count="4">
+            <polyline points="{{ s.points }}" fill="none" stroke="{{ s.color }}" stroke-width="{{ s.width }}" stroke-opacity="{{ s.opacity }}" stroke-linejoin="round" stroke-linecap="round"></polyline>
+          </sc-for>
+          <circle cx="{{ curX }}" cy="{{ curY }}" r="4" fill="var(--st-predicted)"></circle>
+        </sc-if>
+      </svg>
+      <div style="display:flex; gap:8px 16px; flex-wrap:wrap; margin-top:9px; font-family:var(--font-data); font-size:10.5px; color:var(--muted);">
+        <sc-for list="{{ bandLegend }}" as="b" hint-placeholder-count="7">
+          <span style="display:inline-flex; align-items:center; gap:5px;"><span style="width:9px; height:9px; border-radius:2px; background:{{ b.color }};"></span>{{ b.name }}</span>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- raw readouts (no %) -->
+    <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--r-tile); overflow:hidden;">
+      <sc-for list="{{ readouts }}" as="m" hint-placeholder-count="5">
+        <div style="background:var(--surface); padding:11px 13px;"><div style="font-family:var(--font-data); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">{{ m.label }}</div><div style="font-family:var(--font-data); font-size:16px; font-weight:700; color:var(--ink); margin-top:3px;">{{ m.val }}</div></div>
+      </sc-for>
+    </div>
+
+    <!-- controls -->
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <sc-if value="{{ recording }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ requestStop }}" style="font-family:var(--font-ui); font-size:14px; font-weight:700; color:#fff; background:var(--st-due); border:1px solid var(--st-due); border-radius:var(--r-pill); padding:11px 24px; cursor:pointer; box-shadow:var(--e1);">■ Stop capture</button>
+        <button onClick="{{ requestDiscard }}" style="font-family:var(--font-ui); font-size:13px; font-weight:600; color:var(--st-fault); background:transparent; border:1px solid var(--st-fault); border-radius:var(--r-pill); padding:10px 18px; cursor:pointer;">Discard</button>
+        <span style="margin-left:auto; font-family:var(--font-data); font-size:11.5px; color:var(--muted);">raw preserved continuously → {{ destPath }}readings.csv</span>
+      </sc-if>
+      <sc-if value="{{ stopped }}" hint-placeholder-val="{{ false }}">
+        <span style="display:inline-flex; align-items:center; gap:8px; font-family:var(--font-data); font-size:13px; font-weight:700; color:var(--muted);"><span style="width:9px; height:9px; border-radius:2px; background:var(--muted);"></span>stopped · {{ sampleCount }} samples kept</span>
+        <button onClick="{{ goNotes }}" style="margin-left:auto; font-family:var(--font-ui); font-size:14px; font-weight:700; color:#fff; background:var(--st-predicted); border:1px solid var(--st-predicted); border-radius:var(--r-pill); padding:11px 24px; cursor:pointer; box-shadow:var(--e1);">Add notes →</button>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============================================================ -->
+  <!-- ====================== NOTES ====================== -->
+  <!-- ============================================================ -->
+  <sc-if value="{{ isNotes }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Notes" style="display:flex; flex-direction:column; gap:14px;">
+
+    <!-- immutable readings (locked) -->
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:10px; padding:13px 18px; border-bottom:1px solid var(--border);">
+        <span style="font-family:var(--font-display); font-weight:700; font-size:15px;">The readings</span>
+        <span style="display:inline-flex; align-items:center; gap:6px; font-family:var(--font-data); font-size:10.5px; font-weight:600; color:var(--leaf); background:color-mix(in srgb, var(--leaf) 12%, transparent); border-radius:var(--r-pill); padding:3px 10px;">🔒 raw · immutable</span>
+        <span style="margin-left:auto; font-family:var(--font-data); font-size:11px; color:var(--muted);">{{ sampleCount }} samples · {{ durationLabel }}</span>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:var(--border);">
+        <sc-for list="{{ readouts }}" as="m" hint-placeholder-count="5">
+          <div style="background:var(--surface); padding:11px 14px;"><div style="font-family:var(--font-data); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">{{ m.label }}</div><div style="font-family:var(--font-data); font-size:16px; font-weight:700; color:var(--ink); margin-top:3px;">{{ m.val }}</div></div>
+        </sc-for>
+      </div>
+      <!-- band time distribution (raw seconds, NO %) -->
+      <div style="padding:14px 18px; display:flex; flex-direction:column; gap:7px;">
+        <div style="font-family:var(--font-data); font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">time in each band <span style="text-transform:none; letter-spacing:0;">· primary #3 · seconds, not %</span></div>
+        <sc-for list="{{ bandDist }}" as="b" hint-placeholder-count="4">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="width:96px; font-family:var(--font-ui); font-size:12px; font-weight:600; color:{{ b.color }}; flex-shrink:0;">{{ b.name }}</span>
+            <span style="flex:1; height:10px; background:var(--surface-2); border-radius:999px; overflow:hidden;"><span style="display:block; height:100%; width:{{ b.barW }}; background:{{ b.color }}; border-radius:999px;"></span></span>
+            <span style="width:96px; text-align:right; font-family:var(--font-data); font-size:11.5px; color:var(--muted); flex-shrink:0;">{{ b.label }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- interpretation (#335 notes · --st-predicted) + save resilience (#327) -->
+    <div style="background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--st-predicted); border-radius:var(--r-card); box-shadow:var(--e1); overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:10px; padding:13px 18px; border-bottom:1px solid var(--border);">
+        <span style="font-family:var(--font-display); font-weight:700; font-size:15px; color:var(--ink);">Your reading of it</span>
+        <span style="font-family:var(--font-data); font-size:10.5px; color:var(--st-predicted);">interpretation — kept separate from the raw</span>
+        <span style="margin-left:auto; display:inline-flex; align-items:center; gap:7px; font-family:var(--font-data); font-size:11px; color:{{ saveColor }};"><span style="width:7px; height:7px; border-radius:999px; background:currentColor;"></span>{{ autosaveLabel }}</span>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--border);">
+        <label style="background:var(--surface); padding:14px 18px; display:flex; flex-direction:column; gap:6px;"><span style="font-family:var(--font-display); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--st-predicted);">Hypothesis</span><textarea onChange="{{ setHyp }}" rows="3" placeholder="What did you expect?" style="font-family:var(--font-ui); font-size:13.5px; line-height:1.55; color:var(--ink); background:transparent; border:none; outline:none; resize:vertical;" value="{{ notes.hypothesis }}"></textarea></label>
+        <label style="background:var(--surface); padding:14px 18px; display:flex; flex-direction:column; gap:6px;"><span style="font-family:var(--font-display); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--st-predicted);">Method</span><textarea onChange="{{ setMethod }}" rows="3" style="font-family:var(--font-ui); font-size:13.5px; line-height:1.55; color:var(--ink); background:transparent; border:none; outline:none; resize:vertical;" value="{{ notes.method }}"></textarea></label>
+        <label style="background:var(--surface); padding:14px 18px; display:flex; flex-direction:column; gap:6px;"><span style="font-family:var(--font-display); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--st-predicted);">Findings</span><textarea onChange="{{ setFind }}" rows="3" placeholder="What did the raw actually show?" style="font-family:var(--font-ui); font-size:13.5px; line-height:1.55; color:var(--ink); background:transparent; border:none; outline:none; resize:vertical;" value="{{ notes.findings }}"></textarea></label>
+        <label style="background:var(--surface); padding:14px 18px; display:flex; flex-direction:column; gap:6px;"><span style="font-family:var(--font-display); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--st-predicted);">Conclusion</span><textarea onChange="{{ setConcl }}" rows="3" placeholder="What do you now believe — and what's still uncertain?" style="font-family:var(--font-ui); font-size:13.5px; line-height:1.55; color:var(--ink); background:transparent; border:none; outline:none; resize:vertical;" value="{{ notes.conclusion }}"></textarea></label>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 18px; border-top:1px solid var(--border); background:var(--surface-2);">
+        <button onClick="{{ saveNotes }}" style="font-family:var(--font-ui); font-size:13px; font-weight:700; color:#fff; background:var(--st-predicted); border:1px solid var(--st-predicted); border-radius:var(--r-pill); padding:9px 20px; cursor:pointer;">Save note</button>
+        <span style="font-family:var(--font-data); font-size:11.5px; color:var(--muted);">{{ savedLabel }}</span>
+        <span style="margin-left:auto; font-family:var(--font-data); font-size:11px; color:var(--muted); line-height:1.4;">drafts autosave locally — they survive a reload or a lost connection</span>
+      </div>
+    </div>
+
+    <button onClick="{{ newRun }}" style="align-self:flex-start; font-family:var(--font-ui); font-size:13px; font-weight:600; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-pill); padding:10px 20px; cursor:pointer;">＋ Start a new run</button>
+  </div>
+  </sc-if>
+
+  <!-- ================= FOOTER ================= -->
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; border-top:1px solid var(--border); padding-top:16px; margin-top:4px; font-family:var(--font-data); font-size:11px; color:var(--muted);">
+    <span>raw + band = truth · interpretation stays in the notes layer · times: local Chicago + UTC</span>
+    <span style="font-style:italic; font-family:var(--font-ui);">tend well.</span>
+  </div>
+
+</div>
+
+<!-- ================= CONFIRM OVERLAY ================= -->
+<sc-if value="{{ hasConfirm }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed; inset:0; background:rgba(12,19,17,.45); display:flex; align-items:center; justify-content:center; padding:24px; z-index:50;">
+  <div style="max-width:420px; width:100%; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e3); padding:24px;">
+    <div style="font-family:var(--font-display); font-weight:700; font-size:19px; margin-bottom:8px; color:var(--ink);">{{ confirmTitle }}</div>
+    <div style="font-size:14px; line-height:1.55; color:var(--muted); margin-bottom:20px;">{{ confirmBody }}</div>
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
+      <button onClick="{{ confirmNo }}" style="font-family:var(--font-ui); font-size:13px; font-weight:600; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-pill); padding:9px 18px; cursor:pointer;">{{ confirmNoLabel }}</button>
+      <button onClick="{{ confirmYes }}" style="font-family:var(--font-ui); font-size:13px; font-weight:700; color:#fff; background:{{ confirmYesColor }}; border:1px solid {{ confirmYesColor }}; border-radius:var(--r-pill); padding:9px 18px; cursor:pointer;">{{ confirmYesLabel }}</button>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1040, &quot;height&quot;: 1660 },
+  &quot;theme&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;light&quot;, &quot;soil&quot;], &quot;default&quot;: &quot;light&quot;, &quot;tsType&quot;: &quot;\&quot;light\&quot; | \&quot;soil\&quot;&quot; },
+  &quot;stage&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;plan&quot;, &quot;capture&quot;, &quot;notes&quot;], &quot;default&quot;: &quot;plan&quot;, &quot;tsType&quot;: &quot;\&quot;plan\&quot; | \&quot;capture\&quot; | \&quot;notes\&quot;&quot;, &quot;section&quot;: &quot;Review&quot; },
+  &quot;liveDemo&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Review&quot; }
+}">
+class Component extends DCLogic {
+  state = {
+    theme: this.props.theme ?? 'light',
+    stage: this.props.stage ?? 'plan',
+    capState: 'idle',            // idle | armed | recording | stopped
+    subject: 'common-cup',
+    intent: 'Characterize probe response across air \u2192 water \u2192 soil so the band edges are anchored to a controlled sweep, not just the live pot.',
+    sampleRateMs: 1000,
+    source: 'device',            // device | synthetic
+    portOwner: 'monitor',        // monitor | experiment
+    samples: [],                 // {i, vals:[#1,#2,#3,#4]}
+    confirm: null,               // null | 'stop' | 'discard'
+    provExpanded: false,
+    notes: { hypothesis:'', method:'', findings:'', conclusion:'' },
+    notesVersion: 0,
+    notesSavedAt: null,
+    notesDirty: false,
+    startClock: null,            // {local, utc}
+  };
+
+  PORT = '/dev/ttyUSB0';
+  FW = '0.3.2';
+  PLAN_DATE = '2026-06-28';
+  // probes: primary is #3 on GPIO36 (the long-run probe); offsets ~ real cross-probe spread
+  PROBES = [
+    { id:'#1', gpio:'GPIO39', off: 38, series:'var(--band-wet)' },
+    { id:'#2', gpio:'GPIO34', off:-46, series:'var(--band-drying)' },
+    { id:'#3', gpio:'GPIO36', off:  0, series:'var(--st-predicted)', primary:true },
+    { id:'#4', gpio:'GPIO35', off: 22, series:'var(--band-moist)' },
+  ];
+  BANDS = [
+    { name:'submerged',    token:'var(--band-saturated)', lo:0,    hi:900  },
+    { name:'overwatered',  token:'var(--band-wet)',       lo:900,  hi:1080 },
+    { name:'well watered', token:'var(--band-moist)',     lo:1080, hi:1450 },
+    { name:'OK',           token:'var(--band-ideal)',     lo:1450, hi:1750 },
+    { name:'needs water',  token:'var(--band-drying)',    lo:1750, hi:2200 },
+    { name:'dry',          token:'var(--band-dry)',       lo:2200, hi:3050 },
+    { name:'air-dry',      token:'var(--band-parched)',   lo:3050, hi:9999 },
+  ];
+  RATES = [
+    { ms:500,  label:'0.5 s' },
+    { ms:1000, label:'1 s'   },
+    { ms:5000, label:'5 s'   },
+    { ms:30000,label:'30 s'  },
+  ];
+  RATE_WHY = {
+    500:  'resolves a fast bench transition (a dunk, a touch); fills disk quickly \u2014 use for short sweeps.',
+    1000: 'resolves a bench sweep without flooding disk. The default for a hands-on characterization.',
+    5000: 'a calm cadence for a settling probe over several minutes.',
+    30000:'matches the long-running monitor logger \u2014 right for slow dry-downs over hours.',
+  };
+  // geometry (matches the SVG band rects)
+  PL=64; PR=752; PT=16; PB=264; RAW_TOP=3250; RAW_BOT=850;
+
+  componentDidUpdate(prev){
+    if (prev.theme !== this.props.theme && this.props.theme) this.setState({ theme:this.props.theme });
+    if (prev.stage !== this.props.stage && this.props.stage) this.setState({ stage:this.props.stage });
+  }
+  componentWillUnmount(){ if (this._t) clearInterval(this._t); }
+
+  scriptRaw(i){
+    const n=()=> (Math.random()*2-1);
+    let b;
+    if (i<18) b = 2740 + n()*12;                                  // air-dry plateau
+    else if (i<24) b = 2740 + (1040-2740)*((i-17)/6) + n()*20;    // dunk \u2192 water
+    else if (i<52) b = 1045 + n()*18;                              // saturated / water
+    else if (i<58) b = 1045 + (1300-1045)*((i-51)/6) + n()*20;    // into soil
+    else b = 1300 + Math.min((i-58)*0.8, 130) + n()*22;            // field capacity, slow dry-up
+    return Math.round(Math.max(900, Math.min(3110, b)));
+  }
+  genVals(i){
+    const base = this.scriptRaw(i);
+    return this.PROBES.map(p => Math.round(Math.max(900, Math.min(3120, base + p.off + (Math.random()*2-1)*11))));
+  }
+
+  classify(raw){ return this.BANDS.find(b => raw>=b.lo && raw<b.hi) || this.BANDS[this.BANDS.length-1]; }
+  yPix(raw){ return this.PB - (raw-this.RAW_BOT)/(this.RAW_TOP-this.RAW_BOT)*(this.PB-this.PT); }
+  xPix(i,n){ const N=Math.max(n-1,40); return this.PL + (Math.min(i,N)/N)*(this.PR-this.PL); }
+
+  fmtDur(ms){ const s=Math.floor(ms/1000); const m=Math.floor(s/60); const ss=String(s%60).padStart(2,'0'); return m+':'+ss; }
+  primaryVals(){ return this.state.samples.map(s => s.vals[2]); }
+  median(a){ if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y); const m=Math.floor(s.length/2); return s.length%2 ? s[m] : Math.round((s[m-1]+s[m])/2); }
+
+  // ---- handlers ----
+  toggleTheme = () => this.setState(s => ({ theme: s.theme==='soil'?'light':'soil' }));
+  goPlan = () => { if (this.state.capState!=='recording') this.setState({ stage:'plan' }); };
+  goCapture = () => { if (this.state.capState!=='idle') this.setState({ stage:'capture' }); };
+  goNotes = () => { if (this.state.capState==='stopped') this.setState({ stage:'notes' }); };
+  loadDraft = () => {};
+  setSubject = (e) => this.setState({ subject: e.target.value });
+  setIntent = (e) => this.setState({ intent: e.target.value });
+  setRate = (ms) => this.setState({ sampleRateMs: ms });
+  setSourceDevice = () => this.setState({ source:'device' });
+  setSourceSynthetic = () => this.setState({ source:'synthetic' });
+  releaseMonitor = () => this.setState({ portOwner:'experiment' });
+  arm = () => { if (this.state.portOwner==='experiment') this.setState({ capState:'armed' }); };
+  disarm = () => this.setState({ capState:'idle' });
+  beginRecording = () => {
+    const now = new Date();
+    const local = now.toLocaleTimeString('en-US',{ timeZone:'America/Chicago', hour12:false });
+    const utc = now.toISOString().replace('.000','').slice(0,19)+'Z';
+    this.setState({ capState:'recording', stage:'capture', samples:[], startClock:{ local: local+' CDT', utc } });
+    if (this._t) clearInterval(this._t);
+    if (this.props.liveDemo === false) return;     // honest "no synthetic" path: wait for real device
+    this._t0 = Date.now();
+    this._t = setInterval(() => {
+      this.setState(s => {
+        if (s.capState!=='recording') return null;
+        // wall-clock catch-up: robust to timer throttling so the trace fills smoothly (~1 sample / 120ms)
+        const target = Math.min(600, Math.floor((Date.now()-this._t0)/120) + 1);
+        if (s.samples.length >= target) return null;
+        const add = [];
+        for (let i=s.samples.length; i<target; i++) add.push({ i, vals: this.genVals(i) });
+        const next = s.samples.concat(add);
+        if (next.length >= 600) clearInterval(this._t);
+        return { samples: next, capState: next.length>=600 ? 'stopped' : 'recording' };
+      });
+    }, 120);
+  };
+  requestStop = () => this.setState({ confirm:'stop' });
+  requestDiscard = () => this.setState({ confirm:'discard' });
+  confirmNo = () => this.setState({ confirm:null });
+  confirmYes = () => {
+    const c = this.state.confirm;
+    if (this._t) clearInterval(this._t);
+    if (c==='stop') this.setState({ capState:'stopped', confirm:null });
+    else if (c==='discard') this.setState({ capState:'idle', stage:'plan', samples:[], confirm:null, startClock:null });
+  };
+  toggleProv = () => this.setState(s => ({ provExpanded: !s.provExpanded }));
+  setHyp = (e) => this.setState(s => ({ notes:{...s.notes, hypothesis:e.target.value}, notesDirty:true }));
+  setMethod = (e) => this.setState(s => ({ notes:{...s.notes, method:e.target.value}, notesDirty:true }));
+  setFind = (e) => this.setState(s => ({ notes:{...s.notes, findings:e.target.value}, notesDirty:true }));
+  setConcl = (e) => this.setState(s => ({ notes:{...s.notes, conclusion:e.target.value}, notesDirty:true }));
+  saveNotes = () => { const u=new Date().toISOString().slice(0,19)+'Z'; this.setState(s => ({ notesVersion:s.notesVersion+1, notesSavedAt:u, notesDirty:false })); };
+  newRun = () => { if (this._t) clearInterval(this._t); this.setState({ stage:'plan', capState:'idle', samples:[], startClock:null, notes:{hypothesis:'',method:'',findings:'',conclusion:''}, notesVersion:0, notesSavedAt:null, notesDirty:false, portOwner:'monitor' }); };
+
+  renderVals(){
+    const st = this.state;
+    const pv = this.primaryVals();
+    const n = pv.length;
+    const cur = n ? pv[n-1] : null;
+    const curBand = cur!=null ? this.classify(cur) : null;
+    const rawMin = n ? Math.min(...pv) : null;
+    const rawMax = n ? Math.max(...pv) : null;
+    const mean = n ? Math.round(pv.reduce((a,b)=>a+b,0)/n) : null;
+    const med = n ? this.median(pv) : null;
+    const durMs = n * st.sampleRateMs;
+    // slope counts/min over last <=20 samples
+    let slope = '\u2014';
+    if (n>=3){ const w=Math.min(n,20); const a=pv[n-w], b=pv[n-1]; const mins=((w-1)*st.sampleRateMs)/60000; if(mins>0){ const v=Math.round((b-a)/mins); slope=(v>=0?'+':'')+v+'/min'; } }
+    const rate = this.RATES.find(r=>r.ms===st.sampleRateMs) || this.RATES[1];
+
+    // chart series (4 probes)
+    const series = this.PROBES.map((p,k) => ({
+      points: st.samples.map((s,idx)=> this.xPix(idx,n).toFixed(1)+','+this.yPix(s.vals[k]).toFixed(1)).join(' '),
+      color: p.series,
+      width: p.primary ? 2.4 : 1.2,
+      opacity: p.primary ? 1 : 0.42,
+    }));
+    const curX = n ? this.xPix(n-1,n).toFixed(1) : '0';
+    const curY = cur!=null ? this.yPix(cur).toFixed(1) : '0';
+    let areaPoints = '';
+    if (n){ const pts = st.samples.map((s,idx)=> this.xPix(idx,n).toFixed(1)+','+this.yPix(s.vals[2]).toFixed(1)).join(' '); areaPoints = this.PL+','+this.PB+' '+pts+' '+curX+','+this.PB; }
+
+    // live channel cards
+    const channels = this.PROBES.map((p,k) => {
+      const v = n ? st.samples[n-1].vals[k] : null;
+      const last = st.samples.slice(-12).map(s=>s.vals[k]);
+      const spread = last.length>1 ? (Math.max(...last)-Math.min(...last)) : 0;
+      const band = v!=null ? this.classify(v) : null;
+      return { id:p.id, gpio:p.gpio, seriesColor:p.series, raw: v!=null? String(v):'\u2014', bandName: band?band.name:'\u2014', bandColor: band?band.token:'var(--muted)', spread: String(spread), borderColor: p.primary?'var(--st-predicted)':'var(--border)' };
+    });
+
+    // band time distribution (primary) \u2014 seconds, NO %
+    const counts = {};
+    pv.forEach(v => { const b=this.classify(v); counts[b.name]=(counts[b.name]||0)+1; });
+    const maxC = Math.max(1, ...Object.values(counts));
+    const bandDist = this.BANDS.filter(b=>counts[b.name]).sort((a,b)=>counts[b.name]-counts[a.name]).map(b => ({
+      name:b.name, color:b.token, barW: Math.round((counts[b.name]/maxC)*100)+'%',
+      label: (counts[b.name]*st.sampleRateMs/1000)+'s · '+counts[b.name],
+    }));
+
+    const bandLegend = this.BANDS.map(b => ({ name:b.name, color:b.token }));
+
+    // readouts (raw units only)
+    const dash = '\u2014';
+    const readouts = [
+      { label:'current', val: cur!=null? String(cur):dash },
+      { label:'min \u2013 max', val: n? rawMin+'\u2013'+rawMax : dash },
+      { label:'median', val: med!=null? String(med):dash },
+      { label:'slope', val: slope },
+      { label:'samples', val: n? String(n):'0' },
+    ];
+
+    // source
+    const syn = st.source==='synthetic';
+    const sourceLabel = syn ? '\u26a0 synthetic' : '\u26a1 serial device';
+    const sourceShort = syn ? 'synthetic' : 'serial';
+    const sourceColor = syn ? 'var(--st-fault)' : 'var(--leaf)';
+
+    // port ownership
+    const held = st.portOwner==='monitor';
+    const ownerLabel = held ? 'port held by Monitor logger' : 'port owned by Experiment Capture';
+    const ownerColor = held ? 'var(--st-dry)' : 'var(--leaf)';
+
+    // expId / dest
+    const slug = (st.subject||'capture').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'capture';
+    const expId = this.PLAN_DATE+'_'+slug+'_01';
+    const destPath = 'experiments/'+expId+'/';
+
+    // provenance details (available vs design-for-later)
+    const muted='var(--muted)'; const later='var(--st-predicted)';
+    const provDetails = [
+      { label:'UTC start', val: st.startClock? st.startClock.utc : dash, color:muted },
+      { label:'signal chain', val:'trimmed mean 100 (drop 15/15)', color:muted },
+      { label:'calibration', val:'uncalibrated · cross-pin (C1 #170)', color:muted },
+      { label:'firmware version', val: this.FW, color:muted },
+      { label:'firmware git-rev', val:'\u2014 unavailable · #329', color:later },
+      { label:'board id / capability', val:'\u2014 unavailable · #273', color:later },
+      { label:'sensor_type profile', val:'\u2014 unavailable · #274', color:later },
+      { label:'app version', val:'v0.7.1', color:muted },
+    ];
+
+    // rate option chips
+    const rateOptions = this.RATES.map(r => {
+      const on = r.ms===st.sampleRateMs;
+      return { label:r.label, pick:()=>this.setRate(r.ms),
+        fg: on?'#fff':'var(--ink)', bg: on?'var(--st-predicted)':'var(--surface-2)', bd: on?'var(--st-predicted)':'var(--border)' };
+    });
+
+    // source button styles
+    const dev = st.source==='device';
+    const armable = st.portOwner==='experiment';
+
+    // notes save state
+    const saved = st.notesSavedAt;
+    const autosaveLabel = st.notesDirty ? 'editing \u2014 draft autosaved' : (saved ? 'saved locally' : 'no note yet');
+    const saveColor = st.notesDirty ? 'var(--st-dry)' : (saved ? 'var(--leaf)' : 'var(--muted)');
+    const savedLabel = saved ? ('saved '+saved+' · v'+st.notesVersion) : 'not saved yet · drafts autosave as you type';
+
+    // confirm copy
+    const c = st.confirm;
+    const confirmTitle = c==='discard' ? 'Discard this capture?' : 'Stop recording?';
+    const confirmBody = c==='discard'
+      ? 'The raw readings collected so far will be deleted from '+destPath+'. This cannot be undone.'
+      : 'Recording stops and the '+n+' samples are kept in '+destPath+'readings.csv. You can pick up notes next.';
+    const confirmYesLabel = c==='discard' ? 'Discard' : 'Stop & keep';
+    const confirmYesColor = c==='discard' ? 'var(--st-fault)' : 'var(--st-due)';
+    const confirmNoLabel = c==='discard' ? 'Cancel' : 'Keep recording';
+
+    return {
+      themeAttr: st.theme==='soil'?'soil':'light',
+      themeLabel: st.theme==='soil'?'\u2600 Light':'\u25D0 Soil',
+      toggleTheme: this.toggleTheme,
+      port: this.PORT,
+      ownerLabel, ownerColor, portHeldByMonitor: held,
+
+      goPlan:this.goPlan, goCapture:this.goCapture, goNotes:this.goNotes,
+      isPlan: st.stage==='plan', isCapture: st.stage==='capture', isNotes: st.stage==='notes',
+      planDone: st.capState!=='idle', captureDone: st.capState==='stopped',
+
+      // plan
+      loadDraft:this.loadDraft,
+      subject: st.subject, setSubject:this.setSubject,
+      intent: st.intent, setIntent:this.setIntent,
+      rateOptions, rateLabel: rate.label, rateWhy: this.RATE_WHY[st.sampleRateMs],
+      setSourceDevice:this.setSourceDevice, setSourceSynthetic:this.setSourceSynthetic,
+      sourceIsSynthetic: syn, sourceLabel, sourceShort, sourceColor,
+      devFg: dev?'#fff':'var(--ink)', devBg: dev?'var(--leaf)':'var(--surface-2)', devBd: dev?'var(--leaf)':'var(--border)',
+      synFg: syn?'#fff':'var(--muted)', synBg: syn?'var(--st-fault)':'var(--surface-2)', synBd: syn?'var(--st-fault)':'var(--border)',
+      expId, destPath, overwriteNote: 'id is free \u2014 a new run never overwrites; the next is _02.',
+      releaseMonitor:this.releaseMonitor,
+      showArmButton: st.capState==='idle', armed: st.capState==='armed',
+      arm:this.arm, disarm:this.disarm, beginRecording:this.beginRecording,
+      armDisabled: !armable, armFg: armable?'#fff':'var(--muted)', armBg: armable?'var(--st-predicted)':'var(--border)', armCursor: armable?'pointer':'not-allowed',
+
+      // capture
+      recording: st.capState==='recording', stopped: st.capState==='stopped',
+      statusColor: st.capState==='recording'?'var(--leaf)':'var(--muted)',
+      statusGlow: st.capState==='recording'?'animation:liveGlow 1.8s ease-in-out infinite;':'',
+      statusLabel: st.capState==='recording'?'recording':'stopped',
+      curRaw: cur!=null? String(cur):'\u2014', curBandName: curBand?curBand.name:'\u2014', curBandColor: curBand?curBand.token:'var(--muted)',
+      elapsedLabel: this.fmtDur(durMs), sampleCount: n,
+      channels, series, curX, curY, areaPoints, bandLegend, readouts,
+      hasSamples: n>0, noSamples: n===0,
+      requestStop:this.requestStop, requestDiscard:this.requestDiscard,
+
+      // provenance
+      provVisible: st.capState!=='idle',
+      provExpanded: st.provExpanded, toggleProv:this.toggleProv,
+      provToggleLabel: st.provExpanded?'hide details':'all fields',
+      startLocal: st.startClock? st.startClock.local : '\u2014',
+      durationLabel: this.fmtDur(durMs), rawRangeLabel: n? rawMin+'\u2013'+rawMax : '\u2014',
+      fwVersion:this.FW, provDetails,
+
+      // notes
+      notes: st.notes, setHyp:this.setHyp, setMethod:this.setMethod, setFind:this.setFind, setConcl:this.setConcl,
+      bandDist, saveNotes:this.saveNotes, autosaveLabel, saveColor, savedLabel,
+      newRun:this.newRun,
+
+      // confirm
+      hasConfirm: !!c, confirmTitle, confirmBody, confirmYesLabel, confirmYesColor, confirmNoLabel,
+      confirmYes:this.confirmYes, confirmNo:this.confirmNo,
+    };
+  }
+}
+</script>
+</body>
+</html>
