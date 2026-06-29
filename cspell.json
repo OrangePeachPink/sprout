@@ -15,6 +15,7 @@
     "docs/experiments/**"
   ],
   "words": [
+    "itime",
     // Intentional prose coinages from the developer front door (#219): "dogfood"
     // (the design-dogfooding concept) and "contributable" (DX's voice). Allowlisted
     // so cspell --all-files passes; reword the prose and drop these if voice changes.

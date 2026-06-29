@@ -132,6 +132,37 @@ own diagnostics:
 | ADC railed (raw pegged at 0 or 4095) | `SATURATED` | raw clamp check |
 | *(reserved, unused by soil)* | `WARMING`, `BASELINE_LEARNING`, `ESTIMATED`, `ERROR` | — |
 
+**Plants env mapping (`plants.env`, ratified by Data for #373/#374):**
+
+Onboard ambient context from the optional `esp32dev_env` build (SHT45 temp/RH + AS7263
+NIR). **Raw context, NOT plant-truth** — the sensors sit on the breadboard near the
+ESP32, so `sensor_position` carries that placement on every row. One row per
+(sensor, channel), tidy/long like soil — never a packed multi-value row.
+
+| sensor | `sensor_model` | `channel` | `raw_value` | `value` | `unit` | notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| SHT45 | `SHT45` | `ambient_temp` | raw ticks (opt) | °C | `degC` | **calibrated** — value/unit populated |
+| SHT45 | `SHT45` | `ambient_rh` | raw ticks (opt) | %RH | `pctRH` | factory-calibrated sensor |
+| AS7263 | `AS7263` | `nir_610`…`nir_860` | channel count | *(empty)* | *(empty)* | **raw counts** — uncalibrated, one row per band |
+
+- **The soil raw-only law (firmware emits `,,` for soil `value`/`unit`) is soil-specific
+  and does NOT extend to `plants.env`.** SHT45 is a factory-calibrated sensor, so its
+  `value`/`unit` ARE the trustworthy reading (≠ the uncalibrated capacitive soil ADC).
+  AS7263 stays raw-only (`raw_value` count; `value`/`unit` empty): we detect the
+  *relative* skylight transit / beam-vs-shaded state, not absolute irradiance. The
+  host raw-only contract check filters on `plants.soil`, so calibrated env rows never
+  trip it.
+- **`sensor_position`** (canonical column, not buried in payload) carries placement:
+  `breadboard_near_esp32`. The spectral row's payload adds the aim qualifier.
+- **`payload`** — AS7263: `gain`, `itime_ms`, `aim` (e.g. `gain=16;itime_ms=50;aim=skylight_beam;not_canopy`).
+  SHT45: optional `mount=breadboard_near_esp32` mirror; placement is authoritative in `sensor_position`.
+- **`quality_flag`** uses the shared enum: SHT45 → `OK` / `SUSPECT` (CRC-8 fail) /
+  `NO_SIGNAL` (bus timeout); AS7263 → `NO_SIGNAL` (bus/timeout) / `SATURATED` (a band
+  rails). A CRC/bus failure surfaces as a flagged row, **never a silent gap**.
+- **Six tidy rows over one packed row** (the #13 tidy-format call): matches the soil
+  one-row-per-channel model, so analytics treat each NIR band as a uniform series
+  (joinable on `timestamp_utc` like any channel) with no payload-unpacking in `parse_v1`.
+
 ---
 
 ## 5. Event overlay (from the sibling air-quality project)
