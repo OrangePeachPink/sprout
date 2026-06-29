@@ -59,6 +59,10 @@ maintainer confirms `area:` / `layer:` at triage.
 > everything for predictability and to prevent local≠remote drift. Path-filtering would re-introduce exactly
 > the class of surprise we deliberately closed.
 >
+> **The one exception — clang-format:** it runs at *changed scope*, not `--all-files`, because the firmware
+> carries intentional manual column alignment a full-tree reformat would destroy (AGENTS.md §code-style, #343).
+> Every other check — `ruff` / `cspell` / `markdownlint` — stays repo-wide.
+>
 > **If CI goes red after a base fix:** re-running the job alone isn't enough — it replays the *stale* merge
 > commit. **Update your branch** (merge or rebase `main`) so CI re-checks against the fixed base. That's the
 > "Attempt #2 / #3" trap.
