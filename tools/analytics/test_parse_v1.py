@@ -109,3 +109,47 @@ def test_summary_flags_default_bounds(csv_without_bounds: Path) -> None:
     data = parse_file(csv_without_bounds)
     summary = data.summary()
     assert "fallback default" in summary
+
+
+# --------------------------------------------------------------------------- #
+# cadence_src banner field (#322 / Firmware #351)
+# --------------------------------------------------------------------------- #
+
+
+def _cadence_csv(tmp_path: Path, src: str) -> Path:
+    body = textwrap.dedent(f"""\
+        # session_id=sess001  cadence_ms=500  cadence_src={src}
+        # cal bounds(dry>wet): 3050 2140 1830 1520 1150 1050  [moist% 900..3400]
+        {_COLS}
+        {_ROW}
+    """)
+    p = tmp_path / f"cad_{src}.csv"
+    p.write_text(body, encoding="utf-8")
+    return p
+
+
+def test_cadence_src_temp(tmp_path: Path) -> None:
+    # a session-only experiment override is parsed as cadence_src=temp (won't persist)
+    seg = parse_file(_cadence_csv(tmp_path, "temp")).segments[0]
+    assert seg.cadence_ms == 500
+    assert seg.cadence_src == "temp"
+
+
+def test_cadence_src_nvs(tmp_path: Path) -> None:
+    seg = parse_file(_cadence_csv(tmp_path, "nvs")).segments[0]
+    assert seg.cadence_src == "nvs"  # the deliberate persisted default
+
+
+def test_cadence_src_absent_is_none(tmp_path: Path) -> None:
+    # an older banner without the field -> None (no false claim about the source)
+    body = textwrap.dedent(f"""\
+        # session_id=sess001  cadence_ms=30000
+        # cal bounds(dry>wet): 3050 2140 1830 1520 1150 1050  [moist% 900..3400]
+        {_COLS}
+        {_ROW}
+    """)
+    p = tmp_path / "cad_none.csv"
+    p.write_text(body, encoding="utf-8")
+    seg = parse_file(p).segments[0]
+    assert seg.cadence_ms == 30000
+    assert seg.cadence_src is None

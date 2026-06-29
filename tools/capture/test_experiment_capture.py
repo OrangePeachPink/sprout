@@ -162,6 +162,7 @@ class _FakeSerial:
         # (no 2 s grace wait), and is buffered as the first row.
         self._q = [*_BANNER, _data_line()]
         self._acked = False
+        self.writes: list[bytes] = []  # record commands so tests can inspect them
 
     def readline(self) -> bytes:
         if self._q:
@@ -169,6 +170,7 @@ class _FakeSerial:
         return _data_line() if self._acked else b""
 
     def write(self, cmd: bytes) -> int:
+        self.writes.append(cmd)
         self._q.append(b"# ack cad=1000\n")  # satisfy set_cadence's await
         self._acked = True
         return len(cmd)
@@ -185,6 +187,26 @@ def _fake_serial_reader(tmp: Path) -> ec.SerialReader:
         lock_dir=tmp,
         banner_timeout_s=2.0,
     )
+
+
+def test_set_cadence_is_session_only() -> None:
+    print("experiment cadence is session-only (!cad,<ms>,temp) — can't leak (#322):")
+    tmp = Path(tempfile.mkdtemp(prefix="cad_"))
+    try:
+        fake = _FakeSerial()
+        reader = ec.SerialReader(
+            "COM_TEST", 115200, open_fn=lambda: fake, lock_dir=tmp, banner_timeout_s=2.0
+        )
+        reader.acquire()
+        try:
+            reader.set_cadence(0.5)  # 500 ms
+        finally:
+            reader.release()
+        sent = b"".join(fake.writes).decode("ascii")
+        assert "cad,500,temp" in sent, sent  # the ephemeral, NVS-skipping variant
+        check(True, "set_cadence sends !cad,500,temp (no NVS write -> no leak)")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def test_serial_banner_provenance() -> None:
@@ -268,6 +290,7 @@ def test_synthetic_git_unavailable() -> None:
 if __name__ == "__main__":
     test_capture_and_schema()
     test_never_stitch_gate()
+    test_set_cadence_is_session_only()
     test_serial_banner_provenance()
     test_experiment_carries_git()
     test_synthetic_git_unavailable()
