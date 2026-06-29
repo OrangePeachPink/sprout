@@ -149,7 +149,7 @@ wiring/power changes and with Data on schema extensions for new sensor readings.
 |---|---|---|
 | **Python** (logger, analytics, build hooks) | [ruff](ruff.toml) lint + format | line length 88; `ruff check .` · `ruff format .` |
 | **C / C++** (firmware) | clang-format + clang-tidy | 4-space, K&R braces, 80 cols; **changed-scope only, never `--all-files`** (#343) — untouched files keep their manual column alignment, and `AlignTrailingComments: Leave` preserves comment columns even on edited files. Residual: editing a file still reflows its `=`-columns / >80-col tables → changed-lines v2 (#352). |
-| **Markdown** | markdownlint | `npx markdownlint-cli2 "**/*.md"` |
+| **Markdown** | markdownlint | `npx markdownlint-cli2@0.22.1 "**/*.md"` (pinned, like `cspell@10.0.1`) |
 | **Endings / encoding** | git + EditorConfig | LF · UTF-8 · final newline |
 
 Tests: `pytest` on the Python core; a native C harness for firmware logic (compiles on host,
