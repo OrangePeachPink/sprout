@@ -306,8 +306,12 @@ class SerialReader(Reader):
         self._firmware = _parse_provenance(header_lines)
 
     def set_cadence(self, rate_s: float) -> None:
+        # Experiments use the SESSION-ONLY cadence (`!cad,<ms>,temp`, Firmware #351):
+        # set live but never written to NVS, so an experiment's rate (e.g. 0.5 s) can
+        # never leak into the next monitor run — the #322 fix. The monitor's deliberate
+        # NVS default is left untouched; it reverts on the device's next reset.
         ms = max(1, round(rate_s * 1000))
-        body = f"cad,{ms}"
+        body = f"cad,{ms},temp"
         cmd = f"!{body}*{_nmea_crc(body)}\n".encode("ascii")
         timeout = self._ack_timeout_s
         if timeout is None:
