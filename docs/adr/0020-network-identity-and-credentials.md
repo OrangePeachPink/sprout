@@ -1,8 +1,8 @@
 # ADR-0020 — Network identity & secrets (untethered)
 
 **Status:** Proposed — *drafted by Workflow from Discussion #243;
-Trellis-revised 2026-06-28 (stated threat model + hostname collision-suffix + `!name` sanitization, per the
-#285 review); awaiting maintainer ratification + Firmware-lane confirm (#270)*
+Trellis-revised 2026-06-28 (stated threat model + hostname collision-suffix + `!name` sanitization, per
+the #285 review); awaiting maintainer ratification + Firmware-lane confirm (#270)*
 **Date:** 2026-06-27
 **Owner:** Firmware lane / architecture
 **Lane:** firmware

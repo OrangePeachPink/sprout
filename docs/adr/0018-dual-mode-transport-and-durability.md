@@ -61,7 +61,7 @@ own time. One schema across every transport and mode.** Concretely:
    never claim months of standalone history on bare flash.
 6. **The store preserves ADR-0006's raw-is-truth.** "The store" is **append-only raw ingest + rebuildable derived
    views** — raw stays the single source of truth (ADR-0006); the store never becomes a second, mutable truth, and
-   every served/derived view is recomputable from raw. (Guards the R3 contract boundary #293 and the C2/C3 honesty
+   every served/derived view can be rebuilt from raw. (Guards the R3 contract boundary #293 and the C2/C3 honesty
    fixes #294/#295.)
 
 ### Rejected alternatives
