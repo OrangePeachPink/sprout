@@ -12,7 +12,8 @@
 #pragma once
 #include <stddef.h>
 #include <stdbool.h>
-#include "pump_pulse.h"
+#include <stdint.h>
+#include "irrigation.h"
 #include "run_meta.h"
 
 #ifdef __cplusplus
@@ -29,38 +30,36 @@ extern "C" {
  * keeping this header free of Arduino includes.
  */
 typedef struct {
-    char *device_id;        /* writable, max device_id_len bytes          */
-    size_t device_id_len;
-    bool *device_id_custom; /* true when operator set a custom name       */
-    unsigned long *cadence_ms; /* current sweep cadence (runtime-settable)   */
-    bool *cadence_from_nvs; /* true when the persisted default came from NVS */
-    bool *
-        cadence_temp; /* true when the live cadence is a session-only !cad,temp — no NVS (#322) */
-    void *prefs_handle; /* opaque: Preferences* — the NVS store       */
-    pump_pulse_t *pump; /* the manual bounded-pulse actuator (#215)   */
-    void (*pump_set)(int ch, bool on); /* energize / de-energize one relay */
-    void (*all_relays_off)(void); /* fail-safe: all relays off       */
+    char          *device_id;        /* writable, max device_id_len bytes          */
+    size_t         device_id_len;
+    bool          *device_id_custom; /* true when operator set a custom name       */
+    uint32_t      *sample_period_ms; /* &g_sys.sample_period_ms — the FSM idle cadence (#227); !cad / !cfg retune it */
+    bool          *cadence_from_nvs; /* true when the cadence was loaded from NVS   */
+    void          *prefs_handle;     /* opaque: Preferences* — the NVS store       */
+    irrig_ctrl_t  *irrig;            /* the watering supervisor: single sample & actuation authority (ADR-0016).
+                                        !water -> forced dose, !stop -> abort, !auto -> arm gate (#227) */
+    void          (*pump_set)(int ch, bool on);  /* DIRECT relay drive — WDT_WEDGE_TEST build ONLY (the FSM is
+                                                    the sole driver in ship builds); used to strand a relay for #93 */
+    void          (*all_relays_off)(void);        /* fail-safe: drive all relays OFF (!stop hardware backstop) */
     /* Project constants — passed in so this module doesn't need config.h          */
-    unsigned long
-        cadence_floor_ms; /* CADENCE_FLOOR_MS - minimum !cad value      */
-    unsigned long
-        cadence_ceil_ms; /* CADENCE_CEIL_MS  - maximum !cad value      */
-    unsigned long
-        cadence_default_ms; /* READ_INTERVAL_MS — used on !cfg,reset    */
-    const char *fw_version; /* PLANTS_FW_VERSION — reported by !ver       */
-    uint32_t pump_max_ms; /* PUMP_PULSE_MAX_MS — reported in !water ack */
-    int num_channels; /* NUM_SENSORS — reported in !water nak       */
-    uint32_t wdt_timeout_ms; /* WDT_TIMEOUT_MS — reported in !wedge msg    */
+    unsigned long  cadence_floor_ms; /* CADENCE_FLOOR_MS - minimum !cad value      */
+    unsigned long  cadence_ceil_ms;  /* CADENCE_CEIL_MS  - maximum !cad value      */
+    unsigned long  cadence_default_ms; /* READ_INTERVAL_MS — used on !cfg,reset    */
+    const char    *fw_version;       /* PLANTS_FW_VERSION — reported by !ver       */
+    uint32_t       pump_max_ms;      /* PUMP_PULSE_MAX_MS — the hard dose ceiling, reported in !water ack */
+    int            num_channels;     /* NUM_SENSORS — reported in !water nak       */
+    uint32_t       wdt_timeout_ms;   /* WDT_TIMEOUT_MS — reported in !wedge msg    */
     /* Mutable run metadata (#321): !label / !pos read+write this. Lives in
      * main.cpp; reprint_header re-emits the provenance header after !label. */
-    run_meta_t *run_meta;
-    void (*reprint_header)(void);
+    run_meta_t    *run_meta;
+    void          (*reprint_header)(void);
 } commands_ctx_t;
 
 /*
  * Load persisted config from NVS (cadence + device identity) and register all
  * serial-command handlers with the serial_cmd registry:
- *   cad, ping, ver, cfg, name, water, stop  (+ wedge if WDT_WEDGE_TEST)
+ *   cad, ping, ver, cfg, name, water, stop, label, pos, auto
+ *   (+ wedge if WDT_WEDGE_TEST)
  *
  * Call once from setup(), before printing the provenance header.
  * The ctx pointer is consumed immediately; the struct may be stack-allocated.
