@@ -13,3 +13,12 @@ apart, so findings stay reviewable and captures stay isolated from the monitorin
 
 Convention finalized in [ADR-0012](../adr/0012-experiment-data-architecture.md) and
 [PRD-0001](../prd/0001-experiment-capture-mode.md). Placeholder until Epic 1 lands.
+
+## Bench procedures
+
+- [Sage bench preflight checklist](../bench-procedures/bench-preflight-checklist.md) -
+  restart/flash/serial/cadence checks before collecting evidence.
+- [Multi-plant dry/wet baseline run sheet](../bench-procedures/multi-plant-dry-wet-run-sheet.md) -
+  plant IDs, probe placement, dry baseline, watering, and post-water captures.
+- [Environment evidence procedure](../bench-procedures/environment-evidence-procedure.md) -
+  sunlight, heat, water temperature, exposure notes, photos, and Data handoff tags.
