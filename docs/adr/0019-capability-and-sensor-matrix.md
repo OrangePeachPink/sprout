@@ -1,8 +1,8 @@
 # ADR-0019 — Capability & sensor matrix (untethered)
 
-**Status:** Proposed — *drafted by Workflow from Discussion #243 + the Firmware lane's take;
+**Status:** Accepted — *drafted by Workflow from Discussion #243 + the Firmware lane's take;
 Trellis-revised 2026-06-28 (one-codebase wording + sensor-provenance requirement, per the #285 review);
-awaiting maintainer ratification + Firmware-lane confirm (#269)*
+Firmware-confirmed implementable + maintainer-ratified 2026-06-28 (#269)*
 **Date:** 2026-06-27
 **Owner:** Firmware lane / architecture
 **Lane:** firmware (cross-lane: Design badges)
