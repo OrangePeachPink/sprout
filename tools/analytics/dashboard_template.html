@@ -630,6 +630,11 @@ function renderIntegrity(){
     ['sweeps (sample ticks)', fmt(I.sweeps)],
     ['partial sweeps (&lt;4 sensors)', fmt(I.partial_sweeps)],
     ['cadence (median)', I.cadence_actual_s!=null? I.cadence_actual_s+' s' : '—'],
+    // #322: device-set cadence + source — "temp" = a session-only experiment override
+    // that won't persist to NVS; "nvs" = the deliberate saved default; "default" = compiled.
+    ['device cadence', DASH.meta.cadence_ms!=null
+      ? (DASH.meta.cadence_ms/1000)+' s'+(DASH.meta.cadence_src?' ('+DASH.meta.cadence_src+')':'')
+      : '—'],
     ['span (local)', `${I.span_start} → ${I.span_end}`],
     ['duration', I.duration],
   ];

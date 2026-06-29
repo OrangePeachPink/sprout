@@ -367,6 +367,9 @@ def build_context(data: LogData) -> dict:
         "run": getattr(last_seg, "run", None),
         "schema_version": getattr(last_seg, "schema_version", None),
         "tz_offset": getattr(last_seg, "tz_offset", None),
+        # device-reported cadence + its source (nvs|temp|default) from the banner (#322)
+        "cadence_ms": getattr(last_seg, "cadence_ms", None),
+        "cadence_src": getattr(last_seg, "cadence_src", None),
         "parser": "tools/analytics/parse_v1.py (E6)",
         "all_channels": list(sensor_ids),
         "sources": data.sources,

@@ -203,6 +203,7 @@ class SegmentHeader:
     adc: str | None = None
     session_id: str | None = None
     cadence_ms: int | None = None
+    cadence_src: str | None = None  # "nvs" | "temp" | "default" — banner field (#322)
     sensors: dict[str, dict[str, object]] = field(default_factory=dict)
     cal_bounds: list[int] = field(default_factory=list)
     cal_bounds_source: str = ""  # "header" | "default" — set by _parse_header_lines
@@ -398,6 +399,10 @@ def _apply_kv(h: SegmentHeader, kv: dict[str, str]) -> None:
     h.session_id = kv.get("session_id", h.session_id)
     if "cadence_ms" in kv:
         h.cadence_ms = _int(kv["cadence_ms"])
+    # cadence_src (nvs|temp|default) — the banner field from Firmware #351 (#322), so
+    # the dashboard can show whether the live cadence is the persisted default, a
+    # session-only experiment override, or the compiled fallback.
+    h.cadence_src = kv.get("cadence_src", h.cadence_src)
 
 
 def _parse_header_lines(
