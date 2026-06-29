@@ -278,7 +278,7 @@ footer.prov code { font-family: var(--font-data); }
       <span class="cap">writes an isolated <span class="mono">experiments/&lt;id&gt;/</span> capture — never the monitor <span class="mono">logs/</span></span>
     </div>
     <div class="capform">
-      <label class="capf">subject<input id="capSubject" type="text" value="common-cup" maxlength="40" spellcheck="false"><small id="capSubjectHint" class="caphint"></small></label>
+      <label class="capf">subject<input id="capSubject" type="text" value="common-cup" maxlength="100" spellcheck="false" placeholder="e.g. s1 dry to wet after max-fill cold refill"><small id="capSubjectHint" class="caphint"></small></label>
       <label class="capf">sample rate<select id="capRate">
         <option value="0.5">0.5 s</option>
         <option value="1" selected>1 s</option>
@@ -297,10 +297,10 @@ footer.prov code { font-family: var(--font-data); }
     </div>
     <div class="capgroup">probe labels — name what each probe is measuring (optional)</div>
     <div class="capform" id="capLabels">
-      <label class="capf">s1<input class="caplabel" data-ch="s1" type="text" value="s1" maxlength="24" spellcheck="false"></label>
-      <label class="capf">s2<input class="caplabel" data-ch="s2" type="text" value="s2" maxlength="24" spellcheck="false"></label>
-      <label class="capf">s3<input class="caplabel" data-ch="s3" type="text" value="s3" maxlength="24" spellcheck="false"></label>
-      <label class="capf">s4<input class="caplabel" data-ch="s4" type="text" value="s4" maxlength="24" spellcheck="false"></label>
+      <label class="capf">s1<input class="caplabel" data-ch="s1" type="text" value="s1" maxlength="48" spellcheck="false"></label>
+      <label class="capf">s2<input class="caplabel" data-ch="s2" type="text" value="s2" maxlength="48" spellcheck="false"></label>
+      <label class="capf">s3<input class="caplabel" data-ch="s3" type="text" value="s3" maxlength="48" spellcheck="false"></label>
+      <label class="capf">s4<input class="caplabel" data-ch="s4" type="text" value="s4" maxlength="48" spellcheck="false"></label>
     </div>
     <div class="capctl">
       <button class="btn primary" id="capStart" type="button">▶ Start capture</button>
@@ -1069,7 +1069,8 @@ async function capPoll(){
   }
 }
 function capSlugify(s){  // mirrors control.py _slugify: human subject -> folder-safe slug
-  return s.trim().replace(/[^A-Za-z0-9._-]+/g,'_').replace(/^[._-]+|[._-]+$/g,'');
+  return s.trim().replace(/[^A-Za-z0-9._-]+/g,'_').replace(/^[._-]+|[._-]+$/g,'')
+          .slice(0,48).replace(/[._-]+$/,'');  // bounded like the server (#336)
 }
 function capUpdateSubjectHint(){  // live "saves as" preview so the slug is no surprise (#150)
   const raw = document.getElementById('capSubject').value;
