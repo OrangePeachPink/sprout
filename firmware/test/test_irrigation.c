@@ -824,24 +824,47 @@ void t_as7263(void)
 
 void t_env_row(void)
 {
-    telemetry_env_row_t row = {
-        "plants.env",   "3f9a1c",
-        "Sprout ESP32", "0.7.0",
-        123456ULL,      "SHT45",
-        "sht45",        "breadboard",
-        "ambient_temp", "26214",
-        "24.99",        "C",
-        "OK",           "mount=breadboard_near_esp32;not_canopy"};
     char buf[256];
-    TEST_ASSERT_TRUE_MESSAGE(telemetry_format_env_row(buf, sizeof(buf), &row) >
-                                 0,
-                             "env row formatted");
+
+    /* SHT45 temp row: factory-calibrated -> value+unit populated; placement in
+     * sensor_position; degC unit (ratified #377). */
+    telemetry_env_row_t t = {"plants.env",   "3f9a1c",
+                             "Sprout ESP32", "0.7.0",
+                             123456ULL,      "SHT45",
+                             "sht45",        "breadboard_near_esp32",
+                             "ambient_temp", "26214",
+                             "24.99",        "degC",
+                             "OK",           "mount=breadboard_near_esp32"};
+    TEST_ASSERT_TRUE_MESSAGE(telemetry_format_env_row(buf, sizeof(buf), &t) > 0,
+                             "env temp row formatted");
     TEST_ASSERT_NOT_NULL_MESSAGE(
         strstr(buf, "plants.env,3f9a1c,Sprout ESP32,0.7.0,123456,SHT45,sht45,"
-                    "breadboard,ambient_temp,26214,24.99,C,OK,"),
-        "env row columns in order");
-    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, "not_canopy"),
-                                 "placement note in payload");
+                    "breadboard_near_esp32,ambient_temp,26214,24.99,degC,OK,"),
+        "SHT45 row columns in order (value+unit populated)");
+
+    /* AS7263 tidy NIR row: one band, raw count, value+unit empty. */
+    telemetry_env_row_t n = {
+        "plants.env",
+        "3f9a1c",
+        "Sprout ESP32",
+        "0.7.0",
+        123456ULL,
+        "AS7263",
+        "as7263",
+        "breadboard_near_esp32",
+        "nir_610",
+        "1234",
+        "",
+        "",
+        "OK",
+        "gain=64;itime_ms=140;aim=skylight_beam;not_canopy"};
+    TEST_ASSERT_TRUE_MESSAGE(telemetry_format_env_row(buf, sizeof(buf), &n) > 0,
+                             "env nir row formatted");
+    TEST_ASSERT_NOT_NULL_MESSAGE(
+        strstr(buf, "AS7263,as7263,breadboard_near_esp32,nir_610,1234,,,OK,"),
+        "AS7263 tidy row: raw count, empty value/unit");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, "aim=skylight_beam"),
+                                 "aim in payload");
 }
 
 /* -------------------------------------------------------------------------- */

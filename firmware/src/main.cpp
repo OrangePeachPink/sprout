@@ -124,9 +124,9 @@ constexpr int ENV_I2C_SCL = 22; /* ESP32 default I2C/Qwiic SCL */
 constexpr uint32_t ENV_I2C_HZ = 100000; /* standard-mode I2C */
 constexpr uint8_t AS7263_CFG_GAIN = AS7263_GAIN_64X; /* low indoor NIR */
 constexpr uint8_t AS7263_CFG_ITIME = 50; /* INT_TIME reg x2.8ms ~140 ms */
-constexpr const char *ENV_PLACEMENT = "breadboard";
-constexpr const char *ENV_PLACEMENT_NOTE =
-    "mount=breadboard_near_esp32;not_canopy";
+constexpr const char *ENV_PLACEMENT =
+    "breadboard_near_esp32"; /* canonical sensor_position (#377) */
+constexpr const char *ENV_SHT45_PAYLOAD = "mount=breadboard_near_esp32";
 
 static int envI2cWrite(uint8_t addr, const uint8_t *buf, size_t len, void *user)
 {
@@ -162,10 +162,14 @@ static void emitEnvLine(const telemetry_env_row_t *row)
     }
 }
 
-/* Read the env sensors + emit plants.env rows (contextual). Called at the soil
- * cadence; a CRC/bus failure surfaces as a quality_flag row, never a silent gap. */
+/* Read the env sensors + emit plants.env rows (contextual; ratified mapping #377).
+ * SHT45 -> ambient_temp/ambient_rh with REAL value+unit (factory-calibrated, so the
+ * soil raw-only law does NOT apply). AS7263 -> six TIDY rows (one per NIR band, raw
+ * counts). Placement rides sensor_position. A CRC/bus failure surfaces as a
+ * quality_flag row, never a silent gap. */
 static void emitEnvRows(unsigned long long up_ms)
 {
+    /* --- SHT45: factory-calibrated ambient temp + RH (value+unit populated) --- */
     sht45_reading_t s;
     int rc = sht45_read(&g_env_i2c, &s);
     if (rc == SHT45_OK) {
@@ -180,12 +184,12 @@ static void emitEnvRows(unsigned long long up_ms)
         telemetry_env_row_t t = {
             "plants.env", g_session_id, g_device_id,   PLANTS_FW_VERSION, up_ms,
             "SHT45",      "sht45",      ENV_PLACEMENT, "ambient_temp",    traw,
-            tval,         "C",          "OK",          ENV_PLACEMENT_NOTE};
+            tval,         "degC",       "OK",          ENV_SHT45_PAYLOAD};
         emitEnvLine(&t);
         telemetry_env_row_t h = {
             "plants.env", g_session_id, g_device_id,   PLANTS_FW_VERSION, up_ms,
             "SHT45",      "sht45",      ENV_PLACEMENT, "ambient_rh",      rraw,
-            rval,         "%RH",        "OK",          ENV_PLACEMENT_NOTE};
+            rval,         "pctRH",      "OK",          ENV_SHT45_PAYLOAD};
         emitEnvLine(&h);
     } else {
         telemetry_env_row_t e = {"plants.env",
@@ -201,36 +205,43 @@ static void emitEnvRows(unsigned long long up_ms)
                                  "",
                                  "",
                                  rc == SHT45_ERR_CRC ? "SUSPECT" : "NO_SIGNAL",
-                                 ENV_PLACEMENT_NOTE};
+                                 ENV_SHT45_PAYLOAD};
         emitEnvLine(&e);
     }
 
-    if (g_as7263_ok) {
-        as7263_reading_t a;
-        if (as7263_read(&g_env_i2c, &a) == AS7263_OK) {
-            char pl[176];
-            snprintf(pl, sizeof(pl),
-                     "nm610=%u;nm680=%u;nm730=%u;nm760=%u;nm810=%u;nm860=%u;"
-                     "gain=%u;itime=%u;%s",
-                     a.nm610, a.nm680, a.nm730, a.nm760, a.nm810, a.nm860,
-                     (unsigned)AS7263_CFG_GAIN, (unsigned)AS7263_CFG_ITIME,
-                     ENV_PLACEMENT_NOTE);
-            telemetry_env_row_t sp = {"plants.env",
-                                      g_session_id,
-                                      g_device_id,
-                                      PLANTS_FW_VERSION,
-                                      up_ms,
-                                      "AS7263",
-                                      "as7263",
-                                      ENV_PLACEMENT,
-                                      "spectral_nir",
-                                      "",
-                                      "",
-                                      "",
-                                      "OK",
-                                      pl};
-            emitEnvLine(&sp);
+    /* --- AS7263: six tidy NIR rows (one per band, raw counts) --- */
+    static const char *const nir_ch[6] = {"nir_610", "nir_680", "nir_730",
+                                          "nir_760", "nir_810", "nir_860"};
+    static const char *const gain_mult[4] = {"1", "3.7", "16", "64"};
+    as7263_reading_t a;
+    if (g_as7263_ok && as7263_read(&g_env_i2c, &a) == AS7263_OK) {
+        const uint16_t nir[6] = {a.nm610, a.nm680, a.nm730,
+                                 a.nm760, a.nm810, a.nm860};
+        char payload[80];
+        snprintf(payload, sizeof(payload),
+                 "gain=%s;itime_ms=%u;aim=skylight_beam;not_canopy",
+                 gain_mult[AS7263_CFG_GAIN & 3],
+                 (unsigned)(AS7263_CFG_ITIME * 28u / 10u)); /* reg x2.8ms */
+        for (int i = 0; i < 6; i++) {
+            char raw[8];
+            snprintf(raw, sizeof(raw), "%u", nir[i]);
+            telemetry_env_row_t r = {
+                "plants.env", g_session_id, g_device_id, PLANTS_FW_VERSION,
+                up_ms,        "AS7263",     "as7263",    ENV_PLACEMENT,
+                nir_ch[i],    raw,          "",          "",
+                "OK",         payload};
+            emitEnvLine(&r);
         }
+    } else if (g_as7263_ok) {
+        /* read failed -> one NO_SIGNAL row so the dropout isn't silent */
+        telemetry_env_row_t e = {"plants.env", g_session_id,
+                                 g_device_id,  PLANTS_FW_VERSION,
+                                 up_ms,        "AS7263",
+                                 "as7263",     ENV_PLACEMENT,
+                                 "nir_610",    "",
+                                 "",           "",
+                                 "NO_SIGNAL",  "aim=skylight_beam;not_canopy"};
+        emitEnvLine(&e);
     }
 }
 #endif /* ENABLE_ENV_SENSORS */
@@ -435,6 +446,18 @@ void loop()
         }
     }
 
+#ifdef ENABLE_ENV_SENSORS
+    /* Bench env context — pump-INDEPENDENT (I2C, not the soil ADC), on its own
+     * cadence above the pump-active gate: ambient/NIR context is valid during a
+     * dose, so don't drop it when watering happens (Trellis #348-reconcile call).
+     * When #227 lands this stays OUTSIDE the SYS_SAMPLING gate for the same reason. */
+    static unsigned long lastEnv = 0;
+    if (now - lastEnv >= g_cadence_ms) {
+        lastEnv = now;
+        emitEnvRows((unsigned long long)esp_timer_get_time() / 1000ULL);
+    }
+#endif
+
     /* HARD INVARIANT: never sample while a pump runs — keeps noise off the ADC. */
     if (pump_pulse_active(&g_pump)) return;
 
@@ -480,10 +503,6 @@ void loop()
             Serial.println(crc);
         }
     }
-
-#ifdef ENABLE_ENV_SENSORS
-    emitEnvRows(up_ms); /* contextual env rows alongside the soil rows */
-#endif
 
     /* Reprint header every 20 sweeps so a long scroll stays self-describing. */
     static unsigned int hdr = 0;
