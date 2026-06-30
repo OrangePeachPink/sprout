@@ -29,6 +29,13 @@
 #include "commands.h"
 #include "run_meta.h"
 
+#ifdef ENABLE_ENV_SENSORS
+#include <Wire.h>
+#include "env_i2c.h"
+#include "sht45.h"
+#include "as7263.h"
+#endif
+
 #ifndef GIT_REV
 #define GIT_REV "nogit"  /* overridden by scripts/git_rev.py at build */
 #endif
@@ -103,6 +110,142 @@ static void sampleChannel(int ch, uint16_t *buf)
         buf[i] = (uint16_t)analogRead(pin);
 }
 
+#ifdef ENABLE_ENV_SENSORS
+/* ---- bench contextual env sensors (#373/#374) --------------------------- */
+/* I2C/Qwiic SHT45 (ambient temp/RH) + AS7263 (NIR spectral). Raw CONTEXT, not
+ * plant-truth — breadboard-mounted near the ESP32 (see ENV_PLACEMENT below). The
+ * pure-C drivers run over these Arduino Wire-backed callbacks. I2C reads never
+ * touch the soil ADC, so there's no "no sampling while pumping" concern. */
+
+/* Deployment config (env build only — kept out of config.h so config.h's manual
+ * alignment stays off the changed-files clang-format gate, #343). */
+constexpr int ENV_I2C_SDA = 21; /* ESP32 default I2C/Qwiic SDA */
+constexpr int ENV_I2C_SCL = 22; /* ESP32 default I2C/Qwiic SCL */
+constexpr uint32_t ENV_I2C_HZ = 100000; /* standard-mode I2C */
+constexpr uint8_t AS7263_CFG_GAIN = AS7263_GAIN_64X; /* low indoor NIR */
+constexpr uint8_t AS7263_CFG_ITIME = 50; /* INT_TIME reg x2.8ms ~140 ms */
+constexpr const char *ENV_PLACEMENT =
+    "breadboard_near_esp32"; /* canonical sensor_position (#377) */
+constexpr const char *ENV_SHT45_PAYLOAD = "mount=breadboard_near_esp32";
+
+static int envI2cWrite(uint8_t addr, const uint8_t *buf, size_t len, void *user)
+{
+    (void)user;
+    Wire.beginTransmission(addr);
+    Wire.write(buf, len);
+    return Wire.endTransmission() == 0 ? 0 : -1;
+}
+static int envI2cRead(uint8_t addr, uint8_t *buf, size_t len, void *user)
+{
+    (void)user;
+    if (Wire.requestFrom((int)addr, (int)len) != (int)len) return -1;
+    for (size_t i = 0; i < len; i++)
+        buf[i] = (uint8_t)Wire.read();
+    return 0;
+}
+static void envI2cDelay(uint32_t ms, void *user)
+{
+    (void)user;
+    delay(ms);
+}
+static env_i2c_t g_env_i2c = {envI2cWrite, envI2cRead, envI2cDelay, nullptr};
+static bool g_as7263_ok = false;
+
+static void emitEnvLine(const telemetry_env_row_t *row)
+{
+    char line[256];
+    if (telemetry_format_env_row(line, sizeof(line), row) >= 0) {
+        char crc[6];
+        snprintf(crc, sizeof(crc), "*%02X", telemetry_checksum(line));
+        Serial.print(line);
+        Serial.println(crc);
+    }
+}
+
+/* Read the env sensors + emit plants.env rows (contextual; ratified mapping #377).
+ * SHT45 -> ambient_temp/ambient_rh with REAL value+unit (factory-calibrated, so the
+ * soil raw-only law does NOT apply). AS7263 -> six TIDY rows (one per NIR band, raw
+ * counts). Placement rides sensor_position. A CRC/bus failure surfaces as a
+ * quality_flag row, never a silent gap. */
+static void emitEnvRows(unsigned long long up_ms)
+{
+    /* --- SHT45: factory-calibrated ambient temp + RH (value+unit populated) --- */
+    sht45_reading_t s;
+    int rc = sht45_read(&g_env_i2c, &s);
+    if (rc == SHT45_OK) {
+        char tval[12], rval[12], traw[8], rraw[8];
+        int tc = s.temp_c_centi, ta = tc < 0 ? -tc : tc;
+        snprintf(tval, sizeof(tval), "%s%d.%02d", tc < 0 ? "-" : "", ta / 100,
+                 ta % 100);
+        snprintf(rval, sizeof(rval), "%d.%02d", s.rh_pct_centi / 100,
+                 s.rh_pct_centi % 100);
+        snprintf(traw, sizeof(traw), "%u", s.temp_raw);
+        snprintf(rraw, sizeof(rraw), "%u", s.rh_raw);
+        telemetry_env_row_t t = {
+            "plants.env", g_session_id, g_device_id,   PLANTS_FW_VERSION, up_ms,
+            "SHT45",      "sht45",      ENV_PLACEMENT, "ambient_temp",    traw,
+            tval,         "degC",       "OK",          ENV_SHT45_PAYLOAD};
+        emitEnvLine(&t);
+        telemetry_env_row_t h = {
+            "plants.env", g_session_id, g_device_id,   PLANTS_FW_VERSION, up_ms,
+            "SHT45",      "sht45",      ENV_PLACEMENT, "ambient_rh",      rraw,
+            rval,         "pctRH",      "OK",          ENV_SHT45_PAYLOAD};
+        emitEnvLine(&h);
+    } else {
+        telemetry_env_row_t e = {"plants.env",
+                                 g_session_id,
+                                 g_device_id,
+                                 PLANTS_FW_VERSION,
+                                 up_ms,
+                                 "SHT45",
+                                 "sht45",
+                                 ENV_PLACEMENT,
+                                 "ambient_temp",
+                                 "",
+                                 "",
+                                 "",
+                                 rc == SHT45_ERR_CRC ? "SUSPECT" : "NO_SIGNAL",
+                                 ENV_SHT45_PAYLOAD};
+        emitEnvLine(&e);
+    }
+
+    /* --- AS7263: six tidy NIR rows (one per band, raw counts) --- */
+    static const char *const nir_ch[6] = {"nir_610", "nir_680", "nir_730",
+                                          "nir_760", "nir_810", "nir_860"};
+    static const char *const gain_mult[4] = {"1", "3.7", "16", "64"};
+    as7263_reading_t a;
+    if (g_as7263_ok && as7263_read(&g_env_i2c, &a) == AS7263_OK) {
+        const uint16_t nir[6] = {a.nm610, a.nm680, a.nm730,
+                                 a.nm760, a.nm810, a.nm860};
+        char payload[80];
+        snprintf(payload, sizeof(payload),
+                 "gain=%s;itime_ms=%u;aim=skylight_beam;not_canopy",
+                 gain_mult[AS7263_CFG_GAIN & 3],
+                 (unsigned)(AS7263_CFG_ITIME * 28u / 10u)); /* reg x2.8ms */
+        for (int i = 0; i < 6; i++) {
+            char raw[8];
+            snprintf(raw, sizeof(raw), "%u", nir[i]);
+            telemetry_env_row_t r = {
+                "plants.env", g_session_id, g_device_id, PLANTS_FW_VERSION,
+                up_ms,        "AS7263",     "as7263",    ENV_PLACEMENT,
+                nir_ch[i],    raw,          "",          "",
+                "OK",         payload};
+            emitEnvLine(&r);
+        }
+    } else if (g_as7263_ok) {
+        /* read failed -> one NO_SIGNAL row so the dropout isn't silent */
+        telemetry_env_row_t e = {"plants.env", g_session_id,
+                                 g_device_id,  PLANTS_FW_VERSION,
+                                 up_ms,        "AS7263",
+                                 "as7263",     ENV_PLACEMENT,
+                                 "nir_610",    "",
+                                 "",           "",
+                                 "NO_SIGNAL",  "aim=skylight_beam;not_canopy"};
+        emitEnvLine(&e);
+    }
+}
+#endif /* ENABLE_ENV_SENSORS */
+
 /* ---- provenance header -------------------------------------------------- */
 
 static void printHeader()
@@ -170,6 +313,15 @@ static void printHeader()
         "task-wdt=%lums  pump=manual(!water) bounded<=%lums",
         (unsigned long)WDT_TIMEOUT_MS, (unsigned long)PUMP_PULSE_MAX_MS);
     Serial.println(buf);
+#ifdef ENABLE_ENV_SENSORS
+    snprintf(
+        buf, sizeof(buf),
+        "# env(bench): SHT45 ambient_temp/rh + AS7263 NIR(610-860nm) on I2C "
+        "SDA%d/SCL%d - %s, CONTEXT not plant-truth%s",
+        ENV_I2C_SDA, ENV_I2C_SCL, ENV_PLACEMENT,
+        g_as7263_ok ? "" : " [AS7263 init FAILED]");
+    Serial.println(buf);
+#endif
     Serial.println("# device_cols: "
                    "record_type,session_id,device_id,fw,millis_ms,sensor_model,"
                    "sensor_id,sensor_position,channel,raw_value,value,unit,"
@@ -240,6 +392,14 @@ void setup()
             moisture_trimmed_mean(seed, SAMPLES_PER_READ, SAMPLES_TRIM, NULL);
         moisture_init(&state[ch], &cfg, s0);
     }
+#ifdef ENABLE_ENV_SENSORS
+    /* Bring up the I2C/Qwiic contextual sensors (#373/#374). SHT45 is single-shot
+     * (no init); AS7263 needs reset + config. Bench instrumentation, not plant-truth. */
+    Wire.begin(ENV_I2C_SDA, ENV_I2C_SCL, ENV_I2C_HZ);
+    g_as7263_ok = (as7263_init(&g_env_i2c, AS7263_CFG_GAIN, AS7263_CFG_ITIME) ==
+                   AS7263_OK);
+#endif
+
     printHeader();
 
     /* Task watchdog LAST: setup's own work won't trip it; loop() feeds it every
@@ -285,6 +445,18 @@ void loop()
             }
         }
     }
+
+#ifdef ENABLE_ENV_SENSORS
+    /* Bench env context — pump-INDEPENDENT (I2C, not the soil ADC), on its own
+     * cadence above the pump-active gate: ambient/NIR context is valid during a
+     * dose, so don't drop it when watering happens (Trellis #348-reconcile call).
+     * When #227 lands this stays OUTSIDE the SYS_SAMPLING gate for the same reason. */
+    static unsigned long lastEnv = 0;
+    if (now - lastEnv >= g_cadence_ms) {
+        lastEnv = now;
+        emitEnvRows((unsigned long long)esp_timer_get_time() / 1000ULL);
+    }
+#endif
 
     /* HARD INVARIANT: never sample while a pump runs — keeps noise off the ADC. */
     if (pump_pulse_active(&g_pump)) return;
