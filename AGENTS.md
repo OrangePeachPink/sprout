@@ -129,13 +129,17 @@ wiring/power changes and with Data on schema extensions for new sensor readings.
   **Size** (XS–XL) · **Verification** (Pending / Approved / Conditional / Changes requested).
 - **Discussions** = the idea inbox · **PRDs** (`docs/prd/`) = specs for larger features ·
   **ADRs** (`docs/adr/`) = significant or hard-to-reverse decisions (any lane may author one in its area).
-- **The verification gate (the rule that matters most), two stages:** the implementer posts a
-  **requirement-by-requirement evidence map** and moves the card to **Needs Verification** —
-  **Workflow's review inbox.** Workflow confirms it's substantively correct + meets the requirement as
-  written + no bugs/build issues, posts a **Ready to Merge certification** (who approved the design + what
-  was verified + merge-order), and moves it to **Ready to Merge** — **the maintainer merges only from
-  there.** Partials spin a new linked issue for the tail before the original closes. PRs use **`Refs #N`** /
-  `Part of #N`, **never `Closes #N`**; merged PRs do not auto-close issues.
+- **The verification gate (the rule that matters most), two stages:** the implementer builds to the issue's
+  **acceptance criteria** (tests + **local == CI green**), posts a **requirement-by-requirement evidence
+  map**, and moves the card to **Needs Verification** — **Workflow's review inbox.** Workflow then
+  *independently validates* — against the source docs, the AC-by-AC evidence, commit history, issue/PR
+  comments, and **local + remote CI green** — that the work is **fully implemented, substantially meets the
+  *entirety* of the requirement's goals, and is quality** (no bugs / build / dependency issues). On pass it
+  posts a **Ready to Merge certification** (who approved the design + what was verified + merge-order) and
+  moves it to **Ready to Merge** — **the maintainer merges only from there, relying on that whole chain plus
+  Workflow's review.** Partials spin a new linked issue for the tail before the original closes. PRs use
+  **`Refs #N`** / `Part of #N`, **never `Closes #N`**; merged PRs do not auto-close issues. Full lifecycle +
+  per-stage expectations: [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 - **`main` is protected:** PR required, squash-merge, no direct pushes, no force-push/deletion.
 - **Gate labels** `blocks:pumps` / `blocks:public-release` / `blocks:data-integrity` mark
   milestone gates, independent of Priority.
