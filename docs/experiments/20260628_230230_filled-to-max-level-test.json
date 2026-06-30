@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260628_230230_filled-to-max-level-test",
+  "notes": {
+    "hypothesis": "Filling the water cup high enough to reach the probes' marked maximum insertion line may produce a deeper-wet reference than the earlier lower-water cup. Sloppy refill, colder refill water, and probe angle changes could introduce transient artifacts.",
+    "method": "The water cup was refilled from another cup so the probes reached their marked maximum insertion line. The refill was sloppy enough that splashing/over-high wetting was a concern, and the added water was colder than the existing cup water. During the 60 s, 0.5 s capture, the probes were nudged to improve vertical angle and make the submerged depth more comparable.",
+    "findings": "Medians were s1 958, s2 900, s3 969, s4 970 raw ADC. s2 reached the lowest median of the set and had a wider range, 893-922. s4 showed the widest range, 945-982, consistent with a handling or angle transient. No sustained failure pattern appeared after the refill; CRC failures were 1.",
+    "conclusion": "Immersion depth and probe angle matter for wet-reference values. The filled-to-max condition produced a lower/deeper wet reference than some earlier water-cup captures, especially for s2. Future wet anchors should use consistent depth and a simple holder if the data will be used for calibration.",
+    "saved_at": "2026-06-29T13:58:50Z",
+    "version": 1
+  }
+}

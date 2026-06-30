@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260628_224652_wet-dry-speed-transition-settle-test",
+  "notes": {
+    "hypothesis": "The probes should respond quickly when moved from submerged water to air/drying conditions, but the measured curve may include manual handling time, water clinging to probe faces, and probe-to-probe contact artifacts.",
+    "method": "All four probes started wet from the common water cup and were lifted out for a wet-to-dry transition capture at 0.5 s cadence. The probes were stuck to each other from being together in the cup; s1 and s2 in particular were delayed because the flat faces had to be physically separated by hand. This run is therefore a handling-included transition, not a fixture-controlled response curve.",
+    "findings": "All four channels moved strongly from wet toward dry. First-to-last raw ADC deltas were s1 +1843, s2 +1946, s3 +1920, s4 +1906 counts. End values reached about 2868-2926 raw ADC. The curve shows a rapid initial transition followed by slower settling.",
+    "conclusion": "The sensors respond fast enough for Sprout's plant-watering use case. More exact response-curve mapping would require a fixture and synchronized motion, but the added precision is not currently needed for bench decisions.",
+    "saved_at": "2026-06-29T13:58:50Z",
+    "version": 1
+  }
+}

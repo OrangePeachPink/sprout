@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260628_221707_post-firmware-flash-test",
+  "notes": {
+    "hypothesis": "After flashing the updated firmware and restarting the Sprout app/logger, the serial contract, raw ADC CSV fields, notebook saving, and 0.5 s experiment capture should still work against the same water-cup reference.",
+    "method": "Logging was stopped, the app/server was quit, stale Python processes were cleared, firmware was built and flashed through PlatformIO, then the Sprout app/logger was restarted. A 60 s experiment capture at 0.5 s cadence was run with all four probes still in the same cup of water.",
+    "findings": "The capture completed with 114 sweeps and 456 soil rows, matching four channels per sweep. CRC failures were 0. Readings stayed stable: medians s1 977, s2 922, s3 1007, s4 977 raw ADC with ranges of only 6-8 counts per channel.",
+    "conclusion": "The flashed firmware, restarted app, CSV contract, and short 0.5 s capture path were functionally verified. This is an operational validation run, not a new calibration anchor.",
+    "saved_at": "2026-06-29T13:58:50Z",
+    "version": 1
+  }
+}

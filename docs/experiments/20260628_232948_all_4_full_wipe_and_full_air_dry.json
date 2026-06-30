@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260628_232948_all_4_full_wipe_and_full_air_dry",
+  "notes": {
+    "hypothesis": "After all four probes are wiped and allowed to air dry, the readings should approach each probe's dry-air endpoint. Repeating the wipe/dry process may reveal whether additional dry headroom remains.",
+    "method": "All four probes were actively wiped and left in air-dry/open-bench condition. A 60 s capture at 0.5 s cadence was recorded with no intentional water contact.",
+    "findings": "Dry readings were stable. Medians were s1 2975, s2 3119, s3 3121, s4 3058 raw ADC. Ranges were narrow, about 7-10 counts per channel.",
+    "conclusion": "This run established a first full-wipe dry-air endpoint set. s1 remained lower than the other dry probes, so follow-up wipe checks were appropriate before treating these as final dry maxima.",
+    "saved_at": "2026-06-29T13:58:50Z",
+    "version": 1
+  }
+}

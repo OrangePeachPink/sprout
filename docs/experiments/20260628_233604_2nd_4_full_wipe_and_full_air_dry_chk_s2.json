@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260628_233604_2nd_4_full_wipe_and_full_air_dry_chk_s2",
+  "notes": {
+    "hypothesis": "A second full wipe/air-dry pass may show whether any probe, especially s2, still has additional dry headroom after the first dry-air run.",
+    "method": "All four probes were wiped again and held in air-dry/open-bench condition. A 60 s capture at 0.5 s cadence was recorded.",
+    "findings": "Medians were s1 2942, s2 3120, s3 3123, s4 3051 raw ADC. s2 and s3 were essentially unchanged from the first full-dry run; s1 and s4 remained lower.",
+    "conclusion": "The repeat did not reveal meaningful additional dry headroom for s2 or s3. The persistent channel offsets support per-channel dry calibration.",
+    "saved_at": "2026-06-29T13:58:50Z",
+    "version": 1
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260628_231615_s4_dry_to_wet_test",
+  "notes": {
+    "hypothesis": "After wiping a single probe to an air-dry state, placing only that probe into water should create a large rapid raw ADC drop on that channel while the other dry probes remain mostly unchanged.",
+    "method": "s4 was wiped/air-dried and then placed into the water cup during a 90 s capture at 0.5 s cadence. The other probes remained dry/static. Timing includes manual placement time.",
+    "findings": "s4 dropped from 2795 to 965 raw ADC, a -1830 count response. The other channels stayed in dry ranges with small positive deltas: s1 +9, s2 +15, s3 +7 counts.",
+    "conclusion": "The s4 dry-to-wet response was strong, rapid, and channel-local. This supports that the water response can be isolated to one probe without obvious immediate cross-channel wetting artifacts.",
+    "saved_at": "2026-06-29T13:58:50Z",
+    "version": 1
+  }
+}

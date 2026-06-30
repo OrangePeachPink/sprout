@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260628_232650_s1_dry_to_wet_test",
+  "notes": {
+    "hypothesis": "After wiping s1 to an air-dry state, placing only s1 into water should create a large rapid raw ADC drop on s1 while the other dry probes remain mostly unchanged.",
+    "method": "s1 was wiped/air-dried and then placed into the water cup during a 90 s capture at 0.5 s cadence. The other probes remained dry/static. Timing includes manual placement time.",
+    "findings": "s1 dropped from 3006 to 987 raw ADC, a -2019 count response. s2 stayed effectively unchanged at dry (+0 counts), while s3 drifted +56 and s4 +2 counts.",
+    "conclusion": "The s1 dry-to-wet response was strong and fast. Across the one-by-one dry-to-wet tests, all four probes showed large water responses and limited immediate cross-channel contamination.",
+    "saved_at": "2026-06-29T13:58:50Z",
+    "version": 1
+  }
+}
