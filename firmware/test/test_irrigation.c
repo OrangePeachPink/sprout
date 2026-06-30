@@ -601,7 +601,8 @@ void t_autonomous_gate(void)
 
     /* init directly (not start(), which arms) to assert the fail-safe default */
     base_cfg(/*mhw*/ 3, /*mdoses*/ 3, /*pmax*/ 5000, /*dose*/ 2000);
-    RIG.sim[1] = (chan_sim_t){.target_raw = 2400, .noisy = false}; /* DRY healthy */
+    RIG.sim[1] =
+        (chan_sim_t){.target_raw = 2400, .noisy = false}; /* DRY healthy */
     NOW = 1000;
     irrig_init(&CTRL, &SYS, CH, MC, MS, SCRATCH, io, NOW);
     TEST_ASSERT_FALSE_MESSAGE(irrig_autonomous(&CTRL),
@@ -616,7 +617,8 @@ void t_autonomous_gate(void)
                              "disarmed: dry channel still monitored (CH_OK)");
 
     /* operator forced dose still grants while disarmed (manual !water path) */
-    TEST_ASSERT_TRUE_MESSAGE(irrig_request_dose(&CTRL, 1, 0) == IRRIG_DOSE_QUEUED,
+    TEST_ASSERT_TRUE_MESSAGE(irrig_request_dose(&CTRL, 1, 0) ==
+                                 IRRIG_DOSE_QUEUED,
                              "forced dose queued while disarmed");
     step(SYS.sample_period_ms);
     TEST_ASSERT_TRUE_MESSAGE(irrig_active_pump(&CTRL) == 1,
@@ -625,7 +627,8 @@ void t_autonomous_gate(void)
 
     /* armed: the same dry condition now auto-waters */
     base_cfg(3, 3, 5000, 2000);
-    RIG.sim[2] = (chan_sim_t){.target_raw = 2400, .noisy = false}; /* DRY healthy */
+    RIG.sim[2] =
+        (chan_sim_t){.target_raw = 2400, .noisy = false}; /* DRY healthy */
     NOW = 1000;
     irrig_init(&CTRL, &SYS, CH, MC, MS, SCRATCH, io, NOW);
     irrig_set_autonomous(&CTRL, true);
@@ -643,10 +646,11 @@ void t_autonomous_gate(void)
 void t_irrig_abort(void)
 {
     base_cfg(/*mhw*/ 3, /*mdoses*/ 3, /*pmax*/ 5000, /*dose*/ 3000);
-    RIG.sim[1] = (chan_sim_t){.target_raw = 2400, .noisy = false}; /* DRY healthy */
-    start();                                   /* armed */
+    RIG.sim[1] =
+        (chan_sim_t){.target_raw = 2400, .noisy = false}; /* DRY healthy */
+    start(); /* armed */
 
-    step(SYS.sample_period_ms);                /* grant ch1 dose */
+    step(SYS.sample_period_ms); /* grant ch1 dose */
     TEST_ASSERT_TRUE_MESSAGE(irrig_active_pump(&CTRL) == 1, "ch1 dosing");
     TEST_ASSERT_TRUE_MESSAGE(RIG.pumps_on_now == 1, "pump energized");
 
@@ -665,7 +669,7 @@ void t_irrig_abort(void)
 
     /* abort while idle is a harmless no-op */
     TEST_ASSERT_FALSE_MESSAGE(irrig_abort(&CTRL, NOW),
-                             "abort while idle -> false");
+                              "abort while idle -> false");
 }
 
 /* -------------------------------------------------------------------------- */

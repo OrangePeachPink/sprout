@@ -15,8 +15,14 @@
 static commands_ctx_t s_ctx;
 
 /* Convenience casts so handler bodies read cleanly. */
-static inline Preferences *prefs()        { return (Preferences *)s_ctx.prefs_handle; }
-static inline irrig_ctrl_t *irrig()       { return s_ctx.irrig; }
+static inline Preferences *prefs()
+{
+    return (Preferences *)s_ctx.prefs_handle;
+}
+static inline irrig_ctrl_t *irrig()
+{
+    return s_ctx.irrig;
+}
 
 /* ---- private helpers ---------------------------------------------------- */
 
@@ -25,15 +31,18 @@ static inline irrig_ctrl_t *irrig()       { return s_ctx.irrig; }
  * "ESP32-D0WD-V3" -> "Sprout ESP32". The model is a board type shared by
  * millions of chips — no MAC, eFuse, or serial is read.
  */
-static void derive_default_id(char *out, size_t outlen) {
+static void derive_default_id(char *out, size_t outlen)
+{
     const char *model = ESP.getChipModel();
     char family[16];
     size_t i = 0;
     for (; model[i] && model[i] != '-' && i < sizeof(family) - 1; i++)
         family[i] = model[i];
     family[i] = '\0';
-    if (family[0] == '\0') snprintf(out, outlen, "Sprout MCU");
-    else                   snprintf(out, outlen, "Sprout %s", family);
+    if (family[0] == '\0')
+        snprintf(out, outlen, "Sprout MCU");
+    else
+        snprintf(out, outlen, "Sprout %s", family);
 }
 
 /* ---- command handlers (#92 registry) ------------------------------------ */
@@ -44,11 +53,12 @@ static void derive_default_id(char *out, size_t outlen) {
  *   !cad,<ms>,temp  SESSION-ONLY: set live, NO NVS write; reverts to the saved/compiled
  *                   default on reset. Experiments use this so a fast capture rate can
  *                   never leak into the next monitor run (#322). */
-static void handle_cad(const char *args, char *reply, size_t replen) {
-    char        msbuf[12];
+static void handle_cad(const char *args, char *reply, size_t replen)
+{
+    char msbuf[12];
     const char *comma = strchr(args, ',');
-    size_t      mslen = comma ? (size_t)(comma - args) : strlen(args);
-    uint32_t    ms;
+    size_t mslen = comma ? (size_t)(comma - args) : strlen(args);
+    uint32_t ms;
     if (mslen == 0 || mslen >= sizeof(msbuf)) {
         snprintf(reply, replen,
                  "# nak err=parse (use: !cad,<ms>[,temp]) floor=%lu",
@@ -64,7 +74,7 @@ static void handle_cad(const char *args, char *reply, size_t replen) {
         return;
     }
     bool temp = (comma && strcmp(comma + 1, "temp") == 0);
-    if (comma && !temp) {  /* a second arg that isn't exactly "temp" */
+    if (comma && !temp) { /* a second arg that isn't exactly "temp" */
         snprintf(reply, replen, "# nak err=scope (use: !cad,<ms>[,temp])");
         return;
     }
@@ -73,12 +83,13 @@ static void handle_cad(const char *args, char *reply, size_t replen) {
                  (unsigned long)ms, s_ctx.cadence_floor_ms);
         return;
     }
-    unsigned long prev      = (unsigned long)*s_ctx.sample_period_ms;
+    unsigned long prev = (unsigned long)*s_ctx.sample_period_ms;
     *s_ctx.sample_period_ms = ms;
-    *s_ctx.cadence_temp     = temp;
+    *s_ctx.cadence_temp = temp;
     if (temp) {
         /* session-only: never touch NVS, so it can't leak into the next boot (#322) */
-        snprintf(reply, replen, "# ack cad=%lu prev=%lu src=temp (reverts on reset)",
+        snprintf(reply, replen,
+                 "# ack cad=%lu prev=%lu src=temp (reverts on reset)",
                  (unsigned long)ms, prev);
     } else {
         *s_ctx.cadence_from_nvs = true;
@@ -89,25 +100,28 @@ static void handle_cad(const char *args, char *reply, size_t replen) {
 }
 
 /* !ping - liveness check. */
-static void handle_ping(const char *args, char *reply, size_t replen) {
+static void handle_ping(const char *args, char *reply, size_t replen)
+{
     (void)args;
     snprintf(reply, replen, "# ack pong");
 }
 
 /* !ver - identity / provenance (fw + device_id + git rev). */
-static void handle_ver(const char *args, char *reply, size_t replen) {
+static void handle_ver(const char *args, char *reply, size_t replen)
+{
     (void)args;
     snprintf(reply, replen, "# ack ver fw=%s device_id=%s git=%s",
              s_ctx.fw_version, s_ctx.device_id, GIT_REV);
 }
 
 /* !cfg,reset - clear persisted config and apply compile-time defaults (#90). */
-static void handle_cfg(const char *args, char *reply, size_t replen) {
+static void handle_cfg(const char *args, char *reply, size_t replen)
+{
     if (strcmp(args, "reset") == 0) {
         prefs()->clear();
         *s_ctx.sample_period_ms = (uint32_t)s_ctx.cadence_default_ms;
         *s_ctx.cadence_from_nvs = false;
-        *s_ctx.cadence_temp     = false;
+        *s_ctx.cadence_temp = false;
         derive_default_id(s_ctx.device_id, s_ctx.device_id_len);
         *s_ctx.device_id_custom = false;
         snprintf(reply, replen, "# ack cfg reset cad=%lu device_id=%s",
@@ -122,18 +136,20 @@ static void handle_cfg(const char *args, char *reply, size_t replen) {
  * An empty arg clears back to the chip-model default.
  * Sanitized for CSV: commas + control chars -> '_'.
  */
-static void handle_name(const char *args, char *reply, size_t replen) {
+static void handle_name(const char *args, char *reply, size_t replen)
+{
     if (args[0] == '\0') {
         prefs()->remove("device_name");
         derive_default_id(s_ctx.device_id, s_ctx.device_id_len);
         *s_ctx.device_id_custom = false;
-        snprintf(reply, replen, "# ack name device_id=%s (default)", s_ctx.device_id);
+        snprintf(reply, replen, "# ack name device_id=%s (default)",
+                 s_ctx.device_id);
         return;
     }
-    char   clean[32];  /* matches device_id_len in practice */
+    char clean[32]; /* matches device_id_len in practice */
     size_t j = 0;
     for (size_t i = 0; args[i] && j < sizeof(clean) - 1; i++) {
-        char c    = args[i];
+        char c = args[i];
         clean[j++] = (c == ',' || c < 0x20 || c == 0x7f) ? '_' : c;
     }
     clean[j] = '\0';
@@ -141,7 +157,8 @@ static void handle_name(const char *args, char *reply, size_t replen) {
     s_ctx.device_id[s_ctx.device_id_len - 1] = '\0';
     prefs()->putString("device_name", s_ctx.device_id);
     *s_ctx.device_id_custom = true;
-    snprintf(reply, replen, "# ack name device_id=%s (custom)", s_ctx.device_id);
+    snprintf(reply, replen, "# ack name device_id=%s (custom)",
+             s_ctx.device_id);
 }
 
 /*
@@ -151,11 +168,12 @@ static void handle_name(const char *args, char *reply, size_t replen) {
  * sweep right away); ms is clamped to pump_max_ms; a hard-faulted channel is
  * refused (clear it first).
  */
-static void handle_water(const char *args, char *reply, size_t replen) {
-    char        chbuf[12];
-    uint32_t    ms    = 0;
+static void handle_water(const char *args, char *reply, size_t replen)
+{
+    char chbuf[12];
+    uint32_t ms = 0;
     const char *comma = strchr(args, ',');
-    size_t      chlen = comma ? (size_t)(comma - args) : strlen(args);
+    size_t chlen = comma ? (size_t)(comma - args) : strlen(args);
     if (chlen == 0 || chlen >= sizeof(chbuf)) {
         snprintf(reply, replen, "# nak err=parse (use: !water,<ch>[,<ms>])");
         return;
@@ -169,20 +187,20 @@ static void handle_water(const char *args, char *reply, size_t replen) {
         return;
     }
     switch (irrig_request_dose(irrig(), (int)ch, ms)) {
-        case IRRIG_DOSE_QUEUED:
-            snprintf(reply, replen,
-                     "# ack water ch=%lu ms=%lu max=%lu (forced dose queued)",
-                     (unsigned long)ch, (unsigned long)ms,
-                     (unsigned long)s_ctx.pump_max_ms);
-            break;
-        case IRRIG_DOSE_BAD_CHANNEL:
-            snprintf(reply, replen, "# nak err=channel ch=%lu n=%d",
-                     (unsigned long)ch, s_ctx.num_channels);
-            break;
-        case IRRIG_DOSE_FAULTED:
-            snprintf(reply, replen, "# nak err=faulted ch=%lu (clear it first)",
-                     (unsigned long)ch);
-            break;
+    case IRRIG_DOSE_QUEUED:
+        snprintf(reply, replen,
+                 "# ack water ch=%lu ms=%lu max=%lu (forced dose queued)",
+                 (unsigned long)ch, (unsigned long)ms,
+                 (unsigned long)s_ctx.pump_max_ms);
+        break;
+    case IRRIG_DOSE_BAD_CHANNEL:
+        snprintf(reply, replen, "# nak err=channel ch=%lu n=%d",
+                 (unsigned long)ch, s_ctx.num_channels);
+        break;
+    case IRRIG_DOSE_FAULTED:
+        snprintf(reply, replen, "# nak err=faulted ch=%lu (clear it first)",
+                 (unsigned long)ch);
+        break;
     }
 }
 
@@ -191,7 +209,8 @@ static void handle_water(const char *args, char *reply, size_t replen) {
  * lives only in the provenance header, so reprint it on success: the operator
  * (and Data, which joins on run_label) sees the change immediately.
  */
-static void handle_label(const char *args, char *reply, size_t replen) {
+static void handle_label(const char *args, char *reply, size_t replen)
+{
     if (run_meta_set_label(s_ctx.run_meta, args, reply, replen) &&
         s_ctx.reprint_header)
         s_ctx.reprint_header();
@@ -202,19 +221,23 @@ static void handle_label(const char *args, char *reply, size_t replen) {
  * It's a per-row field, so the next soil row for that channel carries it; no
  * header reprint needed (the ack confirms, and the periodic header catches up).
  */
-static void handle_pos(const char *args, char *reply, size_t replen) {
+static void handle_pos(const char *args, char *reply, size_t replen)
+{
     run_meta_set_position(s_ctx.run_meta, args, reply, replen);
 }
 
 /* !stop - operator e-stop: abort any active dose, cancel pending ones, and drive
  * every relay OFF now (#215, single-authority via ADR-0016). */
-static void handle_stop(const char *args, char *reply, size_t replen) {
+static void handle_stop(const char *args, char *reply, size_t replen)
+{
     (void)args;
-    int  ch  = irrig_active_pump(irrig());
+    int ch = irrig_active_pump(irrig());
     bool was = irrig_abort(irrig(), millis());
-    s_ctx.all_relays_off();   /* hardware backstop on top of the FSM abort */
-    if (was) snprintf(reply, replen, "# ack stop ch=%d (aborted)", ch);
-    else     snprintf(reply, replen, "# ack stop idle");
+    s_ctx.all_relays_off(); /* hardware backstop on top of the FSM abort */
+    if (was)
+        snprintf(reply, replen, "# ack stop ch=%d (aborted)", ch);
+    else
+        snprintf(reply, replen, "# ack stop idle");
 }
 
 /* !auto,on|off - arm / disarm AUTONOMOUS dosing (#227, ADR-0016 arm gate).
@@ -222,7 +245,8 @@ static void handle_stop(const char *args, char *reply, size_t replen) {
  * so a reboot never silently resumes autonomous watering. The bench arms it only
  * after the dry-safety chain (#93/#191/#2/#215) has passed on real hardware.
  * Manual !water (a forced dose) works in either state. */
-static void handle_auto(const char *args, char *reply, size_t replen) {
+static void handle_auto(const char *args, char *reply, size_t replen)
+{
     if (strcmp(args, "on") == 0) {
         irrig_set_autonomous(irrig(), true);
         snprintf(reply, replen, "# ack auto on (autonomous dosing ARMED)");
@@ -242,26 +266,31 @@ static void handle_auto(const char *args, char *reply, size_t replen) {
  * the chip must reset within ~WDT_TIMEOUT_MS, and the reboot's allRelaysOff()
  * must leave ch0 de-energized. Never returns; only in esp32dev_wdttest env.
  */
-static void handle_wedge(const char *args, char *reply, size_t replen) {
+static void handle_wedge(const char *args, char *reply, size_t replen)
+{
     (void)args;
     (void)reply;
     (void)replen;
     s_ctx.pump_set(0, true);
-    Serial.printf("# ack wedge ch0=ON - hanging the loop; watchdog must reset in <=%lums\n",
+    Serial.printf("# ack wedge ch0=ON - hanging the loop; watchdog must reset "
+                  "in <=%lums\n",
                   (unsigned long)s_ctx.wdt_timeout_ms);
     Serial.flush();
-    for (;;) { /* no esp_task_wdt_reset() -> watchdog fires -> reset */ }
+    for (;;) { /* no esp_task_wdt_reset() -> watchdog fires -> reset */
+    }
 }
 #endif /* WDT_WEDGE_TEST */
 
 /* ---- public API --------------------------------------------------------- */
 
-void commands_init(commands_ctx_t *ctx) {
-    s_ctx = *ctx;  /* shallow copy; pointer targets live in main.cpp for the session */
+void commands_init(commands_ctx_t *ctx)
+{
+    s_ctx =
+        *ctx; /* shallow copy; pointer targets live in main.cpp for the session */
 
     /* Load persisted runtime config (#90): cadence + device identity. */
     Preferences *p = prefs();
-    p->begin("plants", false);  /* rw namespace; kept open for the session */
+    p->begin("plants", false); /* rw namespace; kept open for the session */
 
     uint32_t saved = p->getULong("cadence_ms", 0);
     if (saved >= s_ctx.cadence_floor_ms && saved <= s_ctx.cadence_ceil_ms) {
@@ -280,23 +309,24 @@ void commands_init(commands_ctx_t *ctx) {
     }
 
     /* Register all inbound serial-command handlers (#92). */
-    serial_cmd_register("cad",   handle_cad);
-    serial_cmd_register("ping",  handle_ping);
-    serial_cmd_register("ver",   handle_ver);
-    serial_cmd_register("cfg",   handle_cfg);
-    serial_cmd_register("name",  handle_name);
+    serial_cmd_register("cad", handle_cad);
+    serial_cmd_register("ping", handle_ping);
+    serial_cmd_register("ver", handle_ver);
+    serial_cmd_register("cfg", handle_cfg);
+    serial_cmd_register("name", handle_name);
     serial_cmd_register("water", handle_water);
-    serial_cmd_register("stop",  handle_stop);
-    serial_cmd_register("auto",  handle_auto);
+    serial_cmd_register("stop", handle_stop);
+    serial_cmd_register("auto", handle_auto);
     serial_cmd_register("label", handle_label);
-    serial_cmd_register("pos",   handle_pos);
+    serial_cmd_register("pos", handle_pos);
 #ifdef WDT_WEDGE_TEST
     serial_cmd_register("wedge", handle_wedge);
 #endif
 }
 
-void commands_poll(void) {
-    static char    buf[48];
+void commands_poll(void)
+{
+    static char buf[48];
     static uint8_t len = 0;
     while (Serial.available() > 0) {
         int ci = Serial.read();
@@ -306,13 +336,14 @@ void commands_poll(void) {
             if (len == 0) continue;
             buf[len] = '\0';
             char reply[96];
-            if (serial_cmd_dispatch(buf, reply, sizeof(reply)) != SERIAL_CMD_IGNORED)
+            if (serial_cmd_dispatch(buf, reply, sizeof(reply)) !=
+                SERIAL_CMD_IGNORED)
                 Serial.println(reply);
             len = 0;
         } else if (len < sizeof(buf) - 1) {
             buf[len++] = c;
         } else {
-            len = 0;  /* oversized line: drop it */
+            len = 0; /* oversized line: drop it */
         }
     }
 }
