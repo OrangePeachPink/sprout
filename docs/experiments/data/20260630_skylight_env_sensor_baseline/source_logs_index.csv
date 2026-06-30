@@ -1,0 +1,5 @@
+source_file,session_id,start_local,end_local,rows,plants_env_rows,plants_soil_rows,gap_before_seconds,header_log_start,note
+logs/Sprout ESP32_20260630_175827.csv,8f2080,2026-06-30 12:58:27.635,2026-06-30 13:03:37.868,252,0,252,0,# log_start_utc=2026-06-30T17:58:27.635Z  tz_offset=-05:00  logger=plants_logger_0_4  schema_version=1,soil-only pre-env reconnect/logging session
+logs/Sprout ESP32_20260630_181815.csv,c61f05,2026-06-30 13:18:15.303,2026-06-30 13:25:21.238,1032,688,344,877,# log_start_utc=2026-06-30T18:18:15.303Z  tz_offset=-05:00  logger=plants_logger_0_4  schema_version=1,cardboard-shield baseline through exact 13:25 lift
+logs/Sprout ESP32_20260630_183455.csv,e39897,2026-06-30 13:34:55.345,2026-06-30 13:42:46.279,1140,760,380,574,# log_start_utc=2026-06-30T18:34:55.345Z  tz_offset=-05:00  logger=plants_logger_0_4  schema_version=1,direct sun after lift; logger later wedged
+logs/Sprout ESP32_20260630_184254.csv,58bd40,2026-06-30 13:42:54.377,2026-06-30 17:31:05.893,32868,21912,10956,8,# log_start_utc=2026-06-30T18:42:54.377Z  tz_offset=-05:00  logger=plants_logger_0_4  schema_version=1,long restarted sun transit and post-sun baseline
