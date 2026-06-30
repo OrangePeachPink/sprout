@@ -103,7 +103,10 @@ issue → commit → release-note stays one thread:
 
 **Project fields** (Priority & Size are fields, not labels — they sort and feed Insights):
 
-- **Status** (lean start): `Backlog → In Progress → In Review → Needs Verification → Done`, + `Won't Do`
+- **Status:** `Backlog → In Progress → Needs Verification → Ready to Merge → Done`, + `Won't Do`
+  *(Evolved from the lean start: `Ready to Merge` added with the two-stage gate (#369); `In Review`
+  removed as ambiguous — it had no owner or trigger, and the two review phases that matter each have
+  one: **Needs Verification** = Workflow, **Ready to Merge** = maintainer.)*
 - **Priority:** `P0`–`P3` · **Size:** `XS`–`XL` (feeds velocity) · **Milestone** (built-in)
 
 **Templates:** YAML Issue Forms under `.github/ISSUE_TEMPLATE/` (`feature`, `bug`, `task` + chooser);
