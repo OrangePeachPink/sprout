@@ -325,9 +325,18 @@ def build_context(data: LogData) -> dict:
             }
         )
 
+    # plants.env rows (SHT45 / AS7263) share the monitor log with soil in the
+    # esp32dev_env build; keep sweeps soil-only so onboard-ambient/NIR counts never
+    # pollute the cross-channel spread or the gap detection (#373/#374). The soil
+    # trajectory/sensors/integrity already filter to plants.soil above.
+    _soil_data = LogData(
+        readings=[r for r in data.readings if r.record_type.startswith("plants.soil")],
+        segments=data.segments,
+        sources=data.sources,
+    )
     sweeps = [
         sw
-        for sw in data.sweeps()
+        for sw in _soil_data.sweeps()
         if any(r.raw_value is not None for r in sw.by_sensor.values())
     ]
     spread_points = []
