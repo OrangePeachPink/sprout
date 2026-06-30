@@ -51,6 +51,39 @@ actually contribute to** — that's your cue. Open the full Sprout project in **
 [developer front door](developer-front-door.copy.md). Same sensors, same words, a real home. We'll be glad to
 see you. 🌱
 
+## Other great places to learn — you're welcome anywhere
+
+We're not the only door into this, and we'd never pretend to be. The maker community is generous, and these
+folks taught us plenty. If a different voice clicks better for you, go — then come back and show us what you
+built:
+
+- **[Adafruit — STEMMA Soil Sensor guide][adafruit]** — beautifully produced, beginner-kind walkthroughs.
+  Their sensor is a corrosion-proof I²C version (a little different from the cheap analog one here), and the
+  Adafruit Learning System is a gift to every new maker.
+- **[SparkFun — Soil Moisture Sensor Hookup Guide][sparkfun]** — a clear, friendly take on the "measure dry,
+  measure wet, calibrate" idea, with great diagrams.
+- **[DFRobot — Capacitive Soil Moisture Sensor (SEN0193) wiki][dfrobot]** — the docs for the classic,
+  inexpensive capacitive sensor most people start with (the same family Sprout uses).
+- **[Maker Portal — calibration with Arduino][makerportal]** — a tidy step-by-step on getting your dry/wet
+  numbers.
+- **Full watering builds on ESP32 (GitHub):** [nclman/esp32-soil-moisture][gh-nclman],
+  [Lumics/Plantwatery][gh-lumics], and [thijstriemstra/garduino][gh-garduino] — real, complete plant-watering
+  projects (WiFi, pump, dashboards) to explore once the basics feel comfortable.
+
+> *One honest heads-up:* most of these (and most tutorials everywhere) finish by turning the reading into a
+> **moisture percentage** with `map()`. That's a fine way to *start* — but here, and in Sprout, we deliberately
+> stick to **bands** ("dry / ideal / wet") instead, because a single percentage pretends to a precision the
+> sensor doesn't actually have. Both approaches will get you reading soil today; we just think bands tell the
+> truth more honestly. Learn from everyone, then decide for yourself.
+
+[adafruit]: https://learn.adafruit.com/adafruit-stemma-soil-sensor-i2c-capacitive-moisture-sensor/overview
+[sparkfun]: https://learn.sparkfun.com/tutorials/soil-moisture-sensor-hookup-guide/all
+[dfrobot]: https://wiki.dfrobot.com/sen0193/docs/18036
+[makerportal]: https://makersportal.com/blog/2020/5/26/capacitive-soil-moisture-calibration-with-arduino
+[gh-nclman]: https://github.com/nclman/esp32-soil-moisture
+[gh-lumics]: https://github.com/Lumics/Plantwatery
+[gh-garduino]: https://github.com/thijstriemstra/garduino
+
 ---
 
 *Arduino beginner on-ramp ([#387](https://github.com/OrangePeachPink/plants/issues/387)) — the framing + copy.
