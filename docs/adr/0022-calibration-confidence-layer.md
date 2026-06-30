@@ -84,6 +84,10 @@ tightens dose behavior.
 2. per-channel calibration **locked** (#170 → `calibrated`);
 3. the calibration-confidence layer **active** (this ADR): a channel may autonomously dose **only while
    `corroborated`** — no disagreement veto, good contact, profile-consistent.
+4. **schema-conformant pump telemetry** (#18) — when armed, pump events must emit as schema-conformant
+   `plants.pump` records, not the interim diagnostic line, so telemetry honesty and the data join hold
+   exactly when watering happens. (#348 ships DISARMED precisely because this and the dry-safety chain are
+   not yet met.)
 
 Until all pass on real hardware, dosing stays **DISARMED** (the ADR-0016 arm-gate). The confidence layer is an
 **additional, continuous** arm condition — not a one-time check. Even after the operator arms, a channel that
