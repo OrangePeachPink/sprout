@@ -179,12 +179,11 @@ Lanes run **concurrently**, so the board and your PRs change *while you're heads
 maintainer to assemble a status round and relay it — **the maintainer is not your messenger, and the issue is
 the message bus.** Keep the system moving by syncing yourself.
 
-**Self-sync at four moments:**
+**Self-sync at three moments:**
 
 1. **At the start** of a session — before you pick up work.
 2. **Just before you stop** — catch what landed while you were heads-down.
-3. **When you get a status request.**
-4. **When you post a share-out** across lanes.
+3. **When you post a status brief / share-out** — whether someone requested it or you're posting proactively.
 
 **The sweep — check your slice of the board:**
 
