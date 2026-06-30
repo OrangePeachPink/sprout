@@ -72,6 +72,25 @@ review your own recent work — **especially before a status brief** — do **CI
 - Fold the finding into the brief's `Gate:` / `Flag:` lines. A green PR with reds in its history has a story
   worth telling.
 
+## Lane self-sync — check before you start, check before you stop
+
+Lanes run **concurrently**; the board and your PRs change *while you're heads-down*. **Don't wait for the
+maintainer to assemble a status round and relay it — the maintainer is not your messenger, and the issue is
+the message bus.** Self-sync at **four moments: when you start, just before you stop, on a status request,
+and when you post a share-out.**
+
+Each sync, sweep your slice: **PRs you own** (moved? merged?), **issues newly `for:<your-lane>`**,
+**questions / RFCs aimed at you**, and **what just merged that unblocks your gated work**. Then **act**:
+
+- Your PR merged → reconcile it and **chase what it unblocks**. A dependency landed → **pick up the unblocked
+  work this session.** A new `for:<lane>` issue or an RFC for you → triage / answer / act.
+- **You have a question for another lane → post it on the issue and route it `for:<lane>` right then.** Don't
+  hold it for the maintainer to carry.
+- **Default to action over questions.** If it's unblocked and in your lane, do it. Escalate to the maintainer
+  only for genuinely maintainer-only calls (merges, hardware approvals, product direction).
+
+Full protocol + the sweep checklist: [CONTRIBUTING.md](.github/CONTRIBUTING.md).
+
 ## Lane routing
 
 When an issue comes up mid-lane and can't route through Workflow first, tag it `for:<lane>` to flag a

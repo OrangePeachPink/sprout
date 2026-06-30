@@ -173,6 +173,47 @@ issue's *main point* is not closed — it's flagged back.
 
 `Refs #N` / `Part of #N` (non-closing links), never `Closes #N`; the repo's auto-close setting stays **off**.
 
+## Lane self-sync — check before you start, check before you stop
+
+Lanes run **concurrently**, so the board and your PRs change *while you're heads-down*. Don't wait for the
+maintainer to assemble a status round and relay it — **the maintainer is not your messenger, and the issue is
+the message bus.** Keep the system moving by syncing yourself.
+
+**Self-sync at four moments:**
+
+1. **At the start** of a session — before you pick up work.
+2. **Just before you stop** — catch what landed while you were heads-down.
+3. **When you get a status request.**
+4. **When you post a share-out** across lanes.
+
+**The sweep — check your slice of the board:**
+
+- **Your open PRs** — did any **move** (review, conformance, certification) or **merge** while you were away?
+- **Issues newly labeled `for:<your-lane>`** — work routed to you.
+- **Comments / questions / RFCs** aimed at your lane on issues and PRs.
+- **What recently merged that unblocks you** — a dependency landed, or a base PR merged so your stacked PR
+  can rebase.
+- **Backlog** items in your area that are now actionable.
+
+**Then act — don't wait, don't ask when you can do:**
+
+- **Your PR merged** → reconcile it (confirm what it satisfies) and **chase what it unblocks downstream.**
+- **A dependency landed** → pick up the now-unblocked work and **advance it this session.**
+- **A new `for:<your-lane>` issue, or an RFC for you** → triage, answer, or act.
+- **You have a question for another lane** → **post it on the issue and route it `for:<lane>` right then.**
+  Do *not* hold it for the maintainer to relay.
+- **Default to action over questions.** If something is unblocked and in your lane, do it. Reserve escalation
+  to the maintainer for genuinely maintainer-only calls (merges, hardware approvals, product direction).
+
+**The anti-patterns this kills:**
+
+- Discovering unblocked work only when the maintainer's next status round happens to surface it.
+- Answering a status request with questions you could have **answered or routed** yourself.
+- Making the maintainer relay a message between two lanes that the **issue thread** could carry directly.
+
+A lane that self-syncs keeps the whole system advancing between the maintainer's check-ins — instead of
+stalling until the next relay.
+
 ## Labels (quick reference)
 
 - `type:*` — the kind of work (mirrors the commit `type:` vocabulary)
