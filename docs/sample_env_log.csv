@@ -1,0 +1,102 @@
+# fw=0.7.0  git=env0001  run=env-sample
+# device_id=plants_esp32_env  schema_version=1  cadence_ms=30000  cadence_src=nvs
+# sensors: ch0=GPIO36/s3 ch1=GPIO39/s4 ch2=GPIO34/s1 ch3=GPIO35/s2
+# env: SHT45@0x44 (ambient temp/RH)  AS7263@0x49 (NIR 610-860nm)  mount=breadboard_near_esp32
+# cal bounds(dry>wet): 3050 2140 1830 1520 1150 1050  [moist% 900..3400]
+record_type,timestamp_utc,timestamp_local,session_id,device_id,firmware_version,sensor_model,sensor_id,sensor_position,channel,raw_value,value,unit,quality_flag,payload
+plants.soil,2026-06-29T12:00:00.000Z,2026-06-29T12:00:00.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,1500,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:00:00.000Z,2026-06-29T12:00:00.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,1540,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:00:00.000Z,2026-06-29T12:00:00.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1580,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:00:00.000Z,2026-06-29T12:00:00.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,1620,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.env,2026-06-29T12:00:00.000Z,2026-06-29T12:00:00.000,envs01,plants_esp32_env,0.7.0,SHT45,env,breadboard_near_esp32,ambient_temp,,23.0,degC,OK,mount=breadboard_near_esp32
+plants.env,2026-06-29T12:00:00.000Z,2026-06-29T12:00:00.000,envs01,plants_esp32_env,0.7.0,SHT45,env,breadboard_near_esp32,ambient_rh,,48.0,pctRH,OK,mount=breadboard_near_esp32
+plants.env,2026-06-29T12:00:00.000Z,2026-06-29T12:00:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_610,800,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:00:00.000Z,2026-06-29T12:00:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_680,1020,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:00:00.000Z,2026-06-29T12:00:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_730,1240,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:00:00.000Z,2026-06-29T12:00:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_760,1460,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:00:00.000Z,2026-06-29T12:00:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_810,1680,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:00:00.000Z,2026-06-29T12:00:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_860,1900,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.soil,2026-06-29T12:00:30.000Z,2026-06-29T12:00:30.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,1503,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:00:30.000Z,2026-06-29T12:00:30.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,1543,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:00:30.000Z,2026-06-29T12:00:30.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1583,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:00:30.000Z,2026-06-29T12:00:30.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,1623,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.env,2026-06-29T12:00:30.000Z,2026-06-29T12:00:30.000,envs01,plants_esp32_env,0.7.0,SHT45,env,breadboard_near_esp32,ambient_temp,,23.3,degC,OK,mount=breadboard_near_esp32
+plants.env,2026-06-29T12:00:30.000Z,2026-06-29T12:00:30.000,envs01,plants_esp32_env,0.7.0,SHT45,env,breadboard_near_esp32,ambient_rh,,47.6,pctRH,OK,mount=breadboard_near_esp32
+plants.env,2026-06-29T12:00:30.000Z,2026-06-29T12:00:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_610,812,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:00:30.000Z,2026-06-29T12:00:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_680,1032,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:00:30.000Z,2026-06-29T12:00:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_730,1252,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:00:30.000Z,2026-06-29T12:00:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_760,1472,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:00:30.000Z,2026-06-29T12:00:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_810,1692,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:00:30.000Z,2026-06-29T12:00:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_860,1912,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.soil,2026-06-29T12:01:00.000Z,2026-06-29T12:01:00.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,1506,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:01:00.000Z,2026-06-29T12:01:00.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,1546,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:01:00.000Z,2026-06-29T12:01:00.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1586,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:01:00.000Z,2026-06-29T12:01:00.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,1626,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.env,2026-06-29T12:01:00.000Z,2026-06-29T12:01:00.000,envs01,plants_esp32_env,0.7.0,SHT45,env,breadboard_near_esp32,ambient_temp,,23.6,degC,OK,mount=breadboard_near_esp32
+plants.env,2026-06-29T12:01:00.000Z,2026-06-29T12:01:00.000,envs01,plants_esp32_env,0.7.0,SHT45,env,breadboard_near_esp32,ambient_rh,,47.2,pctRH,OK,mount=breadboard_near_esp32
+plants.env,2026-06-29T12:01:00.000Z,2026-06-29T12:01:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_610,824,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:01:00.000Z,2026-06-29T12:01:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_680,1044,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:01:00.000Z,2026-06-29T12:01:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_730,1264,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:01:00.000Z,2026-06-29T12:01:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_760,1484,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:01:00.000Z,2026-06-29T12:01:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_810,1704,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:01:00.000Z,2026-06-29T12:01:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_860,1924,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.soil,2026-06-29T12:01:30.000Z,2026-06-29T12:01:30.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,1509,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:01:30.000Z,2026-06-29T12:01:30.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,1549,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:01:30.000Z,2026-06-29T12:01:30.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1589,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:01:30.000Z,2026-06-29T12:01:30.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,1629,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.env,2026-06-29T12:01:30.000Z,2026-06-29T12:01:30.000,envs01,plants_esp32_env,0.7.0,SHT45,env,breadboard_near_esp32,ambient_temp,,23.9,degC,OK,mount=breadboard_near_esp32
+plants.env,2026-06-29T12:01:30.000Z,2026-06-29T12:01:30.000,envs01,plants_esp32_env,0.7.0,SHT45,env,breadboard_near_esp32,ambient_rh,,46.8,pctRH,OK,mount=breadboard_near_esp32
+plants.env,2026-06-29T12:01:30.000Z,2026-06-29T12:01:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_610,836,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:01:30.000Z,2026-06-29T12:01:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_680,1056,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:01:30.000Z,2026-06-29T12:01:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_730,1276,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:01:30.000Z,2026-06-29T12:01:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_760,1496,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:01:30.000Z,2026-06-29T12:01:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_810,1716,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:01:30.000Z,2026-06-29T12:01:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_860,1936,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.soil,2026-06-29T12:02:00.000Z,2026-06-29T12:02:00.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,1512,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:02:00.000Z,2026-06-29T12:02:00.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,1552,,,SUSPECT,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:02:00.000Z,2026-06-29T12:02:00.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1592,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:02:00.000Z,2026-06-29T12:02:00.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,1632,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.env,2026-06-29T12:02:00.000Z,2026-06-29T12:02:00.000,envs01,plants_esp32_env,0.7.0,SHT45,env,breadboard_near_esp32,ambient_temp,,24.2,degC,OK,mount=breadboard_near_esp32
+plants.env,2026-06-29T12:02:00.000Z,2026-06-29T12:02:00.000,envs01,plants_esp32_env,0.7.0,SHT45,env,breadboard_near_esp32,ambient_rh,,46.4,pctRH,OK,mount=breadboard_near_esp32
+plants.env,2026-06-29T12:02:00.000Z,2026-06-29T12:02:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_610,848,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:02:00.000Z,2026-06-29T12:02:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_680,1068,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:02:00.000Z,2026-06-29T12:02:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_730,1288,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:02:00.000Z,2026-06-29T12:02:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_760,1508,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:02:00.000Z,2026-06-29T12:02:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_810,1728,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:02:00.000Z,2026-06-29T12:02:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_860,1948,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.soil,2026-06-29T12:02:30.000Z,2026-06-29T12:02:30.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,1515,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:02:30.000Z,2026-06-29T12:02:30.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,1555,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:02:30.000Z,2026-06-29T12:02:30.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1595,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:02:30.000Z,2026-06-29T12:02:30.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,1635,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.env,2026-06-29T12:02:30.000Z,2026-06-29T12:02:30.000,envs01,plants_esp32_env,0.7.0,SHT45,env,breadboard_near_esp32,ambient_temp,,24.5,degC,OK,mount=breadboard_near_esp32
+plants.env,2026-06-29T12:02:30.000Z,2026-06-29T12:02:30.000,envs01,plants_esp32_env,0.7.0,SHT45,env,breadboard_near_esp32,ambient_rh,,46.0,pctRH,OK,mount=breadboard_near_esp32
+plants.env,2026-06-29T12:02:30.000Z,2026-06-29T12:02:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_610,860,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:02:30.000Z,2026-06-29T12:02:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_680,1080,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:02:30.000Z,2026-06-29T12:02:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_730,1300,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:02:30.000Z,2026-06-29T12:02:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_760,1520,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:02:30.000Z,2026-06-29T12:02:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_810,1740,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:02:30.000Z,2026-06-29T12:02:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_860,1960,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.soil,2026-06-29T12:03:00.000Z,2026-06-29T12:03:00.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,1518,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:03:00.000Z,2026-06-29T12:03:00.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,1558,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:03:00.000Z,2026-06-29T12:03:00.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1598,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:03:00.000Z,2026-06-29T12:03:00.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,1638,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.env,2026-06-29T12:03:00.000Z,2026-06-29T12:03:00.000,envs01,plants_esp32_env,0.7.0,SHT45,env,breadboard_near_esp32,ambient_temp,,24.8,degC,OK,mount=breadboard_near_esp32
+plants.env,2026-06-29T12:03:00.000Z,2026-06-29T12:03:00.000,envs01,plants_esp32_env,0.7.0,SHT45,env,breadboard_near_esp32,ambient_rh,,45.6,pctRH,OK,mount=breadboard_near_esp32
+plants.env,2026-06-29T12:03:00.000Z,2026-06-29T12:03:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_610,872,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:03:00.000Z,2026-06-29T12:03:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_680,1092,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:03:00.000Z,2026-06-29T12:03:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_730,1312,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:03:00.000Z,2026-06-29T12:03:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_760,1532,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:03:00.000Z,2026-06-29T12:03:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_810,1752,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:03:00.000Z,2026-06-29T12:03:00.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_860,1972,,,SATURATED,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.soil,2026-06-29T12:03:30.000Z,2026-06-29T12:03:30.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s1,origplant,soil_moisture,1521,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:03:30.000Z,2026-06-29T12:03:30.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s2,origplant,soil_moisture,1561,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:03:30.000Z,2026-06-29T12:03:30.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,1601,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.soil,2026-06-29T12:03:30.000Z,2026-06-29T12:03:30.000,envs01,plants_esp32_env,0.7.0,UMLIFE_v2_TLC555,s4,origplant,soil_moisture,1641,,,OK,level=well watered;role=disp;spread=24;gpio=36
+plants.env,2026-06-29T12:03:30.000Z,2026-06-29T12:03:30.000,envs01,plants_esp32_env,0.7.0,SHT45,env,breadboard_near_esp32,ambient_temp,,25.1,degC,OK,mount=breadboard_near_esp32
+plants.env,2026-06-29T12:03:30.000Z,2026-06-29T12:03:30.000,envs01,plants_esp32_env,0.7.0,SHT45,env,breadboard_near_esp32,ambient_rh,,45.2,pctRH,OK,mount=breadboard_near_esp32
+plants.env,2026-06-29T12:03:30.000Z,2026-06-29T12:03:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_610,884,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:03:30.000Z,2026-06-29T12:03:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_680,1104,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:03:30.000Z,2026-06-29T12:03:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_730,1324,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:03:30.000Z,2026-06-29T12:03:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_760,1544,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:03:30.000Z,2026-06-29T12:03:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_810,1764,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
+plants.env,2026-06-29T12:03:30.000Z,2026-06-29T12:03:30.000,envs01,plants_esp32_env,0.7.0,AS7263,env,breadboard_near_esp32,nir_860,1984,,,OK,gain=16;itime_ms=50;aim=skylight_beam;not_canopy
