@@ -48,6 +48,11 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+# Tool caches — self-ignored by the tools too, but owned here so it doesn't
+# depend on each tool's nested .gitignore.
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 
 # Native (host) test build artifacts
 tests/native/*.exe
