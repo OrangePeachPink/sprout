@@ -22,6 +22,10 @@
     "docs/experiments/**"
   ],
   "words": [
+    "microzone",
+    "microzones",
+    "resoak",
+    "rootbound",
     "itime",
     // Intentional prose coinages from the developer front door (#219): "dogfood"
     // (the design-dogfooding concept) and "contributable" (DX's voice). Allowlisted
