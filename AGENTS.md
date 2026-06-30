@@ -124,7 +124,7 @@ wiring/power changes and with Data on schema extensions for new sensor readings.
 ## Workflow & GitHub
 
 - **Issues are the ledger.** Every unit of work is an issue (open via the forms). IDs are `#N`.
-- **The [board][board]** is the working view. Fields: **Status** (Backlog → In Progress → In Review →
+- **The [board][board]** is the working view. Fields: **Status** (Backlog → In Progress →
   Needs Verification → **Ready to Merge** → Done / Won't Do) · **Priority** (P0–P3, execution order) ·
   **Size** (XS–XL) · **Verification** (Pending / Approved / Conditional / Changes requested).
 - **Discussions** = the idea inbox · **PRDs** (`docs/prd/`) = specs for larger features ·

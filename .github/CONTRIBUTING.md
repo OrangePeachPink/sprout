@@ -24,7 +24,7 @@ issue. Four fields drive it:
 
 | Field | Values | Means |
 |---|---|---|
-| **Status** | Backlog → In Progress → In Review → Needs Verification → Done · Won't Do | where the work is in its life |
+| **Status** | Backlog → In Progress → Needs Verification → Ready to Merge → Done · Won't Do | where the work is in its life |
 | **Priority** | P0 · P1 · P2 · P3 | execution order (P0 = do first) |
 | **Size** | XS · S · M · L · XL | rough effort (feeds velocity) |
 | **Verification** | Pending · Approved · Conditional · Changes requested | the reviewer's disposition at the gate |
@@ -103,7 +103,7 @@ walks you in.
 ## The verification gate (two stages: Workflow certifies, then Veronica merges)
 
 Sprout uses a **two-stage gate** — a PR is never merged until **Workflow** has certified it. The pipeline:
-**Backlog → In Progress → In Review → Needs Verification → Ready to Merge → Done.**
+**Backlog → In Progress → Needs Verification → Ready to Merge → Done.**
 
 1. **The implementer posts evidence on the issue**, moves the card to **Needs Verification**, and **stops**.
    Evidence is a **requirement-by-requirement map**: for each acceptance criterion in the issue body, show
