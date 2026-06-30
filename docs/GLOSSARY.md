@@ -66,8 +66,30 @@ How far a feature or sensor configuration has progressed through *physical* vali
 - **The `data` branch** — the **data-records store** (csv / gz / database archives), checked out at
   `.data-worktree`. It is *not* a code workspace; it is intentionally far behind `main`; treat it
   read-only.
-- *(Data: add band names, the parse_v1 contract, schema versions, run_label / sensor_position, the source
-  registry, etc.)*
+- **`record_type`** — the namespaced row discriminator: `plants.soil` (a capacitive soil reading),
+  `plants.env` (onboard ambient — SHT45 temp/RH, AS7263 NIR), `plants.pump` (actuation event, reserved).
+  The shared time axis + `record_type` make cross-stream joins trivial.
+- **`parse_v1` contract** — the single telemetry-parsing boundary (ADR-0021): the dashboard/analytics read
+  logs **only** through `parse_v1`, never by ad-hoc CSV parsing, so one parser owns schema truth.
+- **Raw-only contract** — firmware writes empty `value`/`unit` (`,,`) for `plants.soil` (DEC-#38): soil is
+  uncalibrated, so any engineering value would be false precision. It is **soil-specific** — a factory-
+  calibrated env sensor (SHT45) *does* carry real `value`/`unit`.
+- **Tidy / long row** — one row per *(sensor, channel)* reading (soil `s1…s4`; NIR `nir_610…nir_860`), not
+  a packed multi-value row — so every channel is a uniform, joinable series.
+- **Band** — one of the 7 calibrated firmware moisture classes (`air-dry → DRY → needs water → OK →
+  well watered → overwatered → submerged`); the calibrated truth shown alongside raw ADC.
+- **`cadence_src`** (`nvs` | `temp` | `default`) — banner field (#322): whether the live sample cadence is
+  the persisted default, a **session-only** `!cad,<ms>,temp` override (reverts on reset — can't leak), or
+  the compiled fallback.
+- **`sensor_position`** — where a probe/sensor physically sits (e.g. `origplant`, `breadboard_near_esp32`)
+  — placement provenance; a probe swap invalidates per-channel calibration.
+- **derived/model vs authoritative** — source **trust classes**: computed/modelled data (solar geometry,
+  Open-Meteo weather) is `derived/model`, **never** presented as authoritative measurement.
+- **Source registry** — a per-source provenance entry (origin, jurisdiction, cadence, **trust class**,
+  schema version, discovery date) so every dataset declares where it came from and how far to trust it.
+- **Night band / skylight window** — solar-geometry constructs (PRD-0002): a *night band* is a sun-down
+  span shaded on the trajectory; the *skylight window* is the operator-calibrated time the rig actually
+  sees direct sky.
 
 ## Bench & sensing (Sage)
 
