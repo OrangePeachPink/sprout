@@ -88,11 +88,42 @@ tightens dose behavior.
    `plants.pump` records, not the interim diagnostic line, so telemetry honesty and the data join hold
    exactly when watering happens. (#348 ships DISARMED precisely because this and the dry-safety chain are
    not yet met.)
+5. **the under-watering fail-safe** (#410) — items 1-4 guard *over*-action (do not dose without
+   confidence). They do **not** guard *under*-action: a channel that never reaches `corroborated` is never
+   watered and the plant can die **silently**. The system must not ARM until an under-watering fail-safe
+   exists (detect a never-opening gate + an alert-or-fail-toward-watering response). See the open concern
+   below.
 
 Until all pass on real hardware, dosing stays **DISARMED** (the ADR-0016 arm-gate). The confidence layer is an
 **additional, continuous** arm condition — not a one-time check. Even after the operator arms, a channel that
 drops `corroborated → vetoed` mid-operation **loses its autonomous grant for that cycle** (fail-safe). Operator
 forced doses (ADR-0016) are unaffected — they are an explicit human decision, not an autonomous one.
+
+### Open concern — the under-action failure mode (#410)
+
+This ADR guards **one** failure — *over*-action (over-watering: a flood / runaway dose). It does **not** yet
+guard the opposite, asymmetric failure — *under*-action (a plant dying of thirst because the gate never
+opens):
+
+| Failure | Character | Guarded here |
+|---|---|---|
+| over-water (gate opens wrongly) | noisy, usually **recoverable**, self-evident | yes |
+| under-water to death (gate never opens) | **silent, irreversible**, no alarm | **no** |
+
+The very conservatism that makes this gate fail-safe for the **pump** (disagreement -> pause, low contact ->
+do not water) makes it fail-**deadly** for the **plant** in a persistently-ambiguous pot. "Fail-safe by not
+acting" is the right default for hardware; it is **not** sufficient for the mission (the plant surviving).
+The silent / irreversible failure deserves *more* engineering attention than the noisy / recoverable one —
+yet it is the currently-unguarded one. (Owning the honesty: this blind spot is a direct consequence of how
+conservative the gate above is — naming it, not hiding it.)
+
+**First-class open concern, owned by the #410 epic** (Trellis architecture + Data forecast + Firmware
+control); its resolution is **arm prerequisite #5**. Shape (detail in #410): (a) **detect** a never-opening
+gate via a deployment-data forecast of the *never-confident* likelihood; (b) **respond** — alert-first, with
+a **bounded fail-toward-watering** fallback only under tight over-water-safe conditions (no tray water, no
+recent runoff, the good-contact channels read dry); (c) **distinguish pass-through soil** — stop-on-runoff
+must tell *absorbed* from *ran-through* (hydrophobic soil channels water away without wetting the root zone;
+the answer is a pulse-soak-repeat cycle, not more volume — ties to #382).
 
 ## Inputs required (design-light-before-build)
 
@@ -139,6 +170,8 @@ tracked in #400:
 
 ## Revisit triggers
 
+- **The #410 under-watering fail-safe lands:** promote it from *open concern* to a **co-equal mission-safety
+  gate** beside the over-action gate — symmetric guarding of both failure directions.
 - **Sage's contact-procedure round lands:** replace placeholder thresholds with measured ones; revisit the
   disagreement metric.
 - **Multi-probe-per-pot deployment:** revisit whether "microzone disagreement" needs spatial weighting (probe
