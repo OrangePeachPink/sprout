@@ -29,6 +29,11 @@ this repository.** Specifically:
 - **Device identity** — public artifacts (sample logs, fixtures, docs, screenshots) carry only **synthetic
   or pseudonymous** device IDs: never a real MAC, and never a `device_id` derived from a real MAC. Internal
   / gitignored logs may carry real identifiers; the host **scrubs them on any public export**.
+- **Screenshots** — committed screenshots (evidence, docs, PRs) are **cropped to the app / content area
+  only**: no browser chrome (bookmarks bar, toolbar, tabs, URL bar), no OS chrome (taskbar, system tray,
+  notifications), no other windows. Browser/OS chrome leaks names, handles, visited sites, file paths, and
+  operator identity *even when the app content itself is clean*. Crop before commit; a reviewer rejects any
+  screenshot showing chrome.
 - **Generation** — tools that write files (loggers, exporters, the calibration workbench, sample generators)
   must not emit real PI; public-facing output is synthetic / pseudonymized **by construction**, not by
   after-the-fact cleanup.
