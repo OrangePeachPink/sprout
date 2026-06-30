@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260628_234134_3rd_4_full_wipe_and_full_air_dry_chk_s1",
+  "notes": {
+    "hypothesis": "A further full wipe/air-dry pass may show whether s1 can reach the same dry-air region as the other probes, or whether its lower reading is a persistent channel/probe offset.",
+    "method": "All four probes were wiped/air-dried again. A 60 s capture at 0.5 s cadence was recorded. Earlier nearby attempts without manifests appear to have been aborted/invalid-label attempts and are not treated as separate evidence.",
+    "findings": "Medians were s1 3120, s2 3120, s3 3123, s4 3099 raw ADC. s1 reached the same dry-air region as s2/s3 in this valid capture. Ranges remained narrow.",
+    "conclusion": "s1's earlier lower dry reading was not a fixed sensor limitation; it could reach the high dry-air region after additional drying/wiping. This supports using the later full-wipe runs when estimating dry endpoints.",
+    "saved_at": "2026-06-29T13:58:50Z",
+    "version": 1
+  }
+}

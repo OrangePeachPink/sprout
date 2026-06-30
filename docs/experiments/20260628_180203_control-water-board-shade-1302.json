@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260628_180203_control-water-board-shade-1302",
+  "notes": {
+    "hypothesis": "If direct skylight on the ESP32/breadboard was causing a large immediate ADC artifact, then shading the ESP32 while leaving the water cup and probes unchanged should produce a visible step change or strong drift in raw water readings.",
+    "method": "All four probes remained in the same cup of water. At about 13:00 CDT, the ESP32/breadboard was shaded after being in direct skylight. The water cup and probes were not shaded or moved. After about 2 min, a 60 s experiment capture was recorded at 1 s cadence from the serial device.",
+    "findings": "Readings remained stable in the saturated/submerged wet-reference band. Medians were s1 997, s2 941, s3 1034, s4 992 raw ADC. Ranges were tight: s1 993-1000, s2 938-944, s3 1031-1037, s4 988-996. CRC failures were 0; dropped rows were 16.",
+    "conclusion": "This run does not show a large immediate measurement shift within the first few minutes after shading the ESP32/breadboard while the probes stayed in water. It does not rule out board heating or thermal-lag effects, because the ESP32/breadboard may still have been at elevated temperature during capture. Longer shaded recovery captures are needed to evaluate return-to-baseline behavior.",
+    "saved_at": "2026-06-29T13:58:50Z",
+    "version": 1
+  }
+}

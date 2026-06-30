@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260628_234458_4th_4_full_wipe_and_full_air_dry_chk_s1",
+  "notes": {
+    "hypothesis": "A final vigorous wipe/air-dry pass should show whether any additional dry-air headroom remains beyond the previous full-wipe captures.",
+    "method": "All four probes were wiped/air-dried again and captured for 60 s at 0.5 s cadence in open-bench dry condition.",
+    "findings": "Medians were s1 3089, s2 3123, s3 3125, s4 3131 raw ADC. Ranges remained narrow; CRC failures were 1. The dry values stayed in the same roughly 3090-3130 endpoint region.",
+    "conclusion": "Additional wiping did not expose a materially higher dry endpoint. For these probes under this setup, the practical dry-air region is about 3090-3130 raw ADC, with per-channel offsets still important.",
+    "saved_at": "2026-06-29T13:58:50Z",
+    "version": 1
+  }
+}

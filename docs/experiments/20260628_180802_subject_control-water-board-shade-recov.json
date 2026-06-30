@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260628_180802_subject_control-water-board-shade-recov",
+  "notes": {
+    "hypothesis": "If direct sun exposure on the ESP32/breadboard creates an immediate ADC artifact, then switching the board exposure state during a live water-cup run should create a visible step or sustained drift while the probes remain in the same water reference.",
+    "method": "All four probes stayed in the same cup of water. The run captured 5 min at 1 s cadence. Per bench note, the setup was switched at about 180 s elapsed so the final about 120 s occurred with direct sun at the tail of the test; the cup/probes were not intentionally changed.",
+    "findings": "The water-reference readings stayed close to their previous saturated levels. Medians were s1 998, s2 941, s3 1036, s4 994 raw ADC. First-to-last movement was small: s1 +6, s2 +7, s3 +1, s4 +6 counts. CRC failures were 1.",
+    "conclusion": "This run does not show a large immediate sunlight step in the water reference. It weakens the hypothesis of a fast photon/direct-sun artifact on the board as the sole cause of the afternoon drift, but it does not exclude slower thermal behavior or a board-temperature effect.",
+    "saved_at": "2026-06-29T13:58:50Z",
+    "version": 1
+  }
+}
