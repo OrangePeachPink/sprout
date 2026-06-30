@@ -1,0 +1,113 @@
+{
+  "experiment_id": "20260629_experiment_capture_failure_recovery",
+  "date_local": "2026-06-29",
+  "lane": "Sage",
+  "status": "recovery_note_for_394_retest_not_fix",
+  "related": {
+    "issues": [322, 335, 394],
+    "pull_requests": [
+      {
+        "number": 378,
+        "state": "merged",
+        "purpose": "session-only !cad,<ms>,temp support on main"
+      }
+    ],
+    "adrs": ["ADR-0011", "ADR-0012", "ADR-0017"]
+  },
+  "failure": {
+    "surface": "Experiment Capture",
+    "ui_error_experiment_id": "20260629_180412_p2_dry_to_watered_test",
+    "manual_diagnostic": "device rejected cadence 1000 ms (nak)",
+    "bench_fallback": "Monitor logging with manual event notes",
+    "current_port_owner": {
+      "source": "logs/.serial-owner.json",
+      "mode": "monitor",
+      "port": "COM6",
+      "pid": 27732,
+      "opened_utc": "2026-06-29T18:06:26.332Z"
+    },
+    "suspected_root_cause": "Host sent session-only !cad,<ms>,temp before flashed firmware supported the ,temp form.",
+    "post_fix_route": "Issue #394 is the Sage-owned post-PR #378 bench retest for #322."
+  },
+  "empty_attempt_folders": [
+    {
+      "experiment_id": "20260629_173741_P02_large_pothos_dry_baseline_to_rewater",
+      "file_count": 0
+    },
+    {
+      "experiment_id": "20260629_173837_P02_large_pothos_dry_baseline_to_rewater",
+      "file_count": 0
+    },
+    {
+      "experiment_id": "20260629_174059_dry-in-soil-p2-then-water",
+      "file_count": 0
+    },
+    {
+      "experiment_id": "20260629_175604_P02_large_pothos_dry_baseline_to_rewater",
+      "file_count": 0
+    },
+    {
+      "experiment_id": "20260629_175818_p2_in_soil_to_watered",
+      "file_count": 0
+    },
+    {
+      "experiment_id": "20260629_180312_p2_dry_pot_sensors_in_soil_to_watered_baselin",
+      "file_count": 0
+    },
+    {
+      "experiment_id": "20260629_180412_p2_dry_to_watered_test",
+      "file_count": 0
+    }
+  ],
+  "source_cross_check": {
+    "host": {
+      "path": "tools/capture/experiment_capture.py",
+      "observed_behavior": "set_cadence builds body cad,<ms>,temp"
+    },
+    "firmware_current_checkout": {
+      "path": "firmware/lib/commands/commands.cpp",
+      "observed_behavior": "handle_cad accepts old cad,<ms> path and persists cadence to NVS"
+    },
+    "process_doc": {
+      "path": "docs/process/BENCH_PREFLIGHT.md",
+      "observed_behavior": "documents earlier fast experiment cadence persisting into monitor logging"
+    }
+  },
+  "interpretation": {
+    "facts": [
+      "P02 Experiment Capture attempts created folders but no capture files.",
+      "Recovered transcript captured a device NAK for cadence 1000 ms.",
+      "Host Experiment Capture sends !cad,<ms>,temp.",
+      "PR #378 describes and fixes the same firmware gap for #322 and has merged to main.",
+      "Issue #394 is routed to Sage for hardware retest evidence."
+    ],
+    "inference": "P02 Experiment Capture failed because host and flashed firmware disagreed on the cadence command contract.",
+    "cautions": [
+      "A red Experiment Capture label while Monitor owns COM6 may be stale UI/error state, not a new root cause.",
+      "Do not file a #335 UX issue unless the error survives a clean PR #378 reflash and a freed COM6 port.",
+      "Root experiments/ folders are gitignored raw-capture artifacts; this sidecar is the tracked recovery record."
+    ]
+  },
+  "recommended_routing": [
+    {
+      "lane": "Sage",
+      "target": "issue #394 / issue #322",
+      "request": "Reflash ESP32 from main, free COM6, confirm !cad,1000,temp ACKs, and confirm CSV plus manifest.json are written."
+    },
+    {
+      "lane": "Firmware",
+      "target": "issue #322",
+      "request": "Re-engage only if a clean post-PR #378 reflash still NAKs the session-only cadence command."
+    },
+    {
+      "lane": "Data/UI",
+      "target": "issue #335",
+      "request": "Defer UX follow-up unless the error persists after correct firmware and a free COM6 port."
+    },
+    {
+      "lane": "Sage",
+      "target": "new evidence PR",
+      "request": "Bundle this recovery pair with the post-PR #378 retest result because PR #383 is already merged."
+    }
+  ]
+}
