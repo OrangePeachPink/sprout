@@ -27,7 +27,7 @@ ADR-0016 ships autonomous dosing **DISARMED** and gates arming on the dry-safety
 (`#93 / #191 / #2 / #215`) — but that chain proves the *hardware* is safe (relays fail off, the watchdog
 resets, the bench passed). Hardware-safe is not the same as **decision-trustworthy**: there is no gate today
 on whether the *reading* justifies watering. Acting on local truth as if it were pot truth is precisely how an
-autonomous loop overwaters. This ADR defines that missing decision-trust gate.
+autonomous loop over-waters. This ADR defines that missing decision-trust gate.
 
 It is explicitly **not** the per-channel raw→band split (that is #170) and **not** the value-locking of bounds
 (that is Sage's probe-orientation round). It is the layer that sits **between** "the band is calibrated" and
@@ -92,15 +92,15 @@ forced doses (ADR-0016) are unaffected — they are an explicit human decision, 
 
 ## Inputs required (design-light-before-build)
 
-These do not block **ratification of the gate model**; they are required before **build**, and are tracked in
-#400:
+These do not block **ratification of the gate model**; they are required before **build**, and are
+tracked in #400:
 
 - **Sage (bench):** the **contact-quality metric** and the **microzone-disagreement threshold** — what "good
   contact" and "disagreement" actually measure on the bench (the probe-orientation / contact-procedure round).
   Until then, thresholds in any implementation are explicit placeholders.
 - **Data:** the **event-annotation layer** + `cal_source` / date / `confidence` / `contact_quality` riding the
   telemetry header (ties #377 `plants.env` + #300). The confidence layer reads this substrate; profiles and
-  contact-quality must be loggable and queryable.
+  contact-quality must be recorded and queryable.
 - **Firmware:** **veto enforcement** in the control loop — the cross-channel disagreement check + contact-quality
   gate evaluated each sweep, extending the arm-gate inside the ADR-0016 supervisor (reusing the `do_sweep` veto
   pattern; no second decision path).
@@ -108,7 +108,7 @@ These do not block **ratification of the gate model**; they are required before 
 ## Rejected alternatives
 
 - **Act on per-channel calibrated bands directly (no confidence layer).** Rejected: #383 proves a calibrated
-  band is local truth; acting on it as pot truth overwaters parched / hydrophobic / tray-confounded plants.
+  band is local truth; acting on it as pot truth over-waters parched / hydrophobic / tray-confounded plants.
   Calibration is necessary, not sufficient.
 - **A single global moisture threshold across plants.** Rejected: #383 plant-pathway diversity (cactus vs
   rootbound vs pothos) — no naive trigger generalizes.
