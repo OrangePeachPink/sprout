@@ -45,7 +45,7 @@
         <h1 style="font-family:var(--font-display); font-weight:700; font-size:22px; line-height:1.05; margin:0; letter-spacing:-0.01em; white-space:nowrap;">Experiment Capture</h1>
         <span style="white-space:nowrap; font-size:9.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--st-predicted); border:1px solid var(--st-predicted); border-radius:var(--r-pill); padding:2px 9px;">experiment mode</span>
       </div>
-      <div style="font-family:var(--font-data); font-size:11px; color:var(--muted);">a bench instrument · raw readings preserved · isolated from the living log</div>
+      <div style="font-family:var(--font-data); font-size:11px; color:var(--muted);">a guided bench instrument · plan → capture → notes · raw readings preserved · isolated from the living log</div>
     </div>
     <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
       <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted);">app v0.7.1</span>
@@ -65,7 +65,7 @@
   <div style="display:flex; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); box-shadow:var(--e1); overflow:hidden;">
     <button onClick="{{ goPlan }}" style="flex:1; display:flex; flex-direction:column; gap:5px; align-items:flex-start; background:transparent; border:none; border-right:1px solid var(--border); padding:13px 18px 0; cursor:pointer; text-align:left;">
       <div style="display:flex; align-items:center; gap:9px;"><span style="display:inline-flex; width:21px; height:21px; align-items:center; justify-content:center; border-radius:999px; background:var(--st-predicted); color:#fff; font-family:var(--font-data); font-weight:700; font-size:11px;">1</span><span style="font-family:var(--font-display); font-weight:600; font-size:15px; color:var(--ink);">Plan</span><sc-if value="{{ planDone }}" hint-placeholder-val="{{ false }}"><span style="font-family:var(--font-data); font-size:12px; color:var(--leaf);">✓</span></sc-if></div>
-      <span style="font-size:11.5px; color:var(--muted);">subject · sampling · source · destination</span>
+      <span style="font-size:11.5px; color:var(--muted);">subject · probes · sampling · duration</span>
       <div style="height:3px; align-self:stretch; margin-top:2px;"><sc-if value="{{ isPlan }}" hint-placeholder-val="{{ true }}"><div style="height:3px; border-radius:3px 3px 0 0; background:var(--st-predicted);"></div></sc-if></div>
     </button>
     <button onClick="{{ goCapture }}" style="flex:1; display:flex; flex-direction:column; gap:5px; align-items:flex-start; background:transparent; border:none; border-right:1px solid var(--border); padding:13px 18px 0; cursor:pointer; text-align:left;">
@@ -89,6 +89,7 @@
       <span style="color:var(--muted);">{{ startLocal }}</span>
       <span style="color:var(--muted);">{{ durationLabel }}</span>
       <span style="color:var(--muted);">{{ rateLabel }}</span>
+      <span style="color:var(--muted);">auto-stop {{ durationLabelPlanned }}</span>
       <span style="color:{{ sourceColor }}; font-weight:600;">{{ sourceLabel }}</span>
       <span style="color:var(--muted);">fw {{ fwVersion }}</span>
       <span style="color:var(--muted);">app v0.7.1</span>
@@ -100,7 +101,7 @@
       <sc-for list="{{ provDetails }}" as="row" hint-placeholder-count="6">
         <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; font-family:var(--font-data); font-size:11.5px; border-bottom:1px dotted var(--border); padding-bottom:6px;">
           <span style="color:var(--muted);">{{ row.label }}</span>
-          <span style="color:{{ row.color }}; text-align:right;">{{ row.val }}</span>
+          <span style="color:{{ row.color }}; text-align:right; word-break:break-word;">{{ row.val }}</span>
         </div>
       </sc-for>
     </div>
@@ -115,32 +116,108 @@
   <sc-if value="{{ isPlan }}" hint-placeholder-val="{{ true }}">
   <div data-screen-label="Plan" style="display:flex; flex-direction:column; gap:14px;">
 
-    <!-- load-draft seam (#326) -->
-    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:var(--surface-2); border:1px dashed var(--border); border-radius:var(--r-tile); padding:11px 16px;">
-      <span style="font-family:var(--font-data); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); border:1px solid var(--border); border-radius:var(--r-pill); padding:2px 8px;">soon</span>
-      <span style="font-size:12.5px; color:var(--muted); line-height:1.4;">Start from an <span style="color:var(--ink); font-weight:600;">agent-drafted plan</span> — a suggested subject, rate, and hypothesis you review before arming.</span>
-      <button onClick="{{ loadDraft }}" style="margin-left:auto; font-family:var(--font-ui); font-size:12px; font-weight:600; color:var(--muted); background:transparent; border:1px solid var(--border); border-radius:var(--r-pill); padding:6px 14px; cursor:pointer; white-space:nowrap;">Load draft</button>
+    <!-- ===== AGENT-DRAFTED PLAN (#326) — review before arming ===== -->
+    <sc-if value="{{ draftWaiting }}" hint-placeholder-val="{{ true }}">
+    <div style="position:relative; overflow:hidden; background:color-mix(in srgb, var(--st-predicted) 5%, var(--surface)); border:1px solid color-mix(in srgb, var(--st-predicted) 35%, var(--border)); border-radius:var(--r-card); box-shadow:var(--e1); padding:18px 20px; display:flex; flex-direction:column; gap:13px;">
+      <div style="position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--st-predicted);"></div>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <span style="display:inline-flex; width:26px; height:26px; align-items:center; justify-content:center; border-radius:8px; background:var(--st-predicted); color:#fff; font-family:var(--font-display); font-weight:700; font-size:14px; flex-shrink:0;">S</span>
+        <div style="display:flex; flex-direction:column; gap:1px;">
+          <span style="font-family:var(--font-display); font-weight:700; font-size:15px; color:var(--ink);">A plan is waiting for you</span>
+          <span style="font-family:var(--font-data); font-size:10.5px; color:var(--st-predicted);">drafted by {{ draftBy }} · review before arming</span>
+        </div>
+        <span style="margin-left:auto; font-size:9.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--st-predicted); border:1px solid var(--st-predicted); border-radius:var(--r-pill); padding:2px 9px; white-space:nowrap;">suggestion</span>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--r-control); overflow:hidden;">
+        <div style="background:var(--surface); padding:9px 12px;"><div style="font-family:var(--font-data); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">subject</div><div style="font-family:var(--font-data); font-size:12.5px; color:var(--ink); margin-top:2px; word-break:break-word;">{{ draftSubject }}</div></div>
+        <div style="background:var(--surface); padding:9px 12px;"><div style="font-family:var(--font-data); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">rate</div><div style="font-family:var(--font-data); font-size:12.5px; color:var(--ink); margin-top:2px;">{{ draftRateLabel }}</div></div>
+        <div style="background:var(--surface); padding:9px 12px;"><div style="font-family:var(--font-data); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">duration</div><div style="font-family:var(--font-data); font-size:12.5px; color:var(--ink); margin-top:2px;">{{ draftDurationLabel }}</div></div>
+      </div>
+      <div style="display:flex; flex-wrap:wrap; gap:7px;">
+        <sc-for list="{{ draftLabelChips }}" as="c" hint-placeholder-count="4">
+          <span style="display:inline-flex; align-items:center; gap:6px; font-family:var(--font-data); font-size:11px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-pill); padding:4px 10px;"><span style="width:8px; height:8px; border-radius:2px; background:{{ c.color }};"></span>{{ c.id }} · {{ c.label }}</span>
+        </sc-for>
+      </div>
+      <div style="font-size:13px; line-height:1.55; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-control); padding:11px 13px;"><span style="font-family:var(--font-data); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--st-predicted);">hypothesis</span><div style="margin-top:5px;">{{ draftHypothesis }}</div></div>
+      <div style="display:flex; align-items:center; gap:11px; flex-wrap:wrap;">
+        <button onClick="{{ acceptDraft }}" style="font-family:var(--font-ui); font-size:13px; font-weight:700; color:#fff; background:var(--st-predicted); border:1px solid var(--st-predicted); border-radius:var(--r-pill); padding:9px 20px; cursor:pointer; box-shadow:var(--e1);">Load into the form →</button>
+        <button onClick="{{ dismissDraft }}" style="font-family:var(--font-ui); font-size:12.5px; font-weight:600; color:var(--ink); background:transparent; border:1px solid var(--border); border-radius:var(--r-pill); padding:8px 16px; cursor:pointer;">Dismiss</button>
+        <span style="font-size:11.5px; color:var(--muted); line-height:1.4; flex:1; min-width:180px;">{{ draftNote }}</span>
+      </div>
     </div>
+    </sc-if>
+
+    <sc-if value="{{ draftLoaded }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:color-mix(in srgb, var(--leaf) 9%, var(--surface)); border:1px solid color-mix(in srgb, var(--leaf) 35%, var(--border)); border-radius:var(--r-tile); padding:10px 16px;">
+      <span style="font-family:var(--font-data); font-size:12px; color:var(--leaf); font-weight:600;">✓ loaded {{ draftBy }}'s draft</span>
+      <span style="font-size:12px; color:var(--muted); line-height:1.4;">Everything below is editable — it's yours now. Nothing records until you arm and confirm.</span>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ draftDismissed }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--surface-2); border:1px dashed var(--border); border-radius:var(--r-tile); padding:9px 16px;">
+      <span style="font-size:12px; color:var(--muted);">Draft dismissed — building the plan by hand.</span>
+      <button onClick="{{ restoreDraft }}" style="margin-left:auto; font-family:var(--font-ui); font-size:11.5px; font-weight:600; color:var(--st-predicted); background:transparent; border:none; cursor:pointer; padding:2px;">restore draft</button>
+    </div>
+    </sc-if>
 
     <div style="display:grid; grid-template-columns:1.35fr 1fr; gap:14px; align-items:start;">
 
-      <!-- LEFT: subject + intent + sampling -->
+      <!-- LEFT: subject + intent · probes · sampling -->
       <div style="display:flex; flex-direction:column; gap:14px;">
-        <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:18px 20px; display:flex; flex-direction:column; gap:14px;">
+
+        <!-- subject + intent (#336 — human note vs machine id) -->
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:18px 20px; display:flex; flex-direction:column; gap:13px;">
           <div style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">What you're capturing</div>
-          <label style="display:flex; flex-direction:column; gap:5px;"><span style="font-size:12px; color:var(--muted);">Subject</span><input value="{{ subject }}" onChange="{{ setSubject }}" placeholder="common-cup" style="font-family:var(--font-data); font-size:14px; color:var(--ink); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-control); padding:9px 11px; outline:none;" style-focus="border-color:var(--st-predicted);"></label>
+          <label style="display:flex; flex-direction:column; gap:5px;">
+            <span style="font-size:12px; color:var(--muted);">Subject <span style="color:var(--muted); opacity:.8;">— a human note, in your words</span></span>
+            <input value="{{ subject }}" onChange="{{ setSubject }}" maxlength="72" placeholder="common-cup" style="font-family:var(--font-ui); font-size:14px; color:var(--ink); background:var(--surface-2); border:1px solid {{ subjectBorder }}; border-radius:var(--r-control); padding:9px 11px; outline:none;" style-focus="border-color:var(--st-predicted);">
+            <div style="display:flex; flex-wrap:wrap; align-items:baseline; gap:5px 9px; font-family:var(--font-data); font-size:10.5px; color:var(--muted);">
+              <sc-if value="{{ subjectEmpty }}" hint-placeholder-val="{{ false }}"><span style="color:var(--st-dry);">A subject is required — it names the run and its folder.</span></sc-if>
+              <sc-if value="{{ subjectOk }}" hint-placeholder-val="{{ true }}"><span>saved as</span><span style="color:var(--st-predicted); word-break:break-all;">{{ expId }}</span><span>· your words stay intact; the id is the machine-safe slug</span></sc-if>
+            </div>
+          </label>
           <label style="display:flex; flex-direction:column; gap:5px;"><span style="font-size:12px; color:var(--muted);">Intent <span style="color:var(--st-predicted);">— what you expect to see</span></span><textarea onChange="{{ setIntent }}" rows="3" placeholder="Characterize probe response across air → water → soil…" style="font-family:var(--font-ui); font-size:13.5px; line-height:1.5; color:var(--ink); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-control); padding:9px 11px; outline:none; resize:vertical;" value="{{ intent }}" style-focus="border-color:var(--st-predicted);"></textarea></label>
         </div>
 
-        <!-- sampling (#323 ordered rates) -->
-        <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:18px 20px; display:flex; flex-direction:column; gap:11px;">
-          <div style="display:flex; align-items:baseline; gap:9px;"><div style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">Sample rate</div><span style="font-size:11.5px; color:var(--muted);">faster → finer detail, bigger file</span></div>
-          <div style="display:flex; gap:7px; flex-wrap:wrap;">
-            <sc-for list="{{ rateOptions }}" as="r" hint-placeholder-count="4">
-              <button onClick="{{ r.pick }}" style="font-family:var(--font-data); font-size:12.5px; font-weight:600; color:{{ r.fg }}; background:{{ r.bg }}; border:1px solid {{ r.bd }}; border-radius:var(--r-pill); padding:7px 15px; cursor:pointer;">{{ r.label }}</button>
+        <!-- probe labels (R1 · #336) -->
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:18px 20px; display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; align-items:baseline; gap:9px; flex-wrap:wrap;"><div style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">Probe labels</div><span style="font-size:11.5px; color:var(--muted);">what each probe is, and where it sits</span></div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <sc-for list="{{ probeRows }}" as="p" hint-placeholder-count="4">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="width:10px; height:10px; border-radius:3px; background:{{ p.color }}; flex-shrink:0;"></span>
+                <span style="font-family:var(--font-data); font-size:12px; font-weight:700; color:var(--ink); width:22px; flex-shrink:0;">{{ p.id }}</span>
+                <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted); width:54px; flex-shrink:0;">{{ p.gpio }}</span>
+                <input value="{{ p.label }}" onChange="{{ p.setLabel }}" placeholder="{{ p.placeholder }}" maxlength="36" style="flex:1; min-width:0; font-family:var(--font-ui); font-size:13px; color:var(--ink); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-control); padding:7px 10px; outline:none;" style-focus="border-color:var(--st-predicted);">
+                <sc-if value="{{ p.primary }}" hint-placeholder-val="{{ false }}"><span style="font-family:var(--font-data); font-size:9px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--st-predicted); border:1px solid var(--st-predicted); border-radius:var(--r-pill); padding:2px 7px; flex-shrink:0;">primary</span></sc-if>
+              </div>
             </sc-for>
           </div>
-          <div style="font-size:12.5px; color:var(--muted); line-height:1.5; background:var(--surface-2); border-radius:var(--r-control); padding:9px 12px;"><span style="color:var(--st-predicted); font-weight:600;">Why {{ rateLabel }}? </span>{{ rateWhy }}</div>
+          <div style="font-size:11.5px; color:var(--muted); line-height:1.5;">Labels travel with the capture — they tag the live channel cards, the chart legend, and the saved readings. They're notes, not calibration.</div>
+        </div>
+
+        <!-- sampling: rate (#323) + duration (R3) -->
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:18px 20px; display:flex; flex-direction:column; gap:14px;">
+          <div style="display:flex; flex-direction:column; gap:11px;">
+            <div style="display:flex; align-items:baseline; gap:9px;"><div style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">Sample rate</div><span style="font-size:11.5px; color:var(--muted);">faster → finer detail, bigger file</span></div>
+            <div style="display:flex; gap:7px; flex-wrap:wrap;">
+              <sc-for list="{{ rateOptions }}" as="r" hint-placeholder-count="4">
+                <button onClick="{{ r.pick }}" style="font-family:var(--font-data); font-size:12.5px; font-weight:600; color:{{ r.fg }}; background:{{ r.bg }}; border:1px solid {{ r.bd }}; border-radius:var(--r-pill); padding:7px 15px; cursor:pointer;">{{ r.label }}</button>
+              </sc-for>
+            </div>
+            <div style="font-size:12.5px; color:var(--muted); line-height:1.5; background:var(--surface-2); border-radius:var(--r-control); padding:9px 12px;"><span style="color:var(--st-predicted); font-weight:600;">Why {{ rateLabel }}? </span>{{ rateWhy }}</div>
+          </div>
+          <div style="height:1px; background:var(--border);"></div>
+          <div style="display:flex; flex-direction:column; gap:11px;">
+            <div style="display:flex; align-items:baseline; gap:9px;"><div style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">Duration</div><span style="font-size:11.5px; color:var(--muted);">a bounded session — it auto-stops here</span></div>
+            <div style="display:flex; gap:7px; flex-wrap:wrap;">
+              <sc-for list="{{ durationOptions }}" as="d" hint-placeholder-count="4">
+                <button onClick="{{ d.pick }}" style="font-family:var(--font-data); font-size:12.5px; font-weight:600; color:{{ d.fg }}; background:{{ d.bg }}; border:1px solid {{ d.bd }}; border-radius:var(--r-pill); padding:7px 15px; cursor:pointer;">{{ d.label }}</button>
+              </sc-for>
+            </div>
+            <div style="font-size:12.5px; color:var(--muted); line-height:1.5; background:var(--surface-2); border-radius:var(--r-control); padding:9px 12px;"><span style="color:var(--st-predicted); font-weight:600;">Auto-stops</span> at {{ durationLabelPlanned }} (≈{{ plannedSamples }} samples at {{ rateLabel }}). The capture process owns the stop — it ends even if the browser closes.</div>
+          </div>
         </div>
       </div>
 
@@ -161,7 +238,7 @@
         <!-- destination + port ownership (#335/#327 guards, shown) -->
         <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:18px 20px; display:flex; flex-direction:column; gap:12px;">
           <div style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">Destination</div>
-          <div style="display:flex; align-items:center; gap:9px; font-family:var(--font-data); font-size:12.5px;"><span style="color:var(--leaf);">🛡</span><span style="color:var(--ink);">{{ destPath }}</span></div>
+          <div style="display:flex; align-items:center; gap:9px; font-family:var(--font-data); font-size:12.5px;"><span style="color:var(--leaf);">🛡</span><span style="color:var(--ink); word-break:break-all;">{{ destPath }}</span></div>
           <div style="font-size:12px; color:var(--muted); line-height:1.5;">Isolated — your <span style="color:var(--leaf); font-weight:600;">living monitor log is never touched</span>. <span style="color:var(--leaf); font-weight:600;">{{ overwriteNote }}</span></div>
           <div style="border-top:1px solid var(--border); padding-top:11px; display:flex; flex-direction:column; gap:9px;">
             <div style="display:flex; align-items:center; gap:8px; font-family:var(--font-data); font-size:11.5px; color:{{ ownerColor }}; font-weight:600;"><span style="width:7px; height:7px; border-radius:999px; background:currentColor;"></span>{{ ownerLabel }}</div>
@@ -176,16 +253,25 @@
 
     <!-- arm / armed -->
     <sc-if value="{{ showArmButton }}" hint-placeholder-val="{{ true }}">
-      <button onClick="{{ arm }}" disabled="{{ armDisabled }}" style="align-self:flex-start; font-family:var(--font-ui); font-size:14px; font-weight:700; color:{{ armFg }}; background:{{ armBg }}; border:1px solid {{ armBg }}; border-radius:var(--r-pill); padding:11px 26px; cursor:{{ armCursor }}; box-shadow:var(--e1);">Arm capture →</button>
+      <div style="display:flex; align-items:center; gap:13px; flex-wrap:wrap;">
+        <button onClick="{{ arm }}" disabled="{{ armDisabled }}" style="font-family:var(--font-ui); font-size:14px; font-weight:700; color:{{ armFg }}; background:{{ armBg }}; border:1px solid {{ armBg }}; border-radius:var(--r-pill); padding:11px 26px; cursor:{{ armCursor }}; box-shadow:var(--e1);">Arm capture →</button>
+        <sc-if value="{{ armBlocked }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px; color:var(--muted); line-height:1.4;">{{ armBlockReason }}</span></sc-if>
+      </div>
     </sc-if>
     <sc-if value="{{ armed }}" hint-placeholder-val="{{ false }}">
       <div style="background:var(--surface); border:1px solid var(--st-predicted); border-radius:var(--r-card); box-shadow:var(--e2); padding:18px 20px; display:flex; flex-direction:column; gap:13px;">
-        <div style="display:flex; align-items:center; gap:9px;"><span style="display:inline-flex; align-items:center; gap:7px; font-family:var(--font-data); font-size:12px; font-weight:700; color:var(--st-predicted);"><span style="width:9px; height:9px; border-radius:999px; background:currentColor; animation:armPulse 1.6s ease-in-out infinite;"></span>ARMED</span><span style="font-size:13px; color:var(--muted);">review, then begin — nothing is recorded until you confirm.</span></div>
-        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--r-control); overflow:hidden;">
-          <div style="background:var(--surface); padding:9px 12px;"><div style="font-family:var(--font-data); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">subject</div><div style="font-family:var(--font-data); font-size:13px; color:var(--ink); margin-top:2px;">{{ subject }}</div></div>
+        <div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap;"><span style="display:inline-flex; align-items:center; gap:7px; font-family:var(--font-data); font-size:12px; font-weight:700; color:var(--st-predicted);"><span style="width:9px; height:9px; border-radius:999px; background:currentColor; animation:armPulse 1.6s ease-in-out infinite;"></span>ARMED</span><span style="font-size:13px; color:var(--muted);">review, then begin — nothing is recorded until you confirm.</span></div>
+        <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--r-control); overflow:hidden;">
+          <div style="background:var(--surface); padding:9px 12px;"><div style="font-family:var(--font-data); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">subject</div><div style="font-family:var(--font-data); font-size:13px; color:var(--ink); margin-top:2px; word-break:break-word;">{{ subject }}</div></div>
           <div style="background:var(--surface); padding:9px 12px;"><div style="font-family:var(--font-data); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">rate</div><div style="font-family:var(--font-data); font-size:13px; color:var(--ink); margin-top:2px;">{{ rateLabel }}</div></div>
+          <div style="background:var(--surface); padding:9px 12px;"><div style="font-family:var(--font-data); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">duration</div><div style="font-family:var(--font-data); font-size:13px; color:var(--ink); margin-top:2px;">{{ durationLabelPlanned }}</div></div>
           <div style="background:var(--surface); padding:9px 12px;"><div style="font-family:var(--font-data); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">source</div><div style="font-family:var(--font-data); font-size:13px; color:{{ sourceColor }}; margin-top:2px;">{{ sourceShort }}</div></div>
-          <div style="background:var(--surface); padding:9px 12px;"><div style="font-family:var(--font-data); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">writes to</div><div style="font-family:var(--font-data); font-size:13px; color:var(--ink); margin-top:2px;">{{ destPath }}</div></div>
+          <div style="background:var(--surface); padding:9px 12px;"><div style="font-family:var(--font-data); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">writes to</div><div style="font-family:var(--font-data); font-size:13px; color:var(--ink); margin-top:2px; word-break:break-all;">{{ destPath }}</div></div>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:7px;">
+          <sc-for list="{{ probeRows }}" as="p" hint-placeholder-count="4">
+            <span style="display:inline-flex; align-items:center; gap:6px; font-family:var(--font-data); font-size:11px; color:var(--ink); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-pill); padding:4px 10px;"><span style="width:8px; height:8px; border-radius:2px; background:{{ p.color }};"></span>{{ p.id }} · {{ p.labelOrDash }}</span>
+          </sc-for>
         </div>
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
           <button onClick="{{ beginRecording }}" style="font-family:var(--font-ui); font-size:14px; font-weight:700; color:#fff; background:var(--leaf); border:1px solid var(--leaf); border-radius:var(--r-pill); padding:11px 26px; cursor:pointer; box-shadow:var(--e1);">● Begin recording</button>
@@ -205,19 +291,23 @@
     <!-- status + primary reading -->
     <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:16px 20px;">
       <span style="display:inline-flex; align-items:center; gap:8px; font-family:var(--font-data); font-size:13px; font-weight:700; color:{{ statusColor }};"><span style="width:9px; height:9px; border-radius:999px; background:currentColor; {{ statusGlow }}"></span>{{ statusLabel }}</span>
-      <div style="display:flex; align-items:baseline; gap:8px;"><span style="font-family:var(--font-data); font-weight:700; font-size:34px; line-height:1; color:var(--ink);">{{ curRaw }}</span><span style="font-family:var(--font-data); font-size:12px; color:var(--muted);">raw · #3</span></div>
+      <div style="display:flex; align-items:baseline; gap:8px;"><span style="font-family:var(--font-data); font-weight:700; font-size:34px; line-height:1; color:var(--ink);">{{ curRaw }}</span><span style="font-family:var(--font-data); font-size:12px; color:var(--muted);">raw · {{ primaryTag }}</span></div>
       <span style="display:inline-flex; align-items:center; gap:7px; font-family:var(--font-ui); font-size:13px; font-weight:600; color:{{ curBandColor }}; background:color-mix(in srgb, {{ curBandColor }} 13%, transparent); border-radius:var(--r-pill); padding:5px 13px;">{{ curBandName }}</span>
-      <span style="margin-left:auto; font-family:var(--font-data); font-size:13px; color:var(--muted);">{{ elapsedLabel }} · {{ sampleCount }} samples</span>
+      <div style="margin-left:auto; display:flex; flex-direction:column; align-items:flex-end; gap:2px;">
+        <span style="font-family:var(--font-data); font-size:13px; color:var(--muted);">{{ elapsedLabel }} · {{ sampleCount }} samples</span>
+        <sc-if value="{{ recording }}" hint-placeholder-val="{{ false }}"><span style="font-family:var(--font-data); font-size:11px; color:var(--st-predicted);">auto-stops in {{ autoStopIn }}</span></sc-if>
+      </div>
     </div>
 
-    <!-- live channel cards (#334) -->
+    <!-- live channel cards (#334) — labelled -->
     <div>
-      <div style="display:flex; align-items:baseline; gap:9px; margin-bottom:8px;"><div style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">Live channels</div><span style="font-size:11.5px; color:var(--muted);">all four probes in the common cup · raw counts</span></div>
+      <div style="display:flex; align-items:baseline; gap:9px; margin-bottom:8px;"><div style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">Live channels</div><span style="font-size:11.5px; color:var(--muted);">your four labelled probes · raw counts</span></div>
       <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
         <sc-for list="{{ channels }}" as="c" hint-placeholder-count="4">
-          <div style="position:relative; overflow:hidden; background:var(--surface); border:1px solid {{ c.borderColor }}; border-radius:var(--r-tile); box-shadow:var(--e1); padding:12px 13px; display:flex; flex-direction:column; gap:7px;">
+          <div style="position:relative; overflow:hidden; background:var(--surface); border:1px solid {{ c.borderColor }}; border-radius:var(--r-tile); box-shadow:var(--e1); padding:12px 13px 12px 16px; display:flex; flex-direction:column; gap:7px;">
             <div style="position:absolute; left:0; top:0; bottom:0; width:4px; background:{{ c.seriesColor }};"></div>
-            <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:var(--font-data); font-size:12px; font-weight:700; color:var(--ink);">{{ c.id }}</span><span style="font-family:var(--font-data); font-size:10px; color:var(--muted);">{{ c.gpio }}</span></div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;"><span style="font-family:var(--font-ui); font-size:12px; font-weight:700; color:var(--ink); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ c.label }}</span><sc-if value="{{ c.primary }}" hint-placeholder-val="{{ false }}"><span style="font-family:var(--font-data); font-size:8.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--st-predicted); flex-shrink:0;">primary</span></sc-if></div>
+            <div style="display:flex; align-items:center; gap:7px; font-family:var(--font-data); font-size:10px; color:var(--muted);"><span>{{ c.id }}</span><span>{{ c.gpio }}</span></div>
             <div style="font-family:var(--font-data); font-weight:700; font-size:24px; line-height:1; color:var(--ink);">{{ c.raw }}</div>
             <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;"><span style="font-family:var(--font-ui); font-size:11px; font-weight:600; color:{{ c.bandColor }};">{{ c.bandName }}</span><span style="font-family:var(--font-data); font-size:10px; color:var(--muted);">±{{ c.spread }}</span></div>
           </div>
@@ -229,7 +319,7 @@
     <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:16px 18px;">
       <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
         <div style="font-family:var(--font-data); font-size:11.5px; color:var(--muted);">raw ADC · 12-bit (0–4095) · <span style="color:var(--ink);">HIGH = drier</span> · no calibrated %, ever</div>
-        <div style="font-family:var(--font-data); font-size:11px; color:var(--muted);">primary <span style="color:var(--st-predicted); font-weight:600;">#3 / GPIO36</span></div>
+        <div style="font-family:var(--font-data); font-size:11px; color:var(--muted);">primary <span style="color:var(--st-predicted); font-weight:600;">{{ primaryLabel }} · {{ primaryTag }}</span></div>
       </div>
       <svg viewBox="0 0 768 300" style="width:100%; height:auto; display:block;" preserveAspectRatio="none">
         <defs>
@@ -295,7 +385,7 @@
         <span style="margin-left:auto; font-family:var(--font-data); font-size:11.5px; color:var(--muted);">raw preserved continuously → {{ destPath }}readings.csv</span>
       </sc-if>
       <sc-if value="{{ stopped }}" hint-placeholder-val="{{ false }}">
-        <span style="display:inline-flex; align-items:center; gap:8px; font-family:var(--font-data); font-size:13px; font-weight:700; color:var(--muted);"><span style="width:9px; height:9px; border-radius:2px; background:var(--muted);"></span>stopped · {{ sampleCount }} samples kept</span>
+        <span style="display:inline-flex; align-items:center; gap:8px; font-family:var(--font-data); font-size:13px; font-weight:700; color:var(--muted);"><span style="width:9px; height:9px; border-radius:2px; background:var(--muted);"></span>{{ stopReasonLabel }} · {{ sampleCount }} samples kept</span>
         <button onClick="{{ goNotes }}" style="margin-left:auto; font-family:var(--font-ui); font-size:14px; font-weight:700; color:#fff; background:var(--st-predicted); border:1px solid var(--st-predicted); border-radius:var(--r-pill); padding:11px 24px; cursor:pointer; box-shadow:var(--e1);">Add notes →</button>
       </sc-if>
     </div>
@@ -310,19 +400,25 @@
 
     <!-- immutable readings (locked) -->
     <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); overflow:hidden;">
-      <div style="display:flex; align-items:center; gap:10px; padding:13px 18px; border-bottom:1px solid var(--border);">
+      <div style="display:flex; align-items:center; gap:10px; padding:13px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap;">
         <span style="font-family:var(--font-display); font-weight:700; font-size:15px;">The readings</span>
         <span style="display:inline-flex; align-items:center; gap:6px; font-family:var(--font-data); font-size:10.5px; font-weight:600; color:var(--leaf); background:color-mix(in srgb, var(--leaf) 12%, transparent); border-radius:var(--r-pill); padding:3px 10px;">🔒 raw · immutable</span>
-        <span style="margin-left:auto; font-family:var(--font-data); font-size:11px; color:var(--muted);">{{ sampleCount }} samples · {{ durationLabel }}</span>
+        <span style="margin-left:auto; font-family:var(--font-data); font-size:11px; color:var(--muted);">{{ sampleCount }} samples · {{ durationLabel }} · {{ stopReasonLabel }}</span>
       </div>
       <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:var(--border);">
         <sc-for list="{{ readouts }}" as="m" hint-placeholder-count="5">
           <div style="background:var(--surface); padding:11px 14px;"><div style="font-family:var(--font-data); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">{{ m.label }}</div><div style="font-family:var(--font-data); font-size:16px; font-weight:700; color:var(--ink); margin-top:3px;">{{ m.val }}</div></div>
         </sc-for>
       </div>
+      <!-- probe labels readback -->
+      <div style="display:flex; flex-wrap:wrap; gap:7px; padding:12px 18px 0;">
+        <sc-for list="{{ probeRows }}" as="p" hint-placeholder-count="4">
+          <span style="display:inline-flex; align-items:center; gap:6px; font-family:var(--font-data); font-size:11px; color:var(--ink); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-pill); padding:4px 10px;"><span style="width:8px; height:8px; border-radius:2px; background:{{ p.color }};"></span>{{ p.id }} · {{ p.labelOrDash }}</span>
+        </sc-for>
+      </div>
       <!-- band time distribution (raw seconds, NO %) -->
       <div style="padding:14px 18px; display:flex; flex-direction:column; gap:7px;">
-        <div style="font-family:var(--font-data); font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">time in each band <span style="text-transform:none; letter-spacing:0;">· primary #3 · seconds, not %</span></div>
+        <div style="font-family:var(--font-data); font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">time in each band <span style="text-transform:none; letter-spacing:0;">· primary {{ primaryLabel }} · seconds, not %</span></div>
         <sc-for list="{{ bandDist }}" as="b" hint-placeholder-count="4">
           <div style="display:flex; align-items:center; gap:10px;">
             <span style="width:96px; font-family:var(--font-ui); font-size:12px; font-weight:600; color:{{ b.color }}; flex-shrink:0;">{{ b.name }}</span>
@@ -335,7 +431,7 @@
 
     <!-- interpretation (#335 notes · --st-predicted) + save resilience (#327) -->
     <div style="background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--st-predicted); border-radius:var(--r-card); box-shadow:var(--e1); overflow:hidden;">
-      <div style="display:flex; align-items:center; gap:10px; padding:13px 18px; border-bottom:1px solid var(--border);">
+      <div style="display:flex; align-items:center; gap:10px; padding:13px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap;">
         <span style="font-family:var(--font-display); font-weight:700; font-size:15px; color:var(--ink);">Your reading of it</span>
         <span style="font-family:var(--font-data); font-size:10.5px; color:var(--st-predicted);">interpretation — kept separate from the raw</span>
         <span style="margin-left:auto; display:inline-flex; align-items:center; gap:7px; font-family:var(--font-data); font-size:11px; color:{{ saveColor }};"><span style="width:7px; height:7px; border-radius:999px; background:currentColor;"></span>{{ autosaveLabel }}</span>
@@ -382,8 +478,9 @@
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{
-  &quot;$preview&quot;: { &quot;width&quot;: 1040, &quot;height&quot;: 1660 },
+  &quot;$preview&quot;: { &quot;width&quot;: 1040, &quot;height&quot;: 1980 },
   &quot;theme&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;light&quot;, &quot;soil&quot;], &quot;default&quot;: &quot;light&quot;, &quot;tsType&quot;: &quot;\&quot;light\&quot; | \&quot;soil\&quot;&quot; },
+  &quot;hasDraft&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Review&quot;, &quot;label&quot;: &quot;Agent draft waiting&quot; },
   &quot;stage&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;plan&quot;, &quot;capture&quot;, &quot;notes&quot;], &quot;default&quot;: &quot;plan&quot;, &quot;tsType&quot;: &quot;\&quot;plan\&quot; | \&quot;capture\&quot; | \&quot;notes\&quot;&quot;, &quot;section&quot;: &quot;Review&quot; },
   &quot;liveDemo&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Review&quot; }
 }">
@@ -395,9 +492,13 @@ class Component extends DCLogic {
     subject: 'common-cup',
     intent: 'Characterize probe response across air \u2192 water \u2192 soil so the band edges are anchored to a controlled sweep, not just the live pot.',
     sampleRateMs: 1000,
+    durationS: 360,              // bounded session (R3) \u2014 auto-stops here
+    labels: ['west', 'east', 'center', 'south'],   // per-probe human notes (R1)
     source: 'device',            // device | synthetic
     portOwner: 'monitor',        // monitor | experiment
+    draftState: (this.props.hasDraft === false) ? 'dismissed' : 'waiting',  // waiting | loaded | dismissed (#326)
     samples: [],                 // {i, vals:[#1,#2,#3,#4]}
+    stopReason: null,            // manual | auto | discard
     confirm: null,               // null | 'stop' | 'discard'
     provExpanded: false,
     notes: { hypothesis:'', method:'', findings:'', conclusion:'' },
@@ -417,6 +518,7 @@ class Component extends DCLogic {
     { id:'#3', gpio:'GPIO36', off:  0, series:'var(--st-predicted)', primary:true },
     { id:'#4', gpio:'GPIO35', off: 22, series:'var(--band-moist)' },
   ];
+  PLACEHOLDERS = ['e.g. rim \u00b7 west', 'e.g. rim \u00b7 east', 'e.g. center', 'e.g. rim \u00b7 south'];
   BANDS = [
     { name:'submerged',    token:'var(--band-saturated)', lo:0,    hi:900  },
     { name:'overwatered',  token:'var(--band-wet)',       lo:900,  hi:1080 },
@@ -438,23 +540,44 @@ class Component extends DCLogic {
     5000: 'a calm cadence for a settling probe over several minutes.',
     30000:'matches the long-running monitor logger \u2014 right for slow dry-downs over hours.',
   };
+  DURATIONS = [
+    { s:60,   label:'1 min' },
+    { s:360,  label:'6 min' },
+    { s:1800, label:'30 min' },
+    { s:3600, label:'1 h' },
+  ];
+  // an agent-prepared plan waiting for review (#326)
+  DRAFT = {
+    subject: 'common-cup \u00b7 air\u2192water\u2192soil sweep',
+    rateMs: 1000,
+    durationS: 360,
+    labels: ['rim \u00b7 west', 'rim \u00b7 east', 'center', 'rim \u00b7 south'],
+    hypothesis: 'Dunking all four probes through air \u2192 water \u2192 soil in one cup should separate sensor bias from soil microsite: in shared water the four raw traces converge to within cross-probe spread, while in air and in soil they fan out by fixed per-probe offsets. This anchors the band edges to a controlled sweep, not the live pot.',
+    by: 'Sage',
+    note: 'Drafted from your last bench session \u2014 a suggestion, not a command. Review and edit anything before you arm; nothing records until you confirm.',
+  };
   // geometry (matches the SVG band rects)
   PL=64; PR=752; PT=16; PB=264; RAW_TOP=3250; RAW_BOT=850;
 
   componentDidUpdate(prev){
     if (prev.theme !== this.props.theme && this.props.theme) this.setState({ theme:this.props.theme });
     if (prev.stage !== this.props.stage && this.props.stage) this.setState({ stage:this.props.stage });
+    if (prev.hasDraft !== this.props.hasDraft && this.props.hasDraft !== undefined)
+      this.setState({ draftState: this.props.hasDraft === false ? 'dismissed' : 'waiting' });
   }
   componentWillUnmount(){ if (this._t) clearInterval(this._t); }
 
+  // sweep shape as progress 0..1 so any duration shows a full air\u2192water\u2192soil arc
   scriptRaw(i){
-    const n=()=> (Math.random()*2-1);
+    const N = Math.max(1, (this._planned || 360) - 1);
+    const p = Math.min(1, i / N);
+    const n = () => (Math.random()*2-1);
     let b;
-    if (i<18) b = 2740 + n()*12;                                  // air-dry plateau
-    else if (i<24) b = 2740 + (1040-2740)*((i-17)/6) + n()*20;    // dunk \u2192 water
-    else if (i<52) b = 1045 + n()*18;                              // saturated / water
-    else if (i<58) b = 1045 + (1300-1045)*((i-51)/6) + n()*20;    // into soil
-    else b = 1300 + Math.min((i-58)*0.8, 130) + n()*22;            // field capacity, slow dry-up
+    if (p < 0.30) b = 2740 + n()*12;                                  // air-dry plateau
+    else if (p < 0.40) b = 2740 + (1040-2740)*((p-0.30)/0.10) + n()*20; // dunk \u2192 water
+    else if (p < 0.62) b = 1045 + n()*18;                             // saturated / water
+    else if (p < 0.72) b = 1045 + (1300-1045)*((p-0.62)/0.10) + n()*20; // into soil
+    else b = 1300 + Math.min((p-0.72)*900, 130) + n()*22;             // field capacity, slow dry-up
     return Math.round(Math.max(900, Math.min(3110, b)));
   }
   genVals(i){
@@ -467,7 +590,10 @@ class Component extends DCLogic {
   xPix(i,n){ const N=Math.max(n-1,40); return this.PL + (Math.min(i,N)/N)*(this.PR-this.PL); }
 
   fmtDur(ms){ const s=Math.floor(ms/1000); const m=Math.floor(s/60); const ss=String(s%60).padStart(2,'0'); return m+':'+ss; }
+  durLabel(s){ const d=this.DURATIONS.find(x=>x.s===s); if(d) return d.label; if(s<60) return s+' s'; const m=s/60; return (Number.isInteger(m)?m:m.toFixed(1))+' min'; }
+  plannedSamples(){ return Math.max(1, Math.round(this.state.durationS*1000 / this.state.sampleRateMs)); }
   primaryVals(){ return this.state.samples.map(s => s.vals[2]); }
+  labelOf(k){ const l=this.state.labels[k]; return (l && l.trim()) ? l : ''; }
   median(a){ if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y); const m=Math.floor(s.length/2); return s.length%2 ? s[m] : Math.round((s[m-1]+s[m])/2); }
 
   // ---- handlers ----
@@ -475,36 +601,47 @@ class Component extends DCLogic {
   goPlan = () => { if (this.state.capState!=='recording') this.setState({ stage:'plan' }); };
   goCapture = () => { if (this.state.capState!=='idle') this.setState({ stage:'capture' }); };
   goNotes = () => { if (this.state.capState==='stopped') this.setState({ stage:'notes' }); };
-  loadDraft = () => {};
   setSubject = (e) => this.setState({ subject: e.target.value });
   setIntent = (e) => this.setState({ intent: e.target.value });
+  setLabel = (i, val) => this.setState(s => { const L=[...s.labels]; L[i]=val; return { labels:L }; });
   setRate = (ms) => this.setState({ sampleRateMs: ms });
+  setDuration = (s) => this.setState({ durationS: s });
   setSourceDevice = () => this.setState({ source:'device' });
   setSourceSynthetic = () => this.setState({ source:'synthetic' });
   releaseMonitor = () => this.setState({ portOwner:'experiment' });
-  arm = () => { if (this.state.portOwner==='experiment') this.setState({ capState:'armed' }); };
+  acceptDraft = () => this.setState({
+    subject:this.DRAFT.subject, sampleRateMs:this.DRAFT.rateMs, durationS:this.DRAFT.durationS,
+    labels:[...this.DRAFT.labels], intent:this.DRAFT.hypothesis, draftState:'loaded',
+  });
+  dismissDraft = () => this.setState({ draftState:'dismissed' });
+  restoreDraft = () => this.setState({ draftState:'waiting' });
+  arm = () => { if (this.state.portOwner==='experiment' && this.state.subject.trim()) this.setState({ capState:'armed' }); };
   disarm = () => this.setState({ capState:'idle' });
   beginRecording = () => {
     const now = new Date();
     const local = now.toLocaleTimeString('en-US',{ timeZone:'America/Chicago', hour12:false });
     const utc = now.toISOString().replace('.000','').slice(0,19)+'Z';
-    this.setState({ capState:'recording', stage:'capture', samples:[], startClock:{ local: local+' CDT', utc } });
+    const planned = this.plannedSamples();
+    this._planned = planned;
+    this.setState({ capState:'recording', stage:'capture', samples:[], stopReason:null, startClock:{ local: local+' CDT', utc } });
     if (this._t) clearInterval(this._t);
     if (this.props.liveDemo === false) return;     // honest "no synthetic" path: wait for real device
     this._t0 = Date.now();
+    const FRAME = 80;
+    const perMs = Math.max(8, 7000/planned);       // fill the planned run in ~7s of demo time
     this._t = setInterval(() => {
       this.setState(s => {
         if (s.capState!=='recording') return null;
-        // wall-clock catch-up: robust to timer throttling so the trace fills smoothly (~1 sample / 120ms)
-        const target = Math.min(600, Math.floor((Date.now()-this._t0)/120) + 1);
+        const target = Math.min(planned, Math.floor((Date.now()-this._t0)/perMs) + 1);
         if (s.samples.length >= target) return null;
         const add = [];
         for (let i=s.samples.length; i<target; i++) add.push({ i, vals: this.genVals(i) });
         const next = s.samples.concat(add);
-        if (next.length >= 600) clearInterval(this._t);
-        return { samples: next, capState: next.length>=600 ? 'stopped' : 'recording' };
+        const done = next.length >= planned;
+        if (done) clearInterval(this._t);
+        return { samples: next, capState: done?'stopped':'recording', stopReason: done?'auto':null };
       });
-    }, 120);
+    }, FRAME);
   };
   requestStop = () => this.setState({ confirm:'stop' });
   requestDiscard = () => this.setState({ confirm:'discard' });
@@ -512,8 +649,8 @@ class Component extends DCLogic {
   confirmYes = () => {
     const c = this.state.confirm;
     if (this._t) clearInterval(this._t);
-    if (c==='stop') this.setState({ capState:'stopped', confirm:null });
-    else if (c==='discard') this.setState({ capState:'idle', stage:'plan', samples:[], confirm:null, startClock:null });
+    if (c==='stop') this.setState({ capState:'stopped', stopReason:'manual', confirm:null });
+    else if (c==='discard') this.setState({ capState:'idle', stage:'plan', samples:[], stopReason:null, confirm:null, startClock:null });
   };
   toggleProv = () => this.setState(s => ({ provExpanded: !s.provExpanded }));
   setHyp = (e) => this.setState(s => ({ notes:{...s.notes, hypothesis:e.target.value}, notesDirty:true }));
@@ -521,7 +658,7 @@ class Component extends DCLogic {
   setFind = (e) => this.setState(s => ({ notes:{...s.notes, findings:e.target.value}, notesDirty:true }));
   setConcl = (e) => this.setState(s => ({ notes:{...s.notes, conclusion:e.target.value}, notesDirty:true }));
   saveNotes = () => { const u=new Date().toISOString().slice(0,19)+'Z'; this.setState(s => ({ notesVersion:s.notesVersion+1, notesSavedAt:u, notesDirty:false })); };
-  newRun = () => { if (this._t) clearInterval(this._t); this.setState({ stage:'plan', capState:'idle', samples:[], startClock:null, notes:{hypothesis:'',method:'',findings:'',conclusion:''}, notesVersion:0, notesSavedAt:null, notesDirty:false, portOwner:'monitor' }); };
+  newRun = () => { if (this._t) clearInterval(this._t); this.setState({ stage:'plan', capState:'idle', samples:[], stopReason:null, startClock:null, notes:{hypothesis:'',method:'',findings:'',conclusion:''}, notesVersion:0, notesSavedAt:null, notesDirty:false, portOwner:'monitor', draftState: (this.props.hasDraft===false)?'dismissed':'waiting' }); };
 
   renderVals(){
     const st = this.state;
@@ -534,30 +671,37 @@ class Component extends DCLogic {
     const mean = n ? Math.round(pv.reduce((a,b)=>a+b,0)/n) : null;
     const med = n ? this.median(pv) : null;
     const durMs = n * st.sampleRateMs;
+    const planned = this.plannedSamples();
     // slope counts/min over last <=20 samples
     let slope = '\u2014';
     if (n>=3){ const w=Math.min(n,20); const a=pv[n-w], b=pv[n-1]; const mins=((w-1)*st.sampleRateMs)/60000; if(mins>0){ const v=Math.round((b-a)/mins); slope=(v>=0?'+':'')+v+'/min'; } }
     const rate = this.RATES.find(r=>r.ms===st.sampleRateMs) || this.RATES[1];
 
-    // chart series (4 probes)
+    // chart series (4 probes) \u2014 strided to keep the SVG light at long durations
+    const stride = Math.max(1, Math.ceil(n/360));
+    const idxs = [];
+    for (let i=0;i<n;i+=stride) idxs.push(i);
+    if (n>0 && idxs[idxs.length-1] !== n-1) idxs.push(n-1);
+    const curX = n ? this.xPix(n-1,n).toFixed(1) : '0';
+    const curY = cur!=null ? this.yPix(cur).toFixed(1) : '0';
     const series = this.PROBES.map((p,k) => ({
-      points: st.samples.map((s,idx)=> this.xPix(idx,n).toFixed(1)+','+this.yPix(s.vals[k]).toFixed(1)).join(' '),
+      points: idxs.map(i=> this.xPix(i,n).toFixed(1)+','+this.yPix(st.samples[i].vals[k]).toFixed(1)).join(' '),
       color: p.series,
       width: p.primary ? 2.4 : 1.2,
       opacity: p.primary ? 1 : 0.42,
     }));
-    const curX = n ? this.xPix(n-1,n).toFixed(1) : '0';
-    const curY = cur!=null ? this.yPix(cur).toFixed(1) : '0';
     let areaPoints = '';
-    if (n){ const pts = st.samples.map((s,idx)=> this.xPix(idx,n).toFixed(1)+','+this.yPix(s.vals[2]).toFixed(1)).join(' '); areaPoints = this.PL+','+this.PB+' '+pts+' '+curX+','+this.PB; }
+    if (n){ const pts = idxs.map(i=> this.xPix(i,n).toFixed(1)+','+this.yPix(st.samples[i].vals[2]).toFixed(1)).join(' '); areaPoints = this.PL+','+this.PB+' '+pts+' '+curX+','+this.PB; }
 
-    // live channel cards
+    // live channel cards (labelled)
     const channels = this.PROBES.map((p,k) => {
       const v = n ? st.samples[n-1].vals[k] : null;
       const last = st.samples.slice(-12).map(s=>s.vals[k]);
       const spread = last.length>1 ? (Math.max(...last)-Math.min(...last)) : 0;
       const band = v!=null ? this.classify(v) : null;
-      return { id:p.id, gpio:p.gpio, seriesColor:p.series, raw: v!=null? String(v):'\u2014', bandName: band?band.name:'\u2014', bandColor: band?band.token:'var(--muted)', spread: String(spread), borderColor: p.primary?'var(--st-predicted)':'var(--border)' };
+      return { id:p.id, gpio:p.gpio, seriesColor:p.series, primary:!!p.primary, label: this.labelOf(k) || p.id,
+        raw: v!=null? String(v):'\u2014', bandName: band?band.name:'\u2014', bandColor: band?band.token:'var(--muted)',
+        spread: String(spread), borderColor: p.primary?'var(--st-predicted)':'var(--border)' };
     });
 
     // band time distribution (primary) \u2014 seconds, NO %
@@ -566,7 +710,7 @@ class Component extends DCLogic {
     const maxC = Math.max(1, ...Object.values(counts));
     const bandDist = this.BANDS.filter(b=>counts[b.name]).sort((a,b)=>counts[b.name]-counts[a.name]).map(b => ({
       name:b.name, color:b.token, barW: Math.round((counts[b.name]/maxC)*100)+'%',
-      label: (counts[b.name]*st.sampleRateMs/1000)+'s · '+counts[b.name],
+      label: (counts[b.name]*st.sampleRateMs/1000)+'s \u00b7 '+counts[b.name],
     }));
 
     const bandLegend = this.BANDS.map(b => ({ name:b.name, color:b.token }));
@@ -592,40 +736,67 @@ class Component extends DCLogic {
     const ownerLabel = held ? 'port held by Monitor logger' : 'port owned by Experiment Capture';
     const ownerColor = held ? 'var(--st-dry)' : 'var(--leaf)';
 
-    // expId / dest
-    const slug = (st.subject||'capture').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'capture';
+    // subject \u2192 expId / dest (human note vs machine slug, #336)
+    const subjectEmpty = !st.subject.trim();
+    const slug = (st.subject||'capture').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,48).replace(/-$/,'') || 'capture';
     const expId = this.PLAN_DATE+'_'+slug+'_01';
     const destPath = 'experiments/'+expId+'/';
+
+    // probe rows (label editors + readback)
+    const probeRows = this.PROBES.map((p,k) => ({
+      id:p.id, gpio:p.gpio, color:p.series, primary:!!p.primary,
+      label: st.labels[k] || '', placeholder: this.PLACEHOLDERS[k],
+      labelOrDash: this.labelOf(k) || '(unlabeled)',
+      setLabel: (e)=>this.setLabel(k, e.target.value),
+    }));
+    const primaryLabel = this.labelOf(2) || '#3';
 
     // provenance details (available vs design-for-later)
     const muted='var(--muted)'; const later='var(--st-predicted)';
     const provDetails = [
       { label:'UTC start', val: st.startClock? st.startClock.utc : dash, color:muted },
+      { label:'planned duration', val: this.durLabel(st.durationS)+' \u00b7 auto-stop', color:muted },
+      { label:'stop reason', val: st.capState==='stopped' ? (st.stopReason==='auto'?'auto \u00b7 duration reached':'manual') : '\u2014 in progress', color:muted },
+      { label:'probe labels', val: this.PROBES.map((p,k)=> p.id+' '+(this.labelOf(k)||'\u2014')).join(' \u00b7 '), color:muted },
       { label:'signal chain', val:'trimmed mean 100 (drop 15/15)', color:muted },
-      { label:'calibration', val:'uncalibrated · cross-pin (C1 #170)', color:muted },
+      { label:'calibration', val:'uncalibrated \u00b7 cross-pin (C1 #170)', color:muted },
       { label:'firmware version', val: this.FW, color:muted },
-      { label:'firmware git-rev', val:'\u2014 unavailable · #329', color:later },
-      { label:'board id / capability', val:'\u2014 unavailable · #273', color:later },
-      { label:'sensor_type profile', val:'\u2014 unavailable · #274', color:later },
+      { label:'firmware git-rev', val:'\u2014 unavailable \u00b7 #329', color:later },
+      { label:'board id / capability', val:'\u2014 unavailable \u00b7 #273', color:later },
+      { label:'sensor_type profile', val:'\u2014 unavailable \u00b7 #274', color:later },
       { label:'app version', val:'v0.7.1', color:muted },
     ];
 
-    // rate option chips
+    // rate + duration option chips
     const rateOptions = this.RATES.map(r => {
       const on = r.ms===st.sampleRateMs;
       return { label:r.label, pick:()=>this.setRate(r.ms),
         fg: on?'#fff':'var(--ink)', bg: on?'var(--st-predicted)':'var(--surface-2)', bd: on?'var(--st-predicted)':'var(--border)' };
     });
+    const durationOptions = this.DURATIONS.map(d => {
+      const on = d.s===st.durationS;
+      return { label:d.label, pick:()=>this.setDuration(d.s),
+        fg: on?'#fff':'var(--ink)', bg: on?'var(--st-predicted)':'var(--surface-2)', bd: on?'var(--st-predicted)':'var(--border)' };
+    });
 
-    // source button styles
-    const dev = st.source==='device';
-    const armable = st.portOwner==='experiment';
+    // arm gating
+    const armable = st.portOwner==='experiment' && !subjectEmpty;
+    const armBlockReason = held ? 'Release the Monitor first so Capture can own '+this.PORT+'.' : (subjectEmpty ? 'Give the run a subject before arming.' : '');
+
+    // draft (#326)
+    const D = this.DRAFT;
+    const draftRate = this.RATES.find(r=>r.ms===D.rateMs) || {};
+    const draftLabelChips = D.labels.map((l,k)=> ({ id:this.PROBES[k].id, label:l, color:this.PROBES[k].series }));
 
     // notes save state
     const saved = st.notesSavedAt;
     const autosaveLabel = st.notesDirty ? 'editing \u2014 draft autosaved' : (saved ? 'saved locally' : 'no note yet');
     const saveColor = st.notesDirty ? 'var(--st-dry)' : (saved ? 'var(--leaf)' : 'var(--muted)');
-    const savedLabel = saved ? ('saved '+saved+' · v'+st.notesVersion) : 'not saved yet · drafts autosave as you type';
+    const savedLabel = saved ? ('saved '+saved+' \u00b7 v'+st.notesVersion) : 'not saved yet \u00b7 drafts autosave as you type';
+
+    // capture status / auto-stop countdown
+    const remaining = Math.max(0, planned - n);
+    const stopReasonLabel = st.stopReason==='auto' ? 'auto-stopped \u00b7 duration reached' : 'stopped';
 
     // confirm copy
     const c = st.confirm;
@@ -648,20 +819,37 @@ class Component extends DCLogic {
       isPlan: st.stage==='plan', isCapture: st.stage==='capture', isNotes: st.stage==='notes',
       planDone: st.capState!=='idle', captureDone: st.capState==='stopped',
 
-      // plan
-      loadDraft:this.loadDraft,
+      // draft (#326)
+      draftWaiting: st.draftState==='waiting', draftLoaded: st.draftState==='loaded', draftDismissed: st.draftState==='dismissed',
+      acceptDraft:this.acceptDraft, dismissDraft:this.dismissDraft, restoreDraft:this.restoreDraft,
+      draftSubject: D.subject, draftRateLabel: draftRate.label || '1 s', draftDurationLabel: this.durLabel(D.durationS),
+      draftHypothesis: D.hypothesis, draftBy: D.by, draftNote: D.note, draftLabelChips,
+
+      // plan \u2014 subject/intent
       subject: st.subject, setSubject:this.setSubject,
+      subjectEmpty, subjectOk: !subjectEmpty, subjectBorder: subjectEmpty ? 'var(--st-dry)' : 'var(--border)',
       intent: st.intent, setIntent:this.setIntent,
+
+      // plan \u2014 probe labels (R1)
+      probeRows, primaryLabel,
+
+      // plan \u2014 sampling + duration
       rateOptions, rateLabel: rate.label, rateWhy: this.RATE_WHY[st.sampleRateMs],
+      durationOptions, durationLabelPlanned: this.durLabel(st.durationS), plannedSamples: planned,
+
+      // plan \u2014 source + destination
       setSourceDevice:this.setSourceDevice, setSourceSynthetic:this.setSourceSynthetic,
       sourceIsSynthetic: syn, sourceLabel, sourceShort, sourceColor,
-      devFg: dev?'#fff':'var(--ink)', devBg: dev?'var(--leaf)':'var(--surface-2)', devBd: dev?'var(--leaf)':'var(--border)',
+      devFg: !syn?'#fff':'var(--ink)', devBg: !syn?'var(--leaf)':'var(--surface-2)', devBd: !syn?'var(--leaf)':'var(--border)',
       synFg: syn?'#fff':'var(--muted)', synBg: syn?'var(--st-fault)':'var(--surface-2)', synBd: syn?'var(--st-fault)':'var(--border)',
       expId, destPath, overwriteNote: 'id is free \u2014 a new run never overwrites; the next is _02.',
       releaseMonitor:this.releaseMonitor,
+
+      // arm
       showArmButton: st.capState==='idle', armed: st.capState==='armed',
       arm:this.arm, disarm:this.disarm, beginRecording:this.beginRecording,
       armDisabled: !armable, armFg: armable?'#fff':'var(--muted)', armBg: armable?'var(--st-predicted)':'var(--border)', armCursor: armable?'pointer':'not-allowed',
+      armBlocked: !armable, armBlockReason,
 
       // capture
       recording: st.capState==='recording', stopped: st.capState==='stopped',
@@ -669,10 +857,11 @@ class Component extends DCLogic {
       statusGlow: st.capState==='recording'?'animation:liveGlow 1.8s ease-in-out infinite;':'',
       statusLabel: st.capState==='recording'?'recording':'stopped',
       curRaw: cur!=null? String(cur):'\u2014', curBandName: curBand?curBand.name:'\u2014', curBandColor: curBand?curBand.token:'var(--muted)',
-      elapsedLabel: this.fmtDur(durMs), sampleCount: n,
+      primaryTag: '#3 / GPIO36',
+      elapsedLabel: this.fmtDur(durMs), sampleCount: n, autoStopIn: this.fmtDur(remaining*st.sampleRateMs),
       channels, series, curX, curY, areaPoints, bandLegend, readouts,
       hasSamples: n>0, noSamples: n===0,
-      requestStop:this.requestStop, requestDiscard:this.requestDiscard,
+      requestStop:this.requestStop, requestDiscard:this.requestDiscard, stopReasonLabel,
 
       // provenance
       provVisible: st.capState!=='idle',
