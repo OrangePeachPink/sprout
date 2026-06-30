@@ -135,22 +135,3 @@ constexpr int           HEALTH_SAMPLES    = 8;       // cheap burst; trim_each=1
 // in lib/irrigation). The live firmware surfaces per-channel health in the boot banner
 // today; the supervisor folds this threshold in when the autonomous loop is wired (#94).
 constexpr uint8_t IRRIG_MAX_HEALTH_WARN = 3;
-
-// --- Autonomous irrigation policy (#227, ADR-0016) — PROVISIONAL ------------
-// Conservative starting values for the supervisor's autonomous dosing. Real
-// dose / soak / thresholds come from calibration (#170 / #192) — these exist so
-// the loop compiles and runs; a comment, not a guess dressed as truth.
-//
-// SAFETY: autonomous dosing ships DISARMED (the irrigation arm gate defaults
-// OFF, #227). The device samples + decides + logs but never doses on its own
-// until the bench arms it via `!auto,on` — and only after the dry-safety chain
-// (#93 → #191 → #2 → #215) has passed on real hardware. Manual `!water` (an
-// operator forced dose) works regardless. Every dose is still bounded by
-// PUMP_PULSE_MAX_MS, the hard ceiling kept under WDT_TIMEOUT_MS.
-constexpr uint32_t IRRIG_DOSE_MS            = 1500;     // pump run per autonomous dose (<= PUMP_PULSE_MAX_MS)
-constexpr uint32_t IRRIG_SOAK_MS           = 300000UL; // 5 min lockout: let water migrate to the probe before re-deciding
-constexpr uint32_t IRRIG_SETTLE_MS         = 5000;     // post-dose settle (motor/supply recovery) before re-sampling
-constexpr uint8_t  IRRIG_MAX_DOSES         = 3;        // consecutive non-improving doses -> latch a no-improvement fault
-constexpr uint16_t IRRIG_MIN_IMPROVEMENT_RAW = 80;     // a dose must drop the trimmed-mean raw by >= this to count as progress
-static_assert(IRRIG_DOSE_MS <= PUMP_PULSE_MAX_MS,
-              "autonomous dose must fit under the hard pump ceiling");
