@@ -21,6 +21,10 @@ the vehicle that *executes* this list at release time; this doc is the source-of
 - [ ] **Location/coordinates grep** — no real lat/lon decimals, no committed `config/location.local.json`, no
   operator coordinates in tracked files *or* history. Templates carry placeholder city-center values only
   (PRD-0002 R6 / ADR-0013 §3 / ADR-0015).
+- [ ] **Screenshots cropped to content** — every committed image (evidence, docs, README, PR attachments) is
+  cropped to the app / content area only: **no** browser chrome (bookmarks bar, toolbar, tabs, URL bar), **no**
+  OS chrome (taskbar, system tray, notifications), **no** other windows. Browser/OS chrome leaks names, handles,
+  visited sites, and file paths even when the app content itself is clean (ADR-0015 *Screenshots*).
 - [ ] **`.gitignore` audit** — `.env*`, secrets, build outputs, `config/location.local.json`, local-only folders all covered.
 
 ## Legal & community-health
