@@ -84,6 +84,22 @@ How far a feature or sensor configuration has progressed through *physical* vali
 - *(Design: add the brand/voice/token terms, the "character beside the instrument, not on top of it" rule,
   etc.)*
 
+## Onboarding & developer experience (DX)
+
+- **Co-equal routes** — the two first-class ways to do firmware dev: **VS Code + PlatformIO** (local) and
+  **GitHub Codespaces** (browser). Neither is "the" way; the **Arduino IDE is dropped project-wide** (#261).
+- **Contributors Welcome** — the living list of where outside help is especially wanted and how to start
+  ([`docs/CONTRIBUTORS_WELCOME.md`](CONTRIBUTORS_WELCOME.md)); at launch its items graduate into
+  `help wanted` issues (#266).
+- **Developer front door** — the contributor-onboarding copy surface
+  ([`docs/contributing/developer-front-door.copy.md`](contributing/developer-front-door.copy.md)) — the "it
+  just works" entry into the project; DX owns the words, Design owns the render (#136).
+- **Three-command firmware loop** — `just build` / `just test-native` / `just flash`. Build and test are
+  **hardware-free** (so is CI); only **flash** needs the ESP32 on USB. The `just` recipes wrap PlatformIO and
+  add `-d firmware` so the path is always right (#261).
+- **`just preview`** — serve a design `.dc.html` page over `http://` so its components load (the `file://`
+  protocol blocks the `fetch()` they use) (#190).
+
 ## User-facing 👤 (DX / Design)
 
 - *(DX / Design: warm, clear definitions a non-coder owner reads — what the bands mean, "what Sprout is
