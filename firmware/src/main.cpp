@@ -34,13 +34,16 @@
 #endif
 
 /* Per-boot identity (#188): friendly name, never a hardware fingerprint. */
-static char g_device_id[32]    = "Sprout ESP32";
+static char g_device_id[32] = "Sprout ESP32";
 static bool g_device_id_custom = false;
-static char g_session_id[12]   = "000000";
+static char g_session_id[12] = "000000";
 
 /* Sweep cadence (ms): runtime-settable via !cad (#63), persisted to NVS (#90). */
-static unsigned long g_cadence_ms     = READ_INTERVAL_MS;
-static bool          g_cadence_from_nvs = false;
+static unsigned long g_cadence_ms = READ_INTERVAL_MS;
+static bool g_cadence_from_nvs = false;
+/* true when the live cadence is a session-only !cad,temp override (#322): not
+ * persisted, reverts to the saved/compiled default on reset. */
+static bool g_cadence_temp = false;
 
 /* NVS store: opened once in commands_init(), kept open for the session (#90). */
 static Preferences g_prefs;
@@ -57,12 +60,12 @@ static run_meta_t g_run_meta;
 static moisture_cfg_t cfg = {
     SAMPLES_PER_READ,
     SAMPLES_TRIM,
-    60,     /* deadband_raw */
-    3000,   /* confirm_ms_soil (TESTING; prod 8000) */
-    3000,   /* confirm_ms_dry  (TESTING; prod 8000) */
-    2000,   /* confirm_ms_wet  (TESTING; prod 3500) */
+    60, /* deadband_raw */
+    3000, /* confirm_ms_soil (TESTING; prod 8000) */
+    3000, /* confirm_ms_dry  (TESTING; prod 8000) */
+    2000, /* confirm_ms_wet  (TESTING; prod 3500) */
     READ_INTERVAL_MS,
-    250,    /* spread_warn_raw */
+    250, /* spread_warn_raw */
     /* boundary (descending raw): 7-band scheme (#3). ENDPOINTS RATIFIED against the
      * #248 common-cup anchors (ADR-0006 §6). Interior [1..3] still interpolated —
      * pending the controlled dry-down. See lib/moisture_classifier for semantics. */
@@ -75,7 +78,8 @@ static moisture_state_t state[NUM_SENSORS];
 
 /* Fail-safe: drive every relay to its de-energized level.
  * Called FIRST in setup() and passed as a callback to the commands module. */
-static void allRelaysOff() {
+static void allRelaysOff()
+{
     for (int ch = 0; ch < NUM_SENSORS; ch++) {
         pinMode(RELAY_PINS[ch], OUTPUT);
         digitalWrite(RELAY_PINS[ch], RELAY_OFF_LEVEL);
@@ -83,30 +87,36 @@ static void allRelaysOff() {
 }
 
 /* Drive ONE channel's relay on/off — the single relay-control point (#215). */
-static void pumpSet(int ch, bool on) {
+static void pumpSet(int ch, bool on)
+{
     if (ch < 0 || ch >= NUM_SENSORS) return;
     digitalWrite(RELAY_PINS[ch], on ? RELAY_ON_LEVEL : RELAY_OFF_LEVEL);
 }
 
 /* Sample one channel into buf: discard for mux/S&H settle, then fill burst. */
-static void sampleChannel(int ch, uint16_t *buf) {
+static void sampleChannel(int ch, uint16_t *buf)
+{
     int pin = SENSOR_PINS[ch];
-    for (int d = 0; d < ADC_DISCARD; d++) (void)analogRead(pin);
-    for (int i = 0; i < SAMPLES_PER_READ; i++) buf[i] = (uint16_t)analogRead(pin);
+    for (int d = 0; d < ADC_DISCARD; d++)
+        (void)analogRead(pin);
+    for (int i = 0; i < SAMPLES_PER_READ; i++)
+        buf[i] = (uint16_t)analogRead(pin);
 }
 
 /* ---- provenance header -------------------------------------------------- */
 
-static void printHeader() {
-    char buf[256];  /* per-channel name@position can run long on the sensors line */
-    int  n;
+static void printHeader()
+{
+    char buf
+        [256]; /* per-channel name@position can run long on the sensors line */
+    int n;
     Serial.println();
-    Serial.println(
-        "# plants telemetry  schema_version=1  contract=docs/TELEMETRY_SCHEMA.md@v1");
+    Serial.println("# plants telemetry  schema_version=1  "
+                   "contract=docs/TELEMETRY_SCHEMA.md@v1");
 #ifdef WDT_WEDGE_TEST
-    Serial.println(
-        "# *** WDT WEDGE-TEST BUILD (esp32dev_wdttest) *** "
-        "!wedge strands ch0 + hangs the loop -> watchdog must reset. NOT a ship build.");
+    Serial.println("# *** WDT WEDGE-TEST BUILD (esp32dev_wdttest) *** "
+                   "!wedge strands ch0 + hangs the loop -> watchdog must "
+                   "reset. NOT a ship build.");
 #endif
     snprintf(buf, sizeof(buf), "# fw=%s  git=%s  built=%s  run=%s",
              PLANTS_FW_VERSION, GIT_REV, __DATE__ " " __TIME__,
@@ -117,46 +127,53 @@ static void printHeader() {
              g_device_id, g_device_id_custom ? "custom" : "default",
              ESP.getChipModel());
     Serial.println(buf);
-    snprintf(buf, sizeof(buf), "# session_id=%s  cadence_ms=%lu (%s)",
-             g_session_id, g_cadence_ms, g_cadence_from_nvs ? "nvs" : "default");
+    snprintf(
+        buf, sizeof(buf), "# session_id=%s  cadence_ms=%lu  cadence_src=%s",
+        g_session_id, g_cadence_ms,
+        g_cadence_temp ? "temp" : (g_cadence_from_nvs ? "nvs" : "default"));
     Serial.println(buf);
     n = snprintf(buf, sizeof(buf), "# sensors:");
     for (int i = 0; i < NUM_SENSORS && n < (int)sizeof(buf); i++)
-        n += snprintf(buf + n, sizeof(buf) - n, " ch%d=GPIO%d/%s@%s",
-                      i, SENSOR_PINS[i], SENSOR_NAMES[i],
+        n += snprintf(buf + n, sizeof(buf) - n, " ch%d=GPIO%d/%s@%s", i,
+                      SENSOR_PINS[i], SENSOR_NAMES[i],
                       run_meta_position(&g_run_meta, i));
     if (n < (int)sizeof(buf))
         snprintf(buf + n, sizeof(buf) - n, "  (model=%s)", SENSOR_MODEL);
     Serial.println(buf);
     n = snprintf(buf, sizeof(buf), "# health:");
     for (int i = 0; i < NUM_SENSORS && n < (int)sizeof(buf); i++)
-        n += snprintf(buf + n, sizeof(buf) - n, " ch%d=%s",
-                      i, telemetry_quality_flag(&state[i]));
+        n += snprintf(buf + n, sizeof(buf) - n, " ch%d=%s", i,
+                      telemetry_quality_flag(&state[i]));
     if (n < (int)sizeof(buf))
-        snprintf(buf + n, sizeof(buf) - n,
-                 "  (NO_SIGNAL/SUSPECT = probe fault; supervisor won't water it, "
-                 "latch x%u)", (unsigned)IRRIG_MAX_HEALTH_WARN);
+        snprintf(
+            buf + n, sizeof(buf) - n,
+            "  (NO_SIGNAL/SUSPECT = probe fault; supervisor won't water it, "
+            "latch x%u)",
+            (unsigned)IRRIG_MAX_HEALTH_WARN);
     Serial.println(buf);
     n = snprintf(buf, sizeof(buf), "# cal bounds(dry>wet):");
     for (int i = 0; i < MOISTURE_BOUNDARY_COUNT && n < (int)sizeof(buf); i++)
-        n += snprintf(buf + n, sizeof(buf) - n, " %u", (unsigned)cfg.boundary[i]);
+        n += snprintf(buf + n, sizeof(buf) - n, " %u",
+                      (unsigned)cfg.boundary[i]);
     Serial.println(buf);
-    snprintf(buf, sizeof(buf),
-             "# cfg: smp=%u trim=%u db=%u confirm_ms=%lu/%lu/%lu spr=%u discard=%u",
-             (unsigned)cfg.sample_count, (unsigned)cfg.trim_each_side,
-             (unsigned)cfg.deadband_raw,
-             (unsigned long)cfg.confirm_ms_soil, (unsigned long)cfg.confirm_ms_dry,
-             (unsigned long)cfg.confirm_ms_wet,
-             (unsigned)cfg.spread_warn_raw, (unsigned)ADC_DISCARD);
+    snprintf(
+        buf, sizeof(buf),
+        "# cfg: smp=%u trim=%u db=%u confirm_ms=%lu/%lu/%lu spr=%u discard=%u",
+        (unsigned)cfg.sample_count, (unsigned)cfg.trim_each_side,
+        (unsigned)cfg.deadband_raw, (unsigned long)cfg.confirm_ms_soil,
+        (unsigned long)cfg.confirm_ms_dry, (unsigned long)cfg.confirm_ms_wet,
+        (unsigned)cfg.spread_warn_raw, (unsigned)ADC_DISCARD);
     Serial.println(buf);
-    snprintf(buf, sizeof(buf),
-             "# safety: actuators fail-safe OFF (4ch CW-022 active-low, off=HIGH)  "
-             "task-wdt=%lums  pump=manual(!water) bounded<=%lums",
-             (unsigned long)WDT_TIMEOUT_MS, (unsigned long)PUMP_PULSE_MAX_MS);
+    snprintf(
+        buf, sizeof(buf),
+        "# safety: actuators fail-safe OFF (4ch CW-022 active-low, off=HIGH)  "
+        "task-wdt=%lums  pump=manual(!water) bounded<=%lums",
+        (unsigned long)WDT_TIMEOUT_MS, (unsigned long)PUMP_PULSE_MAX_MS);
     Serial.println(buf);
-    Serial.println(
-        "# device_cols: record_type,session_id,device_id,fw,millis_ms,sensor_model,"
-        "sensor_id,sensor_position,channel,raw_value,value,unit,quality_flag,payload");
+    Serial.println("# device_cols: "
+                   "record_type,session_id,device_id,fw,millis_ms,sensor_model,"
+                   "sensor_id,sensor_position,channel,raw_value,value,unit,"
+                   "quality_flag,payload");
     Serial.println(
         "# authoritative: raw_value (ADC counts) + band (payload 'level'); "
         "value/unit are NULL - reserved for a future calibrated VWC, never an "
@@ -165,8 +182,9 @@ static void printHeader() {
 
 /* ---- Arduino lifecycle -------------------------------------------------- */
 
-void setup() {
-    allRelaysOff();  /* FIRST: actuators de-energized before anything else (#93) */
+void setup()
+{
+    allRelaysOff(); /* FIRST: actuators de-energized before anything else (#93) */
 
     Serial.begin(SERIAL_BAUD);
     delay(200);
@@ -178,26 +196,39 @@ void setup() {
     Serial.println();
     Serial.print("# boot plants controller fw=");
     Serial.print(PLANTS_FW_VERSION);
-    Serial.println(
-        " - Rung 4 schema v1, four soil sensors "
-        "(manual bounded pump pulse; fail-safe OFF)");
+    Serial.println(" - Rung 4 schema v1, four soil sensors "
+                   "(manual bounded pump pulse; fail-safe OFF)");
 
     pinMode(LED_PIN, OUTPUT);
 
     /* Prime the pump-pulse FSM before commands_init so !water is immediately safe. */
-    pump_pulse_init(&g_pump, NUM_SENSORS, PUMP_PULSE_DEFAULT_MS, PUMP_PULSE_MAX_MS);
+    pump_pulse_init(&g_pump, NUM_SENSORS, PUMP_PULSE_DEFAULT_MS,
+                    PUMP_PULSE_MAX_MS);
 
     /* Seed run metadata from the config defaults before !label/!pos are registered. */
     run_meta_init(&g_run_meta, RUN_LABEL, SENSOR_POSITION, NUM_SENSORS);
 
     /* Wire command module: load NVS config (cadence + identity) + register handlers. */
     commands_ctx_t cmd_ctx = {
-        g_device_id, sizeof(g_device_id), &g_device_id_custom,
-        &g_cadence_ms, &g_cadence_from_nvs,
-        &g_prefs, &g_pump, pumpSet, allRelaysOff,
-        CADENCE_FLOOR_MS, CADENCE_CEIL_MS, READ_INTERVAL_MS,
-        PLANTS_FW_VERSION, PUMP_PULSE_MAX_MS, NUM_SENSORS, WDT_TIMEOUT_MS,
-        &g_run_meta, printHeader,
+        g_device_id,
+        sizeof(g_device_id),
+        &g_device_id_custom,
+        &g_cadence_ms,
+        &g_cadence_from_nvs,
+        &g_cadence_temp,
+        &g_prefs,
+        &g_pump,
+        pumpSet,
+        allRelaysOff,
+        CADENCE_FLOOR_MS,
+        CADENCE_CEIL_MS,
+        READ_INTERVAL_MS,
+        PLANTS_FW_VERSION,
+        PUMP_PULSE_MAX_MS,
+        NUM_SENSORS,
+        WDT_TIMEOUT_MS,
+        &g_run_meta,
+        printHeader,
     };
     commands_init(&cmd_ctx);
 
@@ -205,7 +236,8 @@ void setup() {
     uint16_t seed[SAMPLES_PER_READ];
     for (int ch = 0; ch < NUM_SENSORS; ch++) {
         sampleChannel(ch, seed);
-        uint16_t s0 = moisture_trimmed_mean(seed, SAMPLES_PER_READ, SAMPLES_TRIM, NULL);
+        uint16_t s0 =
+            moisture_trimmed_mean(seed, SAMPLES_PER_READ, SAMPLES_TRIM, NULL);
         moisture_init(&state[ch], &cfg, s0);
     }
     printHeader();
@@ -217,12 +249,13 @@ void setup() {
     esp_task_wdt_add(NULL);
 }
 
-void loop() {
-    esp_task_wdt_reset();  /* feed the watchdog; a stalled loop -> reset (#93) */
+void loop()
+{
+    esp_task_wdt_reset(); /* feed the watchdog; a stalled loop -> reset (#93) */
 
-    commands_poll();  /* non-blocking: read one line + dispatch if complete */
+    commands_poll(); /* non-blocking: read one line + dispatch if complete */
 
-    unsigned long now = millis();  /* shared timestamp for all loop schedulers */
+    unsigned long now = millis(); /* shared timestamp for all loop schedulers */
 
     /* Service the manual pump pulse: turn relay off the instant the bounded pulse
      * expires (#215). Capture the channel before service() clears it. */
@@ -241,8 +274,10 @@ void loop() {
             uint16_t quick[HEALTH_SAMPLES];
             for (int ch = 0; ch < NUM_SENSORS; ch++) {
                 int pin = SENSOR_PINS[ch];
-                for (int d = 0; d < ADC_DISCARD; d++) (void)analogRead(pin);
-                for (int i = 0; i < HEALTH_SAMPLES; i++) quick[i] = (uint16_t)analogRead(pin);
+                for (int d = 0; d < ADC_DISCARD; d++)
+                    (void)analogRead(pin);
+                for (int i = 0; i < HEALTH_SAMPLES; i++)
+                    quick[i] = (uint16_t)analogRead(pin);
                 uint16_t sp = 0;
                 moisture_trimmed_mean(quick, HEALTH_SAMPLES, 1, &sp);
                 state[ch].last_spread = sp;
@@ -260,7 +295,8 @@ void loop() {
     lastRead = now;
 
     /* 64-bit uptime (us -> ms): survives the uint32 millis() rollover at day 49.7. */
-    unsigned long long up_ms = (unsigned long long)esp_timer_get_time() / 1000ULL;
+    unsigned long long up_ms =
+        (unsigned long long)esp_timer_get_time() / 1000ULL;
 
     /* B6.2 sacrificial sync: leading newline absorbs post-idle UART framing glitch. */
     Serial.println();
@@ -274,9 +310,19 @@ void loop() {
         /* Format the CSV row via lib/telemetry (no Serial there — supervisor-safe). */
         char line[200];
         telemetry_soil_row_t row = {
-            RECORD_TYPE_SOIL, g_session_id, g_device_id, PLANTS_FW_VERSION,
-            up_ms, SENSOR_MODEL, SENSOR_NAMES[ch], run_meta_position(&g_run_meta, ch),
-            SOIL_CHANNEL, SENSOR_PINS[ch], state[ch].last_raw, level, &state[ch],
+            RECORD_TYPE_SOIL,
+            g_session_id,
+            g_device_id,
+            PLANTS_FW_VERSION,
+            up_ms,
+            SENSOR_MODEL,
+            SENSOR_NAMES[ch],
+            run_meta_position(&g_run_meta, ch),
+            SOIL_CHANNEL,
+            SENSOR_PINS[ch],
+            state[ch].last_raw,
+            level,
+            &state[ch],
         };
         if (telemetry_format_soil_row(line, sizeof(line), &row) >= 0) {
             char crc[6];
