@@ -10,6 +10,8 @@ Fast path for Data:
 - `plant_arc_table.csv` - one row per plant with recovered start, wettest, ending checkpoint,
   valid probes, spread, confidence, and completeness notes.
 - `plant_arc_observations_long.csv` - the same arc observations in long form for easy plotting.
+- `arc_derivation_windows.csv` - baseline, watering start, peak window, and pull/ending window
+  timestamps in flat form.
 - `windows/p*_*.csv` - raw monitor rows sliced by plant segment, with Sage probe-inclusion annotations.
 
 Enrichment:

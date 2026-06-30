@@ -11,10 +11,11 @@
   "fast_path_for_data": [
     "plant_arc_table.csv",
     "plant_arc_observations_long.csv",
+    "arc_derivation_windows.csv",
     "windows/p01_morning_monitor_part*.csv plus windows/p02_*.csv through windows/p11_*.csv"
   ],
   "aggregation_boundary": "Sage provides recovered readings, probe validity, spread/confidence notes, and raw slices. Data owns the final one-read-per-plant aggregation rule.",
-  "honest_gap_policy": "Empty start/wettest/pull fields mean that phase was not durably captured or not physically meaningful; do not fabricate complete ranges.",
+  "honest_gap_policy": "Empty start/wettest/ending fields or null derivation windows mean that phase was not durably captured or not physically meaningful; do not fabricate complete ranges.",
   "source_files": [
     "logs/Sprout ESP32_20260629_121817.csv",
     "logs/Sprout ESP32_20260629_135003.csv",
@@ -106,7 +107,23 @@
           "max_raw_driest": 1140
         }
       },
-      "notes": "P01 dry/wet arc primarily comes from committed P01 sidecar captures; this slice preserves the long morning monitor continuation and pull/equilibration evidence."
+      "notes": "P01 dry/wet arc primarily comes from committed P01 sidecar captures; this slice preserves the long morning monitor continuation and pull/equilibration evidence.",
+      "arc_derivation": {
+        "derivation_status": "mixed_summary_and_samples",
+        "baseline_window": null,
+        "baseline_note": "Dry baseline is summary-derived from docs/experiments/20260629_024146_P01_dry_baseline_48h_post_wet_run.json; raw sample rows were not committed.",
+        "watering_start_local": null,
+        "watering_start_precision": "unavailable",
+        "watering_start_note": "P01 watering timing is preserved in sidecar prose but not as a committed sample timestamp.",
+        "peak_window": null,
+        "peak_note": "Wettest point is summary-derived from docs/experiments/20260629_030551_p1_post_dry_rewatering.json; raw sample rows were not committed.",
+        "pull_window": {
+          "start_local": "2026-06-29 12:16:00",
+          "end_local": "2026-06-29 12:16:24",
+          "source": "p01_morning_monitor",
+          "context": "morning pull/equilibration checkpoint"
+        }
+      }
     },
     {
       "window_key": "p02_large_pothos_response",
@@ -186,7 +203,25 @@
           "max_raw_driest": 3863
         }
       },
-      "notes": "Start is recovered from raw monitor rows; durable narrative previously had prose-only baseline."
+      "notes": "Start is recovered from raw monitor rows; durable narrative previously had prose-only baseline.",
+      "arc_derivation": {
+        "derivation_status": "sample_window_with_missing_pull",
+        "baseline_window": {
+          "start_local": "2026-06-29 13:06:31",
+          "end_local": "2026-06-29 13:11:12",
+          "source": "p02_large_pothos_response"
+        },
+        "watering_start_local": "2026-06-29 13:11:12",
+        "watering_start_precision": "operator event",
+        "peak_window": {
+          "start_local": "2026-06-29 13:11:12",
+          "end_local": "2026-06-29 13:14:26",
+          "source": "p02_large_pothos_response",
+          "context": "watering to first runoff"
+        },
+        "pull_window": null,
+        "pull_note": "No durable pull/ending checkpoint was recovered for the one-read arc."
+      }
     },
     {
       "window_key": "p03_large_pothos_response",
@@ -266,7 +301,25 @@
           "max_raw_driest": 3747
         }
       },
-      "notes": "Start is recovered from raw monitor rows; durable narrative previously had prose-only baseline."
+      "notes": "Start is recovered from raw monitor rows; durable narrative previously had prose-only baseline.",
+      "arc_derivation": {
+        "derivation_status": "sample_window_with_missing_pull",
+        "baseline_window": {
+          "start_local": "2026-06-29 13:25:22",
+          "end_local": "2026-06-29 13:28:08",
+          "source": "p03_large_pothos_response"
+        },
+        "watering_start_local": "2026-06-29 13:28:08",
+        "watering_start_precision": "operator event",
+        "peak_window": {
+          "start_local": "2026-06-29 13:28:08",
+          "end_local": "2026-06-29 13:30:08",
+          "source": "p03_large_pothos_response",
+          "context": "watering to first runoff"
+        },
+        "pull_window": null,
+        "pull_note": "No durable pull/ending checkpoint was recovered for the one-read arc."
+      }
     },
     {
       "window_key": "p04_dracaena_bypass",
@@ -345,7 +398,25 @@
           "max_raw_driest": 3389
         }
       },
-      "notes": "Water bypassed/beaded; no trustworthy wetting arc, but pull state and high spread are evidence."
+      "notes": "Water bypassed/beaded; no trustworthy wetting arc, but pull state and high spread are evidence.",
+      "arc_derivation": {
+        "derivation_status": "sample_window_no_valid_peak",
+        "baseline_window": {
+          "start_local": "2026-06-29 13:47:06",
+          "end_local": "2026-06-29 13:52:30",
+          "source": "p04_dracaena_bypass"
+        },
+        "watering_start_local": "2026-06-29 13:52:30",
+        "watering_start_precision": "window lower-bound",
+        "peak_window": null,
+        "peak_note": "No meaningful wet peak: water bypassed/beaded rather than soaking the sensed zones.",
+        "pull_window": {
+          "start_local": "2026-06-29 14:05:30",
+          "end_local": "2026-06-29 14:06:18",
+          "source": "p04_dracaena_bypass",
+          "context": "dry bypass pull checkpoint"
+        }
+      }
     },
     {
       "window_key": "p05_dracaena_bypass",
@@ -425,7 +496,25 @@
           "max_raw_driest": 2897
         }
       },
-      "notes": "Only s1 and s4 were treated as plant-contact probes."
+      "notes": "Only s1 and s4 were treated as plant-contact probes.",
+      "arc_derivation": {
+        "derivation_status": "sample_window_no_valid_peak",
+        "baseline_window": {
+          "start_local": "2026-06-29 14:16:25",
+          "end_local": "2026-06-29 14:18:26",
+          "source": "p05_dracaena_bypass"
+        },
+        "watering_start_local": "2026-06-29 14:18:26",
+        "watering_start_precision": "operator event",
+        "peak_window": null,
+        "peak_note": "No meaningful wet peak: inserted probes stayed dry/air-dry while water bypassed the rootball.",
+        "pull_window": {
+          "start_local": "2026-06-29 14:25:30",
+          "end_local": "2026-06-29 14:26:36",
+          "source": "p05_dracaena_bypass",
+          "context": "limited-probe pull checkpoint"
+        }
+      }
     },
     {
       "window_key": "p06_anthurium_staged_watering",
@@ -504,7 +593,29 @@
           "max_raw_driest": 3402
         }
       },
-      "notes": "Baseline is weak in committed evidence; wettest and pull states are recoverable."
+      "notes": "Baseline is weak in committed evidence; wettest and pull states are recoverable.",
+      "arc_derivation": {
+        "derivation_status": "sample_window",
+        "baseline_window": {
+          "start_local": "2026-06-29 14:37:27",
+          "end_local": "2026-06-29 14:38:44",
+          "source": "p06_anthurium_staged_watering"
+        },
+        "watering_start_local": "2026-06-29 14:38:44",
+        "watering_start_precision": "operator event",
+        "peak_window": {
+          "start_local": "2026-06-29 14:43:59",
+          "end_local": "2026-06-29 14:59:00",
+          "source": "p06_anthurium_staged_watering",
+          "context": "post-pool wettest search window"
+        },
+        "pull_window": {
+          "start_local": "2026-06-29 14:58:30",
+          "end_local": "2026-06-29 14:59:00",
+          "source": "p06_anthurium_staged_watering",
+          "context": "post-pool pull/ending checkpoint"
+        }
+      }
     },
     {
       "window_key": "p07_bromeliad_measure_only",
@@ -584,7 +695,26 @@
           "max_raw_driest": 2638
         }
       },
-      "notes": "No added water; standing cachepot water confounded interpretation."
+      "notes": "No added water; standing cachepot water confounded interpretation.",
+      "arc_derivation": {
+        "derivation_status": "measure_only_no_water",
+        "baseline_window": {
+          "start_local": "2026-06-29 15:19:30",
+          "end_local": "2026-06-29 15:57:12",
+          "source": "p07_bromeliad_measure_only"
+        },
+        "watering_start_local": null,
+        "watering_start_precision": "not applicable",
+        "watering_start_note": "No water was added; hidden standing water in the cachepot was the primary physical finding.",
+        "peak_window": null,
+        "peak_note": "No watering peak exists for this measure-only segment.",
+        "pull_window": {
+          "start_local": "2026-06-29 15:56:30",
+          "end_local": "2026-06-29 15:57:12",
+          "source": "p07_bromeliad_measure_only",
+          "context": "measure-only pull checkpoint"
+        }
+      }
     },
     {
       "window_key": "p08_cactus_microdose",
@@ -664,7 +794,29 @@
           "max_raw_driest": 3197
         }
       },
-      "notes": "S1 orientation switched at 16:17; s3 carried the cleanest arc."
+      "notes": "S1 orientation switched at 16:17; s3 carried the cleanest arc.",
+      "arc_derivation": {
+        "derivation_status": "sample_window_with_method_disturbance",
+        "baseline_window": {
+          "start_local": "2026-06-29 16:06:00",
+          "end_local": "2026-06-29 16:10:00",
+          "source": "p08_cactus_microdose"
+        },
+        "watering_start_local": "2026-06-29 16:10:00",
+        "watering_start_precision": "operator minute",
+        "peak_window": {
+          "start_local": "2026-06-29 16:17:00",
+          "end_local": "2026-06-29 16:18:45",
+          "source": "p08_s1_orientation_check",
+          "context": "s3 clean wettest; s1 orientation/reinsertion disturbed"
+        },
+        "pull_window": {
+          "start_local": "2026-06-29 16:24:00",
+          "end_local": "2026-06-29 16:24:30",
+          "source": "p08_cactus_microdose",
+          "context": "pull-prep tail; s3 cleanest endpoint"
+        }
+      }
     },
     {
       "window_key": "p09_rootbound_succulent",
@@ -744,7 +896,29 @@
           "max_raw_driest": 3182
         }
       },
-      "notes": "Soil was essentially root-consumed; s3 was between rootball and soil."
+      "notes": "Soil was essentially root-consumed; s3 was between rootball and soil.",
+      "arc_derivation": {
+        "derivation_status": "sample_window_single_probe",
+        "baseline_window": {
+          "start_local": "2026-06-29 16:28:00",
+          "end_local": "2026-06-29 16:32:47",
+          "source": "p09_rootbound_succulent"
+        },
+        "watering_start_local": "2026-06-29 16:32:00",
+        "watering_start_precision": "operator minute",
+        "peak_window": {
+          "start_local": "2026-06-29 16:32:47",
+          "end_local": "2026-06-29 16:33:07",
+          "source": "p09_rootbound_succulent",
+          "context": "single s3 rootball-interface wet spike"
+        },
+        "pull_window": {
+          "start_local": "2026-06-29 16:39:37",
+          "end_local": "2026-06-29 16:39:42",
+          "source": "p09_rootbound_succulent",
+          "context": "late rebound before likely pull/handling jump at 16:39:47"
+        }
+      }
     },
     {
       "window_key": "p10_office_pothos",
@@ -824,7 +998,29 @@
           "max_raw_driest": 3198
         }
       },
-      "notes": "Best clumping soil observed, but post-watering was highly uneven."
+      "notes": "Best clumping soil observed, but post-watering was highly uneven.",
+      "arc_derivation": {
+        "derivation_status": "sample_window_endpoint_not_physical_pull",
+        "baseline_window": {
+          "start_local": "2026-06-29 16:59:30",
+          "end_local": "2026-06-29 17:06:00",
+          "source": "p10_office_pothos"
+        },
+        "watering_start_local": "2026-06-29 17:06:00",
+        "watering_start_precision": "operator minute",
+        "peak_window": {
+          "start_local": "2026-06-29 17:06:00",
+          "end_local": "2026-06-29 17:11:00",
+          "source": "p10_office_pothos",
+          "context": "initial one-cup watering and first tray-fill response"
+        },
+        "pull_window": {
+          "start_local": "2026-06-29 17:14:00",
+          "end_local": "2026-06-29 17:14:15",
+          "source": "p10_office_pothos",
+          "context": "late post-watering endpoint; physical 17:21 pull rows trend toward air-dry"
+        }
+      }
     },
     {
       "window_key": "p11_office_plant",
@@ -903,7 +1099,29 @@
           "max_raw_driest": 3077
         }
       },
-      "notes": "Tray retained water at closeout; pull spread was very high."
+      "notes": "Tray retained water at closeout; pull spread was very high.",
+      "arc_derivation": {
+        "derivation_status": "sample_window",
+        "baseline_window": {
+          "start_local": "2026-06-29 17:54:30",
+          "end_local": "2026-06-29 17:55:00",
+          "source": "p11_office_plant"
+        },
+        "watering_start_local": "2026-06-29 17:57:12",
+        "watering_start_precision": "sample-aligned operator event",
+        "peak_window": {
+          "start_local": "2026-06-29 18:01:30",
+          "end_local": "2026-06-29 18:01:50",
+          "source": "p11_office_plant",
+          "context": "tray-fill pause point; s3 wettest"
+        },
+        "pull_window": {
+          "start_local": "2026-06-29 18:24:00",
+          "end_local": "2026-06-29 18:24:08",
+          "source": "p11_office_plant",
+          "context": "final closeout pre-pull before wipe/dry-air samples"
+        }
+      }
     }
   ],
   "non_plant_windows": [
@@ -1064,7 +1282,29 @@
           "max_raw_driest": 3180
         }
       },
-      "notes": "Exploratory only: reinsertion changed contact/depth/packing, but visible response returned near pre-swap level."
+      "notes": "Exploratory only: reinsertion changed contact/depth/packing, but visible response returned near pre-swap level.",
+      "arc_derivation": {
+        "derivation_status": "sample_window_with_method_disturbance",
+        "baseline_window": {
+          "start_local": "2026-06-29 16:06:00",
+          "end_local": "2026-06-29 16:10:00",
+          "source": "p08_cactus_microdose"
+        },
+        "watering_start_local": "2026-06-29 16:10:00",
+        "watering_start_precision": "operator minute",
+        "peak_window": {
+          "start_local": "2026-06-29 16:17:00",
+          "end_local": "2026-06-29 16:18:45",
+          "source": "p08_s1_orientation_check",
+          "context": "s3 clean wettest; s1 orientation/reinsertion disturbed"
+        },
+        "pull_window": {
+          "start_local": "2026-06-29 16:24:00",
+          "end_local": "2026-06-29 16:24:30",
+          "source": "p08_cactus_microdose",
+          "context": "pull-prep tail; s3 cleanest endpoint"
+        }
+      }
     },
     {
       "window_key": "p10_to_p11_air_reset",
@@ -1146,6 +1386,225 @@
       "notes": "P10 tray reabsorbed water by 17:40 while probes air-reset before P11."
     }
   ],
+  "arc_derivation_windows": {
+    "P01": {
+      "derivation_status": "mixed_summary_and_samples",
+      "baseline_window": null,
+      "baseline_note": "Dry baseline is summary-derived from docs/experiments/20260629_024146_P01_dry_baseline_48h_post_wet_run.json; raw sample rows were not committed.",
+      "watering_start_local": null,
+      "watering_start_precision": "unavailable",
+      "watering_start_note": "P01 watering timing is preserved in sidecar prose but not as a committed sample timestamp.",
+      "peak_window": null,
+      "peak_note": "Wettest point is summary-derived from docs/experiments/20260629_030551_p1_post_dry_rewatering.json; raw sample rows were not committed.",
+      "pull_window": {
+        "start_local": "2026-06-29 12:16:00",
+        "end_local": "2026-06-29 12:16:24",
+        "source": "p01_morning_monitor",
+        "context": "morning pull/equilibration checkpoint"
+      }
+    },
+    "P02": {
+      "derivation_status": "sample_window_with_missing_pull",
+      "baseline_window": {
+        "start_local": "2026-06-29 13:06:31",
+        "end_local": "2026-06-29 13:11:12",
+        "source": "p02_large_pothos_response"
+      },
+      "watering_start_local": "2026-06-29 13:11:12",
+      "watering_start_precision": "operator event",
+      "peak_window": {
+        "start_local": "2026-06-29 13:11:12",
+        "end_local": "2026-06-29 13:14:26",
+        "source": "p02_large_pothos_response",
+        "context": "watering to first runoff"
+      },
+      "pull_window": null,
+      "pull_note": "No durable pull/ending checkpoint was recovered for the one-read arc."
+    },
+    "P03": {
+      "derivation_status": "sample_window_with_missing_pull",
+      "baseline_window": {
+        "start_local": "2026-06-29 13:25:22",
+        "end_local": "2026-06-29 13:28:08",
+        "source": "p03_large_pothos_response"
+      },
+      "watering_start_local": "2026-06-29 13:28:08",
+      "watering_start_precision": "operator event",
+      "peak_window": {
+        "start_local": "2026-06-29 13:28:08",
+        "end_local": "2026-06-29 13:30:08",
+        "source": "p03_large_pothos_response",
+        "context": "watering to first runoff"
+      },
+      "pull_window": null,
+      "pull_note": "No durable pull/ending checkpoint was recovered for the one-read arc."
+    },
+    "P04": {
+      "derivation_status": "sample_window_no_valid_peak",
+      "baseline_window": {
+        "start_local": "2026-06-29 13:47:06",
+        "end_local": "2026-06-29 13:52:30",
+        "source": "p04_dracaena_bypass"
+      },
+      "watering_start_local": "2026-06-29 13:52:30",
+      "watering_start_precision": "window lower-bound",
+      "peak_window": null,
+      "peak_note": "No meaningful wet peak: water bypassed/beaded rather than soaking the sensed zones.",
+      "pull_window": {
+        "start_local": "2026-06-29 14:05:30",
+        "end_local": "2026-06-29 14:06:18",
+        "source": "p04_dracaena_bypass",
+        "context": "dry bypass pull checkpoint"
+      }
+    },
+    "P05": {
+      "derivation_status": "sample_window_no_valid_peak",
+      "baseline_window": {
+        "start_local": "2026-06-29 14:16:25",
+        "end_local": "2026-06-29 14:18:26",
+        "source": "p05_dracaena_bypass"
+      },
+      "watering_start_local": "2026-06-29 14:18:26",
+      "watering_start_precision": "operator event",
+      "peak_window": null,
+      "peak_note": "No meaningful wet peak: inserted probes stayed dry/air-dry while water bypassed the rootball.",
+      "pull_window": {
+        "start_local": "2026-06-29 14:25:30",
+        "end_local": "2026-06-29 14:26:36",
+        "source": "p05_dracaena_bypass",
+        "context": "limited-probe pull checkpoint"
+      }
+    },
+    "P06": {
+      "derivation_status": "sample_window",
+      "baseline_window": {
+        "start_local": "2026-06-29 14:37:27",
+        "end_local": "2026-06-29 14:38:44",
+        "source": "p06_anthurium_staged_watering"
+      },
+      "watering_start_local": "2026-06-29 14:38:44",
+      "watering_start_precision": "operator event",
+      "peak_window": {
+        "start_local": "2026-06-29 14:43:59",
+        "end_local": "2026-06-29 14:59:00",
+        "source": "p06_anthurium_staged_watering",
+        "context": "post-pool wettest search window"
+      },
+      "pull_window": {
+        "start_local": "2026-06-29 14:58:30",
+        "end_local": "2026-06-29 14:59:00",
+        "source": "p06_anthurium_staged_watering",
+        "context": "post-pool pull/ending checkpoint"
+      }
+    },
+    "P07": {
+      "derivation_status": "measure_only_no_water",
+      "baseline_window": {
+        "start_local": "2026-06-29 15:19:30",
+        "end_local": "2026-06-29 15:57:12",
+        "source": "p07_bromeliad_measure_only"
+      },
+      "watering_start_local": null,
+      "watering_start_precision": "not applicable",
+      "watering_start_note": "No water was added; hidden standing water in the cachepot was the primary physical finding.",
+      "peak_window": null,
+      "peak_note": "No watering peak exists for this measure-only segment.",
+      "pull_window": {
+        "start_local": "2026-06-29 15:56:30",
+        "end_local": "2026-06-29 15:57:12",
+        "source": "p07_bromeliad_measure_only",
+        "context": "measure-only pull checkpoint"
+      }
+    },
+    "P08": {
+      "derivation_status": "sample_window_with_method_disturbance",
+      "baseline_window": {
+        "start_local": "2026-06-29 16:06:00",
+        "end_local": "2026-06-29 16:10:00",
+        "source": "p08_cactus_microdose"
+      },
+      "watering_start_local": "2026-06-29 16:10:00",
+      "watering_start_precision": "operator minute",
+      "peak_window": {
+        "start_local": "2026-06-29 16:17:00",
+        "end_local": "2026-06-29 16:18:45",
+        "source": "p08_s1_orientation_check",
+        "context": "s3 clean wettest; s1 orientation/reinsertion disturbed"
+      },
+      "pull_window": {
+        "start_local": "2026-06-29 16:24:00",
+        "end_local": "2026-06-29 16:24:30",
+        "source": "p08_cactus_microdose",
+        "context": "pull-prep tail; s3 cleanest endpoint"
+      }
+    },
+    "P09": {
+      "derivation_status": "sample_window_single_probe",
+      "baseline_window": {
+        "start_local": "2026-06-29 16:28:00",
+        "end_local": "2026-06-29 16:32:47",
+        "source": "p09_rootbound_succulent"
+      },
+      "watering_start_local": "2026-06-29 16:32:00",
+      "watering_start_precision": "operator minute",
+      "peak_window": {
+        "start_local": "2026-06-29 16:32:47",
+        "end_local": "2026-06-29 16:33:07",
+        "source": "p09_rootbound_succulent",
+        "context": "single s3 rootball-interface wet spike"
+      },
+      "pull_window": {
+        "start_local": "2026-06-29 16:39:37",
+        "end_local": "2026-06-29 16:39:42",
+        "source": "p09_rootbound_succulent",
+        "context": "late rebound before likely pull/handling jump at 16:39:47"
+      }
+    },
+    "P10": {
+      "derivation_status": "sample_window_endpoint_not_physical_pull",
+      "baseline_window": {
+        "start_local": "2026-06-29 16:59:30",
+        "end_local": "2026-06-29 17:06:00",
+        "source": "p10_office_pothos"
+      },
+      "watering_start_local": "2026-06-29 17:06:00",
+      "watering_start_precision": "operator minute",
+      "peak_window": {
+        "start_local": "2026-06-29 17:06:00",
+        "end_local": "2026-06-29 17:11:00",
+        "source": "p10_office_pothos",
+        "context": "initial one-cup watering and first tray-fill response"
+      },
+      "pull_window": {
+        "start_local": "2026-06-29 17:14:00",
+        "end_local": "2026-06-29 17:14:15",
+        "source": "p10_office_pothos",
+        "context": "late post-watering endpoint; physical 17:21 pull rows trend toward air-dry"
+      }
+    },
+    "P11": {
+      "derivation_status": "sample_window",
+      "baseline_window": {
+        "start_local": "2026-06-29 17:54:30",
+        "end_local": "2026-06-29 17:55:00",
+        "source": "p11_office_plant"
+      },
+      "watering_start_local": "2026-06-29 17:57:12",
+      "watering_start_precision": "sample-aligned operator event",
+      "peak_window": {
+        "start_local": "2026-06-29 18:01:30",
+        "end_local": "2026-06-29 18:01:50",
+        "source": "p11_office_plant",
+        "context": "tray-fill pause point; s3 wettest"
+      },
+      "pull_window": {
+        "start_local": "2026-06-29 18:24:00",
+        "end_local": "2026-06-29 18:24:08",
+        "source": "p11_office_plant",
+        "context": "final closeout pre-pull before wipe/dry-air samples"
+      }
+    }
+  },
   "data_contract_candidates": [
     "event_kind",
     "plant_id",
