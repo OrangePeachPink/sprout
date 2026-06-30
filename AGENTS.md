@@ -76,8 +76,8 @@ review your own recent work — **especially before a status brief** — do **CI
 
 Lanes run **concurrently**; the board and your PRs change *while you're heads-down*. **Don't wait for the
 maintainer to assemble a status round and relay it — the maintainer is not your messenger, and the issue is
-the message bus.** Self-sync at **four moments: when you start, just before you stop, on a status request,
-and when you post a share-out.**
+the message bus.** Self-sync at **three moments: when you start, just before you stop, and when you post a
+status brief / share-out (requested or proactive).**
 
 Each sync, sweep your slice: **PRs you own** (moved? merged?), **issues newly `for:<your-lane>`**,
 **questions / RFCs aimed at you**, and **what just merged that unblocks your gated work**. Then **act**:
