@@ -61,13 +61,16 @@ jobs:
       - name: Lint + format + hygiene (pre-commit; clang-format runs changed-scope below)
         run: SKIP=clang-format uv run pre-commit run --all-files --show-diff-on-failure
 
-      # clang-format — ONLY the C/C++ files this PR changed (never the whole tree).
-      # Same pinned hook (v22.1.5) as local commits + `just lint-fw`, so local == CI.
-      - name: clang-format (changed C/C++ only — #120)
+      # clang-format — ONLY the C/C++ *lines* this PR changed (never whole files,
+      # never the whole tree) — #352. Diffs against the PR merge-base (the blocking
+      # authority, Trellis sign-off). Same wrapper + pinned clang-format==22.1.5 as
+      # local commits + `just lint-fw`, so local == CI.
+      - name: clang-format (changed LINES vs merge-base — #352)
         run: |
           base="${{ github.event.pull_request.base.sha }}"
           [ -z "$base" ] && base="$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)"
-          uv run pre-commit run clang-format --from-ref "$base" --to-ref HEAD --show-diff-on-failure
+          mb="$(git merge-base "$base" HEAD)"
+          uv run python tools/clang_format_changed_lines.py --base "$mb" --check
 
       - name: Tests — native C firmware logic + host Python
         run: just test
