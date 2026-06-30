@@ -79,6 +79,33 @@ How far a feature or sensor configuration has progressed through *physical* vali
 - *(Firmware: add the FSM terms, the supervisor, irrig_tick, forced-dose, the arm-gate, the serial
   commands, etc.)*
 
+## Architecture & ADRs (Trellis)
+
+- **Calibration confidence stage** — how trustworthy a per-channel band is for *action*:
+  `provisional` (uncalibrated / shared bounds) → `calibrated` (per-channel bounds locked from controlled
+  characterization) → `corroborated` (cross-channel + tray/contact agree). Autonomous watering gates on at
+  least `calibrated`. (#170, the calibration-confidence ADR.)
+- **Contract boundary** — the single authorized entry point for a data contract, so the rule lives in one
+  place: e.g. `parse_v1` is the only telemetry reader (ADR-0021); the supervisor is the only sampler/actuator
+  (ADR-0016, *single authority*).
+- **Format-gate scope** — clang-format runs on **changed files** (whole-file reformat — the v1 residual that
+  collapses manual alignment in any file you touch) vs **changed lines** (`git-clang-format` — formats only
+  the diff, preserving untouched alignment). The repo ships changed-files; changed-lines is the tracked
+  upgrade. (ADR-0002 #10, #120/#343.)
+- **io seam** (*injected-callback seam*) — the framework-agnostic driver pattern: hardware lives behind
+  injected callbacks (`irrig_io_t`, `env_i2c_t`) so the **full** module — protocol + math, not just the math
+  — is native-testable with a mock bus. The reason firmware logic compiles and tests on the host (ADR-0001).
+- **Local truth vs pot truth** — a per-channel band is *locally* true (the probe reads its microsite
+  correctly) but is **not** whole-pot truth: pot geometry, contact quality, hydrophobic flow, and tray state
+  dominate interpretation (#383). Per-channel calibration removes *sensor* personality; it does not remove
+  *microsite* effects.
+- **Promotion gate** — the prerequisite set required to advance a *capability stage*. E.g.
+  `plant-deployed → autonomous-enabled` requires the dry-safety chain (`#93/#191/#2/#215`) **+** per-channel
+  calibration (#170, locked) **+** the confidence layer — not any one alone.
+- **Single authority** — ADR-0016: exactly one owner for a safety-critical resource — the supervisor is the
+  sole sample **and** actuation authority. No second sampler, no second relay driver; the arm-gate and forced
+  doses both route through it.
+
 ## Design & brand (Design)
 
 - *(Design: add the brand/voice/token terms, the "character beside the instrument, not on top of it" rule,
