@@ -193,9 +193,12 @@ def recompute_arc() -> list[dict]:
                 rec[f"{key}_band"] = band_for_raw(val) if val is not None else None
                 if key == "ending":
                     meds = [st.median(v) for v in by_probe.values() if v]
-                    rec["ending_spread"] = (
-                        round(max(meds) - min(meds)) if len(meds) > 1 else None
-                    )
+                    if len(meds) > 1:
+                        rec["ending_spread"] = round(max(meds) - min(meds))
+                        rec["ending_lo"] = round(min(meds))  # wettest probe at pull
+                        rec["ending_hi"] = round(max(meds))  # driest probe at pull
+                    else:
+                        rec["ending_spread"] = None
             else:
                 # No committed sample rows for this phase — carry the summary value.
                 cv = comm.get(key)
