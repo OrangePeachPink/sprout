@@ -1,0 +1,1168 @@
+{
+  "experiment_id": "20260629_sage_p08_p11_continuation",
+  "kind": "monitor_log_bench_notes",
+  "date_local": "2026-06-29",
+  "lane": "Sage",
+  "authority": "bench evidence; not calibration-ratified",
+  "sources": {
+    "logs": [
+      "logs/Sprout ESP32_20260629_180631.csv"
+    ],
+    "image_artifacts": [
+      "docs/experiments/assets/20260629_p09_s3_rootball_response.png",
+      "docs/experiments/assets/20260629_p10_uneven_post_watering.png",
+      "docs/experiments/assets/20260629_p11_final_resoak_closeout.png"
+    ],
+    "related_reports": [
+      "docs/experiments/20260629_sage_p01_p07_rescue_survey_recovery.md",
+      "docs/experiments/20260629_sage_p01_p07_rescue_survey_recovery.json"
+    ]
+  },
+  "device_provenance": {
+    "log": "logs/Sprout ESP32_20260629_180631.csv",
+    "firmware_version": "0.7.0",
+    "git_revision": "8e5d73c",
+    "logger_version": "plants_logger_0_4",
+    "session_id": "706a34",
+    "cadence_ms": 5000,
+    "sensor_mapping": {
+      "s1": "GPIO34",
+      "s2": "GPIO35",
+      "s3": "GPIO36",
+      "s4": "GPIO39"
+    }
+  },
+  "plant_segments": [
+    {
+      "plant_id": "P08",
+      "plant": "very small cactus; likely moon/grafted cactus, ID not confirmed",
+      "description": "Green triangular base/rootstock, pink round top with peaks, one larger pink round dome, and three smaller pink round domes off the side.",
+      "care_history": "Usually allowed to dry to fully dry; when watered, normally only a few drops.",
+      "segment_type": "tiny cactus, limited-probe measurement",
+      "events": [
+        {
+          "time_local": "2026-06-29 ~16:06 CDT",
+          "event": "User reported P08 live with s1 and s3 inserted in the pot."
+        },
+        {
+          "time_local": "2026-06-29 ~16:10 CDT",
+          "event": "User confirmed s1 and s3 had real soil contact, pulled the inner pot from the outer pot, and began a small watering because P08 had not been watered in a long time."
+        },
+        {
+          "time_local": "2026-06-29 ~16:12 CDT",
+          "event": "User reported about 1/4 cup applied, with some excess leaking into the temporary bench bowl fixture."
+        },
+        {
+          "time_local": "2026-06-29 16:17 CDT",
+          "event": "User pulled s1 and reinserted it with orientation switched. This is exploratory only because reinsertion changes contact, depth, soil packing, and local water path."
+        },
+        {
+          "time_local": "2026-06-29 ~16:24 CDT",
+          "event": "User reported readiness to pull P08 probes, wipe dry, and prep P09."
+        }
+      ],
+      "probe_state": {
+        "inserted": [
+          "s1",
+          "s3"
+        ],
+        "reference_open_air_unless_later_corrected": [
+          "s2",
+          "s4"
+        ],
+        "contact_confirmed": [
+          "s1",
+          "s3"
+        ],
+        "orientation_notes": {
+          "s3": "Front side faced soil/dirt; back side was near the pot wall.",
+          "s1": "Probe was reversed: back side faced soil/plant; front side faced the pot wall."
+        },
+        "placement_caveat": "Pot/plant is very small; insertion depth is limited, but user confirmed s1 and s3 had real soil contact."
+      },
+      "selected_log_summary": {
+        "pre_water_sample_time_local": "2026-06-29 16:06:27",
+        "pre_water_raw": {
+          "s1": 3274,
+          "s2": 3169,
+          "s3": 3176,
+          "s4": 3183
+        },
+        "pre_water_band": {
+          "s1": "air-dry",
+          "s2": "air-dry",
+          "s3": "air-dry",
+          "s4": "air-dry"
+        },
+        "post_water_sample_time_local": "2026-06-29 16:12:32",
+        "post_water_raw": {
+          "s1": 2921,
+          "s2": 3191,
+          "s3": 1977,
+          "s4": 3154
+        },
+        "post_water_band": {
+          "s1": "dry",
+          "s2": "air-dry",
+          "s3": "needs water",
+          "s4": "air-dry"
+        },
+        "post_water_delta_raw": {
+          "s1": -353,
+          "s2": 22,
+          "s3": -1199,
+          "s4": -29
+        },
+        "s1_orientation_switch_check": {
+          "event_time_local": "2026-06-29 16:17",
+          "samples": [
+            {
+              "time_local": "2026-06-29 16:17:12",
+              "s1_raw": 3071,
+              "s1_band": "dry",
+              "s3_raw": 1377,
+              "s3_band": "well watered"
+            },
+            {
+              "time_local": "2026-06-29 16:18:37",
+              "s1_raw": 3139,
+              "s1_band": "air-dry",
+              "s3_raw": 1482,
+              "s3_band": "well watered"
+            }
+          ],
+          "interpretation": "After s1 was pulled and reinserted with orientation switched, s1 did not show a wetward jump in the first roughly 90 seconds; it stayed dry/air-dry while s3 remained much wetter. The dashboard trace showed a small handling disturbance at the pull/reinsert point, then s1 returned to roughly its prior dry neighborhood. This is not a controlled front/back test because contact and depth changed."
+        },
+        "pull_prep_tail": {
+          "sample_time_local": "2026-06-29 16:24:22",
+          "raw": {
+            "s1": 3348,
+            "s2": 3152,
+            "s3": 1579,
+            "s4": 3183
+          },
+          "band": {
+            "s1": "air-dry",
+            "s2": "air-dry",
+            "s3": "well watered",
+            "s4": "air-dry"
+          },
+          "interpretation": "At P08 pull/prep transition, s3 remained locally wet while s1 had returned to air-dry; s2/s4 remained air-dry references."
+        }
+      },
+      "water_balance": {
+        "applied_cups": 0.25,
+        "runoff_or_leakage_observed": true,
+        "notes": "About 1/4 cup applied; some excess leaked into the temporary bench bowl fixture. No additional water should be added during this segment."
+      },
+      "findings": [
+        "s1 and s3 read air-dry while inserted in P08 pot.",
+        "s1/s3 contact was confirmed, so P08 medium was essentially fully dry before watering.",
+        "About 1/4 cup produced leakage into the bench bowl, so that amount exceeded the tiny pot's immediate holding capacity or found a fast flow path.",
+        "s3 showed a clear wetward response by 16:12:32; s1 moved wetward more slowly and remained dry.",
+        "The s3-vs-s1 response difference is orientation-confounded: s3 front side faced soil while s1 was reversed. Pot-wall proximity, local wetting path, insertion angle/depth, and front/back sensor asymmetry are not separated in this plant run.",
+        "An exploratory s1 orientation switch at 16:17 produced only a small handling disturbance before returning to roughly the prior dry neighborhood; it did not produce an immediate wetward response, but it remains contact/reinsertion-confounded.",
+        "Generic houseplant dry-band logic should not trigger cactus watering without plant-specific review; this watering is based on cactus-specific care history and should be treated as a tiny-pot cactus dose."
+      ],
+      "evidence_quality": "Useful one-plant state note; limited by tiny pot and two-probe placement."
+    },
+    {
+      "plant_id": "P09",
+      "plant": "small succulent, aloe-like but not confirmed Aloe vera",
+      "description": "Rich dark green leaves from three central cores. Leaves are thinner and more numerous than Aloe vera, with approximately 50 small 2-3 inch long leaves/spines in an approximately 2.5 inch diameter pot. Small white polka-dot-like points on the leaves are tiny soft spines/points and are gentle to touch. Exact ID unconfirmed.",
+      "segment_type": "small succulent rootball-interface measurement",
+      "events": [
+        {
+          "time_local": "2026-06-29 ~16:24 CDT",
+          "event": "P09 description captured while prepping after P08."
+        },
+        {
+          "time_local": "2026-06-29 16:28 CDT",
+          "event": "User reported there was essentially no open soil area to insert a probe, lifted P09 out of the soil, and placed one probe between the root ball and surrounding soil."
+        },
+        {
+          "time_local": "2026-06-29 ~16:32 CDT",
+          "event": "User observed that P09 soil is essentially entirely consumed by roots."
+        },
+        {
+          "time_local": "2026-06-29 16:32 CDT",
+          "event": "Gentle watering began after the settle period. Water amount pending."
+        },
+        {
+          "time_local": "2026-06-29 ~16:34 CDT",
+          "event": "User reported less than 1/4 cup was applied and water started flowing out the bottom essentially immediately."
+        },
+        {
+          "time_local": "2026-06-29 ~16:39 CDT",
+          "event": "Dashboard screenshot captured and Sage called P09 evidence sufficient for this rootbound succulent water-response segment. Recommended reseating dampish rootball base in inner pot without the probe, wiping probe, allowing air-dry reset, and prepping P10."
+        }
+      ],
+      "probe_state": {
+        "confirmed_geometry": "one probe between root ball and surrounding soil",
+        "placement_time_local": "2026-06-29 16:28 CDT",
+        "inferred_active_probe": "s3",
+        "active_probe_inference_basis": "After the 16:28 placement, s3 moved from air-dry/open-air behavior into a stable dry-band reading while s1, s2, and s4 stayed air-dry.",
+        "reference_open_air_unless_later_corrected": [
+          "s1",
+          "s2",
+          "s4"
+        ],
+        "root_condition": "soil essentially entirely consumed by roots; treat as rootbound/root-dominated unless later inspection corrects this",
+        "placement_caveat": "Rootball-interface measurement after lifting plant; not a normal in-soil insertion and not calibration-quality. Sensor is likely characterizing rootball and thin remaining substrate film more than bulk potting mix."
+      },
+      "selected_log_summary": {
+        "samples": [
+          {
+            "time_local": "2026-06-29 16:28:07",
+            "raw": {
+              "s1": 3419,
+              "s2": 3156,
+              "s3": 3020,
+              "s4": 3173
+            },
+            "band": {
+              "s1": "air-dry",
+              "s2": "air-dry",
+              "s3": "air-dry",
+              "s4": "air-dry"
+            },
+            "interpretation": "Pre/early placement tail; all channels still read air-dry."
+          },
+          {
+            "time_local": "2026-06-29 16:28:17",
+            "raw": {
+              "s1": 3414,
+              "s2": 3154,
+              "s3": 2925,
+              "s4": 3171
+            },
+            "band": {
+              "s1": "air-dry",
+              "s2": "air-dry",
+              "s3": "dry",
+              "s4": "air-dry"
+            },
+            "interpretation": "s3 enters the dry band while the other channels remain air-dry."
+          },
+          {
+            "time_local": "2026-06-29 16:29:02",
+            "raw": {
+              "s1": 3418,
+              "s2": 3157,
+              "s3": 2921,
+              "s4": 3172
+            },
+            "band": {
+              "s1": "air-dry",
+              "s2": "air-dry",
+              "s3": "dry",
+              "s4": "air-dry"
+            },
+            "interpretation": "s3 stable dry; other channels open-air-like."
+          },
+          {
+            "time_local": "2026-06-29 16:30:17",
+            "raw": {
+              "s1": 3394,
+              "s2": 3156,
+              "s3": 2944,
+              "s4": 3172
+            },
+            "band": {
+              "s1": "air-dry",
+              "s2": "air-dry",
+              "s3": "dry",
+              "s4": "air-dry"
+            },
+            "interpretation": "s3 remains dry after a short settling interval."
+          },
+          {
+            "time_local": "2026-06-29 16:31:52",
+            "raw": {
+              "s1": 3400,
+              "s2": 3158,
+              "s3": 2949,
+              "s4": 3176
+            },
+            "band": {
+              "s1": "air-dry",
+              "s2": "air-dry",
+              "s3": "dry",
+              "s4": "air-dry"
+            },
+            "interpretation": "s3 remains dry during rootbound/root-dominated inspection; other channels remain air-dry."
+          }
+        ],
+        "initial_watering_response": {
+          "watering_start_time_local": "2026-06-29 16:32 CDT",
+          "amount": "less than 1/4 cup",
+          "runoff": "Water started flowing out the bottom essentially immediately.",
+          "samples": [
+            {
+              "time_local": "2026-06-29 16:32:47",
+              "s3_raw": 2948,
+              "s3_csv_level_tag": "dry",
+              "interpretation": "Pre-response / still stable at dry rootball-interface baseline."
+            },
+            {
+              "time_local": "2026-06-29 16:32:52",
+              "s3_raw": 1967,
+              "s3_csv_level_tag": "dry",
+              "delta_from_16_32_47": -981,
+              "interpretation": "Large wetward raw step after gentle watering began."
+            },
+            {
+              "time_local": "2026-06-29 16:32:57",
+              "s3_raw": 1327,
+              "s3_csv_level_tag": "dry",
+              "delta_from_16_32_47": -1621,
+              "interpretation": "Very large wetward raw step; water reached the s3 rootball-interface zone quickly."
+            },
+            {
+              "time_local": "2026-06-29 16:33:07",
+              "s3_raw": 1669,
+              "s3_csv_level_tag": "OK",
+              "interpretation": "Rebound upward after wet spike, consistent with drainage or redistribution."
+            },
+            {
+              "time_local": "2026-06-29 16:33:27",
+              "s3_raw": 1932,
+              "s3_csv_level_tag": "needs water",
+              "interpretation": "Continued upward rebound toward drier raw counts."
+            },
+            {
+              "time_local": "2026-06-29 16:34:02",
+              "s3_raw": 2210,
+              "s3_csv_level_tag": "dry",
+              "interpretation": "Fast return toward drier raw counts after immediate runoff."
+            },
+            {
+              "time_local": "2026-06-29 16:34:12",
+              "s3_raw": 2261,
+              "s3_csv_level_tag": "dry",
+              "interpretation": "Still trending drier after runoff."
+            },
+            {
+              "time_local": "2026-06-29 16:38:32",
+              "s3_raw": 2599,
+              "s3_csv_level_tag": "dry",
+              "interpretation": "Late rebound plateau after drainage or redistribution."
+            },
+            {
+              "time_local": "2026-06-29 16:39:42",
+              "s3_raw": 2598,
+              "s3_csv_level_tag": "dry",
+              "interpretation": "Stable late plateau before possible handling."
+            },
+            {
+              "time_local": "2026-06-29 16:39:47",
+              "s3_raw": 3082,
+              "s3_csv_level_tag": "dry",
+              "interpretation": "Upward jump; possible probe pull or handling if confirmed."
+            }
+          ],
+          "interpretation": "Raw counts are the primary evidence for this watering response. Water reached the s3 rootball-interface zone quickly, then the local reading rebounded upward as water drained or redistributed. Less than 1/4 cup caused essentially immediate bottom flow, indicating very low retention or a fast bypass/drainage path in the root-dominated pot. The CSV level tag changed from dry to OK to needs water and back to dry during the transient, so emitted band/tag semantics should be treated cautiously until display/firmware band behavior is reconciled."
+        },
+        "dashboard_screenshot": {
+          "path": "docs/experiments/assets/20260629_p09_s3_rootball_response.png",
+          "captured_from": "user-provided dashboard screenshot",
+          "interpretation": "Visual dashboard trace shows s3 with a readable dry baseline, sharp wetward response, rebound/redistribution path, and later transition toward dry/air exposure."
+        },
+        "closeout_call": {
+          "time_local": "2026-06-29 ~16:39 CDT",
+          "enough_for_segment": true,
+          "scope": "one-plant rootbound succulent water-response characterization",
+          "not_sufficient_for": "calibration endpoint or generalized soil moisture boundary",
+          "recommended_next_step": "Reseat dampish rootball base back into inner pot without the probe, wipe probe, allow probe to return toward air-dry, and prep P10."
+        }
+      },
+      "water_balance": {
+        "applied_cups": "<0.25",
+        "runoff_or_leakage_observed": true,
+        "runoff_timing": "essentially immediate bottom flow",
+        "notes": "Less than 1/4 cup was applied. Immediate bottom flow is consistent with very low retention or a fast bypass/drainage path in the root-dominated pot."
+      },
+      "findings": [
+        "P09 has little to no open soil surface for a normal probe insertion.",
+        "User inspection indicates the soil is essentially entirely consumed by roots, so this should be treated as rootbound/root-dominated evidence.",
+        "The 16:28 measurement should be treated as rootball-interface evidence after lifting the plant, not a normal in-soil insertion.",
+        "Log behavior strongly indicates s3 was the inserted/active probe, but this is inferred unless physically confirmed.",
+        "The rootball/soil interface around the inserted probe read dry and stayed dry for the observed settling interval, including during the 16:31 rootbound inspection.",
+        "After gentle watering began at 16:32, s3 raw dropped sharply from 2948 at 16:32:47 to 1967 at 16:32:52 and 1327 at 16:32:57, showing water reached the local rootball-interface zone quickly.",
+        "Less than 1/4 cup caused essentially immediate bottom flow, indicating very low retention or a fast bypass/drainage path.",
+        "After the wet spike, s3 rebounded upward toward drier raw counts, reaching 2261 by 16:34:12.",
+        "Late post-runoff readings settled near 2600 raw before a 16:39:47 upward jump to 3082, which may indicate probe pull or handling if confirmed.",
+        "The P09 segment is sufficient for a one-plant rootbound succulent water-response characterization: dry baseline, wetward hit, immediate runoff, and rebound path are all visible.",
+        "P09 is not a calibration endpoint because placement was rootball-interface, one-probe, and root-dominated.",
+        "The CSV level tag changed inconsistently through the transient, so raw ADC trajectory should be preserved as the primary evidence for this segment.",
+        "Avoid forcing additional probes into this pot because the handling disturbance and root damage risk would likely outweigh the added measurement value.",
+        "Treat P09 as succulent-specific care evidence, not a generic houseplant watering trigger."
+      ],
+      "evidence_quality": "Useful rootball-interface state note; limited by plant lifting, one-probe geometry, root-dominated substrate, and inferred probe ID."
+    },
+    {
+      "plant_id": "P10",
+      "plant": "pothos; office-cared comparator",
+      "description": "Another pothos, but better cared for and tended than earlier rescue pothos plants.",
+      "care_history": "Recently brought home from user's office after about four years there. Received approximately 1 cup of water once a week for the duration, missing only a few weeks around holidays.",
+      "segment_type": "office-cared pothos comparator, pre-measurement setup",
+      "shared_context_with_p11": {
+        "cohort": "office-cared plants recently brought home",
+        "care_history": "Regular approximately 1 cup weekly watering for about four years, with only a few holiday gaps.",
+        "pot_construction": "Inner plastic pot inside outer pot with terra cotta base / built-in drip tray.",
+        "tray_mechanism": "Terra cotta itself is unlikely to provide meaningful soil moisture exchange because there is no direct soil-to-terra-cotta contact through the inner plastic liner. The outer base tray can still hold runoff and allow some slow rewetting or resoak from below.",
+        "measurement_implication": "Record both soil/probe response and outer tray/base state. Runoff into the tray may become a short-term rewetting reservoir rather than being fully lost."
+      },
+      "events": [
+        {
+          "time_local": "2026-06-29 ~16:46 CDT",
+          "event": "User introduced P10 and P11 as better-cared office plants; P10 first and identified as another pothos."
+        },
+        {
+          "time_local": "2026-06-29 ~16:47 CDT",
+          "event": "Probes inserted into P10 and left to settle for soil baseline."
+        },
+        {
+          "time_local": "2026-06-29 ~16:51 CDT",
+          "event": "User reseated s1 and requested a 30 second response check."
+        },
+        {
+          "time_local": "2026-06-29 17:06 CDT",
+          "event": "P10 watering started. User noted rich foliage makes it difficult to get water directly to the soil surface and distribute it evenly."
+        },
+        {
+          "time_local": "2026-06-29 ~17:08 CDT",
+          "event": "After about 1 cup applied, user observed water starting to fill the tray under the inner pot."
+        },
+        {
+          "time_local": "2026-06-29 ~17:11 CDT",
+          "event": "User reported that foliage was gently moved aside and watering was believed to be reasonably distributed, but dashboard/log still showed clearly uneven post-watering soil conditions."
+        },
+        {
+          "time_local": "2026-06-29 ~17:15 CDT",
+          "event": "User estimated retained tray water at about 1/4 inch in an approximately 1 inch deep tray after the 1 cup watering, and judged the amount that went into the plant to be about right."
+        },
+        {
+          "time_local": "2026-06-29 17:21 CDT",
+          "event": "P10 probes were pulled, wiped dry, and left to air dry while P11 was prepared. Treat this as the P10 segment boundary; later readings are probe handling / air reset / P11 setup unless explicitly marked otherwise."
+        },
+        {
+          "time_local": "2026-06-29 ~17:26 CDT",
+          "event": "Lab note after P10 probe pull: significant clumps/globs of moist soil stuck to the sensors and had to be wiped off before drying. User observed P10 as having the best soil-structure/moist-clumping response of the tested plants so far."
+        },
+        {
+          "time_local": "2026-06-29 17:40 CDT",
+          "event": "When P10 was removed from the bench, all visible tray water had been reabsorbed into the pot system. User described the extra tray water as approximately 1 cm, fully taken back up between the 17:06 watering start and 17:40."
+        }
+      ],
+      "probe_state": {
+        "pre_p10_reset_sample_time_local": "2026-06-29 16:46:32",
+        "pre_p10_reset_raw": {
+          "s1": 3449,
+          "s2": 3153,
+          "s3": 3156,
+          "s4": 3172
+        },
+        "pre_p10_reset_band": {
+          "s1": "air-dry",
+          "s2": "air-dry",
+          "s3": "air-dry",
+          "s4": "air-dry"
+        },
+        "interpretation": "All channels had returned to air-dry/open-air behavior after P09, suitable for starting P10."
+      },
+      "selected_log_summary": {
+        "settling_baseline": {
+          "inferred_probe_placement_pattern": "Staggered insertion inferred from log: s1 moved down around 16:47:02, s2 around 16:47:12, s3 around 16:47:22, and s4 around 16:47:32.",
+          "samples": [
+            {
+              "time_local": "2026-06-29 16:46:32",
+              "raw": {
+                "s1": 3449,
+                "s2": 3153,
+                "s3": 3156,
+                "s4": 3172
+              },
+              "band": {
+                "s1": "air-dry",
+                "s2": "air-dry",
+                "s3": "air-dry",
+                "s4": "air-dry"
+              },
+              "interpretation": "Pre-P10 air reset."
+            },
+            {
+              "time_local": "2026-06-29 16:47:22",
+              "raw": {
+                "s1": 3298,
+                "s2": 2644,
+                "s3": 2509,
+                "s4": 3174
+              },
+              "band": {
+                "s1": "air-dry",
+                "s2": "dry",
+                "s3": "air-dry",
+                "s4": "air-dry"
+              },
+              "interpretation": "Staggered insertion in progress; s2 has entered dry band and s3 has moved down but emitted tag is still air-dry."
+            },
+            {
+              "time_local": "2026-06-29 16:47:37",
+              "raw": {
+                "s1": 3292,
+                "s2": 2659,
+                "s3": 2488,
+                "s4": 2405
+              },
+              "band": {
+                "s1": "air-dry",
+                "s2": "dry",
+                "s3": "dry",
+                "s4": "dry"
+              },
+              "interpretation": "s2/s3/s4 reading dry-band soil contact; s1 remains air-dry."
+            },
+            {
+              "time_local": "2026-06-29 16:47:57",
+              "raw": {
+                "s1": 3289,
+                "s2": 2647,
+                "s3": 2484,
+                "s4": 2394
+              },
+              "band": {
+                "s1": "air-dry",
+                "s2": "dry",
+                "s3": "dry",
+                "s4": "dry"
+              },
+              "interpretation": "Settling baseline: s2/s3/s4 stable dry; s1 remains high/air-dry and may indicate shallow/weak contact or a very dry local zone."
+            }
+          ],
+          "interpretation": "P10 reads drier than its better care history might suggest at the current probe locations. Let baseline settle longer before watering; treat s1 as questionable contact or a very dry local zone unless physical placement confirms firm soil contact."
+        },
+        "s1_reseat_check": {
+          "event_time_local": "2026-06-29 ~16:51 CDT",
+          "samples": [
+            {
+              "time_local": "2026-06-29 16:51:17",
+              "s1_raw": 3345,
+              "s1_band": "air-dry"
+            },
+            {
+              "time_local": "2026-06-29 16:51:47",
+              "s1_raw": 3329,
+              "s1_band": "air-dry",
+              "delta_from_16_51_17": -16
+            },
+            {
+              "time_local": "2026-06-29 16:52:12",
+              "s1_raw": 3318,
+              "s1_band": "air-dry",
+              "delta_from_16_51_17": -27
+            }
+          ],
+          "comparison_channels": {
+            "s2": "stable dry-band around 2680-2690 during check window",
+            "s3": "stable dry-band around 2370-2375 during check window",
+            "s4": "stable dry-band around 2370-2376 during check window"
+          },
+          "interpretation": "s1 showed a weak downward raw drift but remained air-dry. This is not enough to call s1 a good soil-contact baseline; keep contact marked marginal/questionable unless physical placement confirms firm contact."
+        },
+        "stable_pre_water_comparison": {
+          "sample_time_local": "2026-06-29 16:59:57",
+          "raw": {
+            "s1": 3251,
+            "s2": 2676,
+            "s3": 2361,
+            "s4": 2362
+          },
+          "band": {
+            "s1": "air-dry",
+            "s2": "dry",
+            "s3": "dry",
+            "s4": "dry"
+          },
+          "reliable_channels_for_comparison": [
+            "s2",
+            "s3",
+            "s4"
+          ],
+          "reliable_channel_mean_raw": 2466.3,
+          "reliable_channel_median_raw": 2362,
+          "s1_caveat": "s1 remained high/air-dry after reseat and is treated as marginal/contact-questionable unless physical placement confirms firm contact.",
+          "comparison_to_earlier_pothos": [
+            {
+              "plant_id": "P01",
+              "basis": "Clean P01 pre-water dry-baseline experiment.",
+              "raw_reference": {
+                "s1": 2110,
+                "s2": 2164,
+                "s3": 2189,
+                "s4": 2098,
+                "mean": 2140.3
+              },
+              "interpretation": "P10 reliable channels are drier/higher than P01's dry baseline."
+            },
+            {
+              "plant_id": "P02",
+              "basis": "Parched rescue pothos monitor fallback; air-to-prewater/contact transition, not a clean four-probe calibration baseline.",
+              "raw_reference": {
+                "median_range": "3073-3179"
+              },
+              "interpretation": "P10 reliable channels are much less dry/parched than P02."
+            },
+            {
+              "plant_id": "P03",
+              "basis": "Parched rescue pothos dry-settle window before first runoff; contact transition present.",
+              "raw_reference": {
+                "median_range": "3011-3255"
+              },
+              "interpretation": "P10 reliable channels are much less dry/parched than P03."
+            }
+          ],
+          "watering_call": "P10 is dry and due for watering, but not rescue-parched. Start gentle distributed top watering; record first runoff timing and tray/base retained water state, then pause for tray/inner-pot resoak."
+        },
+        "initial_watering_response": {
+          "watering_start_time_local": "2026-06-29 17:06 CDT",
+          "surface_distribution_caveat": "Rich foliage obstructs access to the soil surface, making even distributed top watering difficult.",
+          "samples": [
+            {
+              "time_local": "2026-06-29 17:05:57",
+              "raw": {
+                "s1": 3093,
+                "s2": 2651,
+                "s3": 2359,
+                "s4": 2357
+              },
+              "band": {
+                "s1": "air-dry",
+                "s2": "dry",
+                "s3": "dry",
+                "s4": "dry"
+              },
+              "interpretation": "Final pre-water tail."
+            },
+            {
+              "time_local": "2026-06-29 17:06:57",
+              "raw": {
+                "s1": 3070,
+                "s2": 2656,
+                "s3": 2358,
+                "s4": 2358
+              },
+              "band": {
+                "s1": "air-dry",
+                "s2": "dry",
+                "s3": "dry",
+                "s4": "dry"
+              },
+              "interpretation": "Still near dry baseline after watering start."
+            },
+            {
+              "time_local": "2026-06-29 17:07:02",
+              "raw": {
+                "s1": 3065,
+                "s2": 2419,
+                "s3": 1447,
+                "s4": 2337
+              },
+              "band": {
+                "s1": "air-dry",
+                "s2": "dry",
+                "s3": "dry",
+                "s4": "dry"
+              },
+              "interpretation": "First strong wetward hit at s3; modest wetward movement at s2; s1 unchanged/contact-questionable."
+            },
+            {
+              "time_local": "2026-06-29 17:07:07",
+              "raw": {
+                "s1": 3029,
+                "s2": 2420,
+                "s3": 1705,
+                "s4": 1809
+              },
+              "band": {
+                "s1": "air-dry",
+                "s2": "dry",
+                "s3": "dry",
+                "s4": "dry"
+              },
+              "interpretation": "s4 now wetward too; s3 rebounding or redistributing after initial wet hit; s2 modest; s1 still not clean wetting evidence."
+            }
+          ],
+          "interpretation": "Initial P10 water path reached s3 quickly, then s4. Foliage obstruction likely made surface distribution uneven. Preserve raw ADC as primary evidence because emitted bands stayed dry/air-dry during obvious wetward raw movement."
+        },
+        "first_tray_fill_response": {
+          "time_local": "2026-06-29 ~17:08 CDT",
+          "applied_cups_at_first_tray_fill": 1.0,
+          "observation": "Water started filling the tray under the inner pot.",
+          "recommended_action": "Pause and allow tray/inner-pot resoak rather than immediately adding more water.",
+          "samples": [
+            {
+              "time_local": "2026-06-29 17:07:57",
+              "raw": {
+                "s1": 3019,
+                "s2": 2758,
+                "s3": 2672,
+                "s4": 1955
+              },
+              "band": {
+                "s1": "air-dry",
+                "s2": "dry",
+                "s3": "dry",
+                "s4": "needs water"
+              },
+              "interpretation": "s4 remains wettest; s3 rebounding drier."
+            },
+            {
+              "time_local": "2026-06-29 17:08:07",
+              "raw": {
+                "s1": 3006,
+                "s2": 2789,
+                "s3": 2765,
+                "s4": 1931
+              },
+              "band": {
+                "s1": "dry",
+                "s2": "dry",
+                "s3": "dry",
+                "s4": "needs water"
+              },
+              "interpretation": "Tray-fill period; s1 starts entering dry band."
+            },
+            {
+              "time_local": "2026-06-29 17:08:17",
+              "raw": {
+                "s1": 2868,
+                "s2": 2819,
+                "s3": 2952,
+                "s4": 1929
+              },
+              "band": {
+                "s1": "dry",
+                "s2": "dry",
+                "s3": "dry",
+                "s4": "needs water"
+              },
+              "interpretation": "s4 wet zone persists; other channels drier or rebounding."
+            },
+            {
+              "time_local": "2026-06-29 17:08:22",
+              "raw": {
+                "s1": 2827,
+                "s2": 2834,
+                "s3": 3038,
+                "s4": 1926
+              },
+              "band": {
+                "s1": "dry",
+                "s2": "dry",
+                "s3": "dry",
+                "s4": "needs water"
+              },
+              "interpretation": "Strong cross-channel heterogeneity at first tray fill."
+            }
+          ],
+          "interpretation": "P10 accepted about 1 cup before visible tray fill. Local response remains heterogeneous: s4 is the clearest sustained wet zone, s3 saw an early wet pulse then rebounded upward/drier, and s1/s2 remain comparatively dry. This supports preferential flow and uneven surface access under dense foliage. Because the outer tray is a normal resoak affordance for this pot, pause for tray-mediated resoak before adding more."
+        },
+        "uneven_post_watering_screenshot": {
+          "path": "docs/experiments/assets/20260629_p10_uneven_post_watering.png",
+          "captured_from": "user-provided dashboard screenshot",
+          "user_distribution_note": "User gently moved foliage out of the way and believed the water was spread around the plant reasonably well.",
+          "sample_time_local": "2026-06-29 17:10:27",
+          "raw": {
+            "s1": 2693,
+            "s2": 3054,
+            "s3": 3151,
+            "s4": 2088
+          },
+          "band": {
+            "s1": "dry",
+            "s2": "dry",
+            "s3": "air-dry",
+            "s4": "needs water"
+          },
+          "spread_raw": 1063,
+          "persistence_check": {
+            "sample_time_local": "2026-06-29 17:14:07",
+            "raw": {
+              "s1": 2810,
+              "s2": 3097,
+              "s3": 3173,
+              "s4": 2067
+            },
+            "band": {
+              "s1": "dry",
+              "s2": "air-dry",
+              "s3": "air-dry",
+              "s4": "needs water"
+            },
+            "spread_raw": 1106,
+            "interpretation": "Unevenness persisted several minutes after the initial 1 cup watering and first tray fill; this strengthens the interpretation that P10 has real local wetting differences, not just a transient splash artifact."
+          },
+          "interpretation": "After a careful 1 cup watering attempt, P10 still showed over 1,000 raw counts of spread. Unevenness should not be attributed only to poor operator water distribution; this is evidence of real pot microzones/preferential flow, influenced by foliage obstruction, root/soil structure, pot geometry, and tray-mediated drainage/resoak."
+        }
+      },
+      "water_balance": {
+        "applied_cups_at_first_tray_fill": 1.0,
+        "runoff_or_tray_fill_observed": true,
+        "runoff_timing": "about 2 minutes after 17:06 watering start",
+        "tray_role": "built-in outer drip tray / resoak reservoir",
+        "retained_tray_water_estimate": {
+          "time_local": "2026-06-29 ~17:15 CDT",
+          "depth_estimate": "about 1/4 inch",
+          "tray_depth_estimate": "about 1 inch",
+          "interpretation": "Tray had enough retained water to confirm runoff/resoak reservoir behavior, but not enough to indicate a large overwater event."
+        },
+        "tray_empty_endpoint": {
+          "time_local": "2026-06-29 17:40 CDT",
+          "elapsed_since_watering_start_minutes": 34,
+          "elapsed_since_first_tray_fill_minutes": 32,
+          "earlier_depth_estimate": "about 1/4 inch, later described as approximately 1 cm extra water",
+          "observation": "All visible tray water had been reabsorbed by the time P10 was removed from the bench.",
+          "interpretation": "The outer tray behaved as a temporary resoak reservoir rather than persistent standing excess water."
+        },
+        "notes": "Tray fill is not automatically wasted water for P10 because the outer base can allow some slow resoak from below. The estimated retained amount suggests the 1 cup volume was about right for plant care, while the sensor spread still shows uneven local soil wetting. By 17:40, visible tray water was gone, supporting tray-mediated resoak for this pot."
+      },
+      "soil_structure_note": {
+        "time_local": "2026-06-29 ~17:26 CDT",
+        "observation": "When probes were pulled from P10, significant moist soil clumps/globs stuck to the sensors and required wiping before drying.",
+        "comparison": "User observed this as the best soil of the tested bunch so far. The potting medium appears similar among the plants, but the rescue plants did not show the same moist clumping behavior.",
+        "inference": "P10 likely retained moisture and soil cohesion better than the rescue pothos plants. Repeated over-dry cycles in rescue plants may have reduced rewetting/clumping behavior and encouraged bypass/channeling.",
+        "untested_speculation": "Removing plants/roots and fully rewetting, stirring, mixing, and soaking the soil might restore some moisture-holding behavior, but this would be destructive or high risk for the plants and is not planned as a bench test."
+      },
+      "planned_handling": [
+        "Before watering, record whether the outer base already has standing water or dampness.",
+        "Record whether the inner pot is left in the outer pot or removed during measurement.",
+        "Place probes across the pot as evenly as feasible without forcing through dense roots.",
+        "If watering, record surface pattern, amount, first runoff timing, and whether water remains in the outer tray."
+      ],
+      "findings": [
+        "P10 should be treated as an office-cared pothos comparator, not a rescue/dry-baseline plant.",
+        "The outer tray/base can confound later readings by retaining runoff for slow resoak.",
+        "Runoff timing alone is not enough for P10/P11; retained tray water state matters.",
+        "During initial settling, s2/s3/s4 stabilized in dry-band soil readings while s1 remained high/air-dry.",
+        "P10 may be drier at probe locations than its care history suggests, but s1 contact should be treated as questionable unless physically confirmed.",
+        "After reseating, s1 moved only weakly over the 30 second check window and remained air-dry.",
+        "At the stable pre-water tail around 17:00, reliable channels s2/s3/s4 were dry at roughly 2361-2676 raw; P10 is drier than P01's clean dry baseline but much less parched than P02/P03."
+        ,
+        "P10 watering started at 17:06 with foliage obstructing even surface access. Initial wetting reached s3 first, then s4; s2 moved modestly and s1 remained contact-questionable."
+        ,
+        "After about 1 cup, water began filling the outer tray. At that point s4 was the clearest sustained wet zone while s3 was rebounding drier and s1/s2 remained comparatively dry.",
+        "After a careful attempt to move foliage and spread water, P10 still showed strong unevenness: around 17:10:27, s4 was 2088 while s3 was 3151 and s2 was 3054.",
+        "Retained tray water was only about 1/4 inch in an approximately 1 inch deep tray, supporting that the 1 cup volume was probably reasonable even though distribution remained heterogeneous.",
+        "P10 soil measurement ended when probes were pulled and wiped at 17:21 local; subsequent readings should be interpreted as probe air reset or P11 setup unless separately labeled.",
+        "Probe pull produced significant moist soil clumps stuck to the sensors, supporting a tactile soil-structure distinction: P10 behaved like cohesive, rewettable soil, while rescue plants are suspected to have more over-dried, bypass-prone medium despite similar potting material.",
+        "By 17:40 local, all visible tray water from the 17:06 watering had been reabsorbed into the P10 pot system, supporting the interpretation that the tray is a functional resoak reservoir rather than simply waste runoff."
+      ],
+      "evidence_quality": "Initial settling baseline captured; contact/placement details still pending."
+    },
+    {
+      "plant_id": "P11",
+      "plant": "office-cared plant, identity pending; miniature corn-plant-like morphology",
+      "description": "Second better-cared office plant from the same long-term care environment as P10. At closeout, user described it as looking like an approximately 8-10 inch tall miniature corn plant, but wider, with no corn stalks and with the first leaves emerging at the base rather than above a bare lower stalk. Exact identity remains unconfirmed.",
+      "care_history": "Recently brought home from user's office after about four years there. Received approximately 1 cup of water once a week for the duration, missing only a few weeks around holidays.",
+      "segment_type": "office-cared comparator, dry settling baseline",
+      "shared_context_with_p10": {
+        "cohort": "office-cared plants recently brought home",
+        "pot_construction": "Inner plastic pot inside outer pot with terra cotta base / built-in drip tray.",
+        "tray_mechanism": "Outer base tray can hold runoff and allow some slow rewetting or resoak from below, even though terra cotta itself is not in direct contact with soil."
+      },
+      "events": [
+        {
+          "time_local": "2026-06-29 ~16:46 CDT",
+          "event": "User introduced P11 as one of the two better-cared office plants; detailed identity pending."
+        },
+        {
+          "time_local": "2026-06-29 ~17:39 CDT",
+          "event": "After P10 pull/wipe/dry time, user reported prepping P11. Live tail showed all four probes stable in air-dry territory before P11 insertion."
+        },
+        {
+          "time_local": "2026-06-29 ~17:43 CDT",
+          "event": "P11 probes were inserted and settling to soil-level readings without watering."
+        },
+        {
+          "time_local": "2026-06-29 ~17:55 CDT",
+          "event": "After longer undisturbed settling, all four P11 probes were in dry-band soil readings. User reported P11's normal watering pattern: fill the top/center plant core from above, let it slowly drain down like rainfall, then continue toward about 1 cup total."
+        },
+        {
+          "time_local": "2026-06-29 17:57 CDT",
+          "event": "P11 watering started. Pre-response sample at 17:57:12 remained stable/dry across all four channels."
+        },
+        {
+          "time_local": "2026-06-29 ~17:59 CDT",
+          "event": "After the initial center/core fill, user switched the remaining approximately 3/4 cup to distributed soil-surface watering to reduce isolated pockets around the sensors."
+        },
+        {
+          "time_local": "2026-06-29 ~18:01 CDT",
+          "event": "User reported P11's tray filling further, estimated at about 1/2-3/4 inch full. This was treated as a stop/pause point rather than a reason to add more water."
+        },
+        {
+          "time_local": "2026-06-29 18:06 CDT",
+          "event": "P11 monitoring checkpoint after tray-fill pause: readings remained highly non-uniform, with s3 well-watered while s1/s2/s4 remained dry. Continue observing tray-mediated resoak; do not add more water at this checkpoint."
+        },
+        {
+          "time_local": "2026-06-29 18:08 CDT",
+          "event": "P11 short-term monitoring endpoint: readings still had not equalized. s1/s4 drifted somewhat wetter than baseline, s2 remained dry/high, and s3 remained well-watered."
+        },
+        {
+          "time_local": "2026-06-29 18:16 CDT",
+          "event": "P11 resoak checkpoint about 15 minutes after tray-fill pause: readings still had not equalized. s1 had drifted much wetter than baseline, s4 remained moderately wetward of baseline, s3 stayed well-watered, and s2 remained high/dry-air-ish."
+        },
+        {
+          "time_local": "2026-06-29 18:24 CDT",
+          "event": "Full greenhouse bench suite called complete. P11 had soaked back up about 2/3 of the water that had been in its overflow tray, but not all of it. Sensors were pulled and wiped dry; readings after the pull should be interpreted as handling / air-reset evidence, not P11 soil state."
+        }
+      ],
+      "probe_state": {
+        "pre_insertion_air_reset_sample_time_local": "2026-06-29 17:39:42",
+        "raw": {
+          "s1": 3545,
+          "s2": 3319,
+          "s3": 3157,
+          "s4": 3055
+        },
+        "band": {
+          "s1": "air-dry",
+          "s2": "air-dry",
+          "s3": "air-dry",
+          "s4": "air-dry"
+        },
+        "interpretation": "All four probes were stable in air-dry territory before P11 insertion. Per-channel open-air offsets remain visible, especially s1 reading higher than the other channels."
+      },
+      "selected_log_summary": {
+        "settling_baseline_no_watering": {
+          "sample_time_local": "2026-06-29 17:43:22",
+          "raw": {
+            "s1": 3169,
+            "s2": 2874,
+            "s3": 2804,
+            "s4": 2831
+          },
+          "band": {
+            "s1": "air-dry",
+            "s2": "dry",
+            "s3": "dry",
+            "s4": "dry"
+          },
+          "reliable_channels": [
+            "s2",
+            "s3",
+            "s4"
+          ],
+          "questionable_channels": [
+            "s1"
+          ],
+          "reliable_channel_mean_raw": 2836.3,
+          "reliable_channel_median_raw": 2831,
+          "interpretation": "P11 reliable channels s2/s3/s4 settled into dry soil-contact readings with no watering yet. s1 remained high/air-dry-ish and should be treated as contact-questionable unless physical placement confirms firm contact. P11 appears drier at probe locations than P10's reliable pre-water baseline."
+        },
+        "longer_settled_baseline_no_watering": {
+          "sample_time_local": "2026-06-29 17:54:52",
+          "raw": {
+            "s1": 2978,
+            "s2": 2732,
+            "s3": 2763,
+            "s4": 2913
+          },
+          "band": {
+            "s1": "dry",
+            "s2": "dry",
+            "s3": "dry",
+            "s4": "dry"
+          },
+          "all_channel_mean_raw": 2846.5,
+          "all_channel_median_raw": 2838,
+          "interpretation": "After longer undisturbed settling, s1 also entered the dry band. P11 has a stable dry no-watering baseline across all four channels before watering."
+        },
+        "watering_start_sample": {
+          "sample_time_local": "2026-06-29 17:57:12",
+          "raw": {
+            "s1": 2955,
+            "s2": 2742,
+            "s3": 2761,
+            "s4": 2942
+          },
+          "band": {
+            "s1": "dry",
+            "s2": "dry",
+            "s3": "dry",
+            "s4": "dry"
+          },
+          "interpretation": "Clean dry pre-response sample immediately after the reported 17:57 watering start."
+        },
+        "watering_response_two_phase": {
+          "center_core_first_response": {
+            "sample_time_local": "2026-06-29 17:57:17",
+            "raw": {
+              "s1": 2943,
+              "s2": 2738,
+              "s3": 2758,
+              "s4": 2286
+            },
+            "interpretation": "Initial center/core fill produced a fast localized wetward response at s4 while s1/s2/s3 remained near dry baseline."
+          },
+          "distributed_surface_transition": {
+            "approx_time_local": "2026-06-29 ~17:59 CDT",
+            "operator_note": "User switched the remaining approximately 3/4 cup to distributed soil-surface watering to avoid leaving pockets around the sensors.",
+            "representative_sample_time_local": "2026-06-29 17:59:22",
+            "raw": {
+              "s1": 2713,
+              "s2": 2663,
+              "s3": 1972,
+              "s4": 2319
+            },
+            "interpretation": "Around the transition to distributed watering, wetting response broadened beyond the initial s4-localized path; s3 showed a strong wetward hit and s1 also moved wetward."
+          },
+          "tray_fill_pause_point": {
+            "sample_time_local": "2026-06-29 18:01:42",
+            "raw": {
+              "s1": 2624,
+              "s2": 2849,
+              "s3": 1299,
+              "s4": 2377
+            },
+            "band": {
+              "s1": "dry",
+              "s2": "dry",
+              "s3": "well watered",
+              "s4": "dry"
+            },
+            "tray_depth_estimate": "about 1/2-3/4 inch full",
+            "interpretation": "P11 had a substantial retained tray reservoir while sensor response remained highly uneven. Stop/pause watering and let tray-mediated resoak proceed rather than chasing the remaining dry channels with more water."
+          },
+          "post_tray_fill_monitoring_checkpoint": {
+            "sample_time_local": "2026-06-29 18:06:17",
+            "raw": {
+              "s1": 2514,
+              "s2": 2998,
+              "s3": 1321,
+              "s4": 2476
+            },
+            "band": {
+              "s1": "dry",
+              "s2": "dry",
+              "s3": "well watered",
+              "s4": "dry"
+            },
+            "interpretation": "P11 remained highly non-uniform several minutes after tray fill: s3 held well-watered while s1/s2/s4 remained dry. This supports continued observation rather than adding more water."
+          },
+          "short_term_monitoring_endpoint": {
+            "sample_time_local": "2026-06-29 18:08:52",
+            "raw": {
+              "s1": 2455,
+              "s2": 3004,
+              "s3": 1330,
+              "s4": 2480
+            },
+            "band": {
+              "s1": "dry",
+              "s2": "dry",
+              "s3": "well watered",
+              "s4": "dry"
+            },
+            "interpretation": "P11 had not equalized in the short term after tray fill. s1/s4 had drifted wetter than baseline, s2 remained dry/high, and s3 remained well-watered."
+          },
+          "fifteen_minute_resoak_checkpoint": {
+            "sample_time_local": "2026-06-29 18:16:12",
+            "elapsed_since_tray_fill_pause_minutes": 15,
+            "raw": {
+              "s1": 2238,
+              "s2": 3085,
+              "s3": 1340,
+              "s4": 2444
+            },
+            "band": {
+              "s1": "dry",
+              "s2": "air-dry",
+              "s3": "well watered",
+              "s4": "dry"
+            },
+            "interpretation": "P11 still had not equalized about 15 minutes after tray-fill pause. s1 drifted much wetter than baseline, s4 stayed moderately wetward of baseline, s3 remained well-watered, and s2 stayed high/dry-air-ish. Treat this as persistent microzone / placement / pathway evidence, not a reason to add more water."
+          },
+          "final_closeout_pre_pull": {
+            "sample_time_local": "2026-06-29 18:24:07",
+            "raw": {
+              "s1": 1850,
+              "s2": 3196,
+              "s3": 1355,
+              "s4": 2274
+            },
+            "band": {
+              "s1": "needs water",
+              "s2": "air-dry",
+              "s3": "well watered",
+              "s4": "dry"
+            },
+            "screenshot_path": "docs/experiments/assets/20260629_p11_final_resoak_closeout.png",
+            "tray_resoak_observation": "About 2/3 of the water in the overflow tray had been soaked back up by the 18:24 closeout, but not all of it.",
+            "interpretation": "P11 remained strongly non-uniform at closeout despite partial tray reabsorption. Treat readings after the 18:24 sensor pull as handling / air-reset evidence, not P11 soil state."
+          }
+        }
+      },
+      "watering_method_plan": {
+        "plant_specific_pathway": "P11 has a peak/top center plant core that is normally watered from above and allowed to hold water briefly, then slowly drain downward as if catching rainfall.",
+        "center_core_capacity_estimate_cups": 0.125,
+        "normal_total_watering_cups": 1.0,
+        "bench_plan": "Start with the normal center/core fill amount and pause briefly to observe delayed soil response, then continue toward the normal total dose. This preserves normal plant handling while separating the center-core pathway from broader watering response."
+      },
+      "water_balance": {
+        "tray_fill_observed": true,
+        "tray_depth_estimate": "about 1/2-3/4 inch full",
+        "time_local": "2026-06-29 ~18:01 CDT",
+        "closeout_time_local": "2026-06-29 18:24 CDT",
+        "closeout_tray_resoak": "about 2/3 of overflow tray water had been reabsorbed; not all",
+        "interpretation": "P11 retained substantially more visible tray water than P10 at the comparable pause point. By 18:24, about 2/3 of that tray water had been reabsorbed, but the plant still showed strong local non-uniformity. This should be treated as a stop/pause boundary and an opportunity to observe resoak behavior, not as evidence that more water is needed because some probes remain dry."
+      },
+      "findings": [
+        "P11 should be interpreted in the same office-cared/tray-mediated context as P10 until more detail is captured.",
+        "P11 has a clean pre-insertion air baseline at about 17:39 local before any P11 soil readings.",
+        "At about 17:43 local, P11 reliable channels s2/s3/s4 settled near 2804-2874 raw in the dry band without watering; s1 remained contact-questionable.",
+        "After longer undisturbed settling, all four P11 channels were in the dry band around 2732-2978 raw before watering.",
+        "P11 watering should be interpreted through its normal center-core reservoir pathway: an initial about 1/8 cup top/core fill may produce a delayed or channeled soil response before the rest of the about 1 cup dose is applied.",
+        "Initial P11 center/core watering produced a localized s4 response first; switching the remaining water to distributed soil-surface watering broadened response, with a strong s3 wetward hit around 17:59:22.",
+        "By about 18:01 local, P11 tray was about 1/2-3/4 inch full while only s3 was well-watered and the other channels remained dry, making this a stop/pause point for tray-mediated resoak observation.",
+        "At 18:06 local, P11 still had s3 well-watered and s1/s2/s4 dry, reinforcing that tray-fill should trigger observation rather than additional watering.",
+        "At 18:08 local, P11 still had not equalized: s1/s4 were modestly wetter than baseline, s2 remained dry/high, and s3 remained well-watered.",
+        "At 18:16 local, about 15 minutes after tray-fill pause, P11 still had not equalized; this is evidence for persistent microzones / placement / pathway effects after watering.",
+        "At 18:24 closeout, P11 had reabsorbed about 2/3 of overflow tray water but remained strongly non-uniform; sensors were then pulled and wiped dry."
+      ],
+      "evidence_quality": "Pre-insertion air reset, stable dry soil baseline, two-phase watering response, tray-fill pause point, 15-minute resoak checkpoint, and final closeout captured."
+    }
+  ],
+  "session_notes": [
+    {
+      "time_local": "2026-06-29 ~18:06 CDT",
+      "note": "The full P01-P11 plant backlog has received at least an initial watering pass.",
+      "interpretation": "User noted the rigorous walk-through, sensor observation, and evidence logging took about 6 hours, while the same physical watering without evidence capture would normally be a 3-5 minute exercise. Automation should preserve the important decisions from this manual run--pause after runoff/tray fill, avoid chasing dry single-channel readings, and respect plant-specific watering pathways--without imposing this evidence-capture overhead on every watering."
+    },
+    {
+      "time_local": "2026-06-29 18:24 CDT",
+      "note": "Full greenhouse bench suite called complete.",
+      "interpretation": "All 11 plants received at least an initial watering pass with sensor/log evidence. The final plant, P11, had partially reabsorbed tray water by closeout but still showed strong local non-uniformity."
+    }
+  ],
+  "open_followups": [
+    "Capture P08 final pull contact condition and runoff/bowl estimate if easy.",
+    "Run a controlled front/back probe-orientation characterization later using the same soil/cup/depth so orientation is isolated from pot-wall and local wetting effects.",
+    "Confirm whether the physical P09 probe was s3 if convenient.",
+    "Confirm whether the P09 s3 jump at 16:39:47 was actual probe pull/handling.",
+    "Continue P09 observation only if it can be done without forcing additional probes into the rootball.",
+    "Track P09 rootbound/low-substrate condition as a plant-care follow-up separate from calibration evidence.",
+    "Reconcile CSV level-tag semantics against dashboard/display band semantics before using emitted levels as calibration evidence.",
+    "For P10/P11, record outer tray/base water state before and after watering.",
+    "Capture P10 probe placement details and whether s1 had firm contact.",
+    "Let P10 settle a little longer before watering and capture next baseline tail.",
+    "Treat P10 s1 as marginal/questionable unless physical placement confirms firm contact.",
+    "For P10 watering, record first runoff timing and whether retained tray water remains available for resoak.",
+    "Continue observing P10 after the initial s3/s4 wetting response to see whether s2 follows and whether tray runoff appears.",
+    "After P10 first tray fill, pause and observe tray-mediated resoak before adding more water."
+    ,
+    "Use P10 as evidence that careful top watering can still leave strong microzone differences in dense pothos pots."
+  ],
+  "saved_at": "2026-06-29",
+  "version": 33
+}

@@ -1,0 +1,588 @@
+{
+  "experiment_id": "20260629_sage_p01_p07_rescue_survey_recovery",
+  "kind": "recovered_monitor_log_bench_notes",
+  "date_local": "2026-06-29",
+  "lane": "Sage",
+  "authority": "bench evidence; not calibration-ratified",
+  "source_thread_id": "019f0ea6-a148-7a91-bba6-0d07f99b7750",
+  "source_status": "recovered after prior Sage thread compact/recompact failure",
+  "sources": {
+    "logs": [
+      "logs/Sprout ESP32_20260629_121817.csv",
+      "logs/Sprout ESP32_20260629_135003.csv",
+      "logs/Sprout ESP32_20260629_180631.csv"
+    ],
+    "existing_sidecars": [
+      "docs/experiments/20260629_030551_p1_post_dry_rewatering.json",
+      "docs/experiments/20260629_032448_overnight_water_soil_equilib_test.json"
+    ],
+    "scratch_recovery_artifacts": [
+      "_scratch/sage_recovery_clean/bench_messages.jsonl",
+      "_scratch/sage_recovery_clean/event_candidates.json",
+      "_scratch/sage_recovery_clean/log_window_summary.json",
+      "_scratch/sage_recovery_clean/log_window_summary.md"
+    ]
+  },
+  "device_provenance": {
+    "p02_p07_log": "logs/Sprout ESP32_20260629_180631.csv",
+    "firmware_version": "0.7.0",
+    "git_revision": "8e5d73c",
+    "logger_version": "plants_logger_0_4",
+    "session_id": "706a34",
+    "cadence_ms": 5000,
+    "sensor_mapping": {
+      "s1": "GPIO34",
+      "s2": "GPIO35",
+      "s3": "GPIO36",
+      "s4": "GPIO39"
+    },
+    "capture_caveat": "P02-P07 used monitor logging because Experiment Capture was blocked by a host/firmware command mismatch: host expected !cad,<ms>,temp while flashed firmware appeared to accept !cad,<ms>."
+  },
+  "global_caveats": [
+    "Raw ADC counts and provisional bands are evidence; uncalibrated percent moisture is not used.",
+    "P02-P07 are bounded monitor-log segments, not isolated Experiment Capture artifacts.",
+    "Lower raw counts mean wetter local probe conditions under the current provisional bands.",
+    "Rescue-state plants are useful field behavior evidence but not calibration authorities without controlled follow-up.",
+    "Runoff and retained water estimates are kitchen/bench estimates unless explicitly measured."
+  ],
+  "plant_segments": [
+    {
+      "plant_id": "P01",
+      "plant": "small home pothos",
+      "segment_type": "post-rewatering overnight and morning continuation",
+      "source_log_windows": [
+        "p01_morning_monitor"
+      ],
+      "source_logs": [
+        "logs/Sprout ESP32_20260629_121817.csv",
+        "logs/Sprout ESP32_20260629_135003.csv"
+      ],
+      "transcript_lines": [
+        3229,
+        3245,
+        3255,
+        3261,
+        3264
+      ],
+      "events": [
+        {
+          "time_local": "2026-06-29 12:16 CDT",
+          "event": "Final pre-pull monitor state before removing P01 probes."
+        },
+        {
+          "time_local": "2026-06-29 12:23 CDT",
+          "event": "Water volume correction: prior P01 rewatering was about 1 US cup, applied slowly and distributed, with no visible runoff."
+        }
+      ],
+      "water_balance": {
+        "applied_cups": 1.0,
+        "runoff_observed": false,
+        "notes": "No visible runoff; paper towel under inner pot stayed dry."
+      },
+      "selected_log_summary": {
+        "window_local": "2026-06-29 07:18:17 to 2026-06-29 12:16:24",
+        "rows": 14302,
+        "last_raw": {
+          "s1": 1280,
+          "s2": 1437,
+          "s3": 1251,
+          "s4": 1138
+        },
+        "median_raw": {
+          "s1": 1272,
+          "s2": 1431,
+          "s3": 1244,
+          "s4": 1126
+        },
+        "last_band": {
+          "s1": "well watered",
+          "s2": "well watered",
+          "s3": "well watered",
+          "s4": "overwatered"
+        }
+      },
+      "findings": [
+        "Four probe locations did not converge overnight.",
+        "s2 remained the higher/drier channel.",
+        "s4 remained the lowest/wettest channel, but the overwatered band should be treated as provisional because there was no runoff."
+      ],
+      "evidence_quality": "Useful plant microzone evidence; not uniform calibration."
+    },
+    {
+      "plant_id": "P02",
+      "plant": "largest home pothos",
+      "segment_type": "parched rescue, monitor-log fallback",
+      "source_log_windows": [
+        "p02_air_to_prewater",
+        "p02_watering_to_runoff",
+        "p02_post_run"
+      ],
+      "source_logs": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "transcript_lines": [
+        3607,
+        3628,
+        3638,
+        3644,
+        3657,
+        3671,
+        3716
+      ],
+      "events": [
+        {
+          "time_local": "2026-06-29 13:11:11.95",
+          "event": "Watering lower bound after probes were reported inserted and settled."
+        },
+        {
+          "time_local": "2026-06-29 13:14:25.56",
+          "event": "Runoff observed."
+        },
+        {
+          "time_local": "2026-06-29 13:27",
+          "event": "Post-run estimate: about 0.5 cup runoff, about 1 cup retained."
+        }
+      ],
+      "water_balance": {
+        "applied_cups": 1.5,
+        "runoff_estimate_cups": 0.5,
+        "estimated_retained_cups": 1.0,
+        "notes": "P02 had at least 3x P01 soil volume, but retained roughly the same water volume as P01."
+      },
+      "selected_log_summary": {
+        "water_start_to_runoff_last_raw": {
+          "s1": 1530,
+          "s2": 1402,
+          "s3": 1205,
+          "s4": 3222
+        },
+        "water_start_to_runoff_last_band": {
+          "s1": "well watered",
+          "s2": "well watered",
+          "s3": "well watered",
+          "s4": "air-dry"
+        }
+      },
+      "findings": [
+        "Strong hydrophobic dry soil / preferential flow evidence.",
+        "Applied water volume was not retained water volume.",
+        "s4 did not provide clean wet-response evidence in this segment."
+      ],
+      "evidence_quality": "Good runoff/water-balance evidence; weak four-probe calibration."
+    },
+    {
+      "plant_id": "P03",
+      "plant": "other large pothos, slightly smaller than P02",
+      "segment_type": "parched rescue, monitor-log fallback",
+      "source_log_windows": [
+        "p03_dry_settle",
+        "p03_watering_to_first_runoff",
+        "p03_after_targeted_pour",
+        "between_plants_air_dry_sun"
+      ],
+      "source_logs": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "transcript_lines": [
+        3696,
+        3704,
+        3726,
+        3740,
+        3757,
+        3767,
+        3772,
+        3786,
+        3800
+      ],
+      "events": [
+        {
+          "time_local": "2026-06-29 13:25:22.78",
+          "event": "Probes inserted."
+        },
+        {
+          "time_local": "2026-06-29 13:28:08.09",
+          "event": "Watering started."
+        },
+        {
+          "time_local": "2026-06-29 13:30:08.05",
+          "event": "First runoff / initial stop."
+        },
+        {
+          "time_local": "2026-06-29 13:31:58.18",
+          "event": "Targeted S4 diagnostic pour; later S3/S4 readings treated as contact-confounded."
+        },
+        {
+          "time_local": "2026-06-29 13:40:20.22",
+          "event": "Segment end / probes pulled."
+        },
+        {
+          "time_local": "2026-06-29 13:44:49.66",
+          "event": "Runoff measured at about 1/3 cup."
+        }
+      ],
+      "water_balance": {
+        "applied_cups": 2.0,
+        "runoff_measured_cups": 0.333,
+        "estimated_not_captured_cups": 1.667,
+        "notes": "Not captured does not prove uniformly absorbed."
+      },
+      "selected_log_summary": {
+        "first_runoff_last_raw": {
+          "s1": 1263,
+          "s2": 1379,
+          "s3": 1259,
+          "s4": 3622
+        },
+        "first_runoff_last_band": {
+          "s1": "well watered",
+          "s2": "well watered",
+          "s3": "well watered",
+          "s4": "air-dry"
+        }
+      },
+      "findings": [
+        "P03 repeated P02's parched-pothos runoff/channeling pattern.",
+        "S1/S2/S3 initial wet response was coherent.",
+        "S3/S4 after the targeted pour are not clean moisture truth."
+      ],
+      "evidence_quality": "Good runoff evidence; S3/S4 later segment contaminated by handling/contact effects."
+    },
+    {
+      "plant_id": "P04",
+      "plant": "likely dracaena/cane-type, unconfirmed",
+      "segment_type": "shallow clear insert, parched rescue",
+      "source_log_windows": [
+        "p04_segment",
+        "p04_after_pooling"
+      ],
+      "source_logs": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "transcript_lines": [
+        3814,
+        3828,
+        3836,
+        3850,
+        3859,
+        3869,
+        3878,
+        3898
+      ],
+      "events": [
+        {
+          "time_local": "2026-06-29 13:48:38.52",
+          "event": "Probes inserted / settling started."
+        },
+        {
+          "time_local": "2026-06-29 13:52:30.18",
+          "event": "Watering/runoff observed after up to 1 cup."
+        },
+        {
+          "time_local": "2026-06-29 14:06:17.94",
+          "event": "Segment end / probes pulled."
+        }
+      ],
+      "water_balance": {
+        "applied_cups": 1.0,
+        "runoff_observed": true,
+        "notes": "Some runoff later appeared to wick back from the temporary bowl."
+      },
+      "selected_log_summary": {
+        "segment_last_raw": {
+          "s1": 2032,
+          "s2": 3006,
+          "s3": 3475,
+          "s4": 3076
+        },
+        "segment_last_band": {
+          "s1": "needs water",
+          "s2": "dry",
+          "s3": "air-dry",
+          "s4": "air-dry"
+        }
+      },
+      "findings": [
+        "Clear insert showed water reaching the bowl while soil did not visibly soak evenly.",
+        "Shallow pot and partial probe insertion reduce calibration confidence.",
+        "Board/breadboard had direct skylight context during the between-plant/P04 window, then was moved out of the direct shaft."
+      ],
+      "evidence_quality": "Strong physical bypass evidence; low calibration confidence."
+    },
+    {
+      "plant_id": "P05",
+      "plant": "6 inch Dracaena marginata, braided",
+      "segment_type": "two-probe tight-rootball / rootbound bypass case",
+      "source_log_windows": [
+        "p05_segment",
+        "p05_watering_to_runoff"
+      ],
+      "source_logs": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "transcript_lines": [
+        3946,
+        3968,
+        3977,
+        3987,
+        4002,
+        4010,
+        4016,
+        4029
+      ],
+      "events": [
+        {
+          "time_local": "2026-06-29 14:16:24.94",
+          "event": "Only two probes inserted due to very tight rootball."
+        },
+        {
+          "time_local": "2026-06-29 14:18:26.02",
+          "event": "Watering start."
+        },
+        {
+          "time_local": "2026-06-29 14:20:19.36",
+          "event": "First runoff / bypass after about 1/2 cup."
+        },
+        {
+          "time_local": "2026-06-29 14:26:35.78",
+          "event": "Probe pull / transition to P06; user confirmed inserted probes were s1 and s4."
+        },
+        {
+          "time_local": "2026-06-29 14:36:42",
+          "event": "Post-pull observation: roots extended outside pot into bowl water."
+        }
+      ],
+      "water_balance": {
+        "applied_cups": 0.5,
+        "remaining_bowl_cups": 0.125,
+        "estimated_bypassed_cups_min": 0.25,
+        "notes": "About half of the estimated bypass may have been reabsorbed through escaped roots in the bowl."
+      },
+      "selected_log_summary": {
+        "water_start_to_runoff_last_raw": {
+          "s1": 3104,
+          "s2": 3109,
+          "s3": 3130,
+          "s4": 2838
+        },
+        "water_start_to_runoff_last_band": {
+          "s1": "air-dry",
+          "s2": "air-dry",
+          "s3": "air-dry",
+          "s4": "dry"
+        }
+      },
+      "findings": [
+        "P05 surface beaded water and sent it down the sides.",
+        "Inserted probes s1 and s4 still looked dry/air-dry because the hard rootball/contact geometry dominated the reading.",
+        "Escaped roots in the bowl may be a primary water uptake path."
+      ],
+      "evidence_quality": "High plant-condition evidence; not clean soil calibration."
+    },
+    {
+      "plant_id": "P06",
+      "plant": "Anthurium Lovable Hearts",
+      "segment_type": "staged pulse-and-pause rescue watering",
+      "source_log_windows": [
+        "p06_setup_to_first_dose",
+        "p06_staged_watering",
+        "p06_post_pool_to_pull"
+      ],
+      "source_logs": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "transcript_lines": [
+        4035,
+        4044,
+        4047,
+        4054,
+        4072,
+        4082,
+        4095,
+        4109,
+        4122,
+        4167,
+        4182
+      ],
+      "events": [
+        {
+          "time_local": "2026-06-29 14:37:27",
+          "event": "P06 setup marker."
+        },
+        {
+          "time_local": "2026-06-29 14:38:44",
+          "event": "Watering start after radial probe insertion."
+        },
+        {
+          "time_local": "2026-06-29 14:41:18",
+          "event": "First dose of about 1.0 to 1.25 cups; minor seepage."
+        },
+        {
+          "time_local": "2026-06-29 14:42:44",
+          "event": "Second-dose start after early seepage reabsorbed."
+        },
+        {
+          "time_local": "2026-06-29 14:43:59",
+          "event": "Sustained pooling at about 1 2/3 cups total."
+        },
+        {
+          "time_local": "2026-06-29 14:46:57",
+          "event": "S1 wetward response visible."
+        },
+        {
+          "time_local": "2026-06-29 14:48:24",
+          "event": "S2 wetward response visible."
+        },
+        {
+          "time_local": "2026-06-29 14:59",
+          "event": "Probe pull / segment end."
+        }
+      ],
+      "water_balance": {
+        "applied_cups": 1.667,
+        "first_dose_cups_range": [
+          1.0,
+          1.25
+        ],
+        "remaining_runoff": ">50 mL and <1/4 cup",
+        "notes": "Early seepage was reabsorbed within roughly 1 to 2 minutes; final sustained pooling remained."
+      },
+      "selected_log_summary": {
+        "post_pool_min_raw": {
+          "s1": 1604,
+          "s2": 2554,
+          "s3": 2400,
+          "s4": 2843
+        },
+        "post_pool_median_raw": {
+          "s1": 1971,
+          "s2": 2733.5,
+          "s3": 2537.5,
+          "s4": 2909
+        }
+      },
+      "findings": [
+        "P6 accepted staged watering better than the bypass-heavy P02/P04/P05 plants.",
+        "Response was still uneven; s1 responded first and most clearly.",
+        "Pulse-and-pause watering is supported for this plant/pot condition."
+      ],
+      "evidence_quality": "Strong staged-dosing evidence; recovery-state confounded."
+    },
+    {
+      "plant_id": "P07",
+      "plant": "bromeliad/rosette-like, exact ID uncertain",
+      "segment_type": "measure-only baseline after hidden standing-water cachepot finding",
+      "source_log_windows": [
+        "p07_measure_only"
+      ],
+      "source_logs": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "transcript_lines": [
+        4196,
+        4199,
+        4211,
+        4217,
+        4226,
+        4230,
+        4248
+      ],
+      "events": [
+        {
+          "time_local": "2026-06-29 15:10",
+          "event": "P07 prep/photo context; visually bromeliad/rosette-like."
+        },
+        {
+          "time_local": "2026-06-29 15:16",
+          "event": "Standing water found in outer/cachepot despite about 3 weeks without watering."
+        },
+        {
+          "time_local": "2026-06-29 15:19:30",
+          "event": "Probes inserted; no watering."
+        },
+        {
+          "time_local": "2026-06-29 15:25",
+          "event": "Measure-only baseline resumed after app restart."
+        },
+        {
+          "time_local": "2026-06-29 15:57",
+          "event": "Probes pulled with no water added; sensors to be wiped and left to return to open-air dry state before the next plant."
+        },
+        {
+          "time_local": "2026-06-29 after 15:57 CDT (exact time not recorded)",
+          "event": "Post-pull inspection found P07 s3 was barely inserted with no real depth or soil contact; exclude s3 from P07 soil interpretation."
+        }
+      ],
+      "water_balance": {
+        "applied_cups": 0,
+        "runoff_observed": null,
+        "notes": "No watering added. Hidden standing water in the cachepot from an older watering overrode the generic dry-soil watering impulse."
+      },
+      "selected_log_summary": {
+        "window_local": "2026-06-29 15:19:30 to 2026-06-29 15:57:12",
+        "rows": 1811,
+        "dashboard_raw_at_pull": {
+          "s1": 1773,
+          "s2": 2175,
+          "s3": 2824,
+          "s4": 2517
+        },
+        "dashboard_band_at_pull": {
+          "s1": "OK / Ideal",
+          "s2": "dry",
+          "s3": "dry",
+          "s4": "dry"
+        },
+        "last_raw": {
+          "s1": 1777,
+          "s2": 2186,
+          "s3": 2836,
+          "s4": 2473
+        },
+        "median_raw": {
+          "s1": 1863.5,
+          "s2": 2238,
+          "s3": 2898,
+          "s4": 2435
+        },
+        "last_band": {
+          "s1": "OK",
+          "s2": "dry",
+          "s3": "dry",
+          "s4": "dry"
+        },
+        "invalid_channels": {
+          "s3": "Post-pull inspection found s3 was barely inserted, shallow, and not meaningfully coupled to soil."
+        }
+      },
+      "findings": [
+        "Local probe zones read dry to needs-water, but hidden standing water means lower roots may have been wet or oxygen-limited.",
+        "No water was added; the standing-water cachepot observation overrode the dry local probe readings.",
+        "P07 s3 is contact-invalid and should be excluded from soil interpretation.",
+        "P7 should not be treated like the parched pothos/dracaena rescue cases without checking cachepot design and lower-root condition."
+      ],
+      "evidence_quality": "Important cachepot/standing-water evidence; no-water decision recorded; s3 contact-invalid."
+    }
+  ],
+  "inventory_plan_from_thread": {
+    "P08": "very small cactus, not yet captured in recovered evidence; described before measurement as green triangular base with pink round top and three smaller pink side domes, likely grafted cactus form but ID not confirmed",
+    "P09": "very small succulent, not yet captured in recovered evidence",
+    "P10": "former work plant, better maintained, about 1 cup/week for about 4 years",
+    "P11": "former work plant, better maintained, about 1 cup/week for about 4 years"
+  },
+  "survey_level_implications": [
+    "Applied water volume is not retained water volume.",
+    "Runoff does not prove a pot is uniformly watered.",
+    "Probe readings are local and can be contact-confounded.",
+    "Pump logic should prefer small pulses with settle/soak pauses.",
+    "Rootbound/cachepot conditions require plant-specific safety logic."
+  ],
+  "open_followups": [
+    "For P07, keep the cachepot standing-water issue as primary: dry outside the cachepot, add a riser/pebbles or other air gap, and only consider a later measured micro-dose after lower-root condition is checked.",
+    "Continue with P08 as a one-probe tiny-cactus measurement; leave unused sensors open-air dry as references.",
+    "Use P10/P11 as better-maintained contrast plants in later controlled runs.",
+    "Route the Experiment Capture command mismatch to Firmware/Data.",
+    "Do not use P02-P07 rescue survey as A2/C1 calibration authority without controlled follow-up."
+  ],
+  "saved_at": "2026-06-29",
+  "version": 4
+}
