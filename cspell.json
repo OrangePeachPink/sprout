@@ -3,6 +3,13 @@
   // labels, and toolchain terms not in the base English dictionary.
   "version": "0.2",
   "language": "en",
+  // Skip everything .gitignore already excludes (_scratch/, logs, build outputs,
+  // .env*, config/location.local.json, ...). The hook lints "**/*.md" with always_run,
+  // and that glob does NOT honor .gitignore on its own — so untracked scratch .md
+  // (e.g. Sage's recovery dumps under _scratch/) would otherwise fail the hook on
+  // content that isn't even in the repo, and lanes skip cspell to commit. Fixing the
+  // class at the root instead of allowlisting one dir at a time (#388; cf. #337).
+  "useGitignore": true,
   // Design owns docs/design/** (its own brand vocabulary); spell-check the rest.
   // docs/experiments/** is bench evidence — capture-id slugs, device codes, and
   // technique shorthand by nature (a fresh slug every session, e.g. "...-recov",
