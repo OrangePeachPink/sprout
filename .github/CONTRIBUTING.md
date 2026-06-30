@@ -100,31 +100,78 @@ walks you in.
 > ([#387](https://github.com/OrangePeachPink/plants/issues/387)) — it hands back the tunable constants and
 > shared terms, then graduates you to this VS Code / Codespaces project.
 
-## The verification gate (two stages: Workflow certifies, then Veronica merges)
+## The lifecycle & the verification gate (Workflow certifies, then the maintainer merges)
 
-Sprout uses a **two-stage gate** — a PR is never merged until **Workflow** has certified it. The pipeline:
-**Backlog → In Progress → Needs Verification → Ready to Merge → Done.**
+A PR is never merged until **Workflow** has *independently* certified it — not just rubber-stamped the lane's
+own report. The full pipeline, with who owns each stage and what's expected:
 
-1. **The implementer posts evidence on the issue**, moves the card to **Needs Verification**, and **stops**.
-   Evidence is a **requirement-by-requirement map**: for each acceptance criterion in the issue body, show
-   *how* it's met with a concrete artifact — PR # + commit SHA, the file/function (`path:line`), the test
-   that covers it *and that it passes*, CI status, plus any manual/bench check. Not "defaults fixed ✓" —
-   instead `AC #1 (serial default) → dashboard_template.html:265 (serial selected) +
-   test_control.py::test_serial_default passing, PR #338 @d4315ef`. **Needs Verification is Workflow's
-   review inbox, not the maintainer's.**
-2. **Workflow** pulls the item, confirms it is substantively correct, meets the requirement *as written*,
-   and has no bugs / errors / build issues — then posts a **Ready to Merge certification** (naming which
-   lanes approved the design + what Workflow verified, with merge-order notes) and moves the card to
-   **Ready to Merge**. Strong evidence certifies fast; weak evidence bounces back.
-3. **Veronica merges only from the Ready to Merge column** — that's the maintainer's queue, the
-   "finished, waiting on me" list. Nothing is merged before it's certified.
+**Backlog → In Progress → Needs Verification → Ready to Merge → Done** · *Won't Do*
 
-PRs use `Refs #N` (a non-closing link), never `Closes #N`, and the repo's auto-close setting stays **off**.
+### Backlog — triaged ideas
+
+An item here has a clear, done-definable goal and carries **acceptance criteria**: a short, testable list of
+what "done" means. Shape the requirement *here* (comments, an ADR, outside opinions) — it's far cheaper than
+reworking it after it's built.
+
+### In Progress — the lane builds
+
+Before moving on, the implementer:
+
+- **confirms / sharpens the acceptance criteria** on the issue (weigh in early if the requirement needs shaping),
+- **implements** the work,
+- **tests** it (the relevant `pytest` / native harness),
+- runs **lint + format + commit hooks** and confirms **local == CI green**,
+- opens a PR with **`Refs #N`** (never `Closes`).
+
+### → Needs Verification — post evidence, then stop *(Workflow's inbox)*
+
+The move is gated on a **requirement-by-requirement evidence map**: for each acceptance criterion, show *how*
+it's met with a concrete artifact — PR # + commit SHA, file/function (`path:line`), the test that covers it
+*and that it passes*, CI status, plus any manual / bench check. Not "defaults fixed ✓" — instead
+`AC #1 (serial default) → dashboard_template.html:265 + test_control.py::test_serial_default passing, PR #338
+@d4315ef`. The implementer does **not** self-merge or move further. **Needs Verification is Workflow's
+review inbox, not the maintainer's.**
+
+### Workflow review *(at Needs Verification)*
+
+Workflow **independently validates** — beyond the lane's self-report — against:
+
+- the **source docs** (PRD / ADR / issue) and the requirement's stated goals,
+- the **AC-by-AC evidence map**,
+- **commit history** and **issue / PR comments**,
+- **CI green — local hooks *and* remote CI** — and **mergeable** (no conflicts, no dependency / stacked-PR traps),
+
+plus Workflow's own judgment that the work is:
+
+- **fully implemented** — not a minor slice that happened to move the card,
+- **substantially meeting the *entirety* of the requirement's goals**, as written and intended,
+- **quality** — correct, no bugs / regressions / build issues, in-lane, honest-data-compliant where it applies.
+
+On pass, Workflow posts a **Ready to Merge certification** (what was verified + which lanes approved the
+design + any **merge-order / ordering** notes) and moves the card to **Ready to Merge**. Strong evidence
+certifies fast; a weak map, a missed goal, or a dependency snag **bounces back** with specifics.
+
+### → Ready to Merge — the maintainer merges *(the maintainer's inbox)*
+
+When a card reaches this column it carries the full evidence chain **plus Workflow's independent
+certification** that the issue is fully implemented, substantively meets the *entirety* of its goals, is
+quality work, is mergeable-green (local + remote), and carries any ordering notes. The maintainer relies on
+**all of it** — source docs, AC evidence, commit history, issue comments, merge-readiness, GitHub-green,
+valid local + remote CI runs — *and* Workflow's review — to **merge with confidence it's ready for the
+codebase.** PRs squash-merge.
+
+### Done — and Won't Do
+
+On merge the issue closes (auto-Done moves the card; because PRs use `Refs`, the close is explicit).
+**Won't Do** is the terminal for "decided against": close the issue as **"not planned"** (not "completed")
+with a one-line reason — distinct from Done, which means *shipped*.
 
 **Partials:** if a merged PR met an issue's *core* requirement but a clean, separable follow-on fell out,
 Workflow spins a **new issue** for the remainder (linked both ways, with the context of what fell out) and
 closes the original — so a tail never gets swept into the merge dustbin and lost. A PR that misses the
 issue's *main point* is not closed — it's flagged back.
+
+`Refs #N` / `Part of #N` (non-closing links), never `Closes #N`; the repo's auto-close setting stays **off**.
 
 ## Labels (quick reference)
 
