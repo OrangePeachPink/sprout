@@ -1,0 +1,1159 @@
+{
+  "experiment_id": "20260629_greenhouse_bench_arc_recovery",
+  "date_local": "2026-06-29",
+  "lane": "Sage",
+  "refs": {
+    "umbrella_issue": "#379",
+    "data_issue": "#380",
+    "source_evidence_pr": "#383"
+  },
+  "purpose": "Promote recoverable P01-P11 bench-day evidence from ignored monitor logs into tracked, computable slices for Data's fixed bench-arc visual and future analytics.",
+  "fast_path_for_data": [
+    "plant_arc_table.csv",
+    "plant_arc_observations_long.csv",
+    "windows/p01_morning_monitor_part*.csv plus windows/p02_*.csv through windows/p11_*.csv"
+  ],
+  "aggregation_boundary": "Sage provides recovered readings, probe validity, spread/confidence notes, and raw slices. Data owns the final one-read-per-plant aggregation rule.",
+  "honest_gap_policy": "Empty start/wettest/pull fields mean that phase was not durably captured or not physically meaningful; do not fabricate complete ranges.",
+  "source_files": [
+    "logs/Sprout ESP32_20260629_121817.csv",
+    "logs/Sprout ESP32_20260629_135003.csv",
+    "logs/Sprout ESP32_20260629_180631.csv"
+  ],
+  "pii_posture": "Generated files use relative source paths, device telemetry, local timestamps, probe IDs, raw ADC counts, and notes. No home coordinates or personal identifiers are intentionally included.",
+  "plant_windows": [
+    {
+      "window_key": "p01_morning_monitor",
+      "kind": "plant_segment",
+      "plant_id": "P01",
+      "phase": "post-water morning equilibration / pull evidence",
+      "start_local": "2026-06-29 07:18:17",
+      "end_local": "2026-06-29 12:16:24",
+      "row_count": 14298,
+      "csv_files": [
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p01_morning_monitor_part01.csv",
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p01_morning_monitor_part02.csv",
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p01_morning_monitor_part03.csv",
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p01_morning_monitor_part04.csv",
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p01_morning_monitor_part05.csv",
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p01_morning_monitor_part06.csv",
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p01_morning_monitor_part07.csv"
+      ],
+      "source_files": [
+        "logs/Sprout ESP32_20260629_121817.csv",
+        "logs/Sprout ESP32_20260629_135003.csv"
+      ],
+      "valid_probe_ids": [
+        "s1",
+        "s2",
+        "s3",
+        "s4"
+      ],
+      "excluded_probes": {},
+      "included_last_median_raw": 1265.5,
+      "included_wettest_raw_min": 1110,
+      "sensor_summary": {
+        "s1": {
+          "rows": 3575,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 07:18:18.722",
+          "first_raw": 1262,
+          "first_band": "well watered",
+          "last_time_local": "2026-06-29 12:16:19.309",
+          "last_raw": 1280,
+          "last_band": "well watered",
+          "min_raw_wettest": 1257,
+          "median_raw": 1272,
+          "max_raw_driest": 1285
+        },
+        "s2": {
+          "rows": 3574,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 07:18:18.722",
+          "first_raw": 1428,
+          "first_band": "well watered",
+          "last_time_local": "2026-06-29 12:16:19.392",
+          "last_raw": 1435,
+          "last_band": "well watered",
+          "min_raw_wettest": 1423,
+          "median_raw": 1431.0,
+          "max_raw_driest": 1441
+        },
+        "s3": {
+          "rows": 3573,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 07:18:17.482",
+          "first_raw": 1123,
+          "first_band": "overwatered",
+          "last_time_local": "2026-06-29 12:16:19.142",
+          "last_raw": 1251,
+          "last_band": "well watered",
+          "min_raw_wettest": 1120,
+          "median_raw": 1244,
+          "max_raw_driest": 1283
+        },
+        "s4": {
+          "rows": 3576,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 07:18:18.720",
+          "first_raw": 1112,
+          "first_band": "overwatered",
+          "last_time_local": "2026-06-29 12:16:19.226",
+          "last_raw": 1135,
+          "last_band": "overwatered",
+          "min_raw_wettest": 1110,
+          "median_raw": 1126.0,
+          "max_raw_driest": 1140
+        }
+      },
+      "notes": "P01 dry/wet arc primarily comes from committed P01 sidecar captures; this slice preserves the long morning monitor continuation and pull/equilibration evidence."
+    },
+    {
+      "window_key": "p02_large_pothos_response",
+      "kind": "plant_segment",
+      "plant_id": "P02",
+      "phase": "dry settle / watering / runoff / early rebound",
+      "start_local": "2026-06-29 13:06:31",
+      "end_local": "2026-06-29 13:24:54",
+      "row_count": 883,
+      "csv_files": [
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p02_large_pothos_response.csv"
+      ],
+      "source_files": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "valid_probe_ids": [
+        "s1",
+        "s2",
+        "s3"
+      ],
+      "excluded_probes": {
+        "s4": "dry outlier / likely poor contact or outside wet path"
+      },
+      "included_last_median_raw": 3020,
+      "included_wettest_raw_min": 1124,
+      "sensor_summary": {
+        "s1": {
+          "rows": 221,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 13:06:32.822",
+          "first_raw": 3178,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 13:24:51.764",
+          "last_raw": 3013,
+          "last_band": "dry",
+          "min_raw_wettest": 1124,
+          "median_raw": 1595,
+          "max_raw_driest": 3198
+        },
+        "s2": {
+          "rows": 221,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 13:06:32.823",
+          "first_raw": 3118,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 13:24:51.848",
+          "last_raw": 3020,
+          "last_band": "dry",
+          "min_raw_wettest": 1132,
+          "median_raw": 1542,
+          "max_raw_driest": 3147
+        },
+        "s3": {
+          "rows": 220,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 13:06:31.569",
+          "first_raw": 3071,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 13:24:51.612",
+          "last_raw": 3102,
+          "last_band": "air-dry",
+          "min_raw_wettest": 1169,
+          "median_raw": 1277.5,
+          "max_raw_driest": 3145
+        },
+        "s4": {
+          "rows": 221,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 13:06:32.821",
+          "first_raw": 3119,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 13:24:51.698",
+          "last_raw": 3249,
+          "last_band": "air-dry",
+          "min_raw_wettest": 2685,
+          "median_raw": 3096,
+          "max_raw_driest": 3863
+        }
+      },
+      "notes": "Start is recovered from raw monitor rows; durable narrative previously had prose-only baseline."
+    },
+    {
+      "window_key": "p03_large_pothos_response",
+      "kind": "plant_segment",
+      "plant_id": "P03",
+      "phase": "dry settle / watering / targeted pour / early rebound",
+      "start_local": "2026-06-29 13:25:22",
+      "end_local": "2026-06-29 13:40:20",
+      "row_count": 716,
+      "csv_files": [
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p03_large_pothos_response.csv"
+      ],
+      "source_files": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "valid_probe_ids": [
+        "s1",
+        "s2",
+        "s3"
+      ],
+      "excluded_probes": {
+        "s4": "dry outlier / likely poor contact or outside wet path"
+      },
+      "included_last_median_raw": 2974,
+      "included_wettest_raw_min": 1122,
+      "sensor_summary": {
+        "s1": {
+          "rows": 179,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 13:25:26.767",
+          "first_raw": 3013,
+          "first_band": "dry",
+          "last_time_local": "2026-06-29 13:40:16.814",
+          "last_raw": 2974,
+          "last_band": "dry",
+          "min_raw_wettest": 1126,
+          "median_raw": 1267,
+          "max_raw_driest": 3015
+        },
+        "s2": {
+          "rows": 179,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 13:25:26.851",
+          "first_raw": 3023,
+          "first_band": "dry",
+          "last_time_local": "2026-06-29 13:40:16.879",
+          "last_raw": 3124,
+          "last_band": "air-dry",
+          "min_raw_wettest": 1122,
+          "median_raw": 1425,
+          "max_raw_driest": 3148
+        },
+        "s3": {
+          "rows": 179,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 13:25:26.618",
+          "first_raw": 3102,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 13:40:16.661",
+          "last_raw": 2289,
+          "last_band": "dry",
+          "min_raw_wettest": 1162,
+          "median_raw": 2333,
+          "max_raw_driest": 3104
+        },
+        "s4": {
+          "rows": 179,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 13:25:26.701",
+          "first_raw": 3258,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 13:40:16.741",
+          "last_raw": 3306,
+          "last_band": "air-dry",
+          "min_raw_wettest": 2389,
+          "median_raw": 3124,
+          "max_raw_driest": 3747
+        }
+      },
+      "notes": "Start is recovered from raw monitor rows; durable narrative previously had prose-only baseline."
+    },
+    {
+      "window_key": "p04_dracaena_bypass",
+      "kind": "plant_segment",
+      "plant_id": "P04",
+      "phase": "measurement / watering bypass / pull",
+      "start_local": "2026-06-29 13:47:06",
+      "end_local": "2026-06-29 14:06:18",
+      "row_count": 923,
+      "csv_files": [
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p04_dracaena_bypass.csv"
+      ],
+      "source_files": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "valid_probe_ids": [
+        "s1",
+        "s2",
+        "s3",
+        "s4"
+      ],
+      "excluded_probes": {},
+      "included_last_median_raw": 3041.0,
+      "included_wettest_raw_min": 1788,
+      "sensor_summary": {
+        "s1": {
+          "rows": 230,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 13:47:06.836",
+          "first_raw": 3141,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 14:06:16.878",
+          "last_raw": 2032,
+          "last_band": "needs water",
+          "min_raw_wettest": 1788,
+          "median_raw": 1984.5,
+          "max_raw_driest": 3141
+        },
+        "s2": {
+          "rows": 231,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 13:47:06.907",
+          "first_raw": 3262,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 14:06:16.948",
+          "last_raw": 3006,
+          "last_band": "dry",
+          "min_raw_wettest": 2664,
+          "median_raw": 2965,
+          "max_raw_driest": 3337
+        },
+        "s3": {
+          "rows": 231,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 13:47:06.674",
+          "first_raw": 3389,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 14:06:16.731",
+          "last_raw": 3475,
+          "last_band": "air-dry",
+          "min_raw_wettest": 3100,
+          "median_raw": 3419,
+          "max_raw_driest": 3509
+        },
+        "s4": {
+          "rows": 231,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 13:47:06.760",
+          "first_raw": 3389,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 14:06:16.799",
+          "last_raw": 3076,
+          "last_band": "air-dry",
+          "min_raw_wettest": 2949,
+          "median_raw": 3064,
+          "max_raw_driest": 3389
+        }
+      },
+      "notes": "Water bypassed/beaded; no trustworthy wetting arc, but pull state and high spread are evidence."
+    },
+    {
+      "window_key": "p05_dracaena_bypass",
+      "kind": "plant_segment",
+      "plant_id": "P05",
+      "phase": "limited-probe measurement / watering bypass / pull",
+      "start_local": "2026-06-29 14:16:25",
+      "end_local": "2026-06-29 14:26:36",
+      "row_count": 488,
+      "csv_files": [
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p05_dracaena_bypass.csv"
+      ],
+      "source_files": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "valid_probe_ids": [
+        "s1",
+        "s4"
+      ],
+      "excluded_probes": {
+        "s2": "not in useful plant contact",
+        "s3": "not in useful plant contact"
+      },
+      "included_last_median_raw": 2999.0,
+      "included_wettest_raw_min": 2760,
+      "sensor_summary": {
+        "s1": {
+          "rows": 122,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 14:16:26.910",
+          "first_raw": 3111,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 14:26:31.931",
+          "last_raw": 3110,
+          "last_band": "air-dry",
+          "min_raw_wettest": 3098,
+          "median_raw": 3106.0,
+          "max_raw_driest": 3113
+        },
+        "s2": {
+          "rows": 122,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 14:16:26.972",
+          "first_raw": 2971,
+          "first_band": "dry",
+          "last_time_local": "2026-06-29 14:26:32.005",
+          "last_raw": 3075,
+          "last_band": "air-dry",
+          "min_raw_wettest": 2589,
+          "median_raw": 3016.0,
+          "max_raw_driest": 3173
+        },
+        "s3": {
+          "rows": 122,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 14:16:26.759",
+          "first_raw": 3169,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 14:26:31.775",
+          "last_raw": 3144,
+          "last_band": "air-dry",
+          "min_raw_wettest": 3118,
+          "median_raw": 3135.5,
+          "max_raw_driest": 3191
+        },
+        "s4": {
+          "rows": 122,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 14:16:26.833",
+          "first_raw": 2783,
+          "first_band": "dry",
+          "last_time_local": "2026-06-29 14:26:31.854",
+          "last_raw": 2888,
+          "last_band": "dry",
+          "min_raw_wettest": 2760,
+          "median_raw": 2828.5,
+          "max_raw_driest": 2897
+        }
+      },
+      "notes": "Only s1 and s4 were treated as plant-contact probes."
+    },
+    {
+      "window_key": "p06_anthurium_staged_watering",
+      "kind": "plant_segment",
+      "plant_id": "P06",
+      "phase": "setup / staged watering / pooled water / pull",
+      "start_local": "2026-06-29 14:37:27",
+      "end_local": "2026-06-29 14:59:00",
+      "row_count": 1033,
+      "csv_files": [
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p06_anthurium_staged_watering.csv"
+      ],
+      "source_files": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "valid_probe_ids": [
+        "s1",
+        "s2",
+        "s3",
+        "s4"
+      ],
+      "excluded_probes": {},
+      "included_last_median_raw": 2902.0,
+      "included_wettest_raw_min": 1604,
+      "sensor_summary": {
+        "s1": {
+          "rows": 258,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 14:37:31.958",
+          "first_raw": 2865,
+          "first_band": "dry",
+          "last_time_local": "2026-06-29 14:58:57.007",
+          "last_raw": 2896,
+          "last_band": "dry",
+          "min_raw_wettest": 1604,
+          "median_raw": 2228.5,
+          "max_raw_driest": 2957
+        },
+        "s2": {
+          "rows": 259,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 14:37:27.026",
+          "first_raw": 2605,
+          "first_band": "dry",
+          "last_time_local": "2026-06-29 14:58:57.074",
+          "last_raw": 2908,
+          "last_band": "dry",
+          "min_raw_wettest": 2335,
+          "median_raw": 2722,
+          "max_raw_driest": 2974
+        },
+        "s3": {
+          "rows": 258,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 14:37:31.805",
+          "first_raw": 2604,
+          "first_band": "dry",
+          "last_time_local": "2026-06-29 14:58:56.856",
+          "last_raw": 2485,
+          "last_band": "dry",
+          "min_raw_wettest": 1953,
+          "median_raw": 2560.0,
+          "max_raw_driest": 3193
+        },
+        "s4": {
+          "rows": 258,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 14:37:31.875",
+          "first_raw": 3398,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 14:58:56.940",
+          "last_raw": 2949,
+          "last_band": "dry",
+          "min_raw_wettest": 2252,
+          "median_raw": 2902.0,
+          "max_raw_driest": 3402
+        }
+      },
+      "notes": "Baseline is weak in committed evidence; wettest and pull states are recoverable."
+    },
+    {
+      "window_key": "p07_bromeliad_measure_only",
+      "kind": "plant_segment",
+      "plant_id": "P07",
+      "phase": "measure-only / cachepot water confound / pull",
+      "start_local": "2026-06-29 15:19:30",
+      "end_local": "2026-06-29 15:57:12",
+      "row_count": 1807,
+      "csv_files": [
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p07_bromeliad_measure_only.csv"
+      ],
+      "source_files": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "valid_probe_ids": [
+        "s1",
+        "s2",
+        "s4"
+      ],
+      "excluded_probes": {
+        "s3": "reported barely inserted with virtually no soil contact"
+      },
+      "included_last_median_raw": 2197,
+      "included_wettest_raw_min": 1769,
+      "sensor_summary": {
+        "s1": {
+          "rows": 451,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 15:19:32.066",
+          "first_raw": 1965,
+          "first_band": "needs water",
+          "last_time_local": "2026-06-29 15:57:07.153",
+          "last_raw": 1783,
+          "last_band": "OK",
+          "min_raw_wettest": 1769,
+          "median_raw": 1864,
+          "max_raw_driest": 2121
+        },
+        "s2": {
+          "rows": 452,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 15:19:32.127",
+          "first_raw": 2201,
+          "first_band": "dry",
+          "last_time_local": "2026-06-29 15:57:07.233",
+          "last_raw": 2197,
+          "last_band": "dry",
+          "min_raw_wettest": 2173,
+          "median_raw": 2238.0,
+          "max_raw_driest": 2405
+        },
+        "s3": {
+          "rows": 452,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 15:19:31.908",
+          "first_raw": 2877,
+          "first_band": "dry",
+          "last_time_local": "2026-06-29 15:57:07.017",
+          "last_raw": 2832,
+          "last_band": "dry",
+          "min_raw_wettest": 2819,
+          "median_raw": 2898.0,
+          "max_raw_driest": 2963
+        },
+        "s4": {
+          "rows": 452,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 15:19:31.979",
+          "first_raw": 2184,
+          "first_band": "dry",
+          "last_time_local": "2026-06-29 15:57:07.089",
+          "last_raw": 2499,
+          "last_band": "dry",
+          "min_raw_wettest": 2184,
+          "median_raw": 2434.0,
+          "max_raw_driest": 2638
+        }
+      },
+      "notes": "No added water; standing cachepot water confounded interpretation."
+    },
+    {
+      "window_key": "p08_cactus_microdose",
+      "kind": "plant_segment",
+      "plant_id": "P08",
+      "phase": "two-probe baseline / microdose / s1 orientation check / pull",
+      "start_local": "2026-06-29 16:06:00",
+      "end_local": "2026-06-29 16:24:30",
+      "row_count": 887,
+      "csv_files": [
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p08_cactus_microdose.csv"
+      ],
+      "source_files": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "valid_probe_ids": [
+        "s1",
+        "s3"
+      ],
+      "excluded_probes": {
+        "s2": "air reference",
+        "s4": "air reference"
+      },
+      "included_last_median_raw": 2387.5,
+      "included_wettest_raw_min": 1266,
+      "sensor_summary": {
+        "s1": {
+          "rows": 222,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 16:06:02.190",
+          "first_raw": 3274,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 16:24:27.226",
+          "last_raw": 3181,
+          "last_band": "air-dry",
+          "min_raw_wettest": 2663,
+          "median_raw": 3235.5,
+          "max_raw_driest": 3348
+        },
+        "s2": {
+          "rows": 222,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 16:06:02.262",
+          "first_raw": 3146,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 16:24:27.315",
+          "last_raw": 3152,
+          "last_band": "air-dry",
+          "min_raw_wettest": 3145,
+          "median_raw": 3166.0,
+          "max_raw_driest": 3200
+        },
+        "s3": {
+          "rows": 221,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 16:06:02.030",
+          "first_raw": 3168,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 16:24:27.080",
+          "last_raw": 1594,
+          "last_band": "OK",
+          "min_raw_wettest": 1266,
+          "median_raw": 1527,
+          "max_raw_driest": 3197
+        },
+        "s4": {
+          "rows": 222,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 16:06:02.106",
+          "first_raw": 3181,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 16:24:27.162",
+          "last_raw": 3184,
+          "last_band": "air-dry",
+          "min_raw_wettest": 3143,
+          "median_raw": 3178.0,
+          "max_raw_driest": 3197
+        }
+      },
+      "notes": "S1 orientation switched at 16:17; s3 carried the cleanest arc."
+    },
+    {
+      "window_key": "p09_rootbound_succulent",
+      "kind": "plant_segment",
+      "plant_id": "P09",
+      "phase": "single-probe rootball/soil interface / small watering / immediate runoff",
+      "start_local": "2026-06-29 16:28:00",
+      "end_local": "2026-06-29 16:40:30",
+      "row_count": 600,
+      "csv_files": [
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p09_rootbound_succulent.csv"
+      ],
+      "source_files": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "valid_probe_ids": [
+        "s3"
+      ],
+      "excluded_probes": {
+        "s1": "air reference",
+        "s2": "air reference",
+        "s4": "air reference"
+      },
+      "included_last_median_raw": 3169,
+      "included_wettest_raw_min": 1327,
+      "sensor_summary": {
+        "s1": {
+          "rows": 150,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 16:28:02.235",
+          "first_raw": 3421,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 16:40:27.280",
+          "last_raw": 3410,
+          "last_band": "air-dry",
+          "min_raw_wettest": 3385,
+          "median_raw": 3420.0,
+          "max_raw_driest": 3490
+        },
+        "s2": {
+          "rows": 150,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 16:28:02.314",
+          "first_raw": 3154,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 16:40:27.352",
+          "last_raw": 3158,
+          "last_band": "air-dry",
+          "min_raw_wettest": 3151,
+          "median_raw": 3156.0,
+          "max_raw_driest": 3163
+        },
+        "s3": {
+          "rows": 150,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 16:28:02.094",
+          "first_raw": 3128,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 16:40:27.129",
+          "last_raw": 3169,
+          "last_band": "air-dry",
+          "min_raw_wettest": 1327,
+          "median_raw": 2603.0,
+          "max_raw_driest": 3171
+        },
+        "s4": {
+          "rows": 150,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 16:28:02.158",
+          "first_raw": 3175,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 16:40:27.205",
+          "last_raw": 3178,
+          "last_band": "air-dry",
+          "min_raw_wettest": 3162,
+          "median_raw": 3172.0,
+          "max_raw_driest": 3182
+        }
+      },
+      "notes": "Soil was essentially root-consumed; s3 was between rootball and soil."
+    },
+    {
+      "window_key": "p10_office_pothos",
+      "kind": "plant_segment",
+      "plant_id": "P10",
+      "phase": "settle / s1 reseat / one-cup watering / tray uptake / pull",
+      "start_local": "2026-06-29 16:46:00",
+      "end_local": "2026-06-29 17:21:30",
+      "row_count": 1703,
+      "csv_files": [
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p10_office_pothos.csv"
+      ],
+      "source_files": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "valid_probe_ids": [
+        "s2",
+        "s3",
+        "s4"
+      ],
+      "excluded_probes": {
+        "s1": "questionable after reseat and local contact change"
+      },
+      "included_last_median_raw": 3080,
+      "included_wettest_raw_min": 1447,
+      "sensor_summary": {
+        "s1": {
+          "rows": 426,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 16:46:02.288",
+          "first_raw": 3450,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 17:21:27.384",
+          "last_raw": 2205,
+          "last_band": "dry",
+          "min_raw_wettest": 2205,
+          "median_raw": 3129.0,
+          "max_raw_driest": 3452
+        },
+        "s2": {
+          "rows": 425,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 16:46:02.368",
+          "first_raw": 3154,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 17:21:27.453",
+          "last_raw": 3080,
+          "last_band": "air-dry",
+          "min_raw_wettest": 2419,
+          "median_raw": 2696,
+          "max_raw_driest": 3159
+        },
+        "s3": {
+          "rows": 426,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 16:46:02.130",
+          "first_raw": 3149,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 17:21:27.233",
+          "last_raw": 3252,
+          "last_band": "air-dry",
+          "min_raw_wettest": 1447,
+          "median_raw": 2474.0,
+          "max_raw_driest": 3255
+        },
+        "s4": {
+          "rows": 426,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 16:46:02.209",
+          "first_raw": 3168,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 17:21:27.302",
+          "last_raw": 2088,
+          "last_band": "needs water",
+          "min_raw_wettest": 1780,
+          "median_raw": 2358.5,
+          "max_raw_driest": 3198
+        }
+      },
+      "notes": "Best clumping soil observed, but post-watering was highly uneven."
+    },
+    {
+      "window_key": "p11_office_plant",
+      "kind": "plant_segment",
+      "plant_id": "P11",
+      "phase": "long settle / crown watering / distributed watering / tray resoak / pull",
+      "start_local": "2026-06-29 17:39:00",
+      "end_local": "2026-06-29 18:24:08",
+      "row_count": 2168,
+      "csv_files": [
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p11_office_plant.csv"
+      ],
+      "source_files": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "valid_probe_ids": [
+        "s1",
+        "s2",
+        "s3",
+        "s4"
+      ],
+      "excluded_probes": {},
+      "included_last_median_raw": 2062.0,
+      "included_wettest_raw_min": 1179,
+      "sensor_summary": {
+        "s1": {
+          "rows": 542,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 17:39:02.428",
+          "first_raw": 3551,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 18:24:07.553",
+          "last_raw": 1850,
+          "last_band": "needs water",
+          "min_raw_wettest": 1827,
+          "median_raw": 2625.0,
+          "max_raw_driest": 3552
+        },
+        "s2": {
+          "rows": 542,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 17:39:02.506",
+          "first_raw": 3320,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 18:24:07.629",
+          "last_raw": 3196,
+          "last_band": "air-dry",
+          "min_raw_wettest": 1761,
+          "median_raw": 2970.0,
+          "max_raw_driest": 3328
+        },
+        "s3": {
+          "rows": 542,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 17:39:02.276",
+          "first_raw": 3160,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 18:24:07.400",
+          "last_raw": 1355,
+          "last_band": "well watered",
+          "min_raw_wettest": 1179,
+          "median_raw": 1350.5,
+          "max_raw_driest": 3172
+        },
+        "s4": {
+          "rows": 542,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 17:39:02.344",
+          "first_raw": 3052,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 18:24:07.474",
+          "last_raw": 2274,
+          "last_band": "dry",
+          "min_raw_wettest": 2203,
+          "median_raw": 2483.0,
+          "max_raw_driest": 3077
+        }
+      },
+      "notes": "Tray retained water at closeout; pull spread was very high."
+    }
+  ],
+  "non_plant_windows": [
+    {
+      "window_key": "between_p03_p04_air_dry_sun",
+      "kind": "non_plant_experiment",
+      "plant_id": "",
+      "phase": "air-dry reset / bench sun exposure",
+      "start_local": "2026-06-29 13:40:20",
+      "end_local": "2026-06-29 13:47:06",
+      "row_count": 324,
+      "csv_files": [
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/between_p03_p04_air_dry_sun.csv"
+      ],
+      "source_files": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "valid_probe_ids": [],
+      "excluded_probes": {
+        "s1": "not in plant",
+        "s2": "not in plant",
+        "s3": "not in plant",
+        "s4": "not in plant"
+      },
+      "included_last_median_raw": "",
+      "included_wettest_raw_min": "",
+      "sensor_summary": {
+        "s1": {
+          "rows": 81,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 13:40:21.800",
+          "first_raw": 2930,
+          "first_band": "dry",
+          "last_time_local": "2026-06-29 13:47:01.824",
+          "last_raw": 3135,
+          "last_band": "air-dry",
+          "min_raw_wettest": 1772,
+          "median_raw": 3136,
+          "max_raw_driest": 3189
+        },
+        "s2": {
+          "rows": 81,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 13:40:21.884",
+          "first_raw": 3116,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 13:47:01.905",
+          "last_raw": 3261,
+          "last_band": "air-dry",
+          "min_raw_wettest": 3072,
+          "median_raw": 3123,
+          "max_raw_driest": 3261
+        },
+        "s3": {
+          "rows": 81,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 13:40:21.649",
+          "first_raw": 2290,
+          "first_band": "dry",
+          "last_time_local": "2026-06-29 13:47:01.670",
+          "last_raw": 3379,
+          "last_band": "air-dry",
+          "min_raw_wettest": 2290,
+          "median_raw": 3296,
+          "max_raw_driest": 3553
+        },
+        "s4": {
+          "rows": 81,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 13:40:21.731",
+          "first_raw": 3346,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 13:47:01.754",
+          "last_raw": 3539,
+          "last_band": "air-dry",
+          "min_raw_wettest": 3346,
+          "median_raw": 3467,
+          "max_raw_driest": 3579
+        }
+      },
+      "notes": "Non-plant bench condition between P03 and P04."
+    },
+    {
+      "window_key": "p08_s1_orientation_check",
+      "kind": "method_probe_check",
+      "plant_id": "P08",
+      "phase": "front/back probe-orientation spot check",
+      "start_local": "2026-06-29 16:17:00",
+      "end_local": "2026-06-29 16:18:45",
+      "row_count": 83,
+      "csv_files": [
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p08_s1_orientation_check.csv"
+      ],
+      "source_files": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "valid_probe_ids": [
+        "s1",
+        "s3"
+      ],
+      "excluded_probes": {
+        "s2": "air reference",
+        "s4": "air reference"
+      },
+      "included_last_median_raw": 2309.5,
+      "included_wettest_raw_min": 1377,
+      "sensor_summary": {
+        "s1": {
+          "rows": 21,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 16:17:02.218",
+          "first_raw": 3070,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 16:18:42.224",
+          "last_raw": 3144,
+          "last_band": "air-dry",
+          "min_raw_wettest": 3069,
+          "median_raw": 3107,
+          "max_raw_driest": 3144
+        },
+        "s2": {
+          "rows": 21,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 16:17:02.284",
+          "first_raw": 3160,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 16:18:42.288",
+          "last_raw": 3146,
+          "last_band": "air-dry",
+          "min_raw_wettest": 3145,
+          "median_raw": 3150,
+          "max_raw_driest": 3162
+        },
+        "s3": {
+          "rows": 20,
+          "included_by_sage": true,
+          "first_time_local": "2026-06-29 16:17:02.067",
+          "first_raw": 1399,
+          "first_band": "well watered",
+          "last_time_local": "2026-06-29 16:18:42.069",
+          "last_raw": 1475,
+          "last_band": "well watered",
+          "min_raw_wettest": 1377,
+          "median_raw": 1451.0,
+          "max_raw_driest": 1482
+        },
+        "s4": {
+          "rows": 21,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 16:17:02.129",
+          "first_raw": 3177,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 16:18:42.145",
+          "last_raw": 3177,
+          "last_band": "air-dry",
+          "min_raw_wettest": 3167,
+          "median_raw": 3177,
+          "max_raw_driest": 3180
+        }
+      },
+      "notes": "Exploratory only: reinsertion changed contact/depth/packing, but visible response returned near pre-swap level."
+    },
+    {
+      "window_key": "p10_to_p11_air_reset",
+      "kind": "non_plant_experiment",
+      "plant_id": "",
+      "phase": "probe wipe / air-dry reset / P11 prep",
+      "start_local": "2026-06-29 17:21:30",
+      "end_local": "2026-06-29 17:43:00",
+      "row_count": 1032,
+      "csv_files": [
+        "docs/experiments/data/20260629_greenhouse_bench_arc_recovery/windows/p10_to_p11_air_reset.csv"
+      ],
+      "source_files": [
+        "logs/Sprout ESP32_20260629_180631.csv"
+      ],
+      "valid_probe_ids": [],
+      "excluded_probes": {
+        "s1": "not in plant",
+        "s2": "not in plant",
+        "s3": "not in plant",
+        "s4": "not in plant"
+      },
+      "included_last_median_raw": "",
+      "included_wettest_raw_min": "",
+      "sensor_summary": {
+        "s1": {
+          "rows": 258,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 17:21:32.372",
+          "first_raw": 3100,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 17:42:57.433",
+          "last_raw": 3146,
+          "last_band": "air-dry",
+          "min_raw_wettest": 3100,
+          "median_raw": 3498.0,
+          "max_raw_driest": 3559
+        },
+        "s2": {
+          "rows": 258,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 17:21:32.453",
+          "first_raw": 3082,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 17:42:57.514",
+          "last_raw": 2886,
+          "last_band": "dry",
+          "min_raw_wettest": 2723,
+          "median_raw": 3246.0,
+          "max_raw_driest": 3328
+        },
+        "s3": {
+          "rows": 258,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 17:21:32.231",
+          "first_raw": 3252,
+          "first_band": "air-dry",
+          "last_time_local": "2026-06-29 17:42:57.281",
+          "last_raw": 2808,
+          "last_band": "dry",
+          "min_raw_wettest": 2168,
+          "median_raw": 3151.5,
+          "max_raw_driest": 3252
+        },
+        "s4": {
+          "rows": 258,
+          "included_by_sage": false,
+          "first_time_local": "2026-06-29 17:21:32.302",
+          "first_raw": 2098,
+          "first_band": "needs water",
+          "last_time_local": "2026-06-29 17:42:57.363",
+          "last_raw": 2831,
+          "last_band": "dry",
+          "min_raw_wettest": 1831,
+          "median_raw": 3054.5,
+          "max_raw_driest": 3149
+        }
+      },
+      "notes": "P10 tray reabsorbed water by 17:40 while probes air-reset before P11."
+    }
+  ],
+  "data_contract_candidates": [
+    "event_kind",
+    "plant_id",
+    "phase",
+    "probe_inclusion",
+    "probe_exclusion_note",
+    "aggregation_rule",
+    "confidence",
+    "arc_completeness"
+  ]
+}

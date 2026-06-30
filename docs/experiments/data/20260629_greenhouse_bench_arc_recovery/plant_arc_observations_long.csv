@@ -1,0 +1,25 @@
+plant_id,phase,raw_value,band,valid_probe_ids,confidence,aggregation_owner,note
+P01,start,2137,dry,s1;s2;s3;s4,high,Data (#380); Sage provides valid-probe evidence only,Use committed sidecar captures for dry/wet/pull; all four probes valid.
+P01,wettest,1188,well watered,s1;s2;s3;s4,high,Data (#380); Sage provides valid-probe evidence only,Use committed sidecar captures for dry/wet/pull; all four probes valid.
+P01,ending,1266,well watered,s1;s2;s3;s4,high,Data (#380); Sage provides valid-probe evidence only,Use committed sidecar captures for dry/wet/pull; all four probes valid.
+P02,start,3118,air-dry,s1;s2;s3,medium,Data (#380); Sage provides valid-probe evidence only,Exclude s4 dry outlier; Data owns final collapse rule.
+P02,wettest,1402,well watered,s1;s2;s3,medium,Data (#380); Sage provides valid-probe evidence only,Exclude s4 dry outlier; Data owns final collapse rule.
+P03,start,3023,dry,s1;s2;s3,medium,Data (#380); Sage provides valid-probe evidence only,Exclude s4 dry outlier; Data owns final collapse rule.
+P03,wettest,1263,well watered,s1;s2;s3,medium,Data (#380); Sage provides valid-probe evidence only,Exclude s4 dry outlier; Data owns final collapse rule.
+P04,ending,3041,dry,s1;s2;s3;s4,low,Data (#380); Sage provides valid-probe evidence only,Show as honest gap rather than fabricate wetting response.
+P05,ending,2971,dry,s1;s4,low,Data (#380); Sage provides valid-probe evidence only,Use s1/s4 only if Data chooses a single read.
+P06,wettest,2477,dry,s1;s2;s3;s4,medium-low,Data (#380); Sage provides valid-probe evidence only,Large spread; surface confidence/spread with any single read.
+P06,ending,2636,dry,s1;s2;s3;s4,medium-low,Data (#380); Sage provides valid-probe evidence only,Large spread; surface confidence/spread with any single read.
+P07,ending,2186,dry,s1;s2;s4,low,Data (#380); Sage provides valid-probe evidence only,Exclude s3: reported virtually no soil contact.
+P08,start,3225,air-dry,s1;s3,medium,Data (#380); Sage provides valid-probe evidence only,S3 is the cleanest arc; s1 had orientation/reinsertion disturbance.
+P08,wettest,1377,well watered,s1;s3,medium,Data (#380); Sage provides valid-probe evidence only,S3 is the cleanest arc; s1 had orientation/reinsertion disturbance.
+P08,ending,1579,OK,s1;s3,medium,Data (#380); Sage provides valid-probe evidence only,S3 is the cleanest arc; s1 had orientation/reinsertion disturbance.
+P09,start,2948,dry,s3,medium-high,Data (#380); Sage provides valid-probe evidence only,Only s3 was in the rootball/soil interface.
+P09,wettest,1327,well watered,s3,medium-high,Data (#380); Sage provides valid-probe evidence only,Only s3 was in the rootball/soil interface.
+P09,ending,2598,dry,s3,medium-high,Data (#380); Sage provides valid-probe evidence only,Only s3 was in the rootball/soil interface.
+P10,start,2362,dry,s2;s3;s4,medium-low,Data (#380); Sage provides valid-probe evidence only,S1 questionable after reseat; high spread is part of the signal.
+P10,wettest,1926,needs water,s2;s3;s4,medium-low,Data (#380); Sage provides valid-probe evidence only,S1 questionable after reseat; high spread is part of the signal.
+P10,ending,2954,dry,s2;s3;s4,medium-low,Data (#380); Sage provides valid-probe evidence only,S1 questionable after reseat; high spread is part of the signal.
+P11,start,2838,dry,s1;s2;s3;s4,medium,Data (#380); Sage provides valid-probe evidence only,Surface spread/confidence; tray still partly wet at closeout.
+P11,wettest,1299,well watered,s1;s2;s3;s4,medium,Data (#380); Sage provides valid-probe evidence only,Surface spread/confidence; tray still partly wet at closeout.
+P11,ending,2062,needs water,s1;s2;s3;s4,medium,Data (#380); Sage provides valid-probe evidence only,Surface spread/confidence; tray still partly wet at closeout.
