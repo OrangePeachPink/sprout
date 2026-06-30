@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260628_231914_s3_dry_to_wet_test",
+  "notes": {
+    "hypothesis": "After wiping s3 to an air-dry state, placing only s3 into water should create a large rapid raw ADC drop on s3 while the other dry probes remain mostly unchanged.",
+    "method": "s3 was wiped/air-dried and then placed into the water cup during a 90 s capture at 0.5 s cadence. The other probes remained dry/static. Timing includes manual placement time.",
+    "findings": "s3 dropped from 2927 to 1004 raw ADC, a -1923 count response. The other channels stayed dry with smaller drift: s1 +26, s2 +12, s4 +35 counts.",
+    "conclusion": "The s3 dry-to-wet response was strong and fast. The result supports the same channel-local behavior seen on s4, with only small background dry drift on the other probes.",
+    "saved_at": "2026-06-29T13:58:50Z",
+    "version": 1
+  }
+}

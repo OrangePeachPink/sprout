@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260629_024146_P01_dry_baseline_48h_post_wet_run",
+  "notes": {
+    "hypothesis": "After 48h without additional water, the previously wet plant should have moved from saturated/wet toward a drier band, but may still show uneven moisture by probe position.",
+    "method": "Four wiped probes were inserted to consistent depth around P01 and allowed to settle for about 2 min, then captured for 180 s at 1 s cadence before any watering. Source was serial device.",
+    "findings": "Medians: s1 2110, s2 2164, s3 2189, s4 2098 raw ADC. Higher raw ADC means drier. All four channels were near the provisional drying/dry region, with about 91 counts between wettest and driest medians. Ranges were tight: s1 2106-2115, s2 2156-2172, s3 2184-2195, s4 2090-2107. All channels drifted slightly downward during capture, consistent with possible continued probe/soil contact settling after insertion.",
+    "conclusion": "P01 was substantially dried out relative to the earlier wet run and was ready for watering. This capture is a useful dry baseline for the following rewatering run. Exact band labels remain provisional until per-channel calibration is ratified.",
+    "saved_at": "2026-06-29T02:50:45Z",
+    "version": 1
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260628_230734_wet-to-dry-sequential-pull-to-platepaper",
+  "notes": {
+    "hypothesis": "Pulling wet probes out one by one and laying them on a plate with paper towel should show fast wet-to-dry transitions per probe, but channel comparisons will be confounded by the sequential pull order and different drying times.",
+    "method": "Starting from wet probes, each probe was pulled from the cup one by one and placed on a plate with paper towel during a 180 s, 0.5 s capture. The action was manual, so transition timing includes human movement and placement time.",
+    "findings": "The sequential transitions are visible in the trace. First-to-last raw ADC deltas were s1 +1816, s2 +1920, s3 +1460, s4 +1173 counts. s1 and s2 reached the driest final values in this run, while s3 and s4 ended lower, likely because their exposure time and retained water state differed.",
+    "conclusion": "The wet-to-dry response is large and fast, but this specific run should not be used as an exact per-channel response comparison because pull order and manual handling dominate the first minutes. It is still useful evidence that the sensors can distinguish wet-to-dry transitions clearly.",
+    "saved_at": "2026-06-29T13:58:50Z",
+    "version": 1
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260629_032448_overnight_water_soil_equilib_test",
+  "notes": {
+    "hypothesis": "After the P01 no-runoff rewatering run, water should redistribute through the soil overnight. If the pot equilibrates as one shared soil volume, the four probes should move closer together. If local wetting paths and dry pockets persist, s2 may remain relatively drier and s4 may remain relatively wetter.",
+    "method": "All four probes stayed in P01 after the post-dry rewatering run. The inner pot remained on a plate with paper towel; no runoff had been observed. No additional water was added during this capture. The experiment ran overnight for 32000 s at 5 s cadence from the serial device. Logging was enabled afterward to continue observing the same four sensors in the same plant.",
+    "findings": "The run completed 6399 sweeps over 533 min 20 s with 25574 soil rows, 3513 dropped rows, and 18 CRC failures. Median raw ADC values were s1 1254, s2 1426, s3 1116, s4 1102. First-to-last deltas were s1 +24, s2 -10, s3 -25, s4 +40 counts. s2 remained the driest/highest channel overnight, while s4 remained among the wettest channels but drifted upward/drier. The cross-channel difference did not collapse to a single shared value.",
+    "conclusion": "Overnight redistribution did not fully equalize the four probe locations. The result supports the hypothesis that local water paths, surface coverage, probe placement, and pot microzones matter after top-watering. s4 should not be treated as proven overwatered solely from the provisional band, because the plant had no runoff and s4 was likely nearest the heaviest direct watering. s2's persistent higher reading is consistent with the visually observed drier/leaf-blocked area, but that remains an inference.",
+    "saved_at": "2026-06-29T13:58:50Z",
+    "version": 1
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260628_181446_shaded_esp32",
+  "notes": {
+    "hypothesis": "If the afternoon drift is partly caused by ESP32/breadboard heating, then holding the board shaded through the later skylight interval should produce a slower return or flattening rather than an immediate step. If the cup/probes or water temperature are the dominant factor, the readings may still move while the board is shaded.",
+    "method": "All four probes remained in the water cup. The ESP32/breadboard was kept shaded for a 15 min capture at 1 s cadence while the bench/skylight interval continued. The water cup, wires, and sensor area may still have had skylight exposure; water temperature was not measured.",
+    "findings": "All channels remained in the water-reference region. Medians were s1 999, s2 942, s3 1035, s4 994 raw ADC. First-to-last drift was small and downward: s1 -8, s2 -10, s3 -19, s4 -9 counts. CRC failures were 2 over 899 sweeps.",
+    "conclusion": "The shaded-board run supports that there was no large fast direct-sun artifact in water, but it leaves a slower thermal explanation plausible. The result also shows why board/chip temperature and water/environment temperature would be useful future context signals.",
+    "saved_at": "2026-06-29T13:58:50Z",
+    "version": 1
+  }
+}

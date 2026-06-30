@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260628_234715_resetting_logging_to_5_sec_via_exp",
+  "notes": {
+    "hypothesis": "After several 0.5 s captures, a short 5 s cadence experiment can verify the experiment UI can still capture at the normal slower interval and provide an operational sanity check before returning to ordinary logging.",
+    "method": "A 30 s capture was run at 5 s cadence with all four probes in dry/open-bench condition. This was an operational cadence check, not a calibration experiment.",
+    "findings": "The capture produced 5 sweeps and 20 rows with no dropped rows and no CRC failures. Readings stayed dry and stable: medians s1 3175, s2 3124, s3 3123, s4 3134 raw ADC.",
+    "conclusion": "The 5 s experiment capture path worked. This file is useful as an operational note that the bench returned from sub-second testing to slower cadence, but it should not be weighted heavily as a calibration anchor due to the very short duration.",
+    "saved_at": "2026-06-29T13:58:50Z",
+    "version": 1
+  }
+}

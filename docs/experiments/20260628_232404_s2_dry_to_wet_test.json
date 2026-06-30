@@ -1,0 +1,11 @@
+{
+  "experiment_id": "20260628_232404_s2_dry_to_wet_test",
+  "notes": {
+    "hypothesis": "After wiping s2 to an air-dry state, placing only s2 into water should create a large rapid raw ADC drop on s2 while the other dry probes remain mostly unchanged.",
+    "method": "s2 was wiped/air-dried and then placed into the water cup during a 90 s capture at 0.5 s cadence. The other probes remained dry/static. Timing includes manual placement time.",
+    "findings": "s2 dropped from 3095 to 941 raw ADC, a -2154 count response. s1 and s3 stayed nearly stable dry (+7 and +9 counts). s4 drifted upward by +98 counts while dry, which is likely a dry settling or handling/context effect rather than a wetting response.",
+    "conclusion": "The s2 dry-to-wet response was strong and channel-local. s2's dry-to-wet span was one of the largest observed, reinforcing the need for per-channel calibration rather than one shared raw boundary.",
+    "saved_at": "2026-06-29T13:58:50Z",
+    "version": 1
+  }
+}
