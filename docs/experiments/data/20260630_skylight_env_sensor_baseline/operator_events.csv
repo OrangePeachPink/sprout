@@ -1,0 +1,9 @@
+event_key,timestamp_local,timestamp_precision,event_kind,description,evidence_source,analysis_use
+env_build_live,2026-06-30 13:18:15,log_start,logger_start,Env rows present in monitor log; SHT45 + AS7263 streaming with soil.,logs/Sprout ESP32_20260630_181815.csv,first durable env+soil stream for this session
+cardboard_box_lifted,2026-06-30 13:25:00,operator_exact_minute,bench_event,Cardboard shielding box lifted exactly at 1:25 pm local.,operator note in Sage thread,direct-sun exposure boundary
+logger_gap_after_lift,2026-06-30 13:25:21 to 13:34:55,source_logs_index,logging_gap,Monitor stream had a gap after the box-lift transition.,source_logs_index.csv,"gap surfaced, not interpolated"
+direct_sun_restart,2026-06-30 13:34:55,log_start,logger_restart,Logging restarted during direct-sun exposure after stop/start.,logs/Sprout ESP32_20260630_183455.csv,direct-sun env response window
+second_logger_restart,2026-06-30 13:42:54,log_start,logger_restart,Logging restarted after another apparent wedge near the eight-minute mark.,logs/Sprout ESP32_20260630_184254.csv,start of long continuous baseline
+probe_orientation_layout,,operator_sequence_no_exact_time,bench_layout,Soil probes dry in air on bench; s2/s3 silkscreen up; s1/s4 silkscreen down.,operator note in Sage thread,front/back heating and air-dry drift context
+shade_sequence,,operator_sequence_no_exact_time,bench_event,"S3 shaded first, ESP32 and SHT45 followed, AS7263 was last to move into shade.",operator note in Sage thread,"interpret AS7263 and SHT45 decline as skylight transit, not plant response"
+s2_reposition_disturbance,,operator_sequence_no_exact_time,handling_artifact,A brief s2 trough/peak was caused by operator repositioning to confirm label.,operator note in Sage thread,exclude sharp soil-air outlier from moisture interpretation

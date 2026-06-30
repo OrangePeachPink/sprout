@@ -1,0 +1,51 @@
+{
+  "experiment_id": "20260630_skylight_env_sensor_baseline",
+  "date_local": "2026-06-30",
+  "lane": "Sage",
+  "refs": {
+    "sht45_bringup": "#373",
+    "as7263_bringup": "#374",
+    "thermal_drift": "#345",
+    "config_provenance_rfc": "#416",
+    "calibration_context": "#170",
+    "data_consumer": "#380"
+  },
+  "purpose": "Promote the first live SHT45 + AS7263 skylight/air-dry bench session from ignored monitor logs into tracked, computable evidence.",
+  "coverage_local": {
+    "start": "2026-06-30 12:58:27.635",
+    "end": "2026-06-30 17:31:05.893"
+  },
+  "source_logs": [
+    "logs/Sprout ESP32_20260630_175827.csv",
+    "logs/Sprout ESP32_20260630_181815.csv",
+    "logs/Sprout ESP32_20260630_183455.csv",
+    "logs/Sprout ESP32_20260630_184254.csv"
+  ],
+  "fast_path_for_data": [
+    "channel_summary.csv",
+    "time_bin_summary.csv",
+    "operator_events.csv",
+    "source_logs_index.csv",
+    "raw_slices/*.csv"
+  ],
+  "raw_slice_count": 17,
+  "row_count": 35292,
+  "honest_gap_policy": "Logger gaps and no-exact-time operator events are surfaced in indexes; do not interpolate sun/shade boundaries that were not timestamped.",
+  "bench_conditions": {
+    "plant_present": false,
+    "soil_present": false,
+    "water_present": false,
+    "soil_probe_state": "air-dry on bench, exposed to same skylight path",
+    "soil_probe_orientation": "s2/s3 silkscreen up; s1/s4 silkscreen down",
+    "sht45_position": "breadboard_near_esp32",
+    "as7263_position": "breadboard_near_esp32",
+    "as7263_aim": "skylight_beam"
+  },
+  "key_observations": [
+    "SHT45 ambient_temp rose from about 28 C baseline to mid-30s C in direct sun.",
+    "AS7263 nir_680 and nir_860 frequently hit raw 51201 during direct sun.",
+    "After shade, soil probes returned to a tight air-dry cluster near 3130-3200 raw.",
+    "Low soil raw outliers occur during handling/repositioning and are not moisture."
+  ],
+  "pii_posture": "Generated files use relative source paths, device telemetry, local timestamps, probe IDs, raw counts, calibrated SHT45 values, and bench notes. No home coordinates or personal identifiers are intentionally included."
+}
