@@ -24,6 +24,7 @@
 #include "sht45.h"
 #include "as7263.h"
 #include "telemetry.h"
+#include "board_capability.h" /* #273 capability descriptor + gate seam */
 
 /* -------------------------------------------------------------------------- */
 /* synthetic rig: ADC source + pump observer + event sink                     */
@@ -954,6 +955,24 @@ void t_env_row(void)
                                  "aim in payload");
 }
 
+/* #273 capability descriptor (ADR-0019 §1-2): the descriptor is accessible, the
+ * gate seam matches the field, and an unknown/no-WiFi target falls to the Tier-0
+ * floor (tethered monitor, no WiFi) — i.e. Tier-0 runs on a no-WiFi board. The
+ * native/host build takes the fallback entry, so that's what this pins. */
+void t_board_capability(void)
+{
+    TEST_ASSERT_FALSE_MESSAGE(
+        board_has_wifi(), "host/fallback: no WiFi -> Tier-0 tethered monitor");
+    TEST_ASSERT_EQUAL_MESSAGE((int)BOARD_CAP.has_wifi, (int)board_has_wifi(),
+                              "gate seam reflects the descriptor field");
+    TEST_ASSERT_EQUAL_MESSAGE(4, BOARD_CAP.num_channels, "4 soil channels");
+    TEST_ASSERT_EQUAL_MESSAGE(12, BOARD_CAP.adc_bits, "12-bit ADC");
+    TEST_ASSERT_NOT_NULL_MESSAGE((void *)BOARD_CAP.name,
+                                 "descriptor has a name");
+    TEST_ASSERT_NOT_NULL_MESSAGE((void *)BOARD_CAP.storage,
+                                 "has a storage tier");
+}
+
 /* #274 sensor-type seam (ADR-0019 §3): a RESISTIVE channel INVERTS the raw->band
  * direction (higher raw = wetter). Pins the MECHANISM, not resistive calibration
  * values (there are none — resistive ships PROVISIONAL); the same raw lands at
@@ -1005,6 +1024,7 @@ int main(void)
     RUN_TEST(t_overrun_failsafe);
     RUN_TEST(t_last_water_ms);
     RUN_TEST(t_band_anchors);
+    RUN_TEST(t_board_capability);
     RUN_TEST(t_sensor_type_resistive);
     RUN_TEST(t_serial_cmd_registry);
     RUN_TEST(t_pump_pulse);
