@@ -24,6 +24,7 @@
 #include <esp_system.h>
 #include <esp_timer.h>
 #include <esp_task_wdt.h>
+#include <esp_idf_version.h> /* ESP_IDF_VERSION - the watchdog API split at IDF5 (#499) */
 #include <Preferences.h>
 #include <string.h>
 #include "config.h"
@@ -516,8 +517,21 @@ void setup()
 
     /* Task watchdog LAST: setup's own work won't trip it; loop() feeds it every
      * iteration.  A hung loop resets the chip → reboot re-runs allRelaysOff() (#93).
-     * Classic esp_task_wdt API (IDF 4.4 / Arduino-ESP32 2.x): timeout in seconds. */
+     * esp_task_wdt_init split its signature at IDF5 (arduino-esp32 3.2+, the C5
+     * experimental target, #442/#499): classic/S3 stay on the pre-IDF5 two-arg form
+     * (timeout in SECONDS); IDF5+ takes a config struct (timeout in MILLISECONDS —
+     * NOT a copy-paste of the old value, the unit itself changed). esp_task_wdt_add
+     * is unchanged across both. */
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    esp_task_wdt_config_t wdt_cfg = {
+        .timeout_ms = WDT_TIMEOUT_MS,
+        .idle_core_mask = 0,
+        .trigger_panic = true,
+    };
+    esp_task_wdt_init(&wdt_cfg);
+#else
     esp_task_wdt_init(WDT_TIMEOUT_MS / 1000UL, true);
+#endif
     esp_task_wdt_add(NULL);
 }
 
