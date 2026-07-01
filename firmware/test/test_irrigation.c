@@ -971,6 +971,25 @@ void t_board_capability(void)
                                  "descriptor has a name");
     TEST_ASSERT_NOT_NULL_MESSAGE((void *)BOARD_CAP.storage,
                                  "has a storage tier");
+
+    /* #436: pins are now a descriptor field (ADR-0019 §1). The host/fallback entry
+     * carries the classic pin values, so this locks the exact classic map (a
+     * regression guard: config.h's SENSOR_PINS/RELAY_PINS/LED_PIN now SOURCE from
+     * these, so a wrong edit here would silently reassign real hardware pins). */
+    const uint8_t soil[4] = {36, 39, 34, 35};
+    const uint8_t relay[4] = {25, 26, 27, 32};
+    for (int i = 0; i < 4; i++) {
+        TEST_ASSERT_EQUAL_MESSAGE(soil[i], BOARD_CAP.soil_pins[i],
+                                  "classic soil pin unchanged");
+        TEST_ASSERT_EQUAL_MESSAGE(relay[i], BOARD_CAP.relay_pins[i],
+                                  "classic relay pin unchanged");
+    }
+    TEST_ASSERT_EQUAL_MESSAGE(2, BOARD_CAP.led_pin,
+                              "classic LED pin unchanged");
+    TEST_ASSERT_EQUAL_MESSAGE(21, BOARD_CAP.i2c_sda,
+                              "classic I2C SDA unchanged");
+    TEST_ASSERT_EQUAL_MESSAGE(22, BOARD_CAP.i2c_scl,
+                              "classic I2C SCL unchanged");
 }
 
 /* #274 sensor-type seam (ADR-0019 §3): a RESISTIVE channel INVERTS the raw->band
