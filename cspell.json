@@ -179,6 +179,8 @@
     "pycache",
     "pyproject",
     "pytest",
+    "pythonw",
+    "Renesas",
     "rebuildable",
     "refetched",
     "reflash",
