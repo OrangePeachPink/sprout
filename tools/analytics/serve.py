@@ -12,6 +12,14 @@ the host logger as it appends. Read-only: it never writes the logs.
 Stop it from the dashboard's "Stop server" control (the no-terminal door) or with
 Ctrl-C. The static ``dashboard.py`` snapshot is still the right tool for a
 shareable one-file artifact; this is for live monitoring on the host.
+
+Scope boundary (ADR-0014 §5, #296): serve.py is **transport + routing + wiring** — HTTP
+serving, request routing, and *holding* the CaptureController / MonitorController
+instances. It does **not** implement capture/monitor lifecycle logic (those controllers
+do); the control-plane state (the two instances + the Monitor/Experiment handoff) lives
+here as module-globals. That co-location is the known seam, extracted into an
+``operator_plane`` module only when a second UI context (#243's device UI) needs to
+share it — not for hygiene alone.
 """
 
 from __future__ import annotations
@@ -36,6 +44,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+from bench_packages import render_bench_detail  # noqa: E402  (bench detail #444)
 from dashboard import (  # noqa: E402  (sibling import)
     RANGE_HOURS,
     build_context,
@@ -44,7 +53,10 @@ from dashboard import (  # noqa: E402  (sibling import)
     gather_inputs,
     render,
 )
-from experiments_catalog import load_catalog, render_catalog  # noqa: E402  (Lab #154)
+from experiments_catalog import (  # noqa: E402  (Lab #154; #444 combined source)
+    load_combined,
+    render_catalog,
+)
 from lab_detail import render_detail  # noqa: E402  (Lab detail #157)
 from lab_drafts import list_drafts, load_draft  # noqa: E402  (agent drafts #326)
 from lab_notes import (  # noqa: E402  (Lab notes #158; path for save resilience #327)
@@ -172,10 +184,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json(_MONITOR.status())
             elif parsed.path == "/serial/owner":  # who holds the port (#330)
                 self._send_json(serial_lock.owner_status())
-            elif parsed.path == "/lab":  # the Lab Notebook catalog (#154)
-                self._send(render_catalog(load_catalog()), "text/html; charset=utf-8")
+            elif parsed.path == "/lab":  # the Lab Notebook catalog (#154 + bench #444)
+                self._send(render_catalog(load_combined()), "text/html; charset=utf-8")
             elif parsed.path == "/lab/experiments.json":
-                self._send_json(load_catalog())
+                self._send_json(load_combined())
             elif parsed.path == "/lab/drafts":  # agent-prepared draft list (#326)
                 self._send_json({"drafts": list_drafts()})
             elif parsed.path.startswith("/lab/draft/"):  # one draft, for prefill (#326)
@@ -200,6 +212,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif parsed.path.startswith("/lab/") and parsed.path.endswith("/notes"):
                 eid = unquote(parsed.path[len("/lab/") : -len("/notes")])  # notes #158
                 self._send_json(load_notes(eid))
+            elif parsed.path.startswith("/lab/bench/"):  # a bench-package detail (#444)
+                pkg = unquote(parsed.path[len("/lab/bench/") :])
+                page = render_bench_detail(pkg)
+                if page is None:
+                    self._send("bench package not found", "text/plain", status=404)
+                else:
+                    self._send(page, "text/html; charset=utf-8")
             elif parsed.path.startswith("/lab/"):  # an experiment detail page (#157)
                 eid = unquote(parsed.path[len("/lab/") :])
                 page = render_detail(eid)

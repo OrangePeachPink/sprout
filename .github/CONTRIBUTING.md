@@ -59,9 +59,11 @@ maintainer confirms `area:` / `layer:` at triage.
 > everything for predictability and to prevent local≠remote drift. Path-filtering would re-introduce exactly
 > the class of surprise we deliberately closed.
 >
-> **The one exception — clang-format:** it runs at *changed scope*, not `--all-files`, because the firmware
-> carries intentional manual column alignment a full-tree reformat would destroy (AGENTS.md §code-style, #343).
-> Every other check — `ruff` / `cspell` / `markdownlint` — stays repo-wide.
+> **The one exception — clang-format:** it runs on the *lines you changed*, not `--all-files`, because the
+> firmware carries intentional manual column alignment a full-tree reformat would destroy (AGENTS.md
+> §code-style; changed-lines via `git-clang-format`, #352). Edit a file and only your touched lines are
+> checked — untouched aligned blocks are left alone. Every other check — `ruff` / `cspell` / `markdownlint` —
+> stays repo-wide.
 >
 > **If CI goes red after a base fix:** re-running the job alone isn't enough — it replays the *stale* merge
 > commit. **Update your branch** (merge or rebase `main`) so CI re-checks against the fixed base. That's the
@@ -192,7 +194,23 @@ the message bus.** Keep the system moving by syncing yourself.
 - **Comments / questions / RFCs** aimed at your lane on issues and PRs.
 - **What recently merged that unblocks you** — a dependency landed, or a base PR merged so your stacked PR
   can rebase.
-- **Backlog** items in your area that are now actionable.
+- **Backlog** items in your area that are now actionable — but **skip anything labelled `needs:hardware`**:
+  those are the maintainer's hardware/bench queue (wiring, pump/relay setup, hardware you don't have yet), not
+  lane-advanceable. Filter your board view to `for:<your-lane> -label:needs:hardware`.
+
+**Which item do you pick? No ambiguity — the board answers it:**
+
+- **Your queue** = the board filtered to `for:<your-lane> -label:needs:hardware -label:needs:maintainer`,
+  **sorted by Priority**.
+- **Your next task** = the **top-priority *sliced* item** in that queue — P0/P1 before P2 before P3. Every
+  P1/P2 is triaged to be **owned, sliced, and actionable**; you don't need permission to start it.
+- **Epics are not tasks.** An item labelled `epic` is a *parent* — work its **sliced children**, never the epic
+  card itself. If an epic has no open sliced children, *that* is the thing to flag (`for:workflow`).
+- **`needs:hardware` / `needs:maintainer` are out of your queue** — the maintainer's bench and decision queues.
+  The filter above already excludes them; don't pull from them.
+- The **only** thing you escalate is a top item that genuinely isn't actionable (missing slice, unclear AC) —
+  and that should be rare, because the backlog is kept triaged. Route it `for:workflow` and take the next item
+  meanwhile.
 
 **Then act — don't wait, don't ask when you can do:**
 
@@ -221,6 +239,8 @@ stalling until the next relay.
 - `blocks:*` — milestone **gates**, independent of Priority: `blocks:pumps`, `blocks:public-release`,
   `blocks:data-integrity`. Filter by these to see what stands between us and pumps / a public release /
   trustworthy data.
+- `needs:hardware` — blocked on a **maintainer hardware/bench session** (wiring, pump/relay setup, hardware
+  not yet on hand). The maintainer's hardware queue; **lanes skip these** when sweeping Backlog.
 - `needs-verification` — set when an issue enters the gate (above)
 - `good first issue` / `help wanted` — welcoming places to start
 
