@@ -71,8 +71,11 @@ experiment *ARGS:
 build:
     {{pio}} run -d firmware
 
-# Compile-check the ESP32-C5 env (isolated pinned platform, #442/ADR-0024). Opt-in /
-# Contributors-Welcome build — NOT in CI, not flash-ready (placeholder pins, #436).
+# Compile-check the ESP32-S3 env — same pinned platform as esp32dev, no new toolchain (#436).
+build-s3:
+    {{pio}} run -d firmware -e esp32s3
+
+# Compile-check the ESP32-C5 env — isolated pinned platform, non-blocking CI dry-run (#442/ADR-0024).
 build-c5:
     {{pio}} run -d firmware -e esp32c5
 

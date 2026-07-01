@@ -121,10 +121,56 @@ jobs:
       - name: Compile firmware (ESP32 — catch src/ regressions)
         run: just build
 
+  # Experimental board compile-checks (#436 S3, #442 C5) — deliberately NOT in `gate`'s
+  # needs and `continue-on-error: true`, so a toolchain break here (community fork,
+  # unproven pins) can NEVER red the required check (ADR-0024: "an experimental
+  # toolchain break stays contained"). Visible on every PR, blocking nothing — the
+  # dry-run Firmware asked for on #442 so this class of break surfaces before hardware
+  # instead of only at someone's next local `just build-s3`/`build-c5`.
+  experimental-boards:
+    name: experimental board (${{ matrix.env }}) — non-blocking
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [esp32s3, esp32c5]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv (+ the locked Python)
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up just
+        uses: extractions/setup-just@v2
+
+      - name: Sync the locked environment
+        run: uv sync
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-experimental-${{ matrix.env }}-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+          restore-keys: pio-experimental-${{ matrix.env }}-${{ runner.os }}-
+
+      # Same underlying command as `just build-s3` / `just build-c5` locally (just
+      # wraps `pio run -d firmware -e <env>`) — called directly here so the matrix
+      # env name maps straight through without a fragile string transform in YAML.
+      - name: Compile-check (${{ matrix.env }})
+        run: pio run -d firmware -e ${{ matrix.env }}
+
   # The single required status check (#472/#466): passes only if BOTH upstream jobs
   # succeeded. Splitting into two jobs changes their names, so branch protection is
   # re-pointed at this one job — "gate" always exists and never silently reads as green
   # from a skip (there is no path-filtering anywhere in this workflow to skip).
+  # experimental-boards is intentionally OUTSIDE this gate's `needs` — see its own
+  # comment above.
   gate:
     name: gate
     needs: [lint, firmware]
