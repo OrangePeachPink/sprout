@@ -955,6 +955,78 @@ void t_env_row(void)
                                  "aim in payload");
 }
 
+/* #278 device-owned time (ADR-0018 / schema v2 §11.1-§11.2): device_seq +
+ * time_source ride the soil row's payload; device_timestamp_utc is OMITTED
+ * (not printed as an empty key) when unsynced - the honest NULL, never a
+ * guessed value. Pins BOTH states: today's real unsynced case, and the
+ * synced case the fields are already ready for once #21 (WiFi/NTP) lands. */
+void t_soil_row_time_provenance(void)
+{
+    moisture_cfg_t cfg = (moisture_cfg_t)MOISTURE_CFG_DEFAULT;
+    moisture_state_t st;
+    moisture_init(&st, &cfg,
+                  1300); /* WELL_WATERED-range raw, any valid state */
+    char buf[300];
+
+    /* unsynced (today's honest reality): device_timestamp_utc key absent entirely */
+    telemetry_soil_row_t unsynced = {
+        "plants.soil",
+        "3f9a1c",
+        "Sprout ESP32",
+        "0.7.0",
+        123456ULL,
+        "UMLIFE_v2_TLC555",
+        "s3",
+        "origplant",
+        "soil_moisture",
+        36,
+        1300,
+        MOIST_WELL_WATERED,
+        &st,
+        42,
+        "device_uptime",
+        "",
+    };
+    TEST_ASSERT_TRUE_MESSAGE(
+        telemetry_format_soil_row(buf, sizeof(buf), &unsynced) > 0,
+        "unsynced row formatted");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, "device_seq=42"),
+                                 "device_seq in payload");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, "time_source=device_uptime"),
+                                 "time_source=device_uptime when unsynced");
+    TEST_ASSERT_NULL_MESSAGE(
+        strstr(buf, "device_timestamp_utc="),
+        "device_timestamp_utc key OMITTED, not empty, when NULL");
+
+    /* synced (future-ready, once #21/NTP lands): device_timestamp_utc appears */
+    telemetry_soil_row_t synced = {
+        "plants.soil",
+        "3f9a1c",
+        "Sprout ESP32",
+        "0.7.0",
+        123456ULL,
+        "UMLIFE_v2_TLC555",
+        "s3",
+        "origplant",
+        "soil_moisture",
+        36,
+        1300,
+        MOIST_WELL_WATERED,
+        &st,
+        43,
+        "device_synced",
+        "2026-07-01T14:05:30.000Z",
+    };
+    TEST_ASSERT_TRUE_MESSAGE(
+        telemetry_format_soil_row(buf, sizeof(buf), &synced) > 0,
+        "synced row formatted");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, "time_source=device_synced"),
+                                 "time_source=device_synced when synced");
+    TEST_ASSERT_NOT_NULL_MESSAGE(
+        strstr(buf, "device_timestamp_utc=2026-07-01T14:05:30.000Z"),
+        "device_timestamp_utc present + exact when synced");
+}
+
 /* #273 capability descriptor (ADR-0019 §1-2): the descriptor is accessible, the
  * gate seam matches the field, and an unknown/no-WiFi target falls to the Tier-0
  * floor (tethered monitor, no WiFi) — i.e. Tier-0 runs on a no-WiFi board. The
@@ -1054,5 +1126,6 @@ int main(void)
     RUN_TEST(t_sht45);
     RUN_TEST(t_as7263);
     RUN_TEST(t_env_row);
+    RUN_TEST(t_soil_row_time_provenance);
     return UNITY_END();
 }

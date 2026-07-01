@@ -24,12 +24,26 @@ const char *telemetry_quality_flag(const moisture_state_t *st)
 int telemetry_format_soil_row(char *buf, size_t buflen,
                               const telemetry_soil_row_t *r)
 {
-    /* payload: level=X;role=Y;spread=N;gpio=P (k=v, ';'-sep, no commas) */
-    char payload[64];
-    snprintf(payload, sizeof(payload), "level=%s;role=%s;spread=%u;gpio=%d",
-             moisture_level_name(r->level),
-             moisture_level_is_display(r->level) ? "disp" : "diag",
-             (unsigned)r->state->last_spread, r->gpio_pin);
+    /* payload: level=X;role=Y;spread=N;gpio=P;device_seq=N;time_source=S
+     * [;device_timestamp_utc=T] (k=v, ';'-sep, no commas). Time-provenance
+     * fields (#278, schema v2 §11.1/§11.2) ride the existing payload field -
+     * additive, doesn't touch the fixed 14-column CSV shape. Field NAMES match
+     * the ratified schema verbatim. device_timestamp_utc is OMITTED (not an
+     * empty key) when NULL/unsynced - absence, not a guessed value, is the
+     * honest NULL here. */
+    char payload[160];
+    int len = snprintf(payload, sizeof(payload),
+                       "level=%s;role=%s;spread=%u;gpio=%d;device_seq=%lu;"
+                       "time_source=%s",
+                       moisture_level_name(r->level),
+                       moisture_level_is_display(r->level) ? "disp" : "diag",
+                       (unsigned)r->state->last_spread, r->gpio_pin,
+                       (unsigned long)r->device_seq, r->time_source);
+    if (r->device_timestamp_utc && r->device_timestamp_utc[0] != '\0' &&
+        len > 0 && (size_t)len < sizeof(payload)) {
+        snprintf(payload + len, sizeof(payload) - (size_t)len,
+                 ";device_timestamp_utc=%s", r->device_timestamp_utc);
+    }
 
     /*
      * Compact device CSV row — host prepends time/sequence columns (B2 split).
