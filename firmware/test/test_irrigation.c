@@ -990,6 +990,20 @@ void t_board_capability(void)
                               "classic I2C SDA unchanged");
     TEST_ASSERT_EQUAL_MESSAGE(22, BOARD_CAP.i2c_scl,
                               "classic I2C SCL unchanged");
+
+    /* #436: per-board calibration. Host/fallback carries the classic endpoint
+     * VALUES (the placeholder every unverified board also uses) but, like
+     * has_wifi/storage, is honestly NOT a real board -> cal_verified=false. This
+     * pins the value/flag as two independent facts: the numbers can match
+     * classic's without the board being claimed as bench-verified. */
+    const uint16_t cal[BOARD_CAL_BOUNDARY_COUNT] = {3050, 2140, 1830,
+                                                    1520, 1150, 1050};
+    for (int i = 0; i < BOARD_CAL_BOUNDARY_COUNT; i++) {
+        TEST_ASSERT_EQUAL_MESSAGE(cal[i], BOARD_CAP.cal_boundary[i],
+                                  "host cal boundary matches the placeholder");
+    }
+    TEST_ASSERT_FALSE_MESSAGE(BOARD_CAP.cal_verified,
+                              "host is not a real board -> not bench-verified");
 }
 
 /* #274 sensor-type seam (ADR-0019 §3): a RESISTIVE channel INVERTS the raw->band

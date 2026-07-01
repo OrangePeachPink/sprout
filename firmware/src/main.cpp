@@ -80,10 +80,15 @@ static moisture_cfg_t cfg = {
     2000, /* confirm_ms_wet  (TESTING; prod 3500) */
     READ_INTERVAL_MS,
     250, /* spread_warn_raw */
-    /* boundary (descending raw): 7-band scheme (#3). ENDPOINTS RATIFIED against the
-     * #248 common-cup anchors (ADR-0006 §6). Interior [1..3] still interpolated —
-     * pending the controlled dry-down. See lib/moisture_classifier for semantics. */
-    {3050, 2140, 1830, 1520, 1150, 1050},
+    /* boundary (descending raw): 7-band scheme (#3), sourced from the board
+     * descriptor (#436) - classic's are ENDPOINT-RATIFIED against the #248
+     * common-cup anchors (ADR-0006 §6, cal_verified=true); a non-classic board's
+     * are the documented placeholder (cal_verified=false) until #443 bench work.
+     * Interior [1..3] still interpolated regardless of board - pending the
+     * controlled dry-down. See lib/moisture_classifier for semantics. */
+    {BOARD_CAP.cal_boundary[0], BOARD_CAP.cal_boundary[1],
+     BOARD_CAP.cal_boundary[2], BOARD_CAP.cal_boundary[3],
+     BOARD_CAP.cal_boundary[4], BOARD_CAP.cal_boundary[5]},
     SENSOR_CAPACITIVE, /* committed v1 path (ADR-0019 §3); resistive is a per-channel seam */
 };
 
@@ -359,6 +364,13 @@ static void printHeader()
              BOARD_CAP.storage,
              board_has_wifi() ? "untethered-ready" : "tethered");
     Serial.println(buf);
+    /* Calibration honesty (#436): a non-verified board runs on the CLASSIC
+     * placeholder endpoints - never silently presented as this board's own
+     * calibration (matches the config-provenance principle, #416/ADR-0025). */
+    if (!BOARD_CAP.cal_verified) {
+        Serial.println("# board cal: PLACEHOLDER (classic endpoints, not "
+                       "bench-verified for this board - #443)");
+    }
     snprintf(
         buf, sizeof(buf), "# session_id=%s  cadence_ms=%lu  cadence_src=%s",
         g_session_id, (unsigned long)g_sys.sample_period_ms,
