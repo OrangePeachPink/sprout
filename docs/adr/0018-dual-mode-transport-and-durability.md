@@ -1,10 +1,10 @@
 # ADR-0018 — Dual-mode transport & durability (untethered)
 
-**Status:** Proposed — *drafted by Workflow from Discussion #243 + the Data lane's transport take;
-Trellis-revised 2026-06-28 (schema-honesty + store-idempotency + raw-is-truth sharpening, per the #285 review).
-**Schema prerequisite satisfied 2026-07-01:** `TELEMETRY_SCHEMA.md` §11 (schema v2 - device-owned time,
-dedupe, sensor provenance) merged via #492, Trellis-signed-off. §11 itself remains its own "draft, awaiting
-ratification" pending the maintainer - this ADR is ready for maintainer ratification alongside it. (#268)*
+**Status:** Accepted — *the maintainer ratified this ADR 2026-07-01, on Trellis's architecture sign-off.
+Drafted by Workflow from Discussion #243 + the Data lane's transport take; Trellis-revised 2026-06-28
+(schema-honesty + store-idempotency + raw-is-truth sharpening, per the #285 review). Schema prerequisite
+`TELEMETRY_SCHEMA.md` §11 (device-owned time, dedupe, sensor provenance) merged via #492 and is ratified
+alongside this ADR, same basis. (#268)*
 **Date:** 2026-06-27
 **Owner:** Data lane (telemetry derivation + the store) / architecture
 **Lane:** data/analytics + firmware (cross-lane)
@@ -85,9 +85,8 @@ own time. One schema across every transport and mode.** Concretely:
 - A new schema field (`time_source`) lands; consumers must handle the unsynced case — it is *not* a missing-data
   error.
 - **Schema prerequisite met:** schema v2 §11 (#300/#492) merged 2026-07-01, architecture-signed-off by Trellis.
-  This ADR is ready for maintainer ratification; §11's own ratification (Proposed→Accepted, the same
-  propose→ratify pattern as ADR-0021 through 0025) travels alongside it — accepting 0018 and ratifying the
-  schema section happen together.
+  Ratified 2026-07-01 alongside this ADR's acceptance — the same propose→ratify pattern as ADR-0021 through
+  0025.
 - The interior of "which transport per tier" (push protocol, file format, sync cadence) is **left to the build
   slices** (#276 / #277 / #278) — this ADR fixes the *seam and the model*, not the wire.
 - Local-vs-net read priority (PRD-0002 R9 / PRD-0005 open question) is **left open**; the adapter seam can
