@@ -259,6 +259,44 @@ static void handle_auto(const char *args, char *reply, size_t replen)
     }
 }
 
+/*
+ * !wifi,<ssid>[,<pass>] - set WiFi credentials (#21 connect-scaffold), persisted
+ * to NVS; main.cpp's loop() picks up the dirty flag and attempts to (re)connect.
+ * Empty args clears credentials (WiFi goes back to idle - no fabricated
+ * "disconnected" state, the device just stops trying). No password means an open
+ * network. Sanitized for CSV the same way !name is: the SSID can't contain a
+ * comma (that's the args separator); the password is taken verbatim after the
+ * first comma, so it MAY contain commas.
+ */
+static void handle_wifi(const char *args, char *reply, size_t replen)
+{
+    if (args[0] == '\0') {
+        prefs()->remove("wifi_ssid");
+        prefs()->remove("wifi_pass");
+        s_ctx.wifi_ssid[0] = '\0';
+        s_ctx.wifi_pass[0] = '\0';
+        *s_ctx.wifi_creds_dirty = true;
+        snprintf(reply, replen, "# ack wifi cleared");
+        return;
+    }
+    const char *comma = strchr(args, ',');
+    size_t ssid_len = comma ? (size_t)(comma - args) : strlen(args);
+    if (ssid_len == 0 || ssid_len >= s_ctx.wifi_ssid_len) {
+        snprintf(reply, replen, "# nak err=parse (use: !wifi,<ssid>[,<pass>])");
+        return;
+    }
+    strncpy(s_ctx.wifi_ssid, args, ssid_len);
+    s_ctx.wifi_ssid[ssid_len] = '\0';
+    const char *pass = comma ? comma + 1 : "";
+    strncpy(s_ctx.wifi_pass, pass, s_ctx.wifi_pass_len - 1);
+    s_ctx.wifi_pass[s_ctx.wifi_pass_len - 1] = '\0';
+    prefs()->putString("wifi_ssid", s_ctx.wifi_ssid);
+    prefs()->putString("wifi_pass", s_ctx.wifi_pass);
+    *s_ctx.wifi_creds_dirty = true;
+    snprintf(reply, replen, "# ack wifi ssid=%s (pass %s)", s_ctx.wifi_ssid,
+             pass[0] ? "set" : "open/none");
+}
+
 #ifdef WDT_WEDGE_TEST
 /*
  * !wedge - WATCHDOG WEDGE-TEST BUILD ONLY (#191 / #93).
@@ -308,6 +346,13 @@ void commands_init(commands_ctx_t *ctx)
         derive_default_id(s_ctx.device_id, s_ctx.device_id_len);
     }
 
+    /* WiFi credentials (#21): load whatever !wifi persisted last session. Empty
+     * (never set) leaves the connect-scaffold in WIFI_NET_IDLE - no attempt made. */
+    size_t sn = p->getString("wifi_ssid", s_ctx.wifi_ssid, s_ctx.wifi_ssid_len);
+    if (sn == 0) s_ctx.wifi_ssid[0] = '\0';
+    size_t pn = p->getString("wifi_pass", s_ctx.wifi_pass, s_ctx.wifi_pass_len);
+    if (pn == 0) s_ctx.wifi_pass[0] = '\0';
+
     /* Register all inbound serial-command handlers (#92). */
     serial_cmd_register("cad", handle_cad);
     serial_cmd_register("ping", handle_ping);
@@ -319,6 +364,7 @@ void commands_init(commands_ctx_t *ctx)
     serial_cmd_register("auto", handle_auto);
     serial_cmd_register("label", handle_label);
     serial_cmd_register("pos", handle_pos);
+    serial_cmd_register("wifi", handle_wifi);
 #ifdef WDT_WEDGE_TEST
     serial_cmd_register("wedge", handle_wedge);
 #endif

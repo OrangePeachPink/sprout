@@ -143,3 +143,14 @@ constexpr int           HEALTH_SAMPLES    = 8;       // cheap burst; trim_each=1
 // in lib/irrigation). The live firmware surfaces per-channel health in the boot banner
 // today; the supervisor folds this threshold in when the autonomous loop is wired (#94).
 constexpr uint8_t IRRIG_MAX_HEALTH_WARN = 3;
+
+// --- WiFi connect-scaffold (#21 desk-buildable slice) -----------------------
+// Policy constants for lib/wifi_net's connect/retry state machine. WiFi is a
+// convenience/telemetry layer, never a dependency of the safety loop - these
+// only govern how eagerly the device tries to reach the AP, not anything
+// actuation-related.
+constexpr uint32_t WIFI_CONNECT_TIMEOUT_MS =
+    15000UL; // give one attempt this long
+constexpr uint32_t WIFI_RETRY_BACKOFF_MS =
+    30000UL; // wait this long after a failed attempt
+constexpr int WIFI_HTTP_PORT = 80; // served-status skeleton (#21)
