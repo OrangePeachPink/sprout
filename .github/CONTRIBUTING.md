@@ -192,7 +192,9 @@ the message bus.** Keep the system moving by syncing yourself.
 - **Comments / questions / RFCs** aimed at your lane on issues and PRs.
 - **What recently merged that unblocks you** — a dependency landed, or a base PR merged so your stacked PR
   can rebase.
-- **Backlog** items in your area that are now actionable.
+- **Backlog** items in your area that are now actionable — but **skip anything labelled `needs:hardware`**:
+  those are the maintainer's hardware/bench queue (wiring, pump/relay setup, hardware you don't have yet), not
+  lane-advanceable. Filter your board view to `for:<your-lane> -label:needs:hardware`.
 
 **Then act — don't wait, don't ask when you can do:**
 
@@ -221,6 +223,8 @@ stalling until the next relay.
 - `blocks:*` — milestone **gates**, independent of Priority: `blocks:pumps`, `blocks:public-release`,
   `blocks:data-integrity`. Filter by these to see what stands between us and pumps / a public release /
   trustworthy data.
+- `needs:hardware` — blocked on a **maintainer hardware/bench session** (wiring, pump/relay setup, hardware
+  not yet on hand). The maintainer's hardware queue; **lanes skip these** when sweeping Backlog.
 - `needs-verification` — set when an issue enters the gate (above)
 - `good first issue` / `help wanted` — welcoming places to start
 
