@@ -190,8 +190,16 @@ static void onIrrigEvent(const irrig_event_t *ev, void *user)
 constexpr int ENV_I2C_SDA = 21; /* ESP32 default I2C/Qwiic SDA */
 constexpr int ENV_I2C_SCL = 22; /* ESP32 default I2C/Qwiic SCL */
 constexpr uint32_t ENV_I2C_HZ = 100000; /* standard-mode I2C */
-constexpr uint8_t AS7263_CFG_GAIN = AS7263_GAIN_64X; /* low indoor NIR */
-constexpr uint8_t AS7263_CFG_ITIME = 50; /* INT_TIME reg x2.8ms ~140 ms */
+/* AS7263 analog gain. Sage-ratified gain=16 for direct-beam headroom (#416): the
+ * 2026-06-30 skylight pass railed at 64x (51201/65535 on nir_680 x165 rows) -> ~12800
+ * at 16x, off the ceiling. FIXED, never auto-ranged (that would break cross-session
+ * comparability); the value is logged per row (payload `gain=`) AND in the boot header,
+ * so a gain change is always explicit. Raw counts scale ~4x lower vs older 64x captures. */
+constexpr uint8_t AS7263_CFG_GAIN = AS7263_GAIN_16X;
+constexpr uint8_t AS7263_CFG_ITIME =
+    50; /* INT_TIME reg x2.8ms ~140 ms (Sage: hold) */
+/* gain enum -> multiplier string; shared by the per-row payload + the boot header (#416). */
+static const char *const AS7263_GAIN_MULT[4] = {"1", "3.7", "16", "64"};
 constexpr const char *ENV_PLACEMENT =
     "breadboard_near_esp32"; /* canonical sensor_position (#377) */
 constexpr const char *ENV_SHT45_PAYLOAD = "mount=breadboard_near_esp32";
@@ -280,7 +288,6 @@ static void emitEnvRows(unsigned long long up_ms)
     /* --- AS7263: six tidy NIR rows (one per band, raw counts) --- */
     static const char *const nir_ch[6] = {"nir_610", "nir_680", "nir_730",
                                           "nir_760", "nir_810", "nir_860"};
-    static const char *const gain_mult[4] = {"1", "3.7", "16", "64"};
     as7263_reading_t a;
     if (g_as7263_ok && as7263_read(&g_env_i2c, &a) == AS7263_OK) {
         const uint16_t nir[6] = {a.nm610, a.nm680, a.nm730,
@@ -288,7 +295,7 @@ static void emitEnvRows(unsigned long long up_ms)
         char payload[80];
         snprintf(payload, sizeof(payload),
                  "gain=%s;itime_ms=%u;aim=skylight_beam;not_canopy",
-                 gain_mult[AS7263_CFG_GAIN & 3],
+                 AS7263_GAIN_MULT[AS7263_CFG_GAIN & 3],
                  (unsigned)(AS7263_CFG_ITIME * 28u / 10u)); /* reg x2.8ms */
         for (int i = 0; i < 6; i++) {
             char raw[8];
@@ -389,6 +396,17 @@ static void printHeader()
         "SDA%d/SCL%d - %s, CONTEXT not plant-truth%s",
         ENV_I2C_SDA, ENV_I2C_SCL, ENV_PLACEMENT,
         g_as7263_ok ? "" : " [AS7263 init FAILED]");
+    Serial.println(buf);
+    /* Config provenance in the header (#416): the sensor-shaping knobs are FIXED and
+     * logged, so any reading is interpretable and cross-session comparability is
+     * explicit. Same values ride each AS7263 row's `gain=`/`itime_ms=` payload. */
+    snprintf(buf, sizeof(buf),
+             "# env cfg: AS7263 gain=%sx itime=%ums I2C=%ukHz - FIXED, no "
+             "auto-range "
+             "(#416); logged per row + here",
+             AS7263_GAIN_MULT[AS7263_CFG_GAIN & 3],
+             (unsigned)(AS7263_CFG_ITIME * 28u / 10u),
+             (unsigned)(ENV_I2C_HZ / 1000u));
     Serial.println(buf);
 #endif
     Serial.println("# device_cols: "
