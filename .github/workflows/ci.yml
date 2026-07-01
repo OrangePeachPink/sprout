@@ -54,6 +54,17 @@ jobs:
           key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
           restore-keys: pio-${{ runner.os }}-
 
+      # Cache the npm download store so the pinned npx tools (markdownlint-cli2 +
+      # cspell — see .pre-commit-config.yaml) aren't re-fetched every run. Keyed on the
+      # hook config so it busts the moment a tool version bumps; restored BEFORE the
+      # lint step below. Pure speedup — changes nothing about which checks run (#468).
+      - name: Cache npx tooling (markdownlint / cspell)
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npx-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: npx-${{ runner.os }}-
+
       # The single definition of lint/format/hygiene — identical to a local commit.
       # clang-format is SKIPped here: it is the one check scoped to changed files, not
       # --all-files (the firmware's manual column alignment must survive a full-tree
