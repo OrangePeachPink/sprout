@@ -1,8 +1,10 @@
 # ADR-0018 — Dual-mode transport & durability (untethered)
 
 **Status:** Proposed — *drafted by Workflow from Discussion #243 + the Data lane's transport take;
-Trellis-revised 2026-06-28 (schema-honesty + store-idempotency + raw-is-truth sharpening, per the #285 review);
-awaiting maintainer ratification + Data-lane confirm. **Ratification is gated on schema v2 (#300).** (#268)*
+Trellis-revised 2026-06-28 (schema-honesty + store-idempotency + raw-is-truth sharpening, per the #285 review).
+**Schema prerequisite satisfied 2026-07-01:** `TELEMETRY_SCHEMA.md` §11 (schema v2 - device-owned time,
+dedupe, sensor provenance) merged via #492, Trellis-signed-off. §11 itself remains its own "draft, awaiting
+ratification" pending the maintainer - this ADR is ready for maintainer ratification alongside it. (#268)*
 **Date:** 2026-06-27
 **Owner:** Data lane (telemetry derivation + the store) / architecture
 **Lane:** data/analytics + firmware (cross-lane)
@@ -22,8 +24,9 @@ Per ADR-0001 the control loop is already offline, so this is purely an **observa
 shape it:
 
 - `TELEMETRY_SCHEMA` is **field-based, not a wire** — transport-agnostic by construction. This ADR *requires* a
-  schema **v2** bump (device-owned time at the column level, row dedupe, sensor provenance) tracked in **#300**;
-  canonical `TELEMETRY_SCHEMA.md`@`main` is still **v1 / host-time-authoritative** until #300 lands.
+  schema **v2** bump (device-owned time at the column level, row dedupe, sensor provenance) - **now defined in
+  §11** (#300/#492). §11 is additive-only: canonical `TELEMETRY_SCHEMA.md`@`main` keeps its v1 behavior
+  unchanged; v2 is proposed alongside it, not yet implemented in `parse_v1`/the emitters.
 - Board storage and connectivity vary widely by tier and silicon (AVR: none; ESP32 flash: ~a day; + SD:
   months).
 
@@ -44,18 +47,18 @@ own time. One schema across every transport and mode.** Concretely:
    is a directly-attached PC. One model, both modes. Store-and-forward **requires row idempotency** — a
    reconnect/replay must not duplicate rows; the dedupe key
    (`device_id`/`session_id`/`device_seq`/`record_type`/`sensor_id`, adding a `device_seq`) is defined by
-   schema v2 (#300).
+   schema v2 §11.2 (#300/#492).
 3. **The device owns its timestamp.** Untethered, no host stamps the time, so the device does: **NTP-on-connect**
    for WiFi tiers (UTC), with **monotonic-uptime + a synced boot-epoch** as the offline fallback, and an optional
    RTC where present. Every row carries a **`time_source` quality flag** (`ntp` / `rtc` / `uptime`) so consumers
    know how the time was set and never treat an unsynced clock as authoritative. The **column-level** model —
    whether `timestamp_utc` is nullable when `time_source=uptime`, `device_timestamp_utc` vs `ingest_timestamp_utc`,
-   and the join / forecast / gap-detection rule for an unsynced row — is defined by schema v2 (#300), not asserted
-   here.
-4. **One schema, every transport.** Schema **v2** (once #300 lands) is the contract for all modes — a Tier-0
-   untethered row and a tethered row are identical in shape. Until v2 lands this ADR stays **Proposed** and does
-   *not* retroactively redefine the v1 contract on `main`. Transport and presentation differ; the data contract
-   does not.
+   and the join / forecast / gap-detection rule for an unsynced row — is defined by schema v2 §11.1
+   (#300/#492).
+4. **One schema, every transport.** Schema **v2** (§11, #300/#492) is the contract for all modes — a Tier-0
+   untethered row and a tethered row are identical in shape. §11 is proposed/additive; it does **not**
+   retroactively redefine the v1 contract on `main` until §11 itself is ratified and implemented. Transport and
+   presentation differ; the data contract does not.
 5. **Storage is capability-honest.** Onboard flash is an **hours-to-a-day buffer**; long standalone history needs
    **a microSD card or sync to a hub**. The "what you need" matrix states the real expectation per board — we
    never claim months of standalone history on bare flash.
@@ -81,8 +84,10 @@ own time. One schema across every transport and mode.** Concretely:
 - **Tethered stays first-class** (the degenerate-hub case), so dev / experiment runs are unaffected.
 - A new schema field (`time_source`) lands; consumers must handle the unsynced case — it is *not* a missing-data
   error.
-- **This ADR cannot be ratified (Proposed→Accepted) until schema v2 (#300) lands** — it asserts a contract that
-  #300 defines. Accepting 0018 and bumping the schema travel together.
+- **Schema prerequisite met:** schema v2 §11 (#300/#492) merged 2026-07-01, architecture-signed-off by Trellis.
+  This ADR is ready for maintainer ratification; §11's own ratification (Proposed→Accepted, the same
+  propose→ratify pattern as ADR-0021 through 0025) travels alongside it — accepting 0018 and ratifying the
+  schema section happen together.
 - The interior of "which transport per tier" (push protocol, file format, sync cadence) is **left to the build
   slices** (#276 / #277 / #278) — this ADR fixes the *seam and the model*, not the wire.
 - Local-vs-net read priority (PRD-0002 R9 / PRD-0005 open question) is **left open**; the adapter seam can
