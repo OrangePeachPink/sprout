@@ -283,6 +283,40 @@ class Reading:
     def gpio(self) -> int | None:
         return _int(self.payload.get("gpio"))
 
+    @property
+    def device_seq(self) -> int | None:
+        """Device-monotonic row counter (schema v2 §11.2, #278/#300) - the
+        device-side half of the dedupe key; survives a store-and-forward
+        reconnect/replay, resets only on reboot. None on a v1-only row."""
+        return _int(self.payload.get("device_seq"))
+
+    @property
+    def time_source(self) -> str | None:
+        """Which clock stamped this row (schema v2 §11.1, #278/#300):
+        ``device_synced`` (NTP/RTC) or ``device_uptime`` (unsynced, no host
+        stamp either) - never trust an unsynced clock as authoritative."""
+        return self.payload.get("time_source")
+
+    @property
+    def device_timestamp_utc(self) -> datetime | None:
+        """The device's own UTC stamp (schema v2 §11.1), if it has one.
+
+        Omitted from the payload entirely when ``time_source=device_uptime``
+        (the device honestly doesn't know UTC) - this is that honest ``None``,
+        never a guessed value. Use ``timestamp_utc`` (host-stamped, §1) for
+        join/forecast/gap-detection; this field is device-provenance only."""
+        return _parse_utc(self.payload.get("device_timestamp_utc"))
+
+
+def dedupe_key(r: Reading) -> tuple[str, str, int | None, str, str]:
+    """The schema v2 §11.2 row-idempotency key: the tuple that identifies
+    *this exact reading* independent of how many times its bytes crossed the
+    wire, so a store-and-forward replay can be dropped at ingest rather than
+    duplicated. ``device_seq`` is ``None`` for a v1-only row (no dedupe
+    signal available - the caller decides how to treat that, this function
+    only reports what the row carries)."""
+    return (r.device_id, r.session_id, r.device_seq, r.record_type, r.sensor_id)
+
 
 @dataclass
 class Sweep:
