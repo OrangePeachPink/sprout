@@ -129,6 +129,10 @@ static void start(void)
     irrig_io_t io = {sim_read, sim_pump, sim_event, &RIG};
     NOW = 1000;
     irrig_init(&CTRL, &SYS, CH, MC, MS, SCRATCH, io, NOW);
+    /* The autonomous tests exercise self-dosing, so arm the engine here (init
+     * now defaults to disarmed, #227). t_autonomous_gate inits directly to assert
+     * that fail-safe default and the disarmed/forced behavior. */
+    irrig_set_autonomous(&CTRL, true);
 }
 
 static void step(uint32_t dt)
@@ -586,6 +590,89 @@ void t_forced_dose(void)
 }
 
 /* -------------------------------------------------------------------------- */
+/* autonomous arm gate (#227 / ADR-0016)                                      */
+/* -------------------------------------------------------------------------- */
+
+/* Disarmed (the init default): a healthy DRY channel is monitored but never
+ * auto-watered, while an operator forced dose still grants. Armed: it waters. */
+void t_autonomous_gate(void)
+{
+    irrig_io_t io = {sim_read, sim_pump, sim_event, &RIG};
+
+    /* init directly (not start(), which arms) to assert the fail-safe default */
+    base_cfg(/*mhw*/ 3, /*mdoses*/ 3, /*pmax*/ 5000, /*dose*/ 2000);
+    RIG.sim[1] =
+        (chan_sim_t){.target_raw = 2400, .noisy = false}; /* DRY healthy */
+    NOW = 1000;
+    irrig_init(&CTRL, &SYS, CH, MC, MS, SCRATCH, io, NOW);
+    TEST_ASSERT_FALSE_MESSAGE(irrig_autonomous(&CTRL),
+                              "autonomous disarmed by default (fail-safe)");
+
+    step(SYS.sample_period_ms);
+    TEST_ASSERT_TRUE_MESSAGE(irrig_active_pump(&CTRL) == -1,
+                             "disarmed: dry channel NOT auto-watered");
+    TEST_ASSERT_TRUE_MESSAGE(RIG.pump_on_count[1] == 0,
+                             "disarmed: no autonomous dose");
+    TEST_ASSERT_TRUE_MESSAGE(irrig_status(&CTRL, 1) == CH_OK,
+                             "disarmed: dry channel still monitored (CH_OK)");
+
+    /* operator forced dose still grants while disarmed (manual !water path) */
+    TEST_ASSERT_TRUE_MESSAGE(irrig_request_dose(&CTRL, 1, 0) ==
+                                 IRRIG_DOSE_QUEUED,
+                             "forced dose queued while disarmed");
+    step(SYS.sample_period_ms);
+    TEST_ASSERT_TRUE_MESSAGE(irrig_active_pump(&CTRL) == 1,
+                             "forced dose grants despite disarmed");
+    TEST_ASSERT_TRUE_MESSAGE(RIG.pump_on_count[1] == 1, "forced dose ran once");
+
+    /* armed: the same dry condition now auto-waters */
+    base_cfg(3, 3, 5000, 2000);
+    RIG.sim[2] =
+        (chan_sim_t){.target_raw = 2400, .noisy = false}; /* DRY healthy */
+    NOW = 1000;
+    irrig_init(&CTRL, &SYS, CH, MC, MS, SCRATCH, io, NOW);
+    irrig_set_autonomous(&CTRL, true);
+    TEST_ASSERT_TRUE_MESSAGE(irrig_autonomous(&CTRL), "armed");
+    step(SYS.sample_period_ms);
+    TEST_ASSERT_TRUE_MESSAGE(irrig_active_pump(&CTRL) == 2,
+                             "armed: dry channel auto-waters");
+    TEST_ASSERT_TRUE_MESSAGE(RIG.max_pumps_on <= 1, "invariant 1 still holds");
+    TEST_ASSERT_TRUE_MESSAGE(RIG.read_during_pump == false,
+                             "invariant 2 still holds");
+}
+
+/* Operator e-stop: irrig_abort forces an active dose OFF, cancels pending forced
+ * doses, and is a no-op (returns false) when idle. */
+void t_irrig_abort(void)
+{
+    base_cfg(/*mhw*/ 3, /*mdoses*/ 3, /*pmax*/ 5000, /*dose*/ 3000);
+    RIG.sim[1] =
+        (chan_sim_t){.target_raw = 2400, .noisy = false}; /* DRY healthy */
+    start(); /* armed */
+
+    step(SYS.sample_period_ms); /* grant ch1 dose */
+    TEST_ASSERT_TRUE_MESSAGE(irrig_active_pump(&CTRL) == 1, "ch1 dosing");
+    TEST_ASSERT_TRUE_MESSAGE(RIG.pumps_on_now == 1, "pump energized");
+
+    bool was = irrig_abort(&CTRL, NOW);
+    TEST_ASSERT_TRUE_MESSAGE(was, "abort while watering -> was-active true");
+    TEST_ASSERT_TRUE_MESSAGE(RIG.pumps_on_now == 0, "abort forces pump OFF");
+    TEST_ASSERT_TRUE_MESSAGE(irrig_active_pump(&CTRL) == -1, "no active pump");
+
+    /* a pending forced dose is cancelled by the abort */
+    irrig_request_dose(&CTRL, 2, 0);
+    irrig_abort(&CTRL, NOW);
+    step(SYS.sample_period_ms);
+    step(SYS.sample_period_ms); /* clear the settle, run a sweep */
+    TEST_ASSERT_TRUE_MESSAGE(RIG.pump_on_count[2] == 0,
+                             "aborted forced dose never fired");
+
+    /* abort while idle is a harmless no-op */
+    TEST_ASSERT_FALSE_MESSAGE(irrig_abort(&CTRL, NOW),
+                              "abort while idle -> false");
+}
+
+/* -------------------------------------------------------------------------- */
 /* run metadata: !label / !pos runtime handlers (#321)                        */
 /* -------------------------------------------------------------------------- */
 
@@ -884,6 +971,8 @@ int main(void)
     RUN_TEST(t_serial_cmd_registry);
     RUN_TEST(t_pump_pulse);
     RUN_TEST(t_forced_dose);
+    RUN_TEST(t_autonomous_gate);
+    RUN_TEST(t_irrig_abort);
     RUN_TEST(t_run_meta);
     RUN_TEST(t_sht45);
     RUN_TEST(t_as7263);
