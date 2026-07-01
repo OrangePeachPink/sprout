@@ -74,6 +74,10 @@ maintainer confirms `area:` / `layer:` at triage.
 > checked — untouched aligned blocks are left alone. Every other check — `ruff` / `cspell` / `markdownlint` —
 > stays repo-wide.
 >
+> **Spelling (`cspell`) is advisory, not a gate (#524).** It accepts US and UK English and reports unknown
+> words without ever failing your commit or CI — write normally, and if it flags a real term, ignore it or add
+> it to `cspell.json` at your convenience.
+>
 > **If CI goes red after a base fix:** re-running the job alone isn't enough — it replays the *stale* merge
 > commit. **Update your branch** (merge or rebase `main`) so CI re-checks against the fixed base. That's the
 > "Attempt #2 / #3" trap.

@@ -73,13 +73,34 @@ repos:
   # Markdown (docs/design/** is cspell-ignored — Design's brand words). Same system-npx pattern
   # as markdownlint, so local == CI with no package.json. (Python/firmware scope is a later
   # step — checking code identifiers needs its own tuning to avoid false positives.)
+  #
+  # Advisory, not a gate (#524): one day, four PRs, six red-CI-and-bounce round trips for
+  # legitimate specialist/vendor terms and English spelling variants, zero real typos caught.
+  # "en,en-GB" in cspell.json (also #524) closes the biggest recurring class (behaviour/
+  # colour/analyse) for good, but a brand-new proper noun or product name will always be able
+  # to surprise a spell checker — no dictionary is ever complete. So: --no-exit-code means an
+  # unknown word never fails the commit or the CI job; verbose:true keeps it printing findings
+  # on every run (not just failures) so the signal isn't lost, it's just not load-bearing
+  # anymore. Add real typos to flagWords in cspell.json if this ever needs to bite harder.
+  #
+  # --gitignore-root . (found chasing #524): `useGitignore: true` walks UP from cwd looking
+  # for .gitignore files. Any lane working from a `dev/<repo>-<lane>-wt` worktree (the
+  # standard pattern - AGENTS.md worktree convention) has a `.git` FILE, not a directory
+  # (worktree gitlink) - and `C:\Users\PV\dev` is itself a git repo with a default-deny `/*`
+  # .gitignore. Without a root pin, cspell's gitignore walk escapes the worktree, hits that
+  # deny-all, and silently checks ZERO files - a false-green local `just check` while CI
+  # (a clean checkout, unaffected) still catches real issues. That's the actual mechanism
+  # behind #524's "red CI, not red local" bounces. `--gitignore-root .` stops the walk at
+  # this repo's own root - this repo's real ignores (docs/design, docs/experiments, _scratch)
+  # still apply, nothing above it leaks in.
   - repo: local
     hooks:
       - id: cspell
         name: cspell
         # Repo-wide on every commit (pass_filenames:false + always_run) so LOCAL scope == CI's
         # `pre-commit run --all-files`; pinned (#226) so the toolchain resolves the same version every run.
-        entry: npx --yes cspell@10.0.1 lint --no-progress --no-summary --no-must-find-files "**/*.md"
+        entry: npx --yes cspell@10.0.1 lint --no-progress --no-summary --no-must-find-files --no-exit-code --gitignore-root . "**/*.md"
         language: system
         pass_filenames: false
         always_run: true
+        verbose: true
