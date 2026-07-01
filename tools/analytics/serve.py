@@ -262,6 +262,20 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif parsed.path.startswith("/lab/study/"):  # save a study (#159)
                 sid = unquote(parsed.path[len("/lab/study/") :])
                 self._send_json(save_study(sid, self._body()))
+            elif parsed.path.startswith("/lab/bench/") and parsed.path.endswith(
+                "/notes"
+            ):
+                # Back-fill notes onto a landed bench package (#450 slice 3). Must
+                # precede the generic /lab/*/notes route, which mis-reads "bench/<id>".
+                pkg = unquote(parsed.path[len("/lab/bench/") : -len("/notes")])
+                try:
+                    result = save_notes(pkg, self._body())
+                    result["path"] = notes_rel_path(pkg)
+                    self._send_json(result)
+                except Exception as exc:
+                    self._send_json(
+                        {"error": str(exc), "path": notes_rel_path(pkg)}, status=500
+                    )
             elif parsed.path.startswith("/lab/") and parsed.path.endswith("/notes"):
                 eid = unquote(parsed.path[len("/lab/") : -len("/notes")])  # notes #158
                 try:
