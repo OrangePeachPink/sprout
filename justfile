@@ -26,8 +26,13 @@ default:
 #  desktop shortcut that runs `just start`.
 # ============================================================================
 # Launch Sprout — serve + open the browser at the fixed port (the zero-CLI door). The one operator entry.
-# --restart (#127) takes over a stale server so the icon always opens a fresh dashboard.
+# --serve-or-focus (#151) is single-instance: a second launch opens the existing tab, never a 2nd server.
+# For a forced fresh start over a stale server, use `just restart`.
 start:
+    @just serve --serve-or-focus --open
+
+# Force-fresh launch: take over a stale server (ask it to /quit), then serve current code (#127).
+restart:
     @just serve --restart --open
 
 # ============================================================================
