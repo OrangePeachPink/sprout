@@ -2,7 +2,13 @@
   // Project dictionary for the plants controller - hardware part names, pin
   // labels, and toolchain terms not in the base English dictionary.
   "version": "0.2",
-  "language": "en",
+  // Both locales at once (#524): cspell accepts a word if it matches EITHER, so US and
+  // UK spelling both pass with zero custom-dictionary entries — kills the whole
+  // behaviour/colour/analyse/travelling class permanently instead of allowlisting each
+  // variant one PR-bounce at a time. Verified against the full docs corpus before
+  // landing: zero regressions, and it let the ten pure-locale words below come out of
+  // the list (they're covered by en-GB now, not by name).
+  "language": "en,en-GB",
   // Skip everything .gitignore already excludes (_scratch/, logs, build outputs,
   // .env*, config/location.local.json, ...). The hook lints "**/*.md" with always_run,
   // and that glob does NOT honor .gitignore on its own — so untracked scratch .md
@@ -126,27 +132,22 @@
     "nclman",
     "Plantwatery",
     "thijstriemstra",
-    // #109 cspell dictionary build - prose terms across docs (British + derived English, technical, source/brand names):
+    // #109 cspell dictionary build - prose terms across docs (technical, source/brand names).
+    // Pure US/UK spelling variants (analyse, behaviour(ally)(s), colour(s), neighbours,
+    // travelling) used to live in this block too - #524 dropped them once "en,en-GB" made
+    // them redundant, so this list is specialist/brand terms only now.
     "acking",
     "adafruit",
     "aideepen",
     "airdry",
-    "analyse",
-    "analysed",
-    "analysing",
     "antipatterns",
     "arduinodiy",
     "baloo",
     "basontech",
-    "behaviour",
-    "behaviourally",
-    "behaviours",
     "biomaker",
     "browsable",
     "checksummed",
     "codenames",
-    "colour",
-    "colours",
     "dataframe",
     "datasheet",
     "datasheets",
@@ -180,7 +181,6 @@
     "millis",
     "mohm",
     "monstera",
-    "neighbours",
     "nmea",
     "nojekyll",
     "nygard",
@@ -222,11 +222,7 @@
     "wayfinding",
     "winget",
     "worktree",
-    "xblw",
-    // #364 glossary context_source bullet: the Zigbee protocol + British "travelling"
-    // (consistent with the British spellings already allowlisted above).
-    "Zigbee",
-    "travelling"
+    "xblw"
   ],
   "flagWords": []
 }
