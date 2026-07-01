@@ -1,8 +1,9 @@
 """Local-time-first display labels on the dashboard (#328 slice 2).
 
 build_context() adds *_display fields (local + explicit zone + UTC secondary) for
-the human-facing header labels, while the machine *_local fields stay untouched —
-start_local anchors the chart axis and last_local is JS-Date-parsed for freshness.
+the human-facing header labels + a local-first start_axis for the chart x-axis
+(#328 slice 4), while the machine *_local fields stay untouched (last_local is
+JS-Date-parsed for freshness).
 """
 
 from __future__ import annotations
@@ -43,11 +44,11 @@ def _ctx(tmp_path: Path):
         + _row("2026-06-28T18:15:00.000Z", "2026-06-28T13:15:00.000", "s2", 1555),
         encoding="utf-8",
     )
-    return build_context(parse_files([str(log)]))["meta"]
+    return build_context(parse_files([str(log)]))
 
 
 def test_start_display_is_local_first_with_utc_secondary(tmp_path: Path) -> None:
-    m = _ctx(tmp_path)
+    m = _ctx(tmp_path)["meta"]
     assert m["start_display"] == "2026-06-28 13:14:30 UTC-05:00 · UTC 18:14:30Z"
     assert m["last_display"] == "2026-06-28 13:15:00 UTC-05:00 · UTC 18:15:00Z"
 
@@ -55,13 +56,21 @@ def test_start_display_is_local_first_with_utc_secondary(tmp_path: Path) -> None
 def test_machine_local_fields_are_unchanged(tmp_path: Path) -> None:
     # The chart anchor + JS Date parse rely on the bare local string — must not gain
     # the zone/UTC suffix, or `new Date(...)` and the axis label break.
-    m = _ctx(tmp_path)
+    m = _ctx(tmp_path)["meta"]
     assert m["start_local"] == "2026-06-28 13:14:30"
     assert m["last_local"] == "2026-06-28 13:15:00"
 
 
 def test_generated_display_is_local_first_shaped(tmp_path: Path) -> None:
     # Host-tz dependent, so assert shape not value: local first, UTC secondary.
-    m = _ctx(tmp_path)
+    m = _ctx(tmp_path)["meta"]
     assert " · UTC " in m["generated_display"]
     assert m["generated_display"].rstrip().endswith("Z")
+
+
+def test_chart_axis_anchor_is_local_first(tmp_path: Path) -> None:
+    # The chart x-axis anchor shows local + zone (#328 slice 4), no UTC secondary.
+    traj = _ctx(tmp_path)["trajectory"]
+    assert traj["start_axis"] == "2026-06-28 13:14:30 UTC-05:00"
+    assert " · UTC " not in traj["start_axis"]
+    assert traj["start_local"] == "2026-06-28 13:14:30"  # bare machine anchor kept
