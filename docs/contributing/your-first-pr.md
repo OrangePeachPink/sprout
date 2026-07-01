@@ -65,9 +65,10 @@ When you pick one up, a maintainer can assign it to you and move its card to *In
    `just check` is the *same* thing CI runs, so green locally means you're in good shape. If a hook reformats a
    file, that's normal — it fixed it for you; just `git add` and commit again.
 
-> **Honest note:** `just check` also runs the native C firmware tests, which need a C compiler (`gcc`) on your
-> PATH. If you're only touching docs or Python, you can run the lighter pieces directly (`just lint`,
-> `just test-host`) and let the rest ride.
+> **Honest note:** `just check` also runs the native C firmware tests, which need **PlatformIO**
+> (`pip install platformio`) *and* a C compiler (`gcc`) on your PATH — neither comes from `uv sync`. If you're
+> only touching docs or Python, you can run the lighter pieces directly (`just lint`, `just test-host`) and let
+> the rest ride — CI runs the full gate either way, so nothing slips through.
 
 ## Step 4 — Commit, the Sprout way
 
