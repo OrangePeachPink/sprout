@@ -196,6 +196,20 @@ the message bus.** Keep the system moving by syncing yourself.
   those are the maintainer's hardware/bench queue (wiring, pump/relay setup, hardware you don't have yet), not
   lane-advanceable. Filter your board view to `for:<your-lane> -label:needs:hardware`.
 
+**Which item do you pick? No ambiguity — the board answers it:**
+
+- **Your queue** = the board filtered to `for:<your-lane> -label:needs:hardware -label:needs:maintainer`,
+  **sorted by Priority**.
+- **Your next task** = the **top-priority *sliced* item** in that queue — P0/P1 before P2 before P3. Every
+  P1/P2 is triaged to be **owned, sliced, and actionable**; you don't need permission to start it.
+- **Epics are not tasks.** An item labelled `epic` is a *parent* — work its **sliced children**, never the epic
+  card itself. If an epic has no open sliced children, *that* is the thing to flag (`for:workflow`).
+- **`needs:hardware` / `needs:maintainer` are out of your queue** — the maintainer's bench and decision queues.
+  The filter above already excludes them; don't pull from them.
+- The **only** thing you escalate is a top item that genuinely isn't actionable (missing slice, unclear AC) —
+  and that should be rare, because the backlog is kept triaged. Route it `for:workflow` and take the next item
+  meanwhile.
+
 **Then act — don't wait, don't ask when you can do:**
 
 - **Your PR merged** → reconcile it (confirm what it satisfies) and **chase what it unblocks downstream.**

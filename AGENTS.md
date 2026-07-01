@@ -82,7 +82,12 @@ status brief / share-out (requested or proactive).**
 Each sync, sweep your slice: **PRs you own** (moved? merged?), **issues newly `for:<your-lane>`**,
 **questions / RFCs aimed at you**, and **what just merged that unblocks your gated work** — but **skip
 `needs:hardware`** (the maintainer's hardware/bench queue; filter `for:<your-lane> -label:needs:hardware`).
-Then **act**:
+
+**Which item? No ambiguity:** your queue = `for:<your-lane> -label:needs:hardware -label:needs:maintainer`
+**sorted by Priority**; your next task = the **top-priority *sliced* item** (P0/P1 → P2 → P3). Every P1/P2 is
+triaged to be owned, sliced, actionable — start it without asking. **Epics are parents, not tasks** — work
+their sliced children, never the epic card. Escalate (`for:workflow`) only a top item that truly isn't
+actionable; that should be rare. Then **act**:
 
 - Your PR merged → reconcile it and **chase what it unblocks**. A dependency landed → **pick up the unblocked
   work this session.** A new `for:<lane>` issue or an RFC for you → triage / answer / act.
