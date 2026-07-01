@@ -26,8 +26,13 @@ default:
 #  desktop shortcut that runs `just start`.
 # ============================================================================
 # Launch Sprout — serve + open the browser at the fixed port (the zero-CLI door). The one operator entry.
-# --restart (#127) takes over a stale server so the icon always opens a fresh dashboard.
+# --serve-or-focus (#151) is single-instance: a second launch opens the existing tab, never a 2nd server.
+# For a forced fresh start over a stale server, use `just restart`.
 start:
+    @just serve --serve-or-focus --open
+
+# Force-fresh launch: take over a stale server (ask it to /quit), then serve current code (#127).
+restart:
     @just serve --restart --open
 
 # ============================================================================
@@ -88,14 +93,19 @@ test-host:
 lint:
     {{py}} -m ruff check .
 
-# Format the C/C++ files changed on this branch vs main (clang-format v22.1.5 — the
-# changed-scope gate, #120). Routes through the pinned pre-commit hook, so there's no
-# C toolchain to install; it applies the formatting in place, then reports — review the
-# diff and commit. Same invocation CI runs, so local == CI.
+# Check the C/C++ *changed lines* on this branch vs main (clang-format v22.1.5 — the
+# changed-LINES gate, #352). git-clang-format formats only the lines you touched, so
+# hand-aligned columns survive. Report-only; non-zero if a touched line needs
+# formatting (run `just format-fw` to fix). Same wrapper CI runs, so local == CI.
 #   just lint-fw              # vs origin/main
 #   just lint-fw <base-ref>   # vs another base (e.g. a fork point)
 lint-fw base="origin/main":
-    uv run pre-commit run clang-format --from-ref {{base}} --to-ref HEAD --show-diff-on-failure
+    {{py}} tools/clang_format_changed_lines.py --base {{base}} --check
+
+# Apply changed-LINES clang-format in place (the fix for what `just lint-fw` reports),
+# then review the diff and commit. Touches only the lines changed vs <base> (#352).
+format-fw base="origin/main":
+    {{py}} tools/clang_format_changed_lines.py --base {{base}}
 
 # Run every pre-commit hook across the repo — the single definition of lint/format/hygiene.
 pre-commit:

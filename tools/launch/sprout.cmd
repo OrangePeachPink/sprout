@@ -1,10 +1,10 @@
 @echo off
 REM ============================================================================
 REM  Sprout launcher - double-click to start Sprout with zero terminal commands.
-REM  Self-updates (git pull --ff-only), then runs `just start` (-> serve.py --restart
-REM  --open): self-update + --restart mean the icon always opens a fresh CURRENT
-REM  dashboard, even over a stale server. Falls back to the Python entrypoint if
-REM  `just` isn't installed.
+REM  Self-updates (git pull --ff-only), then runs `just start` (-> serve.py
+REM  --serve-or-focus --open): single-instance (#151) - a second double-click just
+REM  opens the existing tab, never a second server or window. Falls back to the
+REM  Python entrypoint if `just` isn't installed.
 REM
 REM  Public-clean: every path is relative to this script - no user path, no port
 REM  literal. Stop Sprout from the dashboard's "Stop server" button; you can just
@@ -30,7 +30,7 @@ if %errorlevel%==0 (
   echo [sprout] 'just' is not on your PATH - using the Python entrypoint directly.
   echo [sprout] For the full runner library, install just:  winget install --id Casey.Just -e
   echo.
-  python tools\analytics\serve.py --restart --open
+  python tools\analytics\serve.py --serve-or-focus --open
 )
 
 REM If we reach here the server stopped (the in-UI Stop button, or Ctrl-C).

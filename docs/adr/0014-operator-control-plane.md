@@ -1,7 +1,8 @@
 # ADR-0014 — Operator control plane (Monitor + Experiment under one plane)
 
 **Status:** Proposed — *direction set by the Operator-Experience epic (#125); detail co-authored as the
-slices land*
+slices land. §5 (`serve.py` boundary) added + Trellis-aligned (#296) — the operator-control-plane boundary
+is now explicit; ready for maintainer ratification (Proposed→Accepted).*
 **Date:** 2026-06-26
 **Owner:** Data lane
 **Lane:** data/analytics (the operator control surface)
@@ -51,6 +52,17 @@ Every control path degrades to a clear message (never a raw error), and the runn
 stoppable from the UI (#115 extended across the unified plane, slice 5 / #130) — so hidden zombies cannot
 accumulate.
 
+### 5. `serve.py` boundary — transport/wiring vs lifecycle (#296)
+
+**`serve.py` = transport + routing + wiring.** It owns HTTP serving, request routing, and *holds* the
+controller instances; it does **not** implement capture/monitor lifecycle logic — the `CaptureController`
+(`tools/capture/control.py`) and `MonitorController` (`tools/logger/monitor_control.py`) do. The
+control-plane **state** (the two instances + the Monitor⇄Experiment handoff) currently lives as `serve.py`
+module-globals; that co-location is the known seam, to be extracted into a named `operator_plane` module
+**when a second UI context (the #243 device-served UI) needs to share it** — not for hygiene alone.
+(Architecture Health Review #1; Trellis + Data aligned on #296. The extraction's value is *shared control-plane
+state across two UI contexts*, not tidiness — so it waits for that condition.)
+
 ## Consequences
 
 - Logging and testing are both one-click from the app; the operator never opens a terminal or touches COM6.
@@ -63,3 +75,7 @@ accumulate.
 - The Monitor⇄Experiment handoff needs richer state (paused/resuming) than start/stop → extend the status model.
 - A second rig / port is added → the controllers + mutex generalize to per-port.
 - Remote / multi-user access is wanted → that changes auth + the localhost gate (an ADR-0005 revisit).
+- The **#243 device-served UI is scoped** → check §5's control-plane trigger: does it read/mutate the
+  `_CAPTURE` / `_MONITOR` state? **Yes → extract `operator_plane.py`** (two UI contexts can't share `serve.py`
+  module-globals) **before** it lands. **No →** §5's transport/wiring boundary still holds; documentation or
+  hygiene alone does not trip the extraction (#296).

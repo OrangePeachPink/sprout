@@ -30,24 +30,31 @@ repos:
       - id: check-added-large-files
         args: [--maxkb=1024]
 
-  # C/C++ formatting via clang-format (#120). Pinned to v22.1.5 — idempotent with
-  # our .clang-format (a second pass produces zero changes). The mirror bundles the
-  # binary, so a contributor needs no manual C toolchain — `just check` just works.
+  # C/C++ formatting via clang-format — CHANGED-LINES (#352, v2; supersedes the
+  # changed-files v1, #120/#343). git-clang-format formats only the lines a diff
+  # touched, so hand-aligned =-columns / tables survive byte-identical even in a
+  # file you're editing — closing the residual that forced the move-out-of-config.h
+  # workaround on #376/#348 (so config.h no longer needs a carve-out). Both
+  # clang-format and git-clang-format come from the pinned `clang-format==22.1.5`
+  # wheel in the uv env (one hash-pinned source in uv.lock; the wrapper binds them
+  # via --binary, never an ambient toolchain — the #259 "no ambient compiler"
+  # principle).
   #
-  # CHANGED-SCOPE — the ONE deliberate exception to the repo's --all-files gate
-  # (AGENTS.md §code-style + ADR-0002 #10): the firmware carries intentional manual
-  # column alignment a full-tree reformat would destroy, so clang-format touches
-  # NEW / CHANGED files only. A normal hook (no always_run, not pass_filenames:false)
-  # already does this on commit — it sees only the staged files. In CI it must stay
-  # OUT of `pre-commit run --all-files` (run via `SKIP=clang-format`); a dedicated
-  # ci.yml step then formats only the PR's changed C/C++ files. See ci.yml + `just
-  # lint-fw` — all three route through this same pinned hook so local == CI.
-  - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v22.1.5
+  # CHANGED-SCOPE — still the ONE deliberate exception to the repo's --all-files
+  # gate (AGENTS.md §code-style + ADR-0002 #10). Local: vs HEAD (the lines in the
+  # commit you're making) — apply + fail so you re-stage. In CI it stays OUT of
+  # `pre-commit run --all-files` (via `SKIP=clang-format`); a dedicated ci.yml step
+  # runs `--check` vs the PR merge-base (the blocking authority). `just lint-fw` /
+  # `just format-fw` route through the same wrapper, so local == CI.
+  - repo: local
     hooks:
       - id: clang-format
+        name: clang-format (changed lines, #352)
+        entry: uv run python tools/clang_format_changed_lines.py --base HEAD
+        language: system
         files: '\.(c|cpp|h)$'
         exclude: '^docs/reference/'
+        pass_filenames: false
 
   # markdownlint via the repo's own .markdownlint-cli2.jsonc (globs + ignores), so it
   # behaves identically to just / CI. Uses system npx (node is a standard dev tool).

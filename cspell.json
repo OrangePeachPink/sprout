@@ -101,6 +101,14 @@
     "VCP",
     "Wago",
     "WROOM",
+    // #436 multi-board support - ESP32-S3/C5 chip + toolchain terms:
+    "devkitc",
+    "elif",
+    "JTAG",
+    "pioarduino",
+    "PSRAM",
+    "rymcu",
+    "Xtensa",
     // user-guide hardware/source terms (docs/user/trust-your-sensor.md, #142):
     "Flaura",
     "silkscreen",
