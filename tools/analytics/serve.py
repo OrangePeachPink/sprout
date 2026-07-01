@@ -249,7 +249,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif parsed.path.startswith("/lab/") and parsed.path.endswith("/notes"):
                 eid = unquote(parsed.path[len("/lab/") : -len("/notes")])  # notes #158
                 try:
-                    result = save_notes(eid, self._body())
+                    body = self._body()
+                    # #450: optional lifecycle status + edit author ride the same body,
+                    # backward-compatible (absent -> carried / "unknown").
+                    result = save_notes(
+                        eid, body, status=body.get("status"), author=body.get("author")
+                    )
                     result["path"] = notes_rel_path(eid)  # #327: show where it landed
                     self._send_json(result)
                 except Exception as exc:  # #327: surface the failed target path so the
