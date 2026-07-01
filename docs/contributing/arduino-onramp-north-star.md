@@ -1,4 +1,8 @@
-# Sprout Jr — the DX North Star 🌱
+# The Arduino On-Ramp — the DX North Star 🌱
+
+> **Name is a placeholder.** The public name is **TBD** (maintainer decides, #435) — *"Sprout Jr"* was a
+> working label but **reads as derisive and must not ship**. This doc uses the neutral descriptor
+> **"the on-ramp."**
 
 *Owned by DX. Part of the Arduino On-Ramp epic (#435); it specs the sketch built in #446. This is the
 direction the team builds the beginner on-ramp to. The warm, user-facing
@@ -13,7 +17,7 @@ behind it.*
 > graph, teach the board what *their* dry and wet look like, and hear their plant say one of three honest
 > things. They leave thinking: *"I just did embedded. I want more of this."***
 
-Sprout Jr's job is not to water a plant. It's to turn "I've never touched a microcontroller" into "I'm an
+The on-ramp's job is not to water a plant. It's to turn "I've never touched a microcontroller" into "I'm an
 embedded engineer who hasn't realized it yet" — and to make the jump to **Sprout Full** feel like the obvious
 next step, not a cliff. We are in the business of delight and momentum.
 
@@ -59,7 +63,7 @@ There is a lot out there. None of it is a real on-ramp.
 | **The generic tutorials** ([Maker Portal](https://makersportal.com/blog/2020/5/26/capacitive-soil-moisture-calibration-with-arduino), [DFRobot](https://wiki.dfrobot.com/sen0193/docs/18036)) | Use the real $2 sensor; teach `map()` | All of them end at **"now it's a percentage."** None teach that a percentage is dishonest. |
 
 **The gap — and our wedge:** every existing path either hides the raw signal, or buries the beginner in
-WiFi/pump/cloud, or teaches them a comforting **lie** (moisture %). Sprout Jr does the opposite of all three:
+WiFi/pump/cloud, or teaches them a comforting **lie** (moisture %). Our on-ramp does the opposite of all three:
 
 > **It shows the raw signal honestly, stays radically small, and even at the beginner level refuses the lie —
 > it teaches *bands*, not a fake percentage.** Bands are the truth, and they are the conceptual seed of Sprout
@@ -73,13 +77,13 @@ WiFi/pump/cloud, or teaches them a comforting **lie** (moisture %). Sprout Jr do
 The board is the **Arduino Uno R4 WiFi** — a deliberate maintainer decision (#446), and the right one for
 *this* job. The reasoning:
 
-1. **It's a real Arduino, and that widens the door.** Jr's audience is bigger than the ESP32/Sprout crowd —
+1. **It's a real Arduino, and that widens the door.** The on-ramp's audience is bigger than the ESP32/Sprout crowd —
    it's *everyone* taking a first step. The Uno is the board the whole Arduino learning universe is built
    around; a newcomer who Googles "Arduino soil sensor" lands in a sea of tutorials that now *fit* their board.
 2. **Arduino-IDE-native, lowest-friction first hour.** The R4 (Renesas RA4M1) is first-class in the Arduino
    IDE — no board-package hunt, no USB-driver dance. Plug in, pick **"Arduino Uno R4 WiFi,"** upload. That's
    the smoothest possible first success, which is the #1 job of an on-ramp.
-3. **Simple by design.** The capacitive sensor goes on **`A0`**; the onboard WiFi is **left unused** — Jr is
+3. **Simple by design.** The capacitive sensor goes on **`A0`**; the onboard WiFi is **left unused** — the on-ramp is
    **Serial only**, on purpose. No network, no setup portal, nothing to configure. Just the board, the sensor,
    and the Serial Plotter.
 
@@ -91,7 +95,7 @@ Graduation is *"you already know the ideas,"* not *"you already know this exact 
 durable thing; the board is just where you learned them.
 
 **Tool: the Arduino IDE** — on purpose. Sprout Full dropped it, but the Arduino IDE *is the beginner's first
-tool*, its **Serial Plotter is our delight engine**, and the R4 is native to it. This is exactly why Jr exists.
+tool*, its **Serial Plotter is our delight engine**, and the R4 is native to it. This is exactly why the on-ramp exists.
 
 ---
 
@@ -178,7 +182,7 @@ Every step is designed to land a felt win and set up the next. This is the chore
 
 ## Why they'll want Sprout Full
 
-Jr deliberately leaves them wanting — each ceiling is a Full headline:
+The on-ramp deliberately leaves them wanting — each ceiling is a Full headline:
 
 - They calibrated **one** probe by hand → Full calibrates **four**, per-channel, and locks them.
 - They drew **three** lines → Full has **seven** honest bands and a plant with moods.
@@ -186,7 +190,7 @@ Jr deliberately leaves them wanting — each ceiling is a Full headline:
 - They watched a Serial Plotter → Full **logs every reading** and lets them explore the history.
 - The LED blinked → Full drives a **real pump**, safely, with an arm-gate.
 
-Crucially, the **values** carry over intact: Jr taught them that a percentage is a lie and bands are the
+Crucially, the **values** carry over intact: The on-ramp taught them that a percentage is a lie and bands are the
 truth. Full is just that lesson, all the way up. They don't graduate to a *different* philosophy — they
 graduate to *more* of the one they already fell in love with.
 
@@ -194,7 +198,7 @@ graduate to *more* of the one they already fell in love with.
 
 ## Scope guardrails (the no-architectural-tail contract)
 
-This is the part I hold the line on. Sprout Jr is **one `.ino` + one doc, forever.** What it is **NOT**, and
+This is the part I hold the line on. The on-ramp is **one `.ino` + one doc, forever.** What it is **NOT**, and
 must never grow into:
 
 - ❌ No WiFi, no phone app, no cloud, no MQTT/Firebase/Home Assistant.
@@ -219,10 +223,10 @@ doc.*
   `analogRead(A0)` + `SAMPLES` averaging, the three-band compare, the optional `LED_BUILTIN` blink (WiFi left
   unused, Serial only). Sage measures the real dry/wet anchors on an R4 + probe so the out-of-box defaults are
   honest (the example values in this doc are placeholders). DX hands them this spec; they own the firmware.
-- **Design (a later pass, optional):** if the copy ever gets a styled page, Design dresses it — but Jr ships
+- **Design (a later pass, optional):** if the copy ever gets a styled page, Design dresses it — but the on-ramp ships
   in plain Markdown first; no Design dependency to start.
-- **Glossary:** Jr's terms (Sprout Jr, the three bands, "calibrate by hand") land in the **User-facing 👤**
-  section of [`GLOSSARY.md`](../GLOSSARY.md) when the sketch ships — keeping Jr and Full speaking one language.
+- **Glossary:** the on-ramp's terms (the three bands, "calibrate by hand") land in the **User-facing 👤**
+  section of [`GLOSSARY.md`](../GLOSSARY.md) when the sketch ships — keeping the on-ramp and Full speaking one language.
 
 ---
 
