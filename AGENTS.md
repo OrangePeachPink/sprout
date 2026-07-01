@@ -80,7 +80,9 @@ the message bus.** Self-sync at **three moments: when you start, just before you
 status brief / share-out (requested or proactive).**
 
 Each sync, sweep your slice: **PRs you own** (moved? merged?), **issues newly `for:<your-lane>`**,
-**questions / RFCs aimed at you**, and **what just merged that unblocks your gated work**. Then **act**:
+**questions / RFCs aimed at you**, and **what just merged that unblocks your gated work** — but **skip
+`needs:hardware`** (the maintainer's hardware/bench queue; filter `for:<your-lane> -label:needs:hardware`).
+Then **act**:
 
 - Your PR merged → reconcile it and **chase what it unblocks**. A dependency landed → **pick up the unblocked
   work this session.** A new `for:<lane>` issue or an RFC for you → triage / answer / act.
