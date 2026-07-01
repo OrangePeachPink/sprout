@@ -372,6 +372,40 @@ def build_env_context(start: datetime, end_utc: datetime) -> dict:
     }
 
 
+def _seg_start(seg) -> datetime | None:
+    """A segment's honest start time from its header's ``log_start_utc`` (written by
+    the real host loggers - plants_logger.py / experiment_capture.py). A
+    legacy-converted segment (legacy_log.py) never emits this key, so it is
+    ``None`` - which is the point: it can never outrank a real, host-timestamped
+    session in recency ordering (#496)."""
+    s = getattr(seg, "log_start_utc", None)
+    if not s:
+        return None
+    try:
+        return datetime.fromisoformat(s.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _latest_segment(segments: list):
+    """The chronologically-latest segment, or ``None`` if there are none.
+
+    #496: ``segments[-1]`` is file-processing order (glob-sorted filenames across
+    however many input paths/naming conventions are aggregated), NOT chronological
+    order - so a legacy-converted file whose name happens to sort after the live
+    file's can silently make a stale identity (old fw/device_id) look current. Pick
+    by each segment's real ``log_start_utc`` instead; segments without one (legacy
+    conversions) never win. Falls back to list order only if NONE have a parseable
+    start (an all-legacy aggregate - an honest degrade, not a crash)."""
+    if not segments:
+        return None
+    timed = [(s, _seg_start(s)) for s in segments]
+    with_time = [(s, t) for s, t in timed if t is not None]
+    if with_time:
+        return max(with_time, key=lambda st: st[1])[0]
+    return segments[-1]
+
+
 # --------------------------------------------------------------------------- #
 # context build
 # --------------------------------------------------------------------------- #
@@ -500,7 +534,7 @@ def build_context(data: LogData) -> dict:
         spread_points[i] for i in _dec_idx(len(spread_points), MAX_TRAJ_POINTS)
     ]
 
-    last_seg = data.segments[-1] if data.segments else None
+    last_seg = _latest_segment(data.segments)  # #496: chronological, not file order
     total_h = _hours_since(soil[-1].timestamp_utc, start)
     _host_off = datetime.now().astimezone().utcoffset()
     _host_off_h = _host_off.total_seconds() / 3600 if _host_off else None
@@ -568,6 +602,12 @@ def build_context(data: LogData) -> dict:
             "schema_version": meta["schema_version"],
             "logger_version": getattr(last_seg, "logger_version", None),
             "tz_offset": meta["tz_offset"],
+            # #496: honest even in the edge case where NO real (host-timestamped)
+            # session exists in this view at all, so a legacy-converted capture is
+            # the only/latest segment available — never silently pass its identity
+            # off as the live device's (ADR-0025 "no placeholder that reads as real").
+            "legacy_converted": getattr(last_seg, "logger_version", None)
+            == "legacy-convert",
         },
         "contract": {
             "raw_only": raw_only_ok,
