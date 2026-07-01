@@ -32,17 +32,17 @@ jobs:
     steps:
       # Full history so the changed-lines clang-format step (#352) can diff against
       # the PR merge-base / the previous main commit.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Set up uv (+ the locked Python)
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
       - name: Set up just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v3
 
       - name: Sync the locked environment
         run: uv sync
@@ -52,7 +52,7 @@ jobs:
       # hook config so it busts the moment a tool version bumps. Pure speedup — changes
       # nothing about which checks run (#468).
       - name: Cache npx tooling (markdownlint / cspell)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.npm
           key: npx-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
@@ -86,17 +86,17 @@ jobs:
     name: firmware (native tests + compile)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Set up uv (+ the locked Python)
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
       - name: Set up just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v3
 
       - name: Sync the locked environment
         run: uv sync
@@ -108,7 +108,7 @@ jobs:
         run: pip install platformio
 
       - name: Cache PlatformIO packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.platformio
           key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
