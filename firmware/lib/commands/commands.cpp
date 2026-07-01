@@ -1,6 +1,6 @@
 #include "commands.h"
 #include "serial_cmd.h"
-#include "pump_pulse.h"
+#include "irrigation.h"
 #include <Arduino.h>
 #include <Preferences.h>
 #include <string.h>
@@ -19,13 +19,9 @@ static inline Preferences *prefs()
 {
     return (Preferences *)s_ctx.prefs_handle;
 }
-static inline pump_pulse_t *pump()
+static inline irrig_ctrl_t *irrig()
 {
-    return s_ctx.pump;
-}
-static inline unsigned long cadence()
-{
-    return *s_ctx.cadence_ms;
+    return s_ctx.irrig;
 }
 
 /* ---- private helpers ---------------------------------------------------- */
@@ -51,11 +47,12 @@ static void derive_default_id(char *out, size_t outlen)
 
 /* ---- command handlers (#92 registry) ------------------------------------ */
 
-/* !cad,<ms>[,temp] - set the sweep cadence at runtime (ADR-0011 / #63).
- *   !cad,<ms>       persists to NVS — the operator's deliberate default.
- *   !cad,<ms>,temp  SESSION-ONLY: set live, NO NVS write; reverts to the saved/
- *                   compiled default on reset. Experiment Capture uses this so a
- *                   fast capture rate can't leak into the next monitor run (#322). */
+/* !cad,<ms>[,temp] - retune the supervisor's idle sweep cadence (#63 / #227: the
+ * FSM owns sample_period_ms now).
+ *   !cad,<ms>       persists to NVS — the operator's deliberate default (survives reboot).
+ *   !cad,<ms>,temp  SESSION-ONLY: set live, NO NVS write; reverts to the saved/compiled
+ *                   default on reset. Experiments use this so a fast capture rate can
+ *                   never leak into the next monitor run (#322). */
 static void handle_cad(const char *args, char *reply, size_t replen)
 {
     char msbuf[12];
@@ -86,8 +83,8 @@ static void handle_cad(const char *args, char *reply, size_t replen)
                  (unsigned long)ms, s_ctx.cadence_floor_ms);
         return;
     }
-    unsigned long prev = *s_ctx.cadence_ms;
-    *s_ctx.cadence_ms = ms;
+    unsigned long prev = (unsigned long)*s_ctx.sample_period_ms;
+    *s_ctx.sample_period_ms = ms;
     *s_ctx.cadence_temp = temp;
     if (temp) {
         /* session-only: never touch NVS, so it can't leak into the next boot (#322) */
@@ -122,7 +119,7 @@ static void handle_cfg(const char *args, char *reply, size_t replen)
 {
     if (strcmp(args, "reset") == 0) {
         prefs()->clear();
-        *s_ctx.cadence_ms = s_ctx.cadence_default_ms;
+        *s_ctx.sample_period_ms = (uint32_t)s_ctx.cadence_default_ms;
         *s_ctx.cadence_from_nvs = false;
         *s_ctx.cadence_temp = false;
         derive_default_id(s_ctx.device_id, s_ctx.device_id_len);
@@ -165,8 +162,11 @@ static void handle_name(const char *args, char *reply, size_t replen)
 }
 
 /*
- * !water,<ch>[,<ms>] - arm ONE bounded manual pump pulse (#215).
- * Rejected if a pulse is already running or channel is out of range.
+ * !water,<ch>[,<ms>] - operator manual pulse (#215), expressed as a FORCED DOSE
+ * into the supervisor (single actuation authority, ADR-0016) — not a second relay
+ * driver. Granted on the next sweep (prompt: a pending forced dose makes the FSM
+ * sweep right away); ms is clamped to pump_max_ms; a hard-faulted channel is
+ * refused (clear it first).
  */
 static void handle_water(const char *args, char *reply, size_t replen)
 {
@@ -186,23 +186,20 @@ static void handle_water(const char *args, char *reply, size_t replen)
         snprintf(reply, replen, "# nak err=parse (use: !water,<ch>[,<ms>])");
         return;
     }
-    switch (pump_pulse_arm(pump(), (int)ch, ms, millis())) {
-    case PUMP_PULSE_ARMED:
-        s_ctx.pump_set((int)ch, true);
-        snprintf(reply, replen, "# ack water ch=%lu ms=%lu max=%lu",
-                 (unsigned long)ch, (unsigned long)pump_pulse_armed_ms(pump()),
+    switch (irrig_request_dose(irrig(), (int)ch, ms)) {
+    case IRRIG_DOSE_QUEUED:
+        snprintf(reply, replen,
+                 "# ack water ch=%lu ms=%lu max=%lu (forced dose queued)",
+                 (unsigned long)ch, (unsigned long)ms,
                  (unsigned long)s_ctx.pump_max_ms);
         break;
-    case PUMP_PULSE_ERR_BUSY:
-        snprintf(reply, replen, "# nak err=busy ch=%d",
-                 pump_pulse_channel(pump()));
-        break;
-    case PUMP_PULSE_ERR_CHANNEL:
+    case IRRIG_DOSE_BAD_CHANNEL:
         snprintf(reply, replen, "# nak err=channel ch=%lu n=%d",
                  (unsigned long)ch, s_ctx.num_channels);
         break;
-    default:
-        snprintf(reply, replen, "# nak err=duration");
+    case IRRIG_DOSE_FAULTED:
+        snprintf(reply, replen, "# nak err=faulted ch=%lu (clear it first)",
+                 (unsigned long)ch);
         break;
     }
 }
@@ -229,18 +226,37 @@ static void handle_pos(const char *args, char *reply, size_t replen)
     run_meta_set_position(s_ctx.run_meta, args, reply, replen);
 }
 
-/* !stop - force any active pump pulse OFF now (operator abort / safety, #215). */
+/* !stop - operator e-stop: abort any active dose, cancel pending ones, and drive
+ * every relay OFF now (#215, single-authority via ADR-0016). */
 static void handle_stop(const char *args, char *reply, size_t replen)
 {
     (void)args;
-    int ch = pump_pulse_channel(pump());
-    bool was = pump_pulse_stop(pump());
-    if (was && ch >= 0) s_ctx.pump_set(ch, false);
-    s_ctx.all_relays_off();
+    int ch = irrig_active_pump(irrig());
+    bool was = irrig_abort(irrig(), millis());
+    s_ctx.all_relays_off(); /* hardware backstop on top of the FSM abort */
     if (was)
-        snprintf(reply, replen, "# ack stop ch=%d", ch);
+        snprintf(reply, replen, "# ack stop ch=%d (aborted)", ch);
     else
         snprintf(reply, replen, "# ack stop idle");
+}
+
+/* !auto,on|off - arm / disarm AUTONOMOUS dosing (#227, ADR-0016 arm gate).
+ * Session-scoped: the device boots DISARMED every time (fail-safe; not persisted),
+ * so a reboot never silently resumes autonomous watering. The bench arms it only
+ * after the dry-safety chain (#93/#191/#2/#215) has passed on real hardware.
+ * Manual !water (a forced dose) works in either state. */
+static void handle_auto(const char *args, char *reply, size_t replen)
+{
+    if (strcmp(args, "on") == 0) {
+        irrig_set_autonomous(irrig(), true);
+        snprintf(reply, replen, "# ack auto on (autonomous dosing ARMED)");
+    } else if (strcmp(args, "off") == 0) {
+        irrig_set_autonomous(irrig(), false);
+        snprintf(reply, replen, "# ack auto off (autonomous dosing disarmed)");
+    } else {
+        snprintf(reply, replen, "# nak err=auto (use: !auto,on|off) state=%s",
+                 irrig_autonomous(irrig()) ? "on" : "off");
+    }
 }
 
 #ifdef WDT_WEDGE_TEST
@@ -278,7 +294,7 @@ void commands_init(commands_ctx_t *ctx)
 
     uint32_t saved = p->getULong("cadence_ms", 0);
     if (saved >= s_ctx.cadence_floor_ms && saved <= s_ctx.cadence_ceil_ms) {
-        *s_ctx.cadence_ms = saved;
+        *s_ctx.sample_period_ms = saved;
         *s_ctx.cadence_from_nvs = true;
     }
 
@@ -300,6 +316,7 @@ void commands_init(commands_ctx_t *ctx)
     serial_cmd_register("name", handle_name);
     serial_cmd_register("water", handle_water);
     serial_cmd_register("stop", handle_stop);
+    serial_cmd_register("auto", handle_auto);
     serial_cmd_register("label", handle_label);
     serial_cmd_register("pos", handle_pos);
 #ifdef WDT_WEDGE_TEST

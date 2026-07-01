@@ -44,7 +44,7 @@ mid-edge `GND` instead.**
 | IMG_0534.JPEG | Macro of the R2/R3/R4 + timer cluster (V2.0.0). | R3 R4 R2; "LEE"/"S0L"/"162"; "20240201". |
 | IMG_0535.JPEG | Electronics-end close-up of the **v1.2** variant (U1 timer + D1 diode). | Connector "GND VCC AOUT"; "U1", "D1", R1 "E0L", R2 "222". |
 | IMG_0536.JPEG | Fuller electronics view of the v1.2 variant. | "GND VCC AOUT"; U1/U2, C1-C6, R1-R4, "222". |
-| IMG_0537.JPEG | Full probe, front silkscreen (v1.2 variant). | "Capacitive Soil Moisture Sensor v1.2". |
+| IMG_0537.JPEG | Macro of the v1.2 electronics: NE555 timer (U1) + D1 diode, R1, C1/C2 (not a full-probe silkscreen). | "NE555 55A~"; "D1"; R1 "E0L"; "C1"/"C2". |
 
 ## relay_photos/ - CW-022 4-channel relay board
 

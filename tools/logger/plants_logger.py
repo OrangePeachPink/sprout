@@ -8,8 +8,9 @@ docs/TELEMETRY_SCHEMA.md:
   * reorders to the canonical CSV schema and writes a rotating, self-describing
     CSV file (a new file each UTC day) under <repo>/logs/,
   * renders a terse pretty console for live eyeballing (the B2 file/console split),
-  * auto-reconnects if the port drops, and decodes losslessly (latin-1) so a stray
-    byte is one recoverable char, never a dropped row.
+  * auto-reconnects if the port drops OR the stream silently stalls (#417), marking
+    an honest `# reconnect` seam, and decodes losslessly (latin-1) so a stray byte
+    is one recoverable char, never a dropped row.
 
 Usage:
   python plants_logger.py --port COM5
@@ -136,6 +137,74 @@ def is_line_noise(text):
     return sum(ord(c) < 127 for c in text) / len(text) < 0.5
 
 
+# --- stall watchdog (#417) --------------------------------------------------
+# A *silent* stall — the port stays open (no SerialException) but the device stops
+# streaming — makes ser.readline() return b"" forever; the plain loop spins on it
+# with no data and no reconnect (the 9-minute hole, 2026-06-30). The existing
+# reconnect only fires on a SerialException. The watchdog detects "no data row for
+# longer than expected", forces a reconnect, and marks an honest seam so the gap is
+# queryable, never silently stitched (docs/TELEMETRY_SCHEMA.md).
+
+STALL_MULT = 2.0  # expect >= 1 data row per STALL_MULT x cadence ...
+STALL_FLOOR_S = (
+    90.0  # ... but never trip below this (safe for 30 s cadence + idle noise)
+)
+RECONNECT_SLEEP_S = 2.0
+
+
+class _SerialStall(Exception):
+    """Raised in the read loop when the watchdog trips; reuses the reconnect path."""
+
+
+def cadence_ms_from_header(header_lines):
+    """Pull ``cadence_ms`` from the device ``#`` header block; None if absent."""
+    for ln in header_lines:
+        for tok in ln.replace(",", " ").split():
+            if tok.startswith("cadence_ms="):
+                with contextlib.suppress(ValueError):
+                    return int(tok[len("cadence_ms=") :])
+    return None
+
+
+def stall_timeout_s(cadence_ms, *, mult=STALL_MULT, floor_s=STALL_FLOOR_S):
+    """Seconds of no data before forcing a reconnect. Keys off cadence when known,
+    with a floor so a slow (30 s) cadence + idle line-noise never false-trips."""
+    if cadence_ms and cadence_ms > 0:
+        return max(floor_s, mult * (cadence_ms / 1000.0))
+    return floor_s
+
+
+class StallWatchdog:
+    """Tracks time since the last data row; ``stalled()`` once it exceeds the timeout.
+    Clock-injected so it unit-tests without waiting on a wall clock or hardware."""
+
+    def __init__(self, timeout_s, *, clock=time.monotonic):
+        self._timeout_s = timeout_s
+        self._clock = clock
+        self._last = clock()
+
+    def mark_data(self):
+        self._last = self._clock()
+
+    def retune(self, timeout_s):
+        self._timeout_s = timeout_s
+
+    def gap_s(self):
+        return self._clock() - self._last
+
+    def stalled(self):
+        return self.gap_s() >= self._timeout_s
+
+
+def reconnect_seam_line(gap_s, now, reason):
+    """An honest, queryable ``#`` seam written into the CSV on reconnect, so a logging
+    hole is never silently stitched."""
+    return (
+        f"# reconnect  gap_s={gap_s:.1f}  at_utc={iso_utc(now)}  "
+        f"reason={reason}  logger={LOGGER_VERSION}"
+    )
+
+
 def autodetect_port():
     ports = list(list_ports.comports())
     for p in ports:  # prefer a known USB-serial bridge
@@ -254,6 +323,14 @@ class RotatingCsv:
         self.fh.flush()
         return row, new_path
 
+    def write_comment(self, line):
+        """Write a raw ``#`` comment into the current segment (honest seam, #417)."""
+        if self.fh is None:
+            return None
+        self.fh.write(line.rstrip("\n") + "\n")
+        self.fh.flush()
+        return self.current_path
+
 
 def console_line(row):
     t = row["timestamp_local"][11:19]  # HH:MM:SS
@@ -301,31 +378,50 @@ def _lock_release():
         print(f"[logger] serial-lock release failed (non-fatal): {e}")
 
 
-def run(port, baud, logdir, maxbytes):
+def run(
+    port,
+    baud,
+    logdir,
+    maxbytes,
+    *,
+    open_fn=None,
+    clock=time.monotonic,
+    sleep=time.sleep,
+):
     csvlog = RotatingCsv(logdir, maxbytes)
     sample_id = 0
     pending_hdr = []
     dropped = 0
     crc_fail = 0
     noise = 0
+    if open_fn is None:  # real path; tests inject a fake serial factory
+
+        def open_fn():
+            return serial.Serial(port, baud, timeout=2)
+
+    # Floor timeout until the header reveals the real cadence, then retune (#417).
+    watchdog = StallWatchdog(stall_timeout_s(None), clock=clock)
     _archive_step(logdir, include_all=False)  # back up closed segments from prior runs
     while True:
         try:
-            ser = serial.Serial(port, baud, timeout=2)
+            ser = open_fn()
         except Exception as e:
             print(f"[logger] cannot open {port} ({e}); retrying in 3s")
-            time.sleep(3)
+            sleep(3)
             continue
         print(f"[logger] connected {port} @ {baud}  ->  {logdir}")
         _lock_claim(port)  # advisory: the monitor now owns the port (ADR-0011 #64)
+        watchdog.mark_data()  # a fresh connection resets the stall clock
         try:
             while True:
                 raw = ser.readline()
-                if not raw:
-                    continue  # idle timeout between 30 s bursts
-                text = raw.decode("latin-1").rstrip("\r\n")
+                text = raw.decode("latin-1").rstrip("\r\n") if raw else ""
                 if not text:
-                    continue
+                    # No line this read. A prolonged run of these with no data row is
+                    # a silent stall (port open, device quiet) — force a reconnect.
+                    if watchdog.stalled():
+                        raise _SerialStall(watchdog.gap_s())
+                    continue  # normal idle timeout between bursts
                 if text.lstrip().startswith("#"):
                     pending_hdr.append(text)
                     print(text)
@@ -349,20 +445,40 @@ def run(port, baud, logdir, maxbytes):
                     continue
                 if pending_hdr:
                     csvlog.set_header(pending_hdr)
+                    cad = cadence_ms_from_header(pending_hdr)
+                    if cad:
+                        watchdog.retune(stall_timeout_s(cad))
                     pending_hdr = []
                 sample_id += 1
                 now = datetime.now(timezone.utc)
                 row, new_path = csvlog.write(dev, sample_id, now)
+                watchdog.mark_data()  # a real data row proves the stream is alive
                 if new_path:
                     print(f"[logger] -> {new_path}")
                     # new segment opened -> the previous one is closed; back it up
                     _archive_step(logdir, exclude=new_path)
                 print(console_line(row))
-        except serial.SerialException as e:
-            print(f"[logger] port dropped ({e}); reconnecting...")
+        except _SerialStall as stall:
+            gap = stall.args[0]
+            print(
+                f"[logger] serial stall {gap:.0f}s (port open, no data) -> reconnecting"
+            )
+            csvlog.write_comment(
+                reconnect_seam_line(gap, datetime.now(timezone.utc), "stall-watchdog")
+            )
             with contextlib.suppress(Exception):
                 ser.close()
-            time.sleep(2)
+            sleep(RECONNECT_SLEEP_S)
+        except serial.SerialException as e:
+            print(f"[logger] port dropped ({e}); reconnecting...")
+            csvlog.write_comment(
+                reconnect_seam_line(
+                    watchdog.gap_s(), datetime.now(timezone.utc), "port-dropped"
+                )
+            )
+            with contextlib.suppress(Exception):
+                ser.close()
+            sleep(RECONNECT_SLEEP_S)
         except KeyboardInterrupt:
             print(
                 f"\n[logger] stopped ({sample_id} rows, {dropped} dropped, "

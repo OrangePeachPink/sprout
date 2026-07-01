@@ -54,6 +54,17 @@ jobs:
           key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
           restore-keys: pio-${{ runner.os }}-
 
+      # Cache the npm download store so the pinned npx tools (markdownlint-cli2 +
+      # cspell — see .pre-commit-config.yaml) aren't re-fetched every run. Keyed on the
+      # hook config so it busts the moment a tool version bumps; restored BEFORE the
+      # lint step below. Pure speedup — changes nothing about which checks run (#468).
+      - name: Cache npx tooling (markdownlint / cspell)
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npx-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: npx-${{ runner.os }}-
+
       # The single definition of lint/format/hygiene — identical to a local commit.
       # clang-format is SKIPped here: it is the one check scoped to changed files, not
       # --all-files (the firmware's manual column alignment must survive a full-tree
@@ -61,13 +72,16 @@ jobs:
       - name: Lint + format + hygiene (pre-commit; clang-format runs changed-scope below)
         run: SKIP=clang-format uv run pre-commit run --all-files --show-diff-on-failure
 
-      # clang-format — ONLY the C/C++ files this PR changed (never the whole tree).
-      # Same pinned hook (v22.1.5) as local commits + `just lint-fw`, so local == CI.
-      - name: clang-format (changed C/C++ only — #120)
+      # clang-format — ONLY the C/C++ *lines* this PR changed (never whole files,
+      # never the whole tree) — #352. Diffs against the PR merge-base (the blocking
+      # authority, Trellis sign-off). Same wrapper + pinned clang-format==22.1.5 as
+      # local commits + `just lint-fw`, so local == CI.
+      - name: clang-format (changed LINES vs merge-base — #352)
         run: |
           base="${{ github.event.pull_request.base.sha }}"
           [ -z "$base" ] && base="$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)"
-          uv run pre-commit run clang-format --from-ref "$base" --to-ref HEAD --show-diff-on-failure
+          mb="$(git merge-base "$base" HEAD)"
+          uv run python tools/clang_format_changed_lines.py --base "$mb" --check
 
       - name: Tests — native C firmware logic + host Python
         run: just test

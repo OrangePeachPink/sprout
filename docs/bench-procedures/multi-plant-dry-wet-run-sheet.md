@@ -20,6 +20,9 @@ Assign temporary IDs in bench order:
 If a plant later gets a real name, keep the temporary ID in notes so old captures
 still join cleanly.
 
+For a full greenhouse pass, keep the sequential ID even when the plant has a
+known common name. The bench ID is the data join key; the common name is context.
+
 ## Standard capture settings
 
 For ordinary plant baseline work:
@@ -47,6 +50,14 @@ Use four probes when the pot safely allows it.
 
 If the plant shape makes front/back/right/left awkward, use clock positions
 instead, such as 12, 3, 6, and 9 o'clock.
+
+Record the microsite (the specific spot in the pot) for each probe. A single pot
+can contain dry pockets, wet paths, roots, air gaps, and runoff channels at the
+same time, and that disagreement is evidence rather than noise.
+
+Also record probe validity. If a probe has poor soil contact, shallow insertion,
+root-mass contact, or cannot fit in the pot, say whether Data should include
+it in the plant-level view.
 
 ## Dry baseline procedure
 
@@ -78,6 +89,8 @@ instead, such as 12, 3, 6, and 9 o'clock.
 5. Capture post-water: `P##_post_water_<minutes>m`.
 6. If readings still move rapidly, add a second post-water capture at 30 to 60
    minutes.
+7. Before pulling probes, record the pull time and whether the reading is still
+   drifting, settling, or rebounding toward dry.
 
 ## Cactus and succulent exceptions
 
@@ -87,6 +100,8 @@ instead, such as 12, 3, 6, and 9 o'clock.
   pot too much.
 - If only one probe is used, the run can describe that plant but cannot estimate
   cross-pot microsite spread.
+- If a probe is inserted between a root mass and pot wall, label that contact
+  plainly. It is useful evidence, but not the same as open soil contact.
 
 ## Run sheet template
 
@@ -119,6 +134,7 @@ Dry baseline:
 - settings:
 - raw medians:
 - spread:
+- probe inclusion:
 - anomalies:
 
 Watering action:
@@ -135,6 +151,9 @@ Post-water:
 - settings:
 - raw medians:
 - spread:
+- wettest observed window:
+- pull/removal window:
+- probe inclusion:
 - anomalies:
 
 Evidence:
@@ -161,5 +180,15 @@ For Data, the minimum join keys are:
 | probe_map | `s1 front, s2 right, s3 back, s4 left` |
 | watering_action | `top-water, approx 250 mL, no runoff` |
 | anomaly_tags | `air-pocket?`, `root-contact?`, `single-probe-only` |
+| probe_inclusion | `s1 include, s2 exclude-poor-contact` |
+| watering_start | `2026-06-29 17:06 CDT` |
+| peak_window | `2026-06-29 17:09-17:14 CDT` |
+| pull_window | `2026-06-29 17:21 CDT` |
 
-- Sage
+For a computable handoff, create or update a tracked evidence package under
+`docs/experiments/data/<session-id>/` with raw slices, event/window tables, a
+manifest, and a README. The Markdown narrative remains the lab notebook; the CSV
+package is what lets Data regenerate the plant-level arc without re-reading the
+prose.
+
+— Sage

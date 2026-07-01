@@ -28,3 +28,9 @@
 docs/design/**          linguist-documentation
 **/*.dc.html            linguist-generated
 docs/design/_archive/** linguist-vendored
+
+# Append-only registries: auto-resolve "keep both" conflicts with the built-in `union`
+# merge driver (both sides' added lines kept), so two lanes appending in parallel don't
+# force an Update-branch + a second required-CI run (#471). Review still catches the rare
+# interleaving that needs manual ordering/dedup.
+docs/adr/0000-record-architecture-decisions.md merge=union
