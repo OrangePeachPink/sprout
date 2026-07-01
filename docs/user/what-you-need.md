@@ -58,8 +58,8 @@ If you want Sprout untethered, get an **ESP32** — they're a few dollars and Wi
 
 - **[Can you trust your sensor?](trust-your-sensor.md)** — the 3-minute board check (do this before you rely on
   a capacitive sensor).
-- *The one-click flasher page and the full build-&-run guide are on the way — they'll be linked here when they
-  land.*
+- **[Build & run — kit to first reading](build-and-run.md)** — wiring, the one-click flash, and your first
+  live reading.
 
 ---
 
