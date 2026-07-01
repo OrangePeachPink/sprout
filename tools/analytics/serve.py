@@ -44,6 +44,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+from bench_packages import render_bench_detail  # noqa: E402  (bench detail #444)
 from dashboard import (  # noqa: E402  (sibling import)
     RANGE_HOURS,
     build_context,
@@ -211,6 +212,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif parsed.path.startswith("/lab/") and parsed.path.endswith("/notes"):
                 eid = unquote(parsed.path[len("/lab/") : -len("/notes")])  # notes #158
                 self._send_json(load_notes(eid))
+            elif parsed.path.startswith("/lab/bench/"):  # a bench-package detail (#444)
+                pkg = unquote(parsed.path[len("/lab/bench/") :])
+                page = render_bench_detail(pkg)
+                if page is None:
+                    self._send("bench package not found", "text/plain", status=404)
+                else:
+                    self._send(page, "text/html; charset=utf-8")
             elif parsed.path.startswith("/lab/"):  # an experiment detail page (#157)
                 eid = unquote(parsed.path[len("/lab/") :])
                 page = render_detail(eid)
