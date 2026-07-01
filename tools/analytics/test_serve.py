@@ -157,11 +157,41 @@ def test_restart_takes_over() -> None:
                 p.terminate()
 
 
+def test_serve_or_focus_single_instance() -> None:
+    print("single-instance: --serve-or-focus opens the existing tab and exits 0:")
+    port = _free_port()
+    srv = socket.socket()
+    srv.bind(("127.0.0.1", port))
+    srv.listen()
+    try:
+        out = subprocess.run(
+            # no --open, so no browser is launched in CI; we only assert the bow-out.
+            [sys.executable, str(_SERVE), "--port", str(port), "--serve-or-focus"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        combined = (out.stdout + out.stderr).lower()
+        check(
+            out.returncode == 0,
+            f"exit 0 (bow out, not a 2nd server), got {out.returncode}",
+        )
+        check("already running" in combined, "clean 'already running' message shown")
+        check("traceback" not in combined, "no traceback leaked to the operator")
+        # Enforced under pytest too (check() only fails the __main__ run):
+        assert out.returncode == 0
+        assert "already running" in combined
+        assert "traceback" not in combined
+    finally:
+        srv.close()
+
+
 if __name__ == "__main__":
     test_port_ssot()
     test_in_ui_quit()
     test_port_in_use()
     test_restart_takes_over()
+    test_serve_or_focus_single_instance()
     print()
     if _FAILS:
         print(f"FAILED ({len(_FAILS)}): " + "; ".join(_FAILS))
