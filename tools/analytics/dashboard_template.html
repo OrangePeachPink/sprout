@@ -544,7 +544,7 @@ function renderTraj(){
       responsive:true, maintainAspectRatio:false, animation:false,
       interaction:{ mode:'nearest', intersect:false },
       scales:{
-        ...baseScales(`hours since ${DASH.trajectory.start_local} (local)`, 'raw ADC  (higher = drier)'),
+        ...baseScales(`hours since ${DASH.trajectory.start_axis || DASH.trajectory.start_local}`, 'raw ADC  (higher = drier)'),
         y:{ ...baseScales('', 'raw ADC  (higher = drier)').y, suggestedMin: lo-pad, suggestedMax: hi+pad }
       },
       plugins:{
@@ -890,7 +890,7 @@ function buildDetailChart(s){
     type:'line', data:{ datasets },
     options:{ responsive:true, maintainAspectRatio:false, animation:false,
       interaction:{ mode:'nearest', intersect:false },
-      scales:{ ...baseScales(`hours since ${DASH.trajectory.start_local} (local)`, 'raw ADC (higher = drier)'),
+      scales:{ ...baseScales(`hours since ${DASH.trajectory.start_axis || DASH.trajectory.start_local}`, 'raw ADC (higher = drier)'),
         y:{ ...baseScales('','raw ADC (higher = drier)').y, suggestedMin: lo-pad, suggestedMax: hi+pad } },
       plugins:{ legend:{display:false}, bandShade:{ bands: DASH.cal.bands }, gapShade:{ gaps: DASH.gaps },
         tooltip:{ callbacks:{

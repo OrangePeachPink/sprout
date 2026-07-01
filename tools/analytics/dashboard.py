@@ -593,6 +593,9 @@ def build_context(data: LogData) -> dict:
         "sensors": sensors,
         "trajectory": {
             "start_local": meta["start_local"],
+            # local-first chart-axis anchor (#328): local + zone, no UTC secondary.
+            "start_axis": meta.get("start_display", "").split(" · UTC ")[0]
+            or meta["start_local"],
             "datasets": trajectory_sets,
         },
         "spread": {
