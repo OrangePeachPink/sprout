@@ -73,6 +73,26 @@ Rules:
 **Stop condition — port busy:** a "port in use / access denied" error means another process owns it. Find and
 stop that process; do not fight it with retries.
 
+**Known trap — an orphaned logger can outlive the window that started it**
+([#493](https://github.com/OrangePeachPink/plants/issues/493)). Closing the browser tab/window does **not**
+currently signal `plants_logger.py` / `experiment_capture.py` to stop — only an explicit **`/quit`** click
+does. A closed window can leave a **headless** logger process running for hours, silently holding the port,
+invisible in Task Manager (it has no window and a generic `python.exe` name). If "port busy" persists after
+closing every visible window:
+
+```powershell
+# Find it — headless Sprout capture processes, by command line (not by window/name):
+Get-CimInstance Win32_Process -Filter "Name='python.exe' or Name='pythonw.exe'" |
+  Where-Object { $_.CommandLine -match 'plants_logger|experiment_capture' } |
+  Select-Object ProcessId, CommandLine
+
+# Confirmed it's an orphan? Stop it by the PID from above:
+Stop-Process -Id <ProcessId> -Force
+```
+
+This is a workaround, not a fix — the real fix (an actual close-signal + a server-side liveness self-shutdown)
+is tracked on #493 (Data). Once that lands, this section retires.
+
 ## 3. Capture source — real, not synthetic
 
 - [ ] Source is **serial device** (the real ESP32). Confirm before recording.
