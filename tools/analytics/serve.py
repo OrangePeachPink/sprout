@@ -70,7 +70,9 @@ from lab_studies import (  # noqa: E402  (Lab studies #159)
     render_study_detail,
     save_study,
 )
-from parse_v1 import parse_files  # noqa: E402
+from source_adapter import (  # noqa: E402  (the source-adapter seam, #277)
+    TetheredAdapter,
+)
 
 _REPO = _HERE.parents[1]
 
@@ -115,7 +117,7 @@ def _live_trace(eid: str | None, experiments_dir: object = None) -> list[dict]:
     if not csv.exists():
         return []
     try:
-        ctx = build_context(parse_files([str(csv)]))
+        ctx = build_context(TetheredAdapter().load([str(csv)]))
         return ctx.get("trajectory", {}).get("datasets", [])
     except Exception:  # a partial mid-write read must not break the status poll
         return []
@@ -130,7 +132,8 @@ def _context(
     # misses log files created later (a UTC-midnight rotation, a reconnect), so
     # a long-running server would silently go stale. None => auto-discover.
     resolved = inputs or gather_inputs()
-    data = parse_files(resolved)
+    # #277: reads through the source-adapter seam - see source_adapter.py.
+    data = TetheredAdapter().load(resolved)
     all_ch = sorted(
         {r.sensor_id for r in data.readings if r.record_type.startswith("plants.soil")}
     )

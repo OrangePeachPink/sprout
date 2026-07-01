@@ -54,10 +54,19 @@ maintainer confirms `area:` / `layer:` at triage.
    **not** `Closes #N` (see the gate below). Include how you verified the change.
 6. PRs are **squash-merged** — one clean commit per change; the branch auto-deletes after merge.
 
+> **`just check` needs one more tool than `just start` does.** `uv sync` + `just` alone are enough to run the
+> dashboard and the *lint/format* hooks — but `just check` also runs `just test`, which **unconditionally**
+> compiles and runs the native C firmware-logic suite (`test-native`), even for a docs-only change. That step
+> needs **PlatformIO** (`pip install platformio`) and a **host C compiler** (`gcc` on PATH — e.g. a winget
+> MinGW install on Windows) *in addition to* `uv`/`just`. If you'd rather skip installing those locally,
+> **GitHub Codespaces already has both** (its base image bundles `gcc`, and `pip install platformio` is a
+> quick add) — see the Firmware section below, or just push and let CI run the full gate for you.
+>
 > **Why CI runs everything on every PR:** `just check` (what CI runs) is the same full gate as your machine —
-> on purpose. Hooks are *type*-scoped for speed (a docs change never runs firmware tests locally); CI runs
-> everything for predictability and to prevent local≠remote drift. Path-filtering would re-introduce exactly
-> the class of surprise we deliberately closed.
+> on purpose. Pre-commit *hooks* are file-type-scoped for speed (e.g. `clang-format` only touches `.c`/`.h`
+> files) — but the *test* step above is not type-scoped, so don't read "hooks are scoped" as "a docs change
+> skips firmware tests." CI runs everything for predictability and to prevent local≠remote drift.
+> Path-filtering would re-introduce exactly the class of surprise we deliberately closed.
 >
 > **The one exception — clang-format:** it runs on the *lines you changed*, not `--all-files`, because the
 > firmware carries intentional manual column alignment a full-tree reformat would destroy (AGENTS.md

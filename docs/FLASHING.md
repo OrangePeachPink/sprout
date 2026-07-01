@@ -45,6 +45,27 @@ The flow has a couple of browser prompts that surprise first-timers. In order:
 10/11 usually auto-installs, but **CH340** boards sometimes need the WCH driver. If **no port appears**
 in step 1, that's the cause.
 
+### Which serial port, per board (#436)
+
+This page's flasher (and the port-chooser prompt above) is written for the **classic ESP32**
+(`esp32dev`) — that's the only board the factory image + manifest builds today (see the note below on
+`chipFamily`). The port-identification facts below apply **whichever way you flash** (this page, once
+board-aware, or `pio run -t upload`), so they're recorded now even though the web-flasher itself isn't
+multi-board yet:
+
+| Board | USB bridge | What you'll see in the port chooser |
+|---|---|---|
+| **classic ESP32** (`esp32dev`) — shipping today | **CP2102** UART bridge | *"CP2102 USB to UART Bridge"* / *"Silicon Labs CP210x"* |
+| **ESP32-C5** — experimental, #442 | **CH340** UART bridge | *"USB-SERIAL CH340"* — behaves like the classic on the serial front (UART @ 19200), simpler than the S3 |
+| **ESP32-S3** — experimental, #436 | UART bridge **or** native USB-CDC (board exposes **both** ports) | Two possible entries; which one carries Sprout's `Serial` depends on `ARDUINO_USB_CDC_ON_BOOT` — **not yet decided** (#436 leaves this open, bench-pending) |
+
+**Not yet true for S3/C5 — flagging honestly:** `firmware/scripts/factory_bin.py` hardcodes
+`"chipFamily": "ESP32"` in every manifest it emits, regardless of which env is built — so today's
+web-flasher page is **classic-ESP32-only in practice**, even though `esp32s3`/`esp32c5` compile (#499's
+non-blocking CI dry-run). Making the manifest board-aware (a `chipFamily` per target, e.g. `ESP32-S3` /
+`ESP32-C5`) is a real follow-on, not yet built — don't assume this page can web-flash an S3/C5 board
+today. Source: [`docs/hardware/BOARDS.md`](hardware/BOARDS.md) (Firmware's per-board reference).
+
 ## The firmware artifacts (how the image is built)
 
 `pio run -e esp32dev` produces three files in `firmware/.pio/build/esp32dev/` via the post-build

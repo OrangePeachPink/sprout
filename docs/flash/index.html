@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flash Sprout 🌱</title>
+  <!--
+    Sprout web-flasher page (#271, DX). Plug in the ESP32 over USB, click Install — no Arduino IDE,
+    no toolchain. ESP Web Tools talks to the board over the browser's Web Serial API (Chrome/Edge,
+    desktop only). It reads ./manifest.json (Firmware's build artifact) which points at the factory
+    image; before Install we surface the manifest's `provenance` block (sha256 / git / version) so
+    you see exactly what you're about to flash — honest by default. Version pinned so the behaviour
+    never drifts.
+  -->
+  <script
+    type="module"
+    src="https://unpkg.com/esp-web-tools@10.0.0/dist/web/install-button.js"></script>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      max-width: 42rem; margin: 0 auto; padding: 2rem 1.25rem 4rem;
+    }
+    h1 { font-size: 1.9rem; margin: 0 0 .25rem; }
+    .lede { font-size: 1.1rem; opacity: .85; margin-top: 0; }
+    .card {
+      border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+      border-radius: 12px; padding: 1.1rem 1.25rem; margin: 1.5rem 0;
+    }
+    .install { text-align: center; margin: 1.75rem 0; }
+    esp-web-install-button { --esp-tools-button-color: #17B6C4; }
+    button.activate {
+      font: inherit; font-weight: 600; cursor: pointer;
+      background: #17B6C4; color: #04252a; border: 0;
+      padding: .7rem 1.6rem; border-radius: 999px;
+    }
+    .unsupported {
+      display: block; padding: .9rem 1.1rem; border-radius: 10px;
+      background: color-mix(in srgb, #E8703A 15%, transparent);
+      border: 1px solid color-mix(in srgb, #E8703A 45%, transparent);
+    }
+    dl.prov { display: grid; grid-template-columns: auto 1fr; gap: .25rem .75rem; margin: .5rem 0 0; }
+    dl.prov dt { font-weight: 600; opacity: .7; }
+    dl.prov dd { margin: 0; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; word-break: break-all; }
+    .muted { opacity: .7; font-size: .92rem; }
+    ol { padding-left: 1.2rem; }
+    a { color: #17B6C4; }
+    code { font-family: ui-monospace, Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <h1>Flash Sprout 🌱</h1>
+  <p class="lede">Get Sprout's firmware onto your ESP32 straight from this page — plug in USB, click
+    <strong>Install</strong>. No Arduino IDE, no toolchain, no command line.</p>
+
+  <div class="install">
+    <esp-web-install-button manifest="./manifest.json">
+      <button class="activate" slot="activate">Install Sprout</button>
+      <span slot="unsupported" class="unsupported">
+        This browser can't flash a board. You need <strong>Chrome or Edge on a desktop or
+        laptop</strong> — Safari, Firefox, and phones/tablets don't have the Web Serial API.
+        Open this page there and you're set.
+      </span>
+      <span slot="not-allowed" class="unsupported">
+        You'll need to <strong>allow the serial port</strong> when the browser asks. Click Install
+        again and pick your board from the list.
+      </span>
+    </esp-web-install-button>
+  </div>
+
+  <div class="card" id="provenance" hidden>
+    <strong>What you're about to flash</strong>
+    <p class="muted" style="margin:.35rem 0 .5rem">Read straight from the build's own manifest — so
+      you see the exact image before you install it.</p>
+    <dl class="prov">
+      <dt>Firmware</dt><dd id="p-version">—</dd>
+      <dt>Git</dt><dd id="p-git">—</dd>
+      <dt>SHA-256</dt><dd id="p-sha">—</dd>
+      <dt>Size</dt><dd id="p-bytes">—</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <strong>What you need</strong>
+    <ol>
+      <li>A <strong>desktop or laptop</strong> (Windows, macOS, or Linux).</li>
+      <li><strong>Chrome or Edge</strong> — any Chromium browser. Not Safari, Firefox, or a phone.</li>
+      <li>A USB <strong>data</strong> cable (charge-only cables won't enumerate the board).</li>
+    </ol>
+    <p class="muted">After this one-time flash, Sprout updates itself over Wi-Fi — the cable is a
+      first-day thing, not a living dependency.</p>
+  </div>
+
+  <div class="card">
+    <strong>The two prompts you'll see</strong>
+    <ol>
+      <li><strong>Serial-port chooser</strong> — the browser asks which device to connect to. Pick the
+        ESP32; it's usually labelled by its USB-serial chip (<em>"CP2102 USB to UART Bridge"</em>,
+        <em>"Silicon Labs CP210x"</em>, or <em>"USB-SERIAL CH340"</em>).</li>
+      <li><strong>"Erase device?"</strong> — say yes for a fresh board; it does a clean install.</li>
+    </ol>
+    <p class="muted">No port in the list? The USB-serial driver may be missing (CH340 boards sometimes
+      need the WCH driver on Windows). The full walkthrough is in
+      <a href="https://github.com/OrangePeachPink/plants/blob/main/docs/FLASHING.md">FLASHING.md</a>.</p>
+  </div>
+
+  <p class="muted">Sprout · plants with a pulse · <strong>tend well.</strong></p>
+
+  <script>
+    // Surface the manifest's provenance block before Install (ESP Web Tools ignores the extra field).
+    fetch("./manifest.json", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((m) => {
+        const p = m.provenance || {};
+        const set = (id, v) => { if (v != null) document.getElementById(id).textContent = v; };
+        set("p-version", m.version);
+        set("p-git", p.git);
+        set("p-sha", p.sha256);
+        set("p-bytes", p.bytes != null ? `${p.bytes.toLocaleString()} bytes` : null);
+        if (m.version || p.git || p.sha256) document.getElementById("provenance").hidden = false;
+      })
+      .catch(() => { /* no manifest yet (e.g. previewing the page alone) — just hide the panel */ });
+  </script>
+</body>
+</html>
