@@ -29,6 +29,7 @@ _TEMPLATE = _HERE / "lab_template.html"
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 from dashboard import FONTS_CSS, TOKENS_CSS  # noqa: E402  (reuse the one token source)
+from timefmt import local_first_system  # noqa: E402  (local-first lab labels, #328)
 
 
 def load_catalog(experiments_dir: str | Path | None = None) -> list[dict]:
@@ -75,7 +76,7 @@ def _fmt_when(iso: str | None) -> str:
         dt = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(timezone.utc)
     except ValueError:
         return iso
-    return dt.strftime("%Y-%m-%d %H:%M UTC")
+    return local_first_system(dt)  # local-first, UTC secondary (#328)
 
 
 def _fmt_dur(seconds: object) -> str:
