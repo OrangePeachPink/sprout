@@ -54,13 +54,22 @@ static uint16_t confirm_samples(moisture_level_t lvl, const moisture_cfg_t *cfg)
  * raised; boundaries at/below it are lowered. The result is a deadband-wide
  * window around the committed band that raw must fully exit to change. */
 static moisture_level_t classify_hyst(uint16_t raw, moisture_level_t committed,
-                                      const uint16_t *b, uint16_t deadband)
+                                      const uint16_t *b, uint16_t deadband,
+                                      moisture_sensor_type_t type)
 {
     int half = (int)deadband / 2;
     int band = 0;
     for (int i = 0; i < MOISTURE_BOUNDARY_COUNT; i++) {
-        int eff = (int)b[i] + ((i < (int)committed) ? half : -half);
-        if ((int)raw < eff) band++;     /* each boundary crossed -> 1 wetter */
+        if (type == SENSOR_RESISTIVE) {
+            /* inverted seam (ADR-0019 §3): higher raw = wetter, boundary[] ASCENDING.
+             * Hysteresis sign flips with the direction so it stays symmetric. */
+            int eff = (int)b[i] + ((i < (int)committed) ? -half : half);
+            if ((int)raw > eff) band++; /* each boundary crossed -> 1 wetter */
+        } else {
+            /* capacitive (committed): higher raw = drier, boundary[] DESCENDING */
+            int eff = (int)b[i] + ((i < (int)committed) ? half : -half);
+            if ((int)raw < eff) band++; /* each boundary crossed -> 1 wetter */
+        }
     }
     return (moisture_level_t)band;
 }
@@ -104,7 +113,8 @@ moisture_level_t moisture_update(moisture_state_t *st, const moisture_cfg_t *cfg
     st->last_raw = raw_filtered;
 
     moisture_level_t candidate =
-        classify_hyst(raw_filtered, st->committed, cfg->boundary, cfg->deadband_raw);
+        classify_hyst(raw_filtered, st->committed, cfg->boundary,
+                      cfg->deadband_raw, cfg->sensor_type);
 
     if (candidate == st->committed) {
         /* back home — cancel any in-progress transition */
@@ -134,7 +144,8 @@ void moisture_init(moisture_state_t *st, const moisture_cfg_t *cfg,
                    uint16_t raw_seed)
 {
     /* deadband 0 + neutral committed -> plain classification for the seed */
-    moisture_level_t lvl = classify_hyst(raw_seed, MOIST_OK, cfg->boundary, 0);
+    moisture_level_t lvl =
+        classify_hyst(raw_seed, MOIST_OK, cfg->boundary, 0, cfg->sensor_type);
     st->committed     = lvl;
     st->pending       = lvl;
     st->confirm_count = 0;

@@ -12,6 +12,14 @@ the host logger as it appends. Read-only: it never writes the logs.
 Stop it from the dashboard's "Stop server" control (the no-terminal door) or with
 Ctrl-C. The static ``dashboard.py`` snapshot is still the right tool for a
 shareable one-file artifact; this is for live monitoring on the host.
+
+Scope boundary (ADR-0014 §5, #296): serve.py is **transport + routing + wiring** — HTTP
+serving, request routing, and *holding* the CaptureController / MonitorController
+instances. It does **not** implement capture/monitor lifecycle logic (those controllers
+do); the control-plane state (the two instances + the Monitor/Experiment handoff) lives
+here as module-globals. That co-location is the known seam, extracted into an
+``operator_plane`` module only when a second UI context (#243's device UI) needs to
+share it — not for hygiene alone.
 """
 
 from __future__ import annotations
@@ -36,6 +44,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+from bench_packages import render_bench_detail  # noqa: E402  (bench detail #444)
 from dashboard import (  # noqa: E402  (sibling import)
     RANGE_HOURS,
     build_context,
@@ -203,6 +212,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif parsed.path.startswith("/lab/") and parsed.path.endswith("/notes"):
                 eid = unquote(parsed.path[len("/lab/") : -len("/notes")])  # notes #158
                 self._send_json(load_notes(eid))
+            elif parsed.path.startswith("/lab/bench/"):  # a bench-package detail (#444)
+                pkg = unquote(parsed.path[len("/lab/bench/") :])
+                page = render_bench_detail(pkg)
+                if page is None:
+                    self._send("bench package not found", "text/plain", status=404)
+                else:
+                    self._send(page, "text/html; charset=utf-8")
             elif parsed.path.startswith("/lab/"):  # an experiment detail page (#157)
                 eid = unquote(parsed.path[len("/lab/") :])
                 page = render_detail(eid)
