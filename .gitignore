@@ -43,6 +43,10 @@ build/
 *.hex
 *.map
 
+# Web-flasher: the manifest + image are copied next to the page for local testing (#271);
+# they're per-build artifacts, never committed (*.bin already covers the image).
+docs/flash/manifest.json
+
 # Python (logging / analysis tooling, if added later)
 __pycache__/
 *.pyc
