@@ -123,7 +123,7 @@ const int  THIRSTY_ABOVE = 500;    // drier (bigger) than this  -> "thirsty"
 const int  SOAKED_BELOW  = 340;    // wetter (smaller) than this -> "just watered"
 //                         (anything in between -> "all good")
 
-const bool BLINK_WHEN_THIRSTY = true;  // pulse the onboard LED (LED_BUILTIN) when it needs water
+const bool BLINK_WHEN_THIRSTY = true;  // light up the onboard LED (LED_BUILTIN) when it needs water
 ```
 
 *(The example numbers above are illustrative 10-bit Uno R4 values; Firmware + Sage lock the real out-of-box
@@ -172,7 +172,7 @@ Every step is designed to land a felt win and set up the next. This is the chore
    constants, re-upload. *"I just taught it what my soil feels like."* Empowerment.
 6. **It speaks** → the Serial Monitor now prints one of the three band lines. *"It's alive and it's talking to
    me."* Payoff.
-7. **It acts** *(optional, one line)* → the onboard LED pulses when thirsty. *"It does something in the
+7. **It acts** *(optional, one line)* → the onboard LED lights up when thirsty. *"It does something in the
    world."*
 8. **The graduation beat** → *"You just hand-built the heart of Sprout: **read → calibrate → band → speak.**
    Sprout Full does this automatically — across seven bands, four plants, a real pump, and a live dashboard.
@@ -188,7 +188,7 @@ The on-ramp deliberately leaves them wanting — each ceiling is a Full headline
 - They drew **three** lines → Full has **seven** honest bands and a plant with moods.
 - They typed numbers into a file → Full *remembers* calibration and shows a **dashboard**.
 - They watched a Serial Plotter → Full **logs every reading** and lets them explore the history.
-- The LED blinked → Full drives a **real pump**, safely, with an arm-gate.
+- The LED lit up → Full drives a **real pump**, safely, with an arm-gate.
 
 Crucially, the **values** carry over intact: The on-ramp taught them that a percentage is a lie and bands are the
 truth. Full is just that lesson, all the way up. They don't graduate to a *different* philosophy — they
