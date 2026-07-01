@@ -23,15 +23,20 @@ _REPO = _HERE.parents[1]
 _DOCS_EXPERIMENTS = _REPO / "docs" / "experiments"
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")  # no traversal from the URL
 _FIELDS = ("hypothesis", "method", "findings", "conclusion")
+# Editable-lifecycle foundation (#450 slice 1): a record is editable at any stage.
+# `status` is optional (None = unset, e.g. legacy notes) — backward-compatible.
+_STATUSES = ("planned", "running", "complete")
 
 
 def _empty() -> dict:
-    """The ADR-0017 notes shape, unsaved."""
+    """The ADR-0017 notes shape, unsaved (+ #450: ``status`` / ``edit_log``)."""
     return {
         "hypothesis": "",
         "method": "",
         "findings": "",
         "conclusion": "",
+        "status": None,  # planned | running | complete | None (unset) — #450
+        "edit_log": [],  # [{at, by, fields}] edit provenance (Sage-as-author) — #450
         "saved_at": None,
         "version": 0,
     }
@@ -78,12 +83,23 @@ def load_notes(eid: str, docs_dir: str | Path | None = None) -> dict:
     return out
 
 
-def save_notes(eid: str, fields: dict, docs_dir: str | Path | None = None) -> dict:
+def save_notes(
+    eid: str,
+    fields: dict,
+    docs_dir: str | Path | None = None,
+    *,
+    status: str | None = None,
+    author: str | None = None,
+) -> dict:
     """Persist the four prose fields; bump ``version`` and stamp ``saved_at`` (UTC).
 
-    Preserves every other top-level key already in the sidecar, so saving notes onto a
-    findings report never clobbers its anchors/states. Writes the working-tree file;
-    the commit is the backup (ADR-0017 §5). Raises ValueError on a bad id."""
+    Editable at any lifecycle stage (#450): an optional ``status`` (planned/running/
+    complete) is carried across saves and overridden when given; every save appends an
+    ``edit_log`` entry recording **who** documented it (``author`` — Sage-as-author),
+    **when**, and which fields it touched. Preserves every other top-level key in the
+    sidecar, so saving onto a findings report never clobbers its anchors/states.
+    Writes the working-tree file; the commit is the backup (ADR-0017 §5). Raises
+    ValueError on a bad id or an unknown ``status``."""
     p = _notes_path(eid, docs_dir)
     if p is None:
         raise ValueError(f"invalid experiment id: {eid!r}")
@@ -101,6 +117,19 @@ def save_notes(eid: str, fields: dict, docs_dir: str | Path | None = None) -> di
     notes.update({k: str(fields[k]) for k in _FIELDS if k in fields})
     notes["version"] = int(prev.get("version", 0) or 0) + 1
     notes["saved_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # lifecycle status (#450): carry prev, override when given, validate the value.
+    prev_status = prev.get("status")
+    if status is not None and status not in _STATUSES:
+        raise ValueError(f"invalid status {status!r}; expected one of {_STATUSES}")
+    notes["status"] = status if status is not None else prev_status
+    # edit provenance (#450): who documented this edit, when, and what it touched.
+    changed = [k for k in _FIELDS if k in fields]
+    if status is not None and status != prev_status:
+        changed.append("status")
+    notes["edit_log"] = [
+        *(prev.get("edit_log") or []),
+        {"at": notes["saved_at"], "by": author or "unknown", "fields": changed},
+    ]
     doc.setdefault("experiment_id", eid)
     doc["notes"] = notes
     p.parent.mkdir(parents=True, exist_ok=True)

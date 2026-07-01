@@ -438,7 +438,7 @@ function renderHeader(){
   document.getElementById('subline').innerHTML =
     `4 co-located probes · <span class="mono">origplant</span> · fw <span class="mono">${m.fw||'?'}</span> ` +
     `· ${DASH.sensors.length} channels · ${fmt(DASH.integrity.total)} readings · ` +
-    `${m.total_hours}h since ${m.start_local}`;
+    `${m.total_hours}h since ${m.start_display || m.start_local}`;
   renderFreshness();
   renderChannelChips();
 }
@@ -544,7 +544,7 @@ function renderTraj(){
       responsive:true, maintainAspectRatio:false, animation:false,
       interaction:{ mode:'nearest', intersect:false },
       scales:{
-        ...baseScales(`hours since ${DASH.trajectory.start_local} (local)`, 'raw ADC  (higher = drier)'),
+        ...baseScales(`hours since ${DASH.trajectory.start_axis || DASH.trajectory.start_local}`, 'raw ADC  (higher = drier)'),
         y:{ ...baseScales('', 'raw ADC  (higher = drier)').y, suggestedMin: lo-pad, suggestedMax: hi+pad }
       },
       plugins:{
@@ -677,7 +677,7 @@ function renderIntegrity(){
 function renderProv(){
   const m=DASH.meta;
   document.getElementById('prov').innerHTML =
-    `Generated ${m.generated_local} · schema_version ${m.schema_version} · parser <code>${m.parser}</code> · ` +
+    `Generated ${m.generated_display || m.generated_local} · schema_version ${m.schema_version} · parser <code>${m.parser}</code> · ` +
     `device <code>${m.device_id||'?'}</code> git <code>${m.git||'?'}</code> run <code>${m.run||'?'}</code><br>` +
     `Sources: ${m.sources.map(s=>`<code>${s.replace(/\\/g,'/').split('/').pop()}</code>`).join(', ')}<br>` +
     `The legacy moist% <code>value</code> column is intentionally not plotted (B2/C2); analysis is on raw_value + band. ` +
@@ -890,7 +890,7 @@ function buildDetailChart(s){
     type:'line', data:{ datasets },
     options:{ responsive:true, maintainAspectRatio:false, animation:false,
       interaction:{ mode:'nearest', intersect:false },
-      scales:{ ...baseScales(`hours since ${DASH.trajectory.start_local} (local)`, 'raw ADC (higher = drier)'),
+      scales:{ ...baseScales(`hours since ${DASH.trajectory.start_axis || DASH.trajectory.start_local}`, 'raw ADC (higher = drier)'),
         y:{ ...baseScales('','raw ADC (higher = drier)').y, suggestedMin: lo-pad, suggestedMax: hi+pad } },
       plugins:{ legend:{display:false}, bandShade:{ bands: DASH.cal.bands }, gapShade:{ gaps: DASH.gaps },
         tooltip:{ callbacks:{
@@ -937,7 +937,7 @@ function renderFreshness(){
     span.style.color = 'var(--st-dry)';
     return;
   }
-  let txt = `data as of ${m.generated_local || '?'}`;
+  let txt = `data as of ${m.generated_display || m.generated_local || '?'}`;
   if(ageTxt) txt += ` · last reading ${ageTxt}${(stale && LIVE) ? ' · STALE' : ''}`;
   span.textContent = txt;
   span.style.color = (stale && LIVE) ? 'var(--st-dry)' : 'var(--muted)';

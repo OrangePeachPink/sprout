@@ -262,10 +262,29 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif parsed.path.startswith("/lab/study/"):  # save a study (#159)
                 sid = unquote(parsed.path[len("/lab/study/") :])
                 self._send_json(save_study(sid, self._body()))
+            elif parsed.path.startswith("/lab/bench/") and parsed.path.endswith(
+                "/notes"
+            ):
+                # Back-fill notes onto a landed bench package (#450 slice 3). Must
+                # precede the generic /lab/*/notes route, which mis-reads "bench/<id>".
+                pkg = unquote(parsed.path[len("/lab/bench/") : -len("/notes")])
+                try:
+                    result = save_notes(pkg, self._body())
+                    result["path"] = notes_rel_path(pkg)
+                    self._send_json(result)
+                except Exception as exc:
+                    self._send_json(
+                        {"error": str(exc), "path": notes_rel_path(pkg)}, status=500
+                    )
             elif parsed.path.startswith("/lab/") and parsed.path.endswith("/notes"):
                 eid = unquote(parsed.path[len("/lab/") : -len("/notes")])  # notes #158
                 try:
-                    result = save_notes(eid, self._body())
+                    body = self._body()
+                    # #450: optional lifecycle status + edit author ride the same body,
+                    # backward-compatible (absent -> carried / "unknown").
+                    result = save_notes(
+                        eid, body, status=body.get("status"), author=body.get("author")
+                    )
                     result["path"] = notes_rel_path(eid)  # #327: show where it landed
                     self._send_json(result)
                 except Exception as exc:  # #327: surface the failed target path so the
@@ -285,6 +304,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
                 def _shutdown() -> None:
                     time.sleep(0.25)  # let the {stopped:true} ack flush to the browser
+                    # One-action quit (#151 AC3): tear down any child the server
+                    # started - the capture/logger process - so "Stop server" closes
+                    # the WHOLE stack, not just the web server. Best-effort: a child
+                    # that's already gone or slow to stop must not block shutdown.
+                    for controller in (_CAPTURE, _MONITOR):
+                        with contextlib.suppress(Exception):
+                            controller.stop()
                     self.server.shutdown()
 
                 threading.Thread(target=_shutdown, daemon=True).start()
@@ -362,7 +388,13 @@ def main(argv: list[str] | None = None) -> int:
         "--restart",
         action="store_true",
         help="if a Sprout server already holds the port, ask it to /quit and take over "
-        "- used by the launcher so a stale server can't block entry",
+        "- an explicit force-fresh (e.g. after a code update)",
+    )
+    ap.add_argument(
+        "--serve-or-focus",
+        action="store_true",
+        help="single-instance (the launcher default, #151): if Sprout is already "
+        "running, just open its tab and exit - never a second server or window",
     )
     ap.add_argument(
         "--print-port",
@@ -384,26 +416,42 @@ def main(argv: list[str] | None = None) -> int:
         print(url)
         return 0
 
-    # Port-safety (#126/#127): if a Sprout server is already on this port, don't
-    # half-bind behind it (Windows SO_REUSEADDR would let us). With --restart the
-    # launcher takes over by asking the old one to /quit; otherwise say so + exit.
-    if _port_in_use(args.host, args.port) and not (
-        args.restart and _stop_existing(url, args.host, args.port)
-    ):
-        print(f"Sprout is already running at {url}")
-        print(
-            '  Open that tab, or stop it first ("Stop server" in the dashboard, '
-            "or close its window)."
-        )
-        return 1
+    # Port-safety (#126/#127/#151): if a Sprout server is already on this port, don't
+    # half-bind behind it (Windows SO_REUSEADDR would let us). Three ways to resolve,
+    # in order: --restart takes over (ask the old one to /quit); --serve-or-focus (the
+    # launcher default) is single-instance - open the existing tab and bow out, so a
+    # second double-click never spawns a second server or window (#151 AC1/AC2/AC4);
+    # otherwise say so + exit non-zero.
+    if _port_in_use(args.host, args.port):
+        if args.restart and _stop_existing(url, args.host, args.port):
+            pass  # took over the port; fall through to bind our own
+        elif args.serve_or_focus:
+            print(f"Sprout is already running at {url} - opening that tab.")
+            if args.open:
+                webbrowser.open(url)
+            return 0  # single-instance: exactly one server, no second window
+        else:
+            print(f"Sprout is already running at {url}")
+            print(
+                '  Open that tab, or stop it first ("Stop server" in the dashboard, '
+                "or close its window)."
+            )
+            return 1
 
     # Explicit CLI inputs are pinned; otherwise leave None so each request
     # re-discovers logs/ + the B8 archive (fix #39).
     DashboardHandler.inputs = args.inputs or None
     try:
         httpd = ThreadingHTTPServer((args.host, args.port), DashboardHandler)
-    except OSError as exc:  # raced between the probe and the bind
+    except OSError as exc:  # lost the race between the probe and the bind
         if getattr(exc, "errno", None) == errno.EADDRINUSE:
+            # Someone bound between our probe and here. Single-instance still holds:
+            # focus the winner instead of erroring (closes the double-launch race).
+            if args.serve_or_focus:
+                print(f"Sprout is already running at {url} - opening that tab.")
+                if args.open:
+                    webbrowser.open(url)
+                return 0
             print(f"Sprout is already running at {url} - stop it first.")
             return 1
         raise

@@ -33,6 +33,10 @@
     "Zigbee",
     "onrig",
     "openmeteo",
+    // Local-time-first surfaces (#328): the timefmt module name and the Python
+    // stdlib `zoneinfo` (IANA DST-correct abbreviations) named in the convention doc.
+    "timefmt",
+    "zoneinfo",
     // Intentional prose coinages from the developer front door (#219): "dogfood"
     // (the design-dogfooding concept) and "contributable" (DX's voice). Allowlisted
     // so cspell --all-files passes; reword the prose and drop these if voice changes.

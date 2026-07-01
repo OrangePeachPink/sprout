@@ -1,6 +1,9 @@
 # ADR-0021 — parse_v1 is the single telemetry contract boundary
 
-**Status:** Proposed
+**Status:** Proposed — *Data-confirmed 2026-06-30: #294 (value=NULL) + #295 (header-derived cal bounds) landed;
+`parse_v1` verified as the single boundary — header bounds are authoritative, `DEFAULT_CAL_BOUNDS` is demoted to
+a labelled fallback carrying `cal_bounds_source`, and analytics read logs only through `parse_v1`. Awaiting
+maintainer ratification.*
 **Date:** 2026-06-27
 **Owner:** Trellis (ADR author) + Data lane (implementation)
 **Lane:** data/analytics

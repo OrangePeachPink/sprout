@@ -34,6 +34,17 @@ table.wt th { color: var(--muted); font-weight: 500; }
   list-style: none; padding: 0; margin: 0; }
 .slices li { padding: 2px 0; overflow-wrap: anywhere; }
 .note { color: var(--muted); font-size: 13px; }
+.benchnotes { margin-top: 8px; display: grid; gap: 10px; }
+.benchnotes label { display: block; font-family: var(--font-data); font-size: 12px;
+  color: var(--muted); }
+.benchnotes textarea { width: 100%; margin-top: 4px; resize: vertical; padding: 8px;
+  font-family: var(--font-ui); font-size: 13px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink); }
+.bn-actions { display: flex; align-items: center; gap: 10px; }
+#bn-save { font-family: var(--font-ui); font-size: 13px; padding: 6px 14px;
+  border-radius: 6px; border: 1px solid var(--leaf); background: var(--leaf);
+  color: #fff; cursor: pointer; }
+#bn-save:disabled { opacity: .6; cursor: default; }
 </style>
 </head>
 <body>

@@ -185,6 +185,22 @@ def test_render_bench_detail_rejects_traversal(tmp_path: Path) -> None:
     assert bp.render_bench_detail("a/b", tmp_path) is None
 
 
+def test_bench_detail_has_backfill_notes_section(tmp_path: Path) -> None:
+    # #450 slice 3: the detail page carries a findings/conclusion back-fill form that
+    # POSTs to /lab/bench/<id>/notes.
+    _mk_pkg(
+        tmp_path,
+        "20260629_arc",
+        {"experiment_id": "20260629_arc", "date_local": "2026-06-29", "lane": "Sage"},
+    )
+    page = bp.render_bench_detail("20260629_arc", tmp_path)
+    assert page is not None
+    assert "findings &amp; notes (back-fill)" in page
+    assert 'class="benchnotes" data-pkg="20260629_arc"' in page
+    assert 'id="bn-findings"' in page and 'id="bn-save"' in page
+    assert "/lab/bench/" in page  # the POST target lives in the inline script
+
+
 def test_real_landed_packages_load() -> None:
     # AC #4: works for the actually-landed packages (read-only, deterministic).
     if not _DATA.exists():

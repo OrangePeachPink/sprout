@@ -33,6 +33,7 @@ _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")  # no path traversal from t
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 from dashboard import FONTS_CSS, TOKENS_CSS  # noqa: E402  (the one token/font source)
+from lab_notes import load_notes  # noqa: E402  (back-fill notes on packages, #450 s3)
 
 
 def _title(experiment_id: str) -> str:
@@ -221,6 +222,58 @@ def _detail_body(m: dict, e: dict) -> str:
     return "\n".join(parts)
 
 
+_NOTES_SCRIPT = """<script>
+(function () {
+  var el = document.querySelector('.benchnotes');
+  if (!el) return;
+  var pkg = el.getAttribute('data-pkg');
+  var btn = document.getElementById('bn-save');
+  var st = document.getElementById('bn-status');
+  btn.addEventListener('click', function () {
+    btn.disabled = true; st.textContent = 'saving...';
+    fetch('/lab/bench/' + encodeURIComponent(pkg) + '/notes', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        findings: document.getElementById('bn-findings').value,
+        conclusion: document.getElementById('bn-conclusion').value
+      })
+    }).then(function (r) { return r.json(); })
+      .then(function (d) {
+        st.textContent = d.error ? ('error: ' + d.error)
+          : ('saved ' + (d.path || '') + ' \\u00b7 v' + (d.version || '?'));
+        btn.disabled = false;
+      }).catch(function () {
+        st.textContent = 'save failed - your text is kept'; btn.disabled = false;
+      });
+  });
+})();
+</script>"""
+
+
+def _notes_section(pkg_id: str, notes: dict) -> str:
+    """Back-fill findings/conclusion onto a landed package (#450 slice 3). Notes persist
+    to the ADR-0017 sidecar keyed by the package id, so a bench day's interpretation is
+    attached to its evidence — status/edit_log provenance rides once #473 lands."""
+    esc = html.escape
+    saved = (
+        f"v{notes.get('version')} · saved {esc(str(notes.get('saved_at')))}"
+        if notes.get("saved_at")
+        else "not yet saved"
+    )
+    return (
+        "<h2>findings &amp; notes (back-fill)</h2>"
+        f'<div class="benchnotes" data-pkg="{esc(pkg_id)}">'
+        '<label>findings<textarea id="bn-findings" rows="4">'
+        f"{esc(str(notes.get('findings') or ''))}</textarea></label>"
+        '<label>conclusion<textarea id="bn-conclusion" rows="3">'
+        f"{esc(str(notes.get('conclusion') or ''))}</textarea></label>"
+        '<div class="bn-actions">'
+        '<button id="bn-save" type="button">Save notes</button>'
+        f'<span id="bn-status" class="note">{esc(saved)}</span>'
+        "</div></div>" + _NOTES_SCRIPT
+    )
+
+
 def render_bench_detail(pkg_id: str, data_dir: str | Path | None = None) -> str | None:
     """The ``/lab/bench/<id>`` page for one landed package, or None (-> 404) if it
     doesn't exist. Read-only; path-traversal-safe (the id is validated)."""
@@ -239,10 +292,11 @@ def render_bench_detail(pkg_id: str, data_dir: str | Path | None = None) -> str 
     tokens = TOKENS_CSS.read_text(encoding="utf-8") if TOKENS_CSS.exists() else ""
     fonts = FONTS_CSS.read_text(encoding="utf-8") if FONTS_CSS.exists() else ""
     sub = f"Bench package · {e.get('lane') or 'bench'} · {e.get('date_local') or ''}"
+    body = _detail_body(m, e) + "\n" + _notes_section(pkg_id, load_notes(pkg_id))
     return (
         _DETAIL_TEMPLATE.read_text(encoding="utf-8")
         .replace("/*__SPROUT_TOKENS__*/", fonts + "\n" + tokens)
         .replace("<!--__TITLE__-->", html.escape(str(e["title"])))
         .replace("<!--__SUB__-->", html.escape(sub))
-        .replace("<!--__BODY__-->", _detail_body(m, e))
+        .replace("<!--__BODY__-->", body)
     )
