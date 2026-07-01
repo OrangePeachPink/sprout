@@ -1,11 +1,8 @@
 /*
  * config.h - central hardware/config constants for the plants controller.
- *
- * The sensor and relay pin assignments below are PLACEHOLDERS and are commented
- * out on purpose. We enable them during bring-up, after the physical wiring plan
- * is settled (see docs/).
  */
 #pragma once
+#include "board_capability.h" // BOARD_CAP - per-board pins are a descriptor field (ADR-0019 §1, #436)
 
 // Firmware version (keep in sync with README as it changes)
 constexpr char PLANTS_FW_VERSION[] = "0.7.0";
@@ -14,14 +11,22 @@ constexpr char PLANTS_FW_VERSION[] = "0.7.0";
 // (the prefix-corruption framing errors); throughput is irrelevant at this cadence.
 constexpr unsigned long SERIAL_BAUD = 19200;
 
-// Onboard LED - most classic ESP32 dev boards use GPIO2
-constexpr int LED_PIN = 2;
+// Onboard heartbeat LED, from the board descriptor. BOARD_LED_NONE (255) means no
+// verified pin for this board - loop()'s blink is skipped rather than guessing.
+const int LED_PIN = BOARD_CAP.led_pin;
 
 // --- Sensing: 4 soil sensors on ADC1 ---------------------------------------
-// ADC2 is unusable while WiFi is on, so all sensors live on ADC1. These four are
-// input-only pins, ideal for analog. Fixed pin map (see docs/WIRING.md).
+// ADC2 is unusable while WiFi is on, so all sensors live on ADC1 on every board.
+// Pin values come from BOARD_CAP (board_capability.h) - the classic map below is
+// EXACT / unchanged; other boards' maps are PROVISIONAL, bench-verify before flashing
+// (docs/hardware/BOARDS.md). `const`, not `constexpr`: BOARD_CAP is a runtime-const
+// struct, not a compile-time constant expression - fine, since these are only ever
+// used at runtime (pinMode/analogRead), never in another constexpr/static_assert.
 constexpr int NUM_SENSORS = 4;
-constexpr int SENSOR_PINS[NUM_SENSORS] = {36, 39, 34, 35};  // ch0..ch3 = SVP, SVN, P34, P35
+const int SENSOR_PINS[NUM_SENSORS] = {
+    BOARD_CAP.soil_pins[0], BOARD_CAP.soil_pins[1], BOARD_CAP.soil_pins[2],
+    BOARD_CAP.soil_pins[3]};
+// classic ch0..ch3 = GPIO36/39/34/35 = SVP, SVN, P34, P35
 // Channel -> physical sensor -> pin/silkscreen -> stress history (2026-06-23):
 //   ch0 = GPIO36 / SVP = sensor #3  (clean; was the solo dry-down reference probe)
 //   ch1 = GPIO39 / SVN = sensor #4  (clean)
@@ -95,7 +100,10 @@ static_assert(SAMPLES_PER_READ > 2 * SAMPLES_TRIM, "trimmed mean needs samples l
 // the coil), so de-energized = HIGH. Output-capable GPIOs that avoid the strapping
 // pins (0, 2, 12, 15) and the input-only ADC pins (34/35/36/39). Bench-verify the
 // polarity before connecting a pump.
-constexpr int  RELAY_PINS[NUM_SENSORS] = {25, 26, 27, 32};       // ch0..ch3
+const int RELAY_PINS[NUM_SENSORS] = {
+    BOARD_CAP.relay_pins[0], BOARD_CAP.relay_pins[1], BOARD_CAP.relay_pins[2],
+    BOARD_CAP.relay_pins[3]};
+// classic ch0..ch3 = GPIO25/26/27/32
 constexpr bool RELAY_ACTIVE_LOW = true;                          // CW-022 module
 constexpr int  RELAY_OFF_LEVEL  = RELAY_ACTIVE_LOW ? HIGH : LOW; // the de-energized level
 constexpr int  RELAY_ON_LEVEL   = RELAY_ACTIVE_LOW ? LOW  : HIGH;// the energized level (#215)
