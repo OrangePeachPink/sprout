@@ -44,7 +44,10 @@ from dashboard import (  # noqa: E402  (sibling import)
     gather_inputs,
     render,
 )
-from experiments_catalog import load_catalog, render_catalog  # noqa: E402  (Lab #154)
+from experiments_catalog import (  # noqa: E402  (Lab #154; #444 combined source)
+    load_combined,
+    render_catalog,
+)
 from lab_detail import render_detail  # noqa: E402  (Lab detail #157)
 from lab_drafts import list_drafts, load_draft  # noqa: E402  (agent drafts #326)
 from lab_notes import (  # noqa: E402  (Lab notes #158; path for save resilience #327)
@@ -172,10 +175,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json(_MONITOR.status())
             elif parsed.path == "/serial/owner":  # who holds the port (#330)
                 self._send_json(serial_lock.owner_status())
-            elif parsed.path == "/lab":  # the Lab Notebook catalog (#154)
-                self._send(render_catalog(load_catalog()), "text/html; charset=utf-8")
+            elif parsed.path == "/lab":  # the Lab Notebook catalog (#154 + bench #444)
+                self._send(render_catalog(load_combined()), "text/html; charset=utf-8")
             elif parsed.path == "/lab/experiments.json":
-                self._send_json(load_catalog())
+                self._send_json(load_combined())
             elif parsed.path == "/lab/drafts":  # agent-prepared draft list (#326)
                 self._send_json({"drafts": list_drafts()})
             elif parsed.path.startswith("/lab/draft/"):  # one draft, for prefill (#326)
