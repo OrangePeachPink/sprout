@@ -13,7 +13,7 @@ ratification.*
 
 ## Context
 
-#283 pinned `espressif32@7.0.1` for **reproducibility** — the classic-ESP32 toolchain (Xtensa GCC 8.4.0) is
+The #283 decision pinned `espressif32@7.0.1` for **reproducibility** — the classic-ESP32 toolchain (Xtensa GCC 8.4.0) is
 deliberately frozen; that's a feature, not staleness. But newer silicon can't build on that pin: the ESP32-C5
 (RISC-V, WiFi-6) needs `arduino-esp32 3.2+ / IDF 5.4+`. #442 asked the sharp question: does adding a board
 justify **un-pinning**? The framing that resolves it (DX): reproducibility is not "pinned vs unpinned" — it's
