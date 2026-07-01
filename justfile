@@ -46,6 +46,11 @@ serve *ARGS:
 dash *ARGS:
     @just serve {{ARGS}}
 
+# List any live Sprout-spawned processes (Monitor logger / Experiment capture) by PID
+# + role - the #493 identifiability tool. "Port busy" with no Sprout window open? Run this first.
+processes:
+    {{py}} tools/analytics/sprout_processes.py
+
 # ============================================================================
 #  CAPTURE lane — host-side serial capture (the device-side runtime).
 # ============================================================================
