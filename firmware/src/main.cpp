@@ -24,6 +24,7 @@
 #include <esp_system.h>
 #include <esp_timer.h>
 #include <esp_task_wdt.h>
+#include <esp_idf_version.h> /* ESP_IDF_VERSION - the watchdog API split at IDF5 (#499) */
 #include <Preferences.h>
 #include <string.h>
 #include "config.h"
@@ -50,6 +51,19 @@
 static char g_device_id[32] = "Sprout ESP32";
 static bool g_device_id_custom = false;
 static char g_session_id[12] = "000000";
+
+/* Device-owned time provenance (#278, ADR-0018 + schema v2 §11.1/§11.2, ratified
+ * 2026-07-01). device_seq: monotonic per emitted telemetry row, survives a
+ * store-and-forward reconnect/replay (the dedupe key's device-side half); resets
+ * only on reboot, same lifecycle as g_session_id - a fresh `static` already gives
+ * this for free. time_source is HONEST about what this firmware can currently
+ * prove: no NTP/RTC sync path exists yet (WiFi connect itself isn't wired, #21),
+ * so every row correctly reports "device_uptime" with device_timestamp_utc
+ * omitted (NULL) - never a guessed/fabricated UTC value. Flips to
+ * "device_synced" (+ a real device_timestamp_utc) once #21 lands NTP-on-connect;
+ * this counter + field plumbing is ready for that day without a wire change. */
+static uint32_t g_device_seq = 0;
+constexpr const char *TIME_SOURCE_DEVICE_UPTIME = "device_uptime";
 
 /* Sweep cadence is owned by the supervisor (g_sys.sample_period_ms, #227);
  * runtime-settable via !cad (#63), persisted to NVS (#90). This flag only tracks
@@ -79,10 +93,15 @@ static moisture_cfg_t cfg = {
     2000, /* confirm_ms_wet  (TESTING; prod 3500) */
     READ_INTERVAL_MS,
     250, /* spread_warn_raw */
-    /* boundary (descending raw): 7-band scheme (#3). ENDPOINTS RATIFIED against the
-     * #248 common-cup anchors (ADR-0006 §6). Interior [1..3] still interpolated —
-     * pending the controlled dry-down. See lib/moisture_classifier for semantics. */
-    {3050, 2140, 1830, 1520, 1150, 1050},
+    /* boundary (descending raw): 7-band scheme (#3), sourced from the board
+     * descriptor (#436) - classic's are ENDPOINT-RATIFIED against the #248
+     * common-cup anchors (ADR-0006 §6, cal_verified=true); a non-classic board's
+     * are the documented placeholder (cal_verified=false) until #443 bench work.
+     * Interior [1..3] still interpolated regardless of board - pending the
+     * controlled dry-down. See lib/moisture_classifier for semantics. */
+    {BOARD_CAP.cal_boundary[0], BOARD_CAP.cal_boundary[1],
+     BOARD_CAP.cal_boundary[2], BOARD_CAP.cal_boundary[3],
+     BOARD_CAP.cal_boundary[4], BOARD_CAP.cal_boundary[5]},
     SENSOR_CAPACITIVE, /* committed v1 path (ADR-0019 §3); resistive is a per-channel seam */
 };
 
@@ -358,6 +377,13 @@ static void printHeader()
              BOARD_CAP.storage,
              board_has_wifi() ? "untethered-ready" : "tethered");
     Serial.println(buf);
+    /* Calibration honesty (#436): a non-verified board runs on the CLASSIC
+     * placeholder endpoints - never silently presented as this board's own
+     * calibration (matches the config-provenance principle, #416/ADR-0025). */
+    if (!BOARD_CAP.cal_verified) {
+        Serial.println("# board cal: PLACEHOLDER (classic endpoints, not "
+                       "bench-verified for this board - #443)");
+    }
     snprintf(
         buf, sizeof(buf), "# session_id=%s  cadence_ms=%lu  cadence_src=%s",
         g_session_id, (unsigned long)g_sys.sample_period_ms,
@@ -430,6 +456,11 @@ static void printHeader()
         "# authoritative: raw_value (ADC counts) + band (payload 'level'); "
         "value/unit are NULL - reserved for a future calibrated VWC, never an "
         "uncalibrated %.");
+    /* Time provenance (#278, ADR-0018/schema v2 §11.1): honest about what this
+     * firmware can currently prove - no NTP/RTC path exists yet (#21). */
+    Serial.println("# time: source=device_uptime (no NTP/RTC yet, #21) - "
+                   "device_seq/time_source ride each row's payload, schema v2 "
+                   "§11.1/§11.2");
 }
 
 /* ---- Arduino lifecycle -------------------------------------------------- */
@@ -516,8 +547,21 @@ void setup()
 
     /* Task watchdog LAST: setup's own work won't trip it; loop() feeds it every
      * iteration.  A hung loop resets the chip → reboot re-runs allRelaysOff() (#93).
-     * Classic esp_task_wdt API (IDF 4.4 / Arduino-ESP32 2.x): timeout in seconds. */
+     * esp_task_wdt_init split its signature at IDF5 (arduino-esp32 3.2+, the C5
+     * experimental target, #442/#499): classic/S3 stay on the pre-IDF5 two-arg form
+     * (timeout in SECONDS); IDF5+ takes a config struct (timeout in MILLISECONDS —
+     * NOT a copy-paste of the old value, the unit itself changed). esp_task_wdt_add
+     * is unchanged across both. */
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    esp_task_wdt_config_t wdt_cfg = {
+        .timeout_ms = WDT_TIMEOUT_MS,
+        .idle_core_mask = 0,
+        .trigger_panic = true,
+    };
+    esp_task_wdt_init(&wdt_cfg);
+#else
     esp_task_wdt_init(WDT_TIMEOUT_MS / 1000UL, true);
+#endif
     esp_task_wdt_add(NULL);
 }
 
@@ -575,7 +619,7 @@ void loop()
             .println(); /* B6.2 sacrificial sync: absorbs a post-idle framing glitch */
         for (int ch = 0; ch < NUM_SENSORS; ch++) {
             /* Format the CSV row via lib/telemetry; values come from FSM state. */
-            char line[200];
+            char line[300];
             telemetry_soil_row_t row = {
                 RECORD_TYPE_SOIL,
                 g_session_id,
@@ -590,6 +634,9 @@ void loop()
                 state[ch].last_raw,
                 irrig_level(&g_irrig, ch),
                 &state[ch],
+                g_device_seq++, /* #278: one tick per emitted row, every channel */
+                TIME_SOURCE_DEVICE_UPTIME,
+                "", /* device_timestamp_utc: unsynced, honestly NULL (#278) */
             };
             if (telemetry_format_soil_row(line, sizeof(line), &row) >= 0) {
                 char crc[6];

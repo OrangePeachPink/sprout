@@ -95,6 +95,28 @@ DEFAULT_CAL_BOUNDS = (3050, 2140, 1830, 1520, 1150, 1050)
 _KV_RE = re.compile(r"(\w+)=(.*?)(?=\s+\w+=|$)")
 _SENSOR_RE = re.compile(r"ch(\d+)=GPIO(\d+)/(\S+)")
 
+# ADR-0022's confidence vocabulary. A header value outside this set is never trusted
+# at face value - it degrades to "provisional" (#404) rather than risk an unearned
+# "calibrated"/"corroborated" label reaching the runtime corroborated-veto logic.
+CONFIDENCE_LEVELS = ("provisional", "calibrated", "corroborated")
+
+
+@dataclass
+class ChannelCal:
+    """Per-channel cal-bounds provenance (#404, extends #295's one shared line).
+
+    PROPOSED wire format (awaiting Firmware's emit-format confirmation - see #404):
+    ``# cal_ch <sensor_id>: bounds=<d1,...,d6> src=<...> date=<YYYY-MM-DD>
+    confidence=<provisional|calibrated|corroborated> scope=<channel|shared>``.
+    Parsing here is read-only and additive: a log without any ``cal_ch`` line is
+    unaffected (falls through to the existing shared/default cal bounds, #295)."""
+
+    bounds: list[int] = field(default_factory=list)
+    src: str | None = None
+    date: str | None = None
+    confidence: str = "provisional"
+    scope: str = "channel"
+
 
 # --------------------------------------------------------------------------- #
 # scalar coercion helpers
@@ -207,6 +229,7 @@ class SegmentHeader:
     sensors: dict[str, dict[str, object]] = field(default_factory=dict)
     cal_bounds: list[int] = field(default_factory=list)
     cal_bounds_source: str = ""  # "header" | "default" — set by _parse_header_lines
+    per_channel_cal: dict[str, ChannelCal] = field(default_factory=dict)  # #404
     moist_range: tuple[int, int] | None = None
     cfg: dict[str, str] = field(default_factory=dict)
     source: str | None = None
@@ -259,6 +282,40 @@ class Reading:
     @property
     def gpio(self) -> int | None:
         return _int(self.payload.get("gpio"))
+
+    @property
+    def device_seq(self) -> int | None:
+        """Device-monotonic row counter (schema v2 §11.2, #278/#300) - the
+        device-side half of the dedupe key; survives a store-and-forward
+        reconnect/replay, resets only on reboot. None on a v1-only row."""
+        return _int(self.payload.get("device_seq"))
+
+    @property
+    def time_source(self) -> str | None:
+        """Which clock stamped this row (schema v2 §11.1, #278/#300):
+        ``device_synced`` (NTP/RTC) or ``device_uptime`` (unsynced, no host
+        stamp either) - never trust an unsynced clock as authoritative."""
+        return self.payload.get("time_source")
+
+    @property
+    def device_timestamp_utc(self) -> datetime | None:
+        """The device's own UTC stamp (schema v2 §11.1), if it has one.
+
+        Omitted from the payload entirely when ``time_source=device_uptime``
+        (the device honestly doesn't know UTC) - this is that honest ``None``,
+        never a guessed value. Use ``timestamp_utc`` (host-stamped, §1) for
+        join/forecast/gap-detection; this field is device-provenance only."""
+        return _parse_utc(self.payload.get("device_timestamp_utc"))
+
+
+def dedupe_key(r: Reading) -> tuple[str, str, int | None, str, str]:
+    """The schema v2 §11.2 row-idempotency key: the tuple that identifies
+    *this exact reading* independent of how many times its bytes crossed the
+    wire, so a store-and-forward replay can be dropped at ingest rather than
+    duplicated. ``device_seq`` is ``None`` for a v1-only row (no dedupe
+    signal available - the caller decides how to treat that, this function
+    only reports what the row carries)."""
+    return (r.device_id, r.session_id, r.device_seq, r.record_type, r.sensor_id)
 
 
 @dataclass
@@ -369,6 +426,49 @@ def _parse_sensors(body: str) -> dict[str, dict[str, object]]:
     return out
 
 
+def _parse_cal_channel(body: str) -> tuple[str, ChannelCal] | None:
+    """One ``cal_ch <sensor_id>: bounds=... src=... date=... confidence=... scope=...``
+    line (#404, PROPOSED). Returns None for a malformed line (no sensor id, or no
+    ``:`` separator) - never raises; a bad line just doesn't contribute an override,
+    so the channel falls through to the existing shared/default bounds."""
+    after = body[len("cal_ch") :].strip()
+    if ":" not in after:
+        return None
+    sid, rest = after.split(":", 1)
+    sid = sid.strip()
+    if not sid:
+        return None
+    kv = _kv(rest.strip())
+    bounds_str = kv.get("bounds", "")
+    try:
+        bounds = [int(x) for x in bounds_str.split(",") if x.strip()]
+    except ValueError:
+        bounds = []
+    confidence = kv.get("confidence", "provisional")
+    if confidence not in CONFIDENCE_LEVELS:
+        confidence = "provisional"  # never invent an unearned confidence level
+    return sid, ChannelCal(
+        bounds=bounds,
+        src=kv.get("src"),
+        date=kv.get("date"),
+        confidence=confidence,
+        scope=kv.get("scope", "channel"),
+    )
+
+
+def cal_bounds_for_channel(seg: SegmentHeader, sensor_id: str) -> tuple[list[int], str]:
+    """The cal bounds + confidence label for one channel (#404's honest fallback):
+    per-channel provenance (if present and non-empty) -> the shared header line
+    (#295) -> the compiled default. The shared/default paths carry "provisional"
+    (ADR-0022) since neither is a per-channel calibration claim."""
+    ch = seg.per_channel_cal.get(sensor_id)
+    if ch and ch.bounds:
+        return ch.bounds, ch.confidence
+    if seg.cal_bounds_source == "header":
+        return seg.cal_bounds, "provisional"
+    return list(DEFAULT_CAL_BOUNDS), "provisional"
+
+
 def _parse_cal(body: str) -> tuple[list[int], tuple[int, int] | None]:
     after = body.split(":", 1)[1] if ":" in body else body
     rng: tuple[int, int] | None = None
@@ -416,6 +516,11 @@ def _parse_header_lines(
             h.sensors = _parse_sensors(body)
         elif body.startswith("cal bounds"):
             h.cal_bounds, h.moist_range = _parse_cal(body)
+        elif body.startswith("cal_ch"):  # #404, PROPOSED - see cal_bounds_for_channel
+            parsed = _parse_cal_channel(body)
+            if parsed:
+                sid, ch_cal = parsed
+                h.per_channel_cal[sid] = ch_cal
         elif body.startswith("cfg:"):
             h.cfg = _kv(body[len("cfg:") :])
         elif body.startswith("device_cols:"):

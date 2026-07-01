@@ -80,44 +80,40 @@ pioarduino fork → the **#283 toolchain-pin revisit**.
 
 - **Classic + (your) C5 — UART bridge** (CP2102 / CH340): `Serial` @ 19200 exactly as today;
   the host logger opens the bridge COM port. No change.
-- **S3 — native USB-CDC available**: if the firmware talks over native USB, set
-  `-D ARDUINO_USB_CDC_ON_BOOT=1`; over the UART bridge, leave it off. The 19200 telemetry
-  contract *and* the host logger's port pick depend on this — decide per board at the bench.
+- **S3 — CONFIRMED, no code change needed (verified 2026-07-01):** PlatformIO's
+  `esp32-s3-devkitc-1` board id **defaults to `CDCOnBoot: Disabled`** in the framework's
+  `boards.txt` — i.e. it already targets the UART-bridge-compatible path, same as classic,
+  with no `-D ARDUINO_USB_CDC_ON_BOOT` flag needed in `platformio.ini`. **The one thing still
+  genuinely bench-gated:** whether your specific Amazon clone board actually *has* a separate
+  UART bridge chip, or only a native-USB port (cheap clones sometimes omit the bridge).
+  Check at the bench — if only native-USB enumerates, add
+  `build_flags = -D ARDUINO_USB_CDC_ON_BOOT=1` to `[env:esp32s3]` in `platformio.ini` (one
+  line, ready to add — not added speculatively since the current default is the safer bet).
 
-## Integration plan (when bench time comes)
+## Integration status (updated 2026-07-01 — most of the original plan is now DONE)
 
-1. **Extract the pin map to board-conditional config.** Today `config.h` hard-codes the
-   classic `SENSOR_PINS`/`RELAY_PINS` and the env build hard-codes I²C 21/22 in `main.cpp`.
-   Move them behind `#if defined(CONFIG_IDF_TARGET_ESP32 / _ESP32S3 / _ESP32C5)`.
-   - **#343 caveat:** editing `config.h` trips the changed-files clang-format gate on its
-     protected manual alignment. Do the extraction **after #352** (changed-lines gate) *or*
-     as a deliberate, approved one-time `config.h` reformat — don't sneak it in.
-   - Suggested shape (a new `board_pins.h` that `config.h` includes):
-
-     ```c
-     #if defined(CONFIG_IDF_TARGET_ESP32)      /* classic (baseline) */
-     #define SOIL_PINS  {36, 39, 34, 35}
-     #define RELAY_PINS {25, 26, 27, 32}
-     #define I2C_SDA 21
-     #define I2C_SCL 22
-     #elif defined(CONFIG_IDF_TARGET_ESP32S3)  /* PROVISIONAL — bench-verify */
-     #define SOIL_PINS  {1, 2, 3, 4}
-     #define RELAY_PINS {5, 6, 7, 15}
-     #define I2C_SDA 8
-     #define I2C_SCL 9
-     #elif defined(CONFIG_IDF_TARGET_ESP32C5)  /* TBD at the bench (#436) */
-     #error "ESP32-C5 pin map not assigned yet — bench-verify first"
-     #endif
-     ```
-
-2. **Per-board calibration.** Each chip's ADC (reference, attenuation, linearity) shifts the
-   soil raw endpoints → each board needs its **own** `SENSOR_CAL_BOUNDARY` (#170 /
-   `calibration.h`). Do not reuse the classic's `{3050…1050}`.
-3. **Activate the PlatformIO env** (uncomment `esp32s3`; add `esp32c5` once a supporting
-   platform lands) and **decide the CI board matrix** — building S3/C5 in CI pulls extra
-   toolchains, so it's kept out of the default `pio run` for now (a DX / Workflow call).
-4. **Bench bring-up** per the checklist below, then a boot + telemetry sanity capture like
-   the classic (banner git rev + `# health:` OK + valid checksums).
+1. **✅ DONE — per-board pin map**, `firmware/include/board_capability.h`. Landed as descriptor
+   **fields on `board_capability_t`** (`soil_pins`/`relay_pins`/`led_pin`/`i2c_sda`/`i2c_scl`),
+   not the separate `board_pins.h` this doc originally sketched — ADR-0019 §1 already lists
+   pins as a descriptor field, so `config.h`/`main.cpp` source `SENSOR_PINS`/`RELAY_PINS`/
+   `LED_PIN`/`ENV_I2C_SDA`/`SCL` straight from `BOARD_CAP`. Classic is byte-identical
+   (regression-locked in the native test); S3 carries the candidate map below, PROVISIONAL.
+2. **✅ DONE (structure) — per-board calibration.** `board_capability_t.cal_boundary[6]` +
+   `cal_verified` (bool). **Verified first:** classic and S3 share the SAME
+   `SOC_ADC_MAX_BITWIDTH=12` (checked directly against the framework's `soc_caps.h` for both
+   chips) — so **resolution isn't the gap**, calibration data is. Classic's `cal_boundary` is
+   the real #248 bench-anchored endpoints (`cal_verified=true`); S3/C5 carry the SAME numbers
+   as an explicit, honestly-flagged PLACEHOLDER (`cal_verified=false`) — printed in the boot
+   banner (`# board cal: PLACEHOLDER...`) so it's never silently mistaken for real data.
+   **Still open:** the actual per-board bench measurement (#443) to replace the placeholder.
+3. **✅ DONE — CI board matrix.** #499 (ADR-0024): `esp32s3`/`esp32c5` compile-check on every
+   PR via a non-blocking `experimental-boards` job, isolated from `gate` (can't red the
+   required check). `esp32s3` is a permanent uncommented env now (shares `esp32dev`'s pinned
+   platform, zero extra toolchain cost); `esp32c5` pins its own isolated platform (#442).
+4. **✅ CONFIRMED — factory image.** `factory_bin.py` (the `post:` build step, #271) is
+   generic — inherited via `extends = env:esp32dev`, no board-specific code. Verified clean
+   for `esp32s3`: `sprout-esp32-factory.bin` + `manifest.json` both build correctly.
+5. **Still open — physical bring-up.** The bench checklist below, hardware-gated (#443).
 
 ## Bench-verification checklist (per physical board)
 

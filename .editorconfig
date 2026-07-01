@@ -12,8 +12,9 @@ indent_size = 2
 [*.py]
 indent_size = 4
 
-# Firmware C/C++ house style is 4-space.
-[*.{c,h,cpp}]
+# Firmware C/C++ house style is 4-space. .ino (Arduino sketches, e.g. arduino-starter/) uses the
+# same 4-space style so a beginner's editor matches what the file already looks like.
+[*.{c,h,cpp,ino}]
 indent_size = 4
 
 [*.{bat,cmd,url}]

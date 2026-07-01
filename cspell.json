@@ -27,6 +27,12 @@
     "resoak",
     "rootbound",
     "itime",
+    // Contextual env-source names (#418 / ADR-0023): the Zigbee protocol and the
+    // `context_source` identifiers sht45_onrig / weather_openmeteo (cspell splits
+    // snake_case, so it sees "onrig" / "openmeteo" as tokens).
+    "Zigbee",
+    "onrig",
+    "openmeteo",
     // Local-time-first surfaces (#328): the timefmt module name and the Python
     // stdlib `zoneinfo` (IANA DST-correct abbreviations) named in the convention doc.
     "timefmt",
@@ -102,6 +108,7 @@
     "Wago",
     "WROOM",
     // #436 multi-board support - ESP32-S3/C5 chip + toolchain terms:
+    "BITWIDTH",
     "devkitc",
     "elif",
     "JTAG",
@@ -125,7 +132,9 @@
     "arduinodiy",
     "baloo",
     "basontech",
+    "behaviour",
     "behaviourally",
+    "behaviours",
     "biomaker",
     "browsable",
     "checksummed",
@@ -176,6 +185,8 @@
     "pycache",
     "pyproject",
     "pytest",
+    "pythonw",
+    "Renesas",
     "rebuildable",
     "refetched",
     "reflash",
@@ -205,7 +216,11 @@
     "wayfinding",
     "winget",
     "worktree",
-    "xblw"
+    "xblw",
+    // #364 glossary context_source bullet: the Zigbee protocol + British "travelling"
+    // (consistent with the British spellings already allowlisted above).
+    "Zigbee",
+    "travelling"
   ],
   "flagWords": []
 }
