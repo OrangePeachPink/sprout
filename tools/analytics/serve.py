@@ -12,6 +12,14 @@ the host logger as it appends. Read-only: it never writes the logs.
 Stop it from the dashboard's "Stop server" control (the no-terminal door) or with
 Ctrl-C. The static ``dashboard.py`` snapshot is still the right tool for a
 shareable one-file artifact; this is for live monitoring on the host.
+
+Scope boundary (ADR-0014 §5, #296): serve.py is **transport + routing + wiring** — HTTP
+serving, request routing, and *holding* the CaptureController / MonitorController
+instances. It does **not** implement capture/monitor lifecycle logic (those controllers
+do); the control-plane state (the two instances + the Monitor/Experiment handoff) lives
+here as module-globals. That co-location is the known seam, extracted into an
+``operator_plane`` module only when a second UI context (#243's device UI) needs to
+share it — not for hygiene alone.
 """
 
 from __future__ import annotations
