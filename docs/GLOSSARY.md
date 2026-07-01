@@ -137,10 +137,11 @@ every lane. If two lanes use the same word for different things, or different wo
   the **full** module — protocol + math — is native-testable with a mock bus (ADR-0001).
 - **Calibration confidence stage** — how trustworthy a band is *for action*: `provisional` (uncalibrated /
   shared bounds) → `calibrated` (per-channel bounds locked) → `corroborated` (cross-channel + tray agree).
-  Autonomous watering gates at ≥ `calibrated` (#170).
+  Autonomous watering gates at `corroborated` — `calibrated` is **necessary, not sufficient** (ADR-0022 / #170).
 - **Promotion gate** — the prerequisite set to advance a capability stage. E.g. `plant-deployed →
-  autonomous-enabled` requires the dry-safety chain (#93/#191/#2/#215) **+** locked per-channel calibration
-  (#170) **+** the confidence layer — **not** any one alone.
+  autonomous-enabled` requires **all five**: the dry-safety chain (#93/#191/#2/#215) **+** locked per-channel
+  calibration (#170) **+** the confidence layer **+** schema-conformant pump telemetry (#18) **+** the
+  under-watering fail-safe (#410) — **not** any one alone (ADR-0022).
 - **Local truth vs pot truth** — a per-channel band is locally true (the probe reads its microsite correctly)
   but **not** whole-pot truth (geometry, contact, tray state dominate). Calibration removes sensor
   personality, not microsite (#383).
