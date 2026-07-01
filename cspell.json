@@ -102,6 +102,7 @@
     "Wago",
     "WROOM",
     // #436 multi-board support - ESP32-S3/C5 chip + toolchain terms:
+    "BITWIDTH",
     "devkitc",
     "elif",
     "JTAG",
