@@ -1,4 +1,4 @@
-# ADR-0023 — Config provenance & no-auto-adjust
+# ADR-0025 — Config provenance & no-auto-adjust
 
 **Status:** Proposed — *drafted by Trellis from the #416 RFC (all four lanes converged). The **inline** slice is
 already built + Sage-ratified (`gain=16`, PR #452); this ADR generalizes the model and defines the `config_id`
