@@ -54,6 +54,19 @@ typedef enum {
     MCLASS_WET_DIAG        /* idx 6    (submerged) */
 } moisture_class_t;
 
+/* Sensor-type profile (ADR-0019 §3). Selects the raw->band DIRECTION (and, when a
+ * resistive profile is committed, its curve + read strategy). CAPACITIVE is the
+ * committed v1 path (higher raw = drier; boundaries DESCENDING). RESISTIVE is an
+ * architecture-ready but UNCOMMITTED seam (inverted: higher raw = wetter; boundaries
+ * ASCENDING) — it ships NOTHING calibrated (no probes to baseline), so a channel set
+ * RESISTIVE needs a contributor's boundary[] + a power-only-during-read excitation
+ * strategy in the sampler. Default 0 = CAPACITIVE keeps existing configs unchanged. */
+typedef enum {
+    SENSOR_CAPACITIVE =
+        0, /* committed: higher raw = drier (descending boundary[]) */
+    SENSOR_RESISTIVE /* PROVISIONAL seam: higher raw = wetter (ascending)     */
+} moisture_sensor_type_t;
+
 typedef struct {
     /* --- acquisition --- */
     uint16_t sample_count;     /* samples per measurement (your 64)            */
@@ -83,21 +96,24 @@ typedef struct {
      * Middle bands [1]..[3] are provisional (interpolated); tighten from the
      * dry-down log. Wet end + dry center are anchored to measured readings. */
     uint16_t boundary[MOISTURE_BOUNDARY_COUNT];
+
+    /* --- sensor type (ADR-0019 §3) --- */
+    moisture_sensor_type_t
+        sensor_type; /* CAPACITIVE (committed) | RESISTIVE (seam) */
 } moisture_cfg_t;
 
 /* 7-band defaults; dry edge + wet floor reconciled to anchors (issue #3). */
-#define MOISTURE_CFG_DEFAULT {            \
-    .sample_count    = 64,                \
-    .trim_each_side  = 8,                 \
-    .deadband_raw    = 60,                \
-    .confirm_ms_soil = 8000,              \
-    .confirm_ms_dry  = 8000,              \
-    .confirm_ms_wet  = 3500,              \
-    .loop_period_ms  = 1000,              \
-    .spread_warn_raw = 250,               \
-    .boundary = { 3050, 2140, 1830,       \
-                  1520, 1150, 1050 }      \
-}
+#define MOISTURE_CFG_DEFAULT                                                   \
+    {.sample_count = 64,                                                       \
+     .trim_each_side = 8,                                                      \
+     .deadband_raw = 60,                                                       \
+     .confirm_ms_soil = 8000,                                                  \
+     .confirm_ms_dry = 8000,                                                   \
+     .confirm_ms_wet = 3500,                                                   \
+     .loop_period_ms = 1000,                                                   \
+     .spread_warn_raw = 250,                                                   \
+     .boundary = {3050, 2140, 1830, 1520, 1150, 1050},                         \
+     .sensor_type = SENSOR_CAPACITIVE}
 
 typedef struct {
     moisture_level_t committed;     /* the level you act on / display          */

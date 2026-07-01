@@ -77,6 +77,7 @@ static moisture_cfg_t cfg = {
      * #248 common-cup anchors (ADR-0006 §6). Interior [1..3] still interpolated —
      * pending the controlled dry-down. See lib/moisture_classifier for semantics. */
     {3050, 2140, 1830, 1520, 1150, 1050},
+    SENSOR_CAPACITIVE, /* committed v1 path (ADR-0019 §3); resistive is a per-channel seam */
 };
 
 static moisture_state_t state[NUM_SENSORS];
