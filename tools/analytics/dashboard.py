@@ -43,8 +43,20 @@ from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
     LogData,
     parse_files,
 )
+from timefmt import local_first  # noqa: E402  (local-time-first display labels, #328)
 
 _REPO = _HERE.parents[1]
+
+
+def _tz_offset_hours(reading) -> float | None:
+    """The rig-local UTC offset (hours) implied by a reading's paired stamps, for
+    local-first display (#328); None if either stamp is missing."""
+    if reading.timestamp_local is not None and reading.timestamp_utc is not None:
+        delta = reading.timestamp_local - reading.timestamp_utc.replace(tzinfo=None)
+        return round(delta.total_seconds() / 3600, 2)
+    return None
+
+
 TOKENS_CSS = _REPO / "docs" / "design" / "tokens" / "sprout-tokens.css"
 # Brand fonts, base64-embedded (latin subsets, SIL OFL) so the dashboard renders
 # in-brand fully offline - no Google-Fonts CDN. Vendored beside Chart.js;
@@ -490,6 +502,8 @@ def build_context(data: LogData) -> dict:
 
     last_seg = data.segments[-1] if data.segments else None
     total_h = _hours_since(soil[-1].timestamp_utc, start)
+    _host_off = datetime.now().astimezone().utcoffset()
+    _host_off_h = _host_off.total_seconds() / 3600 if _host_off else None
     meta = {
         "device_id": getattr(last_seg, "device_id", None),
         "fw": getattr(last_seg, "firmware_version", None),
@@ -514,6 +528,30 @@ def build_context(data: LogData) -> dict:
             soil[-1].timestamp_local.strftime("%Y-%m-%d %H:%M:%S")
             if soil[-1].timestamp_local
             else ""
+        ),
+        # Local-first display labels (#328): local time + explicit zone + UTC
+        # secondary. The *_local fields above stay machine values — start_local
+        # anchors the chart axis and last_local is JS-Date-parsed for freshness.
+        "start_display": (
+            local_first(
+                soil[0].timestamp_utc,
+                tz_offset_hours=_tz_offset_hours(soil[0]),
+                seconds=True,
+            )
+            if soil[0].timestamp_utc
+            else ""
+        ),
+        "last_display": (
+            local_first(
+                soil[-1].timestamp_utc,
+                tz_offset_hours=_tz_offset_hours(soil[-1]),
+                seconds=True,
+            )
+            if soil[-1].timestamp_utc
+            else ""
+        ),
+        "generated_display": local_first(
+            datetime.now(timezone.utc), tz_offset_hours=_host_off_h, seconds=True
         ),
     }
 
