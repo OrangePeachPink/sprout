@@ -12,9 +12,9 @@ Honesty rules baked in:
 * **interior bands are proposed, not validated.** The endpoints (saturated +
   air-dry) are firmware-ratified from the common-cup anchors; the interior
   boundaries are the un-reconciled A2 spec, and the UI labels them as such.
-* **no fabricated light cycle.** Day/night shading needs the real light
-  schedule, which is not in the data, so it is omitted; overall drying slope
-  is shown instead.
+* **no fabricated light cycle.** Day/night shading (#198) uses the real,
+  computed solar geometry (``env_solar``, #365/#366) - never a guessed
+  schedule. Absent entirely with no rig location configured (R9).
 
 Usage::
 
