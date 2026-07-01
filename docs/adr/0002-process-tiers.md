@@ -56,12 +56,15 @@ architecture → assurance.
 | **19** | Code intelligence | Editor LSP + GitHub code navigation (zero setup); a code-graph tool earned later by a named navigation/impact pain | ✅ Firmware | 📋 default — nothing to set up |
 | **20** | Security & compliance | Native only: secret scanning + dependency alerts (not maximal tooling); **configs here (gitleaks/Dependabot), repo-level toggles Maintainer's** | ✅ Firmware / Maintainer | 📋 credentials gitignored; secret-scan hook to confirm |
 
-> **Note on #10 — the clang-format exception (#343):** clang-format runs at **changed scope** (not
-> `--all-files`), as the deliberate exception to the otherwise repo-wide pre-commit convention, because the
-> firmware carries intentional manual column alignment (AGENTS.md §code-style). `ruff` / `cspell` /
-> `markdownlint` stay `--all-files`. This is Firmware exercising the "each lane plugs in its own checks"
-> ownership row #10 already grants — a **specificity note, not a reversal**. v1 is changed-*files* (#343); the
-> changed-*lines* purity upgrade tracks to #352.
+> **Note on #10 — the clang-format exception (#343 → #352):** clang-format runs at **changed-lines** scope
+> (`git-clang-format`, #352), not `--all-files`, as the deliberate exception to the otherwise repo-wide
+> pre-commit convention, because the firmware carries intentional manual column alignment (AGENTS.md
+> §code-style). At changed-lines scope every file keeps its untouched-line alignment automatically — even a
+> file you're editing. `ruff` / `cspell` / `markdownlint` stay `--all-files`. This is Firmware exercising the
+> "each lane plugs in its own checks" ownership row #10 already grants — a **specificity note, not a
+> reversal**. It also **retires** the config.h-specific net-zero exception (#343/#348), which existed only
+> because v1 reformatted whole changed files. History: changed-*files* v1 (#343) → changed-*lines* v2 (#352,
+> landed).
 
 ## Consequences
 
