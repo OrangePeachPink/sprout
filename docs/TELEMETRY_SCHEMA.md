@@ -10,8 +10,13 @@ and the **cross-project contract** that makes `plants` and the sibling air-quali
 **adopts the sibling air-quality project's field names where they exist** and **proposes** the additions it still lacks.
 Items marked **[propose→sibling-AQ]** are things the sibling air-quality project should adopt for the join to work.
 
-**Schema version:** `schema_version=1`. Bump on any breaking column change; the version is written
-in every file's header block so one loader can read mixed-version history.
+**Schema version:** `schema_version=1` is the **live, implemented** contract below (§§1-10) — what
+`parse_v1` reads and the device/logger emit today; nothing in this document's status changes that.
+**§11 is a v2 PROPOSAL** (device-owned time, dedupe key, sensor provenance — the untethered/
+multi-device prerequisite for [ADR-0018](adr/0018-dual-mode-transport-and-durability.md), #300),
+**awaiting Trellis + maintainer ratification** before it is implemented or enforced. Bump on any
+breaking column change; the version is written in every file's header block so one loader can read
+mixed-version history.
 
 ---
 
@@ -253,3 +258,111 @@ prefix-corruption. **Recommendation: device emits CSV.**
   `#`-header block, `schema_version` in-header.
 - Everything else already matches (timestamp, identity, `{raw_value,value,unit}`, `quality_flag`,
   event table, `*_context_*`).
+
+---
+
+## 11. Schema v2 (PROPOSED — not yet ratified or implemented) — device-owned time, dedupe, sensor provenance
+
+**Status: draft, awaiting Trellis + maintainer ratification.** This section defines — it does not yet
+implement — the v2 contract [ADR-0018](adr/0018-dual-mode-transport-and-durability.md) needs to cite
+as its schema prerequisite (#300, from Trellis's #285 review). **Nothing here changes today's live
+behavior**: `parse_v1` keeps reading v1 rows exactly as it does now; the device and host logger keep
+emitting v1 unchanged. v2 is additive-only (new optional columns) so a v1 row is a valid v2 row with
+those columns empty — no breaking change, no migration required for existing logs. Implementing /
+enforcing v2 in `parse_v1.py` and the firmware/logger emitters is separate future work, gated on
+ratification.
+
+**Why now:** §1's "time is host-authoritative" and this file's `session_id`-only identity model
+assume one tethered device. The untethered/multi-device path ([PRD-0005](prd/0005-untethered-sprout.md))
+breaks both assumptions — see epic #267 and epic #448: an untethered device may have no host
+stamping `timestamp_utc` as lines arrive, and store-and-forward (buffer while offline, replay on
+reconnect) can re-send rows a host has already ingested. v2 defines the columns that make both cases
+honest instead of silently wrong.
+
+### 11.1 Device-owned time, column-level
+
+Today `timestamp_utc` is host-stamped on arrival (§1) — fine for a tethered USB device where UI latency
+is negligible, wrong for a device buffering readings for minutes/hours before it can reach the host.
+
+| column | origin | shared | example | notes |
+| --- | --- | --- | --- | --- |
+| `device_timestamp_utc` | dev | proposed | `2026-07-01T14:05:30.000Z` \| *(null)* | the device's own UTC stamp (SNTP/RTC), if it has one; **null when unsynced** — never a guessed value |
+| `ingest_timestamp_utc` | host | proposed | `2026-07-01T14:07:12.500Z` | when the host actually received/ingested the row — always populated, tethered or not |
+| `time_source` | dev | proposed (ties to ADR-0018) | `host` \| `device_synced` \| `device_uptime` | which clock the row's authoritative time comes from |
+
+**The unsynced-row rule:** when `time_source=device_uptime` (no SNTP/RTC lock), `device_timestamp_utc`
+is **`NULL`** — the device honestly doesn't know UTC, so the schema doesn't pretend it does.
+`millis_ms`/an on-device monotonic sequence is still exact *relative* timing. Downstream consequences,
+stated so join/forecast/gap-detection code has one place to look:
+
+- **Join on time:** use `ingest_timestamp_utc` for cross-source joins (e.g. weather, the sibling
+  air-quality project) when `device_timestamp_utc` is null — it's always present, even if it carries
+  store-and-forward latency (see §11.2's `device_seq` for the row's true emission order regardless).
+- **Forecast / rate-of-change:** an unsynced device's rows are still validly *ordered* (by `device_seq`)
+  even though their wall-clock spacing is only approximate (ingest-time, not emission-time) until
+  reconnect. Treat the inter-row `Δt` as approximate, not exact, for an unsynced run.
+- **Gap detection:** a gap bounded by a `time_source` change (unsynced → synced, or a store-and-forward
+  flush) is a **reporting-latency gap**, not a data gap — distinguish it the same way §3.1 distinguishes
+  a pump-bracketed gap from a real interruption: by what brackets it, not by silently smoothing it over.
+- **Tethered devices are unaffected:** `time_source=host` for a USB-tethered device is exactly today's
+  v1 behavior (§1) — `device_timestamp_utc` stays null (no device clock involved), `ingest_timestamp_utc`
+  fills the role `timestamp_utc` fills today.
+
+### 11.2 Row idempotency / dedupe key
+
+Store-and-forward means the **same physical reading** can arrive twice (buffered, then replayed after a
+reconnect that raced the original send). v1 has no de-dupe key — `sample_id` (§2 col 4) is a **host**
+monotonic counter assigned on ingest, so a replayed row gets a *new* `sample_id` and silently
+duplicates.
+
+| column | origin | shared | example | notes |
+| --- | --- | --- | --- | --- |
+| `device_seq` | dev | proposed | `40217` | device-monotonic counter, **survives reconnect** (persists across a buffered/replayed send; resets only on device reboot, same as `session_id`) |
+
+**Dedupe key:** `(device_id, session_id, device_seq, record_type, sensor_id)` — the tuple that
+identifies *this exact reading* independent of how many times its bytes crossed the wire. A store, not
+just a stream: ingest checks this key before appending, so a replay is dropped, not duplicated.
+Preserves append-only raw-is-truth (below) — dedupe happens at the ingest boundary, never by rewriting
+already-stored rows.
+
+### 11.3 Sensor provenance (ties to ADR-0019, #295)
+
+A probe's `sensor_type` or calibration profile can change over a device's lifetime (a swapped probe, a
+recalibration). Old logs must stay unambiguous about which profile produced them, so a later
+calibration change never silently reinterprets historical raw data.
+
+| column | origin | shared | example | notes |
+| --- | --- | --- | --- | --- |
+| `sensor_type` | dev | proposed (ADR-0019) | `capacitive_v2` | the capability-descriptor sensor type (ADR-0019 §2), not just `sensor_model`'s part number |
+| `cal_profile_version` | dev/host | proposed | `3` | which calibration profile produced `value` from `raw_value` — increments on a re-cal, never edited in place |
+| `cal_source` | dev/host | proposed | `header` \| `default` | ties to #295's cal-bounds-in-header work — where the bounds that produced this row's band came from |
+
+### 11.4 Raw-is-truth preserved (ADR-0006)
+
+v2 changes **what's recorded alongside a row**, not the raw-is-truth model itself:
+
+- The v2 store is still **append-only raw ingest** — `raw_value` is never rewritten, dedupe drops a
+  *replay* (identical reading, same dedupe key) rather than merging or overwriting anything.
+- Derived views (bands, forecasts, bench-arc summaries) remain **rebuildable** from the raw v2 store,
+  exactly as ADR-0006 requires for v1.
+- An unsynced row's honest `NULL` `device_timestamp_utc` (§11.1) is itself raw-is-truth: the schema
+  records what the device actually knew, not an inferred backfill.
+
+### 11.5 Acceptance mapping (#300)
+
+- [x] Time columns + the unsynced-row rule defined — §11.1
+- [x] Dedupe key (incl. `device_seq`) defined — §11.2
+- [x] Sensor provenance fields defined — §11.3
+- [x] Raw-is-truth preserved in the v2 store model — §11.4
+- [ ] ADR-0018 references this section as its schema prerequisite — for Trellis/maintainer once §11
+      is ratified (this PR proposes; it does not self-ratify)
+
+### 11.6 Explicitly out of scope for this proposal
+
+- **Implementing v2 in `parse_v1.py`** (reading the new columns) and in the device/logger emitters —
+  separate follow-on slice(s), gated on ratification, so a schema change never lands ahead of the code
+  that's supposed to honor it.
+- **Backfilling existing v1 logs** with v2 columns — not needed; v1 logs stay valid v1 (§11 is
+  additive-only), read as-is.
+- **The multi-device registry / dashboard** (#485, #486) — those consume `device_id`/`sensor_id` that
+  already exist in v1; §11 doesn't change their contract.
