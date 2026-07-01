@@ -77,3 +77,21 @@ def local_first(
     else:
         utc_s = u.strftime("%Y-%m-%d %H:%MZ")
     return f"{local_s} {zone} · UTC {utc_s}"
+
+
+def local_first_system(utc_dt: datetime, *, seconds: bool = False) -> str:
+    """Local-first using the **host's** local timezone — for surfaces viewed on the rig
+    (the Lab Notebook). Uses the OS abbreviation (e.g. CDT) when it's crisp, else the
+    offset; on a UTC-only host it reads ``UTC``. Same shape as :func:`local_first`."""
+    u = _as_utc(utc_dt)
+    local = u.astimezone()  # the host's local timezone
+    zone = local.tzname() or ""
+    if not zone or " " in zone:  # a verbose OS name (e.g. Windows) -> crisp offset
+        zone = _offset_label(local.utcoffset())
+    tfmt = "%Y-%m-%d %H:%M:%S" if seconds else "%Y-%m-%d %H:%M"
+    local_s = local.strftime(tfmt)
+    if local.date() == u.date():
+        utc_s = u.strftime("%H:%M:%SZ" if seconds else "%H:%MZ")
+    else:
+        utc_s = u.strftime("%Y-%m-%d %H:%MZ")
+    return f"{local_s} {zone} · UTC {utc_s}"
