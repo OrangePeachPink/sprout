@@ -1,9 +1,10 @@
 # Environment evidence procedure
 
-Use this when investigating sunlight, heat, water temperature, or wet-reference
-artifacts. The goal is not to prove everything in one run; it is to isolate one
-factor at a time and preserve enough evidence for Data to correlate raw ADC with
-local-time interventions.
+Use this when investigating sunlight, heat, water temperature, wet-reference
+(a water reading used as a reference), or ambient sidecar-sensor artifacts. The
+goal is not to prove everything in one run; it is to isolate one factor at a
+time and preserve enough evidence for Data to correlate raw ADC and environment
+rows with local-time interventions.
 
 Refs #331
 
@@ -16,6 +17,7 @@ Refs #331
 | Capture | capture ID, source, cadence, duration, COM port. |
 | Board exposure | ESP32 in direct sun, shaded by box, room light only. |
 | Sensor/cup exposure | probes in direct sun, water cup in sun, wires in sun, all shaded. |
+| Sidecar sensors | SHT45/AS7263 in sun, partial shade, full shade, or covered. |
 | Ambient temperature | room thermometer, nearby desk thermometer, or "not measured." |
 | Water/soil temperature | kitchen thermometer if available, or "not measured." |
 | Light state | skylight beam on board, beam on cup only, cloudy, room light. |
@@ -51,6 +53,7 @@ Keep large bursts or personal/background-sensitive photos out of the repo.
 | Water temperature | Cold, room, warm water cups. | Same probes and board exposure. | Temperature sensitivity in wet reference. | Soil behavior. |
 | Probe depth | Marked-line depth versus shallow. | Same water/cup/board. | Insertion-depth sensitivity. | Plant microsite behavior. |
 | Plant placement | Same plant, same probes, rotated/relocated. | Watering history as much as possible. | Microsite and placement variance. | Sensor-only calibration. |
+| Sidecar exposure | Shade SHT45 or AS7263 while soil probes hold position. | Same board/logging/cadence. | Whether ambient temp/RH or NIR rows respond to sun/shade. | Plant truth or soil moisture. |
 
 ## Intervention notes
 
@@ -63,6 +66,16 @@ Use local time first because the bench human works in Chicago time.
 ```
 
 Then record machine time or UTC if the UI provides it.
+
+For moving skylight-beam runs, record each object crossing separately. The
+sensor may respond in a different window than the soil probes:
+
+```text
+13:25 CDT - Cardboard box lifted; all sensors exposed.
+13:48 CDT - ESP32 fully shaded; SHT45/AS7263 still in sun.
+13:55 CDT - SHT45 full shade; AS7263 still in sun.
+14:03 CDT - AS7263 entered shade; all soil probes shaded.
+```
 
 ## Finding discipline
 
@@ -94,8 +107,14 @@ For Data, attach or comment with:
 - local intervention times
 - raw channel medians/ranges if available
 - exposure state tags: `board_sun`, `board_shade`, `cup_sun`, `cup_shade`,
-  `full_shade`, `water_temp_cold`, `water_temp_room`, `water_temp_warm`
+  `full_shade`, `sht45_sun`, `sht45_shade`, `as7263_sun`, `as7263_shade`,
+  `water_temp_cold`, `water_temp_room`, `water_temp_warm`
 - anomaly tags: `probe_moved`, `water_refilled`, `splash_risk`,
-  `temperature_unmeasured`, `photo_available`
+  `temperature_unmeasured`, `logger_restarted`, `photo_available`
 
-- Sage
+If the run should be durable, land the raw slices, an event table, and a manifest
+under `docs/experiments/data/<session-id>/`. Keep `logs/` and `_scratch/` as
+temporary source material only; Data should not have to mine gitignored files or
+prose to rebuild a result.
+
+— Sage
