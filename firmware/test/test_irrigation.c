@@ -954,6 +954,43 @@ void t_env_row(void)
                                  "aim in payload");
 }
 
+/* #274 sensor-type seam (ADR-0019 §3): a RESISTIVE channel INVERTS the raw->band
+ * direction (higher raw = wetter). Pins the MECHANISM, not resistive calibration
+ * values (there are none — resistive ships PROVISIONAL); the same raw lands at
+ * opposite ends of the band scale for capacitive vs resistive. */
+void t_sensor_type_resistive(void)
+{
+    moisture_cfg_t cap =
+        (moisture_cfg_t)MOISTURE_CFG_DEFAULT; /* SENSOR_CAPACITIVE */
+    TEST_ASSERT_EQUAL_MESSAGE(
+        SENSOR_CAPACITIVE, cap.sensor_type,
+        "default profile is capacitive (configs unchanged)");
+
+    /* Resistive: same magnitudes but ASCENDING boundary[] + inverted direction. */
+    moisture_cfg_t res = (moisture_cfg_t)MOISTURE_CFG_DEFAULT;
+    res.sensor_type = SENSOR_RESISTIVE;
+    const uint16_t asc[MOISTURE_BOUNDARY_COUNT] = {1050, 1150, 1520,
+                                                   1830, 2140, 3050};
+    memcpy(res.boundary, asc, sizeof(res.boundary));
+
+    moisture_state_t sc, sr;
+    /* HIGH raw (3200): capacitive -> AIR_DRY (driest); resistive -> SUBMERGED (wettest) */
+    moisture_init(&sc, &cap, 3200);
+    moisture_init(&sr, &res, 3200);
+    TEST_ASSERT_EQUAL_MESSAGE(MOIST_AIR_DRY, sc.committed,
+                              "cap: high raw -> air-dry");
+    TEST_ASSERT_EQUAL_MESSAGE(MOIST_SUBMERGED, sr.committed,
+                              "res: high raw -> submerged (inverted)");
+
+    /* LOW raw (900): capacitive -> SUBMERGED; resistive -> AIR_DRY */
+    moisture_init(&sc, &cap, 900);
+    moisture_init(&sr, &res, 900);
+    TEST_ASSERT_EQUAL_MESSAGE(MOIST_SUBMERGED, sc.committed,
+                              "cap: low raw -> submerged");
+    TEST_ASSERT_EQUAL_MESSAGE(MOIST_AIR_DRY, sr.committed,
+                              "res: low raw -> air-dry (inverted)");
+}
+
 /* -------------------------------------------------------------------------- */
 /* runner                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -968,6 +1005,7 @@ int main(void)
     RUN_TEST(t_overrun_failsafe);
     RUN_TEST(t_last_water_ms);
     RUN_TEST(t_band_anchors);
+    RUN_TEST(t_sensor_type_resistive);
     RUN_TEST(t_serial_cmd_registry);
     RUN_TEST(t_pump_pulse);
     RUN_TEST(t_forced_dose);
