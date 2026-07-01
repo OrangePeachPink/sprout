@@ -120,6 +120,12 @@
     "Flaura",
     "silkscreen",
     "Uhlmann",
+    // cited community projects in the beginner on-ramp (#387) — GitHub repos/handles we credit:
+    "garduino",
+    "Lumics",
+    "nclman",
+    "Plantwatery",
+    "thijstriemstra",
     // #109 cspell dictionary build - prose terms across docs (British + derived English, technical, source/brand names):
     "acking",
     "adafruit",
