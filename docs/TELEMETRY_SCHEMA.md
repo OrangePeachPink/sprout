@@ -12,11 +12,10 @@ Items marked **[propose→sibling-AQ]** are things the sibling air-quality proje
 
 **Schema version:** `schema_version=1` is the **live, implemented** contract below (§§1-10) — what
 `parse_v1` reads and the device/logger emit today; nothing in this document's status changes that.
-**§11 is a v2 PROPOSAL** (device-owned time, dedupe key, sensor provenance — the untethered/
-multi-device prerequisite for [ADR-0018](adr/0018-dual-mode-transport-and-durability.md), #300),
-**awaiting Trellis + maintainer ratification** before it is implemented or enforced. Bump on any
-breaking column change; the version is written in every file's header block so one loader can read
-mixed-version history.
+**§11 is a v2 model, ratified 2026-07-01** (device-owned time, dedupe key, sensor provenance — the
+untethered/multi-device prerequisite for [ADR-0018](adr/0018-dual-mode-transport-and-durability.md), #300),
+**not yet implemented or enforced** — that's separate follow-on build work. Bump on any breaking column
+change; the version is written in every file's header block so one loader can read mixed-version history.
 
 ---
 
@@ -261,10 +260,10 @@ prefix-corruption. **Recommendation: device emits CSV.**
 
 ---
 
-## 11. Schema v2 (PROPOSED — not yet ratified or implemented) — device-owned time, dedupe, sensor provenance
+## 11. Schema v2 (RATIFIED model — not yet implemented) — device-owned time, dedupe, sensor provenance
 
-**Status: draft, awaiting Trellis + maintainer ratification.** This section defines — it does not yet
-implement — the v2 contract [ADR-0018](adr/0018-dual-mode-transport-and-durability.md) needs to cite
+**Status: ratified by the maintainer 2026-07-01, alongside ADR-0018's acceptance.** This section defines — it
+does not yet implement — the v2 contract [ADR-0018](adr/0018-dual-mode-transport-and-durability.md) cites
 as its schema prerequisite (#300, from Trellis's #285 review). **Nothing here changes today's live
 behavior**: `parse_v1` keeps reading v1 rows exactly as it does now; the device and host logger keep
 emitting v1 unchanged. v2 is additive-only (new optional columns) so a v1 row is a valid v2 row with
