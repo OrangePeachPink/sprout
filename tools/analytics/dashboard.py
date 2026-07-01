@@ -41,7 +41,9 @@ from forecast import fit_line, forecast_payload  # noqa: E402
 from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
     DEFAULT_CAL_BOUNDS,
     LogData,
-    parse_files,
+)
+from source_adapter import (  # noqa: E402  (the source-adapter seam, #277)
+    TetheredAdapter,
 )
 from timefmt import local_first  # noqa: E402  (local-time-first display labels, #328)
 
@@ -796,7 +798,11 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     inputs = args.inputs or gather_inputs()
-    data = parse_files(inputs)
+    # #277: reads through the source-adapter seam - TetheredAdapter today, a future
+    # device-served adapter (#276) later, with no change to this call site. Inputs
+    # are resolved up front (not left to the adapter's own discovery) so the error
+    # message below still names exactly which files were checked.
+    data = TetheredAdapter().load(inputs)
     if not data.readings:
         print("no readings parsed from:", inputs, file=sys.stderr)
         return 1
