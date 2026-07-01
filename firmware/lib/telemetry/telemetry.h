@@ -37,6 +37,20 @@ typedef struct {
     uint16_t raw; /* last trimmed-mean ADC value            */
     moisture_level_t level; /* committed classifier level             */
     const moisture_state_t *state; /* full classifier state (spread, health) */
+    /* --- device-owned time provenance (#278, schema v2 §11.1/§11.2) ---
+     * Rides the existing payload field (additive, doesn't touch the fixed
+     * 14-column CSV shape) - reviewable/adjustable without a wire-format
+     * coordination round; the schema's ratified field NAMES are used verbatim
+     * so Data's future parser can lift them straight out of payload. */
+    uint32_t device_seq; /* device-monotonic, survives reconnect, resets on
+                            reboot (same semantics as session_id) - the row's
+                            true emission order regardless of transport delay */
+    const char *time_source; /* "host" | "device_synced" | "device_uptime" -
+                                which clock this row's time comes from */
+    const char *device_timestamp_utc; /* device's own UTC stamp, or NULL/""
+                                         when unsynced - NEVER a guessed value.
+                                         Omitted from payload entirely (not
+                                         printed as an empty key) when NULL. */
 } telemetry_soil_row_t;
 
 /*

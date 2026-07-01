@@ -52,6 +52,19 @@ static char g_device_id[32] = "Sprout ESP32";
 static bool g_device_id_custom = false;
 static char g_session_id[12] = "000000";
 
+/* Device-owned time provenance (#278, ADR-0018 + schema v2 §11.1/§11.2, ratified
+ * 2026-07-01). device_seq: monotonic per emitted telemetry row, survives a
+ * store-and-forward reconnect/replay (the dedupe key's device-side half); resets
+ * only on reboot, same lifecycle as g_session_id - a fresh `static` already gives
+ * this for free. time_source is HONEST about what this firmware can currently
+ * prove: no NTP/RTC sync path exists yet (WiFi connect itself isn't wired, #21),
+ * so every row correctly reports "device_uptime" with device_timestamp_utc
+ * omitted (NULL) - never a guessed/fabricated UTC value. Flips to
+ * "device_synced" (+ a real device_timestamp_utc) once #21 lands NTP-on-connect;
+ * this counter + field plumbing is ready for that day without a wire change. */
+static uint32_t g_device_seq = 0;
+constexpr const char *TIME_SOURCE_DEVICE_UPTIME = "device_uptime";
+
 /* Sweep cadence is owned by the supervisor (g_sys.sample_period_ms, #227);
  * runtime-settable via !cad (#63), persisted to NVS (#90). This flag only tracks
  * whether the live value came from NVS, for the header. */
@@ -443,6 +456,11 @@ static void printHeader()
         "# authoritative: raw_value (ADC counts) + band (payload 'level'); "
         "value/unit are NULL - reserved for a future calibrated VWC, never an "
         "uncalibrated %.");
+    /* Time provenance (#278, ADR-0018/schema v2 §11.1): honest about what this
+     * firmware can currently prove - no NTP/RTC path exists yet (#21). */
+    Serial.println("# time: source=device_uptime (no NTP/RTC yet, #21) - "
+                   "device_seq/time_source ride each row's payload, schema v2 "
+                   "§11.1/§11.2");
 }
 
 /* ---- Arduino lifecycle -------------------------------------------------- */
@@ -601,7 +619,7 @@ void loop()
             .println(); /* B6.2 sacrificial sync: absorbs a post-idle framing glitch */
         for (int ch = 0; ch < NUM_SENSORS; ch++) {
             /* Format the CSV row via lib/telemetry; values come from FSM state. */
-            char line[200];
+            char line[300];
             telemetry_soil_row_t row = {
                 RECORD_TYPE_SOIL,
                 g_session_id,
@@ -616,6 +634,9 @@ void loop()
                 state[ch].last_raw,
                 irrig_level(&g_irrig, ch),
                 &state[ch],
+                g_device_seq++, /* #278: one tick per emitted row, every channel */
+                TIME_SOURCE_DEVICE_UPTIME,
+                "", /* device_timestamp_utc: unsynced, honestly NULL (#278) */
             };
             if (telemetry_format_soil_row(line, sizeof(line), &row) >= 0) {
                 char crc[6];
