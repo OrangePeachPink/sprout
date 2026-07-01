@@ -27,6 +27,9 @@
 #define BOARD_MAX_CHANNELS 4
 #define BOARD_LED_NONE                                                         \
     255 /* sentinel: no verified heartbeat-LED pin (skip the blink) */
+/* Must equal moisture_classifier.h's MOISTURE_BOUNDARY_COUNT. Not #included here
+ * to keep this header dependency-free; the native test pins the match (#436). */
+#define BOARD_CAL_BOUNDARY_COUNT 6
 
 typedef struct {
     const char *name; /* short board id, e.g. "esp32-classic"            */
@@ -40,36 +43,93 @@ typedef struct {
     uint8_t led_pin; /* heartbeat LED, or BOARD_LED_NONE to skip it     */
     uint8_t i2c_sda; /* env-sensor bus (env build only, #376)           */
     uint8_t i2c_scl;
+    /* --- per-board classifier calibration (#436) ---
+     * Raw ADC characteristics (reference voltage, gain, board/probe-pad parasitics)
+     * differ per SILICON even at the same bit-width, so the classic ENDPOINTS don't
+     * transfer to a new board even though its ADC resolution happens to match
+     * (verified: classic + S3 are both SOC_ADC_MAX_BITWIDTH=12, confirmed against
+     * the framework's soc_caps.h - resolution isn't the gap, calibration data is).
+     * cal_boundary: DESCENDING raw (dry>wet), same shape as moisture_cfg_t.boundary.
+     * cal_verified: true ONLY for a board with real bench endpoints (today: classic,
+     * from the #248 common-cup anchors). false means "structurally wired, values are
+     * the classic placeholder" - never silently treated as real calibration. */
+    uint16_t cal_boundary[BOARD_CAL_BOUNDARY_COUNT];
+    bool cal_verified;
 } board_capability_t;
 
 /* --- the capability matrix (add a board = add a #elif) -------------------- */
 #if defined(CONFIG_IDF_TARGET_ESP32)
-/* the classic baseline - EXACT values, unchanged from config.h's prior literals */
+/* the classic baseline - EXACT values, unchanged from config.h's prior literals.
+ * cal_boundary: the #248 common-cup-anchored endpoints, real bench data. */
 #define BOARD_CAPABILITY                                                       \
-    {"esp32-classic",  true, 4,  12, "nvs", {36, 39, 34, 35},                  \
-     {25, 26, 27, 32}, 2,    21, 22}
+    {"esp32-classic",                                                          \
+     true,                                                                     \
+     4,                                                                        \
+     12,                                                                       \
+     "nvs",                                                                    \
+     {36, 39, 34, 35},                                                         \
+     {25, 26, 27, 32},                                                         \
+     2,                                                                        \
+     21,                                                                       \
+     22,                                                                       \
+     {3050, 2140, 1830, 1520, 1150, 1050},                                     \
+     true}
 #elif defined(CONFIG_IDF_TARGET_ESP32S3)
 /* PROVISIONAL (docs/hardware/BOARDS.md candidate map) - bench-verify at #443.
  * led_pin: BOARDS.md deferred to the framework's LED_BUILTIN (board-dependent on a
- * generic clone) rather than guess a GPIO -> BOARD_LED_NONE skips the blink safely. */
+ * generic clone) rather than guess a GPIO -> BOARD_LED_NONE skips the blink safely.
+ * cal_boundary: the classic PLACEHOLDER endpoints - same 12-bit ADC width (verified,
+ * see the struct comment) does NOT mean the same calibration; cal_verified=false so
+ * nothing downstream treats these as real until #443 bench-measures this board. */
 #define BOARD_CAPABILITY                                                       \
-    {"esp32-s3",    true,           4, 12, "nvs", {1, 2, 3, 4},                \
-     {5, 6, 7, 15}, BOARD_LED_NONE, 8, 9}
+    {"esp32-s3",                                                               \
+     true,                                                                     \
+     4,                                                                        \
+     12,                                                                       \
+     "nvs",                                                                    \
+     {1, 2, 3, 4},                                                             \
+     {5, 6, 7, 15},                                                            \
+     BOARD_LED_NONE,                                                           \
+     8,                                                                        \
+     9,                                                                        \
+     {3050, 2140, 1830, 1520, 1150, 1050},                                     \
+     false}
 #elif defined(CONFIG_IDF_TARGET_ESP32C5)
 /* PROVISIONAL: inherits the classic PLACEHOLDER pins (matches the C5 env's own
  * documented stance in platformio.ini - "do NOT flash until bench-verified", #436
  * / #443). Not a new guess: C5's real pin map is intentionally unassigned pending
- * the bench + datasheet pass (docs/hardware/BOARDS.md). */
+ * the bench + datasheet pass (docs/hardware/BOARDS.md). cal_verified=false: no
+ * bench data exists for this board's ADC either. */
 #define BOARD_CAPABILITY                                                       \
-    {"esp32-c5",       true, 4,  12, "nvs", {36, 39, 34, 35},                  \
-     {25, 26, 27, 32}, 2,    21, 22}
+    {"esp32-c5",                                                               \
+     true,                                                                     \
+     4,                                                                        \
+     12,                                                                       \
+     "nvs",                                                                    \
+     {36, 39, 34, 35},                                                         \
+     {25, 26, 27, 32},                                                         \
+     2,                                                                        \
+     21,                                                                       \
+     22,                                                                       \
+     {3050, 2140, 1830, 1520, 1150, 1050},                                     \
+     false}
 #else
 /* host / native tests / an unknown target: assume the Tier-0 floor - tethered
  * monitor, no WiFi, no persistence. A real no-WiFi board (e.g. an AVR) adds its
  * own #elif with has_wifi=false rather than falling through to this. */
 #define BOARD_CAPABILITY                                                       \
-    {"host",           false, 4,  12, "none", {36, 39, 34, 35},                \
-     {25, 26, 27, 32}, 2,     21, 22}
+    {"host",                                                                   \
+     false,                                                                    \
+     4,                                                                        \
+     12,                                                                       \
+     "none",                                                                   \
+     {36, 39, 34, 35},                                                         \
+     {25, 26, 27, 32},                                                         \
+     2,                                                                        \
+     21,                                                                       \
+     22,                                                                       \
+     {3050, 2140, 1830, 1520, 1150, 1050},                                     \
+     false}
 #endif
 
 static const board_capability_t BOARD_CAP = BOARD_CAPABILITY;
