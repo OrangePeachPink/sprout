@@ -22,3 +22,5 @@ Convention finalized in [ADR-0012](../adr/0012-experiment-data-architecture.md) 
   plant IDs, probe placement, dry baseline, watering, and post-water captures.
 - [Environment evidence procedure](../bench-procedures/environment-evidence-procedure.md) -
   sunlight, heat, water temperature, exposure notes, photos, and Data handoff tags.
+- [S3/C5 bring-up run sheet](../bench-procedures/s3-c5-bringup-run-sheet.md) - execution-ordered
+  pre-flight/flash/verify/record steps for bringing up the ESP32-S3 and ESP32-C5 boards.
