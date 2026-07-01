@@ -75,7 +75,7 @@ build:
 build-s3:
     {{pio}} run -d firmware -e esp32s3
 
-# Compile-check the ESP32-C5 env — isolated pinned platform, non-blocking CI dry-run (#442/ADR-0024).
+# Compile-check the ESP32-C5 env — same pinned platform as esp32dev now (#529), non-blocking CI dry-run (#442/ADR-0024).
 build-c5:
     {{pio}} run -d firmware -e esp32c5
 

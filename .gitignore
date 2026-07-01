@@ -40,6 +40,12 @@ credentials.h
 .pioenvs/
 .piolibdeps/
 
+# ESP-IDF component manager scaffold - auto-written by the arduino-esp32 framework the
+# first time it builds on IDF5+ (pioarduino pin, #529); not authored, not portable across
+# machines, safe to regenerate.
+firmware/src/idf_component.yml
+firmware/src/idf_component.yml.orig
+
 # Arduino build artifacts
 build/
 *.bin
