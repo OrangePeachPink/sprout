@@ -438,7 +438,7 @@ function renderHeader(){
   document.getElementById('subline').innerHTML =
     `4 co-located probes · <span class="mono">origplant</span> · fw <span class="mono">${m.fw||'?'}</span> ` +
     `· ${DASH.sensors.length} channels · ${fmt(DASH.integrity.total)} readings · ` +
-    `${m.total_hours}h since ${m.start_local}`;
+    `${m.total_hours}h since ${m.start_display || m.start_local}`;
   renderFreshness();
   renderChannelChips();
 }
@@ -527,6 +527,21 @@ const gapShade = {  // E9: shade the span of a logging interruption (min-width s
     });
   }
 };
+const nightShade = {  // #198: real night windows from computed solar geometry (#365/#366) -
+  id:'nightShade',    // never a fabricated light cycle; omitted entirely with no location config.
+  beforeDatasetsDraw(chart, args, opts){
+    const x = chart.scales.x, area = chart.chartArea, c = chart.ctx;
+    if(!x) return;
+    (opts.bands||[]).forEach(b=>{
+      let l = x.getPixelForValue(b.x0), r = x.getPixelForValue(b.x1);
+      if(r < area.left || l > area.right) return;
+      l = Math.max(l, area.left); r = Math.min(r, area.right);
+      c.save(); c.fillStyle = hexA('#1B2A4A', 0.10);
+      c.fillRect(l, area.top, Math.max(1, r-l), area.bottom-area.top);
+      c.restore();
+    });
+  }
+};
 
 /* ---- overview charts ---- */
 function renderTraj(){
@@ -544,20 +559,23 @@ function renderTraj(){
       responsive:true, maintainAspectRatio:false, animation:false,
       interaction:{ mode:'nearest', intersect:false },
       scales:{
-        ...baseScales(`hours since ${DASH.trajectory.start_local} (local)`, 'raw ADC  (higher = drier)'),
+        ...baseScales(`hours since ${DASH.trajectory.start_axis || DASH.trajectory.start_local}`, 'raw ADC  (higher = drier)'),
         y:{ ...baseScales('', 'raw ADC  (higher = drier)').y, suggestedMin: lo-pad, suggestedMax: hi+pad }
       },
       plugins:{
         legend:{ display:false },
         bandShade:{ bands: DASH.cal.bands },
         gapShade:{ gaps: DASH.gaps },
+        // #198: real night windows (computed solar geometry, #365/#366) - [] when no
+        // location is configured, so the chart is unaffected (R9 offline-first).
+        nightShade:{ bands: (DASH.env && DASH.env.available) ? DASH.env.night_bands : [] },
         tooltip:{ callbacks:{
           title:(items)=>{ const it=items[0]; const loc=it.dataset._local[it.dataIndex]; return `${it.dataset.label} · ${loc}`; },
           label:(it)=>`raw ${fmt(it.parsed.y)}`
         }}
       }
     },
-    plugins:[bandShade, gapShade]
+    plugins:[nightShade, bandShade, gapShade]
   });
   const lg = document.getElementById('trajLegend'); lg.innerHTML = '';
   DASH.sensors.forEach(s=>{
@@ -674,15 +692,35 @@ function renderIntegrity(){
   }
 }
 
+function envConditionsLine(){
+  // #198: measured conditions for the visible window - honest, never fabricated.
+  // No location configured -> say exactly why the shading is absent (R9, not a bug).
+  const env = DASH.env;
+  if(!env || !env.available) return 'Day/night shading is off — no rig location configured (see config/location.example.json).';
+  const hourly = env.weather_hourly || [];
+  if(!hourly.length) return 'Day/night shading is real (computed solar geometry) — no weather layer cached for this window yet.';
+  const covers = hourly.map(h=>h.cloud_cover).filter(v=>v!=null);
+  const rads = hourly.map(h=>h.radiation).filter(v=>v!=null);
+  const mean = a => a.length ? Math.round(a.reduce((s,v)=>s+v,0)/a.length) : null;
+  const mc = mean(covers), mr = mean(rads);
+  const bits = [];
+  if(mc!=null) bits.push(`mean cloud cover ${mc}%`);
+  if(mr!=null) bits.push(`mean shortwave radiation ${mr} W/m²`);
+  const src = env.weather_source;
+  const label = bits.length ? bits.join(', ') : 'no coverage in this window';
+  return `Day/night shading is real (computed solar geometry). Measured conditions (${label}) — ` +
+    `<i>${src ? 'derived/model, ' + src.origin : 'weather source unavailable'}</i>, never authoritative.`;
+}
+
 function renderProv(){
   const m=DASH.meta;
   document.getElementById('prov').innerHTML =
-    `Generated ${m.generated_local} · schema_version ${m.schema_version} · parser <code>${m.parser}</code> · ` +
+    `Generated ${m.generated_display || m.generated_local} · schema_version ${m.schema_version} · parser <code>${m.parser}</code> · ` +
     `device <code>${m.device_id||'?'}</code> git <code>${m.git||'?'}</code> run <code>${m.run||'?'}</code><br>` +
     `Sources: ${m.sources.map(s=>`<code>${s.replace(/\\/g,'/').split('/').pop()}</code>`).join(', ')}<br>` +
     `The legacy moist% <code>value</code> column is intentionally not plotted (B2/C2); analysis is on raw_value + band. ` +
     `The endpoints (saturated + air-dry) are ratified from the common-cup anchors; the interior band boundaries are the un-reconciled spec (A2), shown as <b>proposed</b>. ` +
-    `Day/night shading is omitted — it needs the real light schedule, which is not in the data.`;
+    `${envConditionsLine()}`;
 }
 
 function renderProvenance(){  // #324 bench-evidence panel
@@ -699,14 +737,18 @@ function renderProvenance(){  // #324 bench-evidence panel
   const staleRow = s.stale
     ? ['running', `STALE — server predates ${dash(s.head_git_sha)}`, 'warn']
     : ['running', 'current', 'ok'];
+  const deviceRows = [
+    ['device id', d.device_id], ['firmware', d.fw], ['fw git', d.fw_git],
+    ['schema', d.schema_version], ['logger', d.logger_version], ['tz offset', d.tz_offset],
+  ];
+  // #496: this view's latest segment is a legacy-converted capture, not a live
+  // session — say so plainly rather than let old fw/device_id read as current.
+  if(d.legacy_converted) deviceRows.push(['note', 'LEGACY-CONVERTED — not the live device', 'warn']);
   wrap.innerHTML =
     grp('server / app', [
       ['app git', sha], ['branch', s.branch], ['started', s.start_utc], staleRow,
     ]) +
-    grp('device / firmware', [
-      ['device id', d.device_id], ['firmware', d.fw], ['fw git', d.fw_git],
-      ['schema', d.schema_version], ['logger', d.logger_version], ['tz offset', d.tz_offset],
-    ]) +
+    grp('device / firmware', deviceRows) +
     grp('contract / calibration', [
       ['value/unit', c.label, c.raw_only ? 'ok' : 'warn'],
       ['calibration', p.calibration],
@@ -890,7 +932,7 @@ function buildDetailChart(s){
     type:'line', data:{ datasets },
     options:{ responsive:true, maintainAspectRatio:false, animation:false,
       interaction:{ mode:'nearest', intersect:false },
-      scales:{ ...baseScales(`hours since ${DASH.trajectory.start_local} (local)`, 'raw ADC (higher = drier)'),
+      scales:{ ...baseScales(`hours since ${DASH.trajectory.start_axis || DASH.trajectory.start_local}`, 'raw ADC (higher = drier)'),
         y:{ ...baseScales('','raw ADC (higher = drier)').y, suggestedMin: lo-pad, suggestedMax: hi+pad } },
       plugins:{ legend:{display:false}, bandShade:{ bands: DASH.cal.bands }, gapShade:{ gaps: DASH.gaps },
         tooltip:{ callbacks:{
@@ -937,7 +979,7 @@ function renderFreshness(){
     span.style.color = 'var(--st-dry)';
     return;
   }
-  let txt = `data as of ${m.generated_local || '?'}`;
+  let txt = `data as of ${m.generated_display || m.generated_local || '?'}`;
   if(ageTxt) txt += ` · last reading ${ageTxt}${(stale && LIVE) ? ' · STALE' : ''}`;
   span.textContent = txt;
   span.style.color = (stale && LIVE) ? 'var(--st-dry)' : 'var(--muted)';

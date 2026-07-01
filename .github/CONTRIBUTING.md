@@ -54,10 +54,19 @@ maintainer confirms `area:` / `layer:` at triage.
    **not** `Closes #N` (see the gate below). Include how you verified the change.
 6. PRs are **squash-merged** — one clean commit per change; the branch auto-deletes after merge.
 
+> **`just check` needs one more tool than `just start` does.** `uv sync` + `just` alone are enough to run the
+> dashboard and the *lint/format* hooks — but `just check` also runs `just test`, which **unconditionally**
+> compiles and runs the native C firmware-logic suite (`test-native`), even for a docs-only change. That step
+> needs **PlatformIO** (`pip install platformio`) and a **host C compiler** (`gcc` on PATH — e.g. a winget
+> MinGW install on Windows) *in addition to* `uv`/`just`. If you'd rather skip installing those locally,
+> **GitHub Codespaces already has both** (its base image bundles `gcc`, and `pip install platformio` is a
+> quick add) — see the Firmware section below, or just push and let CI run the full gate for you.
+>
 > **Why CI runs everything on every PR:** `just check` (what CI runs) is the same full gate as your machine —
-> on purpose. Hooks are *type*-scoped for speed (a docs change never runs firmware tests locally); CI runs
-> everything for predictability and to prevent local≠remote drift. Path-filtering would re-introduce exactly
-> the class of surprise we deliberately closed.
+> on purpose. Pre-commit *hooks* are file-type-scoped for speed (e.g. `clang-format` only touches `.c`/`.h`
+> files) — but the *test* step above is not type-scoped, so don't read "hooks are scoped" as "a docs change
+> skips firmware tests." CI runs everything for predictability and to prevent local≠remote drift.
+> Path-filtering would re-introduce exactly the class of surprise we deliberately closed.
 >
 > **The one exception — clang-format:** it runs on the *lines you changed*, not `--all-files`, because the
 > firmware carries intentional manual column alignment a full-tree reformat would destroy (AGENTS.md
@@ -194,9 +203,16 @@ the message bus.** Keep the system moving by syncing yourself.
 - **Comments / questions / RFCs** aimed at your lane on issues and PRs.
 - **What recently merged that unblocks you** — a dependency landed, or a base PR merged so your stacked PR
   can rebase.
-- **Backlog** items in your area that are now actionable — but **skip anything labelled `needs:hardware`**:
-  those are the maintainer's hardware/bench queue (wiring, pump/relay setup, hardware you don't have yet), not
-  lane-advanceable. Filter your board view to `for:<your-lane> -label:needs:hardware`.
+- **Backlog *and* In Progress** items in your area that are now actionable — an item doesn't have to be sitting
+  in Backlog to be untouched. Workflow (or another lane) can move a card's *status* without anyone touching
+  *your* item yet — check for a PR or a comment from your own lane, not just the column it's in. But **skip
+  anything labelled `needs:hardware`**: those are the maintainer's hardware/bench queue (wiring, pump/relay
+  setup, hardware you don't have yet), not lane-advanceable. Filter your board view to
+  `for:<your-lane> -label:needs:hardware`, across both columns.
+- **A board *status* or *priority* change generates no GitHub notification** — only a comment, label, or
+  assignee change does. So don't rely on your notifications/mentions alone to catch new work: **re-pull the
+  live board (Project #2) each sync**, per the instructions above. If you only ever check "what's new in my
+  notifications," a silent status flip is invisible to you.
 
 **Which item do you pick? No ambiguity — the board answers it:**
 

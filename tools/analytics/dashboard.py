@@ -12,9 +12,9 @@ Honesty rules baked in:
 * **interior bands are proposed, not validated.** The endpoints (saturated +
   air-dry) are firmware-ratified from the common-cup anchors; the interior
   boundaries are the un-reconciled A2 spec, and the UI labels them as such.
-* **no fabricated light cycle.** Day/night shading needs the real light
-  schedule, which is not in the data, so it is omitted; overall drying slope
-  is shown instead.
+* **no fabricated light cycle.** Day/night shading (#198) uses the real,
+  computed solar geometry (``env_solar``, #365/#366) - never a guessed
+  schedule. Absent entirely with no rig location configured (R9).
 
 Usage::
 
@@ -41,10 +41,24 @@ from forecast import fit_line, forecast_payload  # noqa: E402
 from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
     DEFAULT_CAL_BOUNDS,
     LogData,
-    parse_files,
 )
+from source_adapter import (  # noqa: E402  (the source-adapter seam, #277)
+    TetheredAdapter,
+)
+from timefmt import local_first  # noqa: E402  (local-time-first display labels, #328)
 
 _REPO = _HERE.parents[1]
+
+
+def _tz_offset_hours(reading) -> float | None:
+    """The rig-local UTC offset (hours) implied by a reading's paired stamps, for
+    local-first display (#328); None if either stamp is missing."""
+    if reading.timestamp_local is not None and reading.timestamp_utc is not None:
+        delta = reading.timestamp_local - reading.timestamp_utc.replace(tzinfo=None)
+        return round(delta.total_seconds() / 3600, 2)
+    return None
+
+
 TOKENS_CSS = _REPO / "docs" / "design" / "tokens" / "sprout-tokens.css"
 # Brand fonts, base64-embedded (latin subsets, SIL OFL) so the dashboard renders
 # in-brand fully offline - no Google-Fonts CDN. Vendored beside Chart.js;
@@ -360,6 +374,40 @@ def build_env_context(start: datetime, end_utc: datetime) -> dict:
     }
 
 
+def _seg_start(seg) -> datetime | None:
+    """A segment's honest start time from its header's ``log_start_utc`` (written by
+    the real host loggers - plants_logger.py / experiment_capture.py). A
+    legacy-converted segment (legacy_log.py) never emits this key, so it is
+    ``None`` - which is the point: it can never outrank a real, host-timestamped
+    session in recency ordering (#496)."""
+    s = getattr(seg, "log_start_utc", None)
+    if not s:
+        return None
+    try:
+        return datetime.fromisoformat(s.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _latest_segment(segments: list):
+    """The chronologically-latest segment, or ``None`` if there are none.
+
+    #496: ``segments[-1]`` is file-processing order (glob-sorted filenames across
+    however many input paths/naming conventions are aggregated), NOT chronological
+    order - so a legacy-converted file whose name happens to sort after the live
+    file's can silently make a stale identity (old fw/device_id) look current. Pick
+    by each segment's real ``log_start_utc`` instead; segments without one (legacy
+    conversions) never win. Falls back to list order only if NONE have a parseable
+    start (an all-legacy aggregate - an honest degrade, not a crash)."""
+    if not segments:
+        return None
+    timed = [(s, _seg_start(s)) for s in segments]
+    with_time = [(s, t) for s, t in timed if t is not None]
+    if with_time:
+        return max(with_time, key=lambda st: st[1])[0]
+    return segments[-1]
+
+
 # --------------------------------------------------------------------------- #
 # context build
 # --------------------------------------------------------------------------- #
@@ -488,8 +536,10 @@ def build_context(data: LogData) -> dict:
         spread_points[i] for i in _dec_idx(len(spread_points), MAX_TRAJ_POINTS)
     ]
 
-    last_seg = data.segments[-1] if data.segments else None
+    last_seg = _latest_segment(data.segments)  # #496: chronological, not file order
     total_h = _hours_since(soil[-1].timestamp_utc, start)
+    _host_off = datetime.now().astimezone().utcoffset()
+    _host_off_h = _host_off.total_seconds() / 3600 if _host_off else None
     meta = {
         "device_id": getattr(last_seg, "device_id", None),
         "fw": getattr(last_seg, "firmware_version", None),
@@ -515,6 +565,30 @@ def build_context(data: LogData) -> dict:
             if soil[-1].timestamp_local
             else ""
         ),
+        # Local-first display labels (#328): local time + explicit zone + UTC
+        # secondary. The *_local fields above stay machine values — start_local
+        # anchors the chart axis and last_local is JS-Date-parsed for freshness.
+        "start_display": (
+            local_first(
+                soil[0].timestamp_utc,
+                tz_offset_hours=_tz_offset_hours(soil[0]),
+                seconds=True,
+            )
+            if soil[0].timestamp_utc
+            else ""
+        ),
+        "last_display": (
+            local_first(
+                soil[-1].timestamp_utc,
+                tz_offset_hours=_tz_offset_hours(soil[-1]),
+                seconds=True,
+            )
+            if soil[-1].timestamp_utc
+            else ""
+        ),
+        "generated_display": local_first(
+            datetime.now(timezone.utc), tz_offset_hours=_host_off_h, seconds=True
+        ),
     }
 
     # #324 provenance panel: server/app + device/log + the honest-data contract state.
@@ -530,6 +604,12 @@ def build_context(data: LogData) -> dict:
             "schema_version": meta["schema_version"],
             "logger_version": getattr(last_seg, "logger_version", None),
             "tz_offset": meta["tz_offset"],
+            # #496: honest even in the edge case where NO real (host-timestamped)
+            # session exists in this view at all, so a legacy-converted capture is
+            # the only/latest segment available — never silently pass its identity
+            # off as the live device's (ADR-0025 "no placeholder that reads as real").
+            "legacy_converted": getattr(last_seg, "logger_version", None)
+            == "legacy-convert",
         },
         "contract": {
             "raw_only": raw_only_ok,
@@ -555,6 +635,9 @@ def build_context(data: LogData) -> dict:
         "sensors": sensors,
         "trajectory": {
             "start_local": meta["start_local"],
+            # local-first chart-axis anchor (#328): local + zone, no UTC secondary.
+            "start_axis": meta.get("start_display", "").split(" · UTC ")[0]
+            or meta["start_local"],
             "datasets": trajectory_sets,
         },
         "spread": {
@@ -715,7 +798,11 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     inputs = args.inputs or gather_inputs()
-    data = parse_files(inputs)
+    # #277: reads through the source-adapter seam - TetheredAdapter today, a future
+    # device-served adapter (#276) later, with no change to this call site. Inputs
+    # are resolved up front (not left to the adapter's own discovery) so the error
+    # message below still names exactly which files were checked.
+    data = TetheredAdapter().load(inputs)
     if not data.readings:
         print("no readings parsed from:", inputs, file=sys.stderr)
         return 1

@@ -29,6 +29,10 @@ config/location.local.json
 reports/weather/
 # but DO commit the placeholder template:
 !config/location.example.json
+# Multi-device fleet registry (#485): board + per-channel plant assignments. The real
+# fleet (home layout) stays local; the placeholder template IS committed.
+config/devices.local.json
+!config/devices.example.json
 credentials.h
 
 # PlatformIO

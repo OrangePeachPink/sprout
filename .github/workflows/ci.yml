@@ -1,9 +1,13 @@
 name: CI
 
-# The pre-merge gate (#89): one fast job that runs the SAME checks you run locally
-# (`just check` = `pre-commit run --all-files` + `just test`), so CI and your machine
-# never drift. Right-sized per ADR-0002 #12 — deliberately NOT here: coverage gates,
-# mypy, SBOM, security scanners, multi-OS matrices. Add one only when a real need shows up.
+# The pre-merge gate (#89, parallelized #472): the SAME checks you run locally
+# (`just check` = `pre-commit run --all-files` + `just test` + `just build`), so CI and
+# your machine never drift — split into two CONCURRENT jobs so wall-clock is max(job),
+# not sum(steps). NOTHING is skipped or path-filtered on either job — every check still
+# runs on every PR (see #466 — a skipped required check reading as green is the exact
+# onboarding-safety surprise this repo closed on purpose, ADR-0002 #12). Right-sized per
+# ADR-0002 #12 — deliberately NOT here: coverage gates, mypy, SBOM, security scanners,
+# multi-OS matrices. Add one only when a real need shows up.
 
 on:
   pull_request:
@@ -20,15 +24,119 @@ permissions:
   contents: read
 
 jobs:
-  check:
-    name: lint + tests
+  # Host lint/format/hygiene + the changed-lines firmware format check — no PlatformIO,
+  # so this job never waits on the toolchain install/cache the firmware job needs.
+  lint:
+    name: lint + hygiene
     runs-on: ubuntu-latest
     steps:
-      # Full history so the changed-scope clang-format step (#120) can diff against
-      # the PR base / the previous main commit.
-      - uses: actions/checkout@v4
+      # Full history so the changed-lines clang-format step (#352) can diff against
+      # the PR merge-base / the previous main commit.
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+
+      - name: Set up uv (+ the locked Python)
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up just
+        uses: extractions/setup-just@v3
+
+      - name: Sync the locked environment
+        run: uv sync
+
+      # Cache the npm download store so the pinned npx tools (markdownlint-cli2 +
+      # cspell — see .pre-commit-config.yaml) aren't re-fetched every run. Keyed on the
+      # hook config so it busts the moment a tool version bumps. Pure speedup — changes
+      # nothing about which checks run (#468).
+      - name: Cache npx tooling (markdownlint / cspell)
+        uses: actions/cache@v5
+        with:
+          path: ~/.npm
+          key: npx-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: npx-${{ runner.os }}-
+
+      # The single definition of lint/format/hygiene — identical to a local commit.
+      # clang-format is SKIPped here: it is the one check scoped to changed LINES, not
+      # --all-files (the firmware's manual column alignment must survive — AGENTS.md
+      # §code-style, changed-lines via git-clang-format, #352). It runs next, below.
+      - name: Lint + format + hygiene (pre-commit; clang-format runs changed-lines below)
+        run: SKIP=clang-format uv run pre-commit run --all-files --show-diff-on-failure
+
+      # clang-format — ONLY the C/C++ *lines* this PR changed (never whole files, never
+      # the whole tree) — #352. Diffs against the PR merge-base (the blocking authority,
+      # Trellis sign-off). This needs only the pinned clang-format wheel (in the uv env
+      # via pyproject.toml), NOT the PlatformIO toolchain — so it belongs on this fast
+      # job, not the firmware one.
+      - name: clang-format (changed LINES vs merge-base — #352)
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          [ -z "$base" ] && base="$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)"
+          mb="$(git merge-base "$base" HEAD)"
+          uv run python tools/clang_format_changed_lines.py --base "$mb" --check
+
+      - name: Tests — host Python
+        run: just test-host
+
+  # PlatformIO: native-C firmware-logic tests + the ESP32 compile-verify. Isolated in
+  # its own job so its toolchain install/cache never blocks (or is blocked by) lint.
+  firmware:
+    name: firmware (native tests + compile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up uv (+ the locked Python)
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up just
+        uses: extractions/setup-just@v3
+
+      - name: Sync the locked environment
+        run: uv sync
+
+      # PlatformIO — needed for native unit tests (pio test -e native) and the
+      # ESP32 compile-verify (pio run -e esp32dev). Cached by platformio.ini hash
+      # so re-installs only when the toolchain config changes.
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+          restore-keys: pio-${{ runner.os }}-
+
+      - name: Tests — native C firmware logic
+        run: just test-native
+
+      # Compile the ESP32 firmware so regressions in src/ are caught before flash. (#260)
+      - name: Compile firmware (ESP32 — catch src/ regressions)
+        run: just build
+
+  # Experimental board compile-checks (#436 S3, #442 C5) — deliberately NOT in `gate`'s
+  # needs and `continue-on-error: true`, so a toolchain break here (community fork,
+  # unproven pins) can NEVER red the required check (ADR-0024: "an experimental
+  # toolchain break stays contained"). Visible on every PR, blocking nothing — the
+  # dry-run Firmware asked for on #442 so this class of break surfaces before hardware
+  # instead of only at someone's next local `just build-s3`/`build-c5`.
+  experimental-boards:
+    name: experimental board (${{ matrix.env }}) — non-blocking
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [esp32s3, esp32c5]
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Set up uv (+ the locked Python)
         uses: astral-sh/setup-uv@v5
@@ -41,9 +149,6 @@ jobs:
       - name: Sync the locked environment
         run: uv sync
 
-      # PlatformIO — needed for native unit tests (pio test -e native) and the
-      # ESP32 compile-verify (pio run -e esp32dev). Cached by platformio.ini hash
-      # so re-installs only when the toolchain config changes.
       - name: Install PlatformIO
         run: pip install platformio
 
@@ -51,31 +156,30 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.platformio
-          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
-          restore-keys: pio-${{ runner.os }}-
+          key: pio-experimental-${{ matrix.env }}-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+          restore-keys: pio-experimental-${{ matrix.env }}-${{ runner.os }}-
 
-      # The single definition of lint/format/hygiene — identical to a local commit.
-      # clang-format is SKIPped here: it is the one check scoped to changed files, not
-      # --all-files (the firmware's manual column alignment must survive a full-tree
-      # sweep — AGENTS.md §code-style, #120, ADR-0002 #10). It runs changed-scope next.
-      - name: Lint + format + hygiene (pre-commit; clang-format runs changed-scope below)
-        run: SKIP=clang-format uv run pre-commit run --all-files --show-diff-on-failure
+      # Same underlying command as `just build-s3` / `just build-c5` locally (just
+      # wraps `pio run -d firmware -e <env>`) — called directly here so the matrix
+      # env name maps straight through without a fragile string transform in YAML.
+      - name: Compile-check (${{ matrix.env }})
+        run: pio run -d firmware -e ${{ matrix.env }}
 
-      # clang-format — ONLY the C/C++ *lines* this PR changed (never whole files,
-      # never the whole tree) — #352. Diffs against the PR merge-base (the blocking
-      # authority, Trellis sign-off). Same wrapper + pinned clang-format==22.1.5 as
-      # local commits + `just lint-fw`, so local == CI.
-      - name: clang-format (changed LINES vs merge-base — #352)
+  # The single required status check (#472/#466): passes only if BOTH upstream jobs
+  # succeeded. Splitting into two jobs changes their names, so branch protection is
+  # re-pointed at this one job — "gate" always exists and never silently reads as green
+  # from a skip (there is no path-filtering anywhere in this workflow to skip).
+  # experimental-boards is intentionally OUTSIDE this gate's `needs` — see its own
+  # comment above.
+  gate:
+    name: gate
+    needs: [lint, firmware]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: All required jobs passed
         run: |
-          base="${{ github.event.pull_request.base.sha }}"
-          [ -z "$base" ] && base="$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)"
-          mb="$(git merge-base "$base" HEAD)"
-          uv run python tools/clang_format_changed_lines.py --base "$mb" --check
-
-      - name: Tests — native C firmware logic + host Python
-        run: just test
-
-      # Compile the ESP32 firmware so regressions in src/ are caught before flash.
-      # Runs after tests so a fast logic failure surfaces first. (#260)
-      - name: Compile firmware (ESP32 — catch src/ regressions)
-        run: just build
+          if [ "${{ needs.lint.result }}" != "success" ] || [ "${{ needs.firmware.result }}" != "success" ]; then
+            echo "lint=${{ needs.lint.result }}  firmware=${{ needs.firmware.result }}"
+            exit 1
+          fi

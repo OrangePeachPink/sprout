@@ -27,6 +27,10 @@
     "resoak",
     "rootbound",
     "itime",
+    // Local-time-first surfaces (#328): the timefmt module name and the Python
+    // stdlib `zoneinfo` (IANA DST-correct abbreviations) named in the convention doc.
+    "timefmt",
+    "zoneinfo",
     // Intentional prose coinages from the developer front door (#219): "dogfood"
     // (the design-dogfooding concept) and "contributable" (DX's voice). Allowlisted
     // so cspell --all-files passes; reword the prose and drop these if voice changes.
@@ -98,6 +102,7 @@
     "Wago",
     "WROOM",
     // #436 multi-board support - ESP32-S3/C5 chip + toolchain terms:
+    "BITWIDTH",
     "devkitc",
     "elif",
     "JTAG",
@@ -121,7 +126,9 @@
     "arduinodiy",
     "baloo",
     "basontech",
+    "behaviour",
     "behaviourally",
+    "behaviours",
     "biomaker",
     "browsable",
     "checksummed",
@@ -201,7 +208,11 @@
     "wayfinding",
     "winget",
     "worktree",
-    "xblw"
+    "xblw",
+    // #364 glossary context_source bullet: the Zigbee protocol + British "travelling"
+    // (consistent with the British spellings already allowlisted above).
+    "Zigbee",
+    "travelling"
   ],
   "flagWords": []
 }

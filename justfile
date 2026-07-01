@@ -26,8 +26,13 @@ default:
 #  desktop shortcut that runs `just start`.
 # ============================================================================
 # Launch Sprout — serve + open the browser at the fixed port (the zero-CLI door). The one operator entry.
-# --restart (#127) takes over a stale server so the icon always opens a fresh dashboard.
+# --serve-or-focus (#151) is single-instance: a second launch opens the existing tab, never a 2nd server.
+# For a forced fresh start over a stale server, use `just restart`.
 start:
+    @just serve --serve-or-focus --open
+
+# Force-fresh launch: take over a stale server (ask it to /quit), then serve current code (#127).
+restart:
     @just serve --restart --open
 
 # ============================================================================
@@ -40,6 +45,11 @@ serve *ARGS:
 # Friendly alias for `serve`.
 dash *ARGS:
     @just serve {{ARGS}}
+
+# List any live Sprout-spawned processes (Monitor logger / Experiment capture) by PID
+# + role - the #493 identifiability tool. "Port busy" with no Sprout window open? Run this first.
+processes:
+    {{py}} tools/analytics/sprout_processes.py
 
 # ============================================================================
 #  CAPTURE lane — host-side serial capture (the device-side runtime).
@@ -60,6 +70,14 @@ experiment *ARGS:
 # Compile the firmware (no board needed).
 build:
     {{pio}} run -d firmware
+
+# Compile-check the ESP32-S3 env — same pinned platform as esp32dev, no new toolchain (#436).
+build-s3:
+    {{pio}} run -d firmware -e esp32s3
+
+# Compile-check the ESP32-C5 env — isolated pinned platform, non-blocking CI dry-run (#442/ADR-0024).
+build-c5:
+    {{pio}} run -d firmware -e esp32c5
 
 # Pin the upload port with e.g.  just flash --upload-port COM6
 # Flash the firmware to the board, then open the serial monitor (needs the board connected + your OK).

@@ -88,6 +88,26 @@ every lane. If two lanes use the same word for different things, or different wo
   Open-Meteo weather) is `derived/model`, **NEVER** presented as authoritative measurement.
 - **Source registry** — a per-source provenance entry (origin, jurisdiction, cadence, **trust class**, schema
   version, discovery date), so every dataset declares where it came from and how far to trust it.
+- **Night band / skylight window** — solar-geometry constructs (PRD-0002): a *night band* is a sun-down
+  span shaded on the trajectory; the *skylight window* is the operator-calibrated time the rig actually
+  sees direct sky.
+- **Bench-arc / arc table** — the per-plant `start → wettest → pull` summary of a bench day, **recomputed
+  from raw samples** (`bench_arc.py`, #380) and rendered on the band ladder (`bench_arc_view.py`, #423).
+  One read per plant across valid probes — not sensor-by-sensor.
+- **Wettest: sustained vs instant** — in the bench-arc, `wettest` (**sustained**) is the wettest *cross-probe
+  median* over the peak window — a whole-pot level; `wettest_instant` is the single deepest probe sample —
+  one zone. The view shows sustained solid + instant as a faint ghost, so a preferential-flow pot (one probe
+  dove, the rest stayed dry) never reads a false "well watered."
+- **Probe-spread whisker** — `max − min` across included-probe medians at pull; surfaces microzone
+  disagreement honestly (ADR-0022's *surface, don't average* posture), rather than hiding it in one number.
+- **`probe_included_by_sage` / included probe** — the per-row valid-probe flag (Sage owns validity, Data
+  consumes it); excluded probes (stuck / air-reference / no-contact) never enter a plant's read.
+- **`derivation_status`** — Sage's honest-completeness typology for a bench plant's arc (`sample_window` ·
+  `…_no_valid_peak` · `measure_only_no_water` · `single_probe` · `…_missing_pull` · `mixed_summary_and_samples`):
+  it says what a plant's arc can and can't claim, so a gap stays a gap.
+- **`context_source`** — the provenance tag naming which feed filled a row's `*_context_*` columns (SHT45 /
+  ESP32 die / weather / Zigbee); **one source per row, never blended** (ADR-0023), with the trust class
+  travelling alongside.
 - **The `data` branch** *(code-only)* — the data-records store (csv/gz/db archives) at `.data-worktree`. Not a
   code workspace; intentionally far behind `main`; treat read-only.
 
@@ -137,10 +157,11 @@ every lane. If two lanes use the same word for different things, or different wo
   the **full** module — protocol + math — is native-testable with a mock bus (ADR-0001).
 - **Calibration confidence stage** — how trustworthy a band is *for action*: `provisional` (uncalibrated /
   shared bounds) → `calibrated` (per-channel bounds locked) → `corroborated` (cross-channel + tray agree).
-  Autonomous watering gates at ≥ `calibrated` (#170).
+  Autonomous watering gates at `corroborated` — `calibrated` is **necessary, not sufficient** (ADR-0022 / #170).
 - **Promotion gate** — the prerequisite set to advance a capability stage. E.g. `plant-deployed →
-  autonomous-enabled` requires the dry-safety chain (#93/#191/#2/#215) **+** locked per-channel calibration
-  (#170) **+** the confidence layer — **not** any one alone.
+  autonomous-enabled` requires **all five**: the dry-safety chain (#93/#191/#2/#215) **+** locked per-channel
+  calibration (#170) **+** the confidence layer **+** schema-conformant pump telemetry (#18) **+** the
+  under-watering fail-safe (#410) — **not** any one alone (ADR-0022).
 - **Local truth vs pot truth** — a per-channel band is locally true (the probe reads its microsite correctly)
   but **not** whole-pot truth (geometry, contact, tray state dominate). Calibration removes sensor
   personality, not microsite (#383).

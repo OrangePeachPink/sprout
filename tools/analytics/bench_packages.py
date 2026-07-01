@@ -20,11 +20,20 @@ from __future__ import annotations
 
 import html
 import json
+import re
+import sys
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
 _DATA_ROOT = _REPO / "docs" / "experiments" / "data"
+_DETAIL_TEMPLATE = _HERE / "lab_bench_detail_template.html"
+_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")  # no path traversal from the URL
+
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+from dashboard import FONTS_CSS, TOKENS_CSS  # noqa: E402  (the one token/font source)
+from lab_notes import load_notes  # noqa: E402  (back-fill notes on packages, #450 s3)
 
 
 def _title(experiment_id: str) -> str:
@@ -111,9 +120,8 @@ def load_bench_packages(data_dir: str | Path | None = None) -> list[dict]:
 
 
 def bench_card(e: dict) -> str:
-    """A catalog card for a bench package — visually a sibling of the app-capture card
-    (``ecard``) with a ``bench`` marker class. Not an ``<a>``: a package has no capture
-    detail route; its analysis refs + raw-slice path are surfaced inline instead."""
+    """A bench-package catalog card — a sibling of the app-capture ``ecard``, with a
+    ``bench`` marker class, linking to the ``/lab/bench/<id>`` detail page."""
     esc = html.escape
     bits = [f"Bench · {esc(str(e.get('lane') or 'bench'))}"]
     if e.get("plants"):
@@ -130,12 +138,165 @@ def bench_card(e: dict) -> str:
     )
     eid = esc(str(e["experiment_id"]))
     return (
-        '<div class="ecard bench">'
+        f'<a class="ecard bench" href="/lab/bench/{eid}">'
         f'<div class="ecard-h"><h3>{esc(str(e["title"]))}</h3>'
         f'<span class="ewhen">{esc(str(e.get("date_local") or "—"))}</span></div>'
         f'<div class="emeta">{esc(" · ".join(bits))}</div>'
         f'<div class="echips">{chips}</div>'
         f'<div class="efoot"><span class="eid">{eid}</span>'
         f'<span class="equal mono">{esc(str(e.get("package_path") or ""))}</span></div>'
-        "</div>"
+        "</a>"
+    )
+
+
+def _slice_files(m: dict) -> list[str]:
+    """The raw CSV slice paths a package enumerates (per-window ``csv_files``)."""
+    files: list[str] = []
+    for w in m.get("plant_windows") or []:
+        files.extend(w.get("csv_files") or [])
+    return files
+
+
+def _detail_body(m: dict, e: dict) -> str:
+    """The read-only detail body: purpose, facts, plant windows / observations, the
+    analysis-surface refs, and the raw slices — all from the manifest, never re-read."""
+    esc = html.escape
+    parts: list[str] = []
+    if m.get("purpose"):
+        parts.append(f'<p class="purpose">{esc(str(m["purpose"]))}</p>')
+    plants = e.get("plants") or []
+    facts = [
+        ("lane", e.get("lane")),
+        ("date", e.get("date_local")),
+        ("rows", e.get("rows")),
+        ("raw slices", e.get("raw_slices")),
+        ("plants", f"{len(plants)} ({', '.join(plants)})" if plants else None),
+        ("probes", ", ".join(e.get("probes") or []) or None),
+    ]
+    rows = "".join(
+        f'<tr><td class="k">{esc(k)}</td><td>{esc(str(v))}</td></tr>'
+        for k, v in facts
+        if v is not None
+    )
+    parts.append(f'<table class="facts"><tbody>{rows}</tbody></table>')
+
+    windows = m.get("plant_windows") or []
+    if windows:
+        trs = "".join(
+            f"<tr><td>{esc(str(w.get('plant_id', '—')))}</td>"
+            f"<td>{esc(str(w.get('phase', '—')))}</td>"
+            f"<td>{esc(', '.join(w.get('valid_probe_ids') or []) or '—')}</td>"
+            f"<td>{esc(str(w.get('row_count', '—')))}</td></tr>"
+            for w in windows
+        )
+        parts.append(
+            "<h2>plant windows</h2><table class='wt'><thead><tr><th>plant</th>"
+            "<th>phase</th><th>valid probes</th><th>rows</th></tr></thead>"
+            f"<tbody>{trs}</tbody></table>"
+        )
+    elif m.get("key_observations"):
+        obs = "".join(f"<li>{esc(str(o))}</li>" for o in m["key_observations"])
+        parts.append(f"<h2>key observations</h2><ul class='slices'>{obs}</ul>")
+
+    refs = e.get("refs") or {}
+    if refs:
+        chips = "".join(
+            f'<span class="lchip">{esc(str(k))}: {esc(str(v))}</span>'
+            for k, v in refs.items()
+        )
+        parts.append(f"<h2>analysis surfaces</h2><div class='chips'>{chips}</div>")
+
+    slices = _slice_files(m)
+    if slices:
+        shown = slices[:40]
+        lis = "".join(f"<li>{esc(str(s))}</li>" for s in shown)
+        if len(slices) > 40:
+            lis += f"<li>… +{len(slices) - 40} more</li>"
+        parts.append(
+            f"<h2>raw slices ({len(slices)})</h2><ul class='slices'>{lis}</ul>"
+        )
+
+    parts.append(
+        f'<p class="note">package: {esc(str(e.get("package_path") or ""))}</p>'
+    )
+    return "\n".join(parts)
+
+
+_NOTES_SCRIPT = """<script>
+(function () {
+  var el = document.querySelector('.benchnotes');
+  if (!el) return;
+  var pkg = el.getAttribute('data-pkg');
+  var btn = document.getElementById('bn-save');
+  var st = document.getElementById('bn-status');
+  btn.addEventListener('click', function () {
+    btn.disabled = true; st.textContent = 'saving...';
+    fetch('/lab/bench/' + encodeURIComponent(pkg) + '/notes', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        findings: document.getElementById('bn-findings').value,
+        conclusion: document.getElementById('bn-conclusion').value
+      })
+    }).then(function (r) { return r.json(); })
+      .then(function (d) {
+        st.textContent = d.error ? ('error: ' + d.error)
+          : ('saved ' + (d.path || '') + ' \\u00b7 v' + (d.version || '?'));
+        btn.disabled = false;
+      }).catch(function () {
+        st.textContent = 'save failed - your text is kept'; btn.disabled = false;
+      });
+  });
+})();
+</script>"""
+
+
+def _notes_section(pkg_id: str, notes: dict) -> str:
+    """Back-fill findings/conclusion onto a landed package (#450 slice 3). Notes persist
+    to the ADR-0017 sidecar keyed by the package id, so a bench day's interpretation is
+    attached to its evidence — status/edit_log provenance rides once #473 lands."""
+    esc = html.escape
+    saved = (
+        f"v{notes.get('version')} · saved {esc(str(notes.get('saved_at')))}"
+        if notes.get("saved_at")
+        else "not yet saved"
+    )
+    return (
+        "<h2>findings &amp; notes (back-fill)</h2>"
+        f'<div class="benchnotes" data-pkg="{esc(pkg_id)}">'
+        '<label>findings<textarea id="bn-findings" rows="4">'
+        f"{esc(str(notes.get('findings') or ''))}</textarea></label>"
+        '<label>conclusion<textarea id="bn-conclusion" rows="3">'
+        f"{esc(str(notes.get('conclusion') or ''))}</textarea></label>"
+        '<div class="bn-actions">'
+        '<button id="bn-save" type="button">Save notes</button>'
+        f'<span id="bn-status" class="note">{esc(saved)}</span>'
+        "</div></div>" + _NOTES_SCRIPT
+    )
+
+
+def render_bench_detail(pkg_id: str, data_dir: str | Path | None = None) -> str | None:
+    """The ``/lab/bench/<id>`` page for one landed package, or None (-> 404) if it
+    doesn't exist. Read-only; path-traversal-safe (the id is validated)."""
+    root = Path(data_dir) if data_dir else _DATA_ROOT
+    if not _ID_RE.match(pkg_id or "") or not root.exists():
+        return None
+    pkg_dir = root / pkg_id
+    manifest = pkg_dir / "manifest.json"
+    if not (pkg_dir.is_dir() and manifest.exists()):
+        return None
+    try:
+        m = json.loads(manifest.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    e = _entry(m, pkg_dir)
+    tokens = TOKENS_CSS.read_text(encoding="utf-8") if TOKENS_CSS.exists() else ""
+    fonts = FONTS_CSS.read_text(encoding="utf-8") if FONTS_CSS.exists() else ""
+    sub = f"Bench package · {e.get('lane') or 'bench'} · {e.get('date_local') or ''}"
+    body = _detail_body(m, e) + "\n" + _notes_section(pkg_id, load_notes(pkg_id))
+    return (
+        _DETAIL_TEMPLATE.read_text(encoding="utf-8")
+        .replace("/*__SPROUT_TOKENS__*/", fonts + "\n" + tokens)
+        .replace("<!--__TITLE__-->", html.escape(str(e["title"])))
+        .replace("<!--__SUB__-->", html.escape(sub))
+        .replace("<!--__BODY__-->", body)
     )

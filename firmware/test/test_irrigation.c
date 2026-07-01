@@ -24,6 +24,7 @@
 #include "sht45.h"
 #include "as7263.h"
 #include "telemetry.h"
+#include "board_capability.h" /* #273 capability descriptor + gate seam */
 
 /* -------------------------------------------------------------------------- */
 /* synthetic rig: ADC source + pump observer + event sink                     */
@@ -129,6 +130,10 @@ static void start(void)
     irrig_io_t io = {sim_read, sim_pump, sim_event, &RIG};
     NOW = 1000;
     irrig_init(&CTRL, &SYS, CH, MC, MS, SCRATCH, io, NOW);
+    /* The autonomous tests exercise self-dosing, so arm the engine here (init
+     * now defaults to disarmed, #227). t_autonomous_gate inits directly to assert
+     * that fail-safe default and the disarmed/forced behavior. */
+    irrig_set_autonomous(&CTRL, true);
 }
 
 static void step(uint32_t dt)
@@ -586,6 +591,89 @@ void t_forced_dose(void)
 }
 
 /* -------------------------------------------------------------------------- */
+/* autonomous arm gate (#227 / ADR-0016)                                      */
+/* -------------------------------------------------------------------------- */
+
+/* Disarmed (the init default): a healthy DRY channel is monitored but never
+ * auto-watered, while an operator forced dose still grants. Armed: it waters. */
+void t_autonomous_gate(void)
+{
+    irrig_io_t io = {sim_read, sim_pump, sim_event, &RIG};
+
+    /* init directly (not start(), which arms) to assert the fail-safe default */
+    base_cfg(/*mhw*/ 3, /*mdoses*/ 3, /*pmax*/ 5000, /*dose*/ 2000);
+    RIG.sim[1] =
+        (chan_sim_t){.target_raw = 2400, .noisy = false}; /* DRY healthy */
+    NOW = 1000;
+    irrig_init(&CTRL, &SYS, CH, MC, MS, SCRATCH, io, NOW);
+    TEST_ASSERT_FALSE_MESSAGE(irrig_autonomous(&CTRL),
+                              "autonomous disarmed by default (fail-safe)");
+
+    step(SYS.sample_period_ms);
+    TEST_ASSERT_TRUE_MESSAGE(irrig_active_pump(&CTRL) == -1,
+                             "disarmed: dry channel NOT auto-watered");
+    TEST_ASSERT_TRUE_MESSAGE(RIG.pump_on_count[1] == 0,
+                             "disarmed: no autonomous dose");
+    TEST_ASSERT_TRUE_MESSAGE(irrig_status(&CTRL, 1) == CH_OK,
+                             "disarmed: dry channel still monitored (CH_OK)");
+
+    /* operator forced dose still grants while disarmed (manual !water path) */
+    TEST_ASSERT_TRUE_MESSAGE(irrig_request_dose(&CTRL, 1, 0) ==
+                                 IRRIG_DOSE_QUEUED,
+                             "forced dose queued while disarmed");
+    step(SYS.sample_period_ms);
+    TEST_ASSERT_TRUE_MESSAGE(irrig_active_pump(&CTRL) == 1,
+                             "forced dose grants despite disarmed");
+    TEST_ASSERT_TRUE_MESSAGE(RIG.pump_on_count[1] == 1, "forced dose ran once");
+
+    /* armed: the same dry condition now auto-waters */
+    base_cfg(3, 3, 5000, 2000);
+    RIG.sim[2] =
+        (chan_sim_t){.target_raw = 2400, .noisy = false}; /* DRY healthy */
+    NOW = 1000;
+    irrig_init(&CTRL, &SYS, CH, MC, MS, SCRATCH, io, NOW);
+    irrig_set_autonomous(&CTRL, true);
+    TEST_ASSERT_TRUE_MESSAGE(irrig_autonomous(&CTRL), "armed");
+    step(SYS.sample_period_ms);
+    TEST_ASSERT_TRUE_MESSAGE(irrig_active_pump(&CTRL) == 2,
+                             "armed: dry channel auto-waters");
+    TEST_ASSERT_TRUE_MESSAGE(RIG.max_pumps_on <= 1, "invariant 1 still holds");
+    TEST_ASSERT_TRUE_MESSAGE(RIG.read_during_pump == false,
+                             "invariant 2 still holds");
+}
+
+/* Operator e-stop: irrig_abort forces an active dose OFF, cancels pending forced
+ * doses, and is a no-op (returns false) when idle. */
+void t_irrig_abort(void)
+{
+    base_cfg(/*mhw*/ 3, /*mdoses*/ 3, /*pmax*/ 5000, /*dose*/ 3000);
+    RIG.sim[1] =
+        (chan_sim_t){.target_raw = 2400, .noisy = false}; /* DRY healthy */
+    start(); /* armed */
+
+    step(SYS.sample_period_ms); /* grant ch1 dose */
+    TEST_ASSERT_TRUE_MESSAGE(irrig_active_pump(&CTRL) == 1, "ch1 dosing");
+    TEST_ASSERT_TRUE_MESSAGE(RIG.pumps_on_now == 1, "pump energized");
+
+    bool was = irrig_abort(&CTRL, NOW);
+    TEST_ASSERT_TRUE_MESSAGE(was, "abort while watering -> was-active true");
+    TEST_ASSERT_TRUE_MESSAGE(RIG.pumps_on_now == 0, "abort forces pump OFF");
+    TEST_ASSERT_TRUE_MESSAGE(irrig_active_pump(&CTRL) == -1, "no active pump");
+
+    /* a pending forced dose is cancelled by the abort */
+    irrig_request_dose(&CTRL, 2, 0);
+    irrig_abort(&CTRL, NOW);
+    step(SYS.sample_period_ms);
+    step(SYS.sample_period_ms); /* clear the settle, run a sweep */
+    TEST_ASSERT_TRUE_MESSAGE(RIG.pump_on_count[2] == 0,
+                             "aborted forced dose never fired");
+
+    /* abort while idle is a harmless no-op */
+    TEST_ASSERT_FALSE_MESSAGE(irrig_abort(&CTRL, NOW),
+                              "abort while idle -> false");
+}
+
+/* -------------------------------------------------------------------------- */
 /* run metadata: !label / !pos runtime handlers (#321)                        */
 /* -------------------------------------------------------------------------- */
 
@@ -867,6 +955,166 @@ void t_env_row(void)
                                  "aim in payload");
 }
 
+/* #278 device-owned time (ADR-0018 / schema v2 §11.1-§11.2): device_seq +
+ * time_source ride the soil row's payload; device_timestamp_utc is OMITTED
+ * (not printed as an empty key) when unsynced - the honest NULL, never a
+ * guessed value. Pins BOTH states: today's real unsynced case, and the
+ * synced case the fields are already ready for once #21 (WiFi/NTP) lands. */
+void t_soil_row_time_provenance(void)
+{
+    moisture_cfg_t cfg = (moisture_cfg_t)MOISTURE_CFG_DEFAULT;
+    moisture_state_t st;
+    moisture_init(&st, &cfg,
+                  1300); /* WELL_WATERED-range raw, any valid state */
+    char buf[300];
+
+    /* unsynced (today's honest reality): device_timestamp_utc key absent entirely */
+    telemetry_soil_row_t unsynced = {
+        "plants.soil",
+        "3f9a1c",
+        "Sprout ESP32",
+        "0.7.0",
+        123456ULL,
+        "UMLIFE_v2_TLC555",
+        "s3",
+        "origplant",
+        "soil_moisture",
+        36,
+        1300,
+        MOIST_WELL_WATERED,
+        &st,
+        42,
+        "device_uptime",
+        "",
+    };
+    TEST_ASSERT_TRUE_MESSAGE(
+        telemetry_format_soil_row(buf, sizeof(buf), &unsynced) > 0,
+        "unsynced row formatted");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, "device_seq=42"),
+                                 "device_seq in payload");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, "time_source=device_uptime"),
+                                 "time_source=device_uptime when unsynced");
+    TEST_ASSERT_NULL_MESSAGE(
+        strstr(buf, "device_timestamp_utc="),
+        "device_timestamp_utc key OMITTED, not empty, when NULL");
+
+    /* synced (future-ready, once #21/NTP lands): device_timestamp_utc appears */
+    telemetry_soil_row_t synced = {
+        "plants.soil",
+        "3f9a1c",
+        "Sprout ESP32",
+        "0.7.0",
+        123456ULL,
+        "UMLIFE_v2_TLC555",
+        "s3",
+        "origplant",
+        "soil_moisture",
+        36,
+        1300,
+        MOIST_WELL_WATERED,
+        &st,
+        43,
+        "device_synced",
+        "2026-07-01T14:05:30.000Z",
+    };
+    TEST_ASSERT_TRUE_MESSAGE(
+        telemetry_format_soil_row(buf, sizeof(buf), &synced) > 0,
+        "synced row formatted");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, "time_source=device_synced"),
+                                 "time_source=device_synced when synced");
+    TEST_ASSERT_NOT_NULL_MESSAGE(
+        strstr(buf, "device_timestamp_utc=2026-07-01T14:05:30.000Z"),
+        "device_timestamp_utc present + exact when synced");
+}
+
+/* #273 capability descriptor (ADR-0019 §1-2): the descriptor is accessible, the
+ * gate seam matches the field, and an unknown/no-WiFi target falls to the Tier-0
+ * floor (tethered monitor, no WiFi) — i.e. Tier-0 runs on a no-WiFi board. The
+ * native/host build takes the fallback entry, so that's what this pins. */
+void t_board_capability(void)
+{
+    TEST_ASSERT_FALSE_MESSAGE(
+        board_has_wifi(), "host/fallback: no WiFi -> Tier-0 tethered monitor");
+    TEST_ASSERT_EQUAL_MESSAGE((int)BOARD_CAP.has_wifi, (int)board_has_wifi(),
+                              "gate seam reflects the descriptor field");
+    TEST_ASSERT_EQUAL_MESSAGE(4, BOARD_CAP.num_channels, "4 soil channels");
+    TEST_ASSERT_EQUAL_MESSAGE(12, BOARD_CAP.adc_bits, "12-bit ADC");
+    TEST_ASSERT_NOT_NULL_MESSAGE((void *)BOARD_CAP.name,
+                                 "descriptor has a name");
+    TEST_ASSERT_NOT_NULL_MESSAGE((void *)BOARD_CAP.storage,
+                                 "has a storage tier");
+
+    /* #436: pins are now a descriptor field (ADR-0019 §1). The host/fallback entry
+     * carries the classic pin values, so this locks the exact classic map (a
+     * regression guard: config.h's SENSOR_PINS/RELAY_PINS/LED_PIN now SOURCE from
+     * these, so a wrong edit here would silently reassign real hardware pins). */
+    const uint8_t soil[4] = {36, 39, 34, 35};
+    const uint8_t relay[4] = {25, 26, 27, 32};
+    for (int i = 0; i < 4; i++) {
+        TEST_ASSERT_EQUAL_MESSAGE(soil[i], BOARD_CAP.soil_pins[i],
+                                  "classic soil pin unchanged");
+        TEST_ASSERT_EQUAL_MESSAGE(relay[i], BOARD_CAP.relay_pins[i],
+                                  "classic relay pin unchanged");
+    }
+    TEST_ASSERT_EQUAL_MESSAGE(2, BOARD_CAP.led_pin,
+                              "classic LED pin unchanged");
+    TEST_ASSERT_EQUAL_MESSAGE(21, BOARD_CAP.i2c_sda,
+                              "classic I2C SDA unchanged");
+    TEST_ASSERT_EQUAL_MESSAGE(22, BOARD_CAP.i2c_scl,
+                              "classic I2C SCL unchanged");
+
+    /* #436: per-board calibration. Host/fallback carries the classic endpoint
+     * VALUES (the placeholder every unverified board also uses) but, like
+     * has_wifi/storage, is honestly NOT a real board -> cal_verified=false. This
+     * pins the value/flag as two independent facts: the numbers can match
+     * classic's without the board being claimed as bench-verified. */
+    const uint16_t cal[BOARD_CAL_BOUNDARY_COUNT] = {3050, 2140, 1830,
+                                                    1520, 1150, 1050};
+    for (int i = 0; i < BOARD_CAL_BOUNDARY_COUNT; i++) {
+        TEST_ASSERT_EQUAL_MESSAGE(cal[i], BOARD_CAP.cal_boundary[i],
+                                  "host cal boundary matches the placeholder");
+    }
+    TEST_ASSERT_FALSE_MESSAGE(BOARD_CAP.cal_verified,
+                              "host is not a real board -> not bench-verified");
+}
+
+/* #274 sensor-type seam (ADR-0019 §3): a RESISTIVE channel INVERTS the raw->band
+ * direction (higher raw = wetter). Pins the MECHANISM, not resistive calibration
+ * values (there are none — resistive ships PROVISIONAL); the same raw lands at
+ * opposite ends of the band scale for capacitive vs resistive. */
+void t_sensor_type_resistive(void)
+{
+    moisture_cfg_t cap =
+        (moisture_cfg_t)MOISTURE_CFG_DEFAULT; /* SENSOR_CAPACITIVE */
+    TEST_ASSERT_EQUAL_MESSAGE(
+        SENSOR_CAPACITIVE, cap.sensor_type,
+        "default profile is capacitive (configs unchanged)");
+
+    /* Resistive: same magnitudes but ASCENDING boundary[] + inverted direction. */
+    moisture_cfg_t res = (moisture_cfg_t)MOISTURE_CFG_DEFAULT;
+    res.sensor_type = SENSOR_RESISTIVE;
+    const uint16_t asc[MOISTURE_BOUNDARY_COUNT] = {1050, 1150, 1520,
+                                                   1830, 2140, 3050};
+    memcpy(res.boundary, asc, sizeof(res.boundary));
+
+    moisture_state_t sc, sr;
+    /* HIGH raw (3200): capacitive -> AIR_DRY (driest); resistive -> SUBMERGED (wettest) */
+    moisture_init(&sc, &cap, 3200);
+    moisture_init(&sr, &res, 3200);
+    TEST_ASSERT_EQUAL_MESSAGE(MOIST_AIR_DRY, sc.committed,
+                              "cap: high raw -> air-dry");
+    TEST_ASSERT_EQUAL_MESSAGE(MOIST_SUBMERGED, sr.committed,
+                              "res: high raw -> submerged (inverted)");
+
+    /* LOW raw (900): capacitive -> SUBMERGED; resistive -> AIR_DRY */
+    moisture_init(&sc, &cap, 900);
+    moisture_init(&sr, &res, 900);
+    TEST_ASSERT_EQUAL_MESSAGE(MOIST_SUBMERGED, sc.committed,
+                              "cap: low raw -> submerged");
+    TEST_ASSERT_EQUAL_MESSAGE(MOIST_AIR_DRY, sr.committed,
+                              "res: low raw -> air-dry (inverted)");
+}
+
 /* -------------------------------------------------------------------------- */
 /* runner                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -881,12 +1129,17 @@ int main(void)
     RUN_TEST(t_overrun_failsafe);
     RUN_TEST(t_last_water_ms);
     RUN_TEST(t_band_anchors);
+    RUN_TEST(t_board_capability);
+    RUN_TEST(t_sensor_type_resistive);
     RUN_TEST(t_serial_cmd_registry);
     RUN_TEST(t_pump_pulse);
     RUN_TEST(t_forced_dose);
+    RUN_TEST(t_autonomous_gate);
+    RUN_TEST(t_irrig_abort);
     RUN_TEST(t_run_meta);
     RUN_TEST(t_sht45);
     RUN_TEST(t_as7263);
     RUN_TEST(t_env_row);
+    RUN_TEST(t_soil_row_time_provenance);
     return UNITY_END();
 }
