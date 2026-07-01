@@ -28,6 +28,10 @@ _TEMPLATE = _HERE / "lab_template.html"
 
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
+from bench_packages import (  # noqa: E402  (landed bench packages, #444)
+    bench_card,
+    load_bench_packages,
+)
 from dashboard import FONTS_CSS, TOKENS_CSS  # noqa: E402  (reuse the one token source)
 
 
@@ -64,6 +68,17 @@ def load_catalog(experiments_dir: str | Path | None = None) -> list[dict]:
                 "crc_fail": t.get("crc_fail"),
             }
         )
+    entries.sort(key=lambda e: e.get("started_utc") or "", reverse=True)
+    return entries
+
+
+def load_combined(
+    experiments_dir: str | Path | None = None,
+    bench_dir: str | Path | None = None,
+) -> list[dict]:
+    """App captures + landed bench packages (#444), newest first — the ``/lab`` source.
+    Bench entries carry ``kind == "bench"`` so the renderer picks ``bench_card``."""
+    entries = load_catalog(experiments_dir) + load_bench_packages(bench_dir)
     entries.sort(key=lambda e: e.get("started_utc") or "", reverse=True)
     return entries
 
@@ -122,7 +137,9 @@ def render_catalog(entries: list[dict]) -> str:
     tokens = TOKENS_CSS.read_text(encoding="utf-8") if TOKENS_CSS.exists() else ""
     fonts = FONTS_CSS.read_text(encoding="utf-8") if FONTS_CSS.exists() else ""
     cards = (
-        "\n".join(_card(e) for e in entries)
+        "\n".join(
+            bench_card(e) if e.get("kind") == "bench" else _card(e) for e in entries
+        )
         if entries
         else '<p class="empty">No experiments yet — run one from the dashboard\'s '
         "Experiment Capture panel.</p>"
@@ -139,7 +156,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--html", action="store_true", help="write reports/lab.html")
     ap.add_argument("--dir", help="experiments dir (default: repo experiments/)")
     args = ap.parse_args(argv)
-    entries = load_catalog(args.dir)
+    entries = load_combined(args.dir)  # app captures + landed bench packages (#444)
     if args.html:
         out = _REPO / "reports" / "lab.html"
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -147,7 +164,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"wrote {out} ({len(entries)} experiment(s))")
     else:
         for e in entries:
-            print(f"{e['experiment_id']}  {e['title']!r}  {_fmt_dur(e['duration_s'])}")
+            dur = _fmt_dur(e.get("duration_s"))
+            print(f"{e['experiment_id']}  {e['title']!r}  {dur}")
         print(f"{len(entries)} experiment(s)")
     return 0
 
