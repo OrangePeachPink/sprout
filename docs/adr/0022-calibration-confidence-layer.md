@@ -1,8 +1,9 @@
 # ADR-0022 — Calibration-confidence layer (local-truth vs pot-truth gating)
 
-**Status:** Proposed — *drafted by Trellis from #400 (surfaced by #170 + #383). The gate **model** is ratifiable
-now; the **thresholds/metrics** need the cross-lane inputs enumerated below (design-light-before-build —
-ratification is not blocked on them). Awaiting Sage/Data/Firmware inputs + maintainer ratification.*
+**Status:** Accepted — *the gate **model** ratified by the maintainer 2026-06-30 (#400 / #402). The
+**thresholds/metrics** remain design-light-before-build, tracked as non-blocking cross-lane inputs
+(#412 Data · #414 Firmware · #416 config-provenance · Sage bench). The **under-action failure mode** is a
+named open concern owned by the #410 epic — gate item 5.*
 **Date:** 2026-06-30
 **Owner:** Architecture (Trellis, author) — promotion-gate owner; control-loop enforcement co-owned with Firmware
 **Lane:** architecture (cross-lane: Firmware enforcement · Sage bench · Data substrate)
