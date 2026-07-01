@@ -80,7 +80,14 @@ the message bus.** Self-sync at **three moments: when you start, just before you
 status brief / share-out (requested or proactive).**
 
 Each sync, sweep your slice: **PRs you own** (moved? merged?), **issues newly `for:<your-lane>`**,
-**questions / RFCs aimed at you**, and **what just merged that unblocks your gated work**. Then **act**:
+**questions / RFCs aimed at you**, and **what just merged that unblocks your gated work** — but **skip
+`needs:hardware`** (the maintainer's hardware/bench queue; filter `for:<your-lane> -label:needs:hardware`).
+
+**Which item? No ambiguity:** your queue = `for:<your-lane> -label:needs:hardware -label:needs:maintainer`
+**sorted by Priority**; your next task = the **top-priority *sliced* item** (P0/P1 → P2 → P3). Every P1/P2 is
+triaged to be owned, sliced, actionable — start it without asking. **Epics are parents, not tasks** — work
+their sliced children, never the epic card. Escalate (`for:workflow`) only a top item that truly isn't
+actionable; that should be rare. Then **act**:
 
 - Your PR merged → reconcile it and **chase what it unblocks**. A dependency landed → **pick up the unblocked
   work this session.** A new `for:<lane>` issue or an RFC for you → triage / answer / act.
@@ -176,7 +183,7 @@ wiring/power changes and with Data on schema extensions for new sensor readings.
 | Area | Tooling | Rule |
 |---|---|---|
 | **Python** (logger, analytics, build hooks) | [ruff](ruff.toml) lint + format | line length 88; `ruff check .` · `ruff format .` |
-| **C / C++** (firmware) | clang-format + clang-tidy | 4-space, K&R braces, 80 cols; **changed-scope only, never `--all-files`** (#343) — untouched files keep their manual column alignment, and `AlignTrailingComments: Leave` preserves comment columns even on edited files. Residual: editing a file still reflows its `=`-columns / >80-col tables → changed-lines v2 (#352). |
+| **C / C++** (firmware) | clang-format + clang-tidy | 4-space, K&R braces, 80 cols; **changed-lines only (`git-clang-format`), never `--all-files`** (#352) — only the lines you touch are reformatted; every untouched line keeps its manual alignment (`=`-columns, >80-col tables, comment columns all survive). Supersedes the changed-**files** v1 (#343). |
 | **Markdown** | markdownlint | `npx markdownlint-cli2@0.22.1 "**/*.md"` (pinned, like `cspell@10.0.1`) |
 | **Endings / encoding** | git + EditorConfig | LF · UTF-8 · final newline |
 

@@ -1,0 +1,34 @@
+{
+  "_note": "TEMPLATE. Copy to config/devices.local.json (gitignored) and describe YOUR fleet: each ESP32 board and which plant sits on each capacitive channel. This is the multi-device registry (#485) the monitor-all view (#486) reads to attribute N devices' streams to the 11 plants. The registry's JSON shape is a PROPOSAL (awaiting Workflow/Trellis ratification for #300); consumers depend on device_registry.py's functions, not this file's layout. Placeholder values below.",
+  "schema_version": 1,
+  "devices": [
+    {
+      "device_id": "sprout-classic-01",
+      "board": "esp32dev",
+      "label": "the classic (living room)",
+      "channels": {
+        "s1": { "plant_id": "P01", "plant_name": "placeholder" },
+        "s2": { "plant_id": "P02", "plant_name": "placeholder" },
+        "s3": { "plant_id": "P03", "plant_name": "placeholder" },
+        "s4": { "plant_id": "P04", "plant_name": "placeholder" }
+      }
+    },
+    {
+      "device_id": "sprout-s3-01",
+      "board": "esp32-s3-devkitc-1",
+      "label": "the S3 (placeholder location)",
+      "channels": {
+        "s1": { "plant_id": "P05", "plant_name": "placeholder" },
+        "s2": { "plant_id": "P06", "plant_name": "placeholder" }
+      }
+    },
+    {
+      "device_id": "sprout-c5-01",
+      "board": "esp32-c5-devkitc-1",
+      "label": "the C5 (placeholder location)",
+      "channels": {
+        "s1": { "plant_id": "P07", "plant_name": "placeholder" }
+      }
+    }
+  ]
+}

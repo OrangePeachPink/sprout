@@ -12,6 +12,14 @@ the host logger as it appends. Read-only: it never writes the logs.
 Stop it from the dashboard's "Stop server" control (the no-terminal door) or with
 Ctrl-C. The static ``dashboard.py`` snapshot is still the right tool for a
 shareable one-file artifact; this is for live monitoring on the host.
+
+Scope boundary (ADR-0014 §5, #296): serve.py is **transport + routing + wiring** — HTTP
+serving, request routing, and *holding* the CaptureController / MonitorController
+instances. It does **not** implement capture/monitor lifecycle logic (those controllers
+do); the control-plane state (the two instances + the Monitor/Experiment handoff) lives
+here as module-globals. That co-location is the known seam, extracted into an
+``operator_plane`` module only when a second UI context (#243's device UI) needs to
+share it — not for hygiene alone.
 """
 
 from __future__ import annotations
@@ -36,6 +44,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+from bench_packages import render_bench_detail  # noqa: E402  (bench detail #444)
 from dashboard import (  # noqa: E402  (sibling import)
     RANGE_HOURS,
     build_context,
@@ -44,7 +53,10 @@ from dashboard import (  # noqa: E402  (sibling import)
     gather_inputs,
     render,
 )
-from experiments_catalog import load_catalog, render_catalog  # noqa: E402  (Lab #154)
+from experiments_catalog import (  # noqa: E402  (Lab #154; #444 combined source)
+    load_combined,
+    render_catalog,
+)
 from lab_detail import render_detail  # noqa: E402  (Lab detail #157)
 from lab_drafts import list_drafts, load_draft  # noqa: E402  (agent drafts #326)
 from lab_notes import (  # noqa: E402  (Lab notes #158; path for save resilience #327)
@@ -172,10 +184,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json(_MONITOR.status())
             elif parsed.path == "/serial/owner":  # who holds the port (#330)
                 self._send_json(serial_lock.owner_status())
-            elif parsed.path == "/lab":  # the Lab Notebook catalog (#154)
-                self._send(render_catalog(load_catalog()), "text/html; charset=utf-8")
+            elif parsed.path == "/lab":  # the Lab Notebook catalog (#154 + bench #444)
+                self._send(render_catalog(load_combined()), "text/html; charset=utf-8")
             elif parsed.path == "/lab/experiments.json":
-                self._send_json(load_catalog())
+                self._send_json(load_combined())
             elif parsed.path == "/lab/drafts":  # agent-prepared draft list (#326)
                 self._send_json({"drafts": list_drafts()})
             elif parsed.path.startswith("/lab/draft/"):  # one draft, for prefill (#326)
@@ -200,6 +212,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif parsed.path.startswith("/lab/") and parsed.path.endswith("/notes"):
                 eid = unquote(parsed.path[len("/lab/") : -len("/notes")])  # notes #158
                 self._send_json(load_notes(eid))
+            elif parsed.path.startswith("/lab/bench/"):  # a bench-package detail (#444)
+                pkg = unquote(parsed.path[len("/lab/bench/") :])
+                page = render_bench_detail(pkg)
+                if page is None:
+                    self._send("bench package not found", "text/plain", status=404)
+                else:
+                    self._send(page, "text/html; charset=utf-8")
             elif parsed.path.startswith("/lab/"):  # an experiment detail page (#157)
                 eid = unquote(parsed.path[len("/lab/") :])
                 page = render_detail(eid)
@@ -243,10 +262,29 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif parsed.path.startswith("/lab/study/"):  # save a study (#159)
                 sid = unquote(parsed.path[len("/lab/study/") :])
                 self._send_json(save_study(sid, self._body()))
+            elif parsed.path.startswith("/lab/bench/") and parsed.path.endswith(
+                "/notes"
+            ):
+                # Back-fill notes onto a landed bench package (#450 slice 3). Must
+                # precede the generic /lab/*/notes route, which mis-reads "bench/<id>".
+                pkg = unquote(parsed.path[len("/lab/bench/") : -len("/notes")])
+                try:
+                    result = save_notes(pkg, self._body())
+                    result["path"] = notes_rel_path(pkg)
+                    self._send_json(result)
+                except Exception as exc:
+                    self._send_json(
+                        {"error": str(exc), "path": notes_rel_path(pkg)}, status=500
+                    )
             elif parsed.path.startswith("/lab/") and parsed.path.endswith("/notes"):
                 eid = unquote(parsed.path[len("/lab/") : -len("/notes")])  # notes #158
                 try:
-                    result = save_notes(eid, self._body())
+                    body = self._body()
+                    # #450: optional lifecycle status + edit author ride the same body,
+                    # backward-compatible (absent -> carried / "unknown").
+                    result = save_notes(
+                        eid, body, status=body.get("status"), author=body.get("author")
+                    )
                     result["path"] = notes_rel_path(eid)  # #327: show where it landed
                     self._send_json(result)
                 except Exception as exc:  # #327: surface the failed target path so the
@@ -266,6 +304,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
                 def _shutdown() -> None:
                     time.sleep(0.25)  # let the {stopped:true} ack flush to the browser
+                    # One-action quit (#151 AC3): tear down any child the server
+                    # started - the capture/logger process - so "Stop server" closes
+                    # the WHOLE stack, not just the web server. Best-effort: a child
+                    # that's already gone or slow to stop must not block shutdown.
+                    for controller in (_CAPTURE, _MONITOR):
+                        with contextlib.suppress(Exception):
+                            controller.stop()
                     self.server.shutdown()
 
                 threading.Thread(target=_shutdown, daemon=True).start()
@@ -343,7 +388,13 @@ def main(argv: list[str] | None = None) -> int:
         "--restart",
         action="store_true",
         help="if a Sprout server already holds the port, ask it to /quit and take over "
-        "- used by the launcher so a stale server can't block entry",
+        "- an explicit force-fresh (e.g. after a code update)",
+    )
+    ap.add_argument(
+        "--serve-or-focus",
+        action="store_true",
+        help="single-instance (the launcher default, #151): if Sprout is already "
+        "running, just open its tab and exit - never a second server or window",
     )
     ap.add_argument(
         "--print-port",
@@ -365,26 +416,42 @@ def main(argv: list[str] | None = None) -> int:
         print(url)
         return 0
 
-    # Port-safety (#126/#127): if a Sprout server is already on this port, don't
-    # half-bind behind it (Windows SO_REUSEADDR would let us). With --restart the
-    # launcher takes over by asking the old one to /quit; otherwise say so + exit.
-    if _port_in_use(args.host, args.port) and not (
-        args.restart and _stop_existing(url, args.host, args.port)
-    ):
-        print(f"Sprout is already running at {url}")
-        print(
-            '  Open that tab, or stop it first ("Stop server" in the dashboard, '
-            "or close its window)."
-        )
-        return 1
+    # Port-safety (#126/#127/#151): if a Sprout server is already on this port, don't
+    # half-bind behind it (Windows SO_REUSEADDR would let us). Three ways to resolve,
+    # in order: --restart takes over (ask the old one to /quit); --serve-or-focus (the
+    # launcher default) is single-instance - open the existing tab and bow out, so a
+    # second double-click never spawns a second server or window (#151 AC1/AC2/AC4);
+    # otherwise say so + exit non-zero.
+    if _port_in_use(args.host, args.port):
+        if args.restart and _stop_existing(url, args.host, args.port):
+            pass  # took over the port; fall through to bind our own
+        elif args.serve_or_focus:
+            print(f"Sprout is already running at {url} - opening that tab.")
+            if args.open:
+                webbrowser.open(url)
+            return 0  # single-instance: exactly one server, no second window
+        else:
+            print(f"Sprout is already running at {url}")
+            print(
+                '  Open that tab, or stop it first ("Stop server" in the dashboard, '
+                "or close its window)."
+            )
+            return 1
 
     # Explicit CLI inputs are pinned; otherwise leave None so each request
     # re-discovers logs/ + the B8 archive (fix #39).
     DashboardHandler.inputs = args.inputs or None
     try:
         httpd = ThreadingHTTPServer((args.host, args.port), DashboardHandler)
-    except OSError as exc:  # raced between the probe and the bind
+    except OSError as exc:  # lost the race between the probe and the bind
         if getattr(exc, "errno", None) == errno.EADDRINUSE:
+            # Someone bound between our probe and here. Single-instance still holds:
+            # focus the winner instead of erroring (closes the double-launch race).
+            if args.serve_or_focus:
+                print(f"Sprout is already running at {url} - opening that tab.")
+                if args.open:
+                    webbrowser.open(url)
+                return 0
             print(f"Sprout is already running at {url} - stop it first.")
             return 1
         raise
