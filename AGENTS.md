@@ -82,6 +82,8 @@ status brief / share-out (requested or proactive).**
 Each sync, sweep your slice: **PRs you own** (moved? merged?), **issues newly `for:<your-lane>`**,
 **questions / RFCs aimed at you**, and **what just merged that unblocks your gated work** — but **skip
 `needs:hardware`** (the maintainer's hardware/bench queue; filter `for:<your-lane> -label:needs:hardware`).
+**A status/priority change alone triggers no GitHub notification** — only a comment/label/assignee does. Don't
+rely on notifications to catch new work; **re-pull the live board each sync.**
 
 **Which item? No ambiguity:** your queue = `for:<your-lane> -label:needs:hardware -label:needs:maintainer`
 **sorted by Priority**; your next task = the **top-priority *sliced* item** (P0/P1 → P2 → P3). Every P1/P2 is

@@ -194,9 +194,16 @@ the message bus.** Keep the system moving by syncing yourself.
 - **Comments / questions / RFCs** aimed at your lane on issues and PRs.
 - **What recently merged that unblocks you** — a dependency landed, or a base PR merged so your stacked PR
   can rebase.
-- **Backlog** items in your area that are now actionable — but **skip anything labelled `needs:hardware`**:
-  those are the maintainer's hardware/bench queue (wiring, pump/relay setup, hardware you don't have yet), not
-  lane-advanceable. Filter your board view to `for:<your-lane> -label:needs:hardware`.
+- **Backlog *and* In Progress** items in your area that are now actionable — an item doesn't have to be sitting
+  in Backlog to be untouched. Workflow (or another lane) can move a card's *status* without anyone touching
+  *your* item yet — check for a PR or a comment from your own lane, not just the column it's in. But **skip
+  anything labelled `needs:hardware`**: those are the maintainer's hardware/bench queue (wiring, pump/relay
+  setup, hardware you don't have yet), not lane-advanceable. Filter your board view to
+  `for:<your-lane> -label:needs:hardware`, across both columns.
+- **A board *status* or *priority* change generates no GitHub notification** — only a comment, label, or
+  assignee change does. So don't rely on your notifications/mentions alone to catch new work: **re-pull the
+  live board (Project #2) each sync**, per the instructions above. If you only ever check "what's new in my
+  notifications," a silent status flip is invisible to you.
 
 **Which item do you pick? No ambiguity — the board answers it:**
 
