@@ -28,6 +28,7 @@
 #include "telemetry.h"
 #include "commands.h"
 #include "run_meta.h"
+#include "board_capability.h" /* per-board capability descriptor + gate seam (#273) */
 
 #ifdef ENABLE_ENV_SENSORS
 #include <Wire.h>
@@ -269,6 +270,16 @@ static void printHeader()
              "# device_id=%s (%s)  chip=%s  adc=ADC1,12bit,11dB,eFuseCal=off",
              g_device_id, g_device_id_custom ? "custom" : "default",
              ESP.getChipModel());
+    Serial.println(buf);
+    /* Capability provenance (#273 / ADR-0019): the board declares what it CAN do,
+     * so multi-board data is self-describing and WiFi features (#21) have a gate. */
+    snprintf(buf, sizeof(buf),
+             "# board: %s  wifi=%s  channels=%u  adc=%ubit  storage=%s  "
+             "tier0=monitor(%s)",
+             BOARD_CAP.name, board_has_wifi() ? "yes" : "no",
+             (unsigned)BOARD_CAP.num_channels, (unsigned)BOARD_CAP.adc_bits,
+             BOARD_CAP.storage,
+             board_has_wifi() ? "untethered-ready" : "tethered");
     Serial.println(buf);
     snprintf(
         buf, sizeof(buf), "# session_id=%s  cadence_ms=%lu  cadence_src=%s",
