@@ -80,15 +80,22 @@ does. A closed window can leave a **headless** logger process running for hours,
 invisible in Task Manager (it has no window and a generic `python.exe` name). If "port busy" persists after
 closing every visible window:
 
-```powershell
-# Find it — headless Sprout capture processes, by command line (not by window/name):
-Get-CimInstance Win32_Process -Filter "Name='python.exe' or Name='pythonw.exe'" |
-  Where-Object { $_.CommandLine -match 'plants_logger|experiment_capture' } |
-  Select-Object ProcessId, CommandLine
+```sh
+just processes
+```
 
-# Confirmed it's an orphan? Stop it by the PID from above:
+**Find** any live Sprout-spawned process by PID + role (Monitor / Experiment) — one command, no manual
+forensics (`tools/analytics/sprout_processes.py`, #500). Read-only; it only reports. To **stop** a confirmed
+orphan by its PID:
+
+```powershell
 Stop-Process -Id <ProcessId> -Force
 ```
+
+*(The manual find-by-command-line PowerShell this section used before `just processes` existed:
+`Get-CimInstance Win32_Process -Filter "Name='python.exe' or Name='pythonw.exe'" | Where-Object
+{ $_.CommandLine -match 'plants_logger|experiment_capture' }` — kept here only as a fallback if `just
+processes` itself is unavailable.)*
 
 This is a workaround, not a fix — the real fix (an actual close-signal + a server-side liveness self-shutdown)
 is tracked on #493 (Data). Once that lands, this section retires.
