@@ -53,6 +53,8 @@ see you. 🌱
 
 ---
 
-*Arduino beginner on-ramp ([#387](https://github.com/OrangePeachPink/plants/issues/387)) — the framing + copy.
-The actual starter `.ino` (sensor read + the tunable-constants block) is a separate future piece, coordinated
-with Firmware/Sage; this doc is the warm, honest voice it ships in. DX owns the words.*
+*Arduino beginner on-ramp (part of the [Arduino On-Ramp epic](https://github.com/OrangePeachPink/plants/issues/435))
+— the framing + copy. The real sketch, built by Firmware to this spec, lives at
+[`arduino-starter/arduino-starter.ino`](../../arduino-starter/arduino-starter.ino) — one file, no libraries,
+matching this page's constants and voice exactly. DX owns the words; Sage validates the real bench anchors
+before the out-of-box defaults are trusted.*
