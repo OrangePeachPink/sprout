@@ -1,6 +1,7 @@
 # Sprout Jr — the DX North Star 🌱
 
-*Owned by DX (#387). This is the direction the team builds the beginner on-ramp to. The warm, user-facing
+*Owned by DX. Part of the Arduino On-Ramp epic (#435); it specs the sketch built in #446. This is the
+direction the team builds the beginner on-ramp to. The warm, user-facing
 copy lives in [`arduino-starter.md`](arduino-starter.md); this is the **why and the what-good-looks-like**
 behind it.*
 
@@ -67,30 +68,30 @@ WiFi/pump/cloud, or teaches them a comforting **lie** (moisture %). Sprout Jr do
 
 ---
 
-## The decision: ESP32 (not Arduino Uno)
+## The board: Arduino Uno R4 WiFi (the maintainer's call)
 
-You have both, so this is a deliberate DX call, and I'm planting the flag on **ESP32**. Reasons, in order:
+The board is the **Arduino Uno R4 WiFi** — a deliberate maintainer decision (#446), and the right one for
+*this* job. The reasoning:
 
-1. **It's the board Sprout Full runs on.** Graduation becomes *"you already know this hardware,"* not *"throw
-   away your Uno and learn a new board."* The on-ramp's entire purpose is the jump to Full — don't break
-   hardware continuity.
-2. **The numbers transfer 1:1.** Sprout Full reads this sensor on the same 3.3 V, 12-bit ADC and sees
-   ~**900 wet / ~3150 dry** raw. On an ESP32, *the dry and wet numbers a beginner calibrates by hand in Jr are
-   literally the numbers Sprout Full uses.* Their first calibration **is** the real thing. (On a 5 V, 10-bit
-   Uno the range is squeezed into ~0–600 and the numbers don't carry over — a worse teaching story.)
-3. **Delight headroom without the tail.** WiFi is built in, so a future "see it on your phone" stretch exists
-   on the *same* board — but we keep it firmly **out** of core Jr (see Scope).
+1. **It's a real Arduino, and that widens the door.** Jr's audience is bigger than the ESP32/Sprout crowd —
+   it's *everyone* taking a first step. The Uno is the board the whole Arduino learning universe is built
+   around; a newcomer who Googles "Arduino soil sensor" lands in a sea of tutorials that now *fit* their board.
+2. **Arduino-IDE-native, lowest-friction first hour.** The R4 (Renesas RA4M1) is first-class in the Arduino
+   IDE — no board-package hunt, no USB-driver dance. Plug in, pick **"Arduino Uno R4 WiFi,"** upload. That's
+   the smoothest possible first success, which is the #1 job of an on-ramp.
+3. **Simple by design.** The capacitive sensor goes on **`A0`**; the onboard WiFi is **left unused** — Jr is
+   **Serial only**, on purpose. No network, no setup portal, nothing to configure. Just the board, the sensor,
+   and the Serial Plotter.
 
-**The one cost — a 5-minute first-time setup** (install the ESP32 board package + a USB driver). We don't
-hand-wave it; we script it with exact clicks. That's the only place Uno would've been easier, and continuity
-is worth it.
+**Named honestly — what this trades vs. an ESP32 on-ramp:** the raw numbers a beginner calibrates here won't be
+the *same integers* Sprout Full sees (Full runs an **ESP32** on a 3.3 V ADC; the R4 is a different chip at a
+different reference). That's fine — **the *concepts* transfer, which is what a beginner actually keeps:**
+measure your dry, measure your wet, draw the band lines, trust the raw reading over a fake percentage.
+Graduation is *"you already know the ideas,"* not *"you already know this exact board."* The ideas are the
+durable thing; the board is just where you learned them.
 
-**Inclusive fallback:** the sketch should run on an Uno too with **one constant changed** (`ADC_MAX` 4095 →
-1023, and the pin). Recommend ESP32; never block the person who only has an Uno. One sketch, board-agnostic
-where it's trivial — no more.
-
-**Tool:** the **Arduino IDE** — on purpose. Sprout Full dropped it, but the Arduino IDE *is the beginner's
-first tool*, and its **Serial Plotter is our delight engine.** This is exactly why Jr exists.
+**Tool: the Arduino IDE** — on purpose. Sprout Full dropped it, but the Arduino IDE *is the beginner's first
+tool*, its **Serial Plotter is our delight engine**, and the R4 is native to it. This is exactly why Jr exists.
 
 ---
 
@@ -104,21 +105,26 @@ The beginner edits *only this block* — it's the entire interface, and every kn
 
 ```cpp
 // ===== TUNE ME — this is the whole control panel =====
-const int  SENSOR_PIN    = 34;     // the analog pin your sensor's signal wire goes to
+const int  SENSOR_PIN    = A0;     // the analog pin your sensor's signal wire goes to (A0 on the Uno R4)
 const long READ_EVERY_MS = 1000;   // how often I check the soil (try 200 — watch it speed up!)
 const int  SAMPLES       = 8;      // readings I average each check (smooths the jitter)
 
 // --- Calibrate these two to YOUR probe (the fun part — go measure!) ---
-const int  DRY_READING   = 3150;   // what you saw with the probe in dry AIR
-const int  WET_READING    = 900;   // what you saw with the probe in a CUP OF WATER
+// Example values for a 10-bit Uno R4 read (0–1023); yours WILL differ — that's the whole point.
+const int  DRY_READING   = 600;    // what you saw with the probe in dry AIR
+const int  WET_READING   = 260;    // what you saw with the probe in a CUP OF WATER
 
 // --- Where the 3 bands split (between your two numbers above) ---
-const int  THIRSTY_ABOVE = 2400;   // drier (bigger) than this  -> "thirsty"
-const int  SOAKED_BELOW  = 1400;   // wetter (smaller) than this -> "just watered"
+const int  THIRSTY_ABOVE = 500;    // drier (bigger) than this  -> "thirsty"
+const int  SOAKED_BELOW  = 340;    // wetter (smaller) than this -> "just watered"
 //                         (anything in between -> "all good")
 
-const bool BLINK_WHEN_THIRSTY = true;  // pulse the onboard LED when it needs water
+const bool BLINK_WHEN_THIRSTY = true;  // pulse the onboard LED (LED_BUILTIN) when it needs water
 ```
+
+*(The example numbers above are illustrative 10-bit Uno R4 values; Firmware + Sage lock the real out-of-box
+defaults from a bench measurement on an actual R4 + probe. The beginner measures and replaces them regardless —
+that's the lesson.)*
 
 Why these knobs, specifically:
 
@@ -126,8 +132,8 @@ Why these knobs, specifically:
 - `READ_EVERY_MS` + `SAMPLES` are pure play — change them, watch the behavior change. Teaches cadence and
   noise without naming them.
 - `DRY_READING` / `WET_READING` are the **heart of the lesson**: you go measure two numbers and type them in.
-  That *is* calibration. The defaults are Sprout Full's real anchors, so it works out of the box and the
-  numbers are honest.
+  That *is* calibration. It ships with sane example defaults so it runs out of the box — but the beginner
+  measures and replaces them (every probe reads differently), which is exactly the skill worth having.
 - `THIRSTY_ABOVE` / `SOAKED_BELOW` are **raw thresholds, not a percentage** — deliberately. The beginner sees
   that bands are just "where you draw the lines between your dry and wet marks." No `map()`, no lie. (Good
   defaults derived from the anchors mean they only *have* to touch the two calibration numbers to start.)
@@ -152,7 +158,7 @@ which is the seed of Full's "overwatered" band.
 
 Every step is designed to land a felt win and set up the next. This is the choreography the build serves:
 
-1. **Three wires + plug in** (`GND`, `3V3`, signal→`GPIO34`). ~90 seconds. *"That's it? That's the whole
+1. **Three wires + plug in** (`GND`, power, signal→`A0`). ~90 seconds. *"That's it? That's the whole
    circuit?"* — fear of hardware, gone.
 2. **Flash the sketch** (Arduino IDE → paste → Upload). *"I made the chip do a thing."*
 3. **Open the Serial Monitor** → numbers stream by. *"I'm reading the real world."*
@@ -165,8 +171,8 @@ Every step is designed to land a felt win and set up the next. This is the chore
 7. **It acts** *(optional, one line)* → the onboard LED pulses when thirsty. *"It does something in the
    world."*
 8. **The graduation beat** → *"You just hand-built the heart of Sprout: **read → calibrate → band → speak.**
-   Sprout Full does this automatically — across seven bands, four plants, a real pump, and a live dashboard —
-   on this exact board. Come meet Sprout Full."*
+   Sprout Full does this automatically — across seven bands, four plants, a real pump, and a live dashboard.
+   You already know how it thinks. Come meet Sprout Full."*
 
 ---
 
@@ -196,7 +202,7 @@ must never grow into:
 - ❌ No libraries, no dependencies (`analogRead` only).
 - ❌ No persistence — calibration lives in the constants block by hand. *That's the teaching*, not a gap.
 - ❌ No display required — the Serial Monitor / Plotter and the onboard LED are the entire UI.
-- ❌ **Not** compatible with Sprout Full, and we say so plainly (per #387). It's a porch, not a wing.
+- ❌ **Not** compatible with Sprout Full, and we say so plainly (per #435). It's a porch, not a wing.
 
 If a feature would add a dependency, a second file, or a thing we have to keep working as Full evolves — it
 belongs in **Full**, and it becomes a graduation hook instead. The tail we accept is exactly: *one sketch, one
@@ -209,10 +215,10 @@ doc.*
 - **DX (owns the North Star + the experience):** this direction, the [user-facing copy](arduino-starter.md),
   the exact-clicks setup, the calibration walkthrough, the three band lines in Sprout's voice, and the
   graduation beat. The words and the felt arc are mine.
-- **Firmware + Sage (build + verify the sketch):** the actual `.ino` — `analogRead` + `SAMPLES` averaging,
-  the three-band compare, the optional LED, and the board-agnostic `ADC_MAX` constant. Sage sanity-checks the
-  default anchors against real bench probes so the out-of-box defaults are honest. Coordinated on #387; DX
-  hands them this spec, they own the firmware.
+- **Firmware + Sage (build + verify the sketch, #446):** the actual `.ino` for the **Arduino Uno R4 WiFi** —
+  `analogRead(A0)` + `SAMPLES` averaging, the three-band compare, the optional `LED_BUILTIN` blink (WiFi left
+  unused, Serial only). Sage measures the real dry/wet anchors on an R4 + probe so the out-of-box defaults are
+  honest (the example values in this doc are placeholders). DX hands them this spec; they own the firmware.
 - **Design (a later pass, optional):** if the copy ever gets a styled page, Design dresses it — but Jr ships
   in plain Markdown first; no Design dependency to start.
 - **Glossary:** Jr's terms (Sprout Jr, the three bands, "calibrate by hand") land in the **User-facing 👤**
