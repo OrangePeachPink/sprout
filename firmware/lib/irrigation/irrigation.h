@@ -73,25 +73,25 @@ extern "C" {
 /* -------------------------------------------------------------------------- */
 
 typedef enum {
-    IRRIG_EV_LEVEL_CHANGE = 0,    /* committed moisture level changed           */
-    IRRIG_EV_PUMP_ON,             /* a dose started on this channel             */
-    IRRIG_EV_PUMP_OFF,            /* the dose ended                             */
-    IRRIG_EV_TARGET_REACHED,      /* channel reached target_level after dosing  */
-    IRRIG_EV_PROBE_NOT_IN_SOIL,   /* read air-dry: probe likely out of soil     */
-    IRRIG_EV_SENSOR_FAULT,        /* trimmed-spread health flag tripped         */
-    IRRIG_EV_PUMP_OVERRUN_FAULT,  /* pump hit the hard run ceiling (latched)    */
-    IRRIG_EV_NO_IMPROVEMENT_FAULT,/* doses not wetting the soil (latched)       */
-    IRRIG_EV_HEALTH_FAULT,        /* sustained health warning latched (A1)      */
-    IRRIG_EV_FAULT_CLEARED        /* a latched fault was manually cleared        */
+    IRRIG_EV_LEVEL_CHANGE = 0, /* committed moisture level changed           */
+    IRRIG_EV_PUMP_ON, /* a dose started on this channel             */
+    IRRIG_EV_PUMP_OFF, /* the dose ended                             */
+    IRRIG_EV_TARGET_REACHED, /* channel reached target_level after dosing  */
+    IRRIG_EV_PROBE_NOT_IN_SOIL, /* read air-dry: probe likely out of soil     */
+    IRRIG_EV_SENSOR_FAULT, /* trimmed-spread health flag tripped         */
+    IRRIG_EV_PUMP_OVERRUN_FAULT, /* pump hit the hard run ceiling (latched)    */
+    IRRIG_EV_NO_IMPROVEMENT_FAULT, /* doses not wetting the soil (latched)       */
+    IRRIG_EV_HEALTH_FAULT, /* sustained health warning latched (A1)      */
+    IRRIG_EV_FAULT_CLEARED /* a latched fault was manually cleared        */
 } irrig_event_code_t;
 
 typedef struct {
-    uint32_t           now_ms;
-    int                ch;
+    uint32_t now_ms;
+    int ch;
     irrig_event_code_t code;
-    moisture_level_t   level;     /* committed level at the time                */
-    uint16_t           raw;       /* last trimmed-mean raw                       */
-    uint16_t           spread;    /* last trimmed-set spread (health)           */
+    moisture_level_t level; /* committed level at the time                */
+    uint16_t raw; /* last trimmed-mean raw                       */
+    uint16_t spread; /* last trimmed-set spread (health)           */
 } irrig_event_t;
 
 const char *irrig_event_name(irrig_event_code_t code);
@@ -102,22 +102,24 @@ const char *irrig_event_name(irrig_event_code_t code);
 
 /* Shared system policy. */
 typedef struct {
-    uint32_t sample_period_ms;      /* idle cadence between sweeps when nothing
-                                       needs water (minutes in deployment)       */
-    uint8_t  adc_discard;           /* throwaway reads after a channel switch to
-                                       cover S/H settling (e.g. 2). Non-blocking. */
-    uint32_t post_pump_settle_ms;   /* SETTLE duration after a pump stops         */
-    uint32_t pump_max_ms;           /* HARD ceiling on any single pump run; hitting
-                                       it latches a fault                         */
-    uint8_t  max_doses;             /* consecutive non-improving doses before
-                                       latching a no-improvement fault            */
-    uint16_t min_improvement_raw;   /* a dose must drop the trimmed-mean raw by at
-                                       least this (wetter) to count as progress   */
-    uint8_t  max_health_warn;       /* consecutive unhealthy sweeps (classifier
-                                       spread > spread_warn_raw) before a channel
-                                       latches a HARD sensor fault (BACKLOG A1).
-                                       0 disables the latch; the per-read health
-                                       veto still applies regardless.             */
+    /* idle cadence between sweeps when nothing needs water (minutes in
+     * deployment) */
+    uint32_t sample_period_ms;
+    /* throwaway reads after a channel switch to cover S/H settling (e.g. 2).
+     * Non-blocking. */
+    uint8_t adc_discard;
+    uint32_t post_pump_settle_ms; /* SETTLE duration after a pump stops */
+    /* HARD ceiling on any single pump run; hitting it latches a fault */
+    uint32_t pump_max_ms;
+    /* consecutive non-improving doses before latching a no-improvement fault */
+    uint8_t max_doses;
+    /* a dose must drop the trimmed-mean raw by at least this (wetter) to count
+     * as progress */
+    uint16_t min_improvement_raw;
+    /* consecutive unhealthy sweeps (classifier spread > spread_warn_raw) before
+     * a channel latches a HARD sensor fault (BACKLOG A1). 0 disables the latch;
+     * the per-read health veto still applies regardless. */
+    uint8_t max_health_warn;
 } irrig_sys_cfg_t;
 
 /* Per-channel irrigation policy (separate from the per-probe moisture_cfg_t).
@@ -126,10 +128,11 @@ typedef struct {
  * at or wetter than target_level. Set target_level a notch or two wetter than
  * water_at_or_below for a clean hysteresis gap (no dosing chatter). */
 typedef struct {
-    uint32_t         dose_ms;            /* pump run length per pulse             */
-    uint32_t         soak_ms;            /* lockout after a dose                   */
-    moisture_level_t water_at_or_below;  /* request when level <= this (& >= DRY)  */
-    moisture_level_t target_level;       /* recovered when level >= this          */
+    uint32_t dose_ms; /* pump run length per pulse */
+    uint32_t soak_ms; /* lockout after a dose */
+    /* request when level <= this (& >= DRY) */
+    moisture_level_t water_at_or_below;
+    moisture_level_t target_level; /* recovered when level >= this */
 } irrig_chan_cfg_t;
 
 /* Caller-supplied I/O. read_raw must select channel `ch` and return ONE ADC
@@ -137,9 +140,9 @@ typedef struct {
  * active-low polarity. on_event may be NULL. `user` is passed back to all. */
 typedef struct {
     uint16_t (*read_raw)(int ch, void *user);
-    void     (*set_pump)(int ch, bool on, void *user);
-    void     (*on_event)(const irrig_event_t *ev, void *user);
-    void     *user;
+    void (*set_pump)(int ch, bool on, void *user);
+    void (*on_event)(const irrig_event_t *ev, void *user);
+    void *user;
 } irrig_io_t;
 
 /* -------------------------------------------------------------------------- */
@@ -147,54 +150,61 @@ typedef struct {
 /* -------------------------------------------------------------------------- */
 
 typedef enum {
-    SYS_SAMPLING = 0,   /* pumps off, reading probes              */
-    SYS_WATERING,       /* exactly one pump on                    */
-    SYS_SETTLE          /* pumps off, post-dose recovery wait     */
+    SYS_SAMPLING = 0, /* pumps off, reading probes              */
+    SYS_WATERING, /* exactly one pump on                    */
+    SYS_SETTLE /* pumps off, post-dose recovery wait     */
 } irrig_mode_t;
 
 typedef enum {
-    CH_OK = 0,          /* eligible: monitoring / may request     */
-    CH_SOAKING,         /* recently dosed; locked out until soak  */
-    CH_FAULT            /* not watered (latched hard fault OR a
-                           non-latching sensor-health warning)    */
+    CH_OK = 0, /* eligible: monitoring / may request */
+    CH_SOAKING, /* recently dosed; locked out until soak */
+    /* not watered (latched hard fault OR a non-latching sensor-health warning) */
+    CH_FAULT
 } irrig_chan_status_t;
 
 typedef struct {
     /* wiring (all caller-owned; arrays of length IRRIG_CHANNELS) */
-    const irrig_sys_cfg_t  *sys;
+    const irrig_sys_cfg_t *sys;
     const irrig_chan_cfg_t *chan_cfg;
-    const moisture_cfg_t   *mcfg;
-    moisture_state_t       *mstate;
-    uint16_t               *scratch;     /* burst buffer, >= max sample_count   */
-    irrig_io_t              io;
+    const moisture_cfg_t *mcfg;
+    moisture_state_t *mstate;
+    uint16_t *scratch; /* burst buffer, >= max sample_count */
+    irrig_io_t io;
 
     /* global runtime */
+    /* arm gate (#227 / ADR-0016): false = monitor-only — the sweep never sets an
+     * autonomous `want`, so no pump is granted on a dry reading. Operator forced
+     * doses (irrig_request_dose) are honored either way. Defaults OFF at init
+     * (fail-safe); the bench arms it after the safety trio. */
+    bool autonomous_enabled;
     irrig_mode_t mode;
-    int          active_ch;              /* -1 = none; the single running pump  */
-    uint32_t     phase_start_ms;
-    uint32_t     next_sample_ms;
-    int          last_served;            /* rotation pointer for fairness       */
-    uint32_t     active_dose_ms;         /* length of the in-flight dose, resolved at
-                                            grant: forced_ms (clamped) or chan dose_ms */
+    int active_ch; /* -1 = none; the single running pump */
+    uint32_t phase_start_ms;
+    uint32_t next_sample_ms;
+    int last_served; /* rotation pointer for fairness */
+    /* length of the in-flight dose, resolved at grant: forced_ms (clamped) or
+     * chan dose_ms */
+    uint32_t active_dose_ms;
 
     /* per-channel runtime */
     irrig_chan_status_t status[IRRIG_CHANNELS];
-    moisture_level_t    level[IRRIG_CHANNELS];
-    bool                wants[IRRIG_CHANNELS];
-    bool                faulted[IRRIG_CHANNELS];     /* HARD latch (manual clear) */
-    uint32_t            soak_until_ms[IRRIG_CHANNELS];
-    uint16_t            raw_at_dose[IRRIG_CHANNELS]; /* raw when last dose granted */
-    uint8_t             dose_count[IRRIG_CHANNELS];  /* consecutive non-improving  */
-    bool                dosed_once[IRRIG_CHANNELS];  /* dosed since last reset      */
-    moisture_level_t    prev_level[IRRIG_CHANNELS];  /* for level-change events     */
-    bool                prev_health_warn[IRRIG_CHANNELS];
-    uint8_t             warn_count[IRRIG_CHANNELS];   /* consecutive unhealthy reads;
-                                                         self-heals on a clean read,
-                                                         latches at max_health_warn (A1) */
-    uint32_t            last_water_ms[IRRIG_CHANNELS];/* millis() at the last dose-off;
-                                                         interval telemetry (D1/E3)  */
-    bool                forced[IRRIG_CHANNELS];       /* operator forced-dose pending (ADR-0016) */
-    uint32_t            forced_ms[IRRIG_CHANNELS];    /* requested dose length; 0 = use chan dose_ms */
+    moisture_level_t level[IRRIG_CHANNELS];
+    bool wants[IRRIG_CHANNELS];
+    bool faulted[IRRIG_CHANNELS]; /* HARD latch (manual clear) */
+    uint32_t soak_until_ms[IRRIG_CHANNELS];
+    uint16_t raw_at_dose[IRRIG_CHANNELS]; /* raw when last dose granted */
+    uint8_t dose_count[IRRIG_CHANNELS]; /* consecutive non-improving */
+    bool dosed_once[IRRIG_CHANNELS]; /* dosed since last reset */
+    moisture_level_t prev_level[IRRIG_CHANNELS]; /* for level-change events */
+    bool prev_health_warn[IRRIG_CHANNELS];
+    /* consecutive unhealthy reads; self-heals on a clean read, latches at
+     * max_health_warn (A1) */
+    uint8_t warn_count[IRRIG_CHANNELS];
+    /* millis() at the last dose-off; interval telemetry (D1/E3) */
+    uint32_t last_water_ms[IRRIG_CHANNELS];
+    bool forced[IRRIG_CHANNELS]; /* operator forced-dose pending (ADR-0016) */
+    /* requested dose length; 0 = use chan dose_ms */
+    uint32_t forced_ms[IRRIG_CHANNELS];
 } irrig_ctrl_t;
 
 /* -------------------------------------------------------------------------- */
@@ -203,14 +213,10 @@ typedef struct {
 
 /* All pumps forced OFF and classifiers seeded from one burst each (safe; nothing
  * is pumping at init). Call once after wiring up the cfg/state arrays. */
-void irrig_init(irrig_ctrl_t *c,
-                const irrig_sys_cfg_t  *sys,
-                const irrig_chan_cfg_t *chan_cfg,
-                const moisture_cfg_t   *mcfg,
-                moisture_state_t       *mstate,
-                uint16_t               *scratch,
-                irrig_io_t              io,
-                uint32_t                now_ms);
+void irrig_init(irrig_ctrl_t *c, const irrig_sys_cfg_t *sys,
+                const irrig_chan_cfg_t *chan_cfg, const moisture_cfg_t *mcfg,
+                moisture_state_t *mstate, uint16_t *scratch, irrig_io_t io,
+                uint32_t now_ms);
 
 /* Non-blocking. Call every loop with a millisecond clock (millis()). Drives the
  * whole state machine. */
@@ -228,21 +234,36 @@ void irrig_clear_fault(irrig_ctrl_t *c, int ch);
  * clamped to it), and the HARD fault latch (a faulted channel is refused - clear it
  * first). One-shot: the request is consumed when the dose is granted. */
 typedef enum {
-    IRRIG_DOSE_QUEUED = 0,    /* accepted; granted on the next SYS_SAMPLING tick */
-    IRRIG_DOSE_BAD_CHANNEL,   /* ch out of [0, IRRIG_CHANNELS)                    */
-    IRRIG_DOSE_FAULTED        /* channel hard-faulted - clear it first            */
+    IRRIG_DOSE_QUEUED = 0, /* accepted; granted on the next SYS_SAMPLING tick */
+    IRRIG_DOSE_BAD_CHANNEL, /* ch out of [0, IRRIG_CHANNELS)                    */
+    IRRIG_DOSE_FAULTED /* channel hard-faulted - clear it first            */
 } irrig_dose_result_t;
 
 irrig_dose_result_t irrig_request_dose(irrig_ctrl_t *c, int ch, uint32_t ms);
 
+/* Operator e-stop (#215 !stop, single-authority via ADR-0016): force the active
+ * pump OFF immediately, cancel any pending forced doses, drive every relay to its
+ * de-energized level, and enter SETTLE. Returns true if a pump was actually
+ * running. Safe to call in any mode. */
+bool irrig_abort(irrig_ctrl_t *c, uint32_t now_ms);
+
+/* Arm gate (#227 / ADR-0016): enable/disable AUTONOMOUS dosing at runtime. When
+ * disabled (the init default), the supervisor still samples, classifies, vetoes,
+ * logs, and honors operator forced doses — it just never grants a pump on its own
+ * "this channel is dry" decision. main.cpp ships disarmed; the bench arms it (e.g.
+ * via !auto) only once the dry-safety chain (#93/#191/#2/#215) has passed. */
+void irrig_set_autonomous(irrig_ctrl_t *c, bool enabled);
+bool irrig_autonomous(const irrig_ctrl_t *c);
+
 /* introspection for logging / UI */
-irrig_mode_t        irrig_mode(const irrig_ctrl_t *c);
-int                 irrig_active_pump(const irrig_ctrl_t *c);   /* -1 if none */
+irrig_mode_t irrig_mode(const irrig_ctrl_t *c);
+int irrig_active_pump(const irrig_ctrl_t *c); /* -1 if none */
 irrig_chan_status_t irrig_status(const irrig_ctrl_t *c, int ch);
-moisture_level_t    irrig_level(const irrig_ctrl_t *c, int ch);
-bool                irrig_health_warn(const irrig_ctrl_t *c, int ch);   /* per-read OR latched (A1) */
-uint8_t             irrig_warn_count(const irrig_ctrl_t *c, int ch);    /* consecutive unhealthy reads */
-uint32_t            irrig_last_water_ms(const irrig_ctrl_t *c, int ch); /* millis() of last dose-off  */
+moisture_level_t irrig_level(const irrig_ctrl_t *c, int ch);
+bool irrig_health_warn(const irrig_ctrl_t *c, int ch); /* per-read OR latched */
+uint8_t irrig_warn_count(const irrig_ctrl_t *c, int ch); /* consecutive warns */
+/* millis() of last dose-off */
+uint32_t irrig_last_water_ms(const irrig_ctrl_t *c, int ch);
 
 #ifdef __cplusplus
 }
