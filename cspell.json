@@ -205,7 +205,11 @@
     "wayfinding",
     "winget",
     "worktree",
-    "xblw"
+    "xblw",
+    // #364 glossary context_source bullet: the Zigbee protocol + British "travelling"
+    // (consistent with the British spellings already allowlisted above).
+    "Zigbee",
+    "travelling"
   ],
   "flagWords": []
 }
