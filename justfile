@@ -61,6 +61,11 @@ experiment *ARGS:
 build:
     {{pio}} run -d firmware
 
+# Compile-check the ESP32-C5 env (isolated pinned platform, #442/ADR-0024). Opt-in /
+# Contributors-Welcome build — NOT in CI, not flash-ready (placeholder pins, #436).
+build-c5:
+    {{pio}} run -d firmware -e esp32c5
+
 # Pin the upload port with e.g.  just flash --upload-port COM6
 # Flash the firmware to the board, then open the serial monitor (needs the board connected + your OK).
 flash *ARGS:
