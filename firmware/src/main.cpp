@@ -186,10 +186,12 @@ static void onIrrigEvent(const irrig_event_t *ev, void *user)
  * pure-C drivers run over these Arduino Wire-backed callbacks. I2C reads never
  * touch the soil ADC, so there's no "no sampling while pumping" concern. */
 
-/* Deployment config (env build only — kept out of config.h so config.h's manual
- * alignment stays off the changed-files clang-format gate, #343). */
-constexpr int ENV_I2C_SDA = 21; /* ESP32 default I2C/Qwiic SDA */
-constexpr int ENV_I2C_SCL = 22; /* ESP32 default I2C/Qwiic SCL */
+/* I2C pins come from the board descriptor (ADR-0019 §1, #436) - one place per board
+ * describes it. Deployment config below is env-build-only. */
+const int ENV_I2C_SDA =
+    BOARD_CAP.i2c_sda; /* classic default: GPIO21 (I2C/Qwiic SDA) */
+const int ENV_I2C_SCL =
+    BOARD_CAP.i2c_scl; /* classic default: GPIO22 (I2C/Qwiic SCL) */
 constexpr uint32_t ENV_I2C_HZ = 100000; /* standard-mode I2C */
 /* AS7263 analog gain. Sage-ratified gain=16 for direct-beam headroom (#416): the
  * 2026-06-30 skylight pass railed at 64x (51201/65535 on nir_680 x165 rows) -> ~12800
@@ -450,7 +452,9 @@ void setup()
         " - schema v1, 4 soil sensors, supervisor-driven "
         "(autonomous dosing DISARMED; manual !water; fail-safe OFF)");
 
-    pinMode(LED_PIN, OUTPUT);
+    /* BOARD_LED_NONE (255): no verified heartbeat pin for this board - skip rather
+     * than guess (#436; e.g. the S3 clone's LED_BUILTIN is unconfirmed pre-bench). */
+    if (LED_PIN != BOARD_LED_NONE) pinMode(LED_PIN, OUTPUT);
 
     /* Seed run metadata from the config defaults before !label/!pos are registered. */
     run_meta_init(&g_run_meta, RUN_LABEL, SENSOR_POSITION, NUM_SENSORS);
@@ -599,10 +603,13 @@ void loop()
         static unsigned int hdr = 0;
         if (++hdr % 20 == 0) printHeader();
 
-        /* Heartbeat blink — loop alive; doesn't affect cadence. */
-        digitalWrite(LED_PIN, HIGH);
-        delay(20);
-        digitalWrite(LED_PIN, LOW);
+        /* Heartbeat blink — loop alive; doesn't affect cadence. Skipped if the board
+         * has no verified LED pin (BOARD_LED_NONE, #436). */
+        if (LED_PIN != BOARD_LED_NONE) {
+            digitalWrite(LED_PIN, HIGH);
+            delay(20);
+            digitalWrite(LED_PIN, LOW);
+        }
     }
 
 #ifdef ENABLE_ENV_SENSORS
