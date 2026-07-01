@@ -71,7 +71,7 @@ is superseded; the **exact-pin, never-floating, deliberate-not-incidental** disc
 
 ## Consequences
 
-- **DX** repoints `esp32dev` / `esp32dev_env` / `esp32dev_wdttest` / `esp32s3` to the same exact pioarduino pin
+- **DX** points `esp32dev` / `esp32dev_env` / `esp32dev_wdttest` / `esp32s3` to the same exact pioarduino pin
   `esp32c5` already uses. CI simplifies to one toolchain matrix instead of two.
 - **Firmware** fixes any incidental compile breaks (expected minor — the WDT seam already exists) and builds
   the **#21 WiFi scaffold directly against the new pin** — a sequencing win: WiFi code gets written once on the
@@ -80,7 +80,7 @@ is superseded; the **exact-pin, never-floating, deliberate-not-incidental** disc
   toolchain, re-run the wedge test fresh, an ADC sanity A/B against current raw counts (honest-data law — verify
   and record any shift), and re-check bands against the just-landed per-channel calibration.
 - **Data**: no schema change. `firmware_version` in the telemetry header carries the toolchain lineage. The
-  live-logger cutover to the new toolchain should land at an experiment boundary and be annotated, so a bench
+  live-logger switch to the new toolchain should land at an experiment boundary and be annotated, so a bench
   dataset's lineage stays clean and comparable (ties to ADR-0025's no-auto-adjust / provenance doctrine).
 - The board matrix now grows by **adding a board to the one shared pin** (plus its capability descriptor,
   ADR-0019) once past the experimental-isolation staging state — not by a per-board pin proliferating forever.
