@@ -29,6 +29,12 @@ _REPO = _HERE.parents[1]
 _CACHE = _REPO / "reports" / "weather"  # under the gitignored reports/ tree
 _ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 _HOURLY = ["cloud_cover", "shortwave_radiation", "temperature_2m", "precipitation"]
+# This registry entry's OWN shape version (bump if a field is added/renamed/removed) -
+# distinct from Open-Meteo's API, which publishes no schema_version of its own (#367).
+_REGISTRY_SCHEMA_VERSION = 1
+# When this source was first onboarded to the project (git-log-confirmed: the date
+# env_weather.py was first added) - a fixed historical fact, never a "today" stamp.
+_DISCOVERY_DATE = "2026-06-27"
 
 
 def _cache_path(
@@ -78,7 +84,9 @@ def parse_hourly(raw: dict) -> list[dict]:
 
 
 def source_record() -> dict:
-    """The source-registry entry (R7 / ADR-0006 §7): provenance + trust class.
+    """The source-registry entry (R7): origin, jurisdiction, cadence, trust class,
+    schema version, discovery date - the full field set the registry doctrine calls
+    for, so this entry is complete on its own without cross-referencing code.
 
     Deliberately carries **no coordinates** - it may be surfaced/committed, and the home
     location must never leak (R6)."""
@@ -87,6 +95,8 @@ def source_record() -> dict:
         "jurisdiction": "global model grid",
         "cadence": "hourly",
         "trust_class": "derived/model",  # NOT an authoritative station reading
+        "schema_version": _REGISTRY_SCHEMA_VERSION,
+        "discovery_date": _DISCOVERY_DATE,
         "fetched_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "note": (
             "interpolated grid output; never authoritative; cached as dated evidence "

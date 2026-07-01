@@ -51,6 +51,15 @@ def test_source_record_trust_and_no_coords() -> None:
     assert "latitude" not in src and "longitude" not in src
 
 
+def test_source_record_has_the_full_registry_field_set() -> None:
+    # #367 R7: origin, jurisdiction, cadence, trust class, schema version, discovery
+    # date - complete on its own, no cross-referencing code needed.
+    src = env_weather.source_record()
+    assert src["jurisdiction"] == "global model grid"
+    assert isinstance(src["schema_version"], int) and src["schema_version"] >= 1
+    assert src["discovery_date"] == "2026-06-27"  # fixed historical fact, never "today"
+
+
 def test_get_weather_caches_then_serves_offline() -> None:
     tmp = Path(tempfile.mkdtemp())
     try:
