@@ -1078,8 +1078,11 @@ void t_wifi_net_state_machine(void)
         "inside backoff -> no retry trigger");
     TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_FAILED, ctx.state, "still failed");
 
-    /* backoff expires -> retry triggers a fresh begin() */
-    unsigned long retry_at = ctx.next_retry_ms;
+    /* backoff expires -> retry triggers a fresh begin(). Times are computed
+     * from the constants (failure at 17000 + 30000 backoff), not peeked from
+     * the ctx - the backoff is a rollover-safe start+wait pair (#9), there is
+     * no absolute deadline field to read. */
+    unsigned long retry_at = 17000 + 30000;
     TEST_ASSERT_TRUE_MESSAGE(wifi_net_tick(&ctx, true, false, retry_at, &cfg),
                              "backoff expired -> retry begin() triggered");
     TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_CONNECTING, ctx.state,
@@ -1090,7 +1093,7 @@ void t_wifi_net_state_machine(void)
         wifi_net_tick(&ctx, true, false, retry_at + 15000, &cfg),
         "2nd timeout -> failed again");
     TEST_ASSERT_EQUAL_MESSAGE(2, ctx.retry_count, "two failures counted");
-    retry_at = ctx.next_retry_ms;
+    retry_at = retry_at + 15000 + 30000; /* 2nd failure + retry backoff */
     TEST_ASSERT_TRUE_MESSAGE(wifi_net_tick(&ctx, true, false, retry_at, &cfg),
                              "3rd attempt triggers");
     TEST_ASSERT_FALSE_MESSAGE(
@@ -1100,10 +1103,11 @@ void t_wifi_net_state_machine(void)
                               "repeated failure -> portal reopens (AC#3)");
 
     /* portal keeps a background STA retry on the LONG backoff... */
+    unsigned long portal_entered = retry_at + 15000;
     TEST_ASSERT_FALSE_MESSAGE(
-        wifi_net_tick(&ctx, true, false, ctx.next_retry_ms - 1000, &cfg),
+        wifi_net_tick(&ctx, true, false, portal_entered + 300000 - 1000, &cfg),
         "inside portal backoff -> no retry");
-    unsigned long portal_retry = ctx.next_retry_ms;
+    unsigned long portal_retry = portal_entered + 300000;
     TEST_ASSERT_TRUE_MESSAGE(
         wifi_net_tick(&ctx, true, false, portal_retry, &cfg),
         "portal backoff expired -> background STA retry");
@@ -1115,7 +1119,7 @@ void t_wifi_net_state_machine(void)
                               "portal-origin failure -> back to portal");
 
     /* ...and a SUCCESSFUL background retry self-heals to CONNECTED */
-    unsigned long heal_at = ctx.next_retry_ms;
+    unsigned long heal_at = portal_retry + 15000 + 300000;
     TEST_ASSERT_TRUE_MESSAGE(wifi_net_tick(&ctx, true, false, heal_at, &cfg),
                              "portal retry triggers again");
     TEST_ASSERT_FALSE_MESSAGE(

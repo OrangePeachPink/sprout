@@ -42,7 +42,12 @@ typedef struct {
     wifi_net_state_t state;
     unsigned long
         attempt_started_ms; /* when the current CONNECTING attempt began */
-    unsigned long next_retry_ms; /* FAILED/PORTAL -> earliest retry time */
+    /* FAILED/PORTAL backoff as a START + WAIT pair, never an absolute
+     * deadline: `now - started >= wait` is rollover-safe unsigned-delta
+     * arithmetic (the #9 timing-audit idiom); `now >= deadline` would stall
+     * for ~49 days if the deadline computation straddled the millis() wrap. */
+    unsigned long backoff_started_ms;
+    uint32_t backoff_wait_ms;
     uint32_t retry_count; /* consecutive failures since the last CONNECTED   */
     bool portal_origin; /* the in-flight attempt started from PORTAL (a
                            timeout returns there, not to FAILED)            */

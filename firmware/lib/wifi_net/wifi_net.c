@@ -43,10 +43,12 @@ bool wifi_net_tick(wifi_net_ctx_t *ctx, bool has_creds, bool arduino_connected,
                  * keep background STA retries on the LONG portal backoff so a
                  * transient outage self-heals (#275). */
                 ctx->state = WIFI_NET_PORTAL;
-                ctx->next_retry_ms = now + cfg->portal_retry_backoff_ms;
+                ctx->backoff_started_ms = now;
+                ctx->backoff_wait_ms = cfg->portal_retry_backoff_ms;
             } else {
                 ctx->state = WIFI_NET_FAILED;
-                ctx->next_retry_ms = now + cfg->retry_backoff_ms;
+                ctx->backoff_started_ms = now;
+                ctx->backoff_wait_ms = cfg->retry_backoff_ms;
             }
         }
         return false;
@@ -60,7 +62,7 @@ bool wifi_net_tick(wifi_net_ctx_t *ctx, bool has_creds, bool arduino_connected,
         return true;
 
     case WIFI_NET_FAILED:
-        if (now >= ctx->next_retry_ms) {
+        if (now - ctx->backoff_started_ms >= ctx->backoff_wait_ms) {
             ctx->state = WIFI_NET_CONNECTING;
             ctx->attempt_started_ms = now;
             ctx->portal_origin = false;
@@ -72,7 +74,7 @@ bool wifi_net_tick(wifi_net_ctx_t *ctx, bool has_creds, bool arduino_connected,
         /* AP is up (caller raised it on the entry edge). With creds stored,
          * keep trying STA in the background on the portal backoff; the AP
          * tears down only via the CONNECTED edge. */
-        if (now >= ctx->next_retry_ms) {
+        if (now - ctx->backoff_started_ms >= ctx->backoff_wait_ms) {
             ctx->state = WIFI_NET_CONNECTING;
             ctx->attempt_started_ms = now;
             ctx->portal_origin = true; /* a timeout returns to PORTAL */
