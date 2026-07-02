@@ -108,6 +108,21 @@ typedef struct {
 int telemetry_format_env_row(char *buf, size_t buflen,
                              const telemetry_env_row_t *r);
 
+/*
+ * Format one per-channel cal-provenance header line (#404, format locked with
+ * Data's #507 parser):
+ *   # cal_ch <sensor_id>: bounds=<d1,...,d6> src=<...> [date=<...>]
+ *     confidence=<provisional|calibrated|corroborated> scope=<channel|shared>
+ * Space-separated k=v (the `# cfg:` convention, NOT the payload's `;` one);
+ * bounds are the DESCENDING (dry>wet) raw ints, moisture_classifier order.
+ * `date` is omitted entirely (not an empty key) when NULL/"" - same honest-NULL
+ * rule as device_timestamp_utc. Returns chars written, or -1 on truncation.
+ */
+int telemetry_format_cal_ch(char *buf, size_t buflen, const char *sensor_id,
+                            const uint16_t *bounds, int bounds_count,
+                            const char *src, const char *date,
+                            const char *confidence, const char *scope);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

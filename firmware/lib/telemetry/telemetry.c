@@ -70,3 +70,31 @@ int telemetry_format_env_row(char *buf, size_t buflen,
                      r->unit, r->quality_flag, r->payload);
     return (n >= 0 && (size_t)n < buflen) ? n : -1;
 }
+
+int telemetry_format_cal_ch(char *buf, size_t buflen, const char *sensor_id,
+                            const uint16_t *bounds, int bounds_count,
+                            const char *src, const char *date,
+                            const char *confidence, const char *scope)
+{
+    /* # cal_ch s3: bounds=3123,2140,1830,1520,1150,969 src=... date=...
+     * confidence=provisional scope=channel  - format locked with Data's #507
+     * parser (_parse_cal_channel / ChannelCal). date omitted when NULL/"". */
+    int n = snprintf(buf, buflen, "# cal_ch %s: bounds=", sensor_id);
+    if (n < 0 || (size_t)n >= buflen) return -1;
+    for (int i = 0; i < bounds_count; i++) {
+        int w = snprintf(buf + n, buflen - (size_t)n, "%s%u", i ? "," : "",
+                         (unsigned)bounds[i]);
+        if (w < 0 || (size_t)(n + w) >= buflen) return -1;
+        n += w;
+    }
+    int w;
+    if (date && date[0] != '\0')
+        w = snprintf(buf + n, buflen - (size_t)n,
+                     " src=%s date=%s confidence=%s scope=%s", src, date,
+                     confidence, scope);
+    else
+        w = snprintf(buf + n, buflen - (size_t)n,
+                     " src=%s confidence=%s scope=%s", src, confidence, scope);
+    if (w < 0 || (size_t)(n + w) >= buflen) return -1;
+    return n + w;
+}

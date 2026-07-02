@@ -108,10 +108,9 @@ static run_meta_t g_run_meta;
 /* Shared classifier config template — acquisition / hysteresis / persistence /
  * health are shared across channels. Its boundary[] is the shared-interior
  * reference + default rails; at setup each g_mcfg[ch] takes these shared fields
- * but OVERRIDES boundary[] per-channel from calibration.h (C1/#170). Kept as the
- * canonical copy the provenance header prints — the header still shows this
- * shared template, not each channel's diverged rails; surfacing per-channel
- * cal bounds in the header is a possible follow-up, not yet scoped. */
+ * but OVERRIDES boundary[] per-channel from calibration.h (C1/#170). The header
+ * prints BOTH tiers: this shared template (`# cal bounds`, the fallback) and
+ * each channel's diverged rails (`# cal_ch`, #404). */
 static moisture_cfg_t cfg = {
     SAMPLES_PER_READ,
     SAMPLES_TRIM,
@@ -491,6 +490,18 @@ static void printHeader()
         n += snprintf(buf + n, sizeof(buf) - n, " %u",
                       (unsigned)cfg.boundary[i]);
     Serial.println(buf);
+    /* Per-channel cal provenance (#404) - one cal_ch line per channel, sourced
+     * from the LIVE g_mcfg[ch].boundary (what the classifier actually uses, per
+     * the #170 seam), never re-read from calibration.h - so a future runtime
+     * boundary update stays honest in the header. Format locked with Data's
+     * #507 parser; the shared line above remains the fallback tier. */
+    for (int ch = 0; ch < NUM_SENSORS; ch++) {
+        if (telemetry_format_cal_ch(
+                buf, sizeof(buf), SENSOR_NAMES[ch], g_mcfg[ch].boundary,
+                MOISTURE_BOUNDARY_COUNT, SENSOR_CAL_SRC, SENSOR_CAL_DATE,
+                SENSOR_CAL_CONFIDENCE, SENSOR_CAL_SCOPE) > 0)
+            Serial.println(buf);
+    }
     snprintf(
         buf, sizeof(buf),
         "# cfg: smp=%u trim=%u db=%u confirm_ms=%lu/%lu/%lu spr=%u discard=%u",
