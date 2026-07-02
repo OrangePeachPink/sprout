@@ -140,6 +140,13 @@ ship:
 preview *ARGS:
     {{py}} tools/preview.py {{ARGS}}
 
+# Clean-machine onboarding validation (#186) — scripts the exact README/CONTRIBUTING
+# Quick Start (uv sync, pre-commit install, dashboard serves, clean shutdown, gate
+# passes) with explicit pass criteria per step. Run on a genuinely clean checkout for
+# the real test; safe to re-run on an already-set-up machine too.
+validate-onboarding:
+    {{py}} tools/dx/validate_onboarding.py
+
 # ============================================================================
 #  LANES: register your recipes in your section above. Pattern:
 #     # One-line summary (this exact line shows in `just --list`).
