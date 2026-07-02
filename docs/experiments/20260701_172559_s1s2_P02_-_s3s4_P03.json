@@ -1,0 +1,33 @@
+{
+  "experiment_id": "20260701_172559_s1s2_P02_-_s3s4_P03",
+  "notes": {
+    "hypothesis": "Forty-eight hours after the first greenhouse bench watering, P02 and P03 should still show uneven moisture recovery. Running two probes per plant in one 6-minute capture should reveal whether a careful manual 1 cup surface watering reaches both local probe zones or still leaves dry pockets.",
+    "method": "Experiment Capture ran for 360 s at 1 s cadence. Probe mapping: s1 and s2 were placed in P02; s3 and s4 were placed in P03. Both pots were larger/drier pothos pots and were placed over temporary catch basins. Veronica manually watered approximately 1 cup into each plant during the run, doing a much better-than-consumer, distributed surface pour across the plant surface. After the initial note, runoff was observed in the catch basins: P02 leaked about 1/8 cup into the bowl, and P03 leaked a little less than 1/8 cup. This method is intentionally recorded as manual distributed surface watering, not pump-equivalent watering: a consumer kit with one plain hose outlet would likely deliver water at one spot and create stronger wet/dry pockets.",
+    "findings": "Both plants showed real but highly uneven wetting. P02 split strongly: s1 reached about 1336-1343 raw ADC by the end and was in the well-watered band, while s2 stayed around 2555 raw ADC and remained dry. P03 also split: s4 reached about 1699-1702 raw ADC and was in the OK/ideal band, while s3 stayed around 2550-2556 raw ADC and remained dry. The per-sensor cards showed broad within-run ranges: s1 1336-3185, s2 2144-3222, s3 1763-3177, s4 1675-3210 raw ADC. SHT45 and AS7263 environmental rows were present and live during the capture.",
+    "conclusion": "One cup per plant produced small but real runoff: about 1/8 cup from P02 and a little less than 1/8 cup from P03. Even with that bounded runoff and a careful distributed manual pour, it did not create uniform moisture across either pot. The result reinforces that these large pothos pots have strong microzone and preferential-flow behavior even when a human intentionally spreads water better than the eventual pump hardware will. For downstream analysis, treat this as best-case manual distributed watering with minor runoff, not as evidence that a single pump tube can evenly wet the pot. Future pump-distribution tests should separately use a point-source hose layout with probes near, midway, and far from the outlet.",
+    "status": "complete",
+    "edit_log": [
+      {
+        "at": "2026-07-01T17:39:12Z",
+        "by": "Sage",
+        "fields": [
+          "hypothesis",
+          "method",
+          "findings",
+          "conclusion",
+          "status"
+        ]
+      },
+      {
+        "at": "2026-07-01T17:42:00Z",
+        "by": "Sage",
+        "fields": [
+          "method",
+          "conclusion"
+        ]
+      }
+    ],
+    "saved_at": "2026-07-01T17:42:00Z",
+    "version": 2
+  }
+}

@@ -1,0 +1,3 @@
+# Local-only full chat transcript for disaster recovery.
+# Do not commit these large verbose thread dumps unless explicitly requested.
+LOCAL_THREAD_TRANSCRIPT_*.md

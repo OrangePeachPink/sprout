@@ -1,0 +1,124 @@
+{
+  "packet_id": "20260701_48h_followup_bench",
+  "packet_kind": "sage_bench_recovery",
+  "status": "local_rescue_packet_not_yet_reviewed_or_merged",
+  "created_local": "2026-07-01T18:19:25-05:00",
+  "lane": "Sage",
+  "signoff": "-- Sage",
+  "workflow_issue": "#533",
+  "workflow_issue_url": "https://github.com/OrangePeachPink/plants/issues/533",
+  "purpose": "Preserve the 2026-07-01 P01-P11 48-hour follow-up bench evidence before any issue or PR publication.",
+  "workflow_issue_request": "WORKFLOW_ISSUE_REQUEST.md",
+  "refs": {
+    "session_umbrella": "#379",
+    "calibration": "#170",
+    "dry_safety": "#191",
+    "data_followup": "#380"
+  },
+  "thread_recovery": {
+    "broken_prior_thread_id": "019f0ea6-a148-7a91-bba6-0d07f99b7750",
+    "broken_prior_thread_uri": "codex://threads/019f0ea6-a148-7a91-bba6-0d07f99b7750",
+    "recovery_thread_id": "019f1513-4205-7e70-9769-91fad3980be3",
+    "recovery_thread_uri": "codex://threads/019f1513-4205-7e70-9769-91fad3980be3",
+    "json_log_file": null,
+    "json_log_file_note": "Not directly identified from the runtime. Search Codex local thread/export storage for either thread ID if raw transcript JSON is needed."
+  },
+  "pii_posture": "Expected public-clean: relative repo paths, local timestamps, device telemetry, probe labels, raw ADC counts, environment sidecar readings, and bench notes only. No home coordinates, personal identifiers, or private account metadata should be present; verify again before PR.",
+  "sidecars": [
+    "../../20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to.json",
+    "../../20260701_172559_s1s2_P02_-_s3s4_P03.json",
+    "../../20260701_180122_p04_p05_water_halfcup_quartercup.json",
+    "../../20260701_183611_p06_48h_check_2probe_maybe_water.json",
+    "../../20260701_185816_p07_cachepot_retention_check_no_water.json",
+    "../../20260701_191925_p08_p09_48h_measure_only_2probe.json",
+    "../../20260701_194006_p10_48h_4probe_check.json",
+    "../../20260701_210013_p11_48h_4probe_check.json"
+  ],
+  "experiment_captures": [
+    {
+      "plant_scope": "P01",
+      "experiment_id": "20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to",
+      "directory": "experiment_captures/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to",
+      "csv": "experiment_captures/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to.csv",
+      "manifest": "experiment_captures/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to/manifest.json"
+    },
+    {
+      "plant_scope": "P02_P03",
+      "experiment_id": "20260701_172559_s1s2_P02_-_s3s4_P03",
+      "directory": "experiment_captures/20260701_172559_s1s2_P02_-_s3s4_P03",
+      "csv": "experiment_captures/20260701_172559_s1s2_P02_-_s3s4_P03/20260701_172559_s1s2_P02_-_s3s4_P03.csv",
+      "manifest": "experiment_captures/20260701_172559_s1s2_P02_-_s3s4_P03/manifest.json"
+    },
+    {
+      "plant_scope": "P04_P05",
+      "experiment_id": "20260701_180122_p04_p05_water_halfcup_quartercup",
+      "directory": "experiment_captures/20260701_180122_p04_p05_water_halfcup_quartercup",
+      "csv": "experiment_captures/20260701_180122_p04_p05_water_halfcup_quartercup/20260701_180122_p04_p05_water_halfcup_quartercup.csv",
+      "manifest": "experiment_captures/20260701_180122_p04_p05_water_halfcup_quartercup/manifest.json"
+    },
+    {
+      "plant_scope": "P06",
+      "experiment_id": "20260701_183611_p06_48h_check_2probe_maybe_water",
+      "directory": "experiment_captures/20260701_183611_p06_48h_check_2probe_maybe_water",
+      "csv": "experiment_captures/20260701_183611_p06_48h_check_2probe_maybe_water/20260701_183611_p06_48h_check_2probe_maybe_water.csv",
+      "manifest": "experiment_captures/20260701_183611_p06_48h_check_2probe_maybe_water/manifest.json"
+    },
+    {
+      "plant_scope": "P07",
+      "experiment_id": "20260701_185816_p07_cachepot_retention_check_no_water",
+      "directory": "experiment_captures/20260701_185816_p07_cachepot_retention_check_no_water",
+      "csv": "experiment_captures/20260701_185816_p07_cachepot_retention_check_no_water/20260701_185816_p07_cachepot_retention_check_no_water.csv",
+      "manifest": "experiment_captures/20260701_185816_p07_cachepot_retention_check_no_water/manifest.json"
+    },
+    {
+      "plant_scope": "P08_P09",
+      "experiment_id": "20260701_191925_p08_p09_48h_measure_only_2probe",
+      "directory": "experiment_captures/20260701_191925_p08_p09_48h_measure_only_2probe",
+      "csv": "experiment_captures/20260701_191925_p08_p09_48h_measure_only_2probe/20260701_191925_p08_p09_48h_measure_only_2probe.csv",
+      "manifest": "experiment_captures/20260701_191925_p08_p09_48h_measure_only_2probe/manifest.json"
+    },
+    {
+      "plant_scope": "P10",
+      "experiment_id": "20260701_194006_p10_48h_4probe_check",
+      "directory": "experiment_captures/20260701_194006_p10_48h_4probe_check",
+      "csv": "experiment_captures/20260701_194006_p10_48h_4probe_check/20260701_194006_p10_48h_4probe_check.csv",
+      "manifest": "experiment_captures/20260701_194006_p10_48h_4probe_check/manifest.json"
+    },
+    {
+      "plant_scope": "P11",
+      "experiment_id": "20260701_210013_p11_48h_4probe_check",
+      "directory": "experiment_captures/20260701_210013_p11_48h_4probe_check",
+      "csv": "experiment_captures/20260701_210013_p11_48h_4probe_check/20260701_210013_p11_48h_4probe_check.csv",
+      "manifest": "experiment_captures/20260701_210013_p11_48h_4probe_check/manifest.json"
+    }
+  ],
+  "monitor_logs": [
+    {
+      "path": "monitor_logs/Sprout ESP32_20260701_174045.csv",
+      "scope": "P04/P05 baseline and surrounding monitor evidence"
+    },
+    {
+      "path": "monitor_logs/Sprout ESP32_20260701_184208.csv",
+      "scope": "P06 post-run monitor and sunlight-artifact evidence"
+    },
+    {
+      "path": "monitor_logs/Sprout ESP32_20260701_190444.csv",
+      "scope": "P07 post-run and later monitor context"
+    },
+    {
+      "path": "monitor_logs/Sprout ESP32_20260701_205851.csv",
+      "scope": "pre-P11/P11 adjacent monitor context"
+    },
+    {
+      "path": "monitor_logs/Sprout ESP32_20260701_210522.csv",
+      "scope": "P11 post-run monitor and s3/GPIO36 rail-low fault evidence"
+    }
+  ],
+  "known_caveats": [
+    "P11 s3/GPIO36 produced impossible low raw values and later reached 0; exclude that channel from plant moisture interpretation after the impossible drop and preserve it as fault evidence.",
+    "P07 experiment name says no_water, but about 1/2 cup was added into central leaf/branch cores; the method note overrides the stale name.",
+    "P04/P05 baseline came from monitor logging without in-app metadata.",
+    "Distributed hand watering is not equivalent to a future one-hose pump spot-feed output.",
+    "Raw ADC counts remain truth; bands remain provisional pending #170 calibration work."
+  ]
+}

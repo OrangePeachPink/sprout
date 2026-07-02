@@ -1,0 +1,33 @@
+{
+  "experiment_id": "20260701_185816_p07_cachepot_retention_check_no_water",
+  "subject": "p07_cachepot_retention_check_no_water",
+  "title": "p07_cachepot_retention_check_no_water",
+  "schema_version": 2,
+  "mode": "experiment",
+  "sample_rate_s": 1.0,
+  "duration_s": 300.0,
+  "stopped_by": "duration",
+  "labels": {
+    "s1": "s1",
+    "s2": "s2",
+    "s3": "notinuse",
+    "s4": "notinuse"
+  },
+  "started_utc": "2026-07-01T18:58:16.859Z",
+  "ended_utc": "2026-07-01T19:03:19.247Z",
+  "capture_version": "experiment_capture_0_1",
+  "firmware": {
+    "version": "0.7.0 - schema v1, 4 soil sensors, supervisor-driven (autonomous dosing DISARMED; manual !water; fail-safe OFF)",
+    "git": null,
+    "built": null,
+    "run": null
+  },
+  "file": "20260701_185816_p07_cachepot_retention_check_no_water.csv",
+  "transport": {
+    "rows": 3266,
+    "sweeps": 2176,
+    "dropped": 776,
+    "crc_fail": 0,
+    "idle_noise": 0
+  }
+}

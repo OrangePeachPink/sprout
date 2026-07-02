@@ -1,0 +1,25 @@
+{
+  "experiment_id": "20260701_180122_p04_p05_water_halfcup_quartercup",
+  "notes": {
+    "hypothesis": "Forty-eight hours after the full greenhouse bench watering, P04 and P05 should still expose the hard cases from the first session: P04 may wet unevenly with visible dry soil bands in the clear inner liner, while P05 may resist both probe insertion and top watering because the pot is mostly rootball and sheds water. A short in-soil watering capture should show whether bounded manual doses can reach the active probe zones without relying on an unmonitored bottom reservoir.",
+    "method": "Experiment Capture ran for 300 s at 1 s cadence. This run started with probes already in soil/rootball, not from dry-air baseline. Probe mapping: s1 and s2 were placed in P04 with credible contact; s3 was seated into the P05 rootball after a firm push; s4 was only edge/adjacent in P05 and should be treated as low-confidence contact. Veronica watered P04 with slightly more than 1/2 cup and observed tiny leaking. Veronica watered P05 slowly with 1/4 cup and observed no leaking during the capture. During the capture P04 also had dead leaves trimmed from its base, a plant-care intervention recorded as bench context. The planned post-experiment P05 bottom-reservoir watering in its regular outer pot is outside this measured capture unless separately recorded.",
+    "findings": "The end of the capture showed strongly uneven local wetting. P04 split across its two probes: s1 moved down to about 1093 raw ADC and the wet/overwatered band, while s2 ended around 2086 raw ADC and still read needs-water/drying. P05 also split by contact zone: s3 moved from about 3071 dry/rootball readings down to about 2169 raw ADC, near the needs-water/drying boundary, while s4 stayed essentially air-dry at about 3122 raw ADC and should not be used as a P05 moisture endpoint because it was edge/adjacent with poor insertion. The per-card ranges were s1 990-2703, s2 1733-2643, s3 1327-3071, and s4 3115-3137 raw ADC. Environmental rows were present: SHT45 was around 27.45-27.49 degC and 48.4-48.6 pctRH near the end; AS7263 rows were live with strong skylight context and a repeated high nir_860 value, so the NIR sidecar should be treated as light-context evidence rather than plant-truth.",
+    "conclusion": "P04 accepted the dose but still showed sharp microzone disagreement: one probe saw wet/overwatered conditions while the second stayed in needs-water, with slight runoff. That supports the prior observation that water can bypass portions of the pot even when visible wetting occurs. P05 accepted the slow 1/4 cup top dose without visible runoff, but the credible rootball probe only reached the needs-water/drying region and the edge probe remained effectively air-dry; this supports the working care model that P05 may need bottom/reservoir-style watering through roots exiting the inner liner for plant health, while that after-care path remains unmonitored by the current probe setup. For downstream analysis, include s1 and s2 as P04, include s3 as P05 with contact caveat, and exclude or very-low-weight s4 for P05 moisture aggregation.",
+    "status": "complete",
+    "edit_log": [
+      {
+        "at": "2026-07-01T18:14:35Z",
+        "by": "Sage",
+        "fields": [
+          "hypothesis",
+          "method",
+          "findings",
+          "conclusion",
+          "status"
+        ]
+      }
+    ],
+    "saved_at": "2026-07-01T18:14:35Z",
+    "version": 1
+  }
+}
