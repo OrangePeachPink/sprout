@@ -220,6 +220,14 @@ every lane. If two lanes use the same word for different things, or different wo
   for *trends on one probe over time*. **NEVER** call it moisture %, VWC, or compare it across probes.
 - **Reading 👤** — what Sprout takes from the soil. Warm, plain. **not** "capture" or "sample" in owner copy
   (those are bench/code words).
+- **On-ramp bands 👤** — the beginner Arduino on-ramp's own **three** plain-language moisture states (#435):
+  **High and dry · All good · Just watered**. **Not** the same vocabulary as Full's seven **Band names**
+  above — deliberately simpler, so don't conflate the two systems or reuse Full's seven names in on-ramp copy.
+  Full's seven bands are what the three graduate into, not a synonym for them. See
+  [`arduino-onramp-north-star.md`](contributing/arduino-onramp-north-star.md).
+- **Calibrate by hand 👤** — the on-ramp's own act of measuring your probe's dry and wet readings and typing
+  them into the sketch's tunable-constants block (#435). The **teaching**, not a gap to be automated away — Full
+  calibrates automatically; the on-ramp's whole point is to *feel* what calibration means first.
 
 ---
 
