@@ -1235,6 +1235,46 @@ void t_per_channel_cal(void)
     }
 }
 
+/* #404: the cal_ch header line - pins the EXACT wire format Data's #507 parser
+ * (_parse_cal_channel) reads, byte-for-byte, using ch0's real calibration.h
+ * values + the provenance constants. Also pins the honest-NULL date rule:
+ * a NULL/empty date omits the key entirely, never emits `date=`. */
+void t_cal_ch_line(void)
+{
+    char buf[160];
+
+    /* full line, ch0 values straight from calibration.h */
+    int n = telemetry_format_cal_ch(
+        buf, sizeof(buf), "s3", SENSOR_CAL_BOUNDARY[0], MOISTURE_BOUNDARY_COUNT,
+        SENSOR_CAL_SRC, SENSOR_CAL_DATE, SENSOR_CAL_CONFIDENCE,
+        SENSOR_CAL_SCOPE);
+    TEST_ASSERT_TRUE_MESSAGE(n > 0, "cal_ch line formatted");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "# cal_ch s3: bounds=3123,2140,1830,1520,1150,969 "
+        "src=wipe_airdry_bench date=2026-06-28 confidence=provisional "
+        "scope=channel",
+        buf, "exact wire format the #507 parser reads");
+
+    /* honest-NULL date: key omitted entirely, not printed empty */
+    n = telemetry_format_cal_ch(buf, sizeof(buf), "s2", SENSOR_CAL_BOUNDARY[3],
+                                MOISTURE_BOUNDARY_COUNT, "manual", NULL,
+                                "provisional", "channel");
+    TEST_ASSERT_TRUE_MESSAGE(n > 0, "dateless cal_ch line formatted");
+    TEST_ASSERT_NULL_MESSAGE(strstr(buf, "date="),
+                             "NULL date -> date= key absent");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, "src=manual confidence="),
+                                 "fields stay adjacent when date omitted");
+
+    /* truncation is reported, never a silently-clipped line */
+    char tiny[24];
+    TEST_ASSERT_EQUAL_MESSAGE(-1,
+                              telemetry_format_cal_ch(tiny, sizeof(tiny), "s3",
+                                                      SENSOR_CAL_BOUNDARY[0],
+                                                      MOISTURE_BOUNDARY_COUNT,
+                                                      "x", "y", "z", "w"),
+                              "truncation -> -1");
+}
+
 /* -------------------------------------------------------------------------- */
 /* runner                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -1262,6 +1302,7 @@ int main(void)
     RUN_TEST(t_env_row);
     RUN_TEST(t_soil_row_time_provenance);
     RUN_TEST(t_per_channel_cal);
+    RUN_TEST(t_cal_ch_line);
     RUN_TEST(t_wifi_net_state_machine);
     return UNITY_END();
 }
