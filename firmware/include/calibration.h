@@ -41,6 +41,15 @@
  * include it. main.cpp static_asserts the match. */
 #define SENSOR_CAL_CHANNELS 4
 
+/* Provenance for the cal_ch header lines (#404, ADR-0022 vocabulary). Shared
+ * across all four channels for now — one bench session produced every rail;
+ * #192's export_config regenerates these per-channel if sessions ever diverge.
+ * Values are space-free (the cal_ch line is space-separated k=v). */
+#define SENSOR_CAL_SRC "wipe_airdry_bench" /* the 2026-06-28 characterization */
+#define SENSOR_CAL_DATE "2026-06-28"
+#define SENSOR_CAL_CONFIDENCE "provisional" /* ADR-0022; Sage's caveat holds  */
+#define SENSOR_CAL_SCOPE "channel" /* per-channel override line (#507 parser) */
+
 static const uint16_t
     SENSOR_CAL_BOUNDARY[SENSOR_CAL_CHANNELS][MOISTURE_BOUNDARY_COUNT] = {
         /* ch0 = s3 (GPIO36/SVP): wet ~969, dry ~3123 */
