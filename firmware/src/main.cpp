@@ -277,7 +277,11 @@ static void envI2cDelay(uint32_t ms, void *user)
 }
 static env_i2c_t g_env_i2c = {envI2cWrite, envI2cRead, envI2cDelay, nullptr};
 static bool g_as7263_ok = false;
+#endif /* ENABLE_ENV_SENSORS */
 
+/* Format + emit one plants.env row with its checksum. Used by the bench env
+ * sensors (env build) AND the always-on die-temp row (#345) - so it lives
+ * OUTSIDE the ENABLE_ENV_SENSORS guard. */
 static void emitEnvLine(const telemetry_env_row_t *row)
 {
     char line[256];
@@ -288,6 +292,51 @@ static void emitEnvLine(const telemetry_env_row_t *row)
         Serial.println(crc);
     }
 }
+
+/* ---- ESP32 die temperature (#345) ---------------------------------------- */
+/* Board-proxy diagnostic context - the chip's OWN temperature, NOT ambient/soil/
+ * water (ADR-0023 source tag: esp32_die, measured/uncalibrated). Purpose: separate
+ * "the electronics/ADC reference environment is heating" from "the soil is
+ * changing" in the afternoon-drift analysis. Zero external hardware, so it emits
+ * on EVERY build (the multi-board fleet won't all carry an SHT45).
+ *
+ * temperatureRead() (Arduino core): classic ESP32 reads the legacy undocumented
+ * ROM sensor - KNOWN CAVEAT: some classic chips have it fused off and return the
+ * constant raw 128 -> exactly (128-32)/1.8 C forever; that exact value is flagged
+ * SUSPECT rather than silently trusted. S3/C5 use the real IDF5 driver, which
+ * returns NAN on failure -> NO_SIGNAL. */
+static void emitDieTempRow(unsigned long long up_ms)
+{
+    /* the classic fused-off sentinel: raw 128 through (x-32)/1.8, bit-exact */
+    const float kFusedOffSentinel = (128.0f - 32.0f) / 1.8f;
+    float c = temperatureRead();
+    char val[16] = "";
+    const char *unit = "";
+    const char *q = "NO_SIGNAL";
+    if (!isnan(c)) {
+        snprintf(val, sizeof(val), "%.2f", (double)c);
+        unit = "degC";
+        q = (c == kFusedOffSentinel) ? "SUSPECT" : "OK";
+    }
+    telemetry_env_row_t r = {"plants.env",
+                             g_session_id,
+                             g_device_id,
+                             PLANTS_FW_VERSION,
+                             up_ms,
+                             "ESP32",
+                             "esp32_die",
+                             "on_chip",
+                             "die_temp",
+                             "",
+                             val,
+                             unit,
+                             q,
+                             "source=esp32_die;cal=uncalibrated_board_proxy;"
+                             "api=temperatureRead"};
+    emitEnvLine(&r);
+}
+
+#ifdef ENABLE_ENV_SENSORS
 
 /* Read the env sensors + emit plants.env rows (contextual; ratified mapping #377).
  * SHT45 -> ambient_temp/ambient_rh with REAL value+unit (factory-calibrated, so the
@@ -783,4 +832,12 @@ void loop()
         emitEnvRows((unsigned long long)esp_timer_get_time() / 1000ULL);
     }
 #endif
+
+    /* ESP32 die temp (#345) — every build, same pump-independent pacing rationale
+     * as the env block above (an on-chip register read, never the soil ADC). */
+    static unsigned long lastDieTemp = 0;
+    if (now - lastDieTemp >= g_sys.sample_period_ms) {
+        lastDieTemp = now;
+        emitDieTempRow((unsigned long long)esp_timer_get_time() / 1000ULL);
+    }
 }
