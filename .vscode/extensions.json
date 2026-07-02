@@ -14,5 +14,12 @@
     "ms-vscode-remote.remote-containers",
     "redhat.vscode-yaml",
     "ms-vscode.cpptools"
+  ],
+  // cpptools generically nudges toward CMake Tools as a companion regardless of build
+  // system. This repo has no CMake project (firmware/platformio.ini is the actual build,
+  // already covered by platformio-ide above) - installing it would be actively misleading,
+  // pointing a contributor at `cmake`/`ctest` instead of `just build`/`pio test`.
+  "unwantedRecommendations": [
+    "ms-vscode.cmake-tools"
   ]
 }
