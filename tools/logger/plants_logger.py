@@ -5,6 +5,8 @@ plants_logger.py - host-side serial capture for the plants controller (fw v0.5.0
 Owns the serial port (replacing `pio device monitor --filter log2file`), and per
 docs/TELEMETRY_SCHEMA.md:
   * stamps each device row with host UTC + local time and a monotonic sample_id,
+    plus the host's own elapsed `time.monotonic()` (host_monotonic_ms, #9) - a
+    relative axis immune to a UTC backward jump/DST duplicate hour or an NTP step,
   * reorders to the canonical CSV schema and writes a rotating, self-describing
     CSV file (a new file each UTC day) under <repo>/logs/,
   * renders a terse pretty console for live eyeballing (the B2 file/console split),
@@ -246,11 +248,24 @@ def parse_device_line(text):
     return d
 
 
+def _append_payload(payload, key, value):
+    """Append one ``;k=v`` pair to a device payload string (host-side extension,
+    same additive convention as #278's device_seq/time_source). Never touches the
+    device-emitted keys - only adds to the end."""
+    pair = f"{key}={value}"
+    return f"{payload};{pair}" if payload else pair
+
+
 class RotatingCsv:
     """One CSV file per UTC day, each re-emitting the device header block so every
-    segment is independently self-describing."""
+    segment is independently self-describing.
 
-    def __init__(self, logdir, maxbytes=0):
+    Also stamps every row with the host's own **monotonic** elapsed time (#9):
+    UTC alone can jump backward or duplicate an hour at a DST transition, or step
+    on an NTP correction - a relative axis anchored to ``time.monotonic()`` at
+    logger start survives both, for a multi-week run's own internal ordering."""
+
+    def __init__(self, logdir, maxbytes=0, *, monotonic=time.monotonic):
         self.logdir = logdir
         self.maxbytes = maxbytes
         self.device_id = "unknown"
@@ -259,6 +274,8 @@ class RotatingCsv:
         self.writer = None
         self.header_lines = []
         self.current_path = None
+        self._monotonic = monotonic
+        self._t0 = monotonic()  # this logger process's own start reference
         os.makedirs(logdir, exist_ok=True)
 
     def set_header(self, lines):
@@ -296,6 +313,7 @@ class RotatingCsv:
         if self.device_id == "unknown" and dev["device_id"]:
             self.device_id = dev["device_id"]
         new_path = self._roll(now)
+        host_monotonic_ms = round((self._monotonic() - self._t0) * 1000)
         row = dict.fromkeys(CANONICAL_COLS, "")
         row.update(
             {
@@ -313,7 +331,9 @@ class RotatingCsv:
                 "value": dev["value"],
                 "unit": dev["unit"],
                 "quality_flag": dev["quality_flag"],
-                "payload": dev["payload"],
+                "payload": _append_payload(
+                    dev["payload"], "host_monotonic_ms", host_monotonic_ms
+                ),
                 "timestamp_utc": iso_utc(now),
                 "timestamp_local": iso_local(now),
                 "sample_id": sample_id,
