@@ -307,6 +307,16 @@ class Reading:
         join/forecast/gap-detection; this field is device-provenance only."""
         return _parse_utc(self.payload.get("device_timestamp_utc"))
 
+    @property
+    def host_monotonic_ms(self) -> int | None:
+        """Elapsed ``time.monotonic()`` (ms) since the host logger started (#9).
+
+        A relative axis that survives a UTC backward jump, a DST-duplicate hour,
+        or an NTP step correction - the host-side counterpart to the device's own
+        ``millis_ms``. ``None`` on a row from a logger version that predates this
+        field (never a guessed value)."""
+        return _int(self.payload.get("host_monotonic_ms"))
+
 
 def dedupe_key(r: Reading) -> tuple[str, str, int | None, str, str]:
     """The schema v2 §11.2 row-idempotency key: the tuple that identifies

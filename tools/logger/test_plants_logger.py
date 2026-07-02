@@ -224,6 +224,31 @@ def test_rotating_csv_null_value_unit_preserved(tmp_path: Path) -> None:
     assert row["unit"] == ""
 
 
+def test_rotating_csv_appends_host_monotonic_ms(tmp_path: Path) -> None:
+    """#9: a UTC-immune relative axis, injected via a fake clock for determinism."""
+    ticks = iter([100.0, 100.25, 101.0])  # t0, then two later reads
+    rc = RotatingCsv(str(tmp_path), monotonic=lambda: next(ticks))
+    dev = parse_device_line(_make_line())
+    row1, _ = rc.write(dev, sample_id=1, now=_UTC_0)
+    row2, _ = rc.write(dev, sample_id=2, now=_UTC_0)
+    assert "host_monotonic_ms=250" in row1["payload"]  # (100.25 - 100.0) * 1000
+    assert "host_monotonic_ms=1000" in row2["payload"]  # (101.0 - 100.0) * 1000
+    # the device's own payload keys survive, untouched, ahead of the appended key
+    assert row1["payload"].startswith("level=well watered;role=diag;")
+
+
+def test_rotating_csv_host_monotonic_ms_with_empty_device_payload(
+    tmp_path: Path,
+) -> None:
+    ticks = iter([50.0, 50.5])
+    rc = RotatingCsv(str(tmp_path), monotonic=lambda: next(ticks))
+    dev = parse_device_line(_make_line(payload=""))
+    row, _ = rc.write(dev, sample_id=1, now=_UTC_0)
+    assert (
+        row["payload"] == "host_monotonic_ms=500"
+    )  # no leading ";" with no prior keys
+
+
 def test_rotating_csv_rolls_on_new_day(tmp_path: Path) -> None:
     rc = RotatingCsv(str(tmp_path))
     dev = parse_device_line(_make_line())
