@@ -35,6 +35,11 @@
 #include "commands.h"
 #include "run_meta.h"
 #include "board_capability.h" /* per-board capability descriptor + gate seam (#273) */
+#include "calibration.h" /* SENSOR_CAL_BOUNDARY[ch] — per-channel raw->band (#170) */
+
+/* The calibration table and the firmware must agree on the channel count. */
+static_assert(SENSOR_CAL_CHANNELS == NUM_SENSORS,
+              "calibration.h channel count must match NUM_SENSORS");
 
 #ifdef ENABLE_ENV_SENSORS
 #include <Wire.h>
@@ -81,9 +86,13 @@ static Preferences g_prefs;
  * move probes between plants without reflashing (stale metadata = join hazard). */
 static run_meta_t g_run_meta;
 
-/* Shared classifier config template — same boundaries all channels for now; copied
- * into g_mcfg[] at setup (C1/#170 will diverge per channel). Kept as the canonical
- * copy the header prints. */
+/* Shared classifier config template — acquisition / hysteresis / persistence /
+ * health are shared across channels. Its boundary[] is the shared-interior
+ * reference + default rails; at setup each g_mcfg[ch] takes these shared fields
+ * but OVERRIDES boundary[] per-channel from calibration.h (C1/#170). Kept as the
+ * canonical copy the provenance header prints — the header still shows this
+ * shared template, not each channel's diverged rails; surfacing per-channel
+ * cal bounds in the header is a possible follow-up, not yet scoped. */
 static moisture_cfg_t cfg = {
     SAMPLES_PER_READ,
     SAMPLES_TRIM,
@@ -114,7 +123,8 @@ static moisture_state_t state[NUM_SENSORS];
  * every loop. Autonomous dosing ships DISARMED (see setup) — the bench arms it
  * with !auto only after the dry-safety chain (#93/#191/#2/#215) passes. */
 static irrig_ctrl_t g_irrig;
-static moisture_cfg_t g_mcfg[NUM_SENSORS]; /* per-channel (all = cfg for now) */
+static moisture_cfg_t g_mcfg
+    [NUM_SENSORS]; /* per-channel: shared cfg + per-channel boundary (#170) */
 static irrig_chan_cfg_t
     g_chan_cfg[NUM_SENSORS]; /* per-channel dose policy (provisional) */
 static uint16_t
@@ -490,11 +500,16 @@ void setup()
     /* Seed run metadata from the config defaults before !label/!pos are registered. */
     run_meta_init(&g_run_meta, RUN_LABEL, SENSOR_POSITION, NUM_SENSORS);
 
-    /* Build the supervisor's per-channel config (shared template for now; C1/#170
-     * diverges it later) and bring up the engine. irrig_init seeds every classifier
-     * from one burst with all pumps OFF — it replaces the old standalone seed loop. */
+    /* Build the supervisor's per-channel config and bring up the engine. irrig_init
+     * seeds every classifier from one burst with all pumps OFF — it replaces the
+     * old standalone seed loop. */
     for (int ch = 0; ch < NUM_SENSORS; ch++) {
-        g_mcfg[ch] = cfg;
+        g_mcfg[ch] =
+            cfg; /* shared acquisition / hysteresis / persistence / health */
+        /* C1/#170: diverge ONLY the raw->band boundaries per channel (sensor
+         * personality removed); the band->action policy (g_chan_cfg) stays shared. */
+        memcpy(g_mcfg[ch].boundary, SENSOR_CAL_BOUNDARY[ch],
+               sizeof(g_mcfg[ch].boundary));
         g_chan_cfg[ch].dose_ms = IRRIG_DOSE_MS;
         g_chan_cfg[ch].soak_ms = IRRIG_SOAK_MS;
         g_chan_cfg[ch].water_at_or_below = MOIST_NEEDS_WATER;

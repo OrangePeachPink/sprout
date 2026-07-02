@@ -25,6 +25,7 @@
 #include "as7263.h"
 #include "telemetry.h"
 #include "board_capability.h" /* #273 capability descriptor + gate seam */
+#include "calibration.h" /* SENSOR_CAL_BOUNDARY — per-channel raw->band (#170) */
 
 /* -------------------------------------------------------------------------- */
 /* synthetic rig: ADC source + pump observer + event sink                     */
@@ -1115,6 +1116,48 @@ void t_sensor_type_resistive(void)
                               "res: low raw -> air-dry (inverted)");
 }
 
+/* classify `raw` using channel ch's per-channel calibration (#170). */
+static moisture_level_t band_on_channel(int ch, uint16_t raw)
+{
+    moisture_cfg_t cfg = (moisture_cfg_t)MOISTURE_CFG_DEFAULT;
+    memcpy(cfg.boundary, SENSOR_CAL_BOUNDARY[ch], sizeof(cfg.boundary));
+    moisture_state_t st;
+    moisture_init(&st, &cfg, raw);
+    return st.committed;
+}
+
+/* #170: per-channel raw->band calibration. Pins the MECHANISM (each channel
+ * classifies against its OWN boundary[]), NOT the provisional values (Data's
+ * #192 owns those, so this test survives a value regen). The seam: an identical
+ * raw lands in different bands on two channels whose outer rails differ, while
+ * the still-shared interior keeps the watering decision uniform (Step 1). */
+void t_per_channel_cal(void)
+{
+    /* the table covers every channel and is genuinely per-channel (not a copy) */
+    TEST_ASSERT_EQUAL_INT_MESSAGE(IRRIG_CHANNELS, SENSOR_CAL_CHANNELS,
+                                  "cal table covers every channel");
+    TEST_ASSERT_TRUE_MESSAGE(SENSOR_CAL_BOUNDARY[0][5] !=
+                                 SENSOR_CAL_BOUNDARY[3][5],
+                             "ch0(s3) and ch3(s2) have distinct wet rails");
+
+    /* a raw between s2's wet rail (ch3 ~900) and s3's wet rail (ch0 ~969):
+     * submerged on s3 (below its rail) but NOT on s2 (above its rail). */
+    const uint16_t raw = 930;
+    TEST_ASSERT_TRUE_MESSAGE(band_on_channel(0, raw) == MOIST_SUBMERGED,
+                             "raw 930 < s3 wet rail -> submerged on ch0");
+    TEST_ASSERT_TRUE_MESSAGE(band_on_channel(3, raw) != MOIST_SUBMERGED,
+                             "raw 930 > s2 wet rail -> NOT submerged on ch3");
+
+    /* Step-1 invariant: interior [1..4] stays SHARED, so a mid-soil raw bands
+     * the SAME on every channel — the watering decision is unchanged until the
+     * Step-2 per-channel field-capacity anchor lands. */
+    for (int ch = 1; ch < SENSOR_CAL_CHANNELS; ch++) {
+        TEST_ASSERT_EQUAL_MESSAGE(band_on_channel(0, 1300),
+                                  band_on_channel(ch, 1300),
+                                  "shared interior -> same mid-soil band");
+    }
+}
+
 /* -------------------------------------------------------------------------- */
 /* runner                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -1141,5 +1184,6 @@ int main(void)
     RUN_TEST(t_as7263);
     RUN_TEST(t_env_row);
     RUN_TEST(t_soil_row_time_provenance);
+    RUN_TEST(t_per_channel_cal);
     return UNITY_END();
 }
