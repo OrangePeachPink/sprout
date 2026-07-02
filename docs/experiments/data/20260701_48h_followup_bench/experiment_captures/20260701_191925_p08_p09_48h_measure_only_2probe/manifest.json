@@ -1,0 +1,33 @@
+{
+  "experiment_id": "20260701_191925_p08_p09_48h_measure_only_2probe",
+  "subject": "p08_p09_48h_measure_only_2probe",
+  "title": "p08_p09_48h_measure_only_2probe",
+  "schema_version": 2,
+  "mode": "experiment",
+  "sample_rate_s": 1.0,
+  "duration_s": 180.0,
+  "stopped_by": "duration",
+  "labels": {
+    "s1": "P08 cactus",
+    "s2": "P09 succulent",
+    "s3": "not_in_use",
+    "s4": "not_in_use"
+  },
+  "started_utc": "2026-07-01T19:19:25.713Z",
+  "ended_utc": "2026-07-01T19:22:28.098Z",
+  "capture_version": "experiment_capture_0_1",
+  "firmware": {
+    "version": "0.7.0 - schema v1, 4 soil sensors, supervisor-driven (autonomous dosing DISARMED; manual !water; fail-safe OFF)",
+    "git": null,
+    "built": null,
+    "run": null
+  },
+  "file": "20260701_191925_p08_p09_48h_measure_only_2probe.csv",
+  "transport": {
+    "rows": 1950,
+    "sweeps": 1298,
+    "dropped": 469,
+    "crc_fail": 0,
+    "idle_noise": 0
+  }
+}

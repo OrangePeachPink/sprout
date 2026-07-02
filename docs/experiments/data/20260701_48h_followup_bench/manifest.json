@@ -1,0 +1,339 @@
+{
+  "experiment_id": "20260701_48h_followup_bench",
+  "date_local": "2026-07-01",
+  "lane": "Sage",
+  "purpose": "48-hour follow-up bench pass for plants P01-P11 after the 2026-06-29 greenhouse characterization: short per-plant experiment captures (air -> soil -> optional small watering) plus surrounding monitor logs, to check 48h moisture retention and small-top-up response. Raw evidence for calibration (#170) and Data follow-up (#380).",
+  "refs": {
+    "session_umbrella": "#379",
+    "calibration": "#170",
+    "dry_safety": "#191",
+    "data_followup": "#380"
+  },
+  "row_count": 26770,
+  "raw_slice_count": 19,
+  "honest_gap_policy": "Empty or excluded probe/plant fields mean that channel was not a valid plant-moisture source (air reference, poor contact, or the P11 s3 fault) - not a zero. Do not interpolate un-timestamped operator events.",
+  "pii_posture": "Relative repo paths, local timestamps, device telemetry, probe IDs, raw ADC counts, environmental sidecar readings, and bench notes only. No home coordinates, personal identifiers, private account metadata, or local tooling paths.",
+  "reconstitution": {
+    "policy": "Capture CSVs and monitor logs over the repo's 1024 KB file limit are stored as line-boundary parts (`<name>_partNN.csv`). Concatenating a file's parts in order reproduces the original bytes exactly; each original's SHA-256 and byte size are recorded here. Files under the limit are stored whole.",
+    "files": [
+      {
+        "original_file": "20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to.csv",
+        "original_sha256": "da7dab9440a774982ba11ca66242dbc1e6c235364b6545f668b446c025ed9f34",
+        "original_bytes": 1489311,
+        "split": true,
+        "files": [
+          "experiment_captures/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to_part01.csv",
+          "experiment_captures/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to_part02.csv"
+        ],
+        "part_count": 2,
+        "part_sha256": [
+          "a799a405d62bb3370d35aa66152385a784f9a6f22cead37ee4de08873dc37dd8",
+          "b65578590479865e25b1ccd1da38d656a58db35f2c8e3e01df39df861e760a36"
+        ],
+        "path": "experiment_captures/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to.csv"
+      },
+      {
+        "original_file": "20260701_172559_s1s2_P02_-_s3s4_P03.csv",
+        "original_sha256": "1f9bfe0e1cb135a8252650fac17bc933267085b8313f206a5ca07c4bc63b1ba5",
+        "original_bytes": 1243023,
+        "split": true,
+        "files": [
+          "experiment_captures/20260701_172559_s1s2_P02_-_s3s4_P03/20260701_172559_s1s2_P02_-_s3s4_P03_part01.csv",
+          "experiment_captures/20260701_172559_s1s2_P02_-_s3s4_P03/20260701_172559_s1s2_P02_-_s3s4_P03_part02.csv"
+        ],
+        "part_count": 2,
+        "part_sha256": [
+          "0f30e4d9ef2480902b576b54195efd4ab35a188bdc5b1144996f9b28c817f2c5",
+          "16227d0ddfad2bdf65fdbdf9c0a95bb512f911072bffd6c2c0fb01b0f73083f7"
+        ],
+        "path": "experiment_captures/20260701_172559_s1s2_P02_-_s3s4_P03/20260701_172559_s1s2_P02_-_s3s4_P03.csv"
+      },
+      {
+        "original_file": "20260701_180122_p04_p05_water_halfcup_quartercup.csv",
+        "original_sha256": "adb359ed3fd6f4079f9443a698c7022a7193b448f4f5cf187158dfdcdb610b48",
+        "original_bytes": 1118846,
+        "split": true,
+        "files": [
+          "experiment_captures/20260701_180122_p04_p05_water_halfcup_quartercup/20260701_180122_p04_p05_water_halfcup_quartercup_part01.csv",
+          "experiment_captures/20260701_180122_p04_p05_water_halfcup_quartercup/20260701_180122_p04_p05_water_halfcup_quartercup_part02.csv"
+        ],
+        "part_count": 2,
+        "part_sha256": [
+          "1c0bf56fa5edb6742ab32fdc5f4d3a26d0bda0a4fa735a09c9149bbf202e9366",
+          "3677f786ccba05b2654a8fcfc6f0bd2a6dfbad77386488af404b698ee661f334"
+        ],
+        "path": "experiment_captures/20260701_180122_p04_p05_water_halfcup_quartercup/20260701_180122_p04_p05_water_halfcup_quartercup.csv"
+      },
+      {
+        "original_file": "20260701_183611_p06_48h_check_2probe_maybe_water.csv",
+        "original_sha256": "7a6147e3a685ce842906d142ef03102ef836bde2cc9f1265621d5a68718eaee9",
+        "original_bytes": 1064860,
+        "split": true,
+        "files": [
+          "experiment_captures/20260701_183611_p06_48h_check_2probe_maybe_water/20260701_183611_p06_48h_check_2probe_maybe_water_part01.csv",
+          "experiment_captures/20260701_183611_p06_48h_check_2probe_maybe_water/20260701_183611_p06_48h_check_2probe_maybe_water_part02.csv"
+        ],
+        "part_count": 2,
+        "part_sha256": [
+          "ec34e21fb274f2f9e194fb953c1db3194faa98047d6e4c1a566b549f63435acb",
+          "01fcabf1c2a5092c985987b9a5ab3630dc09e384d19c99f8f7a65cb1855d0bef"
+        ],
+        "path": "experiment_captures/20260701_183611_p06_48h_check_2probe_maybe_water/20260701_183611_p06_48h_check_2probe_maybe_water.csv"
+      },
+      {
+        "original_file": "20260701_185816_p07_cachepot_retention_check_no_water.csv",
+        "original_sha256": "8561d27e79f0a17f14192a0adee1b8931811d93f84885cb553a71996c8cfe27a",
+        "original_bytes": 1104386,
+        "split": true,
+        "files": [
+          "experiment_captures/20260701_185816_p07_cachepot_retention_check_no_water/20260701_185816_p07_cachepot_retention_check_no_water_part01.csv",
+          "experiment_captures/20260701_185816_p07_cachepot_retention_check_no_water/20260701_185816_p07_cachepot_retention_check_no_water_part02.csv"
+        ],
+        "part_count": 2,
+        "part_sha256": [
+          "d17b2d35f40219d8ab42e4110eeaebcd4083ecd42a24f2afb2fc0d0dc05e1e63",
+          "272bb7650a1dc6eb66b758ef8c98b4beb62a88785e1e5f2ec1b435bb76d5d079"
+        ],
+        "path": "experiment_captures/20260701_185816_p07_cachepot_retention_check_no_water/20260701_185816_p07_cachepot_retention_check_no_water.csv"
+      },
+      {
+        "original_file": "20260701_191925_p08_p09_48h_measure_only_2probe.csv",
+        "original_sha256": "a3251fbe7d8a8c248bc0e400676c992095738cb891b5f472c1b3580fb7c67f45",
+        "original_bytes": 638607,
+        "split": false,
+        "files": [
+          "experiment_captures/20260701_191925_p08_p09_48h_measure_only_2probe/20260701_191925_p08_p09_48h_measure_only_2probe.csv"
+        ],
+        "path": "experiment_captures/20260701_191925_p08_p09_48h_measure_only_2probe/20260701_191925_p08_p09_48h_measure_only_2probe.csv"
+      },
+      {
+        "original_file": "20260701_194006_p10_48h_4probe_check.csv",
+        "original_sha256": "795d7292ca93831230adfdb5056186911758ea39f7c7e7ec59bfd5add0479b55",
+        "original_bytes": 1045737,
+        "split": false,
+        "files": [
+          "experiment_captures/20260701_194006_p10_48h_4probe_check/20260701_194006_p10_48h_4probe_check.csv"
+        ],
+        "path": "experiment_captures/20260701_194006_p10_48h_4probe_check/20260701_194006_p10_48h_4probe_check.csv"
+      },
+      {
+        "original_file": "20260701_210013_p11_48h_4probe_check.csv",
+        "original_sha256": "abbed0d7747fcea75bb3e7a807ea65cbb32ae180cfbb7adcde9a64ee843545aa",
+        "original_bytes": 1020391,
+        "split": false,
+        "files": [
+          "experiment_captures/20260701_210013_p11_48h_4probe_check/20260701_210013_p11_48h_4probe_check.csv"
+        ],
+        "path": "experiment_captures/20260701_210013_p11_48h_4probe_check/20260701_210013_p11_48h_4probe_check.csv"
+      },
+      {
+        "original_file": "Sprout ESP32_20260701_174045.csv",
+        "original_sha256": "60b37783855224bcc146f08a455782861a08c89c480c1c56fda543e2eff64387",
+        "original_bytes": 594920,
+        "split": false,
+        "files": [
+          "monitor_logs/Sprout ESP32_20260701_174045.csv"
+        ],
+        "path": "monitor_logs/Sprout ESP32_20260701_174045.csv",
+        "scope": "P04/P05 baseline (monitor logging; no in-app capture metadata) and surrounding evidence"
+      },
+      {
+        "original_file": "Sprout ESP32_20260701_184208.csv",
+        "original_sha256": "db8b60ab68c184262b93ff48f1f5d5a6ac1a9a1d88d12809969c2f3668304d56",
+        "original_bytes": 386698,
+        "split": false,
+        "files": [
+          "monitor_logs/Sprout ESP32_20260701_184208.csv"
+        ],
+        "path": "monitor_logs/Sprout ESP32_20260701_184208.csv",
+        "scope": "P06 post-run monitor; contains sunlight artifacts"
+      },
+      {
+        "original_file": "Sprout ESP32_20260701_190444.csv",
+        "original_sha256": "1341c510d625eda6d6a6e2794d953426749509f90876106b77852623f929aaaf",
+        "original_bytes": 286189,
+        "split": false,
+        "files": [
+          "monitor_logs/Sprout ESP32_20260701_190444.csv"
+        ],
+        "path": "monitor_logs/Sprout ESP32_20260701_190444.csv",
+        "scope": "P07 post-run and later monitor context"
+      },
+      {
+        "original_file": "Sprout ESP32_20260701_205851.csv",
+        "original_sha256": "2f5db17c853d4c88e2c085660e577197ea03d9ff0eec5b1397f4b2806550d111",
+        "original_bytes": 49484,
+        "split": false,
+        "files": [
+          "monitor_logs/Sprout ESP32_20260701_205851.csv"
+        ],
+        "path": "monitor_logs/Sprout ESP32_20260701_205851.csv",
+        "scope": "pre-P11 / P11-adjacent monitor context"
+      },
+      {
+        "original_file": "Sprout ESP32_20260701_210522.csv",
+        "original_sha256": "add69772f1f3f2a5f6d799d87fe86f74d6bbd1deb0f87fa6c2000bec73203206",
+        "original_bytes": 1761048,
+        "split": true,
+        "files": [
+          "monitor_logs/Sprout ESP32_20260701_210522_part01.csv",
+          "monitor_logs/Sprout ESP32_20260701_210522_part02.csv"
+        ],
+        "part_count": 2,
+        "part_sha256": [
+          "299dc9a86b2e4a27e9ff046704cd9c5867edc7e96691ef57ede8a2cc07a35d64",
+          "cd00f8a63475c2c1464600072bf8224257764df9dbbdaecde37afcf762d6820a"
+        ],
+        "path": "monitor_logs/Sprout ESP32_20260701_210522.csv",
+        "scope": "P11 post-run monitor; s3/GPIO36 rail-low FAULT evidence"
+      }
+    ]
+  },
+  "plant_windows": [
+    {
+      "window_key": "20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to",
+      "plant_id": "P01",
+      "phase": "48h post-water top-up: air -> soil settle -> small hand watering (1/4-1/2 cup); no runoff",
+      "valid_probe_ids": [
+        "s1",
+        "s2",
+        "s3",
+        "s4"
+      ],
+      "excluded_probes": {},
+      "row_count": 4136,
+      "csv_files": [
+        "experiment_captures/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to_part01.csv",
+        "experiment_captures/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to_part02.csv"
+      ]
+    },
+    {
+      "window_key": "20260701_172559_s1s2_P02_-_s3s4_P03",
+      "plant_id": "P02+P03",
+      "phase": "dual-pot: s1/s2 in P02, s3/s4 in P03; ~1 cup each, distributed hand watering (NOT a pump proxy); minor leakage",
+      "valid_probe_ids": [
+        "s1",
+        "s2",
+        "s3",
+        "s4"
+      ],
+      "excluded_probes": {},
+      "row_count": 4130,
+      "csv_files": [
+        "experiment_captures/20260701_172559_s1s2_P02_-_s3s4_P03/20260701_172559_s1s2_P02_-_s3s4_P03_part01.csv",
+        "experiment_captures/20260701_172559_s1s2_P02_-_s3s4_P03/20260701_172559_s1s2_P02_-_s3s4_P03_part02.csv"
+      ]
+    },
+    {
+      "window_key": "20260701_180122_p04_p05_water_halfcup_quartercup",
+      "plant_id": "P04+P05",
+      "phase": "dual-pot: s1/s2 in P04 (>1/2 cup, dead leaves trimmed mid-capture); s3 in P05 rootball (1/4 cup, no leak)",
+      "valid_probe_ids": [
+        "s1",
+        "s2",
+        "s3"
+      ],
+      "excluded_probes": {
+        "s4": "P05 edge/adjacent probe, poor rootball contact, low confidence"
+      },
+      "row_count": 3401,
+      "csv_files": [
+        "experiment_captures/20260701_180122_p04_p05_water_halfcup_quartercup/20260701_180122_p04_p05_water_halfcup_quartercup_part01.csv",
+        "experiment_captures/20260701_180122_p04_p05_water_halfcup_quartercup/20260701_180122_p04_p05_water_halfcup_quartercup_part02.csv"
+      ]
+    },
+    {
+      "window_key": "20260701_183611_p06_48h_check_2probe_maybe_water",
+      "plant_id": "P06",
+      "phase": "anthurium 2-probe; spongey/moist soil; 1/2 cup, small leakage; post-run monitor has sunlight artifacts",
+      "valid_probe_ids": [
+        "s1",
+        "s2"
+      ],
+      "excluded_probes": {
+        "s3": "not inserted in pot",
+        "s4": "not inserted in pot"
+      },
+      "row_count": 3240,
+      "csv_files": [
+        "experiment_captures/20260701_183611_p06_48h_check_2probe_maybe_water/20260701_183611_p06_48h_check_2probe_maybe_water_part01.csv",
+        "experiment_captures/20260701_183611_p06_48h_check_2probe_maybe_water/20260701_183611_p06_48h_check_2probe_maybe_water_part02.csv"
+      ]
+    },
+    {
+      "window_key": "20260701_185816_p07_cachepot_retention_check_no_water",
+      "plant_id": "P07",
+      "phase": "cachepot-retention 2-probe; filename says no_water but ~1/2 cup added into central leaf/branch cores (method overrides stale name)",
+      "valid_probe_ids": [
+        "s1",
+        "s2"
+      ],
+      "excluded_probes": {
+        "s3": "not inserted in pot",
+        "s4": "not inserted in pot"
+      },
+      "row_count": 3266,
+      "csv_files": [
+        "experiment_captures/20260701_185816_p07_cachepot_retention_check_no_water/20260701_185816_p07_cachepot_retention_check_no_water_part01.csv",
+        "experiment_captures/20260701_185816_p07_cachepot_retention_check_no_water/20260701_185816_p07_cachepot_retention_check_no_water_part02.csv"
+      ]
+    },
+    {
+      "window_key": "20260701_191925_p08_p09_48h_measure_only_2probe",
+      "plant_id": "P08+P09",
+      "phase": "measure-only (no water): s1 in P08 cactus, s2 in P09 succulent (barely contacting outer roots, rootbound)",
+      "valid_probe_ids": [
+        "s1",
+        "s2"
+      ],
+      "excluded_probes": {
+        "s3": "air / unused",
+        "s4": "air / unused"
+      },
+      "row_count": 1950,
+      "csv_files": [
+        "experiment_captures/20260701_191925_p08_p09_48h_measure_only_2probe/20260701_191925_p08_p09_48h_measure_only_2probe.csv"
+      ]
+    },
+    {
+      "window_key": "20260701_194006_p10_48h_4probe_check",
+      "plant_id": "P10",
+      "phase": "4-probe measure-only; better soil structure; no watering (readings did not justify a dose)",
+      "valid_probe_ids": [
+        "s1",
+        "s2",
+        "s3",
+        "s4"
+      ],
+      "excluded_probes": {},
+      "row_count": 3437,
+      "csv_files": [
+        "experiment_captures/20260701_194006_p10_48h_4probe_check/20260701_194006_p10_48h_4probe_check.csv"
+      ]
+    },
+    {
+      "window_key": "20260701_210013_p11_48h_4probe_check",
+      "plant_id": "P11",
+      "phase": "4-probe; drier than P10; ~3/4 cup soil + ~1/8 cup core; s3/GPIO36 FAULT (impossible ~180 raw then 0) excluded; s1/s2/s4 valid",
+      "valid_probe_ids": [
+        "s1",
+        "s2",
+        "s4"
+      ],
+      "excluded_probes": {
+        "s3": "GPIO36 rail-low fault: impossible ~180 raw during run, then 0 in post-run monitor; preserved as fault evidence, not moisture"
+      },
+      "row_count": 3210,
+      "csv_files": [
+        "experiment_captures/20260701_210013_p11_48h_4probe_check/20260701_210013_p11_48h_4probe_check.csv"
+      ]
+    }
+  ],
+  "key_observations": [
+    "Raw ADC counts remain truth; bands remain provisional pending #170 calibration.",
+    "P11 s3/GPIO36 read an impossible ~180 raw then reached 0 in post-run monitoring - sensor-path fault, excluded from moisture and preserved as fault evidence.",
+    "P07 experiment name says no_water, but ~1/2 cup was added into the central leaf/branch cores; the method note overrides the stale filename.",
+    "P04/P05 baseline came from monitor logging without in-app capture metadata; use the monitor_logs slice for that baseline.",
+    "Watering this day was hand-distributed across the soil surface; it is not equivalent to a future one-hose pump spot-feed."
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "experiment_id": "20260701_183611_p06_48h_check_2probe_maybe_water",
+  "notes": {
+    "hypothesis": "Forty-eight hours after the full greenhouse bench watering, P06 anthurium may still retain meaningful moisture. A two-probe 300 s check should show whether the sponge-like medium is already wet enough, and whether a small bounded top-up creates uniform response or only local wetting.",
+    "method": "Experiment Capture ran for 300 s at 1 s cadence. Probe mapping: s1 and s2 were placed in P06; s3 and s4 were intentionally labelled notinuse and remained as air references. Veronica reported that the soil looked spongey and moist before watering, and probe insertion was harder than the prior session because the medium rebounded like a sponge. After a short settle period, Veronica added 1/2 cup water. Small leakage into the catch basin was observed. No additional water was added. After the duration capture ended, Veronica briefly continued normal monitor logging on P06 before stopping the logger. That post-run monitor period is contextual evidence only, not part of the isolated 300 s experiment.",
+    "findings": "P06 showed strong local disagreement after the 1/2 cup dose. At the end of the capture, s1 was about 1195-1200 raw ADC in the well-watered band, while s2 was about 2214-2222 raw ADC in the dry band. The run-level card showed broad ranges for the two active probes: s1 about 1192-3290 and s2 about 2199-3264 raw ADC, consistent with initial handling/settle plus watering response. The notinuse probes stayed air-dry around s3 3201-3236 and s4 3210-3246 raw ADC. Environmental rows were present and live; near the end SHT45 was about 28.56-28.58 degC and 46.1-46.6 pctRH, and AS7263 NIR counts were low compared with the earlier direct-skylight captures. In the post-run monitor view, s1 remained well-watered around 1184-1193 raw ADC, while s2 continued drifting through the dry band around 2371-2435 raw ADC; s3 and s4 remained air-dry references. Veronica identified the visible jump and return during this known window as a sunlight artifact. The exact optical mechanism is not precise because the catch bowl shaded the light sensors, so the soil probes and environmental light sensors were not necessarily in direct sun at the same time.",
+    "conclusion": "This was primarily a retention and drainage-tolerance check, not a clear dry-plant watering need. The pre-water qualitative evidence said the medium was already moist and sponge-like, and the small runoff after only 1/2 cup supports that P06 did not need a large dose. The two active probes disagreed strongly: one local zone became well-watered while the other stayed dry, so downstream analysis should treat this as uneven local wetting in a moisture-retentive anthurium medium rather than a whole-pot dry-to-wet transition. The post-run sunlight artifact should be treated as environmental/bench context, not a plant-water response. For plant care, stop at the recorded 1/2 cup dose and allow drainage before returning P06 to its summer shelf exposure.",
+    "status": "complete",
+    "edit_log": [
+      {
+        "at": "2026-07-01T18:42:19Z",
+        "by": "Sage",
+        "fields": [
+          "hypothesis",
+          "method",
+          "findings",
+          "conclusion",
+          "status"
+        ]
+      },
+      {
+        "at": "2026-07-01T18:54:45Z",
+        "by": "Sage",
+        "fields": [
+          "method",
+          "findings",
+          "conclusion"
+        ]
+      }
+    ],
+    "saved_at": "2026-07-01T18:54:45Z",
+    "version": 2
+  }
+}
