@@ -1,0 +1,33 @@
+{
+  "experiment_id": "20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to",
+  "subject": "p1_48_hours_later_baseline_air_to_soil_settle_to",
+  "title": "p1 48 hours later baseline air to soil settle to water cycle",
+  "schema_version": 2,
+  "mode": "experiment",
+  "sample_rate_s": 1.0,
+  "duration_s": 360.0,
+  "stopped_by": "duration",
+  "labels": {
+    "s1": "s1",
+    "s2": "s2",
+    "s3": "s3",
+    "s4": "s4"
+  },
+  "started_utc": "2026-07-01T17:11:40.933Z",
+  "ended_utc": "2026-07-01T17:17:43.331Z",
+  "capture_version": "experiment_capture_0_1",
+  "firmware": {
+    "version": "0.7.0 - schema v1, 4 soil sensors, supervisor-driven (autonomous dosing DISARMED; manual !water; fail-safe OFF)",
+    "git": null,
+    "built": null,
+    "run": null
+  },
+  "file": "20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to.csv",
+  "transport": {
+    "rows": 4136,
+    "sweeps": 2756,
+    "dropped": 340,
+    "crc_fail": 0,
+    "idle_noise": 0
+  }
+}

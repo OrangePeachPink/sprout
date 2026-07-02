@@ -1,0 +1,33 @@
+{
+  "experiment_id": "20260701_183611_p06_48h_check_2probe_maybe_water",
+  "subject": "p06_48h_check_2probe_maybe_water",
+  "title": "p06_48h_check_2probe_maybe_water",
+  "schema_version": 2,
+  "mode": "experiment",
+  "sample_rate_s": 1.0,
+  "duration_s": 300.0,
+  "stopped_by": "duration",
+  "labels": {
+    "s1": "s1",
+    "s2": "s2",
+    "s3": "notinuse",
+    "s4": "notinuse"
+  },
+  "started_utc": "2026-07-01T18:36:11.553Z",
+  "ended_utc": "2026-07-01T18:41:13.904Z",
+  "capture_version": "experiment_capture_0_1",
+  "firmware": {
+    "version": "0.7.0 - schema v1, 4 soil sensors, supervisor-driven (autonomous dosing DISARMED; manual !water; fail-safe OFF)",
+    "git": null,
+    "built": null,
+    "run": null
+  },
+  "file": "20260701_183611_p06_48h_check_2probe_maybe_water.csv",
+  "transport": {
+    "rows": 3240,
+    "sweeps": 2160,
+    "dropped": 795,
+    "crc_fail": 0,
+    "idle_noise": 0
+  }
+}

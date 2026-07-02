@@ -1,0 +1,25 @@
+{
+  "experiment_id": "20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to",
+  "notes": {
+    "hypothesis": "Forty-eight hours after the full P01 rewatering run, the small pothos should still retain useful moisture. A short air-to-soil-to-small-top-up capture should separate probe air baseline and insertion/handling artifacts from the actual 48-hour soil state, then show whether a small additional watering moves the pot into a well-watered state without runoff.",
+    "method": "Experiment Capture ran for 360 s at 1 s cadence on P01 with all four soil probes and the new SHT45/AS7263 environmental sidecar streams active. The run began with probes in air, then probes were inserted and allowed to settle in the P01 pot. After the soil baseline/settle phase, Veronica manually watered between 1/4 and 1/2 cup, distributed across the surface by hand. No runoff or leaking was observed; the temporary catch bowl was not under this pot. The plant looked well watered afterward and was returned to its normal windowsill location.",
+    "findings": "The opening air samples were in the dry-air region, roughly s1 3180, s2 3106, s3 3147, s4 3124 raw ADC. The trace includes visible insertion/handling structure before the true soil/watering response. After the small top-up, the end-of-run plateau was much wetter: about s1 1316-1322 (well watered), s2 1088-1093 (overwatered band), s3 1081-1086 (overwatered band), and s4 980-985 (submerged band). The low s4 minimum should be treated cautiously because the run includes handling artifacts; the final plateau is the cleaner endpoint for plant-care interpretation. SHT45 and AS7263 rows were present in the capture as environmental context.",
+    "conclusion": "The 48-hour P01 check shows the plant could accept a small top-up without visible runoff and reached a wet/well-watered endpoint by the provisional raw bands. For analysis, tag this run as air baseline -> insertion/handling -> soil settle -> manual small distributed watering -> end settle. It is useful for 48-hour post-watering recovery and drift comparison, but not a pump-distribution proxy because the water was applied carefully by hand over the soil surface.",
+    "status": "complete",
+    "edit_log": [
+      {
+        "at": "2026-07-01T17:39:12Z",
+        "by": "Sage",
+        "fields": [
+          "hypothesis",
+          "method",
+          "findings",
+          "conclusion",
+          "status"
+        ]
+      }
+    ],
+    "saved_at": "2026-07-01T17:39:12Z",
+    "version": 1
+  }
+}
