@@ -758,21 +758,21 @@ void setup()
 
     /* Task watchdog LAST: setup's own work won't trip it; loop() feeds it every
      * iteration.  A hung loop resets the chip → reboot re-runs allRelaysOff() (#93).
-     * esp_task_wdt_init split its signature at IDF5 (arduino-esp32 3.2+, the C5
-     * experimental target, #442/#499): classic/S3 stay on the pre-IDF5 two-arg form
-     * (timeout in SECONDS); IDF5+ takes a config struct (timeout in MILLISECONDS —
-     * NOT a copy-paste of the old value, the unit itself changed). esp_task_wdt_add
-     * is unchanged across both. */
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+     * IDF5 config-struct API only (#529): the whole matrix moved to the one
+     * pioarduino/IDF5 pin (ADR-0024 rev), so the pre-IDF5 two-arg branch is
+     * retired. The guard below makes a pin regression FAIL LOUDLY at compile
+     * rather than silently reviving an API whose timeout unit differed
+     * (seconds vs milliseconds) - the safety path never degrades quietly. */
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
+#error                                                                         \
+    "Watchdog uses the IDF5 esp_task_wdt API; the matrix is pinned to IDF5 (ADR-0024/#529). Re-add the two-arg seconds form ONLY with a bench re-qual (#191)."
+#endif
     esp_task_wdt_config_t wdt_cfg = {
         .timeout_ms = WDT_TIMEOUT_MS,
         .idle_core_mask = 0,
         .trigger_panic = true,
     };
     esp_task_wdt_init(&wdt_cfg);
-#else
-    esp_task_wdt_init(WDT_TIMEOUT_MS / 1000UL, true);
-#endif
     esp_task_wdt_add(NULL);
 }
 
