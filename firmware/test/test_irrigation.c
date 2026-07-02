@@ -26,6 +26,7 @@
 #include "telemetry.h"
 #include "board_capability.h" /* #273 capability descriptor + gate seam */
 #include "calibration.h" /* SENSOR_CAL_BOUNDARY — per-channel raw->band (#170) */
+#include "wifi_net.h" /* #21 connect-scaffold state machine */
 
 /* -------------------------------------------------------------------------- */
 /* synthetic rig: ADC source + pump observer + event sink                     */
@@ -1028,6 +1029,82 @@ void t_soil_row_time_provenance(void)
         "device_timestamp_utc present + exact when synced");
 }
 
+/* #21 connect-scaffold state machine (lib/wifi_net): pure C, driven with
+ * synthetic inputs - no Arduino/WiFi.h needed, exactly the "testable without a
+ * network association" bar the slice was scoped to. Covers: no creds stays
+ * idle, creds trigger one edge-triggered begin(), a timeout without success
+ * fails + starts a backoff window, the backoff expires into a retry, and a
+ * connected state that drops reconnects immediately (no backoff on a fresh
+ * drop - only on a failed attempt). */
+void t_wifi_net_state_machine(void)
+{
+    wifi_net_ctx_t ctx;
+    wifi_net_init(&ctx);
+    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_IDLE, ctx.state, "starts idle");
+
+    /* no credentials: stays idle forever, never triggers begin() */
+    TEST_ASSERT_FALSE_MESSAGE(
+        wifi_net_tick(&ctx, false, false, 1000, 15000, 30000),
+        "no creds -> no begin() trigger");
+    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_IDLE, ctx.state,
+                              "no creds -> stays idle");
+
+    /* creds appear: one edge-triggered begin() call, moves to CONNECTING */
+    TEST_ASSERT_TRUE_MESSAGE(
+        wifi_net_tick(&ctx, true, false, 2000, 15000, 30000),
+        "creds appear -> begin() triggered once");
+    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_CONNECTING, ctx.state, "-> connecting");
+    /* still connecting, not yet timed out: no re-trigger, no state change */
+    TEST_ASSERT_FALSE_MESSAGE(
+        wifi_net_tick(&ctx, true, false, 5000, 15000, 30000),
+        "mid-attempt -> no re-trigger");
+    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_CONNECTING, ctx.state,
+                              "still connecting before timeout");
+
+    /* timeout elapses without success -> FAILED, backoff window set */
+    TEST_ASSERT_FALSE_MESSAGE(
+        wifi_net_tick(&ctx, true, false, 2000 + 15000, 15000, 30000),
+        "timeout -> failed, no trigger on the failing tick itself");
+    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_FAILED, ctx.state, "-> failed");
+    TEST_ASSERT_EQUAL_MESSAGE(1, ctx.retry_count, "one failure counted");
+
+    /* still inside the backoff window: no retry yet */
+    TEST_ASSERT_FALSE_MESSAGE(
+        wifi_net_tick(&ctx, true, false, 2000 + 15000 + 1000, 15000, 30000),
+        "inside backoff -> no retry trigger");
+    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_FAILED, ctx.state, "still failed");
+
+    /* backoff expires -> retry triggers a fresh begin() */
+    unsigned long retry_at = ctx.next_retry_ms;
+    TEST_ASSERT_TRUE_MESSAGE(
+        wifi_net_tick(&ctx, true, false, retry_at, 15000, 30000),
+        "backoff expired -> retry begin() triggered");
+    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_CONNECTING, ctx.state,
+                              "retry -> connecting again");
+
+    /* this attempt succeeds: CONNECTED, retry_count resets */
+    TEST_ASSERT_FALSE_MESSAGE(
+        wifi_net_tick(&ctx, true, true, retry_at + 500, 15000, 30000),
+        "success -> no begin() trigger");
+    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_CONNECTED, ctx.state, "-> connected");
+    TEST_ASSERT_EQUAL_MESSAGE(0, ctx.retry_count,
+                              "retry_count resets on success");
+
+    /* connection drops: immediate reconnect attempt, no backoff wait */
+    TEST_ASSERT_TRUE_MESSAGE(
+        wifi_net_tick(&ctx, true, false, retry_at + 60000, 15000, 30000),
+        "drop -> immediate reconnect trigger, no backoff");
+    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_CONNECTING, ctx.state,
+                              "drop -> connecting again immediately");
+
+    /* credentials cleared mid-flight: back to idle regardless of prior state */
+    TEST_ASSERT_FALSE_MESSAGE(
+        wifi_net_tick(&ctx, false, false, retry_at + 61000, 15000, 30000),
+        "creds cleared -> no trigger");
+    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_IDLE, ctx.state,
+                              "creds cleared -> back to idle");
+}
+
 /* #273 capability descriptor (ADR-0019 §1-2): the descriptor is accessible, the
  * gate seam matches the field, and an unknown/no-WiFi target falls to the Tier-0
  * floor (tethered monitor, no WiFi) — i.e. Tier-0 runs on a no-WiFi board. The
@@ -1185,5 +1262,6 @@ int main(void)
     RUN_TEST(t_env_row);
     RUN_TEST(t_soil_row_time_provenance);
     RUN_TEST(t_per_channel_cal);
+    RUN_TEST(t_wifi_net_state_machine);
     return UNITY_END();
 }

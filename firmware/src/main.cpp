@@ -40,6 +40,9 @@
 /* The calibration table and the firmware must agree on the channel count. */
 static_assert(SENSOR_CAL_CHANNELS == NUM_SENSORS,
               "calibration.h channel count must match NUM_SENSORS");
+#include "wifi_net.h" /* connect/retry state machine, pure C (#21 desk-buildable slice) */
+#include <WiFi.h>
+#include <WebServer.h> /* core-bundled, no lib_deps entry needed */
 
 #ifdef ENABLE_ENV_SENSORS
 #include <Wire.h>
@@ -80,6 +83,22 @@ static bool g_cadence_temp = false;
 
 /* NVS store: opened once in commands_init(), kept open for the session (#90). */
 static Preferences g_prefs;
+
+/* WiFi connect-scaffold (#21 desk-buildable slice). Credentials are NVS-backed
+ * via !wifi (lib/commands); the state machine (lib/wifi_net, pure C) owns the
+ * connect/retry/reconnect policy, ticked every loop(). WiFi is a convenience/
+ * telemetry layer — never a dependency of the safety loop, which runs unchanged
+ * whether or not this ever connects. */
+static wifi_net_ctx_t g_wifi;
+static char g_wifi_ssid[64] = "";
+static char g_wifi_pass[64] = "";
+static bool g_wifi_creds_dirty = false;
+
+/* Served-status skeleton (#21): minimal read-only status page. No control
+ * endpoints here — manual actuation over the network (with auth + the same
+ * safety interlocks as autonomous watering) is this issue's later, separate
+ * slice, not this connect-scaffold. */
+static WebServer g_http(WIFI_HTTP_PORT);
 
 /* Run metadata (#321): run_label + per-channel sensor_position, seeded from the
  * config.h defaults and updated at runtime via !label / !pos so the bench can
@@ -471,6 +490,43 @@ static void printHeader()
     Serial.println("# time: source=device_uptime (no NTP/RTC yet, #21) - "
                    "device_seq/time_source ride each row's payload, schema v2 "
                    "§11.1/§11.2");
+    /* WiFi connect-scaffold status (#21) - live state, not just capability. Set
+     * credentials with !wifi,<ssid>[,<pass>]; the served status page (this same
+     * state) comes up at http://<ip>/ once connected. */
+    if (board_has_wifi()) {
+        char netbuf[96];
+        snprintf(netbuf, sizeof(netbuf), "# net: state=%s creds=%s",
+                 wifi_net_state_name(g_wifi.state),
+                 g_wifi_ssid[0] ? "set" : "unset");
+        Serial.println(netbuf);
+    }
+}
+
+/* ---- Served-status skeleton (#21) ---------------------------------------- */
+
+/* GET / - plain-text status snapshot. Read-only, no auth (LAN-local, and the
+ * fuller #21 scope adds auth + control endpoints separately - this skeleton is
+ * status only, nothing actuates from an HTTP request). Reuses the same per-
+ * channel state the boot banner reports, so this never drifts from serial
+ * telemetry - both read the same g_irrig/state. */
+static void handleRoot()
+{
+    char buf[512];
+    int n = snprintf(
+        buf, sizeof(buf),
+        "Sprout %s\nfw=%s git=%s board=%s\nwifi=%s ip=%s\nuptime_ms=%lu\n\n",
+        g_device_id, PLANTS_FW_VERSION, GIT_REV, BOARD_CAP.name,
+        wifi_net_state_name(g_wifi.state), WiFi.localIP().toString().c_str(),
+        millis());
+    for (int ch = 0; ch < NUM_SENSORS && n > 0 && (size_t)n < sizeof(buf);
+         ch++) {
+        n += snprintf(buf + n, sizeof(buf) - (size_t)n,
+                      "ch%d: level=%s raw=%u quality=%s\n", ch,
+                      moisture_level_name(state[ch].committed),
+                      (unsigned)state[ch].last_raw,
+                      telemetry_quality_flag(&state[ch]));
+    }
+    g_http.send(200, "text/plain", buf);
 }
 
 /* ---- Arduino lifecycle -------------------------------------------------- */
@@ -547,6 +603,11 @@ void setup()
         WDT_TIMEOUT_MS,
         &g_run_meta,
         printHeader,
+        g_wifi_ssid,
+        sizeof(g_wifi_ssid),
+        g_wifi_pass,
+        sizeof(g_wifi_pass),
+        &g_wifi_creds_dirty,
     };
     commands_init(&cmd_ctx);
 
@@ -557,6 +618,19 @@ void setup()
     g_as7263_ok = (as7263_init(&g_env_i2c, AS7263_CFG_GAIN, AS7263_CFG_ITIME) ==
                    AS7263_OK);
 #endif
+
+    /* WiFi connect-scaffold (#21): mode + state machine init. WiFi.begin() itself
+     * is deferred to loop()'s wifi_net_tick() - never called from setup(), so a
+     * missing/wrong AP can never block or delay bring-up (Tier-0 monitor still
+     * boots and runs with zero WiFi involvement). board_has_wifi() gates whether
+     * this board is expected to have the radio at all; STA mode is harmless to
+     * set even if no credentials are stored yet. */
+    if (board_has_wifi()) {
+        WiFi.mode(WIFI_STA);
+        g_http.on("/", handleRoot);
+        g_http.begin();
+    }
+    wifi_net_init(&g_wifi);
 
     printHeader();
 
@@ -587,6 +661,30 @@ void loop()
     commands_poll(); /* non-blocking: read one line + dispatch if complete */
 
     unsigned long now = millis(); /* shared timestamp for all loop schedulers */
+
+    /* WiFi connect-scaffold (#21): drive the connect/retry policy every tick.
+     * Never blocks - wifi_net_tick is pure logic, and WiFi.begin()/status() don't
+     * block the loop either (begin() is async; status() just reads a cached
+     * enum). Convenience/telemetry layer only: irrig_tick below runs unchanged
+     * whether or not any of this ever connects. */
+    if (board_has_wifi()) {
+        if (g_wifi_creds_dirty) {
+            /* Operator just changed credentials (!wifi) - drop whatever attempt
+             * was in flight against the OLD ap and force an immediate fresh
+             * attempt rather than waiting out a stale retry-backoff window. */
+            WiFi.disconnect();
+            wifi_net_init(&g_wifi);
+            g_wifi_creds_dirty = false;
+        }
+        bool has_creds = g_wifi_ssid[0] != '\0';
+        if (wifi_net_tick(&g_wifi, has_creds, WiFi.status() == WL_CONNECTED,
+                          now, WIFI_CONNECT_TIMEOUT_MS,
+                          WIFI_RETRY_BACKOFF_MS)) {
+            WiFi.begin(g_wifi_ssid, g_wifi_pass);
+        }
+        g_http
+            .handleClient(); /* cheap no-op until a client actually connects */
+    }
 
     /* The supervisor is the single sample & actuation authority (ADR-0016): tick it
      * EVERY iteration so dose / overrun / settle timing is real-time, not cadence-

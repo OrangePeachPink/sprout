@@ -11,7 +11,7 @@
 | # | Board (as listed) | Chip | USB bridge | Flash / PSRAM | Status |
 |---|---|---|---|---|---|
 | 1 | classic ESP32 / NodeMCU-32S / ESP-32D | ESP32-D0WD (Xtensa LX6 ×2) | CP2102 (UART) | 4 MB | ✅ baseline (`esp32dev`), unchanged |
-| 2 | Amazon ESP32-C5 3-pack | ESP32-C5 (RISC-V, dual-band Wi-Fi 6) | **CH340 (UART)** | 4 MB, 32-pin | ⛔ toolchain-blocked (#283) |
+| 2 | Amazon ESP32-C5 3-pack | ESP32-C5 (RISC-V, dual-band Wi-Fi 6) | **CH340 (UART)** | 4 MB, 32-pin | 🟡 builds today (#529); pins to sort |
 | 3 | Amazon "ESP32-S3-DevKitC N8R2" | ESP32-S3 (Xtensa LX7 ×2) | UART bridge **+ native USB** | 8 MB, 2 MB PSRAM (claimed) | 🟡 builds today; pins + USB to sort |
 
 ## What Sprout needs from a board (the pin budget)
@@ -35,9 +35,10 @@ The shipping map (`firmware/include/config.h`), for reference:
 
 ### Target 3 — ESP32-S3 (buildable now; verify the N8R2 marking)
 
-**Confirmed:** the pinned `espressif32@7.0.1` supports S3 — board ids `esp32-s3-devkitc-1`
-(N8) and `rymcu-esp32-s3-devkitc-1` (**N8R2**, matches your listing). The toolchain
-compiles the firmware today (verified: `pio run -e esp32s3` builds clean — see the PR).
+**Confirmed:** the pinned toolchain (pioarduino, shared across the whole matrix since #529)
+supports S3 — board ids `esp32-s3-devkitc-1` (N8) and `rymcu-esp32-s3-devkitc-1` (**N8R2**,
+matches your listing). The toolchain compiles the firmware today (verified: `pio run -e
+esp32s3` builds clean — see the PR).
 
 **Chip facts (confirm vs the S3 datasheet):**
 
@@ -60,11 +61,13 @@ compiles the firmware today (verified: `pio run -e esp32s3` builds clean — see
 - I²C: SDA **8**, SCL **9** (or the board's labeled Qwiic pins)
 - LED: the board's `LED_BUILTIN`
 
-### Target 2 — ESP32-C5 (toolchain-blocked; do NOT pre-assign pins)
+### Target 2 — ESP32-C5 (toolchain resolved; do NOT pre-assign pins)
 
-**Blocked:** `espressif32@7.0.1` has **zero** C5 support (`pio boards esp32c5` → empty,
-confirmed 2026-06-30). C5 needs a newer platform / arduino-esp32 3.2+ (IDF 5.4+) or the
-pioarduino fork → the **#283 toolchain-pin revisit**.
+**Resolved (#283 → #529):** the classic `espressif32@7.0.1` pin had **zero** C5 support
+(`pio boards esp32c5` → empty, confirmed 2026-06-30) — needed arduino-esp32 3.2+ (IDF 5.4+).
+The whole matrix, including C5, now shares one pioarduino pin (ADR-0024 revised); C5 builds
+today the same as S3 does. The pin *map* below is still bench-pending — the toolchain
+question and the pin-assignment question are separate, and only the first is resolved.
 
 **What we know (confirm vs the C5 datasheet + your board):**
 
