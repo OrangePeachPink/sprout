@@ -46,7 +46,9 @@ if str(_HERE) not in sys.path:
 
 from bench_packages import render_bench_detail  # noqa: E402  (bench detail #444)
 from dashboard import (  # noqa: E402  (sibling import)
+    FONTS_CSS,
     RANGE_HOURS,
+    TOKENS_CSS,
     build_context,
     filter_channels,
     filter_since,
@@ -106,6 +108,61 @@ DEFAULT_PORT = 8765
 _EID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")  # no traversal from a status id
 
 
+class NoDataYet(Exception):
+    """Discovery found zero readings (#543) - not a parse error. ``had_any_logged``
+    distinguishes a genuinely fresh checkout (nothing logged at all) from an
+    existing install whose current range/channel filter excludes everything
+    logged so far, so the first-run page never overclaims "fresh checkout" when
+    real data actually exists. do_GET renders a real page for this instead of
+    the bare 500 the ValueError used to produce."""
+
+    def __init__(self, resolved: list[str], *, had_any_logged: bool) -> None:
+        super().__init__(f"no readings parsed from {resolved}")
+        self.had_any_logged = had_any_logged
+
+
+def _empty_state_html(had_any_logged: bool) -> str:
+    """A genuine first-run page (#543) - no readings yet is not an error state, so
+    it gets its own honest, on-tone response rather than the 500 error path."""
+    tokens = TOKENS_CSS.read_text(encoding="utf-8") if TOKENS_CSS.exists() else ""
+    fonts = FONTS_CSS.read_text(encoding="utf-8") if FONTS_CSS.exists() else ""
+    if had_any_logged:
+        message = (
+            "<p>No readings match the current range/channel filter.</p>"
+            "<p>Clear the filter, or widen the time range, to see logged data.</p>"
+        )
+    else:
+        message = (
+            "<p>No readings yet - this is a fresh checkout with nothing logged.</p>"
+            "<p>Start the Monitor or run an Experiment Capture, then reload "
+            "this page.</p>"
+        )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sprout</title>
+<style>
+{fonts}
+{tokens}
+body {{ font-family: var(--font-body); background: var(--bg); color: var(--ink);
+  display: flex; align-items: center; justify-content: center; min-height: 100vh;
+  margin: 0; }}
+.empty {{ max-width: 32rem; text-align: center; padding: 2rem; }}
+.empty h1 {{ font-family: var(--font-display); color: var(--leaf); }}
+.empty p {{ color: var(--muted); }}
+</style>
+</head>
+<body>
+<div class="empty">
+<h1>Sprout</h1>
+{message}
+</div>
+</body>
+</html>
+"""
+
+
 def _live_trace(eid: str | None, experiments_dir: object = None) -> list[dict]:
     """The running capture's per-probe trajectory, re-parsed from its (live) CSV, so the
     capture panel can chart the sub-second data as it lands (#161). Cheap (a bounded
@@ -137,9 +194,10 @@ def _context(
     all_ch = sorted(
         {r.sensor_id for r in data.readings if r.record_type.startswith("plants.soil")}
     )
+    had_any_logged = bool(all_ch)
     data = filter_since(filter_channels(data, channels), hours)
     if not data.readings:
-        raise ValueError(f"no readings parsed from {resolved}")
+        raise NoDataYet(resolved, had_any_logged=had_any_logged)  # #543
     ctx = build_context(data)
     ctx["meta"]["all_channels"] = all_ch  # full set, so the toggles can re-enable
     return ctx
@@ -231,6 +289,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self._send(page, "text/html; charset=utf-8")
             else:
                 self._send("not found", "text/plain; charset=utf-8", status=404)
+        except NoDataYet as exc:  # #543: the honest empty state, not an error
+            if parsed.path == "/data.json":
+                self._send_json({"empty": True, "had_any_logged": exc.had_any_logged})
+            else:
+                self._send(
+                    _empty_state_html(exc.had_any_logged), "text/html; charset=utf-8"
+                )
         except Exception as exc:  # report any parse/render failure to the client
             self._send(f"error: {exc}", "text/plain; charset=utf-8", status=500)
 
