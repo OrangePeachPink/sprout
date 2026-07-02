@@ -154,3 +154,6 @@ constexpr uint32_t WIFI_CONNECT_TIMEOUT_MS =
 constexpr uint32_t WIFI_RETRY_BACKOFF_MS =
     30000UL; // wait this long after a failed attempt
 constexpr int WIFI_HTTP_PORT = 80; // served-status skeleton (#21)
+// NTP-on-connect (#278/#276, ADR-0018 §3): SNTP arms on WiFi association; rows
+// flip time_source=device_uptime -> device_synced once the clock is real.
+constexpr const char *WIFI_NTP_SERVER = "pool.ntp.org";
