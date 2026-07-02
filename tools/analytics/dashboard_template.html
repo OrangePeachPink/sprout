@@ -452,8 +452,9 @@ function renderCards(){
     c.addEventListener('click', () => showDetail(s.id));
     c.appendChild(el('div','accent')).style.background = s.color;
     c.appendChild(el('div','drill', 'details →'));
-    c.appendChild(el('div', null,
-      `<span class="sid">${s.id}</span> <span class="gpio">GPIO ${s.gpio} · ${s.channel}</span>`));
+    c.appendChild(el('div', null, s.plant_name
+      ? `<span class="sid">${s.plant_name}</span> <span class="gpio">${s.id} · GPIO ${s.gpio} · ${s.channel}</span>`
+      : `<span class="sid">${s.id}</span> <span class="gpio">GPIO ${s.gpio} · ${s.channel}</span>`));
     c.appendChild(el('div','raw', fmt(s.raw_last) + '<span class="rawu"> raw</span>'));
     const pill = el('span','pill', `${s.band_ui} <span style="opacity:.8">· ${s.mood}</span>`);
     pill.style.background = s.band_color;
