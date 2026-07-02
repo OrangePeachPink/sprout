@@ -60,12 +60,21 @@ typedef struct {
      * main.cpp; reprint_header re-emits the provenance header after !label. */
     run_meta_t *run_meta;
     void (*reprint_header)(void);
+    /* WiFi credentials (#21 connect-scaffold): writable NVS-backed buffers, same
+     * pattern as device_id above. !wifi,<ssid>,<pass> writes both + sets the dirty
+     * flag so main.cpp's loop() can trigger an immediate (re)connect attempt rather
+     * than waiting for the next natural retry-backoff tick. */
+    char *wifi_ssid;
+    size_t wifi_ssid_len;
+    char *wifi_pass;
+    size_t wifi_pass_len;
+    bool *wifi_creds_dirty;
 } commands_ctx_t;
 
 /*
- * Load persisted config from NVS (cadence + device identity) and register all
- * serial-command handlers with the serial_cmd registry:
- *   cad, ping, ver, cfg, name, water, stop, label, pos, auto
+ * Load persisted config from NVS (cadence + device identity + WiFi credentials)
+ * and register all serial-command handlers with the serial_cmd registry:
+ *   cad, ping, ver, cfg, name, water, stop, label, pos, auto, wifi
  *   (+ wedge if WDT_WEDGE_TEST)
  *
  * Call once from setup(), before printing the provenance header.
