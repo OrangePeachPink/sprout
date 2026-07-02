@@ -43,6 +43,8 @@ static_assert(SENSOR_CAL_CHANNELS == NUM_SENSORS,
 #include "wifi_net.h" /* connect/retry state machine, pure C (#21 desk-buildable slice) */
 #include <WiFi.h>
 #include <WebServer.h> /* core-bundled, no lib_deps entry needed */
+#include <time.h> /* NTP-on-connect (#278): configTime/gmtime_r/strftime */
+#include <sys/time.h> /* gettimeofday - ms precision for device_timestamp_utc */
 
 #ifdef ENABLE_ENV_SENSORS
 #include <Wire.h>
@@ -72,6 +74,31 @@ static char g_session_id[12] = "000000";
  * this counter + field plumbing is ready for that day without a wire change. */
 static uint32_t g_device_seq = 0;
 constexpr const char *TIME_SOURCE_DEVICE_UPTIME = "device_uptime";
+constexpr const char *TIME_SOURCE_DEVICE_SYNCED = "device_synced";
+
+/* NTP-on-connect (#278 tail / ADR-0018 §3): configTime() arms SNTP on each WiFi
+ * association (see loop()); rows flip to device_synced only once the clock is
+ * REAL. The sanity floor rejects the epoch-zero default - a clock before
+ * 2025-01-01 means SNTP hasn't answered yet, so we keep reporting
+ * device_uptime rather than stamping rows with 1970. */
+static bool timeIsSynced(void)
+{
+    return time(nullptr) > 1735689600; /* 2025-01-01T00:00:00Z */
+}
+
+/* ISO-8601 UTC with millisecond precision, e.g. 2026-07-02T03:15:30.412Z -
+ * the device_timestamp_utc format schema v2 §11.1 documents. */
+static void isoUtcNow(char *out, size_t n)
+{
+    struct timeval tv;
+    gettimeofday(&tv, nullptr);
+    struct tm tmv;
+    time_t secs = tv.tv_sec;
+    gmtime_r(&secs, &tmv);
+    size_t len = strftime(out, n, "%Y-%m-%dT%H:%M:%S", &tmv);
+    if (len > 0 && len + 6 <= n)
+        snprintf(out + len, n - len, ".%03ldZ", (long)(tv.tv_usec / 1000));
+}
 
 /* Sweep cadence is owned by the supervisor (g_sys.sample_period_ms, #227);
  * runtime-settable via !cad (#63), persisted to NVS (#90). This flag only tracks
@@ -99,6 +126,14 @@ static bool g_wifi_creds_dirty = false;
  * safety interlocks as autonomous watering) is this issue's later, separate
  * slice, not this connect-scaffold. */
 static WebServer g_http(WIFI_HTTP_PORT);
+
+/* Served-telemetry cache (#276): the latest formatted soil row (+checksum) per
+ * channel, written at EMIT time and served on request — an HTTP hit never
+ * triggers a sample (the supervisor stays the single sample authority,
+ * ADR-0016). Same bytes as the serial wire ("one schema, every transport",
+ * ADR-0018 §4), so the future device-served reader adapter parses it with the
+ * same parse path as the serial stream. Empty = no row emitted yet. */
+static char g_last_row[NUM_SENSORS][320];
 
 /* Run metadata (#321): run_label + per-channel sensor_position, seeded from the
  * config.h defaults and updated at runtime via !label / !pos so the bench can
@@ -545,11 +580,15 @@ static void printHeader()
         "# authoritative: raw_value (ADC counts) + band (payload 'level'); "
         "value/unit are NULL - reserved for a future calibrated VWC, never an "
         "uncalibrated %.");
-    /* Time provenance (#278, ADR-0018/schema v2 §11.1): honest about what this
-     * firmware can currently prove - no NTP/RTC path exists yet (#21). */
-    Serial.println("# time: source=device_uptime (no NTP/RTC yet, #21) - "
-                   "device_seq/time_source ride each row's payload, schema v2 "
-                   "§11.1/§11.2");
+    /* Time provenance (#278, ADR-0018/schema v2 §11.1) - LIVE sync state, not a
+     * static claim: device_synced only once SNTP has actually answered. */
+    snprintf(buf, sizeof(buf),
+             "# time: source=%s - device_seq/time_source ride each row's "
+             "payload, schema v2 §11.1/§11.2",
+             timeIsSynced() ? "device_synced (NTP)"
+                            : "device_uptime (unsynced; NTP arms on WiFi "
+                              "connect, #278)");
+    Serial.println(buf);
     /* WiFi connect-scaffold status (#21) - live state, not just capability. Set
      * credentials with !wifi,<ssid>[,<pass>]; the served status page (this same
      * state) comes up at http://<ip>/ once connected. */
@@ -587,6 +626,27 @@ static void handleRoot()
                       telemetry_quality_flag(&state[ch]));
     }
     g_http.send(200, "text/plain", buf);
+}
+
+/* GET /telemetry (#276) - the latest schema-shaped soil row per channel, the
+ * SAME bytes (row + *HH checksum) as the serial wire per ADR-0018 §4 ("one
+ * schema, every transport") - so a device-served reader adapter reuses the
+ * serial parse path unchanged. Served from the emit-time cache; never samples
+ * (ADR-0016). The device_cols preamble keeps the payload self-describing. */
+static void handleTelemetry()
+{
+    static char resp[sizeof(g_last_row) + 220]; /* BSS, not handler stack */
+    int n = snprintf(resp, sizeof(resp),
+                     "# device_cols: record_type,session_id,device_id,fw,"
+                     "millis_ms,sensor_model,sensor_id,sensor_position,channel,"
+                     "raw_value,value,unit,quality_flag,payload\n");
+    for (int ch = 0; ch < NUM_SENSORS && n > 0 && (size_t)n < sizeof(resp);
+         ch++) {
+        if (g_last_row[ch][0] != '\0')
+            n += snprintf(resp + n, sizeof(resp) - (size_t)n, "%s\n",
+                          g_last_row[ch]);
+    }
+    g_http.send(200, "text/plain", resp);
 }
 
 /* ---- Arduino lifecycle -------------------------------------------------- */
@@ -688,6 +748,8 @@ void setup()
     if (board_has_wifi()) {
         WiFi.mode(WIFI_STA);
         g_http.on("/", handleRoot);
+        g_http.on("/telemetry",
+                  handleTelemetry); /* schema-shaped rows (#276) */
         g_http.begin();
     }
     wifi_net_init(&g_wifi);
@@ -742,6 +804,16 @@ void loop()
                           WIFI_RETRY_BACKOFF_MS)) {
             WiFi.begin(g_wifi_ssid, g_wifi_pass);
         }
+        /* NTP-on-connect (#278 tail, ADR-0018 §3): arm SNTP on each fresh
+         * association (re-arms after a drop, so a long-offline clock re-syncs).
+         * configTime is async - rows keep reporting device_uptime until
+         * timeIsSynced() sees a real answer; nothing blocks here. */
+        static wifi_net_state_t prevWifiState = WIFI_NET_IDLE;
+        if (g_wifi.state == WIFI_NET_CONNECTED &&
+            prevWifiState != WIFI_NET_CONNECTED) {
+            configTime(0, 0, WIFI_NTP_SERVER); /* UTC: no TZ/DST offsets */
+        }
+        prevWifiState = g_wifi.state;
         g_http
             .handleClient(); /* cheap no-op until a client actually connects */
     }
@@ -788,6 +860,13 @@ void loop()
         unsigned long long up_ms =
             (unsigned long long)esp_timer_get_time() / 1000ULL;
 
+        /* Time provenance for this sweep (#278): device_synced + a real UTC
+         * stamp once NTP has answered; honestly device_uptime + NO stamp until
+         * then. One read per sweep - all four rows share the moment. */
+        char ts[32] = "";
+        bool synced = timeIsSynced();
+        if (synced) isoUtcNow(ts, sizeof(ts));
+
         Serial
             .println(); /* B6.2 sacrificial sync: absorbs a post-idle framing glitch */
         for (int ch = 0; ch < NUM_SENSORS; ch++) {
@@ -808,14 +887,17 @@ void loop()
                 irrig_level(&g_irrig, ch),
                 &state[ch],
                 g_device_seq++, /* #278: one tick per emitted row, every channel */
-                TIME_SOURCE_DEVICE_UPTIME,
-                "", /* device_timestamp_utc: unsynced, honestly NULL (#278) */
+                synced ? TIME_SOURCE_DEVICE_SYNCED : TIME_SOURCE_DEVICE_UPTIME,
+                ts, /* real UTC when synced; "" = honestly NULL (#278) */
             };
             if (telemetry_format_soil_row(line, sizeof(line), &row) >= 0) {
                 char crc[6];
                 snprintf(crc, sizeof(crc), "*%02X", telemetry_checksum(line));
                 Serial.print(line);
                 Serial.println(crc);
+                /* Cache the exact wire bytes for GET /telemetry (#276). */
+                snprintf(g_last_row[ch], sizeof(g_last_row[ch]), "%s%s", line,
+                         crc);
             }
         }
 
