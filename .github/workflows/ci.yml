@@ -122,15 +122,27 @@ jobs:
         run: just build
 
   # Experimental board compile-checks (#436 S3, #442 C5) — deliberately NOT in `gate`'s
-  # needs and `continue-on-error: true`, so a toolchain break here (community fork,
-  # unproven pins) can NEVER red the required check (ADR-0024: "an experimental
-  # toolchain break stays contained"). Visible on every PR, blocking nothing — the
-  # dry-run Firmware asked for on #442 so this class of break surfaces before hardware
-  # instead of only at someone's next local `just build-s3`/`build-c5`.
+  # needs, so a toolchain break here (community fork, unproven pins) can NEVER red the
+  # required check (ADR-0024: "an experimental toolchain break stays contained").
+  # Visible on every PR, blocking nothing — the dry-run Firmware asked for on #442 so
+  # this class of break surfaces before hardware instead of only at someone's next
+  # local `just build-s3`/`build-c5`.
+  #
+  # continue-on-error is on the COMPILE STEP, not the job (#504): job-level
+  # continue-on-error still reports this job's own check-run conclusion as `failure`
+  # (a real red X in the PR checks list / PR list, verified against #499's actual
+  # first-commit check-run data — GitHub Actions docs confirm this is documented
+  # behavior, not a bug: "the job will get a red failure badge... but the job status
+  # will be considered success" for downstream/workflow-conclusion purposes only).
+  # Step-level continue-on-error makes the JOB ITSELF report success — a genuinely
+  # green check, matching what "non-blocking" is supposed to look like at a glance,
+  # not just what it structurally does. The trailing step below still surfaces a
+  # failure as a `::warning::` annotation (visible in the PR's Checks/Files-changed
+  # UI) so a real break isn't silently swallowed — de-escalated from "red X block",
+  # not hidden.
   experimental-boards:
     name: experimental board (${{ matrix.env }}) — non-blocking
     runs-on: ubuntu-latest
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -162,8 +174,17 @@ jobs:
       # Same underlying command as `just build-s3` / `just build-c5` locally (just
       # wraps `pio run -d firmware -e <env>`) — called directly here so the matrix
       # env name maps straight through without a fragile string transform in YAML.
+      # continue-on-error here (step-level, #504) is what makes the JOB's own
+      # check-run report success even when this fails — see the job comment above.
       - name: Compile-check (${{ matrix.env }})
+        id: compile
+        continue-on-error: true
         run: pio run -d firmware -e ${{ matrix.env }}
+
+      - name: Surface a non-blocking failure
+        if: steps.compile.outcome == 'failure'
+        run: |
+          echo "::warning title=Experimental board compile failed (non-blocking)::${{ matrix.env }} failed to compile on the pinned toolchain. This never blocks merge (ADR-0024) - see the Compile-check step's log above for the real error, then fix or file it."
 
   # The single required status check (#472/#466): passes only if BOTH upstream jobs
   # succeeded. Splitting into two jobs changes their names, so branch protection is
