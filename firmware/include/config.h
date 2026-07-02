@@ -157,3 +157,11 @@ constexpr int WIFI_HTTP_PORT = 80; // served-status skeleton (#21)
 // NTP-on-connect (#278/#276, ADR-0018 §3): SNTP arms on WiFi association; rows
 // flip time_source=device_uptime -> device_synced once the clock is real.
 constexpr const char *WIFI_NTP_SERVER = "pool.ntp.org";
+// Captive portal (#275, ADR-0020 §4): the config AP opens on a fresh board (no
+// creds) or after this many consecutive STA failures; while up, background STA
+// retries continue on the LONG backoff so a transient router outage self-heals
+// without human action. AP name = prefix + a generated NVS-stored suffix -
+// synthetic identity, never MAC/silicon-derived (ADR-0020 §2).
+constexpr uint32_t WIFI_PORTAL_AFTER_FAILURES = 3;
+constexpr uint32_t WIFI_PORTAL_RETRY_BACKOFF_MS = 300000UL; // 5 min
+constexpr const char *WIFI_AP_PREFIX = "Sprout-Setup-";

@@ -1029,80 +1029,117 @@ void t_soil_row_time_provenance(void)
         "device_timestamp_utc present + exact when synced");
 }
 
-/* #21 connect-scaffold state machine (lib/wifi_net): pure C, driven with
- * synthetic inputs - no Arduino/WiFi.h needed, exactly the "testable without a
- * network association" bar the slice was scoped to. Covers: no creds stays
- * idle, creds trigger one edge-triggered begin(), a timeout without success
- * fails + starts a backoff window, the backoff expires into a retry, and a
- * connected state that drops reconnects immediately (no backoff on a fresh
- * drop - only on a failed attempt). */
+/* #21/#275 connect-scaffold + portal state machine (lib/wifi_net): pure C,
+ * driven with synthetic inputs - no Arduino/WiFi.h needed. Covers: a fresh
+ * board (no creds) opens the PORTAL (never a silent idle, #275/ADR-0020 §4),
+ * creds trigger one edge-triggered begin(), timeout -> FAILED -> backoff ->
+ * retry, repeated failure falls to PORTAL, PORTAL keeps background STA
+ * retries on the LONG backoff and self-heals to CONNECTED, a drop reconnects
+ * immediately, and cleared creds reopen the portal. */
 void t_wifi_net_state_machine(void)
 {
+    const wifi_net_cfg_t cfg = {
+        15000, /* connect_timeout_ms */
+        30000, /* retry_backoff_ms */
+        3, /* portal_after_failures */
+        300000, /* portal_retry_backoff_ms (5 min) */
+    };
     wifi_net_ctx_t ctx;
     wifi_net_init(&ctx);
     TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_IDLE, ctx.state, "starts idle");
 
-    /* no credentials: stays idle forever, never triggers begin() */
-    TEST_ASSERT_FALSE_MESSAGE(
-        wifi_net_tick(&ctx, false, false, 1000, 15000, 30000),
-        "no creds -> no begin() trigger");
-    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_IDLE, ctx.state,
-                              "no creds -> stays idle");
+    /* fresh board, no credentials: the config AP is the only way forward */
+    TEST_ASSERT_FALSE_MESSAGE(wifi_net_tick(&ctx, false, false, 1000, &cfg),
+                              "no creds -> no begin() trigger");
+    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_PORTAL, ctx.state,
+                              "no creds -> portal (fresh-board onboarding)");
 
-    /* creds appear: one edge-triggered begin() call, moves to CONNECTING */
-    TEST_ASSERT_TRUE_MESSAGE(
-        wifi_net_tick(&ctx, true, false, 2000, 15000, 30000),
-        "creds appear -> begin() triggered once");
+    /* creds appear (portal form / !wifi -> caller re-inits): fresh attempt */
+    wifi_net_init(&ctx);
+    TEST_ASSERT_TRUE_MESSAGE(wifi_net_tick(&ctx, true, false, 2000, &cfg),
+                             "creds appear -> begin() triggered once");
     TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_CONNECTING, ctx.state, "-> connecting");
     /* still connecting, not yet timed out: no re-trigger, no state change */
-    TEST_ASSERT_FALSE_MESSAGE(
-        wifi_net_tick(&ctx, true, false, 5000, 15000, 30000),
-        "mid-attempt -> no re-trigger");
+    TEST_ASSERT_FALSE_MESSAGE(wifi_net_tick(&ctx, true, false, 5000, &cfg),
+                              "mid-attempt -> no re-trigger");
     TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_CONNECTING, ctx.state,
                               "still connecting before timeout");
 
     /* timeout elapses without success -> FAILED, backoff window set */
     TEST_ASSERT_FALSE_MESSAGE(
-        wifi_net_tick(&ctx, true, false, 2000 + 15000, 15000, 30000),
+        wifi_net_tick(&ctx, true, false, 2000 + 15000, &cfg),
         "timeout -> failed, no trigger on the failing tick itself");
     TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_FAILED, ctx.state, "-> failed");
     TEST_ASSERT_EQUAL_MESSAGE(1, ctx.retry_count, "one failure counted");
 
     /* still inside the backoff window: no retry yet */
     TEST_ASSERT_FALSE_MESSAGE(
-        wifi_net_tick(&ctx, true, false, 2000 + 15000 + 1000, 15000, 30000),
+        wifi_net_tick(&ctx, true, false, 2000 + 15000 + 1000, &cfg),
         "inside backoff -> no retry trigger");
     TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_FAILED, ctx.state, "still failed");
 
     /* backoff expires -> retry triggers a fresh begin() */
     unsigned long retry_at = ctx.next_retry_ms;
-    TEST_ASSERT_TRUE_MESSAGE(
-        wifi_net_tick(&ctx, true, false, retry_at, 15000, 30000),
-        "backoff expired -> retry begin() triggered");
+    TEST_ASSERT_TRUE_MESSAGE(wifi_net_tick(&ctx, true, false, retry_at, &cfg),
+                             "backoff expired -> retry begin() triggered");
     TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_CONNECTING, ctx.state,
                               "retry -> connecting again");
 
-    /* this attempt succeeds: CONNECTED, retry_count resets */
+    /* second failure, then third attempt fails -> falls to PORTAL (#275) */
     TEST_ASSERT_FALSE_MESSAGE(
-        wifi_net_tick(&ctx, true, true, retry_at + 500, 15000, 30000),
-        "success -> no begin() trigger");
-    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_CONNECTED, ctx.state, "-> connected");
+        wifi_net_tick(&ctx, true, false, retry_at + 15000, &cfg),
+        "2nd timeout -> failed again");
+    TEST_ASSERT_EQUAL_MESSAGE(2, ctx.retry_count, "two failures counted");
+    retry_at = ctx.next_retry_ms;
+    TEST_ASSERT_TRUE_MESSAGE(wifi_net_tick(&ctx, true, false, retry_at, &cfg),
+                             "3rd attempt triggers");
+    TEST_ASSERT_FALSE_MESSAGE(
+        wifi_net_tick(&ctx, true, false, retry_at + 15000, &cfg),
+        "3rd timeout -> threshold reached");
+    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_PORTAL, ctx.state,
+                              "repeated failure -> portal reopens (AC#3)");
+
+    /* portal keeps a background STA retry on the LONG backoff... */
+    TEST_ASSERT_FALSE_MESSAGE(
+        wifi_net_tick(&ctx, true, false, ctx.next_retry_ms - 1000, &cfg),
+        "inside portal backoff -> no retry");
+    unsigned long portal_retry = ctx.next_retry_ms;
+    TEST_ASSERT_TRUE_MESSAGE(
+        wifi_net_tick(&ctx, true, false, portal_retry, &cfg),
+        "portal backoff expired -> background STA retry");
+    /* ...and a FAILED background retry returns to PORTAL, not FAILED */
+    TEST_ASSERT_FALSE_MESSAGE(
+        wifi_net_tick(&ctx, true, false, portal_retry + 15000, &cfg),
+        "portal-origin timeout -> no trigger");
+    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_PORTAL, ctx.state,
+                              "portal-origin failure -> back to portal");
+
+    /* ...and a SUCCESSFUL background retry self-heals to CONNECTED */
+    unsigned long heal_at = ctx.next_retry_ms;
+    TEST_ASSERT_TRUE_MESSAGE(wifi_net_tick(&ctx, true, false, heal_at, &cfg),
+                             "portal retry triggers again");
+    TEST_ASSERT_FALSE_MESSAGE(
+        wifi_net_tick(&ctx, true, true, heal_at + 500, &cfg),
+        "association succeeds -> no trigger");
+    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_CONNECTED, ctx.state,
+                              "portal self-heals -> connected (AP tears down "
+                              "on this edge)");
     TEST_ASSERT_EQUAL_MESSAGE(0, ctx.retry_count,
                               "retry_count resets on success");
 
     /* connection drops: immediate reconnect attempt, no backoff wait */
     TEST_ASSERT_TRUE_MESSAGE(
-        wifi_net_tick(&ctx, true, false, retry_at + 60000, 15000, 30000),
+        wifi_net_tick(&ctx, true, false, heal_at + 60000, &cfg),
         "drop -> immediate reconnect trigger, no backoff");
     TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_CONNECTING, ctx.state,
                               "drop -> connecting again immediately");
 
-    /* credentials cleared mid-flight: back to idle regardless of prior state */
+    /* credentials cleared mid-flight: portal reopens (never a silent idle) */
     TEST_ASSERT_FALSE_MESSAGE(
-        wifi_net_tick(&ctx, false, false, retry_at + 61000, 15000, 30000),
+        wifi_net_tick(&ctx, false, false, heal_at + 61000, &cfg),
         "creds cleared -> no trigger");
-    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_IDLE, ctx.state,
-                              "creds cleared -> back to idle");
+    TEST_ASSERT_EQUAL_MESSAGE(WIFI_NET_PORTAL, ctx.state,
+                              "creds cleared -> portal reopens");
 }
 
 /* #273 capability descriptor (ADR-0019 §1-2): the descriptor is accessible, the
