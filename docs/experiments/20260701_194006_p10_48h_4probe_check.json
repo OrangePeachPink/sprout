@@ -1,0 +1,25 @@
+{
+  "experiment_id": "20260701_194006_p10_48h_4probe_check",
+  "notes": {
+    "hypothesis": "P10 is expected to retain moisture better than the rescue pothos plants because its soil previously showed the strongest moist clumping on probe removal. A 48-hour four-probe check should show whether it still has usable moisture after the prior watering and whether it needs any top-up before returning to the windowsill.",
+    "method": "Experiment Capture ran for 300 s at 1 s cadence. Probe mapping: s1, s2, s3, and s4 were all inserted into P10. The run began with air/handling and insertion artifacts, then settled into an in-soil baseline. No water was added during this experiment. This is a measure-only 48-hour follow-up, not a watering run.",
+    "findings": "The capture completed by duration with 3437 rows, 2289 sweeps, 318 dropped rows, and 0 CRC failures. Soil rows were complete for all four probes: s1 n=287 min=2122 max=3200 median=2140 tail_avg=2124 last=2123; s2 n=287 min=2066 max=3213 median=2201 tail_avg=2111.7 last=2098; s3 n=287 min=1943 max=3204 median=2259 tail_avg=2259.2 last=2260; s4 n=287 min=1989 max=3183 median=2112 tail_avg=2098.6 last=2097. The early high values and sharp drops are insertion/settling artifacts; the final settled baseline is around 2098-2260 raw ADC across the four probes, mostly dry/drying by the provisional ladder but not air-dry. Environmental rows were present: SHT45 ambient temperature averaged 28.413 degC and RH averaged 46.678 pctRH; AS7263 raw NIR rows were present with live non-zero bands.",
+    "conclusion": "Do not water P10 in this pass. The settled four-probe reading is dry-ish but coherent and well below air-dry, consistent with retained soil moisture 48 hours after watering rather than an urgent drought signal. Because P10 has better soil structure and previously held moist clumps on the probes, overwatering risk is higher than the benefit of chasing a dry-band label. For downstream analysis, treat the first minute as air/handling/insertion, use the settled tail as the P10 48-hour baseline, and record this as measure-only/no-water evidence.",
+    "status": "complete",
+    "edit_log": [
+      {
+        "at": "2026-07-01T19:49:40Z",
+        "by": "Sage",
+        "fields": [
+          "hypothesis",
+          "method",
+          "findings",
+          "conclusion",
+          "status"
+        ]
+      }
+    ],
+    "saved_at": "2026-07-01T19:49:40Z",
+    "version": 1
+  }
+}

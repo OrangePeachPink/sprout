@@ -1,0 +1,33 @@
+{
+  "experiment_id": "20260701_194006_p10_48h_4probe_check",
+  "subject": "p10_48h_4probe_check",
+  "title": "p10_48h_4probe_check",
+  "schema_version": 2,
+  "mode": "experiment",
+  "sample_rate_s": 1.0,
+  "duration_s": 300.0,
+  "stopped_by": "duration",
+  "labels": {
+    "s1": "P10 s1",
+    "s2": "P10 s2",
+    "s3": "P10 s3",
+    "s4": "P10 s4"
+  },
+  "started_utc": "2026-07-01T19:40:07.470Z",
+  "ended_utc": "2026-07-01T19:45:09.823Z",
+  "capture_version": "experiment_capture_0_1",
+  "firmware": {
+    "version": "0.7.0 - schema v1, 4 soil sensors, supervisor-driven (autonomous dosing DISARMED; manual !water; fail-safe OFF)",
+    "git": null,
+    "built": null,
+    "run": null
+  },
+  "file": "20260701_194006_p10_48h_4probe_check.csv",
+  "transport": {
+    "rows": 3437,
+    "sweeps": 2289,
+    "dropped": 318,
+    "crc_fail": 0,
+    "idle_noise": 0
+  }
+}

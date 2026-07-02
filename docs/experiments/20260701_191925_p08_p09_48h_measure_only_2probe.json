@@ -1,0 +1,25 @@
+{
+  "experiment_id": "20260701_191925_p08_p09_48h_measure_only_2probe",
+  "notes": {
+    "hypothesis": "P08 cactus and P09 succulent are tiny, low-water plants that should not be rewatered during this pass unless the readings and physical condition show an unexpected problem. A short measure-only two-probe run should capture their 48-hour post-watering state while preserving contact-quality caveats.",
+    "method": "Experiment Capture ran for 180 s at 1 s cadence. Probe mapping: s1 was placed in P08 cactus, s2 was placed in P09 succulent, and s3/s4 were labelled not_in_use and stayed as air references. No water was added. Veronica reported that P09 had essentially nowhere to insert a probe into soil; s2 was barely in contact with the outer roots, so it should be treated as low-confidence contact-quality evidence rather than a confident soil-moisture measurement.",
+    "findings": "P08 s1 settled around 2415-2419 raw ADC in the dry band, with a run range of about 2414-3197 raw ADC that includes insertion/settle. P09 s2 settled around 3062-3065 raw ADC in the dry/near-air region, with a broad run range of about 2752-3301 raw ADC; because contact was only barely against outer roots, this should not be interpreted as a reliable whole-pot soil state. The not_in_use probes stayed air-dry around s3 3167-3171 and s4 3170-3176 raw ADC near the end. Environmental rows were present and live; near the end SHT45 was about 27.8 degC and 47.4 pctRH, and AS7263 showed moderate bench/skylight context.",
+    "conclusion": "No watering was indicated during this measure-only run. P08 appears dry by the provisional band, but that is acceptable for a small cactus 48 hours after a prior small watering and does not justify another dose. P09 remains difficult to instrument with these probes because the rootball consumes the available soil volume; the s2 trace is best treated as low-confidence outer-root contact, not a dependable soil reading. For downstream analysis, include P08 s1 as a single-probe dry cactus measurement, exclude or very-low-weight P09 s2 for moisture aggregation, and keep s3/s4 as air references.",
+    "status": "complete",
+    "edit_log": [
+      {
+        "at": "2026-07-01T19:23:23Z",
+        "by": "Sage",
+        "fields": [
+          "hypothesis",
+          "method",
+          "findings",
+          "conclusion",
+          "status"
+        ]
+      }
+    ],
+    "saved_at": "2026-07-01T19:23:23Z",
+    "version": 1
+  }
+}

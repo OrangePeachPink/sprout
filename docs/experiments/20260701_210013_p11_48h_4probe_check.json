@@ -1,0 +1,25 @@
+{
+  "experiment_id": "20260701_210013_p11_48h_4probe_check",
+  "notes": {
+    "hypothesis": "Forty-eight hours after the greenhouse bench watering, P11 may be drier than P10 and may need a top-up. A four-probe experiment should capture the before-water state, the response to a measured watering, and any per-probe disagreement before returning the plant to the windowsill.",
+    "method": "Experiment Capture ran for 300 s at 1 s cadence with all four probes in P11. The run began from in-soil placement rather than a clean air baseline. Veronica judged the soil drier than P10 and watered during the run with approximately 3/4 cup distributed to the soil plus about 1/8 cup into the central plant core/column so it could soak down over time. After the experiment, monitor logging continued while the s3 anomaly was investigated.",
+    "findings": "The experiment completed by duration with 3210 rows, 2138 sweeps, 323 dropped rows, and crc_fail 0. Experiment statistics by probe were: s1 min/max 1525-3202, median 1574, mean 2015.2, final 1525; s2 min/max 953-3158, median 995, mean 1624.7, final 995; s3 min/max 180-3196, median 420, mean 1179.9, final 440; s4 min/max 1295-3187, median 1466, mean 1853.5, final 1296. The s3 minimum of 180 raw is not physically credible for this sensor in normal soil/water use and was followed in the post-run monitor log by a rail-low drift to 0 on GPIO36. Veronica pulled and wiped s3, observed no obvious wet components, visible damage, or connector issue, and s3 did not recover during the observed monitor window. At exactly 5:23 pm local, s1, s2, and s4 were pulled from the plant and returned to normal dry-air levels on the bench while s3 remained failed at/near 0. Monitor logging stopped fully at 5:44 pm local.",
+    "conclusion": "P11 did receive a real watering and s1/s2/s4 captured a strong wetting response, but the s3 channel became invalid during or immediately after the wetting event. Use this experiment for P11 only with an explicit s3 exclusion or low-confidence flag after the impossible drop. Preserve the s3 trace as separate fault evidence for sensor/cable/GPIO36 diagnosis; do not treat the s3 180/0 readings as true soil moisture.",
+    "status": "complete",
+    "edit_log": [
+      {
+        "at": "2026-07-01T23:19:25Z",
+        "by": "Sage",
+        "fields": [
+          "hypothesis",
+          "method",
+          "findings",
+          "conclusion",
+          "status"
+        ]
+      }
+    ],
+    "saved_at": "2026-07-01T23:19:25Z",
+    "version": 1
+  }
+}

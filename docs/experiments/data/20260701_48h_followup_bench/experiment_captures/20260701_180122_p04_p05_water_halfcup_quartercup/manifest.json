@@ -1,0 +1,33 @@
+{
+  "experiment_id": "20260701_180122_p04_p05_water_halfcup_quartercup",
+  "subject": "p04_p05_water_halfcup_quartercup",
+  "title": "p04+p05 water halfcup_quartercup",
+  "schema_version": 2,
+  "mode": "experiment",
+  "sample_rate_s": 1.0,
+  "duration_s": 300.0,
+  "stopped_by": "duration",
+  "labels": {
+    "s1": "s1",
+    "s2": "s2",
+    "s3": "s3",
+    "s4": "s4"
+  },
+  "started_utc": "2026-07-01T18:01:22.590Z",
+  "ended_utc": "2026-07-01T18:06:24.973Z",
+  "capture_version": "experiment_capture_0_1",
+  "firmware": {
+    "version": "0.7.0 - schema v1, 4 soil sensors, supervisor-driven (autonomous dosing DISARMED; manual !water; fail-safe OFF)",
+    "git": null,
+    "built": null,
+    "run": null
+  },
+  "file": "20260701_180122_p04_p05_water_halfcup_quartercup.csv",
+  "transport": {
+    "rows": 3401,
+    "sweeps": 2265,
+    "dropped": 541,
+    "crc_fail": 0,
+    "idle_noise": 0
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "experiment_id": "20260701_185816_p07_cachepot_retention_check_no_water",
+  "notes": {
+    "hypothesis": "P07 is the prior cachepot-retention plant, likely a bromeliad-type plant with central leaf/core water-holding structures. After being left out of its outer pot for about 48 hours to drain, a short two-probe check should show whether the soil/root zone is still moisture-retentive and whether central-cup watering creates immediate or delayed soil-probe response.",
+    "method": "Experiment Capture ran for 300 s at 1 s cadence. The subject slug says no_water because the intended procedure was a retention check, but the actual procedure included watering. Probe mapping: s1 and s2 were inserted into P07 under difficult contact conditions; s3 and s4 were labelled notinuse and stayed as air references. The inner pot had not been returned to the outer pot after the previous session, so P07 had been drying/draining out of its usual cachepot condition for about 48 hours. Veronica reported that P07 did not feel parched. During the capture, Veronica added about 1/2 cup water, mostly into the cores of the plant's central branch/leaf clusters so it would be held and feed slowly from the plant's own leaf-holding mechanism. No water leakage was observed. After the duration capture ended, Veronica continued normal monitor logging on P07 for a short post-run follow-up and then stopped it. That monitor segment is contextual evidence only, not part of the isolated 300 s experiment.",
+    "findings": "P07 responded strongly on both active probes despite the central-cup style dosing. By the end of the capture, s1 was about 1461-1467 raw ADC in the well-watered/moist band, and s2 was about 1757-1765 raw ADC in the OK/ideal band. The per-card ranges were broad because the capture included insertion/settle and the watering response: s1 about 1311-3203 raw ADC and s2 about 1756-3168 raw ADC. The notinuse air references stayed stable and dry around s3 3175-3185 and s4 3148-3185 raw ADC. Environmental rows were present and live; near the end SHT45 was about 27.9 degC and 47.6-47.8 pctRH, with low-to-moderate AS7263 NIR context compared with direct-skylight captures. In the post-run monitor stop view, s1 was about 1499 raw ADC in the well-watered band and s2 was about 1797 raw ADC in the OK/ideal band, while s3 and s4 remained air-dry references around 3171-3174 raw ADC. The post-run trend showed active probes staying in the moist/ideal region with a slight rebound toward drier values rather than continuing sharply wetter.",
+    "conclusion": "This run should be interpreted as a P07 central-reservoir/cachepot behavior check, not a normal soil top-water run and not a true no-water run. The plant did not feel parched after 48 hours out of the outer pot, and the central leaf/core dose reached or influenced the active probe zones within the 5 minute window without observed leakage. The short monitor follow-up suggests the probe zones remained comfortably wet/ideal and then stabilized or drifted slightly drier, consistent with local redistribution rather than a continuing flood into the soil. That supports P07's identity as a water-retentive plant whose available water may be held above or around the soil rather than behaving like a conventional pot surface pour. For downstream analysis, include s1 and s2 as P07 active probes, exclude s3/s4 as notinuse air references, and tag the run as central-cup watering with no observed runoff plus post-run monitor follow-up.",
+    "status": "complete",
+    "edit_log": [
+      {
+        "at": "2026-07-01T19:04:43Z",
+        "by": "Sage",
+        "fields": [
+          "hypothesis",
+          "method",
+          "findings",
+          "conclusion",
+          "status"
+        ]
+      },
+      {
+        "at": "2026-07-01T19:14:17Z",
+        "by": "Sage",
+        "fields": [
+          "method",
+          "findings",
+          "conclusion"
+        ]
+      }
+    ],
+    "saved_at": "2026-07-01T19:14:17Z",
+    "version": 2
+  }
+}

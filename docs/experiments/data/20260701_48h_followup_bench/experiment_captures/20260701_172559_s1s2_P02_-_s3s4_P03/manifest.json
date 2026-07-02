@@ -1,0 +1,33 @@
+{
+  "experiment_id": "20260701_172559_s1s2_P02_-_s3s4_P03",
+  "subject": "s1s2_P02_-_s3s4_P03",
+  "title": "s1s2 P02 - s3s4 P03",
+  "schema_version": 2,
+  "mode": "experiment",
+  "sample_rate_s": 1.0,
+  "duration_s": 360.0,
+  "stopped_by": "duration",
+  "labels": {
+    "s1": "s1",
+    "s2": "s2",
+    "s3": "s3",
+    "s4": "s4"
+  },
+  "started_utc": "2026-07-01T17:25:59.349Z",
+  "ended_utc": "2026-07-01T17:32:01.691Z",
+  "capture_version": "experiment_capture_0_1",
+  "firmware": {
+    "version": "0.7.0 - schema v1, 4 soil sensors, supervisor-driven (autonomous dosing DISARMED; manual !water; fail-safe OFF)",
+    "git": null,
+    "built": null,
+    "run": null
+  },
+  "file": "20260701_172559_s1s2_P02_-_s3s4_P03.csv",
+  "transport": {
+    "rows": 4130,
+    "sweeps": 2752,
+    "dropped": 358,
+    "crc_fail": 0,
+    "idle_noise": 0
+  }
+}
