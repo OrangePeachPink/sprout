@@ -21,6 +21,7 @@ from plants_logger import (
     is_line_noise,
     iso_utc,
     parse_device_line,
+    stamp_row,
 )
 
 _ANALYTICS = Path(__file__).resolve().parents[1] / "analytics"
@@ -247,6 +248,39 @@ def test_rotating_csv_host_monotonic_ms_with_empty_device_payload(
     assert (
         row["payload"] == "host_monotonic_ms=500"
     )  # no leading ";" with no prior keys
+
+
+# --------------------------------------------------------------------------- #
+# stamp_row() - the extracted row-building logic (#277), reused by DeviceAdapter
+# --------------------------------------------------------------------------- #
+
+
+def test_stamp_row_matches_rotating_csv_write(tmp_path: Path) -> None:
+    """#277 refactor: stamp_row() must produce the exact row RotatingCsv.write()
+    used to build inline, for the same inputs - proves the extraction changed
+    nothing about serial-logged rows."""
+    rc = RotatingCsv(str(tmp_path), monotonic=lambda: 100.0)
+    dev = parse_device_line(_make_line())
+    row_via_rotating_csv, _ = rc.write(dev, sample_id=7, now=_UTC_0)
+    row_direct = stamp_row(dev, 7, _UTC_0, LOGGER_VERSION, host_monotonic_ms=0)
+    assert row_via_rotating_csv == row_direct
+
+
+def test_stamp_row_honors_a_distinct_logger_version() -> None:
+    """A non-serial caller (the WiFi DeviceAdapter) names itself honestly,
+    never borrows the serial logger's own identity."""
+    dev = parse_device_line(_make_line())
+    row = stamp_row(dev, 1, _UTC_0, "device_adapter_v1")
+    assert row["logger_version"] == "device_adapter_v1"
+
+
+def test_stamp_row_omits_host_monotonic_ms_by_default() -> None:
+    """No fabricated monotonic axis when the caller has no meaningful single
+    start reference (a per-poll adapter, unlike the persistent serial logger)."""
+    dev = parse_device_line(_make_line(payload=""))
+    row = stamp_row(dev, 1, _UTC_0, "device_adapter_v1")
+    assert "host_monotonic_ms" not in row["payload"]
+    assert row["payload"] == ""
 
 
 def test_rotating_csv_rolls_on_new_day(tmp_path: Path) -> None:
