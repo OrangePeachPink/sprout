@@ -37,6 +37,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 import provenance  # noqa: E402  (sibling - server/app provenance for the panel, #324)
+from device_registry import Registry, load_registry  # noqa: E402  (#486 attribution)
 from forecast import fit_line, forecast_payload  # noqa: E402
 from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
     DEFAULT_CAL_BOUNDS,
@@ -411,7 +412,12 @@ def _latest_segment(segments: list):
 # --------------------------------------------------------------------------- #
 # context build
 # --------------------------------------------------------------------------- #
-def build_context(data: LogData) -> dict:
+def build_context(data: LogData, registry: Registry | None = None) -> dict:
+    """``registry`` defaults to ``device_registry.load_registry()`` (the local
+    fleet config, falling back to the committed example/demo shape, #486) - pass
+    one explicitly to test attribution without touching real/example config
+    files."""
+    reg = registry if registry is not None else load_registry()
     soil = [
         r
         for r in data.readings
@@ -451,9 +457,15 @@ def build_context(data: LogData) -> dict:
         ]
         last = rs[-1]
         ui = BAND_UI.get(last.band or "", ("?", "#9A8480", "Unknown"))
+        # #486: attribute this channel to a plant via the fleet registry - honest
+        # None on an unknown device or unassigned channel, never an invented name.
+        plant = reg.plant_for(last.device_id, sid)
         sensors.append(
             {
                 "id": sid,
+                "device_id": last.device_id or None,
+                "plant_id": plant["plant_id"] if plant else None,
+                "plant_name": plant["plant_name"] if plant else None,
                 "gpio": last.gpio,
                 "channel": last.channel,
                 "color": colors[sid],
