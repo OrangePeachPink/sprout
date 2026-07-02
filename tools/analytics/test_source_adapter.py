@@ -142,6 +142,34 @@ def test_device_adapter_stamps_host_observed_time_and_own_logger_version() -> No
     assert r.logger_version == DEVICE_ADAPTER_VERSION  # never plants_logger's own
 
 
+def test_device_adapter_carries_device_owned_time_fields_through() -> None:
+    """Firmware's forward-compat note on PR #553: once a bench pass syncs NTP,
+    real rows gain device_seq/time_source=device_synced/device_timestamp_utc in
+    payload - additive, no shape change. DeviceAdapter never touches payload
+    contents (stamp_row() passes dev["payload"] through unmodified for this
+    adapter, since it's never given a host_monotonic_ms to append), so these
+    already reach Reading via the existing generic parse_payload() properties -
+    this proves it with a real post-sync-shaped payload, not just theory."""
+    text = _telemetry_response(
+        [
+            _device_line(
+                sensor="s1",
+                payload=(
+                    "level=well watered;role=diag;spread=18;gpio=36;"
+                    "device_seq=4821;time_source=device_synced;"
+                    "device_timestamp_utc=2026-07-02T06:15:00Z"
+                ),
+            )
+        ]
+    )
+    da = DeviceAdapter("http://192.0.2.1", fetch=lambda url: text)
+    r = da.load().readings[0]
+    assert r.device_seq == 4821
+    assert r.time_source == "device_synced"
+    assert r.device_timestamp_utc == datetime(2026, 7, 2, 6, 15, 0, tzinfo=timezone.utc)
+    assert r.band == "well watered"  # the device-emitted fields all survive too
+
+
 def test_device_adapter_drops_a_crc_failed_row_not_the_whole_poll() -> None:
     text = _telemetry_response(
         [_device_line(sensor="s1", bad_crc=True), _device_line(sensor="s2")]
