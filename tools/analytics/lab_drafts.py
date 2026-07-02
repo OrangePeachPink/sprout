@@ -20,6 +20,21 @@ Usage (agent path)::
         --source serial --port COM6 --label s1="under shade" \\
         --hypothesis "removing shade raises ADC (drying) within minutes" \\
         --method "@t+0s baseline; @t+180s remove shade; watch s1"
+
+Draft -> lifecycle bridge (#450 "slice 3" / pre-run registration):
+``save_draft`` also writes a ``status=planned`` lifecycle record (the ADR-0017
+notes model, #158/#473) at ``docs/experiments/<name>.json``, seeded from the
+draft's hypothesis/method — so the plan is visible in the Lab Notebook catalog
+*before* the bench starts, satisfying "create a planned experiment before it
+runs." This is the thin Data-only half of the bridge scoped on #450: the draft's
+name doubles as the pre-run record's id. **Not built here** (a separate,
+cross-lane decision, #450's own routing): what advances ``planned -> running ->
+complete`` when a capture actually starts/finishes, and whether the run's real
+``experiment_id`` gets linked back to this draft's planned record — that touches
+the capture-start/stop control plane (``experiment_capture``/``control``),
+Firmware-adjacent operator-plane territory, not pure Data. Until that lands, a
+planned record from a draft that never runs stays visibly `planned` — an honest,
+not a silent, gap.
 """
 
 from __future__ import annotations
@@ -36,6 +51,10 @@ _REPO = _HERE.parents[1]
 _DRAFTS_DIR = _REPO / "docs" / "experiments" / "drafts"
 _NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")  # no traversal from the URL
 _NOTE_FIELDS = ("hypothesis", "method", "findings", "conclusion")
+
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+from lab_notes import save_notes  # noqa: E402  (the draft->planned bridge, #450)
 
 
 def _draft_path(name: str, drafts_dir: str | Path | None) -> Path | None:
@@ -69,11 +88,26 @@ def _empty(name: str) -> dict:
     }
 
 
-def save_draft(name: str, fields: dict, drafts_dir: str | Path | None = None) -> dict:
+def save_draft(
+    name: str,
+    fields: dict,
+    drafts_dir: str | Path | None = None,
+    *,
+    docs_dir: str | Path | None = None,
+    author: str | None = None,
+    sync_planned: bool = True,
+) -> dict:
     """Write an experiment draft. Returns the persisted draft. Raises on a bad name.
 
     This only writes a plan file — it never touches the serial port or starts a
-    capture (the operator-start guarantee, #326)."""
+    capture (the operator-start guarantee, #326).
+
+    Pre-run registration bridge (#450): also writes/updates a ``status=planned``
+    lifecycle record (``lab_notes``) at the draft's name, seeded from its
+    hypothesis/method, so the plan is visible in the Lab Notebook *before* the
+    bench starts. ``sync_planned=False`` skips this (e.g. a caller that only
+    wants the plan file, or a test isolating draft-only behavior).
+    ``docs_dir``/``author`` pass straight through to ``lab_notes.save_notes``."""
     p = _draft_path(name, drafts_dir)
     if p is None:
         raise ValueError(f"invalid draft name: {name!r}")
@@ -92,6 +126,14 @@ def save_draft(name: str, fields: dict, drafts_dir: str | Path | None = None) ->
     draft["saved_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(draft, indent=2) + "\n", encoding="utf-8", newline="\n")
+    if sync_planned:
+        save_notes(
+            name,
+            draft["notes"],
+            docs_dir,
+            status="planned",
+            author=author or "Sage",
+        )
     return draft
 
 
@@ -164,6 +206,7 @@ def main(argv: list[str] | None = None) -> int:
         },
     )
     print(f"wrote draft {draft_rel_path(args.name)} (no capture started)")
+    print(f"registered as a planned experiment: docs/experiments/{args.name}.json")
     return 0
 
 
