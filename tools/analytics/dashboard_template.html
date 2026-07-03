@@ -467,6 +467,12 @@ function renderCards(){
     add('range', `${fmt(s.raw_min)}–${fmt(s.raw_max)}`);
     add('median', fmt(s.raw_median));
     add('slope', s.slope_per_hr!=null? `${s.slope_per_hr>=0?'+':''}${s.slope_per_hr}/h` : '—');
+    if(s.ambient){ // #562: interior-ambient context — value never shown without its source tag
+      const parts = [];
+      if(s.ambient.temp_c!=null) parts.push(`${s.ambient.temp_c}°C`);
+      if(s.ambient.rh_pct!=null) parts.push(`${s.ambient.rh_pct}%RH`);
+      add('ambient', `${parts.join(' · ')} <span class="muted">(${s.ambient.source})</span>`);
+    }
     c.appendChild(meta);
     wrap.appendChild(c);
   });

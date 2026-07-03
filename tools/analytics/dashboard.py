@@ -460,12 +460,24 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         # #486: attribute this channel to a plant via the fleet registry - honest
         # None on an unknown device or unassigned channel, never an invented name.
         plant = reg.plant_for(last.device_id, sid)
+        # #562 (ADR-0023 v2): the last reading's interior-ambient context, only
+        # ever value+tag together - a context value never renders untagged.
+        ambient = None
+        if last.context_source and (
+            last.temp_context_c is not None or last.rh_context_pct is not None
+        ):
+            ambient = {
+                "temp_c": last.temp_context_c,
+                "rh_pct": last.rh_context_pct,
+                "source": last.context_source,
+            }
         sensors.append(
             {
                 "id": sid,
                 "device_id": last.device_id or None,
                 "plant_id": plant["plant_id"] if plant else None,
                 "plant_name": plant["plant_name"] if plant else None,
+                "ambient": ambient,
                 "gpio": last.gpio,
                 "channel": last.channel,
                 "color": colors[sid],

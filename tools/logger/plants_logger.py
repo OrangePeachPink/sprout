@@ -256,7 +256,9 @@ def _append_payload(payload, key, value):
     return f"{payload};{pair}" if payload else pair
 
 
-def stamp_row(dev, sample_id, now, logger_version, *, host_monotonic_ms=None):
+def stamp_row(
+    dev, sample_id, now, logger_version, *, host_monotonic_ms=None, context=None
+):
     """Build one CANONICAL_COLS row dict from a parsed device line, stamped with
     the host's observed-at time + a host sample counter (schema v1 S2: these are
     host-filled, not device-native). Pulled out of RotatingCsv.write() (#277) so a
@@ -270,11 +272,23 @@ def stamp_row(dev, sample_id, now, logger_version, *, host_monotonic_ms=None):
 
     ``host_monotonic_ms`` is optional (#9): the serial logger has one persistent
     process with a meaningful single start reference; a per-poll adapter usually
-    doesn't, so it stays the honest default None rather than a fabricated value."""
+    doesn't, so it stays the honest default None rather than a fabricated value.
+
+    ``context`` is the interior-ambient fill (#562, ADR-0023 v2 - see
+    context_fill.py): value keys land in their reserved CANONICAL_COLS columns;
+    the ``*context_source`` tag keys ride payload k=v (never a new positional
+    column). None/empty = the columns stay honestly empty."""
     payload = dev["payload"]
     if host_monotonic_ms is not None:
         payload = _append_payload(payload, "host_monotonic_ms", host_monotonic_ms)
+    context = context or {}
+    for tag_key in ("context_source", "pressure_context_source"):
+        if context.get(tag_key):
+            payload = _append_payload(payload, tag_key, context[tag_key])
     row = dict.fromkeys(CANONICAL_COLS, "")
+    for col in ("temp_context_c", "rh_context_pct", "pressure_context_hpa"):
+        if context.get(col):
+            row[col] = context[col]
     row.update(
         {
             "record_type": dev["record_type"],
@@ -353,13 +367,18 @@ class RotatingCsv:
         self.current_path = path
         return path
 
-    def write(self, dev, sample_id, now):
+    def write(self, dev, sample_id, now, *, context=None):
         if self.device_id == "unknown" and dev["device_id"]:
             self.device_id = dev["device_id"]
         new_path = self._roll(now)
         host_monotonic_ms = round((self._monotonic() - self._t0) * 1000)
         row = stamp_row(
-            dev, sample_id, now, LOGGER_VERSION, host_monotonic_ms=host_monotonic_ms
+            dev,
+            sample_id,
+            now,
+            LOGGER_VERSION,
+            host_monotonic_ms=host_monotonic_ms,
+            context=context,
         )
         self.writer.writerow([row[c] for c in CANONICAL_COLS])
         self.fh.flush()
@@ -431,6 +450,15 @@ def run(
     sleep=time.sleep,
 ):
     csvlog = RotatingCsv(logdir, maxbytes)
+    # Interior-ambient context fill (#562, ADR-0023 v2): env rows feed it, soil
+    # rows read it. Import here (sibling module) so a missing/broken filler can
+    # never take down logging - context degrades to honestly-empty columns.
+    try:
+        from context_fill import ContextFiller
+
+        filler = ContextFiller()
+    except Exception:
+        filler = None
     sample_id = 0
     pending_hdr = []
     dropped = 0
@@ -493,7 +521,12 @@ def run(
                     pending_hdr = []
                 sample_id += 1
                 now = datetime.now(timezone.utc)
-                row, new_path = csvlog.write(dev, sample_id, now)
+                context = None
+                if filler is not None:
+                    filler.observe(dev)  # env rows update the ambient cache
+                    if dev["record_type"].startswith("plants.soil"):
+                        context = filler.context_for()  # {} -> honestly empty
+                row, new_path = csvlog.write(dev, sample_id, now, context=context)
                 watchdog.mark_data()  # a real data row proves the stream is alive
                 if new_path:
                     print(f"[logger] -> {new_path}")

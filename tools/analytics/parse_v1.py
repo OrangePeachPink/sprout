@@ -100,6 +100,27 @@ _SENSOR_RE = re.compile(r"ch(\d+)=GPIO(\d+)/(\S+)")
 # "calibrated"/"corroborated" label reaching the runtime corroborated-veto logic.
 CONFIDENCE_LEVELS = ("provisional", "calibrated", "corroborated")
 
+# ADR-0023 v2's context-source vocabulary: tag -> proximity/family class, so the
+# trust class travels deterministically with the value (#562). Interior classes
+# (plant_local, room) are the only legal fillers of temp/RH context; "exterior"
+# appears solely via the pressure exception (§3). An unknown tag -> None: the
+# value stays visible but its class is honestly unresolved, never guessed.
+CONTEXT_SOURCE_CLASS = {
+    "sht45_onrig": "plant_local",
+    "zigbee_room": "room",
+    "thread_room": "room",
+    "matter_room": "room",
+    "ecobee": "room",
+    "ha_ambient": "room",
+    "weather_openmeteo": "exterior",
+}
+
+
+def context_class(tag: str | None) -> str | None:
+    """The ADR-0023 proximity/family class for a ``context_source`` tag, or
+    ``None`` when the tag is absent/unknown - a consumer must not invent one."""
+    return CONTEXT_SOURCE_CLASS.get(tag) if tag else None
+
 
 @dataclass
 class ChannelCal:
@@ -316,6 +337,23 @@ class Reading:
         ``millis_ms``. ``None`` on a row from a logger version that predates this
         field (never a guessed value)."""
         return _int(self.payload.get("host_monotonic_ms"))
+
+    @property
+    def context_source(self) -> str | None:
+        """Which interior-ambient source filled this row's ``temp_context_c`` /
+        ``rh_context_pct`` (#562, ADR-0023 v2) - e.g. ``sht45_onrig``. Rides
+        payload k=v (the #559 review decision - never a positional column, so
+        the HotBoxAQ shared core stays byte-identical). ``None`` on any row
+        whose interior context was never filled - honest, not a default."""
+        return self.payload.get("context_source")
+
+    @property
+    def pressure_context_source(self) -> str | None:
+        """The per-quantity tag for ``pressure_context_hpa`` (ADR-0023 §3's
+        exception: pressure alone may fill from the exterior family, e.g.
+        ``weather_openmeteo``). Separate from ``context_source`` because
+        mixed-source rows are the common case - the SHT45 has no pressure."""
+        return self.payload.get("pressure_context_source")
 
 
 def dedupe_key(r: Reading) -> tuple[str, str, int | None, str, str]:

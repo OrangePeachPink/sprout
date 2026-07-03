@@ -63,9 +63,9 @@ the cross-project core both repos carry.
 | 15 | `value` | dev | yes | *(null)* | interpreted value — **null** until a calibrated VWC exists; never an uncalibrated % (#38). **`raw_value` + band are authoritative.** |
 | 16 | `unit` | dev | yes | *(null)* | unit of `value` (null while `value` is null) |
 | 17 | `quality_flag` | dev | yes | `OK` | shared enum, §4 |
-| 18 | `temp_context_c` | host/dev | yes | *(null)* | future env layer (C4) |
-| 19 | `rh_context_pct` | host/dev | yes | *(null)* | future env layer (C4) |
-| 20 | `pressure_context_hpa` | host/dev | yes | *(null)* | future env layer (C4) |
+| 18 | `temp_context_c` | host | yes | *(null)* | interior ambient, §12 (ADR-0023 v2) |
+| 19 | `rh_context_pct` | host | yes | *(null)* | interior ambient, §12 (ADR-0023 v2) |
+| 20 | `pressure_context_hpa` | host | yes | *(null)* | §12 — pressure exception (ADR-0023 §3) |
 | 21 | `event_id` | dev/host | yes | *(null)* | links to event table, §5 (D1) |
 | 22 | `payload` | dev | plants-ext | `level=OK;role=disp;spread=50;gpio=36` | `;`-sep `k=v`, §6 |
 | 23 | `notes` | host | yes | *(null)* | optional human annotation |
@@ -185,6 +185,9 @@ Raw rows carry `event_id` (null when idle); one event-table row per event with: 
 and the first `=` splits key/value, so values *may* contain spaces (e.g. `level=well watered`). Plants
 `plants.soil` keys: `level` (band name, e.g. `OK`/`well watered`), `role` (`disp`|`diag`),
 `spread` (raw spread of kept samples), `gpio`. Example: `level=well watered;role=disp;spread=48;gpio=36`.
+Host-appended keys (additive, never touching device keys): `host_monotonic_ms` (#9), the §11 v2 keys
+(`device_seq`, `time_source`, `device_timestamp_utc`), and the §12 context tags (`context_source`,
+`pressure_context_source`).
 
 ---
 
@@ -365,3 +368,43 @@ v2 changes **what's recorded alongside a row**, not the raw-is-truth model itsel
   additive-only), read as-is.
 - **The multi-device registry / dashboard** (#485, #486) — those consume `device_id`/`sensor_id` that
   already exist in v1; §11 doesn't change their contract.
+
+---
+
+## 12. Interior-ambient context fill (IMPLEMENTED — #562, ADR-0023 v2 ratified 2026-07-02)
+
+The long-reserved context columns (18–20) are filled **host-side at log-write time** by the logger's
+`ContextFiller` (`tools/logger/context_fill.py`), from the `plants.env` rows streaming through the same
+session. Firmware is unaffected. The columns hold values; the **provenance tags ride `payload` k=v**
+(`context_source`, `pressure_context_source`) — never new positional columns, so the shared core
+(cols 1–21, 23) stays byte-identical with the sibling AQ project.
+
+### 12.1 Two families, fenced (ADR-0023 v2)
+
+Interior ambient (`temp_context_c`, `rh_context_pct`) fills **only** from the two proximity classes:
+
+| Class | Meaning | `context_source` values today |
+|---|---|---|
+| `plant_local` | in the plant's own microclimate | `sht45_onrig` |
+| `room` | smart-home ambient for the room (seam; integrations are #563) | `zigbee_room`, `thread_room`, `matter_room`, `ecobee`, `ha_ambient` |
+
+- **The `plant_local` boundary** (the placement rule, per maintainer 2026-07-02): if the sensor shares
+  the plant's shelf/rig — moving the plant would mean moving the sensor — it is plant-local; if it
+  measures the room the plant happens to be in, it is room-class. The current rig's SHT45 at
+  `breadboard_near_esp32` is plant-local.
+- Exactly **one** source fills a row's interior columns (plant-local beats room; freshest within the
+  class; never a blend). Nothing fresh → columns stay honestly empty.
+- **A weather feed never fills interior temp/RH** — enforced structurally (the filler refuses an
+  exterior class in its interior source map) and pinned by test.
+- **ESP32 die temp never fills any context column** — excluded by identity *before* the source map is
+  consulted (so even a misconfigured map can't admit it); pinned by test.
+- A context value never travels without its tag; the tag resolves deterministically to its class via
+  `parse_v1.context_class()`.
+
+### 12.2 The pressure exception (ADR-0023 §3)
+
+`pressure_context_hpa` **may** fill from the exterior family (indoor pressure tracks outdoor), tagged
+with its own per-quantity `pressure_context_source` (e.g. `weather_openmeteo`) — per-quantity because
+mixed-source rows are the common case (the SHT45 has no pressure). The fill seam is implemented and
+tested; live weather wiring is a separate slice (the #367 ingestion does not fetch pressure yet, and
+the logger is offline-first — R9 — so it must come from a local cache, never a fetch in the log loop).
