@@ -16,11 +16,15 @@ identifiers that tie the repo to the maintainer's hardware and home network:
   paths (the serial suffix is the unique-to-your-unit part) and bare
   ``VID_xxxx&PID_xxxx`` model IDs (flagged per the #558 directive; generic
   model-level mentions can be allowlisted with a reason).
-- **SSIDs / hostnames** in text: not regexable generically - matched against
-  an OPERATOR-LOCAL denylist (``config/identifiers.local.txt``, gitignored;
-  committing the denylist would itself leak the identifiers). Absent file =>
-  the class is skipped with a note (that's the CI case; CI still enforces the
-  regex classes).
+- **SSIDs / hostnames / other operator-sensitive terms** in text: not
+  regexable generically - matched against an OPERATOR-LOCAL denylist
+  (``config/identifiers.local.txt``, gitignored; committing the denylist would
+  itself leak the terms). Home-network names are the original case, but the
+  same list also covers any literal an operator wants kept out of the public
+  tree - e.g. internal or companion-project codenames not yet announced.
+  One term per line (``re:`` prefix = regex). Absent file => the class is
+  skipped with a note (that's the CI case; CI still enforces the regex
+  classes).
 
 Findings print MASKED by default (first/last fragment only) so a CI log never
 re-leaks what it caught; ``--reveal`` unmasks for local triage.
