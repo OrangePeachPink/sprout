@@ -40,9 +40,10 @@
 /* The calibration table and the firmware must agree on the channel count. */
 static_assert(SENSOR_CAL_CHANNELS == NUM_SENSORS,
               "calibration.h channel count must match NUM_SENSORS");
-#include "wifi_net.h" /* connect/retry state machine, pure C (#21 desk-buildable slice) */
+#include "wifi_net.h" /* connect/retry/portal state machine, pure C (#21/#275) */
 #include <WiFi.h>
 #include <WebServer.h> /* core-bundled, no lib_deps entry needed */
+#include <DNSServer.h> /* captive-portal catch-all DNS (#275, core-bundled) */
 #include <time.h> /* NTP-on-connect (#278): configTime/gmtime_r/strftime */
 #include <sys/time.h> /* gettimeofday - ms precision for device_timestamp_utc */
 
@@ -120,6 +121,14 @@ static wifi_net_ctx_t g_wifi;
 static char g_wifi_ssid[64] = "";
 static char g_wifi_pass[64] = "";
 static bool g_wifi_creds_dirty = false;
+
+/* Captive portal (#275, ADR-0020 §4): config-only AP + catch-all DNS so a
+ * phone's captive-detection probe lands on /setup. The AP name is synthetic
+ * (ADR-0020 §2): WIFI_AP_PREFIX + a generated suffix persisted in NVS - never
+ * MAC/silicon-derived. Raised/torn down on wifi_net state EDGES in loop(). */
+static DNSServer g_dns;
+static bool g_portal_up = false;
+static char g_ap_name[32] = "";
 
 /* Served-status skeleton (#21): minimal read-only status page. No control
  * endpoints here — manual actuation over the network (with auth + the same
@@ -649,6 +658,113 @@ static void handleTelemetry()
     g_http.send(200, "text/plain", resp);
 }
 
+/* ---- Captive portal (#275) ----------------------------------------------- */
+
+/* GET /setup - minimal functional onboarding form. Deliberately plain HTML:
+ * Design owns the portal screens (#275's Design half); this is the working
+ * substrate they restyle. ADR-0020 §4: NEVER reflects stored credentials -
+ * the form is always empty. */
+static void handleSetupForm()
+{
+    static const char page[] =
+        "<!DOCTYPE html><html><head><meta name=\"viewport\" "
+        "content=\"width=device-width,initial-scale=1\">"
+        "<title>Sprout setup</title></head><body>"
+        "<h1>Sprout WiFi setup</h1>"
+        "<p>Join Sprout to your home network. Credentials are stored on the "
+        "device only.</p>"
+        "<form method=\"POST\" action=\"/setup\">"
+        "<label>Network name (SSID)<br><input name=\"ssid\" maxlength=\"63\" "
+        "required></label><br><br>"
+        "<label>Password<br><input name=\"pass\" type=\"password\" "
+        "maxlength=\"63\"></label><br>"
+        "<p>Leave the password empty for an open network.</p>"
+        "<button type=\"submit\">Save &amp; connect</button></form>"
+        "</body></html>";
+    g_http.send(200, "text/html", page);
+}
+
+/* POST /setup - save credentials to NVS (same store !wifi uses) and trigger
+ * an immediate fresh STA attempt via the dirty flag. The reply page never
+ * echoes what was submitted (ADR-0020 §1/§4). */
+static void handleSetupSave()
+{
+    String ssid = g_http.arg("ssid");
+    String pass = g_http.arg("pass");
+    if (ssid.length() == 0 || ssid.length() >= sizeof(g_wifi_ssid)) {
+        g_http.send(400, "text/plain", "SSID must be 1-63 characters.");
+        return;
+    }
+    /* same CSV-safety sanitization as !name/!wifi: no commas/control chars */
+    strncpy(g_wifi_ssid, ssid.c_str(), sizeof(g_wifi_ssid) - 1);
+    g_wifi_ssid[sizeof(g_wifi_ssid) - 1] = '\0';
+    for (size_t i = 0; g_wifi_ssid[i]; i++) {
+        char c = g_wifi_ssid[i];
+        if (c == ',' || c < 0x20 || c == 0x7f) g_wifi_ssid[i] = '_';
+    }
+    strncpy(g_wifi_pass, pass.c_str(), sizeof(g_wifi_pass) - 1);
+    g_wifi_pass[sizeof(g_wifi_pass) - 1] = '\0';
+    g_prefs.putString("wifi_ssid", g_wifi_ssid);
+    g_prefs.putString("wifi_pass", g_wifi_pass);
+    g_wifi_creds_dirty = true; /* loop() forces an immediate fresh attempt */
+    g_http.send(200, "text/html",
+                "<!DOCTYPE html><html><body><h1>Saved.</h1><p>Sprout is "
+                "joining your network now. This setup hotspot turns itself "
+                "off once connected.</p></body></html>");
+}
+
+/* Catch-all: in portal mode, redirect every unknown URL to /setup so phone/
+ * tablet captive-portal detection pops the form; otherwise a plain 404. */
+static void handleNotFound()
+{
+    if (g_portal_up) {
+        g_http.sendHeader("Location", String("http://") +
+                                          WiFi.softAPIP().toString() +
+                                          "/setup");
+        g_http.send(302, "text/plain", "");
+    } else {
+        g_http.send(404, "text/plain", "not found");
+    }
+}
+
+/* Raise the config AP (idempotent). AP name: WIFI_AP_PREFIX + a 4-hex suffix
+ * generated ONCE and persisted to NVS - synthetic identity, never a hardware
+ * id (ADR-0020 §2). Open AP: the portal is local-link, short-lived, and
+ * config-only per ADR-0020 §4's stated home-hobby threat model. */
+static void portalUp()
+{
+    if (g_portal_up) return;
+    if (g_ap_name[0] == '\0') {
+        char suffix[8];
+        size_t n = g_prefs.getString("ap_suffix", suffix, sizeof(suffix));
+        if (n == 0 || suffix[0] == '\0') {
+            snprintf(suffix, sizeof(suffix), "%04x",
+                     (unsigned)(esp_random() & 0xFFFF));
+            g_prefs.putString("ap_suffix", suffix);
+        }
+        snprintf(g_ap_name, sizeof(g_ap_name), "%s%s", WIFI_AP_PREFIX, suffix);
+    }
+    WiFi.mode(WIFI_AP_STA); /* AP for the portal + STA for background retries */
+    WiFi.softAP(g_ap_name);
+    g_dns.start(53, "*", WiFi.softAPIP());
+    g_portal_up = true;
+    char msg[80];
+    snprintf(msg, sizeof(msg), "# portal: up ap=%s (config-only, ADR-0020)",
+             g_ap_name);
+    Serial.println(msg);
+}
+
+/* Tear the config AP down (idempotent) - the CONNECTED edge. */
+static void portalDown()
+{
+    if (!g_portal_up) return;
+    g_dns.stop();
+    WiFi.softAPdisconnect(true);
+    WiFi.mode(WIFI_STA);
+    g_portal_up = false;
+    Serial.println("# portal: down (joined the network)");
+}
+
 /* ---- Arduino lifecycle -------------------------------------------------- */
 
 void setup()
@@ -750,6 +866,9 @@ void setup()
         g_http.on("/", handleRoot);
         g_http.on("/telemetry",
                   handleTelemetry); /* schema-shaped rows (#276) */
+        g_http.on("/setup", HTTP_GET, handleSetupForm); /* portal (#275) */
+        g_http.on("/setup", HTTP_POST, handleSetupSave);
+        g_http.onNotFound(handleNotFound); /* captive-detection redirect */
         g_http.begin();
     }
     wifi_net_init(&g_wifi);
@@ -799,21 +918,34 @@ void loop()
             g_wifi_creds_dirty = false;
         }
         bool has_creds = g_wifi_ssid[0] != '\0';
+        const wifi_net_cfg_t net_cfg = {
+            WIFI_CONNECT_TIMEOUT_MS,
+            WIFI_RETRY_BACKOFF_MS,
+            WIFI_PORTAL_AFTER_FAILURES,
+            WIFI_PORTAL_RETRY_BACKOFF_MS,
+        };
         if (wifi_net_tick(&g_wifi, has_creds, WiFi.status() == WL_CONNECTED,
-                          now, WIFI_CONNECT_TIMEOUT_MS,
-                          WIFI_RETRY_BACKOFF_MS)) {
+                          now, &net_cfg)) {
             WiFi.begin(g_wifi_ssid, g_wifi_pass);
         }
-        /* NTP-on-connect (#278 tail, ADR-0018 §3): arm SNTP on each fresh
-         * association (re-arms after a drop, so a long-offline clock re-syncs).
-         * configTime is async - rows keep reporting device_uptime until
-         * timeIsSynced() sees a real answer; nothing blocks here. */
+        /* State EDGES: NTP-on-connect (#278 tail, ADR-0018 §3) arms SNTP on
+         * each fresh association (re-arms after a drop, so a long-offline
+         * clock re-syncs; configTime is async, nothing blocks). The captive
+         * portal (#275) raises its AP on the PORTAL edge and tears down on
+         * the CONNECTED edge. */
         static wifi_net_state_t prevWifiState = WIFI_NET_IDLE;
         if (g_wifi.state == WIFI_NET_CONNECTED &&
             prevWifiState != WIFI_NET_CONNECTED) {
             configTime(0, 0, WIFI_NTP_SERVER); /* UTC: no TZ/DST offsets */
+            portalDown();
+        }
+        if (g_wifi.state == WIFI_NET_PORTAL &&
+            prevWifiState != WIFI_NET_PORTAL) {
+            portalUp();
         }
         prevWifiState = g_wifi.state;
+        if (g_portal_up)
+            g_dns.processNextRequest(); /* captive-detection DNS catch-all */
         g_http
             .handleClient(); /* cheap no-op until a client actually connects */
     }

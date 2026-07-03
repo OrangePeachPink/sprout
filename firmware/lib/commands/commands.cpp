@@ -293,7 +293,10 @@ static void handle_wifi(const char *args, char *reply, size_t replen)
     prefs()->putString("wifi_ssid", s_ctx.wifi_ssid);
     prefs()->putString("wifi_pass", s_ctx.wifi_pass);
     *s_ctx.wifi_creds_dirty = true;
-    snprintf(reply, replen, "# ack wifi ssid=%s (pass %s)", s_ctx.wifi_ssid,
+    /* ADR-0020 §1: credentials are never logged - and the serial stream IS a
+     * log (the host logger records every line to CSV). Ack without echoing
+     * the SSID; confirm only that something was stored. */
+    snprintf(reply, replen, "# ack wifi stored (ssid set, pass %s)",
              pass[0] ? "set" : "open/none");
 }
 
