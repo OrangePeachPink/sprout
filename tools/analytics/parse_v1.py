@@ -555,6 +555,16 @@ def _row_dict(cols: list[str], fields: list[str]) -> dict[str, str]:
     return dict(zip(cols, fields))
 
 
+def reading_from_row(row: dict[str, str], seg: SegmentHeader | None = None) -> Reading:
+    """Build one ``Reading`` from a CANONICAL_COLUMNS-shaped row dict, independent
+    of file parsing (#277) - the public seam a non-file transport (the WiFi
+    ``DeviceAdapter``, ``source_adapter.py``) uses to produce a ``Reading``
+    identical in shape to one read from a CSV file. ``seg`` supplies
+    ``schema_version`` provenance; omit for a segment-less/synthetic row (an
+    empty ``SegmentHeader`` -> ``schema_version=None``, honest, never guessed)."""
+    return _reading_from_row(row, seg if seg is not None else SegmentHeader())
+
+
 def _reading_from_row(row: dict[str, str], seg: SegmentHeader) -> Reading:
     return Reading(
         record_type=row.get("record_type", ""),

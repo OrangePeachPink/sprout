@@ -2,17 +2,22 @@
 
 Covers TetheredAdapter's behavior-preserving wrap of parse_files()/gather_inputs(),
 so refactoring dashboard.py/serve.py's call sites onto the seam is provably a
-no-behavior-change move.
+no-behavior-change move. Also covers DeviceAdapter (#276/#277 AC1): the WiFi-served
+transport, proven both against an injected fake fetch (fast, deterministic) and a
+real HTTP server (the actual byte-level contract, no physical hardware needed).
 """
 
 from __future__ import annotations
 
+import http.server
 import sys
+import threading
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from parse_v1 import parse_files
-from source_adapter import TetheredAdapter
+from source_adapter import DEVICE_ADAPTER_VERSION, DeviceAdapter, TetheredAdapter
 
 _COLS = "record_type,timestamp_utc,session_id,raw_value,quality_flag,payload"
 _ROW = "plants.soil,2026-06-27T00:00:30.000Z,sess001,1312,OK,level=well watered;gpio=36"
@@ -62,4 +67,181 @@ def test_explicit_inputs_bypass_discover(tmp_path: Path) -> None:
 
     data = TetheredAdapter(discover=fake_discover).load([str(csv)])
     assert calls["n"] == 0  # explicit inputs win; discover never called
+    assert len(data.readings) == 1
+
+
+# --------------------------------------------------------------------------- #
+# DeviceAdapter (#276/#277 AC1): the WiFi-served transport
+# --------------------------------------------------------------------------- #
+
+_DEVICE_COLS_HEADER = (
+    "# device_cols: record_type,session_id,device_id,fw,millis_ms,sensor_model,"
+    "sensor_id,sensor_position,channel,raw_value,value,unit,quality_flag,payload"
+)
+
+
+def _device_line(
+    *,
+    record_type: str = "plants.soil",
+    session: str = "wifi001",
+    device: str = "sprout-classic-01",
+    fw: str = "0.8.0",
+    millis: int = 60000,
+    sensor_model: str = "UMLIFE_v2_TLC555",
+    sensor: str = "s1",
+    position: str = "origplant",
+    channel: str = "soil_moisture",
+    raw: int = 1400,
+    quality: str = "OK",
+    payload: str = "level=well watered;role=diag;spread=18;gpio=36",
+    bad_crc: bool = False,
+) -> str:
+    """One device line exactly as handleTelemetry() (firmware/src/main.cpp) emits
+    it - same DEVICE_COLS order, same *HH XOR checksum as the serial wire."""
+    body = (
+        f"{record_type},{session},{device},{fw},{millis},"
+        f"{sensor_model},{sensor},{position},{channel},"
+        f"{raw},,,{quality},{payload}"
+    )
+    calc = 0
+    for ch in body:
+        calc ^= ord(ch) & 0xFF
+    if bad_crc:
+        calc ^= 0xFF  # deliberately wrong
+    return f"{body}*{calc:02X}"
+
+
+def _telemetry_response(lines: list[str]) -> str:
+    return _DEVICE_COLS_HEADER + "\n" + "\n".join(lines) + "\n"
+
+
+def test_device_adapter_parses_the_real_telemetry_shape() -> None:
+    text = _telemetry_response(
+        [_device_line(sensor="s1", raw=1400), _device_line(sensor="s2", raw=1600)]
+    )
+    fixed_now = datetime(2026, 7, 2, tzinfo=timezone.utc)
+    da = DeviceAdapter(
+        "http://192.0.2.1", fetch=lambda url: text, clock=lambda: fixed_now
+    )
+    data = da.load()
+    assert len(data.readings) == 2
+    ids = {r.sensor_id: r.raw_value for r in data.readings}
+    assert ids == {"s1": 1400, "s2": 1600}
+    assert data.segments[0].device_id == "sprout-classic-01"
+    assert data.sources == ["http://192.0.2.1"]
+
+
+def test_device_adapter_stamps_host_observed_time_and_own_logger_version() -> None:
+    text = _telemetry_response([_device_line()])
+    fixed_now = datetime(2026, 7, 2, 12, 30, 0, tzinfo=timezone.utc)
+    da = DeviceAdapter(
+        "http://192.0.2.1", fetch=lambda url: text, clock=lambda: fixed_now
+    )
+    r = da.load().readings[0]
+    assert r.timestamp_utc == fixed_now
+    assert r.logger_version == DEVICE_ADAPTER_VERSION  # never plants_logger's own
+
+
+def test_device_adapter_carries_device_owned_time_fields_through() -> None:
+    """Firmware's forward-compat note on PR #553: once a bench pass syncs NTP,
+    real rows gain device_seq/time_source=device_synced/device_timestamp_utc in
+    payload - additive, no shape change. DeviceAdapter never touches payload
+    contents (stamp_row() passes dev["payload"] through unmodified for this
+    adapter, since it's never given a host_monotonic_ms to append), so these
+    already reach Reading via the existing generic parse_payload() properties -
+    this proves it with a real post-sync-shaped payload, not just theory."""
+    text = _telemetry_response(
+        [
+            _device_line(
+                sensor="s1",
+                payload=(
+                    "level=well watered;role=diag;spread=18;gpio=36;"
+                    "device_seq=4821;time_source=device_synced;"
+                    "device_timestamp_utc=2026-07-02T06:15:00Z"
+                ),
+            )
+        ]
+    )
+    da = DeviceAdapter("http://192.0.2.1", fetch=lambda url: text)
+    r = da.load().readings[0]
+    assert r.device_seq == 4821
+    assert r.time_source == "device_synced"
+    assert r.device_timestamp_utc == datetime(2026, 7, 2, 6, 15, 0, tzinfo=timezone.utc)
+    assert r.band == "well watered"  # the device-emitted fields all survive too
+
+
+def test_device_adapter_drops_a_crc_failed_row_not_the_whole_poll() -> None:
+    text = _telemetry_response(
+        [_device_line(sensor="s1", bad_crc=True), _device_line(sensor="s2")]
+    )
+    da = DeviceAdapter("http://192.0.2.1", fetch=lambda url: text)
+    data = da.load()
+    assert len(data.readings) == 1
+    assert data.readings[0].sensor_id == "s2"
+
+
+def test_device_adapter_unreachable_device_is_empty_not_a_crash() -> None:
+    def _boom(url: str) -> str:
+        raise OSError("Connection refused")
+
+    da = DeviceAdapter("http://192.0.2.1", fetch=_boom)
+    data = da.load()
+    assert data.readings == [] and data.segments == []
+
+
+def test_device_adapter_empty_response_is_honest_empty() -> None:
+    # every channel empty (g_last_row[ch][0] == '\0') -> just the header line
+    da = DeviceAdapter("http://192.0.2.1", fetch=lambda url: _DEVICE_COLS_HEADER + "\n")
+    data = da.load()
+    assert data.readings == [] and data.segments == []
+
+
+def test_device_adapter_sample_id_increments_across_polls() -> None:
+    text = _telemetry_response([_device_line()])
+    da = DeviceAdapter("http://192.0.2.1", fetch=lambda url: text)
+    first = da.load().readings[0].sample_id
+    second = da.load().readings[0].sample_id
+    assert second == first + 1
+
+
+# --------------------------------------------------------------------------- #
+# DeviceAdapter end-to-end: a real HTTP server, the actual byte-level contract
+# --------------------------------------------------------------------------- #
+
+
+class _TelemetryHandler(http.server.BaseHTTPRequestHandler):
+    """Serves the exact bytes handleTelemetry() (#276) would - proves
+    DeviceAdapter's real _http_get() path, not just the injected-fetch unit
+    tests above."""
+
+    def do_GET(self) -> None:  # http.server dispatch name
+        if self.path == "/telemetry":
+            body = _telemetry_response([_device_line(sensor="s1", raw=1777)]).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def log_message(self, fmt: str, *args: object) -> None:
+        pass  # keep test output quiet
+
+
+def test_device_adapter_end_to_end_over_real_http() -> None:
+    server = http.server.HTTPServer(("127.0.0.1", 0), _TelemetryHandler)
+    port = server.server_address[1]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        data = DeviceAdapter(f"http://127.0.0.1:{port}").load()
+        assert len(data.readings) == 1
+        assert data.readings[0].sensor_id == "s1"
+        assert data.readings[0].raw_value == 1777
+        assert data.readings[0].device_id == "sprout-classic-01"
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
     assert len(data.readings) == 1

@@ -256,6 +256,50 @@ def _append_payload(payload, key, value):
     return f"{payload};{pair}" if payload else pair
 
 
+def stamp_row(dev, sample_id, now, logger_version, *, host_monotonic_ms=None):
+    """Build one CANONICAL_COLS row dict from a parsed device line, stamped with
+    the host's observed-at time + a host sample counter (schema v1 S2: these are
+    host-filled, not device-native). Pulled out of RotatingCsv.write() (#277) so a
+    non-serial transport (the WiFi DeviceAdapter, source_adapter.py) can produce
+    byte-identical row semantics without going through a CSV file at all.
+
+    ``logger_version`` is the caller's own identity (e.g. ``LOGGER_VERSION`` for
+    the serial logger, a distinct string for an HTTP-polling adapter) - never
+    hardcoded here, so a WiFi-sourced row honestly names what actually stamped it
+    rather than falsely claiming the serial logger touched it.
+
+    ``host_monotonic_ms`` is optional (#9): the serial logger has one persistent
+    process with a meaningful single start reference; a per-poll adapter usually
+    doesn't, so it stays the honest default None rather than a fabricated value."""
+    payload = dev["payload"]
+    if host_monotonic_ms is not None:
+        payload = _append_payload(payload, "host_monotonic_ms", host_monotonic_ms)
+    row = dict.fromkeys(CANONICAL_COLS, "")
+    row.update(
+        {
+            "record_type": dev["record_type"],
+            "session_id": dev["session_id"],
+            "device_id": dev["device_id"],
+            "firmware_version": dev["fw"],
+            "logger_version": logger_version,
+            "millis_ms": dev["millis_ms"],
+            "sensor_model": dev["sensor_model"],
+            "sensor_id": dev["sensor_id"],
+            "sensor_position": dev["sensor_position"],
+            "channel": dev["channel"],
+            "raw_value": dev["raw_value"],
+            "value": dev["value"],
+            "unit": dev["unit"],
+            "quality_flag": dev["quality_flag"],
+            "payload": payload,
+            "timestamp_utc": iso_utc(now),
+            "timestamp_local": iso_local(now),
+            "sample_id": sample_id,
+        }
+    )
+    return row
+
+
 class RotatingCsv:
     """One CSV file per UTC day, each re-emitting the device header block so every
     segment is independently self-describing.
@@ -314,30 +358,8 @@ class RotatingCsv:
             self.device_id = dev["device_id"]
         new_path = self._roll(now)
         host_monotonic_ms = round((self._monotonic() - self._t0) * 1000)
-        row = dict.fromkeys(CANONICAL_COLS, "")
-        row.update(
-            {
-                "record_type": dev["record_type"],
-                "session_id": dev["session_id"],
-                "device_id": dev["device_id"],
-                "firmware_version": dev["fw"],
-                "logger_version": LOGGER_VERSION,
-                "millis_ms": dev["millis_ms"],
-                "sensor_model": dev["sensor_model"],
-                "sensor_id": dev["sensor_id"],
-                "sensor_position": dev["sensor_position"],
-                "channel": dev["channel"],
-                "raw_value": dev["raw_value"],
-                "value": dev["value"],
-                "unit": dev["unit"],
-                "quality_flag": dev["quality_flag"],
-                "payload": _append_payload(
-                    dev["payload"], "host_monotonic_ms", host_monotonic_ms
-                ),
-                "timestamp_utc": iso_utc(now),
-                "timestamp_local": iso_local(now),
-                "sample_id": sample_id,
-            }
+        row = stamp_row(
+            dev, sample_id, now, LOGGER_VERSION, host_monotonic_ms=host_monotonic_ms
         )
         self.writer.writerow([row[c] for c in CANONICAL_COLS])
         self.fh.flush()
