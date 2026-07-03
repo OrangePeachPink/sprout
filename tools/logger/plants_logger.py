@@ -323,7 +323,9 @@ class RotatingCsv:
     on an NTP correction - a relative axis anchored to ``time.monotonic()`` at
     logger start survives both, for a multi-week run's own internal ordering."""
 
-    def __init__(self, logdir, maxbytes=0, *, monotonic=time.monotonic):
+    def __init__(
+        self, logdir, maxbytes=0, *, monotonic=time.monotonic, logger_version=None
+    ):
         self.logdir = logdir
         self.maxbytes = maxbytes
         self.device_id = "unknown"
@@ -334,6 +336,10 @@ class RotatingCsv:
         self.current_path = None
         self._monotonic = monotonic
         self._t0 = monotonic()  # this logger process's own start reference
+        # #582: the segment header's `logger=` claim names whoever actually
+        # writes this file - the serial logger by default, the fleet logger
+        # when it constructs its own writers. Never a borrowed identity.
+        self._logger_version = logger_version or LOGGER_VERSION
         os.makedirs(logdir, exist_ok=True)
 
     def set_header(self, lines):
@@ -358,7 +364,7 @@ class RotatingCsv:
         self.writer = csv.writer(self.fh)
         self.fh.write(
             f"# log_start_utc={iso_utc(now)}  tz_offset={tz_offset(now)}  "
-            f"logger={LOGGER_VERSION}  schema_version=1\n"
+            f"logger={self._logger_version}  schema_version=1\n"
         )
         for ln in self.header_lines:
             self.fh.write(ln + "\n")
@@ -383,6 +389,18 @@ class RotatingCsv:
         self.writer.writerow([row[c] for c in CANONICAL_COLS])
         self.fh.flush()
         return row, new_path
+
+    def write_row(self, row, now):
+        """Persist an ALREADY-STAMPED canonical row dict (#582 - the fleet
+        logger's path: DeviceAdapter stamped it at poll time; this just lands
+        it on disk through the same roll/header/flush machinery as write()).
+        Returns the new segment path if this write rolled, else None."""
+        if self.device_id == "unknown" and row.get("device_id"):
+            self.device_id = row["device_id"]
+        new_path = self._roll(now)
+        self.writer.writerow([row.get(c, "") for c in CANONICAL_COLS])
+        self.fh.flush()
+        return new_path
 
     def write_comment(self, line):
         """Write a raw ``#`` comment into the current segment (honest seam, #417)."""
