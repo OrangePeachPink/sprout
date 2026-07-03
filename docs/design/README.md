@@ -12,7 +12,7 @@ whole system. Start there:
 - **`foundations/`** — the design system + the Brand Consistency Pass (the standard + its changelog).
 - **`brand/`** — the brand guide, the mark, banners, and the social-preview image.
 - **`voice/`** — voice & personality.
-- **`onboarding/`** — the User Front Door: the designed "Start Here" for the person who runs Sprout (#134).
+- **`onboarding/`** — first-meeting surfaces: the front doors, the sensor guide, untethered states.
 - **`motion/`** — the welcome loop, day-in-the-life, loader, mark demo.
 - **`go-to-market/`** — decks and the social kit.
 - **`merch/`** — the print-ready merch catalog + production spec.

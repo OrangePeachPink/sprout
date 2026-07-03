@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --leaf:#34A853; --sprout:#8BD24F; --ink:#1E2A18; --muted:#6F7E62; --border:#E3E9D8;
+    --surface:#FFFFFF; --surface-2:#F7FAF2; --bg:#EEF4E6;
+    --st-watering:#17B6C4; --st-dry:#F5A623; --st-due:#E8703A; --st-fault:#E0483D; --st-predicted:#7C5CFF;
+    --band-saturated:#0E7A86; --band-wet:#17B6C4; --band-moist:#34A853; --band-ideal:#8BD24F;
+    --band-drying:#F5A623; --band-dry:#E8703A; --band-parched:#E0483D;
+    --q-nosignal:#9A8480;
+    --d-bg:#0C1311; --d-surface-2:#111A16; --d-surface:#18231F; --d-border:#29372F;
+    --d-ink:#E9F1EB; --d-muted:#8B9B90; --d-leaf:#93DD6A;
+    --font-display:"Baloo 2",sans-serif; --font-ui:"Hanken Grotesk",sans-serif; --font-data:"JetBrains Mono",monospace;
+    --r-control:8px; --r-tile:14px; --r-card:20px; --r-pill:999px;
+    --e1:0 1px 2px rgba(30,42,24,.06); --e2:0 6px 18px rgba(30,42,24,.08);
+  }
+  body{margin:0;}
+  @keyframes liveGlow{0%,100%{box-shadow:0 0 5px currentColor;}50%{box-shadow:0 0 12px currentColor;}}
+  @keyframes syncSpin{to{transform:rotate(360deg);}}
+</style>
+</helmet>
+
+<div style="background:var(--bg); color:var(--ink); font-family:var(--font-ui); min-height:100vh; padding:34px 26px;">
+<div style="max-width:1120px; margin:0 auto; display:flex; flex-direction:column; gap:18px;">
+
+  <!-- ================= HEADER ================= -->
+  <div data-screen-label="Header" style="display:flex; flex-direction:column; gap:10px;">
+    <div style="display:flex; align-items:center; gap:13px; flex-wrap:wrap;">
+      <span style="display:inline-flex; width:30px; height:30px; align-items:center; justify-content:center; border-radius:9px; background:var(--leaf); color:#fff; font-family:var(--font-display); font-weight:700; font-size:17px;">S</span>
+      <h1 style="font-family:var(--font-display); font-weight:700; font-size:24px; margin:0; letter-spacing:-0.01em;">Untethered — offline · online · syncing</h1>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      <span style="font-family:var(--font-data); font-size:10.5px; font-weight:600; color:var(--st-predicted); border:1px solid var(--st-predicted); border-radius:var(--r-pill); padding:3px 11px;">#279 · Wave 1</span>
+      <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted); border:1px solid var(--border); border-radius:var(--r-pill); padding:3px 11px;">PRD-0005 R8</span>
+      <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted); border:1px solid var(--border); border-radius:var(--r-pill); padding:3px 11px;">ADR-0018 · ratified</span>
+      <span style="font-family:var(--font-data); font-size:10.5px; color:var(--leaf); border:1px solid color-mix(in srgb, var(--leaf) 45%, transparent); border-radius:var(--r-pill); padding:3px 11px;">built against #532 · GET / on-device</span>
+    </div>
+    <p style="margin:0; font-size:13.5px; line-height:1.55; color:var(--muted); max-width:820px;">The three presentation states for a Sprout that lives on the windowsill, drawn against the <strong style="color:var(--ink);">real served status</strong> — not an imagined payload. Hardens the connection-states sketch from the Untethered exploration (PR #249); the state lives in a chip + one line, never in the numbers.</p>
+  </div>
+
+  <!-- ================= SIMULATOR ================= -->
+  <div data-screen-label="State simulator" style="display:flex; flex-direction:column; gap:12px;">
+    <div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap;">
+      <span style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">Try it</span>
+      <button onClick="{{ pullPlug }}" disabled="{{ isOffline }}" style="font-family:var(--font-ui); font-size:12.5px; font-weight:700; color:{{ plugFg }}; background:{{ plugBg }}; border:1px solid {{ plugBg }}; border-radius:var(--r-pill); padding:8px 17px; cursor:{{ plugCursor }}; white-space:nowrap;">⏻ Take the network away</button>
+      <button onClick="{{ plugBack }}" disabled="{{ notOffline }}" style="font-family:var(--font-ui); font-size:12.5px; font-weight:700; color:{{ backFg }}; background:{{ backBg }}; border:1px solid {{ backBg }}; border-radius:var(--r-pill); padding:8px 17px; cursor:{{ backCursor }}; white-space:nowrap;">⟳ Bring it back</button>
+      <span style="font-size:12px; color:var(--muted);">{{ simHint }}</span>
+    </div>
+
+    <div style="display:grid; grid-template-columns:460px 1fr; gap:14px; align-items:start;">
+
+      <!-- ===== the glance surface (hub / browser view) ===== -->
+      <div style="border-radius:var(--r-card); overflow:hidden; background:var(--d-bg); border:1px solid var(--d-border); box-shadow:0 14px 34px rgba(0,0,0,.30);">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:15px 18px; border-bottom:1px solid var(--d-border);">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--d-ink);">Sprout</span>
+            <span style="font-family:var(--font-data); font-size:10px; color:var(--d-muted); border:1px solid var(--d-border); border-radius:var(--r-pill); padding:2px 8px; white-space:nowrap;">windowsill · esp32dev</span>
+          </div>
+          <span style="display:inline-flex; align-items:center; gap:7px; font-family:var(--font-data); font-size:11.5px; font-weight:600; color:{{ stChipColor }};">
+            <sc-if value="{{ isSyncing }}" hint-placeholder-val="{{ false }}"><span style="width:10px; height:10px; border-radius:999px; border:2px solid currentColor; border-top-color:transparent; animation:syncSpin .9s linear infinite;"></span></sc-if>
+            <sc-if value="{{ notSyncing }}" hint-placeholder-val="{{ true }}"><span style="width:8px; height:8px; border-radius:999px; background:currentColor; {{ stDotGlow }}"></span></sc-if>
+            {{ stChipLabel }}
+          </span>
+        </div>
+        <div style="display:flex; align-items:center; gap:11px; padding:13px 18px; background:var(--d-surface-2); border-bottom:1px solid var(--d-border);">
+          <x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="{{ markBand }}" size="34" static="" hint-size="30px,34px"></x-import>
+          <p style="margin:0; font-size:13.5px; line-height:1.45; color:var(--d-ink);">{{ voiceLine }}</p>
+        </div>
+        <sc-if value="{{ isSyncing }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; align-items:center; gap:10px; padding:10px 18px; border-bottom:1px solid var(--d-border);">
+            <span style="flex:1; height:4px; border-radius:999px; background:var(--d-border); overflow:hidden;"><span style="display:block; height:100%; width:{{ syncPct }}; background:var(--st-watering); border-radius:999px;"></span></span>
+            <span style="font-family:var(--font-data); font-size:10.5px; color:var(--st-watering);">{{ syncCountLabel }}</span>
+          </div>
+        </sc-if>
+        <div style="padding:14px 18px; display:flex; flex-direction:column; gap:9px; {{ chFade }}">
+          <sc-for list="{{ chRows }}" as="c" hint-placeholder-count="4">
+            <div style="display:flex; align-items:center; gap:11px; background:var(--d-surface); border:1px solid {{ c.bd }}; border-radius:var(--r-tile); padding:10px 13px;">
+              <span style="font-family:var(--font-data); font-size:10.5px; color:var(--d-muted); width:26px; flex-shrink:0;">{{ c.ch }}</span>
+              <span style="width:9px; height:9px; border-radius:999px; background:{{ c.dotColor }}; flex-shrink:0; {{ c.dotStyle }}"></span>
+              <span style="font-family:var(--font-display); font-weight:600; font-size:14px; color:{{ c.levelColor }}; min-width:104px;">{{ c.levelShown }}</span>
+              <span style="font-family:var(--font-data); font-size:11px; color:var(--d-muted);">raw {{ c.raw }}</span>
+              <span style="margin-left:auto; font-family:var(--font-data); font-size:9.5px; font-weight:600; letter-spacing:.05em; color:{{ c.qColor }}; border:1px solid color-mix(in srgb, {{ c.qColor }} 45%, transparent); border-radius:var(--r-pill); padding:2px 8px;">{{ c.quality }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex; align-items:center; gap:7px 13px; flex-wrap:wrap; padding:11px 18px; border-top:1px solid var(--d-border); font-family:var(--font-data); font-size:10px; color:var(--d-muted);">
+          <span>fw 0.3.2</span><span>git 7c31d9a</span><span>{{ ipLabel }}</span><span>up {{ uptimeLabel }}</span>
+          <span style="margin-left:auto; color:{{ timeChipColor }}; border:1px solid color-mix(in srgb, {{ timeChipColor }} 40%, transparent); border-radius:var(--r-pill); padding:1px 8px;">time: {{ timeSourceLabel }}</span>
+        </div>
+      </div>
+
+      <!-- ===== what the device actually says ===== -->
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); overflow:hidden;">
+          <div style="display:flex; align-items:center; gap:9px; padding:11px 16px; border-bottom:1px solid var(--border);">
+            <span style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">What the device actually says</span>
+            <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted);">GET / · text/plain · read-only, nothing actuates (#532)</span>
+          </div>
+          <div style="padding:13px 16px; background:var(--surface-2);">
+            <div style="font-family:var(--font-data); font-size:11px; color:var(--muted); margin-bottom:7px;">$ curl http://sprout.local/</div>
+            <sc-if value="{{ fetchOk }}" hint-placeholder-val="{{ true }}">
+              <div style="font-family:var(--font-data); font-size:12px; line-height:1.65; color:var(--ink); white-space:pre-wrap;">{{ payloadText }}</div>
+            </sc-if>
+            <sc-if value="{{ isOffline }}" hint-placeholder-val="{{ false }}">
+              <div style="font-family:var(--font-data); font-size:12px; color:var(--st-fault); margin-bottom:11px;">curl: (7) Failed to connect to sprout.local — no route to host</div>
+              <div style="border-top:1px dashed var(--border); padding-top:10px;">
+                <div style="font-family:var(--font-data); font-size:10px; color:var(--st-dry); margin-bottom:6px;">LAST-KNOWN SNAPSHOT · viewer-stamped {{ lastHeardLabel }} — the viewer's clock, never the device's claim</div>
+                <div style="font-family:var(--font-data); font-size:12px; line-height:1.65; color:var(--muted); white-space:pre-wrap;">{{ payloadText }}</div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--st-predicted); border-radius:var(--r-tile); padding:12px 16px; display:flex; flex-direction:column; gap:6px;">
+          <span style="font-family:var(--font-data); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--st-predicted);">the mapping rule</span>
+          <span style="font-size:12.5px; line-height:1.55; color:var(--ink);">Every pixel of the glance traces to a served field — <span style="font-family:var(--font-data); font-size:11.5px;">wifi=</span> + fetch result → the chip; <span style="font-family:var(--font-data); font-size:11.5px;">chN level/raw/quality</span> → the rows; <span style="font-family:var(--font-data); font-size:11.5px;">fw/git/board/ip/uptime_ms</span> → the footer. What isn't served isn't shown as fact: sync progress is the <strong>store's</strong> claim (hub-side), and "last heard" is the <strong>viewer's</strong> clock. The device never claims wall-time — <span style="font-family:var(--font-data); font-size:11.5px;">time: uptime</span> until NTP/RTC lands (#21).</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= STATE ANATOMY ================= -->
+  <div data-screen-label="State anatomy" style="display:flex; flex-direction:column; gap:10px;">
+    <div style="display:flex; align-items:baseline; gap:10px;"><span style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">The three states</span><span style="font-size:11.5px; color:var(--muted);">chip + one voice line + one rule each — numbers stay clean</span></div>
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+      <sc-for list="{{ stateCards }}" as="s" hint-placeholder-count="3">
+        <div style="background:var(--surface); border:1px solid var(--border); border-top:4px solid {{ s.color }}; border-radius:var(--r-tile); box-shadow:var(--e1); padding:15px 17px; display:flex; flex-direction:column; gap:9px;">
+          <span style="display:inline-flex; align-items:center; gap:7px; font-family:var(--font-data); font-size:12px; font-weight:700; color:{{ s.color }};"><span style="width:8px; height:8px; border-radius:999px; background:currentColor;"></span>{{ s.chip }}</span>
+          <span style="font-size:12.5px; line-height:1.5; color:var(--ink); font-style:italic;">“{{ s.voice }}”</span>
+          <span style="font-size:12px; line-height:1.55; color:var(--muted);">{{ s.rule }}</span>
+          <span style="font-family:var(--font-data); font-size:10.5px; color:{{ s.srcColor }}; border-top:1px dotted var(--border); padding-top:8px;">{{ s.src }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); box-shadow:var(--e1); padding:13px 17px; display:flex; flex-direction:column; gap:8px;">
+      <span style="font-family:var(--font-data); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);">beneath them: the device's own wifi state (served verbatim as wifi=…)</span>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <sc-for list="{{ wifiSubs }}" as="w" hint-placeholder-count="4">
+          <span style="display:inline-flex; align-items:center; gap:7px; font-family:var(--font-data); font-size:11px; color:var(--ink); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-pill); padding:5px 12px;"><span style="width:7px; height:7px; border-radius:999px; background:{{ w.color }};"></span>wifi={{ w.name }}<span style="color:var(--muted);"> · {{ w.note }}</span></span>
+        </sc-for>
+      </div>
+      <span style="font-size:11.5px; color:var(--muted); line-height:1.5;">The chip is the <em>viewer's</em> state; <span style="font-family:var(--font-data); font-size:10.5px;">wifi=</span> is the <em>device's</em> — you mostly read connecting/failed over serial or after the fact, since an unreachable device can't serve you its own bad news.</span>
+    </div>
+  </div>
+
+  <!-- ================= CHANNEL QUALITY VOCABULARY ================= -->
+  <div data-screen-label="Quality vocabulary" style="display:flex; flex-direction:column; gap:10px;">
+    <div style="display:flex; align-items:baseline; gap:10px;"><span style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">Per-channel quality — the served enum, verbatim</span><span style="font-size:11.5px; color:var(--muted);">quality gates the band: an untrusted reading never wears a band color</span></div>
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px;">
+      <sc-for list="{{ qualityCards }}" as="q" hint-placeholder-count="4">
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); box-shadow:var(--e1); padding:14px 16px; display:flex; flex-direction:column; gap:8px;">
+          <span style="font-family:var(--font-data); font-size:11px; font-weight:700; letter-spacing:.05em; color:{{ q.color }}; border:1px solid color-mix(in srgb, {{ q.color }} 45%, transparent); border-radius:var(--r-pill); padding:3px 10px; width:fit-content;">{{ q.flag }}</span>
+          <span style="font-family:var(--font-data); font-size:11px; color:var(--muted);">{{ q.when }}</span>
+          <span style="font-size:12px; line-height:1.5; color:var(--ink);">{{ q.treatment }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ================= HONESTY & SEAMS ================= -->
+  <div data-screen-label="Honesty and seams" style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:18px 20px; display:flex; flex-direction:column; gap:12px;">
+    <div style="display:flex; align-items:baseline; gap:10px;"><span style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">Honesty & seams — build notes</span><span style="font-size:11.5px; color:var(--muted);">what changed vs the exploration, and where each fact comes from</span></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px 22px;">
+      <sc-for list="{{ seamNotes }}" as="nt" hint-placeholder-count="6">
+        <div style="display:flex; gap:10px; align-items:flex-start; border-bottom:1px dotted var(--border); padding-bottom:9px;">
+          <span style="font-family:var(--font-data); font-size:10px; font-weight:700; color:{{ nt.color }}; margin-top:2px; flex-shrink:0; width:64px;">{{ nt.tag }}</span>
+          <span style="font-size:12.5px; line-height:1.55; color:var(--ink);">{{ nt.text }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ================= FOOTER ================= -->
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; border-top:1px solid var(--border); padding-top:16px; font-family:var(--font-data); font-size:11px; color:var(--muted);">
+    <span>#279 · one contract, both modes — only transport and presentation differ (ADR-0018)</span>
+    <span style="font-style:italic; font-family:var(--font-ui);">tend well.</span>
+  </div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1160, &quot;height&quot;: 2160 },
+  &quot;state&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;online&quot;, &quot;offline&quot;, &quot;syncing&quot;], &quot;default&quot;: &quot;online&quot;, &quot;tsType&quot;: &quot;\&quot;online\&quot; | \&quot;offline\&quot; | \&quot;syncing\&quot;&quot; },
+  &quot;liveDemo&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot; }
+}">
+class Component extends DCLogic {
+  state = {
+    mode: this.props.state ?? 'online',      // online | offline | syncing
+    uptimeMs: 63754210,                       // device keeps running regardless of viewer
+    shownUptimeMs: 63754210,                  // what the viewer last saw
+    held: 0,                                  // readings buffered while unreachable (demo)
+    syncTotal: 0,
+    offlineTicks: 0,
+    raws: [1612, 2010, 3891, 1240],
+  };
+
+  CH = [
+    { ch:'ch0', level:'OK',           quality:'OK',        jitter:true  },
+    { ch:'ch1', level:'needs water',  quality:'OK',        jitter:true  },
+    { ch:'ch2', level:'air-dry',      quality:'NO_SIGNAL', jitter:false },
+    { ch:'ch3', level:'well watered', quality:'SUSPECT',   jitter:true  },
+  ];
+  LEVEL_COLOR = {
+    'submerged':'var(--band-saturated)', 'overwatered':'var(--band-wet)', 'well watered':'var(--band-moist)',
+    'OK':'var(--band-ideal)', 'needs water':'var(--band-drying)', 'dry':'var(--band-dry)', 'air-dry':'var(--band-parched)',
+  };
+  Q_COLOR = { OK:'var(--d-leaf)', SUSPECT:'var(--st-dry)', NO_SIGNAL:'var(--q-nosignal)', SATURATED:'var(--st-fault)' };
+
+  componentDidMount(){
+    if (this.props.liveDemo === false) return;
+    this._t = setInterval(() => this.tick(), 1000);
+  }
+  componentWillUnmount(){ if (this._t) clearInterval(this._t); }
+  componentDidUpdate(prev){
+    if (prev.state !== this.props.state && this.props.state) this.setState({ mode:this.props.state });
+  }
+
+  tick(){
+    this.setState(s => {
+      const n = { uptimeMs: s.uptimeMs + 1000 };
+      if (s.mode === 'online'){
+        n.shownUptimeMs = s.uptimeMs + 1000;
+        n.raws = s.raws.map((r,k) => this.CH[k].jitter ? Math.max(900, Math.min(4089, r + Math.round((Math.random()*2-1)*4))) : r);
+      } else if (s.mode === 'offline'){
+        n.offlineTicks = s.offlineTicks + 1;
+        if ((s.offlineTicks+1) % 2 === 0) n.held = s.held + 4;   // 4 channels per demo sample
+      } else if (s.mode === 'syncing'){
+        const drain = Math.max(4, Math.ceil(s.held/5));
+        const left = Math.max(0, s.held - drain);
+        n.held = left;
+        n.shownUptimeMs = s.uptimeMs + 1000;
+        if (left === 0) n.mode = 'online';
+      }
+      return n;
+    });
+  }
+
+  pullPlug = () => this.setState({ mode:'offline', offlineTicks:0, held:0 });
+  plugBack = () => this.setState(s => ({ mode: s.held>0 ? 'syncing' : 'online', syncTotal: Math.max(s.held,1), shownUptimeMs: s.uptimeMs }));
+
+  fmtUp(ms){
+    const t = Math.floor(ms/1000); const h = Math.floor(t/3600); const m = Math.floor((t%3600)/60); const sec = t%60;
+    return h + 'h ' + String(m).padStart(2,'0') + 'm ' + String(sec).padStart(2,'0') + 's';
+  }
+
+  renderVals(){
+    const st = this.state;
+    const mode = st.mode;
+    const online = mode==='online', offline = mode==='offline', syncing = mode==='syncing';
+
+    // ---- glance rows (quality gates the band) ----
+    const chRows = this.CH.map((c,k) => {
+      const q = c.quality;
+      const trusted = q === 'OK';
+      const levelColor = trusted ? this.LEVEL_COLOR[c.level] : this.Q_COLOR[q];
+      const shown = q==='NO_SIGNAL' ? 'no signal' : (q==='SUSPECT' ? c.level+' ?' : (q==='SATURATED' ? 'railed' : c.level));
+      return {
+        ch:c.ch, raw:String(st.raws[k]), quality:q, qColor:this.Q_COLOR[q],
+        levelShown: shown, levelColor,
+        dotColor: trusted ? this.LEVEL_COLOR[c.level] : this.Q_COLOR[q],
+        dotStyle: (trusted && online) ? 'box-shadow:0 0 6px currentColor;' : (q==='NO_SIGNAL' ? 'background:transparent; border:2px dashed '+this.Q_COLOR[q]+'; width:7px; height:7px;' : ''),
+        bd: trusted ? 'var(--d-border)' : 'color-mix(in srgb, '+this.Q_COLOR[q]+' 35%, var(--d-border))',
+      };
+    });
+
+    // ---- payload (single source of truth; frozen copy when offline) ----
+    const upShown = offline ? st.shownUptimeMs : st.uptimeMs;
+    // The snapshot always reads wifi=connected: it's what the device said the
+    // last time it could speak — an unreachable device can't serve its own bad news.
+    const lines = [
+      'Sprout windowsill',
+      'fw=0.3.2 git=7c31d9a board=esp32dev',
+      'wifi=connected ip=192.168.1.114',
+      'uptime_ms=' + upShown,
+      '',
+    ];
+    this.CH.forEach((c,k) => lines.push(c.ch + ': level=' + c.level + ' raw=' + st.raws[k] + ' quality=' + c.quality));
+    const payloadText = lines.join('\n');
+
+    // ---- chips / voice per state ----
+    const stChipColor = online ? 'var(--d-leaf)' : (offline ? 'var(--st-dry)' : 'var(--st-watering)');
+    const stChipLabel = online ? 'online · synced' : (offline ? 'offline · last heard '+st.offlineTicks+'s ago' : 'syncing · catching up');
+    const voiceLine = online ? 'All caught up — readings are live.'
+      : offline ? 'I can\u2019t reach your Sprout right now. Here\u2019s the last I heard — it\u2019s still tending on its own.'
+      : 'Back together — catching you up on what I missed.';
+    const markBand = online ? 'ideal' : (offline ? 'drying' : 'moist');
+
+    // ---- sync ----
+    const total = Math.max(st.syncTotal, 1);
+    const pct = syncing ? Math.round(((total - st.held)/total)*100) : 0;
+
+    // ---- state anatomy cards ----
+    const stateCards = [
+      { chip:'online · synced', color:'var(--leaf)', voice:'All caught up — readings are live.',
+        rule:'Fetch succeeds. Live dot glows; channel rows carry band colors (quality permitting); footer shows served fw/git/ip/uptime verbatim.',
+        src:'source: GET / responds · wifi=connected', srcColor:'var(--leaf)' },
+      { chip:'offline · last heard 2m', color:'var(--st-dry)', voice:'I can\u2019t reach your Sprout right now. Here\u2019s the last I heard — it\u2019s still tending on its own.',
+        rule:'Fetch fails. Show the last-known snapshot dimmed, age stamped by the viewer\u2019s clock. Never invent freshness; never alarm — the control loop is offline-capable by design (ADR-0001).',
+        src:'source: fetch error + viewer\u2019s last snapshot', srcColor:'var(--st-dry)' },
+      { chip:'syncing · catching up', color:'var(--st-watering)', voice:'Back together — catching you up on what I missed.',
+        rule:'Reachable again, backfill in flight. Spinner chip + slim progress; drawn transport-agnostic so Data\u2019s transport choice never redraws it (R8). Uptime jumps forward — proof it never stopped.',
+        src:'progress source: the store (#276/#277/#278) — not GET /', srcColor:'var(--st-predicted)' },
+    ];
+
+    // ---- wifi sub-states (wifi_net.c verbatim) ----
+    const wifiSubs = [
+      { name:'idle',       color:'var(--muted)',        note:'no credentials yet' },
+      { name:'connecting', color:'var(--st-watering)',  note:'attempt in flight' },
+      { name:'connected',  color:'var(--leaf)',         note:'serving GET /' },
+      { name:'failed',     color:'var(--st-fault)',     note:'retrying with backoff' },
+    ];
+
+    // ---- quality vocabulary (telemetry.c verbatim) ----
+    const qualityCards = [
+      { flag:'OK', color:'var(--leaf)', when:'clean read', treatment:'Band color + band word, full strength. The only flag that earns a band.' },
+      { flag:'SUSPECT', color:'var(--st-dry)', when:'noisy / poor contact', treatment:'Band word with a “?”, amber tag. Shown but not trusted — check the probe seat.' },
+      { flag:'NO_SIGNAL', color:'var(--q-nosignal)', when:'floating / disconnected', treatment:'No band, no color — dashed dot, “no signal”. A missing probe is not a dry plant.' },
+      { flag:'SATURATED', color:'var(--st-fault)', when:'ADC railed (≤5 / ≥4090)', treatment:'“railed” in fault red. A pegged pin is a wiring fact, not a moisture reading.' },
+    ];
+
+    // ---- honesty & seams ----
+    const seamNotes = [
+      { tag:'DROPPED', color:'var(--st-fault)', text:'The exploration\u2019s “INDEX 58” donut. GET / serves level + raw + quality — no calibrated index exists, so none is drawn. Raw + band = truth.' },
+      { tag:'DROPPED', color:'var(--st-fault)', text:'Plant names on the device surface. The payload has no names — the glance is channel-first (ch0…ch3); friendly names join host-side where plants.env lives (#377).' },
+      { tag:'HONEST', color:'var(--leaf)', text:'“Last heard” is the viewer\u2019s clock. The device owns only uptime_ms today (time: uptime · #21); the time-source chip is drawn for ntp / rtc / uptime so NTP lands with no redesign (schema v2 §11.1).' },
+      { tag:'HONEST', color:'var(--leaf)', text:'Sync progress is the store\u2019s claim, not the device\u2019s — GET / reports now, not history. The bar and “held n” arrive with store-and-forward (#276/#277/#278); the slot is designed, transport-agnostic.' },
+      { tag:'VERBATIM', color:'var(--st-predicted)', text:'Band words are moisture_level_name() exactly (air-dry … submerged); quality is the S4 enum exactly (OK / SUSPECT / NO_SIGNAL / SATURATED); wifi= is wifi_net_state_name() exactly.' },
+      { tag:'READ-ONLY', color:'var(--st-predicted)', text:'#532 is status-only — no auth, LAN-local, nothing actuates over HTTP. So this surface draws zero controls: a glance you can trust, not a lever you can pull.' },
+    ];
+
+    return {
+      // simulator
+      pullPlug:this.pullPlug, plugBack:this.plugBack,
+      isOffline: offline, notOffline: !offline,
+      plugFg: offline?'var(--muted)':'#fff', plugBg: offline?'var(--border)':'var(--st-due)', plugCursor: offline?'not-allowed':'pointer',
+      backFg: !offline?'var(--muted)':'#fff', backBg: !offline?'var(--border)':'var(--leaf)', backCursor: !offline?'not-allowed':'pointer',
+      simHint: online ? 'live — raws breathe, uptime runs' : (offline ? 'unreachable — the device keeps sampling; the viewer holds its last snapshot' : 'backfill draining to the store…'),
+
+      // glance
+      stChipColor, stChipLabel, stDotGlow: online?'animation:liveGlow 1.8s ease-in-out infinite;':'',
+      isSyncing: syncing, notSyncing: !syncing,
+      voiceLine, markBand,
+      syncPct: pct+'%', syncCountLabel: (total-st.held)+' / '+total,
+      chRows, chFade: offline?'opacity:.55;':'',
+      ipLabel: offline?'ip —':'ip 192.168.1.114',
+      uptimeLabel: this.fmtUp(offline ? st.shownUptimeMs : st.uptimeMs),
+      timeChipColor: 'var(--st-dry)', timeSourceLabel: 'uptime · unsynced',
+
+      // payload
+      fetchOk: !offline, payloadText,
+      lastHeardLabel: st.offlineTicks + 's ago',
+
+      // anatomy + vocab + seams
+      stateCards, wifiSubs, qualityCards, seamNotes,
+    };
+  }
+}
+</script>
+</body>
+</html>
