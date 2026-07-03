@@ -1,8 +1,9 @@
 # ADR-0014 — Operator control plane (Monitor + Experiment under one plane)
 
-**Status:** Proposed — *direction set by the Operator-Experience epic (#125); detail co-authored as the
-slices land. §5 (`serve.py` boundary) added + Trellis-aligned (#296) — the operator-control-plane boundary
-is now explicit; ready for maintainer ratification (Proposed→Accepted).*
+**Status:** Accepted — *maintainer-ratified 2026-07-03 (Trellis ratification digest, PR #465). Direction set
+by the Operator-Experience epic (#125); all five slices shipped; §5 (`serve.py` boundary) added +
+Trellis-aligned (#296) — the operator-control-plane boundary is explicit. Was Proposed 2026-06-26 → Accepted;
+the boundary is now normative — new control surfaces extend this plane, never a second server/port-holder.*
 **Date:** 2026-06-26
 **Owner:** Data lane
 **Lane:** data/analytics (the operator control surface)
