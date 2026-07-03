@@ -282,6 +282,7 @@ def scan_history(denylist: list[re.Pattern] | None) -> list[Finding]:
         stdout=subprocess.PIPE,
     )
     assert proc.stdin and proc.stdout
+    rel_allowlist = ALLOWLIST_PATH.relative_to(REPO).as_posix()
 
     def read_exact(n: int) -> bytes:
         # a pipe read() may return SHORT (observed on Windows) - loop to n bytes
@@ -308,6 +309,14 @@ def scan_history(denylist: list[re.Pattern] | None) -> list[Finding]:
             continue
         data = read_exact(size)
         read_exact(1)  # trailing LF
+        # The allowlist file's own blobs legitimately contain the identifier
+        # text they exempt - skip them by PATH, the SAME exemption scan_tree
+        # makes for the working-tree copy (#573: without this the allowlist
+        # blob self-flags forever in --history, poisoning the "history clean"
+        # signal #558's AC exists to produce). Read the blob FIRST regardless,
+        # or the batch stream desyncs on the next iteration.
+        if path == rel_allowlist:
+            continue
         label = f"{path}@{sha[:8]}"
         ext = Path(path).suffix.lower()
         if ext in IMAGE_EXTS:

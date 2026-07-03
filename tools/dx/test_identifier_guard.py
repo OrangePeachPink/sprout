@@ -8,7 +8,10 @@ scans the whole tracked tree, including its own tests.
 from __future__ import annotations
 
 import struct
+import subprocess
+from pathlib import Path
 
+import identifier_guard
 from identifier_guard import (
     MAC_RE,
     USB_INSTANCE_RE,
@@ -17,6 +20,7 @@ from identifier_guard import (
     jpeg_strip,
     png_meta_chunks,
     png_strip,
+    scan_history,
     scan_text,
 )
 
@@ -166,3 +170,60 @@ def test_png_strip_removes_text_keeps_structure():
 def test_regex_objects_importable():
     # the compiled patterns are part of the module contract (used in docs/tests)
     assert MAC_RE.pattern and USB_INSTANCE_RE.pattern and VID_PID_RE.pattern
+
+
+# --- history mode (#573 regression) ------------------------------------------
+
+
+def _git(repo: Path, *args: str) -> None:
+    subprocess.run(
+        ["git", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", *args],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
+
+
+def _init_repo(repo: Path) -> None:
+    _git(repo, "init", "-q")
+    _git(repo, "config", "user.email", "t@example.invalid")
+    _git(repo, "config", "user.name", "t")
+
+
+def test_history_skips_allowlist_blob_but_still_catches_leaks(tmp_path, monkeypatch):
+    """#573: scan_history must exempt the allowlist file's own blobs by PATH
+    (they legitimately contain the identifier text they exempt), the same way
+    scan_tree does — while STILL catching a genuine leak elsewhere in history.
+    """
+    repo = tmp_path / "repo"
+    (repo / "tools" / "dx").mkdir(parents=True)
+    (repo / "docs").mkdir()
+
+    # the allowlist file carries an identifier by design -> must be exempted
+    allowlist = repo / "tools" / "dx" / "identifier_guard_allowlist.txt"
+    allowlist.write_text(
+        "# reviewed exceptions\n"
+        "docs/x.md:" + "USB\\" + "VID_10C4" + "&" + "PID_EA60" + "\n",
+        encoding="utf-8",
+    )
+    # a genuine leak in a normal file -> must still be caught
+    leak_mac = ":".join(f"{n:02x}" for n in range(0xC0, 0xC6))
+    (repo / "docs" / "leak.md").write_text(
+        f"device {leak_mac} seen\n", encoding="utf-8"
+    )
+
+    _init_repo(repo)
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "seed")
+
+    # point the module at the temp repo (globals are read at call time)
+    monkeypatch.setattr(identifier_guard, "REPO", repo)
+    monkeypatch.setattr(identifier_guard, "ALLOWLIST_PATH", allowlist)
+    monkeypatch.setattr(identifier_guard, "DENYLIST_PATH", repo / "none.txt")
+
+    findings = scan_history(None)
+    paths = {f.path.split("@")[0] for f in findings}
+
+    assert "tools/dx/identifier_guard_allowlist.txt" not in paths  # exempted
+    assert any(f.cls == "mac" for f in findings)  # real leak still caught
+    assert paths == {"docs/leak.md"}  # exactly the leak, nothing else
