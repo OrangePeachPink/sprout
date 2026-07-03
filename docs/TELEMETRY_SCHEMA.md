@@ -405,6 +405,13 @@ Interior ambient (`temp_context_c`, `rh_context_pct`) fills **only** from the tw
 
 `pressure_context_hpa` **may** fill from the exterior family (indoor pressure tracks outdoor), tagged
 with its own per-quantity `pressure_context_source` (e.g. `weather_openmeteo`) — per-quantity because
-mixed-source rows are the common case (the SHT45 has no pressure). The fill seam is implemented and
-tested; live weather wiring is a separate slice (the #367 ingestion does not fetch pressure yet, and
-the logger is offline-first — R9 — so it must come from a local cache, never a fetch in the log loop).
+mixed-source rows are the common case (the SHT45 has no pressure). **Live wiring (#567):** the value
+comes from Open-Meteo's *forecast* endpoint (`current=surface_pressure`) via a rolling
+current-conditions cache (`reports/weather/pressure_current.json`, gitignored — deliberately not the
+archive layer's immutable dated evidence). The dashboard's env path refreshes it opportunistically
+(hourly cadence); both fill spines — the serial logger's `ContextFiller` and the untethered
+`DeviceAdapter` — only ever **read** the cache, so no log loop or request poll can block on a socket.
+Staleness bound: a value older than 3 h never fills (synoptic pressure moves ~<1 hPa/h, so the
+indoor≈outdoor claim stays honest to a few hPa); offline, the cache ages out and fills stop —
+columns stay honestly empty (R9). The archive ingestion (#367) also fetches `surface_pressure` now
+for analysis-time joins; older cached windows simply lack the field (never refetched).

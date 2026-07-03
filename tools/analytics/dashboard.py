@@ -364,6 +364,18 @@ def build_env_context(start: datetime, end_utc: datetime) -> dict:
         weather_source = wd.get("source")
     except Exception:
         pass
+    # #567: opportunistically refresh the rolling current-pressure cache while
+    # we're already in the env path's networking window (same try/except
+    # posture as the weather fetch above). The fill paths - the logger's
+    # ContextFiller and DeviceAdapter - only ever READ that cache; this is the
+    # one place that writes it. Offline -> refresh no-ops -> cache ages out ->
+    # pressure fills stop, honestly.
+    try:
+        import weather_pressure
+
+        weather_pressure.refresh_if_stale(location=loc)
+    except Exception:
+        pass
 
     return {
         "available": True,

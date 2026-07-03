@@ -330,3 +330,56 @@ def test_fleet_inputs_reach_only_the_first_adapter() -> None:
 
     FleetAdapter([_Probe("first"), _Probe("second")]).load(["a.csv"])
     assert seen == {"first": ["a.csv"], "second": None}
+
+
+# --------------------------------------------------------------------------- #
+# DeviceAdapter pressure exception (#567, ADR-0023 §3): the untethered spine
+# --------------------------------------------------------------------------- #
+
+
+def test_device_adapter_fills_pressure_tagged_per_quantity() -> None:
+    text = _telemetry_response([_device_line(sensor="s1"), _device_line(sensor="s2")])
+    da = DeviceAdapter(
+        "http://192.0.2.1",
+        fetch=lambda url: text,
+        pressure_source=lambda: (1013.2, "weather_openmeteo"),
+    )
+    for r in da.load().readings:
+        assert r.pressure_context_hpa == 1013.2
+        assert r.pressure_context_source == "weather_openmeteo"
+        # the fence, on THIS spine too: weather touched pressure ONLY -
+        # interior temp/RH and their tag stay honestly empty
+        assert r.temp_context_c is None and r.rh_context_pct is None
+        assert r.context_source is None
+
+
+def test_device_adapter_pressure_source_none_yield_fills_nothing() -> None:
+    text = _telemetry_response([_device_line()])
+    da = DeviceAdapter(
+        "http://192.0.2.1", fetch=lambda url: text, pressure_source=lambda: None
+    )
+    r = da.load().readings[0]
+    assert r.pressure_context_hpa is None
+    assert r.pressure_context_source is None  # no value -> no tag, ever
+
+
+def test_device_adapter_without_pressure_source_is_unchanged() -> None:
+    text = _telemetry_response([_device_line()])
+    plain = DeviceAdapter("http://192.0.2.1", fetch=lambda url: text)
+    r = plain.load().readings[0]
+    assert r.pressure_context_hpa is None and r.pressure_context_source is None
+
+
+def test_device_adapter_reads_pressure_once_per_poll() -> None:
+    # one observed-at moment per poll -> one pressure read, not one per row
+    calls = {"n": 0}
+
+    def _src():
+        calls["n"] += 1
+        return (1013.2, "weather_openmeteo")
+
+    text = _telemetry_response([_device_line(sensor="s1"), _device_line(sensor="s2")])
+    DeviceAdapter(
+        "http://192.0.2.1", fetch=lambda url: text, pressure_source=_src
+    ).load()
+    assert calls["n"] == 1
