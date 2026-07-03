@@ -1,83 +1,114 @@
-# ADR-0023 — Contextual env columns: multi-source with a `context_source` tag
+# ADR-0023 — Two context families: interior ambient vs exterior conditions
 
-**Status:** Proposed — *drafted by Data from #418 (a Data call). The **model** below (multi-source + provenance
-tag + no-synthesis) is ratifiable now; the one implementation item — adding a `context_source` column to the
-schema + `parse_v1` — needs Workflow/Trellis ratification of the schema change (design-light-before-build).*
-**Date:** 2026-06-30
-**Owner:** Data (author) — host logger / analytics substrate
+**Status:** Proposed — *v2, reworked 2026-07-02 from the maintainer's design review of v1 (the review found v1
+conflated two physically unrelated environments under one precedence table). Drafted by Workflow from the
+maintainer's direction; Data (author lane of v1) to confirm; maintainer ratifies.*
+**Date:** 2026-06-30 (v1) · 2026-07-02 (v2 rework)
+**Owner:** Data — host logger / analytics substrate
 **Lane:** data (relates: Firmware emits the raw `plants.env` rows · Sage bench placement · Trellis schema register)
 **Extends:** [ADR-0006](0006-data-architecture.md) (honest data / source trust classes) ·
 [ADR-0021](0021-parse-v1-telemetry-contract-boundary.md) (single parse boundary)
-**Relates:** #418 (this decision) · #345 (ESP32 die-temp) · #377 (`plants.env`) · #300 (telemetry v2 header) ·
-ADR-0022 (surface disagreement, don't average it) · #416 (config-provenance RFC — the same self-interpreting
-reading principle)
+**Relates:** #418 (this decision) · #345 (ESP32 die-temp — *excluded from context, see Decision 5*) · #377
+(`plants.env`) · #366/#367 (solar geometry + weather ingestion — the exterior family) · ADR-0022 (surface
+disagreement, don't average it) · PRD-0006 R4 (exterior conditions refine the runway forecast)
 
 ---
 
 ## Context
 
-The host CSV reserves `temp_context_c`, `rh_context_pct`, `pressure_context_hpa` on every soil row — **empty
-today**. The obvious move is to fill them from the concurrent **SHT45** so a `plants.soil` row carries ambient
-context join-free. But temp/RH will soon arrive from **several sources at once**, and a single untagged column
-becomes uninterpretable the moment there is more than one feed:
+The host CSV reserves `temp_context_c`, `rh_context_pct`, `pressure_context_hpa` on every soil row — empty
+today. v1 of this ADR proposed filling them from a single precedence list spanning every available source:
+on-rig sensor, ESP32 die temperature, a weather feed, room sensors.
 
-- **SHT45** — on-rig (`breadboard_near_esp32`), factory-calibrated (now, via #377).
-- **ESP32 die-temp** — board-proxy, uncalibrated (#345).
-- **Weather overlay** — external/room/outdoor, `derived/model` (#367/#368).
-- **Future Zigbee / Thread** room/area ambient.
+**The maintainer's review found the core flaw: that list mixes sources that do not measure the same physical
+thing.** A plant on an indoor windowsill sits behind glass: the air it actually lives in is the *house's*
+interior air, causally decoupled from outdoor temperature, rain, and humidity. Projecting a weather-feed
+temperature into the plant's ambient-context column is not "lower-trust context" — it is a value for a
+different environment wearing a context costume. Meanwhile exterior conditions *do* matter — but for what they
+actually drive: sun position and angle through the window, expected sun-hours, cloudiness, season, and the
+growth cycle the plant is in.
 
-This is the same principle #416 raises for sensor knobs: a reading must be **self-interpreting** — you must be
-able to tell what produced a context value, and whether two rows' context are comparable. Averaging sources
-into one number would violate honest-data (ADR-0006) and the ADR-0022 posture (surface disagreement, never
-average it away).
+A context value must be **self-interpreting** (the #416 principle), and it must first be **the right quantity
+at all**. That forces a split.
 
 ## Decision
 
-1. **`*_context_*` is multi-source *with provenance*, not single-source-by-policy.** Add one column,
-   **`context_source`**, naming the feed that produced that row's context values. A context value without its
-   source tag is not allowed.
+**Context is two separate families. They never fill each other's columns.**
 
-2. **Exactly one source fills a given row's context columns — never a blend.** No averaging, no synthesis. The
-   other concurrent sources remain their own `plants.env` rows on the shared time axis, fully queryable; the
-   context column only records *which* source was projected onto the soil row, plus its tag.
+### 1. Interior ambient — the air the plant is actually in
 
-3. **Default fill precedence — nearest-calibrated-to-the-plant wins:**
+The reserved soil-row columns (`temp_context_c`, `rh_context_pct`, and `context_source`) belong to this family
+exclusively. Fill precedence is by **proximity class**, not by instrument brand:
 
-   | Order | `context_source` | Trust class (ADR-0006) | Note |
-   |---|---|---|---|
-   | 1 | `sht45_onrig` | measured / calibrated | factory-cal, on the rig — primary when present |
-   | 2 | `esp32_die` | measured / uncalibrated | #345 board-proxy — fallback + drift diagnostic, tagged uncalibrated |
-   | 3 | `weather_openmeteo` | derived / model | regional fallback when no on-rig sensor |
-   | 4 | `zigbee_room` / `thread_room` | measured / calibrated (room) | area ambient, not plant-local |
-   | — | `none` | — | empty columns; nothing available for that row's window |
+| Tier | Proximity class | Example `context_source` values | Trust class (ADR-0006) |
+|---|---|---|---|
+| 1 | `plant_local` — an on-rig / in-canopy T·RH sensor | `sht45_onrig`, future in-canopy probes | measured / calibrated |
+| 2 | `room` — smart-home ambient for the room/area | `zigbee_room`, `thread_room`, `matter_room`, `ecobee`, `ha_ambient` | measured / calibrated (room) |
+| — | `none` — nothing local exists | columns stay empty | — |
 
-4. **Per-deployment configurable.** The precedence list lives in config (a future location/deployment config,
-   alongside #365); the table above is the default. Reordering is a *deliberate, logged* choice — never adaptive.
+- The class is the tier; the `context_source` value records the actual instrument (provenance). An `SHT45` is
+  one *instance* of `plant_local` — most deployments will have no plant-local sensor and a growing share will
+  have some room-class source; the model must welcome whatever instrument a user actually has.
+- **A weather feed never fills interior temperature or humidity. Empty is honest; projected weather is not.**
+- Exactly one source fills a given row's interior columns — never a blend, never synthesis (ADR-0022 posture).
+  Other concurrent sources remain their own `plants.env` rows, fully queryable.
+- A context value without its `context_source` tag is not allowed; the tag maps deterministically to a trust
+  class (ADR-0006) that travels with the value.
 
-5. **Trust class travels with the value.** `context_source` maps deterministically to a trust class so analytics
-   never treats a `derived/model` weather temp as an authoritative on-rig measurement. Consistent with the source
-   registry (ADR-0006).
+### 2. Exterior conditions — what the sun and season are doing
 
-6. **Reconciliation is a later view, not a column.** When multiple sources exist, a future confidence/agreement
-   view (mirroring ADR-0022's calibration-confidence) compares them from their `plants.env` rows and flags
-   disagreement. The context column stays a single honest projection; it does not pre-judge agreement.
+The weather ingestion (#367) and solar geometry (#366) time-series **are this family, and they already
+exist** as their own datasets. This ADR names their purpose and fences them:
+
+- They drive **light and cycle analytics**: sun position/angle through the window, expected sun-hours,
+  cloud/irradiance, season, expected growth cycle — and PRD-0006 R4's runway-forecast refinement.
+- They are **never projected onto a soil row's interior ambient columns**. Correlation between the families is
+  analysis-time work against both datasets, not a column fill.
+
+### 3. The pressure exception
+
+Buildings are not pressure vessels: indoor barometric pressure tracks outdoor closely. `pressure_context_hpa`
+**may** therefore fill from the exterior family (e.g. `context_source=weather_openmeteo` for the pressure
+column only), explicitly tagged. This is stated as physics, not as a crack in the fence — temperature and
+humidity remain interior-only.
+
+### 4. Per-deployment configuration — deliberate, logged, never adaptive
+
+The tier list lives in deployment config (alongside #365). Reordering within the interior family, or an
+explicit open-air override (a genuinely outdoor plant whose ambient *is* the weather) is a deliberate, logged
+choice. The default for every indoor deployment is the table above with weather fenced out. Nothing reorders
+itself.
+
+### 5. ESP32 die temperature is not context — at all
+
+Die temp (#345/#536) is chip junction temperature: a **development and drift diagnostic**, self-heated well
+above ambient, honestly labeled `board-proxy — never ambient` by its own implementation. It stays exactly what
+it is — its own labeled `plants.env` row type for dev-team analytics — and never fills any context column in
+any tier. It is not a production runtime value for a deployed Sprout.
+
+### 6. Reconciliation is a later view, not a column
+
+When multiple interior sources exist, a future confidence/agreement view (mirroring ADR-0022) compares them
+from their own rows and flags disagreement. The context columns stay a single honest projection.
 
 ## Consequences
 
-- A soil row becomes ambient-aware **join-free** for the common case, while staying honest about provenance and
-  trust — no false precision, no hidden source.
-- **One schema change** (`context_source`) is the only cross-lane item: it extends TELEMETRY_SCHEMA v2 and
-  `parse_v1` (ADR-0021). That is the implementation slice and needs Workflow/Trellis ratification of the column
-  before any code lands — this ADR proposes the model, not the column add.
-- Firmware is unaffected: it keeps emitting raw per-sensor `plants.env` rows; contextualization is host-side.
-- Unblocks the actual fill of `temp_context_c` / `rh_context_pct` from SHT45 (the #418 ask) without painting us
-  into a single-source corner when #345 / weather / Zigbee arrive.
+- A soil row becomes ambient-aware join-free **with the right quantity**: interior air, from the nearest real
+  instrument, or honestly empty.
+- The exterior family needs **no new storage** — weather + solar layers already exist; they gain a stated
+  purpose and a fence.
+- The only cross-lane schema item is unchanged from v1: adding `context_source` to TELEMETRY_SCHEMA v2 +
+  `parse_v1` (through the ADR-0021 boundary) — the implementation slice that follows ratification.
+- Firmware is unaffected: it keeps emitting raw per-sensor rows; contextualization is host-side.
+- Unblocks the #418 fill (SHT45 as a `plant_local` instance) without wiring a model that breaks the moment a
+  real user shows up with an Ecobee and no soldering iron.
 
-## Open (cross-lane, non-blocking to ratify the model)
+## Open (routed)
 
-- **Trellis / Workflow:** ratify the `context_source` column on the schema + `parse_v1` (the one implementation
-  gate). — routed `for:trellis` / `for:workflow`.
-- **Sage:** confirm `sht45_onrig` placement provenance (`breadboard_near_esp32`) is the right "plant-local"
-  primary, or whether a future in-canopy probe should outrank it.
+- **Data:** confirm this v2 as author lane — especially the proximity-class tiers and the `room`-class source
+  naming for the smart-home integrations.
+- **Sage:** the placement question folds into the `plant_local` class definition — what physical placement
+  qualifies a sensor as plant-local vs room (e.g. `breadboard_near_esp32` today).
+- **Maintainer:** ratify; #418 closes on ratification and the `context_source` implementation slice gets cut.
 
-— Data 🌱
+— Workflow ⚙️ (v2 from maintainer design review; v1 by Data 🌱)
