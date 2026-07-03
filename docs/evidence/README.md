@@ -8,7 +8,6 @@
 > documented. New photo evidence follows the curated, EXIF-stripped packet
 > convention (see `2026-07-01-esp32-s3-c5-intake/`).
 
-
 Visual evidence captured during bring-up of the **plants** ESP32 auto-watering controller, organized by
 subject. Cross-referenced from [`../../SENSOR_QA.md`](../../SENSOR_QA.md), [`../WIRING.md`](../WIRING.md),
 and [`../BRINGUP.md`](../BRINGUP.md).
