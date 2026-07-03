@@ -91,6 +91,13 @@ from control import CaptureController, ControlError  # noqa: E402  (capture sibl
 _LOGGER_DIR = _REPO / "tools" / "logger"
 if str(_LOGGER_DIR) not in sys.path:
     sys.path.insert(0, str(_LOGGER_DIR))
+from collection_control import (  # noqa: E402  (logger sibling - #588)
+    CollectionError,
+    start_all,
+    status_all,
+    stop_all,
+)
+from fleet_control import FleetController, FleetError  # noqa: E402  (#588)
 from monitor_control import (  # noqa: E402  (logger sibling)
     MonitorController,
     MonitorError,
@@ -101,6 +108,9 @@ from monitor_control import (  # noqa: E402  (logger sibling)
 # process that owns the port. serve.py never touches the serial port itself.
 _CAPTURE = CaptureController()
 _MONITOR = MonitorController()
+# #588 (ADR-0014 ratification note): the fleet poller rides the same operator
+# plane - one Start governs all collection; serve.py just holds + routes.
+_FLEET = FleetController()
 
 # The fixed port (ADR-0005 §4/§5). Data owns it as the single source of truth: the
 # runner (`just start`) and the double-click launcher reference THIS value — via
@@ -275,6 +285,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json(st)
             elif parsed.path == "/monitor/status":
                 self._send_json(_MONITOR.status())
+            elif parsed.path == "/fleet/status":  # the fleet poller (#588)
+                self._send_json(_FLEET.status())
+            elif parsed.path == "/collection/status":  # both paths, one view (#588)
+                self._send_json(status_all(_MONITOR, _FLEET))
             elif parsed.path == "/serial/owner":  # who holds the port (#330)
                 self._send_json(serial_lock.owner_status())
             elif parsed.path == "/lab":  # the Lab Notebook catalog (#154 + bench #444)
@@ -357,6 +371,19 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json(_MONITOR.start(port=self._body().get("port")))
             elif parsed.path == "/monitor/stop":
                 self._send_json(_MONITOR.stop())
+            elif parsed.path == "/fleet/start":  # single-flight (#588)
+                self._send_json(_FLEET.start())
+            elif parsed.path == "/fleet/stop":
+                self._send_json(_FLEET.stop())
+            elif parsed.path == "/collection/start":
+                # ADR-0014: ONE operator action = all collection running; each
+                # absent path skips with a stated reason (policy lives in
+                # collection_control, not here - serve stays wiring, section 5)
+                self._send_json(
+                    start_all(_MONITOR, _FLEET, port=self._body().get("port"))
+                )
+            elif parsed.path == "/collection/stop":
+                self._send_json(stop_all(_MONITOR, _FLEET))
             elif parsed.path == "/serial/owner/clear":  # clear a STALE marker (#330)
                 self._send_json(serial_lock.clear_if_stale())
             elif parsed.path.startswith("/lab/study/"):  # save a study (#159)
@@ -408,7 +435,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     # started - the capture/logger process - so "Stop server" closes
                     # the WHOLE stack, not just the web server. Best-effort: a child
                     # that's already gone or slow to stop must not block shutdown.
-                    for controller in (_CAPTURE, _MONITOR):
+                    for controller in (_CAPTURE, _MONITOR, _FLEET):
                         with contextlib.suppress(Exception):
                             controller.stop()
                     self.server.shutdown()
@@ -416,7 +443,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 threading.Thread(target=_shutdown, daemon=True).start()
             else:
                 self._send("not found", "text/plain; charset=utf-8", status=404)
-        except (ControlError, MonitorError) as exc:  # rejected (bad input / busy)
+        except (
+            ControlError,
+            MonitorError,
+            FleetError,
+            CollectionError,
+        ) as exc:  # rejected (bad input / busy / nothing to collect)
             self._send_json({"error": str(exc)}, status=400)
         except Exception as exc:
             self._send_json({"error": str(exc)}, status=500)
