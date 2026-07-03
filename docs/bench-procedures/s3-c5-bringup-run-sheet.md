@@ -7,6 +7,13 @@ live troubleshooting. Follow it live, in order, per board. No doc-hopping needed
 
 Refs #443 · #436 (parent) · #191/#93 (classic re-qualification, conditional §5)
 
+> **Status 2026-07-03:** §1–§2 (identity + flash) are complete for all three boards — S3
+> evidence in [`docs/evidence/2026-07-03-esp32-s3-bringup-wifi/`](../evidence/2026-07-03-esp32-s3-bringup-wifi/README.md)
+> (#568), C5 `flash_id` probes in the maintainer's local packet. The "later session once WiFi
+> lands" this sheet deferred to now exists:
+> [untethered-wifi-evidence-run-sheet.md](untethered-wifi-evidence-run-sheet.md). Still live
+> here: §1 continuity checks (unpowered) and conditional §5.
+
 ## Scope
 
 Two physical boards this session: **ESP32-S3** (Amazon "DevKitC N8R2"-style) and **ESP32-C5**
