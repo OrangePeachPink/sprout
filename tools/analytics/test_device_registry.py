@@ -154,3 +154,57 @@ def test_committed_example_serves_no_devices() -> None:
     if not example.exists():
         return
     assert dr.load_registry(example).served_devices() == []
+
+
+# --------------------------------------------------------------------------- #
+# name / hostname / first-seen order (#583 - the ratified card-header fields)
+# --------------------------------------------------------------------------- #
+
+
+def test_name_and_hostname_parse_for_the_card_header(tmp_path: Path) -> None:
+    doc = _fleet()
+    doc["devices"][0]["name"] = "the classic"
+    doc["devices"][0]["hostname"] = "sprout-classic-8ccd.local"
+    reg = dr.load_registry(_write(tmp_path, doc))
+    d = reg.device("sprout-classic-01")
+    assert d.name == "the classic"
+    assert d.hostname == "sprout-classic-8ccd.local"
+
+
+def test_name_falls_back_to_label_hostname_absent_is_none(tmp_path: Path) -> None:
+    # A legacy config carrying only `label` still populates `name` (non-breaking
+    # migration); hostname absent/blank -> None, never invented (a tethered
+    # device shows its port instead of a fabricated `.local` name).
+    doc = _fleet()  # devices[0] has label "classic", no name/hostname
+    reg = dr.load_registry(_write(tmp_path, doc))
+    d = reg.device("sprout-classic-01")
+    assert d.name == "classic"  # fell back to label
+    assert d.hostname is None  # absent -> None
+
+
+def test_hostname_wrong_type_or_blank_degrades_to_none(tmp_path: Path) -> None:
+    doc = _fleet()
+    doc["devices"][0]["hostname"] = ""  # blank is not a hostname
+    doc["devices"][1]["hostname"] = 42  # wrong type - never trusted
+    reg = dr.load_registry(_write(tmp_path, doc))
+    assert reg.device("sprout-classic-01").hostname is None
+    assert reg.device("sprout-s3-01").hostname is None
+
+
+def test_devices_preserve_registry_first_seen_order(tmp_path: Path) -> None:
+    # #583 ORDER rule: `devices` list order == registry first-seen == the
+    # dashboard's card order, never re-sorted by state. Reverse-alphabetical
+    # ids must stay in file order.
+    doc = {"devices": [{"device_id": "z-first"}, {"device_id": "a-second"}]}
+    reg = dr.load_registry(_write(tmp_path, doc))
+    assert [d.device_id for d in reg.devices] == ["z-first", "a-second"]
+
+
+def test_committed_example_carries_name_for_every_device() -> None:
+    # The ratified shape (#583): every device has a friendly `name` for its card
+    # header. hostname may be null (tethered) - name may not.
+    example = _CONFIG / "devices.example.json"
+    if not example.exists():
+        return
+    reg = dr.load_registry(example)
+    assert all(d.name for d in reg.devices)

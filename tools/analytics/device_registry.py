@@ -15,9 +15,10 @@ fleet - which mirrors the operator's home layout - lives in the gitignored
 template and the demo/test default.
 
 **The stable contract is this module's API** (`plant_for`, `all_plants`, `devices`),
-not the JSON layout: consumers depend on the functions, so the on-disk shape stays a
-proposal (`schema_version`, awaiting Workflow/Trellis ratification for #300) that can
-evolve without breaking them.
+not the JSON layout: consumers depend on the functions. The `schema_version: 1` shape
+is **ratified** (Trellis 2026-07-03, #583/#300) — including the per-device card-header
+fields `name` (friendly identity) and `hostname` (synthetic `.local` name, ADR-0020),
+and the guarantee that `devices` list order is the dashboard's first-seen card order.
 
 Honest attribution: an unknown device or an unassigned channel returns ``None`` - the
 registry never invents a plant. A missing or malformed config yields an **empty**
@@ -49,6 +50,14 @@ class Device:
     # The device's served root (#486, e.g. "http://192.168.1.42") - the live view
     # polls its GET /telemetry (#276) when set. None = tethered/serial-only.
     base_url: str | None = None
+    # Per-device card-header identity (#583, ADR-0020). `name` is the friendly
+    # !name/pretty identity (re-nameable, never a MAC); it falls back to `label`
+    # for legacy configs. `hostname` is the synthetic `.local` name - None for a
+    # tethered device (the card shows its port instead). Both are display
+    # reflections; the device owns the real values (ADR-0020). Distinct from
+    # `base_url`, which is an IP, not a hostname.
+    name: str | None = None
+    hostname: str | None = None
 
     def plant_for(self, channel: str) -> dict | None:
         """The {plant_id, plant_name} on a channel, or None if unassigned."""
@@ -110,12 +119,18 @@ def _device_from_dict(raw: dict) -> Device | None:
     channels = raw.get("channels")
     channels = channels if isinstance(channels, dict) else {}
     base_url = raw.get("base_url")
+    hostname = raw.get("hostname")
+    label = raw.get("label")
+    name = raw.get("name")
     return Device(
         device_id=did,
         board=raw.get("board"),
-        label=raw.get("label"),
+        label=label,
         channels=channels,
         base_url=base_url if isinstance(base_url, str) and base_url else None,
+        # friendly name; a legacy config carrying only `label` still populates it
+        name=name if isinstance(name, str) and name else label,
+        hostname=hostname if isinstance(hostname, str) and hostname else None,
     )
 
 
