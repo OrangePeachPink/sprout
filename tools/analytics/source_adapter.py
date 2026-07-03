@@ -21,10 +21,15 @@ untethered/device-served transport can plug in without ``dashboard.py`` or
   **Real-hardware bench verification (flash + WiFi + a live browser hit) is a
   separate, physical step this slice cannot claim** — see #276/#277 threads.
 
-Deliberately dependency-light (only ``parse_v1`` + ``plants_logger``):
-``TetheredAdapter`` takes its *discovery* callable (``dashboard.gather_inputs``) as
-a constructor argument rather than importing ``dashboard`` directly, so there's no
-import cycle with the modules that will construct it.
+:class:`FleetAdapter` (#486) composes N of the above into one ``LogData`` — the
+"all plants across all devices, one live view" wiring — deduplicating exact
+store-and-forward replays via the existing ``ingest_store.Store`` boundary (#521).
+
+Deliberately dependency-light (only ``parse_v1``/``ingest_store`` +
+``plants_logger``): ``TetheredAdapter`` takes its *discovery* callable
+(``dashboard.gather_inputs``) as a constructor argument rather than importing
+``dashboard`` directly, so there's no import cycle with the modules that will
+construct it.
 """
 
 from __future__ import annotations
@@ -36,6 +41,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Protocol
 
+from ingest_store import Store
 from parse_v1 import LogData, SegmentHeader, parse_files, reading_from_row
 
 _LOGGER_DIR = Path(__file__).resolve().parent.parent / "logger"
@@ -150,3 +156,37 @@ class DeviceAdapter:
             return LogData()
         seg.device_id = readings[0].device_id
         return LogData(readings=readings, segments=[seg], sources=[self._base_url])
+
+
+class FleetAdapter:
+    """N sources, one ``LogData`` (#486 - the "all plants, one live view" wiring).
+
+    Composes any mix of adapters behind the same ``SourceAdapter`` contract -
+    today that's one ``TetheredAdapter`` (the host CSV history) plus one
+    ``DeviceAdapter`` per fleet-registry device with a ``base_url``. Loads each
+    in turn and concatenates; a source that fails or returns nothing simply
+    contributes nothing (each adapter already degrades to empty on its own).
+
+    Dedupe rides the existing ingest boundary (``ingest_store.Store``, #521):
+    the same physical reading arriving via two transports (a device both
+    tethered *and* WiFi-polled) is an exact store-and-forward replay - dropped
+    on its schema-v2 ``device_seq`` key. A v1-only row has no dedupe signal and
+    is always kept (Store's own honest-degrade rule; a false-positive drop
+    would silently lose real data).
+
+    ``inputs`` passes through to the *first* adapter only (by construction the
+    tethered/file one - explicit CLI paths mean "read these files", which no
+    device endpoint can honor); the rest always use their own discovery."""
+
+    def __init__(self, adapters: list) -> None:
+        self._adapters = list(adapters)
+
+    def load(self, inputs: list[str] | None = None) -> LogData:
+        store = Store()
+        readings, segments, sources = [], [], []
+        for i, adapter in enumerate(self._adapters):
+            data = adapter.load(inputs if i == 0 else None)
+            readings.extend(r for r in data.readings if store.ingest(r))
+            segments.extend(data.segments)
+            sources.extend(data.sources)
+        return LogData(readings=readings, segments=segments, sources=sources)

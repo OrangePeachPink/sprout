@@ -122,3 +122,35 @@ def test_committed_example_is_valid_and_loads() -> None:
     assert len(reg.devices) >= 1
     # placeholders are fine; the point is the shape parses + attributes.
     assert all(d.device_id for d in reg.devices)
+
+
+# --------------------------------------------------------------------------- #
+# base_url / served_devices (#486 - the WiFi-polled part of the fleet)
+# --------------------------------------------------------------------------- #
+
+
+def test_base_url_parsed_and_served_devices_filters(tmp_path: Path) -> None:
+    doc = _fleet()
+    doc["devices"][1]["base_url"] = "http://192.168.1.42"
+    reg = dr.load_registry(_write(tmp_path, doc))
+    assert reg.device("sprout-classic-01").base_url is None  # absent -> None
+    assert reg.device("sprout-s3-01").base_url == "http://192.168.1.42"
+    assert [d.device_id for d in reg.served_devices()] == ["sprout-s3-01"]
+
+
+def test_base_url_empty_or_wrong_type_degrades_to_none(tmp_path: Path) -> None:
+    doc = _fleet()
+    doc["devices"][0]["base_url"] = ""  # empty string is not a served device
+    doc["devices"][1]["base_url"] = 42  # wrong type - never trusted
+    reg = dr.load_registry(_write(tmp_path, doc))
+    assert reg.served_devices() == []
+
+
+def test_committed_example_serves_no_devices() -> None:
+    # The example is the fresh-checkout fallback (load_registry's default) - a
+    # base_url in it would make every first-run dashboard request block polling
+    # a placeholder address. It must stay tethered-only.
+    example = _CONFIG / "devices.example.json"
+    if not example.exists():
+        return
+    assert dr.load_registry(example).served_devices() == []

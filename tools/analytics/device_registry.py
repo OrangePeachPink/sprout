@@ -46,6 +46,9 @@ class Device:
     label: str | None
     # channel token (s1..s4) -> {"plant_id": str, "plant_name": str|None}
     channels: dict[str, dict] = field(default_factory=dict)
+    # The device's served root (#486, e.g. "http://192.168.1.42") - the live view
+    # polls its GET /telemetry (#276) when set. None = tethered/serial-only.
+    base_url: str | None = None
 
     def plant_for(self, channel: str) -> dict | None:
         """The {plant_id, plant_name} on a channel, or None if unassigned."""
@@ -76,6 +79,11 @@ class Registry:
         d = self.device(device_id)
         return d.plant_for(channel) if d else None
 
+    def served_devices(self) -> list[Device]:
+        """Devices with a ``base_url`` - the WiFi-polled part of the fleet (#486).
+        Empty when the config assigns none, so the live view stays tethered-only."""
+        return [d for d in self.devices if d.base_url]
+
     def all_plants(self) -> list[dict]:
         """Every assigned plant across the fleet, de-duplicated by plant_id and sorted.
 
@@ -101,11 +109,13 @@ def _device_from_dict(raw: dict) -> Device | None:
         return None  # a device with no identity can't attribute anything - skip it
     channels = raw.get("channels")
     channels = channels if isinstance(channels, dict) else {}
+    base_url = raw.get("base_url")
     return Device(
         device_id=did,
         board=raw.get("board"),
         label=raw.get("label"),
         channels=channels,
+        base_url=base_url if isinstance(base_url, str) and base_url else None,
     )
 
 

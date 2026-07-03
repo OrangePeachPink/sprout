@@ -55,6 +55,7 @@ from dashboard import (  # noqa: E402  (sibling import)
     gather_inputs,
     render,
 )
+from device_registry import load_registry  # noqa: E402  (the fleet config, #486)
 from experiments_catalog import (  # noqa: E402  (Lab #154; #444 combined source)
     load_combined,
     render_catalog,
@@ -72,7 +73,9 @@ from lab_studies import (  # noqa: E402  (Lab studies #159)
     render_study_detail,
     save_study,
 )
-from source_adapter import (  # noqa: E402  (the source-adapter seam, #277)
+from source_adapter import (  # noqa: E402  (the source-adapter seam, #277/#486)
+    DeviceAdapter,
+    FleetAdapter,
     TetheredAdapter,
 )
 
@@ -180,17 +183,33 @@ def _live_trace(eid: str | None, experiments_dir: object = None) -> list[dict]:
         return []
 
 
+def _fleet_adapter(registry=None):
+    """The live view's telemetry source (#486): the tethered CSV history plus one
+    DeviceAdapter per fleet-registry device with a ``base_url``. With no served
+    devices configured this is exactly the plain TetheredAdapter path - a
+    tethered-only install sees zero behavior change. ``registry`` is injectable
+    for tests; None loads the real fleet config per request (same re-discover
+    rationale as #39: a config edit shouldn't need a server restart)."""
+    reg = registry if registry is not None else load_registry()
+    served = reg.served_devices()
+    tethered = TetheredAdapter()
+    if not served:
+        return tethered
+    return FleetAdapter([tethered, *(DeviceAdapter(d.base_url) for d in served)])
+
+
 def _context(
     inputs: list[str] | None = None,
     hours: float | None = None,
     channels: list[str] | None = None,
+    registry=None,
 ) -> dict:
     # Re-discover files on every request (fix #39): a list frozen at startup
     # misses log files created later (a UTC-midnight rotation, a reconnect), so
     # a long-running server would silently go stale. None => auto-discover.
     resolved = inputs or gather_inputs()
-    # #277: reads through the source-adapter seam - see source_adapter.py.
-    data = TetheredAdapter().load(resolved)
+    # #277/#486: reads through the source-adapter seam - see source_adapter.py.
+    data = _fleet_adapter(registry).load(resolved)
     all_ch = sorted(
         {r.sensor_id for r in data.readings if r.record_type.startswith("plants.soil")}
     )
