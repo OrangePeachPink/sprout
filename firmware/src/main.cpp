@@ -600,12 +600,20 @@ static void printHeader()
     Serial.println(buf);
     /* WiFi connect-scaffold status (#21) - live state, not just capability. Set
      * credentials with !wifi,<ssid>[,<pass>]; the served status page (this same
-     * state) comes up at http://<ip>/ once connected. */
+     * state) comes up at http://<ip>/ once connected. When connected, the LAN
+     * IP rides the line (#571) so untethered evidence never starts with a
+     * router-page scavenger hunt - an RFC1918 IP is repo-evidence-safe; the
+     * SSID stays out per ADR-0020 §1 (the serial stream IS a log). */
     if (board_has_wifi()) {
         char netbuf[96];
-        snprintf(netbuf, sizeof(netbuf), "# net: state=%s creds=%s",
-                 wifi_net_state_name(g_wifi.state),
-                 g_wifi_ssid[0] ? "set" : "unset");
+        int m = snprintf(netbuf, sizeof(netbuf), "# net: state=%s creds=%s",
+                         wifi_net_state_name(g_wifi.state),
+                         g_wifi_ssid[0] ? "set" : "unset");
+        if (g_wifi.state == WIFI_NET_CONNECTED && m > 0 &&
+            (size_t)m < sizeof(netbuf)) {
+            snprintf(netbuf + m, sizeof(netbuf) - (size_t)m, " ip=%s",
+                     WiFi.localIP().toString().c_str());
+        }
         Serial.println(netbuf);
     }
 }
@@ -938,6 +946,16 @@ void loop()
             prevWifiState != WIFI_NET_CONNECTED) {
             configTime(0, 0, WIFI_NTP_SERVER); /* UTC: no TZ/DST offsets */
             portalDown();
+            /* Print the LAN IP the moment we associate (#571) - the operator
+             * shouldn't need a router page or arp -a to find the device. By
+             * WL_CONNECTED the core has completed DHCP, so localIP() is real.
+             * RFC1918-safe for evidence; no SSID (ADR-0020 §1). */
+            char ipbuf[64];
+            snprintf(ipbuf, sizeof(ipbuf),
+                     "# net: state=connected creds=set "
+                     "ip=%s",
+                     WiFi.localIP().toString().c_str());
+            Serial.println(ipbuf);
         }
         if (g_wifi.state == WIFI_NET_PORTAL &&
             prevWifiState != WIFI_NET_PORTAL) {
