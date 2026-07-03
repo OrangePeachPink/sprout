@@ -61,12 +61,13 @@ esp32s3` builds clean — see the PR).
   PSRAM also 33–37). **N8R2 = 8 MB flash + 2 MB PSRAM** — bench-confirm which GPIOs the
   module reserves before putting a relay there.
 
-**Candidate map — STARTING POINT, bench-verify every pin:**
+**Anticipated map (in `board_capability.h`, `cal_verified=false`) — bench-verify every pin:**
 
-- Soil (ADC1): GPIO **1, 2, 3, 4**
-- Relays: GPIO **5, 6, 7, 15** (clear of strapping 0/3/45/46 + PSRAM pins)
+- Soil (ADC1): GPIO **1, 2, 4, 5** — refined 2026-07-03 to drop strapping **GPIO3** (S3
+  strapping = 0/3/45/46) that the earlier `{1,2,3,4}` candidate included.
+- Relays: GPIO **6, 7, 15, 16** (non-strapping outputs, clear of USB-JTAG 19/20 + PSRAM pins)
 - I²C: SDA **8**, SCL **9** (or the board's labeled Qwiic pins)
-- LED: the board's `LED_BUILTIN`
+- LED: `BOARD_LED_NONE` (generic-clone LED unconfirmed)
 
 ### Target 2 — ESP32-C5 (toolchain resolved; do NOT pre-assign pins)
 
@@ -84,9 +85,21 @@ question and the pin-assignment question are separate, and only the first is res
   port + native USB port, 8MB+8MB PSRAM) and `c5-yellow-01` (KITC-A clone: CH340 on the
   tested port, flash TBD). The original "3-pack, CH340, 4MB" handoff description matched
   the clone only. Both serial paths behave classic-like on their UART/CH340 port @ 19200.
-- ADC / GPIO specifics **must come from the C5 datasheet + bench.** Do **not** assign C5
-  pins before continuity — this doc intentionally leaves the C5 map **blank** until then.
-  Expect `board_capability.h` to need per-VARIANT entries if the boards' usable pins differ.
+- **Anticipated C5 map now entered** in `board_capability.h` (`cal_verified=false`), from the
+  datasheet + DevKitC-1 v1.2 user guide — **valid existent GPIOs** (C5 = GPIO0–28):
+  - Soil (ADC1): GPIO **1, 4, 5, 6** — the only four non-strapping ADC1 pins (ADC1 = GPIO1–6;
+    strapping MTMS/2, MTDI/3 removed → forced, not chosen).
+  - Relays: GPIO **0, 8, 9, 10** (the only four free non-strapping outputs; confirm GPIO0
+    isn't the boot button at continuity).
+  - I²C: **23 / 24** — nominal, no env sensors planned on the C5.
+- **Why this replaced the placeholder (bench finding, 2026-07-03, official C5):** the prior
+  entry inherited the *classic* pins `{36,39,34,35}`/`{25,26,27,32}`, which **don't exist** on
+  the C5 (GPIO0–28) — the first flash flooded continuous `Pin 36 is not ADC pin!` /
+  `IO 32 is not set as GPIO` errors that starved the loop before WiFi came up. Valid pins fixed
+  it; WiFi bring-up then succeeded (see `docs/evidence/2026-07-03-esp32-c5-native-usb/`).
+- Continuity is still **meter-pending (B1)** — the clones lie, and even this official board's
+  header→GPIO routing wants confirming; expect per-VARIANT entries if the two C5s' usable pins
+  differ.
 
 ## Serial per board (the real gotcha)
 

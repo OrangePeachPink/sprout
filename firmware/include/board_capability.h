@@ -75,42 +75,55 @@ typedef struct {
      {3050, 2140, 1830, 1520, 1150, 1050},                                     \
      true}
 #elif defined(CONFIG_IDF_TARGET_ESP32S3)
-/* PROVISIONAL (docs/hardware/BOARDS.md candidate map) - bench-verify at #443.
- * led_pin: BOARDS.md deferred to the framework's LED_BUILTIN (board-dependent on a
- * generic clone) rather than guess a GPIO -> BOARD_LED_NONE skips the blink safely.
- * cal_boundary: the classic PLACEHOLDER endpoints - same 12-bit ADC width (verified,
- * see the struct comment) does NOT mean the same calibration; cal_verified=false so
- * nothing downstream treats these as real until #443 bench-measures this board. */
+/* ANTICIPATED map (docs/hardware/BOARDS.md) - all VALID S3 GPIOs, continuity
+ * NOT yet meter-verified (B1) so cal_verified=false. Refined 2026-07-03: the
+ * soil set drops strapping GPIO3 (S3 strapping = 0/3/45/46) that the earlier
+ * {1,2,3,4} candidate included - a capacitive probe holding a strapping pin at
+ * reset can disturb boot, so soil now uses non-strapping ADC1 pins only.
+ *   soil : {1,2,4,5} - ADC1 (GPIO1-10), all non-strapping.
+ *   relay: {6,7,15,16} - non-strapping outputs, clear of USB-JTAG 19/20.
+ *   i2c  : {8,9}. led_pin: BOARD_LED_NONE (generic-clone LED unconfirmed).
+ * cal_boundary: classic PLACEHOLDER endpoints - 12-bit width matches but the
+ * calibration does not transfer; cal_verified=false until #443 bench-measures. */
 #define BOARD_CAPABILITY                                                       \
     {"esp32-s3",                                                               \
      true,                                                                     \
      4,                                                                        \
      12,                                                                       \
      "nvs",                                                                    \
-     {1, 2, 3, 4},                                                             \
-     {5, 6, 7, 15},                                                            \
+     {1, 2, 4, 5},                                                             \
+     {6, 7, 15, 16},                                                           \
      BOARD_LED_NONE,                                                           \
      8,                                                                        \
      9,                                                                        \
      {3050, 2140, 1830, 1520, 1150, 1050},                                     \
      false}
 #elif defined(CONFIG_IDF_TARGET_ESP32C5)
-/* PROVISIONAL: inherits the classic PLACEHOLDER pins (matches the C5 env's own
- * documented stance in platformio.ini - "do NOT flash until bench-verified", #436
- * / #443). Not a new guess: C5's real pin map is intentionally unassigned pending
- * the bench + datasheet pass (docs/hardware/BOARDS.md). cal_verified=false: no
- * bench data exists for this board's ADC either. */
+/* ANTICIPATED map - C5 datasheet + DevKitC-1 v1.2 user guide (#443 candidates).
+ * VALID existent GPIOs (C5 = GPIO0-28). Replaces the classic placeholder
+ * {36,39,34,35}/{25,26,27,32} which DO NOT EXIST on the C5 - at the first bench
+ * flash (2026-07-03, official C5) those nonexistent pins flooded continuous
+ * `Pin 36 is not ADC pin!` / `IO 32 is not set as GPIO` errors that starved the
+ * loop before WiFi could come up. Valid pins fix that. Continuity NOT yet
+ * meter-verified (B1) and the ADC is NOT calibrated -> cal_verified=false; the
+ * do-not-flash-for-SENSORS caution stands until the wired round.
+ *   soil : the ONLY four non-strapping ADC1 pins. ADC1 = GPIO1-6; strapping
+ *          MTMS(2)/MTDI(3) removed -> {1,4,5,6} is forced, not chosen.
+ *   relay: the only four free non-strapping output pins {0,8,9,10} (GPIO0 is a
+ *          plain I/O on C5, not strapping - verify it isn't the boot button at B1).
+ *   i2c  : NOMINAL - no env sensors planned on the C5 (the single SHT45/AS7263
+ *          instance lives on the classic); set to valid pins for completeness. */
 #define BOARD_CAPABILITY                                                       \
     {"esp32-c5",                                                               \
      true,                                                                     \
      4,                                                                        \
      12,                                                                       \
      "nvs",                                                                    \
-     {36, 39, 34, 35},                                                         \
-     {25, 26, 27, 32},                                                         \
-     2,                                                                        \
-     21,                                                                       \
-     22,                                                                       \
+     {1, 4, 5, 6},                                                             \
+     {0, 8, 9, 10},                                                            \
+     BOARD_LED_NONE,                                                           \
+     23,                                                                       \
+     24,                                                                       \
      {3050, 2140, 1830, 1520, 1150, 1050},                                     \
      false}
 #else
