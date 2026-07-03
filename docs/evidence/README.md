@@ -1,4 +1,13 @@
-# Evidence photos - plants controller bring-up
+# Hardware evidence
+
+> **Note (2026-07-02):** the original photo sets that lived here (`board_photos/`,
+> `sensor_photos/`, `relay_photos/`, `driver_photos/`) were **removed from the repo
+> and its history** — they carried camera EXIF metadata (ADR-0015 class). The
+> originals are retained in the maintainer's local archive outside the repo.
+> The descriptions below are preserved as the durable record of what each set
+> documented. New photo evidence follows the curated, EXIF-stripped packet
+> convention (see `2026-07-01-esp32-s3-c5-intake/`).
+
 
 Visual evidence captured during bring-up of the **plants** ESP32 auto-watering controller, organized by
 subject. Cross-referenced from [`../../SENSOR_QA.md`](../../SENSOR_QA.md), [`../WIRING.md`](../WIRING.md),
@@ -7,7 +16,7 @@ and [`../BRINGUP.md`](../BRINGUP.md).
 > The short `.mov` clips that iOS auto-attached to some stills have been removed; only the JPEG/PNG
 > stills are kept here.
 
-## board_photos/ - NodeMCU-32S dev board (ESP-32D / WROOM-32 class)
+## board_photos/ (removed — archived locally) - NodeMCU-32S dev board (ESP-32D / WROOM-32 class)
 
 | File | What it shows | Key readable text |
 | --- | --- | --- |
@@ -26,7 +35,7 @@ and [`../BRINGUP.md`](../BRINGUP.md).
 `GND` next to `5V` is mislabeled - it measures +3.3 V, not ground (bench-verified at Rung 3). Use the
 mid-edge `GND` instead.**
 
-## sensor_photos/ - capacitive soil-moisture sensors
+## sensor_photos/ (removed — archived locally) - capacitive soil-moisture sensors
 
 > **Two variants were photographed.** The project's QA-passed units are **V2.0.0 / TLC555** - their
 > connector silkscreen misprints the signal pad as **`AUOT`** (a typo for `AOUT`). A second, older
@@ -46,7 +55,7 @@ mid-edge `GND` instead.**
 | IMG_0536.JPEG | Fuller electronics view of the v1.2 variant. | "GND VCC AOUT"; U1/U2, C1-C6, R1-R4, "222". |
 | IMG_0537.JPEG | Macro of the v1.2 electronics: NE555 timer (U1) + D1 diode, R1, C1/C2 (not a full-probe silkscreen). | "NE555 55A~"; "D1"; R1 "E0L"; "C1"/"C2". |
 
-## relay_photos/ - CW-022 4-channel relay board
+## relay_photos/ (removed — archived locally) - CW-022 4-channel relay board
 
 | File | What it shows | Key readable text |
 | --- | --- | --- |
@@ -54,7 +63,7 @@ mid-edge `GND` instead.**
 | IMG_0532.JPEG | Angled view of the control-header end + power-select jumper. | Header "GND IN1 IN2 IN3 IN4 VCC"; "JD-VCC"; relay ratings. |
 | IMG_0533.JPEG | Reverse/bottom angle showing the PCB model silkscreen. | Model "CW-022"; "GND IN1..IN4 VCC"; "SONGLE SRD-05VDC-SL-C". |
 
-## driver_photos/ - Silicon Labs CP210x driver (Windows Device Manager, 2026-06-21)
+## driver_photos/ (removed — archived locally) - Silicon Labs CP210x driver (Windows Device Manager, 2026-06-21)
 
 All seven are the CP210x Properties dialog on host `MICRODEV`, device "Silicon Labs CP210x USB to UART
 Bridge (COM6)".
