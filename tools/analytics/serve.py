@@ -189,13 +189,26 @@ def _fleet_adapter(registry=None):
     devices configured this is exactly the plain TetheredAdapter path - a
     tethered-only install sees zero behavior change. ``registry`` is injectable
     for tests; None loads the real fleet config per request (same re-discover
-    rationale as #39: a config edit shouldn't need a server restart)."""
+    rationale as #39: a config edit shouldn't need a server restart).
+
+    #567: served devices get the weather-pressure seam (ADR-0023 §3) - a
+    cache-only reader (never a fetch inside a request), import-guarded so a
+    missing weather layer degrades to no pressure fill, never a broken view."""
     reg = registry if registry is not None else load_registry()
     served = reg.served_devices()
     tethered = TetheredAdapter()
     if not served:
         return tethered
-    return FleetAdapter([tethered, *(DeviceAdapter(d.base_url) for d in served)])
+    try:
+        from weather_pressure import latest_pressure as _pressure
+    except ImportError:
+        _pressure = None
+    return FleetAdapter(
+        [
+            tethered,
+            *(DeviceAdapter(d.base_url, pressure_source=_pressure) for d in served),
+        ]
+    )
 
 
 def _context(

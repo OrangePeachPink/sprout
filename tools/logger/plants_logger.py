@@ -453,10 +453,24 @@ def run(
     # Interior-ambient context fill (#562, ADR-0023 v2): env rows feed it, soil
     # rows read it. Import here (sibling module) so a missing/broken filler can
     # never take down logging - context degrades to honestly-empty columns.
+    # #567: the pressure exception's source is the weather layer's CACHE-ONLY
+    # reader - it never touches the network, so the read loop can never block
+    # on a socket (the dashboard's env path owns refreshing the cache). A
+    # missing weather layer degrades to no pressure fill, nothing else.
     try:
         from context_fill import ContextFiller
 
-        filler = ContextFiller()
+        try:
+            sys.path.insert(
+                0,
+                os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)), "..", "analytics"
+                ),
+            )
+            from weather_pressure import latest_pressure as _pressure
+        except Exception:
+            _pressure = None
+        filler = ContextFiller(pressure_source=_pressure)
     except Exception:
         filler = None
     sample_id = 0

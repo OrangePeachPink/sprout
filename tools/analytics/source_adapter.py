@@ -113,12 +113,23 @@ class DeviceAdapter:
     so a device that's off or still booting shows the same honest empty state a
     fresh checkout does, not a dashboard crash. A row that fails its CRC (garbled
     over the air) is silently dropped, same as the serial logger's own crc-fail
-    path — corrupt data is not "no data", but it's also not a value to trust."""
+    path — corrupt data is not "no data", but it's also not a value to trust.
 
-    def __init__(self, base_url: str, *, fetch=None, clock=None) -> None:
+    ``pressure_source`` (#567, ADR-0023 §3): a callable -> ``(hpa, tag)`` or
+    ``None`` — the same seam ``ContextFiller`` takes on the serial spine. When
+    it yields, each polled **soil** row fills ``pressure_context_hpa`` + its
+    per-quantity ``pressure_context_source`` payload tag. This path can only
+    ever touch the two pressure keys — the untethered spine has no interior
+    source (``/telemetry`` serves soil rows only), and weather must never fill
+    interior temp/RH, so no interior key is even reachable from here."""
+
+    def __init__(
+        self, base_url: str, *, fetch=None, clock=None, pressure_source=None
+    ) -> None:
         self._base_url = base_url.rstrip("/")
         self._fetch = fetch if fetch is not None else _http_get
         self._clock = clock if clock is not None else self._utc_now
+        self._pressure_source = pressure_source
         self._next_sample_id = 0
 
     @staticmethod
@@ -136,6 +147,9 @@ class DeviceAdapter:
             return LogData()  # unreachable device - honest empty, not a crash
 
         now = self._clock()  # one poll, one shared "observed at" moment
+        # #567: one pressure read per poll (not per row) - every soil row in
+        # this poll shares the same observed-at moment, so one value is honest.
+        pressure = self._pressure_source() if self._pressure_source else None
         seg = SegmentHeader(source=self._base_url)
         readings = []
         for line in text.splitlines():
@@ -145,8 +159,17 @@ class DeviceAdapter:
             dev = parse_device_line(line)
             if dev is None or dev.get("_crc_ok") is False:
                 continue  # unparseable or corrupt - never a guessed reading
+            context = None
+            if pressure is not None and dev["record_type"].startswith("plants.soil"):
+                hpa, tag = pressure
+                context = {
+                    "pressure_context_hpa": str(hpa),
+                    "pressure_context_source": tag,
+                }
             self._next_sample_id += 1
-            row = stamp_row(dev, self._next_sample_id, now, DEVICE_ADAPTER_VERSION)
+            row = stamp_row(
+                dev, self._next_sample_id, now, DEVICE_ADAPTER_VERSION, context=context
+            )
             # reading_from_row()/_int() expects a string-typed row (the CSV-row
             # contract) - stamp_row()'s sample_id is a plain int (RotatingCsv.write()
             # relies on that; csv.writer stringifies it downstream, on that path).

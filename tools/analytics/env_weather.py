@@ -28,7 +28,16 @@ _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
 _CACHE = _REPO / "reports" / "weather"  # under the gitignored reports/ tree
 _ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
-_HOURLY = ["cloud_cover", "shortwave_radiation", "temperature_2m", "precipitation"]
+# surface_pressure added for #567 (the ADR-0023 §3 pressure exception's archive-
+# side sibling). Additive: an older cached window simply lacks the field and
+# parse_hourly yields None for it - dated evidence is never refetched (R9).
+_HOURLY = [
+    "cloud_cover",
+    "shortwave_radiation",
+    "temperature_2m",
+    "precipitation",
+    "surface_pressure",
+]
 # This registry entry's OWN shape version (bump if a field is added/renamed/removed) -
 # distinct from Open-Meteo's API, which publishes no schema_version of its own (#367).
 _REGISTRY_SCHEMA_VERSION = 1
