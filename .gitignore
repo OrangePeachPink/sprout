@@ -34,8 +34,9 @@ reports/weather/
 config/devices.local.json
 !config/devices.example.json
 credentials.h
-# identifier-guard SSID/hostname denylist (#558): the home network names + hostnames
-# the guard greps committed text for. Committing the list would itself leak them.
+# identifier-guard denylist (#558): operator-sensitive literals the guard greps
+# committed text for - home network names + hostnames, and any term to keep out of the
+# public tree (e.g. unannounced companion-project codenames). Committing it would leak them.
 config/identifiers.local.txt
 
 # PlatformIO
