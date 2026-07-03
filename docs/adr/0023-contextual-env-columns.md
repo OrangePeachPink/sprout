@@ -1,8 +1,8 @@
 # ADR-0023 — Two context families: interior ambient vs exterior conditions
 
-**Status:** Proposed — *v2, reworked 2026-07-02 from the maintainer's design review of v1 (the review found v1
-conflated two physically unrelated environments under one precedence table). Drafted by Workflow from the
-maintainer's direction; Data (author lane of v1) to confirm; maintainer ratifies.*
+**Status:** Accepted — *the maintainer ratified v2 on 2026-07-02, same day as directing the rework (v1
+conflated two physically unrelated environments under one precedence table; the maintainer's design review
+found it). Drafted by Workflow from the maintainer's direction; Data confirms as author lane post-ratification.*
 **Date:** 2026-06-30 (v1) · 2026-07-02 (v2 rework)
 **Owner:** Data — host logger / analytics substrate
 **Lane:** data (relates: Firmware emits the raw `plants.env` rows · Sage bench placement · Trellis schema register)
