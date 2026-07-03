@@ -208,11 +208,22 @@ def filter_since(data: LogData, hours: float | None) -> LogData:
 
 
 def filter_channels(data: LogData, channels: list[str] | None) -> LogData:
-    """Keep only readings for the given sensor ids (None / empty = all) (E10)."""
+    """Keep only readings for the given sensor ids (None / empty = all) (E10).
+
+    #583 (the FENCE rule): a token may be a plain sensor id (``s1`` - matches
+    that channel on every device, the single-device case unchanged) or a
+    device-scoped ``s1@<device_id>`` composite, matching exactly one device's
+    channel - two devices' ``s1`` are different plants and must be
+    independently toggleable."""
     if not channels:
         return data
-    keep = set(channels)
-    kept = [r for r in data.readings if r.sensor_id in keep]
+    plain = {c for c in channels if "@" not in c}
+    scoped = {tuple(c.split("@", 1)) for c in channels if "@" in c}
+    kept = [
+        r
+        for r in data.readings
+        if r.sensor_id in plain or (r.sensor_id, r.device_id) in scoped
+    ]
     return LogData(readings=kept, segments=data.segments, sources=data.sources)
 
 
@@ -448,13 +459,35 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
     mrange = seg.moist_range if seg and seg.moist_range else (900, 3400)
     bands = _band_ranges(bounds, mrange[0], mrange[1])
 
+    # #583 (the FENCE rule): identity is (device_id, sensor_id) - two devices'
+    # s1 are different plants and never mix, merge, or roll up. With a single
+    # device the key collapses to the bare sensor id, so today's one-Sprout
+    # dashboard is byte-identical (the COLLAPSE rule obeyed at the data layer).
+    device_ids_in_data: list[str] = []
+    for r in soil:
+        if r.device_id and r.device_id not in device_ids_in_data:
+            device_ids_in_data.append(r.device_id)
+    multi = len(device_ids_in_data) > 1
+
+    def _key(r) -> str:
+        return f"{r.sensor_id}@{r.device_id}" if multi else r.sensor_id
+
     by_sensor: dict[str, list] = {}
     for r in soil:
-        by_sensor.setdefault(r.sensor_id, []).append(r)
+        by_sensor.setdefault(_key(r), []).append(r)
     sensor_ids = sorted(by_sensor)
-    colors = {
-        sid: SENSOR_COLORS[_channel_idx(sid) % len(SENSOR_COLORS)] for sid in sensor_ids
-    }
+    if multi:
+        # enumeration order, not sid digits: two devices' s1 must not share a
+        # colour in the one trajectory chart (they're different plants)
+        colors = {
+            sid: SENSOR_COLORS[i % len(SENSOR_COLORS)]
+            for i, sid in enumerate(sensor_ids)
+        }
+    else:
+        colors = {
+            sid: SENSOR_COLORS[_channel_idx(sid) % len(SENSOR_COLORS)]
+            for sid in sensor_ids
+        }
 
     sensors = []
     trajectory_sets = []
@@ -468,10 +501,18 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
             for r in rs
         ]
         last = rs[-1]
-        ui = BAND_UI.get(last.band or "", ("?", "#9A8480", "Unknown"))
+        # #583 (the HONESTY rule): NO_SIGNAL earns no band colour and no value
+        # display - a floating input's number is noise, and showing it implies
+        # signal. The raw rows stay fully queryable; only the card display gates.
+        no_signal = last.quality_flag == "NO_SIGNAL"
+        if no_signal:
+            ui = ("no signal", "#9A8480", "Unwired")
+        else:
+            ui = BAND_UI.get(last.band or "", ("?", "#9A8480", "Unknown"))
         # #486: attribute this channel to a plant via the fleet registry - honest
         # None on an unknown device or unassigned channel, never an invented name.
-        plant = reg.plant_for(last.device_id, sid)
+        # (last.sensor_id, not the group key - the key may be device-scoped, #583)
+        plant = reg.plant_for(last.device_id, last.sensor_id)
         # #562 (ADR-0023 v2): the last reading's interior-ambient context, only
         # ever value+tag together - a context value never renders untagged.
         ambient = None
@@ -497,7 +538,9 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         sensors.append(
             {
                 "id": sid,
+                "sensor_id": last.sensor_id,  # the bare channel token (#583)
                 "device_id": last.device_id or None,
+                "no_signal": no_signal,
                 "plant_id": plant["plant_id"] if plant else None,
                 "plant_name": plant["plant_name"] if plant else None,
                 "ambient": ambient,
@@ -671,6 +714,12 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         "calibration": "uncalibrated (raw + band only; per-channel cal #170)",
     }
 
+    # #583: the per-device groups the template renders (the #575 spec's eight
+    # rules). Single device -> one group + the slim ribbon (COLLAPSE).
+    device_groups = _device_groups(
+        reg, device_ids_in_data, by_sensor, sensors, data.segments
+    )
+
     # PRD-0002 R3 (#368): join solar + optional weather onto the soil window. Offline-
     # first — {"available": False} when no location config, so the UI just omits it.
     env = build_env_context(start, soil[-1].timestamp_utc)
@@ -681,6 +730,7 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         "env": env,
         "cal": {"bounds": bounds, "moist_range": list(mrange), "bands": bands},
         "sensors": sensors,
+        "devices": device_groups,
         "trajectory": {
             "start_local": meta["start_local"],
             # local-first chart-axis anchor (#328): local + zone, no UTC secondary.
@@ -700,6 +750,79 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         "integrity": integrity,
         "gaps": gaps,
     }
+
+
+def _device_groups(reg, device_ids_in_data, by_sensor, sensors, segments) -> list:
+    """The per-device group headers (#583, the #575 spec's eight rules).
+
+    - ORDER: registry order first (the config's first-seen list), then
+      unregistered devices in data-appearance order - state never re-sorts.
+    - PER-DEVICE: connection state, time source, and calibration status live
+      here, once - never repeated on cards, never averaged into fleet health.
+    - STATES: the header exposes ``last_seen_utc`` and the raw ``time_source``;
+      the client derives online/offline/syncing (#279 vocabulary) and stamps
+      the offline age with the VIEWER's clock, per the spec - never a baked
+      server-side age that goes stale in a static snapshot.
+    - IDENTITY: friendly name + hostname from the registry (never a MAC); a
+      device with no registry entry shows its device_id honestly.
+    """
+    ordered: list[str] = [
+        d.device_id for d in reg.devices if d.device_id in device_ids_in_data
+    ]
+    ordered += [d for d in device_ids_in_data if d not in ordered]
+    if not ordered:
+        ordered = [None]  # a legacy log with no device_id column: one group
+
+    groups = []
+    for did in ordered:
+        if did is None:  # legacy log, no device_id column: every card, one group
+            entry_ids = [s["id"] for s in sensors]
+        else:
+            entry_ids = [s["id"] for s in sensors if s["device_id"] == did]
+        rows = [r for k in entry_ids for r in by_sensor[k]]
+        if not rows:
+            continue
+        last = max(rows, key=lambda r: r.timestamp_utc)
+        regdev = reg.device(did) if did else None
+        base_url = getattr(regdev, "base_url", None)
+        hostname = None
+        if base_url:
+            hostname = base_url.split("://", 1)[-1].rstrip("/")
+        transport = (
+            "wifi"
+            if (
+                last.payload.get("transport") == "wifi_poll"
+                or last.logger_version.startswith("device_adapter")
+            )
+            else "serial"
+        )
+        # HONESTY: cal_verified=false surfaces as the device's own header claim
+        # (firmware emits "# board cal: PLACEHOLDER" when not bench-verified,
+        # #436) - never a guess. Absent line = the board compiled cal-verified.
+        cal_provisional = any(
+            seg.device_id == did
+            and any("board cal: PLACEHOLDER" in ln for ln in seg.raw_lines)
+            for seg in segments
+        )
+        groups.append(
+            {
+                "device_id": did,
+                "name": (getattr(regdev, "label", None) or did or "Sprout"),
+                "hostname": hostname,
+                "transport": transport,
+                "board": getattr(regdev, "board", None),
+                "fw": last.firmware_version or None,
+                "time_source": last.time_source,  # None = host-stamped
+                "last_seen_utc": (
+                    last.timestamp_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+                    if last.timestamp_utc
+                    else None
+                ),
+                "cal_provisional": cal_provisional,
+                "sensors": entry_ids,
+            }
+        )
+    return groups
 
 
 def _round_opt(v: float | None, n: int) -> float | None:
