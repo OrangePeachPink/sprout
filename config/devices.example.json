@@ -1,5 +1,5 @@
 {
-  "_note": "TEMPLATE. Copy to config/devices.local.json (gitignored) and describe YOUR fleet: each ESP32 board and which plant sits on each capacitive channel. This is the multi-device registry (#485) the monitor-all view (#486) reads to attribute N devices' streams to the 11 plants. The registry's JSON shape is a PROPOSAL (awaiting Workflow/Trellis ratification for #300); consumers depend on device_registry.py's functions, not this file's layout. Placeholder values below.",
+  "_note": "TEMPLATE. Copy to config/devices.local.json (gitignored) and describe YOUR fleet: each ESP32 board and which plant sits on each capacitive channel. This is the multi-device registry (#485) the monitor-all view (#486) reads to attribute N devices' streams to the 11 plants. Optional per-device base_url (the device's served root, e.g. http://192.168.1.42): when set, the live dashboard also polls that device's GET /telemetry (#276) - omit it for tethered/serial-only devices. The registry's JSON shape is a PROPOSAL (awaiting Workflow/Trellis ratification for #300); consumers depend on device_registry.py's functions, not this file's layout. Placeholder values below.",
   "schema_version": 1,
   "devices": [
     {

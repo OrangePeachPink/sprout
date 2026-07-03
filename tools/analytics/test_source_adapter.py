@@ -17,7 +17,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from parse_v1 import parse_files
-from source_adapter import DEVICE_ADAPTER_VERSION, DeviceAdapter, TetheredAdapter
+from source_adapter import (
+    DEVICE_ADAPTER_VERSION,
+    DeviceAdapter,
+    FleetAdapter,
+    TetheredAdapter,
+)
 
 _COLS = "record_type,timestamp_utc,session_id,raw_value,quality_flag,payload"
 _ROW = "plants.soil,2026-06-27T00:00:30.000Z,sess001,1312,OK,level=well watered;gpio=36"
@@ -245,3 +250,83 @@ def test_device_adapter_end_to_end_over_real_http() -> None:
         server.shutdown()
         thread.join(timeout=5)
     assert len(data.readings) == 1
+
+
+# --------------------------------------------------------------------------- #
+# FleetAdapter (#486): N sources -> one LogData, deduped on device_seq
+# --------------------------------------------------------------------------- #
+
+
+def test_fleet_combines_tethered_and_device_sources(tmp_path: Path) -> None:
+    csv = _write(tmp_path)  # one tethered reading (no device_seq)
+    wifi = _telemetry_response(
+        [_device_line(device="sprout-s3-01", sensor="s1", raw=1900)]
+    )
+    fleet = FleetAdapter(
+        [
+            TetheredAdapter(),
+            DeviceAdapter("http://192.0.2.7", fetch=lambda url: wifi),
+        ]
+    )
+    data = fleet.load([str(csv)])
+    assert len(data.readings) == 2
+    assert {r.raw_value for r in data.readings} == {1312, 1900}
+    assert str(csv) in data.sources and "http://192.0.2.7" in data.sources
+
+
+def test_fleet_dedupes_an_exact_replay_across_transports() -> None:
+    # the same physical reading (same device_seq) arriving via two transports
+    # is a store-and-forward replay - kept once, dropped once (#521's boundary)
+    line = _device_line(
+        payload="level=OK;gpio=36;device_seq=77;time_source=device_synced"
+    )
+    text = _telemetry_response([line])
+    fleet = FleetAdapter(
+        [
+            DeviceAdapter("http://192.0.2.7", fetch=lambda url: text),
+            DeviceAdapter("http://192.0.2.8", fetch=lambda url: text),
+        ]
+    )
+    data = fleet.load()
+    assert len(data.readings) == 1
+
+
+def test_fleet_never_dedupes_rows_without_device_seq() -> None:
+    # no device_seq -> no dedupe signal -> always kept (Store's honest degrade;
+    # a false-positive drop would silently lose real data)
+    text = _telemetry_response([_device_line()])  # payload has no device_seq
+    fleet = FleetAdapter(
+        [
+            DeviceAdapter("http://192.0.2.7", fetch=lambda url: text),
+            DeviceAdapter("http://192.0.2.8", fetch=lambda url: text),
+        ]
+    )
+    assert len(fleet.load().readings) == 2
+
+
+def test_fleet_unreachable_device_contributes_nothing(tmp_path: Path) -> None:
+    csv = _write(tmp_path)
+
+    def _boom(url: str) -> str:
+        raise OSError("Connection refused")
+
+    fleet = FleetAdapter([TetheredAdapter(), DeviceAdapter("http://x", fetch=_boom)])
+    data = fleet.load([str(csv)])
+    assert len(data.readings) == 1  # the tethered view survives untouched
+
+
+def test_fleet_inputs_reach_only_the_first_adapter() -> None:
+    seen: dict[str, object] = {}
+
+    class _Probe:
+        def __init__(self, name: str) -> None:
+            self._name = name
+
+        def load(self, inputs=None):  # matches the SourceAdapter contract
+            seen[self._name] = inputs
+            from parse_v1 import LogData
+
+            return LogData()
+
+    FleetAdapter([_Probe("first"), _Probe("second")]).load(["a.csv"])
+    assert seen == {"first": ["a.csv"], "second": None}
