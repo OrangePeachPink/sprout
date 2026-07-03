@@ -42,7 +42,8 @@ constexpr int ADC_DISCARD = 4;
 constexpr const char *RUN_LABEL = "4probe-coloc-origplant";
 
 // --- Cross-project telemetry identity (docs/TELEMETRY_SCHEMA.md) ------------
-// These populate the namespaced, joinable row schema shared with HotBoxAQ.
+// These populate the namespaced, joinable row schema shared with the
+// companion air-quality project.
 constexpr const char *RECORD_TYPE_SOIL = "plants.soil";       // namespaced record_type
 constexpr const char *SENSOR_MODEL     = "UMLIFE_v2_TLC555";  // probe family
 constexpr const char *SENSOR_POSITION  = "origplant";        // all four co-located now; per-channel at repot

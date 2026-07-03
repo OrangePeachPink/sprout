@@ -4,7 +4,8 @@ makes a soil row ambient-aware join-free: as ``plants.env`` rows stream past,
 remember the freshest interior-ambient reading; when a soil row is written,
 fill its reserved ``temp_context_c`` / ``rh_context_pct`` columns from it and
 tag the fill with ``context_source`` (payload k=v, per the #559 review - never
-a new positional column, so the HotBoxAQ shared core stays byte-identical).
+a new positional column, so the companion air-quality project's shared core
+stays byte-identical).
 
 **Two families, fenced (ADR-0023 v2 decision).** Interior ambient - the air the
 plant actually lives in - fills only from the two proximity classes:

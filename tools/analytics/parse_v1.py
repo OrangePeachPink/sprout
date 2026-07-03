@@ -343,7 +343,8 @@ class Reading:
         """Which interior-ambient source filled this row's ``temp_context_c`` /
         ``rh_context_pct`` (#562, ADR-0023 v2) - e.g. ``sht45_onrig``. Rides
         payload k=v (the #559 review decision - never a positional column, so
-        the HotBoxAQ shared core stays byte-identical). ``None`` on any row
+        the companion air-quality project's shared core stays byte-identical).
+        ``None`` on any row
         whose interior context was never filled - honest, not a default."""
         return self.payload.get("context_source")
 
