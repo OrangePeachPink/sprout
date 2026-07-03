@@ -48,8 +48,9 @@ enforced (merged PRs don't auto-close). This is the trust contract that lets fou
 - **Start here:** **#28** (schema-v1 parser) and **#29** (4-channel dashboard) are your **P1** spine.
   **#9** and **#12** carry `blocks:data-integrity` (durability); **#38** touches the `value` column on the
   schema side.
-- **Carry-over:** the HotBoxAQ schema alignment that closed out of #14 (plants-side complete) is a
-  **HotBox-side todo** — pick it up when HotBox development starts.
+- **Carry-over:** the companion air-quality project's schema alignment that closed out of #14
+  (plants-side complete) is a **companion-side todo** — pick it up when that project's
+  development starts.
 
 ### 🎨 Design lane
 

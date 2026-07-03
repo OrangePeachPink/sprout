@@ -136,6 +136,6 @@ Cut via `/to-issues`; each a `Refs` PR through the gate:
 ## Out of scope / later
 
 - ML prediction / anomaly detection over the feature set — a later epic; the substrate here enables it.
-- Cross-project joins (e.g. HotBoxAQ environmental context against an experiment) — PRD-0002's territory, joinable
-  later via the shared telemetry schema.
+- Cross-project joins (e.g. the companion air-quality project's environmental context against an
+  experiment) — PRD-0002's territory, joinable later via the shared telemetry schema.
 - Exporting a study as a published report artifact — a later nicety once the living log exists.
