@@ -40,12 +40,13 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          version: "0.11.14"   # pin uv (#254) — kills cross-version uv.lock re-serialization
 
       - name: Set up just
         uses: extractions/setup-just@v4
 
       - name: Sync the locked environment
-        run: uv sync
+        run: uv sync --locked   # assert uv.lock is current; fail loud, never rewrite it (#254)
 
       # Cache the npm download store so the pinned npx tools (markdownlint-cli2 +
       # cspell — see .pre-commit-config.yaml) aren't re-fetched every run. Keyed on the
@@ -94,12 +95,13 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          version: "0.11.14"   # pin uv (#254) — kills cross-version uv.lock re-serialization
 
       - name: Set up just
         uses: extractions/setup-just@v4
 
       - name: Sync the locked environment
-        run: uv sync
+        run: uv sync --locked   # assert uv.lock is current; fail loud, never rewrite it (#254)
 
       # PlatformIO — needed for native unit tests (pio test -e native) and the
       # ESP32 compile-verify (pio run -e esp32dev). Cached by platformio.ini hash
@@ -154,12 +156,13 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          version: "0.11.14"   # pin uv (#254) — kills cross-version uv.lock re-serialization
 
       - name: Set up just
         uses: extractions/setup-just@v4
 
       - name: Sync the locked environment
-        run: uv sync
+        run: uv sync --locked   # assert uv.lock is current; fail loud, never rewrite it (#254)
 
       - name: Install PlatformIO
         run: pip install platformio

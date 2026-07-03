@@ -8,10 +8,16 @@
 #   Then just run:       just            # lists every recipe
 #                        just start      # launches Sprout (the dashboard)
 #
-# Python runs through uv (ADR-0002 #3): `uv run python` uses the locked env and
-# auto-syncs it on first use, so every recipe gets reproducible deps. One place to change.
-
-py  := "uv run python"
+# Python runs through uv (ADR-0002 #3): `uv run` uses the locked env and builds it from
+# uv.lock on first use, so every recipe gets reproducible deps. One place to change.
+#
+# --frozen (#254): routine commands use the lock AS-IS and never rewrite it. Without it, a
+# stray implicit re-lock (uv re-serializes uv.lock when a contributor's uv version differs
+# from the lock's writer) leaves uv.lock dirty, which then silently blocks `git checkout`
+# ("Aborting ... uv.lock") - a brutal, causeless first-PR trap. --frozen still BUILDS a
+# missing .venv from the lock (verified), so fresh checkouts are unaffected; it only forbids
+# WRITING the lock. Dependencies change intentionally via `just lock`, never as a side effect.
+py  := "uv run --frozen python"
 pio := "pio"
 
 # Show the menu (every recipe + its one-line summary).
@@ -122,10 +128,15 @@ format-fw base="origin/main":
 
 # Run every pre-commit hook across the repo — the single definition of lint/format/hygiene.
 pre-commit:
-    uv run pre-commit run --all-files
+    uv run --frozen pre-commit run --all-files
 
 # The pre-merge gate: all hooks + the tests. Exactly what CI runs (mirrors #89).
 check: pre-commit test
+
+# Everything else runs --frozen; commit pyproject.toml + uv.lock together as a deliberate change.
+# Update uv.lock after a pyproject.toml dependency change — the ONE command allowed to rewrite it (#254).
+lock:
+    uv lock
 
 # Release ritual — not wired until the first release (see ADR-0009 versioning & release policy).
 ship:

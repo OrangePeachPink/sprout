@@ -81,6 +81,11 @@ maintainer confirms `area:` / `layer:` at triage.
 > **If CI goes red after a base fix:** re-running the job alone isn't enough — it replays the *stale* merge
 > commit. **Update your branch** (merge or rebase `main`) so CI re-checks against the fixed base. That's the
 > "Attempt #2 / #3" trap.
+>
+> **`git checkout`/`git switch` says `Aborting … uv.lock`?** A stray `uv` re-lock dirtied `uv.lock` (uv
+> re-serializes it when your uv version differs from the lock's writer). Run **`git restore uv.lock`** and
+> switch again. Routine commands go through `just` with `--frozen` so this shouldn't happen (#254) — change
+> dependencies via **`just lock`**, never by editing `uv.lock` by hand.
 
 ## Firmware — build, test, flash (no Arduino IDE)
 
