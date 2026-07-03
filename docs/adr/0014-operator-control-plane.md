@@ -1,8 +1,12 @@
 # ADR-0014 — Operator control plane (Monitor + Experiment under one plane)
 
-**Status:** Proposed — *direction set by the Operator-Experience epic (#125); detail co-authored as the
-slices land. §5 (`serve.py` boundary) added + Trellis-aligned (#296) — the operator-control-plane boundary
-is now explicit; ready for maintainer ratification (Proposed→Accepted).*
+**Status:** Accepted — *maintainer-ratified 2026-07-03. Ratified as shipped reality: the Operator-Experience
+epic (#125) delivered every section, and #560 was conformance-checked against §5's boundary. Ratification
+note for the untethered era (the Wave-1 finish line on #448): §1's "Monitor mode" concept **extends** to the
+fleet poller (#582) — the expectation recorded at ratification is that the WiFi poll→persist loop rides the
+Monitor lifecycle (one Start/Stop governs both collection paths, serial and fleet), not a third lifecycle,
+and #582's process-home decision binds to this. §5's `operator_plane` extraction trigger (#243 device-served
+UI sharing controller state) has not fired and stays dormant.*
 **Date:** 2026-06-26
 **Owner:** Data lane
 **Lane:** data/analytics (the operator control surface)
