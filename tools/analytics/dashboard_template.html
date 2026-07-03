@@ -147,6 +147,22 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 
 /* summary cards */
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-md); }
+/* #583: per-device grouping (#575's eight rules) — the outer container stacks
+   groups vertically; each group holds its own .cards grid. Existing tokens only. */
+#cards { display: flex; flex-direction: column; gap: var(--space-md); }
+.devgroup { display: flex; flex-direction: column; gap: 10px; }
+.devheader { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 8px 12px; background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--r-tile); }
+.devname { font-weight: 700; color: var(--ink); }
+.devid { font-family: var(--font-data); font-size: 11px; color: var(--muted); }
+.statechip { font-family: var(--font-data); font-size: 11px; font-weight: 600;
+  border: 1px solid; border-radius: 999px; padding: 2px 10px; }
+.calchip { font-family: var(--font-data); font-size: 11px; font-weight: 600;
+  margin-left: auto; }
+.calbanner { font-size: 12px; color: var(--st-dry); background: var(--surface);
+  border: 1px dashed var(--st-dry); border-radius: var(--r-tile); padding: 8px 12px; }
+.devribbon { font-size: 11px; color: var(--muted); padding: 0 2px; }
 .scard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-tile);
   box-shadow: var(--e1); padding: var(--space-md); position: relative; overflow: hidden; cursor: pointer;
   transition: box-shadow .12s, transform .12s; }
@@ -443,45 +459,123 @@ function renderHeader(){
   renderChannelChips();
 }
 
-/* ---- summary cards (click -> single-plant detail) ---- */
+/* ---- device state (#583 STATES rule): derived with the VIEWER's clock ---- */
+// online within the repo's interruption threshold (+ margin for a slow sweep);
+// syncing = fresh WiFi data whose device clock hasn't NTP-synced yet (#278);
+// offline stamps its age live — never a server-baked age that goes stale.
+const STATE_ONLINE_S = 180;
+function fmtAge(s){ return s<60 ? Math.floor(s)+'s ago' : s<3600 ? Math.floor(s/60)+'m ago' : s<86400 ? Math.floor(s/3600)+'h ago' : Math.floor(s/86400)+'d ago'; }
+function deviceState(d){
+  if(!d.last_seen_utc) return {label:'no data', color:'var(--q-nosignal)', offline:true};
+  const age = (Date.now() - Date.parse(d.last_seen_utc))/1000;
+  if(age > STATE_ONLINE_S) return {label:`offline · last heard ${fmtAge(age)}`, color:'var(--st-dry)', offline:true};
+  if(d.transport==='wifi' && d.time_source==='device_uptime')
+    return {label:'online · syncing', color:'var(--st-watering)', offline:false};
+  const t = d.time_source==='device_synced' ? 'synced' : 'live';
+  return {label:`online · ${t}`, color:'var(--leaf)', offline:false};
+}
+
+/* ---- summary cards, grouped per device (#583 / #575's eight rules) ---- */
 function renderCards(){
   const wrap = document.getElementById('cards'); wrap.innerHTML = '';
   document.getElementById('cardsCap').textContent = 'raw + band = truth · click a card for the single-plant view';
-  DASH.sensors.forEach(s => {
-    const c = el('div','scard'); c.title = `Open the ${s.id} single-plant view`;
-    c.addEventListener('click', () => showDetail(s.id));
-    c.appendChild(el('div','accent')).style.background = s.color;
-    c.appendChild(el('div','drill', 'details →'));
-    c.appendChild(el('div', null, s.plant_name
-      ? `<span class="sid">${s.plant_name}</span> <span class="gpio">${s.id} · GPIO ${s.gpio} · ${s.channel}</span>`
-      : `<span class="sid">${s.id}</span> <span class="gpio">GPIO ${s.gpio} · ${s.channel}</span>`));
-    c.appendChild(el('div','raw', fmt(s.raw_last) + '<span class="rawu"> raw</span>'));
-    const pill = el('span','pill', `${s.band_ui} <span style="opacity:.8">· ${s.mood}</span>`);
-    pill.style.background = s.band_color;
-    const pwrap = el('div'); pwrap.appendChild(pill); c.appendChild(pwrap);
-    const meta = el('div','meta');
-    const add = (l,v) => { meta.appendChild(el('span','muted small',l)); meta.appendChild(el('span','num small',v)); };
-    add('fw band', s.band_fw||'—');
-    add('spread', s.spread_last!=null? s.spread_last : '—');
-    add('quality', s.quality_last||'—');
-    add('range', `${fmt(s.raw_min)}–${fmt(s.raw_max)}`);
-    add('median', fmt(s.raw_median));
-    add('slope', s.slope_per_hr!=null? `${s.slope_per_hr>=0?'+':''}${s.slope_per_hr}/h` : '—');
-    if(s.ambient){ // #562: interior-ambient context — value never shown without its source tag
-      const parts = [];
-      if(s.ambient.temp_c!=null) parts.push(`${s.ambient.temp_c}°C`);
-      if(s.ambient.rh_pct!=null) parts.push(`${s.ambient.rh_pct}%RH`);
-      add('ambient', `${parts.join(' · ')} <span class="muted">(${s.ambient.source})</span>`);
+  const devices = (DASH.devices && DASH.devices.length) ? DASH.devices
+    : [{device_id:null, name:'Sprout', sensors: DASH.sensors.map(s=>s.id)}];
+  const multi = devices.length > 1;                    // COLLAPSE: one device = today's flat wall
+  devices.forEach(d => {
+    const group = el('div','devgroup');
+    const st = deviceState(d);
+    if(multi){                                          // full header: the device is the fence
+      const h = el('div','devheader');
+      h.appendChild(el('span','devname', d.name));
+      const idbits = [];
+      if(d.hostname) idbits.push(d.hostname);          // IDENTITY: registry hostname, never a MAC
+      if(d.transport) idbits.push(d.transport);
+      if(d.board) idbits.push(d.board);
+      if(d.fw) idbits.push('fw ' + d.fw);
+      h.appendChild(el('span','devid mono', idbits.join(' · ')));
+      const chip = el('span','statechip', st.label);   // STATES: #279 vocabulary
+      chip.style.color = st.color; chip.style.borderColor = st.color;
+      chip.dataset.lastSeen = d.last_seen_utc || '';
+      h.appendChild(chip);
+      h.appendChild(el('span','devid mono',
+        d.time_source ? ('time · ' + d.time_source.replace('_',' ')) : 'time · host-stamped'));
+      const cal = el('span','calchip', d.cal_provisional ? 'cal · provisional' : 'cal · bench-verified');
+      cal.style.color = d.cal_provisional ? 'var(--st-dry)' : 'var(--leaf)';
+      h.appendChild(cal);
+      group.appendChild(h);
+      if(d.cal_provisional){                            // HONESTY: provisional-band banner until #170
+        group.appendChild(el('div','calbanner',
+          'Board calibration is provisional (not bench-verified for this board) — bands render provisional until per-channel cal (#170).'));
+      }
+    } else if (DASH.devices && DASH.devices.length===1 && d.device_id){
+      // slim ribbon: the single-device case keeps today's flat card wall
+      const rib = el('div','devribbon mono');
+      const bits = [d.name];
+      if(d.transport) bits.push(d.transport);
+      bits.push(st.label);
+      rib.textContent = bits.join(' · ');
+      group.appendChild(rib);
     }
-    if(s.pressure){ // #577: pressure is the EXTERIOR-family exception (ADR-0023 §3) —
-      // marked "· exterior" so its provenance visibly differs from the interior
-      // ambient tag above; value + tag together, honest-blank when the cache ages out.
-      add('pressure', `${s.pressure.hpa} hPa <span class="muted">(${s.pressure.source} · exterior)</span>`);
-    }
-    c.appendChild(meta);
-    wrap.appendChild(c);
+    const cardsWrap = el('div','cards');
+    if(st.offline && multi) cardsWrap.style.opacity = '.55';  // dims THIS group only
+    const byId = {}; DASH.sensors.forEach(s=>byId[s.id]=s);
+    (d.sensors||[]).forEach(id => { const s = byId[id]; if(s) cardsWrap.appendChild(cardFor(s)); });
+    group.appendChild(cardsWrap);
+    wrap.appendChild(group);
   });
 }
+
+function cardFor(s){
+  const c = el('div','scard'); c.title = `Open the ${s.id} single-plant view`;
+  c.addEventListener('click', () => showDetail(s.id));
+  c.appendChild(el('div','accent')).style.background = s.no_signal ? 'var(--q-nosignal)' : s.color;
+  c.appendChild(el('div','drill', 'details →'));
+  const chanLabel = s.sensor_id || s.id;
+  c.appendChild(el('div', null, s.plant_name
+    ? `<span class="sid">${s.plant_name}</span> <span class="gpio">${chanLabel} · GPIO ${s.gpio} · ${s.channel}</span>`
+    : `<span class="sid">${chanLabel}</span> <span class="gpio">GPIO ${s.gpio} · ${s.channel}</span>`));
+  // HONESTY (#583): an unwired input shows '—', never a floating-noise number
+  c.appendChild(el('div','raw', (s.no_signal ? '—' : fmt(s.raw_last)) + '<span class="rawu"> raw</span>'));
+  const pill = el('span','pill', `${s.band_ui} <span style="opacity:.8">· ${s.mood}</span>`);
+  pill.style.background = s.band_color;
+  const pwrap = el('div'); pwrap.appendChild(pill); c.appendChild(pwrap);
+  const meta = el('div','meta');
+  const add = (l,v) => { meta.appendChild(el('span','muted small',l)); meta.appendChild(el('span','num small',v)); };
+  if(s.no_signal){
+    add('quality', s.quality_last||'—');   // NO trend, NO stats — nothing here earns one
+    c.appendChild(meta);
+    return c;
+  }
+  add('fw band', s.band_fw||'—');
+  add('spread', s.spread_last!=null? s.spread_last : '—');
+  add('quality', s.quality_last||'—');
+  add('range', `${fmt(s.raw_min)}–${fmt(s.raw_max)}`);
+  add('median', fmt(s.raw_median));
+  add('slope', s.slope_per_hr!=null? `${s.slope_per_hr>=0?'+':''}${s.slope_per_hr}/h` : '—');
+  if(s.ambient){ // #562: interior-ambient context — value never shown without its source tag
+    const parts = [];
+    if(s.ambient.temp_c!=null) parts.push(`${s.ambient.temp_c}°C`);
+    if(s.ambient.rh_pct!=null) parts.push(`${s.ambient.rh_pct}%RH`);
+    add('ambient', `${parts.join(' · ')} <span class="muted">(${s.ambient.source})</span>`);
+  }
+  if(s.pressure){ // #577: pressure is the EXTERIOR-family exception (ADR-0023 §3) —
+    // marked "· exterior" so its provenance visibly differs from the interior
+    // ambient tag above; value + tag together, honest-blank when the cache ages out.
+    add('pressure', `${s.pressure.hpa} hPa <span class="muted">(${s.pressure.source} · exterior)</span>`);
+  }
+  c.appendChild(meta);
+  return c;
+}
+
+// STATES: offline ages tick with the viewer's clock, not a stale render stamp
+setInterval(() => {
+  document.querySelectorAll('.statechip[data-last-seen]').forEach(chip => {
+    if(!chip.dataset.lastSeen) return;
+    const d = DASH.devices && DASH.devices.find(x => x.last_seen_utc === chip.dataset.lastSeen);
+    if(d){ const st = deviceState(d); chip.textContent = st.label; chip.style.color = st.color; chip.style.borderColor = st.color; }
+  });
+}, 5000);
 
 /* ---- calibration ladder ---- */
 function renderLadder(){
