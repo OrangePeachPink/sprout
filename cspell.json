@@ -167,6 +167,8 @@
     "hackster",
     "hanken",
     "idempotently",
+    // #558 identifier-guard: the IPTC photo-metadata standard named in evidence docs.
+    "IPTC",
     "irrig",
     "kohm",
     "lastminuteengineers",

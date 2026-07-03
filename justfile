@@ -92,8 +92,8 @@ test-native:
 # ============================================================================
 #  TEST — the whole harness (ADR-0002 #11). Lanes plug their suites in here.
 # ============================================================================
-# Run everything: firmware logic (native C) + the host Python tests.
-test: test-native test-host
+# Run everything: firmware logic (native C) + the host Python tests + the DX tool suite.
+test: test-native test-host test-dx
 
 # Host Python tests (the control-plane seam test today; pytest is the harness for new suites).
 test-host:
@@ -146,6 +146,17 @@ preview *ARGS:
 # the real test; safe to re-run on an already-set-up machine too.
 validate-onboarding:
     {{py}} tools/dx/validate_onboarding.py
+
+# Hardware/network PII scan (#558): image metadata (EXIF/XMP/IPTC) + MAC/USB-ID/SSID
+# text greps over the tracked tree. Runs in every commit via pre-commit (blocking).
+#   just identifier-guard --history     # one-time audit of every blob ever committed
+#   just identifier-guard --strip F...  # remove metadata from image files, byte-level
+identifier-guard *ARGS:
+    {{py}} tools/dx/identifier_guard.py {{ARGS}}
+
+# DX tool tests (pytest — identifier-guard suite; new DX suites land here too).
+test-dx:
+    {{py}} -m pytest tools/dx/ -q
 
 # ============================================================================
 #  LANES: register your recipes in your section above. Pattern:

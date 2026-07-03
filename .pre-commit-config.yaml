@@ -104,3 +104,20 @@ repos:
         pass_filenames: false
         always_run: true
         verbose: true
+
+  # identifier-guard (#558) — hardware/network PII gate: image metadata (EXIF/XMP/IPTC)
+  # + MAC (incl. EUI-64 ff:fe), USB instance-ID/VID&PID, and operator-local SSID/hostname
+  # denylist in committed text. BLOCKING, unlike cspell's advisory posture, on purpose:
+  # an identifier that lands in history needs git filter-repo to truly remove, so
+  # commit time is the one cheap moment to stop it. Mechanizes PR #568's manual
+  # pre-merge certification. False positives → tools/dx/identifier_guard_allowlist.txt
+  # (with a written reason). The SSID denylist (config/identifiers.local.txt) is
+  # operator-local/gitignored — absent in CI, where the regex classes still enforce.
+  - repo: local
+    hooks:
+      - id: identifier-guard
+        name: identifier-guard (PII — image metadata + MAC/USB/SSID)
+        entry: uv run python tools/dx/identifier_guard.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
