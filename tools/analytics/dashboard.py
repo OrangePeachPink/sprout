@@ -471,6 +471,17 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
                 "rh_pct": last.rh_context_pct,
                 "source": last.context_source,
             }
+        # #577 (ADR-0023 §3): pressure is the EXTERIOR-family exception - a
+        # separate quantity with its own per-quantity tag, kept distinct from
+        # the interior ambient block above so the UI can mark it as exterior.
+        # Same value+tag-together honesty; honest-empty when the cache ages out
+        # (the fill layer #567 writes nothing when stale -> this stays None).
+        pressure = None
+        if last.pressure_context_source and last.pressure_context_hpa is not None:
+            pressure = {
+                "hpa": last.pressure_context_hpa,
+                "source": last.pressure_context_source,
+            }
         sensors.append(
             {
                 "id": sid,
@@ -478,6 +489,7 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
                 "plant_id": plant["plant_id"] if plant else None,
                 "plant_name": plant["plant_name"] if plant else None,
                 "ambient": ambient,
+                "pressure": pressure,
                 "gpio": last.gpio,
                 "channel": last.channel,
                 "color": colors[sid],
