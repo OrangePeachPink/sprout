@@ -1,0 +1,13 @@
+# identifier_guard allowlist (#558) - reviewed exceptions only.
+#
+# Format: one `<repo path>:<exact matched text>` per line; the reason lives in
+# a comment directly above the entry. This file is the ONLY file the guard
+# does not scan (entries would self-flag). Adding a line here is a statement
+# that a human verified the match is generic - never allowlist anything
+# carrying a per-unit serial, a real MAC, or a home-network name.
+
+# Generic Silicon Labs CP2102 model ID (10C4:EA60) - identical for every
+# CP2102 ever made, no instance-serial suffix. It names a chip model, not
+# this bench's unit. Quoted from a Device Manager event in the evidence
+# procedure doc as an example of what the "Events tab" shows.
+docs/evidence/README.md:USB\VID_10C4&PID_EA60

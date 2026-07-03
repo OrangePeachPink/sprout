@@ -7,6 +7,15 @@
 > The descriptions below are preserved as the durable record of what each set
 > documented. New photo evidence follows the curated, EXIF-stripped packet
 > convention (see `2026-07-01-esp32-s3-c5-intake/`).
+>
+> **This is machine-checked now (#558):** every commit runs `identifier-guard`
+> (blocking pre-commit hook) — image metadata (EXIF/XMP/IPTC) plus MAC / USB
+> instance-ID / SSID text patterns across the tracked tree. Strip a flagged
+> photo with `just identifier-guard --strip <file>` (byte-level, pixels
+> untouched); a verified-generic text mention gets a reasoned entry in
+> `tools/dx/identifier_guard_allowlist.txt`. Home-network names go in the
+> gitignored `config/identifiers.local.txt` so the guard can grep for them
+> without the list itself ever being committed.
 
 Visual evidence captured during bring-up of the **plants** ESP32 auto-watering controller, organized by
 subject. Cross-referenced from [`../../SENSOR_QA.md`](../../SENSOR_QA.md), [`../WIRING.md`](../WIRING.md),
