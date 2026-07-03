@@ -125,6 +125,8 @@
     "pioarduino",
     "PSRAM",
     "rymcu",
+    // TWDT = ESP-IDF Task Watchdog Timer; surfaced in the IDF5 wedge re-test (#529 / #599).
+    "TWDT",
     "Xtensa",
     "XTAL",
     // user-guide hardware/source terms (docs/user/trust-your-sensor.md, #142):
