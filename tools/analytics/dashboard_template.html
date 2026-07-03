@@ -307,6 +307,13 @@ footer.prov code { font-family: var(--font-data); }
       <button class="btn" id="monStop" type="button" disabled>■ Stop logging</button>
       <span class="capstatus" id="monStatus">—</span>
     </div>
+    <!-- #588 (ADR-0014): one operator action = ALL collection running (serial
+         monitor + WiFi fleet); an absent path skips with a stated reason. -->
+    <div class="capctl">
+      <button class="btn primary" id="collStart" type="button">▶ Start all collection</button>
+      <button class="btn" id="collStop" type="button" disabled>■ Stop all</button>
+      <span class="capstatus" id="collStatus">—</span>
+    </div>
     <div id="serialOwner" class="serialowner" hidden></div>
   </section>
 
@@ -1449,6 +1456,43 @@ async function monStop(){
     monRender((await apiJson('/monitor/stop', {method:'POST'})).data);
   }catch(e){ if(e.apiDown){ monApiDown(); return; } monSetStatus('stop failed: ' + e, 'err'); }
 }
+/* ---- #588: the one-action collection plane (serial + fleet, ADR-0014) ---- */
+function collDescribe(st){
+  const bit = (name, s) => {
+    if(!s) return name + ': —';
+    if(s.state === 'running') return name + ': running' + (s.devices ? ` (${s.devices} device${s.devices===1?'':'s'})` : '');
+    if(s.state === 'skipped') return name + ': skipped — ' + (s.reason || '');
+    return name + ': ' + s.state;
+  };
+  return bit('serial', st.monitor) + ' · ' + bit('fleet', st.fleet);
+}
+function collRender(st){
+  const start = document.getElementById('collStart'), stop = document.getElementById('collStop');
+  const on = !!st.collecting;
+  start.disabled = on; stop.disabled = !on;
+  const box = document.getElementById('collStatus');
+  box.textContent = collDescribe(st); box.className = 'capstatus' + (on ? ' ok' : '');
+}
+async function collPoll(){
+  try{ collRender((await apiJson('/collection/status', {cache:'no-store'})).data); }
+  catch(e){ /* transient or old server without the route — keep last state */ }
+}
+async function collStart(){
+  const box = document.getElementById('collStatus'); box.textContent = 'starting…';
+  const port = document.getElementById('monPort').value.trim();
+  try{
+    const { ok, status, data } = await apiJson('/collection/start', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({port: port || null}),
+    });
+    if(!ok){ box.textContent = 'refused: ' + (data.error || ('HTTP ' + status)); box.className = 'capstatus err'; monPoll(); return; }
+    collRender(data); monPoll();  // the serial half also shows on the Monitor row
+  }catch(e){ box.textContent = 'start failed: ' + e; box.className = 'capstatus err'; }
+}
+async function collStop(){
+  const box = document.getElementById('collStatus'); box.textContent = 'stopping…';
+  try{ collRender((await apiJson('/collection/stop', {method:'POST'})).data); monPoll(); }
+  catch(e){ box.textContent = 'stop failed: ' + e; box.className = 'capstatus err'; }
+}
 let quitArmed = false;
 async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's not a 1-click kill
   const btn = document.getElementById('quitBtn');
@@ -1500,14 +1544,19 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
     if(capDraftBtn){ capDraftBtn.addEventListener('click', capDraftLoad); capLoadDraftList(); }
     monStartBtn.addEventListener('click', monStart);
     monStopBtn.addEventListener('click', monStop);
+    document.getElementById('collStart').addEventListener('click', collStart);   // #588
+    document.getElementById('collStop').addEventListener('click', collStop);
     monPoll();  // reflect the logger's current state on load
-    monPollTimer = setInterval(monPoll, 5000);  // keep it live (handoff #129) + stoppable on API-down (#130)
+    collPoll(); // ...and the combined collection plane (#588)
+    monPollTimer = setInterval(() => { monPoll(); collPoll(); }, 5000);  // keep it live (handoff #129) + stoppable on API-down (#130)
     quitBtn.hidden = false;  // the in-UI stop only applies to a live server
     quitBtn.addEventListener('click', quitServer);
     capPoll();  // reflect any in-flight capture on load
   } else {
     capStartBtn.disabled = true; capStopBtn.disabled = true;
     monStartBtn.disabled = true; monStopBtn.disabled = true;
+    document.getElementById('collStart').disabled = true;   // #588: snapshot = no control plane
+    document.getElementById('collStop').disabled = true;
     capSetStatus('serve via serve.py for capture control');
     monSetStatus('serve via serve.py for monitor control');
   }

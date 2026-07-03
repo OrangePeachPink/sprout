@@ -113,3 +113,74 @@ def test_context_survives_an_unreachable_fleet_device(tmp_path: Path) -> None:
     # instead: connection refused is immediate AND offline-deterministic.
     ctx = _context([str(log)], registry=_registry("http://127.0.0.1:9"))
     assert len(ctx["sensors"]) == 1  # the tethered view is untouched
+
+
+# --------------------------------------------------------------------------- #
+# #588: the collection control plane is routed (a real serve.py subprocess)
+# --------------------------------------------------------------------------- #
+
+
+def test_collection_routes_are_live(tmp_path: Path) -> None:
+    import json
+    import socket
+    import subprocess
+    import sys as _sys
+    import time
+    import urllib.error
+    import urllib.request
+
+    serve_py = Path(__file__).resolve().parent / "serve.py"
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    proc = subprocess.Popen(
+        [_sys.executable, str(serve_py), str(tmp_path), "--port", str(port)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    try:
+        up = False
+        for _ in range(60):
+            try:
+                with socket.create_connection(("127.0.0.1", port), timeout=0.2):
+                    up = True
+                    break
+            except OSError:
+                time.sleep(0.1)
+        assert up
+
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}/collection/status", timeout=5
+        ) as resp:
+            doc = json.loads(resp.read().decode())
+        assert doc["collecting"] is False
+        assert doc["monitor"]["state"] == "stopped"
+        assert doc["fleet"]["state"] == "stopped"
+
+        # /fleet/start with zero registered devices refuses 400 with a reason.
+        # Environment-robust: on a machine whose real devices.local.json DOES
+        # register base_url devices, the start succeeds instead - accept that,
+        # but always stop what we started (never leak a real poller from a test).
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/fleet/start", method="POST"
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                started = json.loads(resp.read().decode())
+            assert started["state"] == "running"  # real local fleet config exists
+            urllib.request.urlopen(
+                urllib.request.Request(
+                    f"http://127.0.0.1:{port}/fleet/stop", method="POST"
+                ),
+                timeout=5,
+            )
+        except urllib.error.HTTPError as e:
+            assert e.code == 400
+            body = json.loads(e.read().decode())
+            assert "no registered fleet devices" in body["error"]
+    finally:
+        if proc.poll() is None:
+            proc.terminate()
+            proc.wait(timeout=5)
