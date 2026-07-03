@@ -1,18 +1,25 @@
 # Sprout Board Support — Bring-up Reference (#436)
 
-> **Status: pre-work / structure.** The classic ESP32 is the known baseline and is
-> **unchanged**. Every S3/C5 pin below is a *candidate* to **bench-verify** against the
-> module silkscreen + continuity — the lab boards are generic Amazon clones, **not**
-> official Espressif DevKitC. Chip constraints cite the Espressif datasheets; confirm
-> there and at the bench before assigning pins or flashing.
+> **Status: identities intake-verified (2026-07-01); pins still bench-pending.** The classic
+> ESP32 is the known baseline and is **unchanged**. Every S3/C5 pin below is a *candidate* to
+> **bench-verify** against the module silkscreen + continuity. Of the new boards, ONE is an
+> official Espressif DevKitC (`c5-official-01`); the S3 and the second C5 are clones — apply
+> the "clones lie" posture to those two. Chip constraints cite the Espressif datasheets;
+> confirm there and at the bench before assigning pins or flashing.
 
-## Targets (from the hardware handoff)
+## Targets (intake-verified 2026-07-01 — supersedes the original handoff guesses)
 
-| # | Board (as listed) | Chip | USB bridge | Flash / PSRAM | Status |
+| # | Board (bench ID) | Chip | USB (observed) | Flash / PSRAM | Status |
 |---|---|---|---|---|---|
 | 1 | classic ESP32 / NodeMCU-32S / ESP-32D | ESP32-D0WD (Xtensa LX6 ×2) | CP2102 (UART) | 4 MB | ✅ baseline (`esp32dev`), unchanged |
-| 2 | Amazon ESP32-C5 3-pack | ESP32-C5 (RISC-V, dual-band Wi-Fi 6) | **CH340 (UART)** | 4 MB, 32-pin | 🟡 builds today (#529); pins to sort |
-| 3 | Amazon "ESP32-S3-DevKitC N8R2" | ESP32-S3 (Xtensa LX7 ×2) | UART bridge **+ native USB** | 8 MB, 2 MB PSRAM (claimed) | 🟡 builds today; pins + USB to sort |
+| 2a | `c5-official-01` — Espressif ESP32-C5-DevKitC-1-**N8R8** (official; box + silkscreen + module can agree) | ESP32-C5 (RISC-V, dual-band Wi-Fi 6) | CP210x on the `UART` port (COM11) **+ native USB** on the `USB` port (COM12) | **8 MB + 8 MB PSRAM** | 🟡 builds today (#529); `flash_id` + pins pending |
+| 2b | `c5-yellow-01` — ESP32-C5-KITC-A clone (module can: `ESPC5-32 H4`) | ESP32-C5 | CH340 on the one tested port (COM10); 2nd port unconfirmed | unknown until `flash_id` (possibly 4 MB) | 🟡 builds today; identity resolved, USB split partial |
+| 3 | `s3-n8r2-01` — ESP32-S3-N8R2 dual-USB | ESP32-S3 (Xtensa LX7 ×2) | port **labeled `COM`** enumerated as **native USB serial/JTAG** (`303A:4001`, COM7) — see the serial section | 8 MB + 2 MB PSRAM (module can) | 🟡 builds today; `flash_id` blocked on manual bootloader entry |
+
+> Identity source of truth: the #443 intake evidence packet,
+> [`docs/evidence/2026-07-01-esp32-s3-c5-intake/`](../evidence/2026-07-01-esp32-s3-c5-intake/README.md)
+> (photos + Device Manager enumerations, curated by Sage). There are TWO C5 variants in
+> house; which one the fleet standardizes on is an open maintainer decision on #443.
 
 ## What Sprout needs from a board (the pin budget)
 
@@ -69,29 +76,37 @@ The whole matrix, including C5, now shares one pioarduino pin (ADR-0024 revised)
 today the same as S3 does. The pin *map* below is still bench-pending — the toolchain
 question and the pin-assignment question are separate, and only the first is resolved.
 
-**What we know (confirm vs the C5 datasheet + your board):**
+**What we know (intake-verified 2026-07-01; ADC/GPIO still datasheet + bench):**
 
 - ESP32-C5 = single-core RISC-V, **dual-band Wi-Fi 6 (2.4 + 5 GHz)** + BLE — the headline
   new capability, and the reason this is worth doing for the early-adopter audience.
-- Your 3-pack uses a **CH340 UART bridge** → serial should behave like the classic (UART @
-  19200), **not** native USB-CDC — *simpler* than the S3 on the serial front.
-- ADC / GPIO specifics **must come from the C5 datasheet + bench.** Per your handoff, do
-  **not** assign C5 pins before recording the module marking, silkscreen, and continuity —
-  so this doc intentionally leaves the C5 map **blank** until then.
+- **TWO variants in house** (intake packet): `c5-official-01` (DevKitC-1-N8R8: CP210x UART
+  port + native USB port, 8MB+8MB PSRAM) and `c5-yellow-01` (KITC-A clone: CH340 on the
+  tested port, flash TBD). The original "3-pack, CH340, 4MB" handoff description matched
+  the clone only. Both serial paths behave classic-like on their UART/CH340 port @ 19200.
+- ADC / GPIO specifics **must come from the C5 datasheet + bench.** Do **not** assign C5
+  pins before continuity — this doc intentionally leaves the C5 map **blank** until then.
+  Expect `board_capability.h` to need per-VARIANT entries if the boards' usable pins differ.
 
 ## Serial per board (the real gotcha)
 
-- **Classic + (your) C5 — UART bridge** (CP2102 / CH340): `Serial` @ 19200 exactly as today;
-  the host logger opens the bridge COM port. No change.
-- **S3 — CONFIRMED, no code change needed (verified 2026-07-01):** PlatformIO's
-  `esp32-s3-devkitc-1` board id **defaults to `CDCOnBoot: Disabled`** in the framework's
-  `boards.txt` — i.e. it already targets the UART-bridge-compatible path, same as classic,
-  with no `-D ARDUINO_USB_CDC_ON_BOOT` flag needed in `platformio.ini`. **The one thing still
-  genuinely bench-gated:** whether your specific Amazon clone board actually *has* a separate
-  UART bridge chip, or only a native-USB port (cheap clones sometimes omit the bridge).
-  Check at the bench — if only native-USB enumerates, add
-  `build_flags = -D ARDUINO_USB_CDC_ON_BOOT=1` to `[env:esp32s3]` in `platformio.ini` (one
-  line, ready to add — not added speculatively since the current default is the safer bet).
+- **Classic — UART bridge** (CP2102): `Serial` @ 19200 exactly as today; the host logger
+  opens the bridge COM port. No change.
+- **C5 official (`c5-official-01`)** — CP210x on the `UART`-labeled port (classic-like,
+  COM11 at intake) **plus** a native-USB port (COM12). Telemetry stays on the UART path;
+  the native port is a bonus (flashing/JTAG) — no CDC flag needed.
+- **C5 yellow (`c5-yellow-01`)** — CH340 on the one tested port (COM10), classic-like.
+  Second physical port unconfirmed — record it before relying on it.
+- **S3 (`s3-n8r2-01`) — intake fact that changes the picture:** the port **labeled `COM`**
+  enumerated as **native USB serial/JTAG** (`303A:4001`, COM7) — NOT a UART bridge. Since
+  the `esp32-s3-devkitc-1` board id defaults to `CDCOnBoot: Disabled`, `Serial` currently
+  targets UART0, which may surface on the *other* physical port — or nowhere, if this board
+  has no bridge chip (some dual-port S3 boards wire both ports to native USB + UART0 header
+  pins only). **Bench next step decides it:** identify the second port; if only native-USB
+  enumerates, add `build_flags = -D ARDUINO_USB_CDC_ON_BOOT=1` to `[env:esp32s3]` (one
+  line, ready to add — not added speculatively). The intake `flash_id` failure
+  (`No serial data received` on COM7) is consistent with native USB-JTAG needing manual
+  bootloader entry — retry per the packet's resume point.
 
 ## Integration status (updated 2026-07-01 — most of the original plan is now DONE)
 
