@@ -1,9 +1,12 @@
 # ADR-0021 — parse_v1 is the single telemetry contract boundary
 
-**Status:** Proposed — *Data-confirmed 2026-06-30: #294 (value=NULL) + #295 (header-derived cal bounds) landed;
-`parse_v1` verified as the single boundary — header bounds are authoritative, `DEFAULT_CAL_BOUNDS` is demoted to
-a labelled fallback carrying `cal_bounds_source`, and analytics read logs only through `parse_v1`. Awaiting
-maintainer ratification.*
+**Status:** Accepted — *maintainer-ratified 2026-07-03. Ratified as battle-tested practice: the two
+violations named at authoring (#294 value=NULL, #295 header-derived cal bounds) were fixed before
+ratification, and every contract change since — context columns (#565), pressure (#572), the untethered
+spine's `DeviceAdapter`/`FleetAdapter` (#553/#560) — extended the one boundary, zero parallel parsers.
+Ratification note: the "schema_version=2 ships" revisit trigger has already fired and is **satisfied** —
+v2 rows are handled inside `parse_v1` (versioned handling, additive columns), exactly as the trigger
+prescribed. The §4 import-lint remains optional (#291 scope).*
 **Date:** 2026-06-27
 **Owner:** Trellis (ADR author) + Data lane (implementation)
 **Lane:** data/analytics
