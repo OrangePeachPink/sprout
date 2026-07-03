@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --leaf:#34A853; --sprout:#8BD24F; --ink:#1E2A18; --muted:#6F7E62; --border:#E3E9D8;
+    --surface:#FFFFFF; --surface-2:#F7FAF2; --bg:#EEF4E6;
+    --st-watering:#17B6C4; --st-dry:#F5A623; --st-due:#E8703A; --st-fault:#E0483D; --st-predicted:#7C5CFF;
+    --band-saturated:#0E7A86; --band-wet:#17B6C4; --band-moist:#34A853; --band-ideal:#8BD24F;
+    --band-drying:#F5A623; --band-dry:#E8703A; --band-parched:#E0483D;
+    --q-nosignal:#9A8480;
+    --font-display:"Baloo 2",sans-serif; --font-ui:"Hanken Grotesk",sans-serif; --font-data:"JetBrains Mono",monospace;
+    --r-control:8px; --r-tile:14px; --r-card:20px; --r-pill:999px;
+    --e1:0 1px 2px rgba(30,42,24,.06); --e2:0 6px 18px rgba(30,42,24,.08);
+  }
+  body{margin:0;}
+  @keyframes liveGlow{0%,100%{box-shadow:0 0 5px currentColor;}50%{box-shadow:0 0 12px currentColor;}}
+</style>
+</helmet>
+
+<div style="background:var(--bg); color:var(--ink); font-family:var(--font-ui); min-height:100vh; padding:34px 26px;">
+<div style="max-width:1120px; margin:0 auto; display:flex; flex-direction:column; gap:18px;">
+
+  <!-- ================= HEADER ================= -->
+  <div data-screen-label="Header" style="display:flex; flex-direction:column; gap:10px;">
+    <div style="display:flex; align-items:center; gap:13px; flex-wrap:wrap;">
+      <span style="display:inline-flex; width:30px; height:30px; align-items:center; justify-content:center; border-radius:9px; background:var(--leaf); color:#fff; font-family:var(--font-display); font-weight:700; font-size:17px;">S</span>
+      <h1 style="font-family:var(--font-display); font-weight:700; font-size:24px; margin:0; letter-spacing:-0.01em;">Every Sprout, one glance — per-device grouping</h1>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      <span style="font-family:var(--font-data); font-size:10.5px; font-weight:600; color:var(--st-predicted); border:1px solid var(--st-predicted); border-radius:var(--r-pill); padding:3px 11px;">#486 · multi-device dashboard</span>
+      <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted); border:1px solid var(--border); border-radius:var(--r-pill); padding:3px 11px;">consumes the #485 registry · v1 device_id/sensor_id</span>
+      <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted); border:1px solid var(--border); border-radius:var(--r-pill); padding:3px 11px;">identity per ADR-0020 · never a MAC</span>
+      <span style="font-family:var(--font-data); font-size:10.5px; color:var(--leaf); border:1px solid color-mix(in srgb, var(--leaf) 45%, transparent); border-radius:var(--r-pill); padding:3px 11px;">second device is real · s3 bring-up 2026-07-03</span>
+    </div>
+    <p style="margin:0; font-size:13.5px; line-height:1.55; color:var(--muted); max-width:840px;">The host dashboard once the second Sprout exists: cards group under the <strong style="color:var(--ink);">device that grew them</strong>. Each device is its own fence — its own connection state, time source, calibration status. One device's bad day never colors another's numbers.</p>
+  </div>
+
+  <!-- ================= SIMULATOR ================= -->
+  <div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap;">
+    <span style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">Try it</span>
+    <sc-for list="{{ simButtons }}" as="b" hint-placeholder-count="3">
+      <button onClick="{{ b.pick }}" style="font-family:var(--font-ui); font-size:12.5px; font-weight:700; color:{{ b.fg }}; background:{{ b.bg }}; border:1px solid {{ b.bd }}; border-radius:var(--r-pill); padding:8px 16px; cursor:pointer; white-space:nowrap;">{{ b.label }}</button>
+    </sc-for>
+    <span style="font-size:12px; color:var(--muted);">{{ simHint }}</span>
+  </div>
+
+  <!-- ================= FLEET SUMMARY ================= -->
+  <div style="display:flex; align-items:center; gap:8px 18px; flex-wrap:wrap; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); box-shadow:var(--e1); padding:11px 16px; font-family:var(--font-data); font-size:11.5px; color:var(--muted);">
+    <span style="color:var(--ink); font-weight:600;">{{ fleetDevices }}</span>
+    <span>{{ fleetChannels }}</span>
+    <span style="color:var(--leaf);">{{ fleetReporting }}</span>
+    <sc-if value="{{ anyUnwired }}" hint-placeholder-val="{{ true }}"><span style="color:var(--q-nosignal);">{{ fleetUnwired }}</span></sc-if>
+    <sc-if value="{{ anyOffline }}" hint-placeholder-val="{{ false }}"><span style="color:var(--st-dry);">{{ fleetOffline }}</span></sc-if>
+    <span style="margin-left:auto;">order: first-seen in the registry — never re-sorted by state</span>
+  </div>
+
+  <!-- ================= DEVICE GROUPS ================= -->
+  <sc-for list="{{ deviceGroups }}" as="d" hint-placeholder-count="2">
+    <div data-screen-label="Device group" style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); overflow:hidden; {{ d.groupStyle }}">
+      <!-- single-device: the header collapses to this slim ribbon -->
+      <sc-if value="{{ d.slimHeader }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; align-items:center; gap:8px 14px; flex-wrap:wrap; padding:9px 18px; border-bottom:1px solid var(--border);">
+          <span style="display:inline-flex; align-items:center; gap:7px; font-family:var(--font-data); font-size:12px; color:var(--ink);"><span style="width:8px; height:8px; border-radius:2px; background:{{ d.accent }};"></span>{{ d.name }}</span>
+          <span style="font-family:var(--font-data); font-size:11px; color:var(--muted);">{{ d.hostname }}</span>
+          <span style="margin-left:auto; display:inline-flex; align-items:center; gap:6px; font-family:var(--font-data); font-size:11px; font-weight:600; color:{{ d.stateColor }};"><span style="width:7px; height:7px; border-radius:999px; background:currentColor; {{ d.stateGlow }}"></span>{{ d.stateLabel }}</span>
+        </div>
+      </sc-if>
+      <!-- device header — the fence (appears when the second device does) -->
+      <sc-if value="{{ d.fullHeader }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex; align-items:center; gap:9px 14px; flex-wrap:wrap; padding:13px 18px; border-bottom:1px solid var(--border); background:var(--surface-2);">
+        <span style="display:inline-flex; align-items:center; gap:8px;">
+          <span style="width:10px; height:10px; border-radius:3px; background:{{ d.accent }};"></span>
+          <span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--ink);">{{ d.name }}</span>
+        </span>
+        <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted);">{{ d.hostname }}</span>
+        <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted); border:1px solid var(--border); border-radius:var(--r-pill); padding:2px 9px; white-space:nowrap;">{{ d.transport }}</span>
+        <span style="display:inline-flex; align-items:center; gap:6px; font-family:var(--font-data); font-size:11px; font-weight:600; color:{{ d.stateColor }};"><span style="width:7px; height:7px; border-radius:999px; background:currentColor; {{ d.stateGlow }}"></span>{{ d.stateLabel }}</span>
+        <span style="margin-left:auto; display:inline-flex; align-items:center; gap:7px 12px; flex-wrap:wrap; font-family:var(--font-data); font-size:10px; color:var(--muted);">
+          <span>{{ d.board }}</span><span>fw {{ d.fw }}</span>
+          <span style="color:{{ d.timeColor }};">time: {{ d.timeSource }}</span>
+          <span style="color:{{ d.calColor }}; border:1px solid color-mix(in srgb, {{ d.calColor }} 40%, transparent); border-radius:var(--r-pill); padding:1px 8px; white-space:nowrap;">{{ d.calLabel }}</span>
+        </span>
+      </div>
+      </sc-if>
+      <!-- honesty banner (per-device, only when earned) -->
+      <sc-if value="{{ d.hasBanner }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; gap:9px; align-items:flex-start; padding:10px 18px; border-bottom:1px solid var(--border); background:color-mix(in srgb, {{ d.bannerColor }} 7%, var(--surface)); font-size:12px; line-height:1.5; color:var(--ink);">
+          <span style="color:{{ d.bannerColor }}; font-weight:700; flex-shrink:0;">{{ d.bannerIcon }}</span>
+          <span>{{ d.bannerText }}</span>
+        </div>
+      </sc-if>
+      <!-- channel cards -->
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:14px 18px; {{ d.cardsStyle }}">
+        <sc-for list="{{ d.cards }}" as="c" hint-placeholder-count="4">
+          <div style="position:relative; overflow:hidden; background:var(--surface); border:1px solid {{ c.bd }}; border-radius:var(--r-tile); box-shadow:var(--e1); padding:11px 12px 11px 15px; display:flex; flex-direction:column; gap:6px;">
+            <div style="position:absolute; left:0; top:0; bottom:0; width:4px; background:{{ c.accent }};"></div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+              <span style="font-family:var(--font-ui); font-size:12px; font-weight:700; color:var(--ink); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ c.label }}</span>
+              <span style="font-family:var(--font-data); font-size:9.5px; color:var(--muted); flex-shrink:0;">{{ c.id }}</span>
+            </div>
+            <sc-if value="{{ c.hasReading }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; align-items:baseline; gap:7px;">
+                <span style="font-family:var(--font-data); font-weight:700; font-size:21px; line-height:1; color:var(--ink);">{{ c.raw }}</span>
+                <span style="font-family:var(--font-data); font-size:9.5px; color:var(--muted);">raw</span>
+              </div>
+              <svg viewBox="0 0 120 26" style="width:100%; height:26px; display:block;" preserveAspectRatio="none">
+                <polyline points="{{ c.spark }}" fill="none" stroke="{{ c.accent }}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.9"></polyline>
+              </svg>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+                <span style="font-family:var(--font-ui); font-size:11.5px; font-weight:600; color:{{ c.bandColor }};">{{ c.bandName }}</span>
+                <span style="font-family:var(--font-data); font-size:9.5px; font-weight:600; color:{{ c.qColor }};">{{ c.quality }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ c.noReading }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; align-items:baseline; gap:7px;">
+                <span style="font-family:var(--font-data); font-weight:700; font-size:21px; line-height:1; color:var(--q-nosignal);">—</span>
+              </div>
+              <div style="height:26px; display:flex; align-items:center;"><span style="width:100%; border-top:2px dashed color-mix(in srgb, var(--q-nosignal) 45%, transparent);"></span></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+                <span style="font-family:var(--font-ui); font-size:11.5px; font-weight:600; color:var(--q-nosignal);">{{ c.bandName }}</span>
+                <span style="font-family:var(--font-data); font-size:9.5px; font-weight:600; color:var(--q-nosignal);">{{ c.quality }}</span>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <!-- offline note (per-device) -->
+      <sc-if value="{{ d.isOffline }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:0 18px 13px; font-family:var(--font-data); font-size:10.5px; color:var(--st-dry);">last-known snapshot · {{ d.lastHeard }} — viewer-stamped; the device tends on its own (ADR-0001)</div>
+      </sc-if>
+    </div>
+  </sc-for>
+
+  <!-- ================= SINGLE-DEVICE COLLAPSE ================= -->
+  <sc-if value="{{ singleMode }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex; gap:9px; align-items:flex-start; background:var(--surface); border:1px dashed var(--border); border-radius:var(--r-tile); padding:11px 16px; font-size:12.5px; line-height:1.5; color:var(--muted);">
+      <span style="color:var(--st-predicted); font-weight:700;">↳</span>
+      <span><strong style="color:var(--ink);">One device, no chrome:</strong> with a single registered Sprout the group header collapses to this slim ribbon and the cards flow exactly as today's dashboard — grouping appears when the second device does, not before. Nothing to relearn, nothing redundant.</span>
+    </div>
+  </sc-if>
+
+  <!-- ================= GROUPING RULES ================= -->
+  <div data-screen-label="Grouping rules" style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:18px 20px; display:flex; flex-direction:column; gap:12px;">
+    <div style="display:flex; align-items:baseline; gap:10px;"><span style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">The grouping rules</span><span style="font-size:11.5px; color:var(--muted);">what Data builds against</span></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px 22px;">
+      <sc-for list="{{ rules }}" as="r" hint-placeholder-count="8">
+        <div style="display:flex; gap:10px; align-items:flex-start; border-bottom:1px dotted var(--border); padding-bottom:9px;">
+          <span style="font-family:var(--font-data); font-size:10px; font-weight:700; color:{{ r.color }}; margin-top:2px; flex-shrink:0; width:74px;">{{ r.tag }}</span>
+          <span style="font-size:12.5px; line-height:1.55; color:var(--ink);">{{ r.text }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ================= FOOTER ================= -->
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; border-top:1px solid var(--border); padding-top:16px; font-family:var(--font-data); font-size:11px; color:var(--muted);">
+    <span>#486 · the device is the fence — states, time, and calibration never leak across it</span>
+    <span style="font-style:italic; font-family:var(--font-ui);">tend well.</span>
+  </div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1160, &quot;height&quot;: 1750 },
+  &quot;secondDevice&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;online&quot;, &quot;offline&quot;, &quot;removed&quot;], &quot;default&quot;: &quot;online&quot;, &quot;tsType&quot;: &quot;\&quot;online\&quot; | \&quot;offline\&quot; | \&quot;removed\&quot;&quot; },
+  &quot;liveDemo&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot; }
+}">
+class Component extends DCLogic {
+  state = {
+    s3: this.props.secondDevice ?? 'online',   // online | offline | removed
+    raws: [1612, 1548, 1691, 1575],            // classic rig, well-watered-ish, HIGH = drier
+    offlineS: 124,
+    tick: 0,
+  };
+
+  SERIES = ['#1E40AF', '#7C5CFF', '#0E7A86', '#B91C1C'];   // sensor series palette (#203) — distinct from band colors
+  LABELS = ['rim · west', 'rim · east', 'center', 'rim · south'];
+  BANDS = [
+    { name:'submerged',    token:'var(--band-saturated)', lo:0,    hi:900  },
+    { name:'overwatered',  token:'var(--band-wet)',       lo:900,  hi:1080 },
+    { name:'well watered', token:'var(--band-moist)',     lo:1080, hi:1450 },
+    { name:'OK',           token:'var(--band-ideal)',     lo:1450, hi:1750 },
+    { name:'needs water',  token:'var(--band-drying)',    lo:1750, hi:2200 },
+    { name:'dry',          token:'var(--band-dry)',       lo:2200, hi:3050 },
+    { name:'air-dry',      token:'var(--band-parched)',   lo:3050, hi:9999 },
+  ];
+
+  componentDidMount(){
+    this._hist = this.LABELS.map((_,k) => Array.from({length:24}, (_,i) => this.state.raws[k] + Math.round(Math.sin(i/3.2+k)*9)));
+    if (this.props.liveDemo === false) return;
+    this._t = setInterval(() => this.setState(s => {
+      const raws = s.raws.map(r => Math.max(1400, Math.min(1780, r + Math.round((Math.random()*2-1)*5))));
+      raws.forEach((r,k) => { this._hist[k].push(r); if (this._hist[k].length>24) this._hist[k].shift(); });
+      return { raws, tick: s.tick+1, offlineS: s.s3==='offline' ? s.offlineS+1 : s.offlineS };
+    }), 1000);
+  }
+  componentWillUnmount(){ if (this._t) clearInterval(this._t); }
+  componentDidUpdate(prev){
+    if (prev.secondDevice !== this.props.secondDevice && this.props.secondDevice) this.setState({ s3:this.props.secondDevice });
+  }
+
+  classify(raw){ return this.BANDS.find(b => raw>=b.lo && raw<b.hi) || this.BANDS[this.BANDS.length-1]; }
+  spark(k){
+    const h = (this._hist && this._hist[k]) || [];
+    if (!h.length) return '';
+    const min = Math.min(...h), max = Math.max(...h), span = Math.max(max-min, 14);
+    return h.map((v,i) => (i/(h.length-1)*118+1).toFixed(1) + ',' + (24 - ((v-min)/span)*20 + 1).toFixed(1)).join(' ');
+  }
+  setS3 = (v) => this.setState(s => ({ s3:v, offlineS: v==='offline' ? 0 : s.offlineS }));
+  fmtAge(s){ return s<60 ? s+'s ago' : Math.floor(s/60)+'m '+String(s%60).padStart(2,'0')+'s ago'; }
+
+  renderVals(){
+    const st = this.state;
+    const s3 = st.s3;
+    const single = s3==='removed';
+    const s3off = s3==='offline';
+
+    // ---- classic rig (device 1) — calibrated, serial-tethered, healthy ----
+    const classicCards = this.LABELS.map((label,k) => {
+      const raw = st.raws[k];
+      const band = this.classify(raw);
+      return {
+        id:'s'+(k+1)+' · gpio'+[34,35,36,39][k], label, accent:this.SERIES[k],
+        hasReading:true, noReading:false,
+        raw:String(raw), spark:this.spark(k),
+        bandName:band.name, bandColor:band.token,
+        quality:'OK', qColor:'var(--leaf)', bd:'var(--border)',
+      };
+    });
+
+    // ---- s3 rig (device 2) — uncalibrated, WiFi, nothing wired ----
+    const s3Cards = [0,1,2,3].map(k => ({
+      id:'s'+(k+1)+' · provisional', label:'unwired', accent:'var(--q-nosignal)',
+      hasReading:false, noReading:true,
+      raw:'', spark:'',
+      bandName:'no signal', bandColor:'var(--q-nosignal)',
+      quality:'NO_SIGNAL', qColor:'var(--q-nosignal)', bd:'color-mix(in srgb, var(--q-nosignal) 30%, var(--border))',
+    }));
+
+    const deviceGroups = [];
+    deviceGroups.push({
+      fullHeader: !single, slimHeader: single,
+      name:'Sprout ESP32', hostname:'tethered · /dev/ttyUSB0', transport:'serial', accent:'var(--leaf)',
+      stateLabel:'online · live', stateColor:'var(--leaf)', stateGlow:'animation:liveGlow 1.8s ease-in-out infinite;',
+      board:'esp32dev', fw:'0.3.2', timeSource:'host-stamped', timeColor:'var(--muted)',
+      calLabel:'cal · bench-verified', calColor:'var(--leaf)',
+      hasBanner:false, bannerColor:'', bannerIcon:'', bannerText:'',
+      cards:classicCards, cardsStyle:'', groupStyle:'', isOffline:false, lastHeard:'',
+    });
+    if (!single){
+      deviceGroups.push({
+        fullHeader: true, slimHeader: false,
+        name:'Sprout ESP32-S3', hostname:'sprout-esp32-s3-8ccd.local', transport:'wifi', accent:'var(--st-watering)',
+        stateLabel: s3off ? 'offline · last heard '+this.fmtAge(st.offlineS) : 'online · synced',
+        stateColor: s3off ? 'var(--st-dry)' : 'var(--leaf)',
+        stateGlow: s3off ? '' : 'animation:liveGlow 1.8s ease-in-out infinite;',
+        board:'esp32-s3', fw:'0.7.0',
+        timeSource: s3off ? 'ntp (last sync)' : 'ntp · device-synced', timeColor:'var(--leaf)',
+        calLabel:'cal · provisional', calColor:'var(--st-dry)',
+        hasBanner:true, bannerColor: 'var(--q-nosignal)', bannerIcon:'◌',
+        bannerText:'No sensors wired yet — these inputs float, so what they read is bench noise, not soil. Nothing here earns a band or a trend until a probe lands (evidence 2026-07-03). Board ADC is not bench-calibrated (cal_verified=false): when probes do land, bands render as provisional until C1.',
+        cards:s3Cards, cardsStyle: s3off ? 'opacity:.55;' : '', groupStyle:'', isOffline:s3off,
+        lastHeard: this.fmtAge(st.offlineS),
+      });
+    }
+
+    // ---- fleet summary ----
+    const devCount = single ? 1 : 2;
+    const chCount = single ? 4 : 8;
+    const offCount = (!single && s3off) ? 1 : 0;
+
+    // ---- simulator ----
+    const mk = (label, val, active, activeBg) => ({
+      label, pick:()=>this.setS3(val),
+      fg: active?'#fff':'var(--ink)', bg: active?activeBg:'var(--surface)', bd: active?activeBg:'var(--border)',
+    });
+    const simButtons = [
+      mk('Both online', 'online', s3==='online', 'var(--leaf)'),
+      mk('Take the S3 offline', 'offline', s3==='offline', 'var(--st-dry)'),
+      mk('Only one device', 'removed', single, 'var(--st-predicted)'),
+    ];
+    const simHint = single ? 'a one-Sprout home — grouping chrome collapses'
+      : s3off ? 'states are per-device: the S3 goes quiet, the windowsill rig never flinches'
+      : 'two devices, two fences — each header owns its own state, time, and calibration';
+
+    // ---- rules ----
+    const rules = [
+      { tag:'FENCE', color:'var(--st-predicted)', text:'A card belongs to exactly one device group — channels never mix, merge, or roll up across devices. device_id + sensor_id is the identity (v1 fields; #485 registry).' },
+      { tag:'PER-DEVICE', color:'var(--st-predicted)', text:'Connection state, time source, and calibration status live in the device header, once — never repeated on cards, never averaged into a fleet-level “health”.' },
+      { tag:'STATES', color:'var(--leaf)', text:'The header state chip reuses the untethered vocabulary verbatim (online · offline · syncing, #279): offline dims that group only and stamps its age with the viewer\u2019s clock.' },
+      { tag:'IDENTITY', color:'var(--leaf)', text:'The friendly name + hostname come from the registry, per ADR-0020 — synthetic, re-nameable, never a MAC. A tethered device shows its port where a hostname would be.' },
+      { tag:'ORDER', color:'var(--muted)', text:'Groups keep registry first-seen order. State never re-sorts them — an offline device holds its place instead of jumping around the page.' },
+      { tag:'COLLAPSE', color:'var(--muted)', text:'With one registered device the header collapses to the slim ribbon and cards flow ungrouped — today\u2019s dashboard is the single-device case, unchanged.' },
+      { tag:'HONESTY', color:'var(--st-dry)', text:'Quality gates the band per card (NO_SIGNAL earns no band color); cal_verified=false gates band authority per device (bands render provisional until C1 #170). Unwired inputs show “—”, never a trend.' },
+      { tag:'NO %', color:'var(--st-dry)', text:'Raw counts + band words only, per card, same as everywhere — a second device changes the layout, never the honesty law.' },
+    ];
+
+    return {
+      simButtons, simHint,
+      fleetDevices: devCount + (devCount===1?' device':' devices'),
+      fleetChannels: chCount + ' channels',
+      fleetReporting: '4 reporting',
+      fleetUnwired: single ? '' : '4 unwired',
+      anyUnwired: !single,
+      fleetOffline: offCount ? '1 device offline' : '',
+      anyOffline: offCount>0,
+      deviceGroups, singleMode: single,
+      rules,
+    };
+  }
+}
+</script>
+</body>
+</html>
