@@ -144,6 +144,17 @@ static WebServer g_http(WIFI_HTTP_PORT);
  * same parse path as the serial stream. Empty = no row emitted yet. */
 static char g_last_row[NUM_SENSORS][320];
 
+/* Served-telemetry env cache (#598): the plants.env rows (die-temp on every build;
+ * SHT45/AS7263 on the env build) from the latest emit cycle, cached the same way as
+ * g_last_row so an UNTETHERED board serves its ambient context on /telemetry too -
+ * #276 served soil only, leaving the skylight-confound sensors invisible off-cable.
+ * Reset once per cadence tick in loop() (BEFORE the env + die appends, every build),
+ * appended by emitEnvLine. Same wire bytes as serial (ADR-0018 §4). */
+#define MAX_ENV_ROWS                                                           \
+    10 /* SHT temp+rh (2) + AS7263 NIR (6) + die-temp (1) + margin */
+static char g_last_env[MAX_ENV_ROWS][288];
+static uint8_t g_last_env_count = 0;
+
 /* Run metadata (#321): run_label + per-channel sensor_position, seeded from the
  * config.h defaults and updated at runtime via !label / !pos so the bench can
  * move probes between plants without reflashing (stale metadata = join hazard). */
@@ -333,6 +344,12 @@ static void emitEnvLine(const telemetry_env_row_t *row)
         snprintf(crc, sizeof(crc), "*%02X", telemetry_checksum(line));
         Serial.print(line);
         Serial.println(crc);
+        /* #598: cache the exact emitted bytes (row + *CRC) for /telemetry, so an
+         * untethered board serves ambient context, not just soil. Reset per cadence
+         * tick in loop(); bounded by MAX_ENV_ROWS (a full env cycle fits). */
+        if (g_last_env_count < MAX_ENV_ROWS)
+            snprintf(g_last_env[g_last_env_count++], sizeof(g_last_env[0]),
+                     "%s%s", line, crc);
     }
 }
 
@@ -652,7 +669,8 @@ static void handleRoot()
  * (ADR-0016). The device_cols preamble keeps the payload self-describing. */
 static void handleTelemetry()
 {
-    static char resp[sizeof(g_last_row) + 220]; /* BSS, not handler stack */
+    static char resp[sizeof(g_last_row) + sizeof(g_last_env) +
+                     220]; /* BSS, not handler stack */
     int n = snprintf(resp, sizeof(resp),
                      "# device_cols: record_type,session_id,device_id,fw,"
                      "millis_ms,sensor_model,sensor_id,sensor_position,channel,"
@@ -662,6 +680,15 @@ static void handleTelemetry()
         if (g_last_row[ch][0] != '\0')
             n += snprintf(resp + n, sizeof(resp) - (size_t)n, "%s\n",
                           g_last_row[ch]);
+    }
+    /* #598: the plants.env context rows (die-temp + SHT45/AS7263) after the soil
+     * rows - same 14 columns, same wire bytes, so the host adapter parses them off
+     * WiFi exactly as off serial (ADR-0018 §4). Untethered ambient visibility. */
+    for (uint8_t i = 0;
+         i < g_last_env_count && n > 0 && (size_t)n < sizeof(resp); i++) {
+        if (g_last_env[i][0] != '\0')
+            n += snprintf(resp + n, sizeof(resp) - (size_t)n, "%s\n",
+                          g_last_env[i]);
     }
     g_http.send(200, "text/plain", resp);
 }
@@ -1077,6 +1104,15 @@ void loop()
             delay(20);
             digitalWrite(LED_PIN, LOW);
         }
+    }
+
+    /* #598: rebuild the served env-context cache once per cadence tick, BEFORE the
+     * env block (env build) and the always-on die-temp row append into it - so a
+     * die-only (non-env) build never grows it without bound. Same pacing as both. */
+    static unsigned long lastEnvCache = 0;
+    if (now - lastEnvCache >= g_sys.sample_period_ms) {
+        lastEnvCache = now;
+        g_last_env_count = 0;
     }
 
 #ifdef ENABLE_ENV_SENSORS
