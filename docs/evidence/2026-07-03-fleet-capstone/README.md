@@ -79,6 +79,11 @@ Result: the dashboard renders **three "online · synced" cards** — classic, s3
 each with its four channels, feeding the shared calibration ladder and raw-trajectory
 plots. Three chip families (Xtensa D0WD, Xtensa S3, RISC-V C5), one dashboard, live.
 
+![Sprout dashboard — three ESP32 boards (classic / s3-1 / c5off1) each showing "online · synced", the fleet logger running across 3 devices, live per-channel soil readings, and the shared calibration ladder.](fleet-dashboard-capstone.png)
+
+*The capstone, one launch: three chip families named, `online · synced`, and logging as one fleet.
+Browser chrome cropped and image metadata stripped (identifier-guard); RFC1918 IPs retained per posture.*
+
 ## Finding — device identity has no continuity across renames (#602)
 
 The classic is one piece of silicon that has reported **three** identities over its life
