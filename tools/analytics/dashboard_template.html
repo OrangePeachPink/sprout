@@ -1569,6 +1569,10 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
     if(autoChk.checked){ autoTimer = setInterval(refresh, AUTO_MS); refresh(); }
     else if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
   });
+  // #613 (safe half): a live view should be live by default. Auto-refresh defaults
+  // ON when served live; the operator can still toggle it off. (Auto-STARTING
+  // collection is the separate W2 decision - untouched here.)
+  if(LIVE){ autoChk.checked = true; autoTimer = setInterval(refresh, AUTO_MS); }
 
   document.querySelectorAll('.rangebtn').forEach(b=> b.addEventListener('click', ()=> setRange(b.dataset.r)));
 
