@@ -231,16 +231,21 @@ def _context(
     # misses log files created later (a UTC-midnight rotation, a reconnect), so
     # a long-running server would silently go stale. None => auto-discover.
     resolved = inputs or gather_inputs()
+    # #602: one registry load per request, shared by the fleet adapter, the
+    # channel filter's identity coalesce, and build_context's grouping.
+    reg = registry if registry is not None else load_registry()
     # #277/#486: reads through the source-adapter seam - see source_adapter.py.
-    data = _fleet_adapter(registry).load(resolved)
+    data = _fleet_adapter(reg).load(resolved)
     all_ch = sorted(
         {r.sensor_id for r in data.readings if r.record_type.startswith("plants.soil")}
     )
     had_any_logged = bool(all_ch)
-    data = filter_since(filter_channels(data, channels), hours)
+    data = filter_since(
+        filter_channels(data, channels, canonical=reg.canonical_for), hours
+    )
     if not data.readings:
         raise NoDataYet(resolved, had_any_logged=had_any_logged)  # #543
-    ctx = build_context(data)
+    ctx = build_context(data, registry=reg)
     ctx["meta"]["all_channels"] = all_ch  # full set, so the toggles can re-enable
     return ctx
 

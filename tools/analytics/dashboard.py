@@ -207,8 +207,13 @@ def filter_since(data: LogData, hours: float | None) -> LogData:
     return LogData(readings=kept, segments=data.segments, sources=data.sources)
 
 
-def filter_channels(data: LogData, channels: list[str] | None) -> LogData:
+def filter_channels(
+    data: LogData, channels: list[str] | None, canonical=None
+) -> LogData:
     """Keep only readings for the given sensor ids (None / empty = all) (E10).
+    ``canonical`` (#602): an optional device_id -> canonical-id mapping (the
+    registry's ``canonical_for``) so device-scoped tokens keep matching a
+    board's whole history across renames; None = identity (v1 behavior).
 
     #583 (the FENCE rule): a token may be a plain sensor id (``s1`` - matches
     that channel on every device, the single-device case unchanged) or a
@@ -219,10 +224,13 @@ def filter_channels(data: LogData, channels: list[str] | None) -> LogData:
         return data
     plain = {c for c in channels if "@" not in c}
     scoped = {tuple(c.split("@", 1)) for c in channels if "@" in c}
+    # #602: scoped tokens carry the CANONICAL id (the card key), so a row from a
+    # prior identity must match through the same coalesce the grouping uses.
+    canon = canonical or (lambda d: d)
     kept = [
         r
         for r in data.readings
-        if r.sensor_id in plain or (r.sensor_id, r.device_id) in scoped
+        if r.sensor_id in plain or (r.sensor_id, canon(r.device_id)) in scoped
     ]
     return LogData(readings=kept, segments=data.segments, sources=data.sources)
 
@@ -463,14 +471,19 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
     # s1 are different plants and never mix, merge, or roll up. With a single
     # device the key collapses to the bare sensor id, so today's one-Sprout
     # dashboard is byte-identical (the COLLAPSE rule obeyed at the data layer).
+    # #602 (identity continuity): a renamed board's prior identities coalesce
+    # into its canonical id AT GROUPING TIME - one card, continuous history.
+    # Raw rows keep the id they truthfully reported; only the view keys remap.
+    _canon = reg.canonical_for
     device_ids_in_data: list[str] = []
     for r in soil:
-        if r.device_id and r.device_id not in device_ids_in_data:
-            device_ids_in_data.append(r.device_id)
+        did = _canon(r.device_id)
+        if did and did not in device_ids_in_data:
+            device_ids_in_data.append(did)
     multi = len(device_ids_in_data) > 1
 
     def _key(r) -> str:
-        return f"{r.sensor_id}@{r.device_id}" if multi else r.sensor_id
+        return f"{r.sensor_id}@{_canon(r.device_id)}" if multi else r.sensor_id
 
     by_sensor: dict[str, list] = {}
     for r in soil:
@@ -512,7 +525,8 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         # #486: attribute this channel to a plant via the fleet registry - honest
         # None on an unknown device or unassigned channel, never an invented name.
         # (last.sensor_id, not the group key - the key may be device-scoped, #583)
-        plant = reg.plant_for(last.device_id, last.sensor_id)
+        # #602: attribute via the canonical id - the registry entry lives there
+        plant = reg.plant_for(_canon(last.device_id), last.sensor_id)
         # #562 (ADR-0023 v2): the last reading's interior-ambient context, only
         # ever value+tag together - a context value never renders untagged.
         ambient = None
@@ -539,7 +553,7 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
             {
                 "id": sid,
                 "sensor_id": last.sensor_id,  # the bare channel token (#583)
-                "device_id": last.device_id or None,
+                "device_id": _canon(last.device_id) or None,  # canonical (#602)
                 "no_signal": no_signal,
                 "plant_id": plant["plant_id"] if plant else None,
                 "plant_name": plant["plant_name"] if plant else None,
@@ -783,6 +797,12 @@ def _device_groups(reg, device_ids_in_data, by_sensor, sensors, segments) -> lis
         if not rows:
             continue
         last = max(rows, key=lambda r: r.timestamp_utc)
+        # #602: the identities this board ACTUALLY reported in this window,
+        # besides its canonical one - surfaced on the header so the display-
+        # time coalesce is visible, never a silent merge (truth has a chain).
+        also_reported_as = sorted(
+            {r.device_id for r in rows if r.device_id and r.device_id != did}
+        )
         regdev = reg.device(did) if did else None
         base_url = getattr(regdev, "base_url", None)
         hostname = None
@@ -800,14 +820,16 @@ def _device_groups(reg, device_ids_in_data, by_sensor, sensors, segments) -> lis
         # (firmware emits "# board cal: PLACEHOLDER" when not bench-verified,
         # #436) - never a guess. Absent line = the board compiled cal-verified.
         cal_provisional = any(
-            seg.device_id == did
+            reg.canonical_for(seg.device_id) == did
             and any("board cal: PLACEHOLDER" in ln for ln in seg.raw_lines)
             for seg in segments
         )
         groups.append(
             {
                 "device_id": did,
-                "name": (getattr(regdev, "label", None) or did or "Sprout"),
+                # the ratified `name` field (it falls back to a legacy `label`
+                # at parse time, #583); an unregistered device stays its own id
+                "name": (getattr(regdev, "name", None) or did or "Sprout"),
                 "hostname": hostname,
                 "transport": transport,
                 "board": getattr(regdev, "board", None),
@@ -819,6 +841,7 @@ def _device_groups(reg, device_ids_in_data, by_sensor, sensors, segments) -> lis
                     else None
                 ),
                 "cal_provisional": cal_provisional,
+                "also_reported_as": also_reported_as,  # honest coalesce (#602)
                 "sensors": entry_ids,
             }
         )

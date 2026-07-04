@@ -511,6 +511,12 @@ function renderCards(){
       cal.style.color = d.cal_provisional ? 'var(--st-dry)' : 'var(--leaf)';
       h.appendChild(cal);
       group.appendChild(h);
+      if(d.also_reported_as && d.also_reported_as.length){
+        // #602: the display-time identity coalesce is VISIBLE, never silent —
+        // these rows truthfully carried the old ids on the wire (raw untouched).
+        group.appendChild(el('div','devribbon mono',
+          'history coalesced from: ' + d.also_reported_as.join(' · ')));
+      }
       if(d.cal_provisional){                            // HONESTY: provisional-band banner until #170
         group.appendChild(el('div','calbanner',
           'Board calibration is provisional (not bench-verified for this board) — bands render provisional until per-channel cal (#170).'));

@@ -176,6 +176,10 @@ class FleetLogger:
     def _writer(self, device_id: str) -> RotatingCsv:
         if device_id not in self._writers:
             w = RotatingCsv(self.logdir, logger_version=FLEET_LOGGER_VERSION)
+            # #602: pin the file lineage to the (canonical) key - otherwise the
+            # first row's raw device_id names the file, splitting a renamed
+            # board's lineage right back apart.
+            w.device_id = device_id
             w.set_header(
                 [
                     f"# transport=wifi_poll  poll_cadence_s={self.cadence_s:g}  "
@@ -192,6 +196,7 @@ class FleetLogger:
         Returns the number of rows appended."""
         self.polls += 1
         reg = self._registry if self._registry is not None else load_registry()
+        canon = reg.canonical_for  # #602: file lineage follows the canonical id
         appended = 0
         for device in reg.served_devices():
             data = self._adapter(device.base_url).load()
@@ -204,9 +209,12 @@ class FleetLogger:
                 row["payload"] = _append_payload(
                     row.get("payload", ""), "transport", "wifi_poll"
                 )
-                new_path = self._writer(row.get("device_id") or "unknown").write_row(
-                    row, r.timestamp_utc
-                )
+                # #602: the WRITER key (file naming/lineage) coalesces to the
+                # canonical identity so a renamed board keeps one file lineage;
+                # the row itself keeps the id the device truthfully reported.
+                new_path = self._writer(
+                    canon(row.get("device_id")) or "unknown"
+                ).write_row(row, r.timestamp_utc)
                 appended += 1
                 if new_path:
                     self._log(f"[fleet] -> {new_path}")
