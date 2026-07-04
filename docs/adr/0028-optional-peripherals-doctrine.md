@@ -1,6 +1,6 @@
 # ADR-0028 — Optional-peripherals doctrine: the minimum Sprout is complete
 
-**Status:** Proposed — *drafted by Trellis (2026-07-04) from the maintainer's ratified product principle
+**Status:** Accepted — *maintainer-ratified 2026-07-04. Drafted by Trellis from the maintainer's ratified product principle
 (stated verbatim on #20, applied on #19). Extends ADR-0019's capability matrix from a technical gating
 *mechanism* into the product-experience *doctrine* that governs it. Needed before W2's display architecture
 (#20) builds against it.*
