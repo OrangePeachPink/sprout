@@ -29,8 +29,8 @@ W2 begins adding peripherals — on-device displays (#20), a tank-level sensor (
 assumes a display, a status flow that assumes a tank sensor, an onboarding that implies you need to solder.
 That drift is exactly what turns "a hobbyist with one sensor" into a second-class user.
 
-The maintainer ratified the guardrail (verbatim, #20): **"Sprout's minimum viable setup is a microcontroller
-+ one soil-moisture sensor. Everything beyond that — displays included — is optional enhancement: the
+The maintainer ratified the guardrail (verbatim, #20): **"Sprout's minimum viable setup is a microcontroller +
+one soil-moisture sensor. Everything beyond that — displays included — is optional enhancement: the
 workflow without the peripheral must be first-class, never a degraded experience. No large component /
 soldering investment as an entry bar."** This ADR fixes that as doctrine before the W2 peripherals are built.
 
@@ -64,8 +64,8 @@ examples this doctrine generalizes:
 
 Per ADR-0014, the operator's first-class status surface is the **served dashboard** — headless, over
 WiFi / localhost. An on-device OLED / e-ink / LED is a **redundant glance enhancement**: it may never be the
-*only* way to see state, and the product is complete with none. This is the specific architectural constraint
-#20's display build must honor — design the glance surface as a *projection* of state that already exists
+*only* way to see state, and the product is complete with none. This is the specific architectural constraint #20's
+display build must honor — design the glance surface as a *projection* of state that already exists
 headlessly, never as the state's home.
 
 ### 5. The capability descriptor (ADR-0019) is the single source of what is present; every capability defaults *absent*
