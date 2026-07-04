@@ -51,6 +51,10 @@ typedef struct {
                                          when unsynced - NEVER a guessed value.
                                          Omitted from payload entirely (not
                                          printed as an empty key) when NULL. */
+    /* #601 / ADR-0027 §1b: the friendly name, emitted as name= at the FRONT of the
+     * payload on every row (device_id is now the stable nonce; name= is the
+     * pre-mint degrade identifier + human legibility). "" or NULL -> empty value. */
+    const char *name;
 } telemetry_soil_row_t;
 
 /*
@@ -101,6 +105,7 @@ typedef struct {
     const char *unit; /* "C" / "%RH" / "" for NULL            */
     const char *quality_flag; /* shared enum (S4)                     */
     const char *payload; /* ";"-sep k=v, incl. the placement note */
+    const char *name; /* #601: friendly name, emitted as name= before payload */
 } telemetry_env_row_t;
 
 /* Format one plants.env CSV row WITHOUT the trailing "*HH". Returns chars written

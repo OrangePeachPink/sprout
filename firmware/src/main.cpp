@@ -2,7 +2,7 @@
  * plants - capacitive soil-moisture + pump auto-watering controller
  * Target: classic ESP32 (SoC marked ESP-32D / ESP32-D0WD class)
  *
- * schema v1 - FOUR soil sensors, supervisor-driven (#94/#227, ADR-0016). The
+ * schema v3 - FOUR soil sensors, supervisor-driven (#94/#227, ADR-0016). The
  * irrigation supervisor (lib/irrigation) is the SINGLE sample & actuation
  * authority: ticked every loop, it owns the ADC sweep (one channel at a time,
  * never while a pump runs), classifies each channel, vetoes on health, and — when
@@ -35,6 +35,7 @@
 #include "commands.h"
 #include "run_meta.h"
 #include "board_capability.h" /* per-board capability descriptor + gate seam (#273) */
+#include "device_uid.h" /* #601 stable-id base32 mint (ADR-0027 §1b) */
 #include "calibration.h" /* SENSOR_CAL_BOUNDARY[ch] — per-channel raw->band (#170) */
 
 /* The calibration table and the firmware must agree on the channel count. */
@@ -58,9 +59,17 @@ static_assert(SENSOR_CAL_CHANNELS == NUM_SENSORS,
 #define GIT_REV "nogit"  /* overridden by scripts/git_rev.py at build */
 #endif
 
-/* Per-boot identity (#188): friendly name, never a hardware fingerprint. */
-static char g_device_id[32] = "Sprout ESP32";
-static bool g_device_id_custom = false;
+/* Identity (ADR-0027 §1b / #601). device_id is the STABLE minted id - a 6-char
+ * base32 nonce (device_uid lib), minted once in setup() after RF is up and
+ * persisted to NVS; never the friendly name, never MAC/eFuse-derived (ADR-0020).
+ * Empty until minted (setup mints before printHeader + the first telemetry row). */
+static char g_device_id[32] = "";
+/* The friendly, re-nameable label (#188 / #600). Rides telemetry as name= on every
+ * row (#601); the registry (#592) is its authoritative home, this is the device's
+ * cached copy so the banner / GET-/ show a human name without a lookup (ADR-0027
+ * rider 2). Loaded from NVS "device_name" in commands_init; set by !name. */
+static char g_device_name[32] = "Sprout ESP32";
+static bool g_device_name_custom = false;
 static char g_session_id[12] = "000000";
 
 /* Device-owned time provenance (#278, ADR-0018 + schema v2 §11.1/§11.2, ratified
@@ -338,8 +347,13 @@ static bool g_as7263_ok = false;
  * OUTSIDE the ENABLE_ENV_SENSORS guard. */
 static void emitEnvLine(const telemetry_env_row_t *row)
 {
-    char line[256];
-    if (telemetry_format_env_row(line, sizeof(line), row) >= 0) {
+    char line[300]; /* #601: name= adds up to ~38 bytes vs the prior 256 */
+    /* #601: stamp the friendly name onto every env row (payload name=). The row
+     * literals the callers build leave .name NULL (zero-init); set it here at the
+     * single choke point rather than in each of the ~6 env-row literals. */
+    telemetry_env_row_t r = *row;
+    r.name = g_device_name;
+    if (telemetry_format_env_row(line, sizeof(line), &r) >= 0) {
         char crc[6];
         snprintf(crc, sizeof(crc), "*%02X", telemetry_checksum(line));
         Serial.print(line);
@@ -489,8 +503,16 @@ static void printHeader()
         [256]; /* per-channel name@position can run long on the sensors line */
     int n;
     Serial.println();
-    Serial.println("# plants telemetry  schema_version=1  "
-                   "contract=docs/TELEMETRY_SCHEMA.md@v1");
+    /* #601 / ADR-0027 §1b: schema_version>=3 declares device_id is the stable minted
+     * id (not the friendly name) + name= rides every payload. The host reads THIS
+     * banner line for the version (plants_logger.schema_version_from_header) and
+     * applies the >=3 rule (parse_v1). Computed from the one PLANTS_SCHEMA_VERSION
+     * source of truth (config.h) so no banner line can disagree with another (#601). */
+    snprintf(buf, sizeof(buf),
+             "# plants telemetry  schema_version=%d  "
+             "contract=docs/TELEMETRY_SCHEMA.md@v%d",
+             PLANTS_SCHEMA_VERSION, PLANTS_SCHEMA_VERSION);
+    Serial.println(buf);
 #ifdef WDT_WEDGE_TEST
     Serial.println("# *** WDT WEDGE-TEST BUILD (esp32dev_wdttest) *** "
                    "!wedge strands ch0 + hangs the loop -> watchdog must "
@@ -501,9 +523,10 @@ static void printHeader()
              run_meta_label(&g_run_meta));
     Serial.println(buf);
     snprintf(buf, sizeof(buf),
-             "# device_id=%s (%s)  chip=%s  adc=ADC1,12bit,11dB,eFuseCal=off",
-             g_device_id, g_device_id_custom ? "custom" : "default",
-             ESP.getChipModel());
+             "# device_id=%s  name=%s (%s)  chip=%s  "
+             "adc=ADC1,12bit,11dB,eFuseCal=off",
+             g_device_id, g_device_name,
+             g_device_name_custom ? "custom" : "default", ESP.getChipModel());
     Serial.println(buf);
     /* Capability provenance (#273 / ADR-0019): the board declares what it CAN do,
      * so multi-board data is self-describing and WiFi features (#21) have a gate. */
@@ -606,14 +629,15 @@ static void printHeader()
         "# authoritative: raw_value (ADC counts) + band (payload 'level'); "
         "value/unit are NULL - reserved for a future calibrated VWC, never an "
         "uncalibrated %.");
-    /* Time provenance (#278, ADR-0018/schema v2 §11.1) - LIVE sync state, not a
+    /* Time provenance (#278, ADR-0018/schema §11.1) - LIVE sync state, not a
      * static claim: device_synced only once SNTP has actually answered. */
     snprintf(buf, sizeof(buf),
              "# time: source=%s - device_seq/time_source ride each row's "
-             "payload, schema v2 §11.1/§11.2",
+             "payload, schema v%d §11.1/§11.2",
              timeIsSynced() ? "device_synced (NTP)"
                             : "device_uptime (unsynced; NTP arms on WiFi "
-                              "connect, #278)");
+                              "connect, #278)",
+             PLANTS_SCHEMA_VERSION);
     Serial.println(buf);
     /* WiFi connect-scaffold status (#21) - live state, not just capability. Set
      * credentials with !wifi,<ssid>[,<pass>]; the served status page (this same
@@ -647,8 +671,9 @@ static void handleRoot()
     char buf[512];
     int n = snprintf(
         buf, sizeof(buf),
-        "Sprout %s\nfw=%s git=%s board=%s\nwifi=%s ip=%s\nuptime_ms=%lu\n\n",
-        g_device_id, PLANTS_FW_VERSION, GIT_REV, BOARD_CAP.name,
+        "Sprout %s\ndevice_id=%s fw=%s git=%s board=%s\nwifi=%s ip=%s\n"
+        "uptime_ms=%lu\n\n",
+        g_device_name, g_device_id, PLANTS_FW_VERSION, GIT_REV, BOARD_CAP.name,
         wifi_net_state_name(g_wifi.state), WiFi.localIP().toString().c_str(),
         millis());
     for (int ch = 0; ch < NUM_SENSORS && n > 0 && (size_t)n < sizeof(buf);
@@ -816,8 +841,11 @@ void setup()
     Serial.println();
     Serial.print("# boot plants controller fw=");
     Serial.print(PLANTS_FW_VERSION);
+    Serial.print(" - schema v");
+    Serial.print(
+        PLANTS_SCHEMA_VERSION); /* #601: computed from config.h, not a literal */
     Serial.println(
-        " - schema v1, 4 soil sensors, supervisor-driven "
+        ", 4 soil sensors, supervisor-driven "
         "(autonomous dosing DISARMED; manual !water; fail-safe OFF)");
 
     /* BOARD_LED_NONE (255): no verified heartbeat pin for this board - skip rather
@@ -855,9 +883,10 @@ void setup()
      * The supervisor owns the cadence now, so !cad/!cfg retune g_sys.sample_period_ms;
      * !water/!stop/!auto act on g_irrig. */
     commands_ctx_t cmd_ctx = {
-        g_device_id,
-        sizeof(g_device_id),
-        &g_device_id_custom,
+        g_device_id, /* device_uid: the minted nonce, read-only for !ver (#601) */
+        g_device_name,
+        sizeof(g_device_name),
+        &g_device_name_custom,
         &g_sys.sample_period_ms,
         &g_cadence_from_nvs,
         &g_cadence_temp,
@@ -907,6 +936,19 @@ void setup()
         g_http.begin();
     }
     wifi_net_init(&g_wifi);
+
+    /* #601 / ADR-0027 §1b: mint-or-load the stable device_id (a base32 nonce).
+     * Placed AFTER wifi_net_init so the SoC RNG is seeded - esp_random() is only
+     * truly random once RF is up; minting earlier could make two identical
+     * fresh-flashed boards mint the SAME id and recreate the collision this closes.
+     * Minted once, persisted to NVS, reused forever; a factory flash wipes NVS and
+     * yields a new id (correct). Never MAC/eFuse-derived (ADR-0020). Runs before
+     * printHeader() + the first telemetry row so device_id is never empty on the wire. */
+    g_prefs.getString("device_uid", g_device_id, sizeof(g_device_id));
+    if (strlen(g_device_id) != DEVICE_UID_LEN) {
+        device_uid_encode(esp_random(), g_device_id);
+        g_prefs.putString("device_uid", g_device_id);
+    }
 
     printHeader();
 
@@ -1081,6 +1123,7 @@ void loop()
                 g_device_seq++, /* #278: one tick per emitted row, every channel */
                 synced ? TIME_SOURCE_DEVICE_SYNCED : TIME_SOURCE_DEVICE_UPTIME,
                 ts, /* real UTC when synced; "" = honestly NULL (#278) */
+                g_device_name, /* #601: friendly name -> payload name= on every row */
             };
             if (telemetry_format_soil_row(line, sizeof(line), &row) >= 0) {
                 char crc[6];

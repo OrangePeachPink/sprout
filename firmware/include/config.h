@@ -44,6 +44,13 @@ constexpr const char *RUN_LABEL = "4probe-coloc-origplant";
 // --- Cross-project telemetry identity (docs/TELEMETRY_SCHEMA.md) ------------
 // These populate the namespaced, joinable row schema shared with the
 // companion air-quality project.
+// The telemetry SCHEMA version this firmware emits (ADR-0027 §1b). SINGLE SOURCE
+// OF TRUTH: every banner mention (the boot line, the telemetry-header line the
+// host parses, the contract @vN tag, the time-provenance line) computes from this
+// one constant, so they can NEVER drift out of sync - they did exactly once (#601:
+// boot line said v1 while the header said v3). Bump here and everywhere follows.
+// >= 3 => device_id is the stable minted id + name= rides the payload.
+constexpr int PLANTS_SCHEMA_VERSION = 3;
 constexpr const char *RECORD_TYPE_SOIL = "plants.soil";       // namespaced record_type
 constexpr const char *SENSOR_MODEL     = "UMLIFE_v2_TLC555";  // probe family
 constexpr const char *SENSOR_POSITION  = "origplant";        // all four co-located now; per-channel at repot
