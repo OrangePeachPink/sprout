@@ -189,6 +189,13 @@ name-keyed archive stays **permanent** — those rows are never rewritten (§8's
 re-keys *new* data forward without ever mutating or over-deleting the historical record; #602's map lives on
 purely as the reader for pre-migration logs. *(Data's §8/§9 precision.)*
 
+**Unique-vs-shared legacy defaults (maintainer-approved clarification, 2026-07-04):** the two legacy
+identities are not equally safe to map. `plants_esp32_f4e9d4` was **unique** to the classic — it coalesces
+directly. `Sprout ESP32` was the **shared firmware default across all three boards** (#601's original
+finding) — it must be split by evidence (session/timeframe/transport) before any mapping, and rows that
+remain genuinely ambiguous stay **honest-unknown** (an explicit unattributable bucket), never
+blind-coalesced. *(Trellis's #620 honest-migration rule, folded in at the maintainer's direction.)*
+
 ## Wave scoping
 
 - **Wave 1 (required):** mint + emit the stable device id (firmware — this is #601's structural
