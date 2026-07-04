@@ -503,12 +503,16 @@ static void printHeader()
         [256]; /* per-channel name@position can run long on the sensors line */
     int n;
     Serial.println();
-    /* #601 / ADR-0027 §1b: schema_version=3 declares device_id is the stable minted
+    /* #601 / ADR-0027 §1b: schema_version>=3 declares device_id is the stable minted
      * id (not the friendly name) + name= rides every payload. The host reads THIS
      * banner line for the version (plants_logger.schema_version_from_header) and
-     * applies the >=3 rule (parse_v1). v2 is taken by experiment-capture, so this is 3. */
-    Serial.println("# plants telemetry  schema_version=3  "
-                   "contract=docs/TELEMETRY_SCHEMA.md@v3");
+     * applies the >=3 rule (parse_v1). Computed from the one PLANTS_SCHEMA_VERSION
+     * source of truth (config.h) so no banner line can disagree with another (#601). */
+    snprintf(buf, sizeof(buf),
+             "# plants telemetry  schema_version=%d  "
+             "contract=docs/TELEMETRY_SCHEMA.md@v%d",
+             PLANTS_SCHEMA_VERSION, PLANTS_SCHEMA_VERSION);
+    Serial.println(buf);
 #ifdef WDT_WEDGE_TEST
     Serial.println("# *** WDT WEDGE-TEST BUILD (esp32dev_wdttest) *** "
                    "!wedge strands ch0 + hangs the loop -> watchdog must "
@@ -629,10 +633,11 @@ static void printHeader()
      * static claim: device_synced only once SNTP has actually answered. */
     snprintf(buf, sizeof(buf),
              "# time: source=%s - device_seq/time_source ride each row's "
-             "payload, schema v3 §11.1/§11.2",
+             "payload, schema v%d §11.1/§11.2",
              timeIsSynced() ? "device_synced (NTP)"
                             : "device_uptime (unsynced; NTP arms on WiFi "
-                              "connect, #278)");
+                              "connect, #278)",
+             PLANTS_SCHEMA_VERSION);
     Serial.println(buf);
     /* WiFi connect-scaffold status (#21) - live state, not just capability. Set
      * credentials with !wifi,<ssid>[,<pass>]; the served status page (this same
@@ -836,8 +841,11 @@ void setup()
     Serial.println();
     Serial.print("# boot plants controller fw=");
     Serial.print(PLANTS_FW_VERSION);
+    Serial.print(" - schema v");
+    Serial.print(
+        PLANTS_SCHEMA_VERSION); /* #601: computed from config.h, not a literal */
     Serial.println(
-        " - schema v3, 4 soil sensors, supervisor-driven "
+        ", 4 soil sensors, supervisor-driven "
         "(autonomous dosing DISARMED; manual !water; fail-safe OFF)");
 
     /* BOARD_LED_NONE (255): no verified heartbeat pin for this board - skip rather
