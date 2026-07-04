@@ -206,6 +206,24 @@ Use **SUPERSEDED** in place of **DUPLICATE** when the work was overtaken by ship
 single newer issue. **Look before you label:** banner only genuinely dead threads — verify the issue wasn't
 *reopened and merged* as the real implementation before tombstoning it.
 
+Use **DECIDED AGAINST** when the issue was *considered and declined* — not a duplicate, not superseded. This is
+the **highest-value** variant: a duplicate's lost context is mildly annoying, but a rejection's is expensive —
+it's where a contributor burns a day re-proposing something already ruled out, or where a good idea with a
+**revisit trigger** stays buried because nobody can see the trigger. Two rules keep it honest:
+
+- **Cite, never reconstruct.** Quote or link the recorded decision (closing comment / ADR / PRD non-goal)
+  *verbatim*. If no rationale is findable, flag it for a fresh maintainer ruling rather than inventing one — a
+  confident-sounding banner with a reconstructed "why" launders guesswork into doctrine.
+- **Closed work only.** Parked-but-alive items keep their `parked` label (no tombstone); delivered work gets
+  nothing. The banner means "this ended" — diluting that meaning kills its value.
+
+Preserve any **revisit trigger** in the banner — the narrow condition that would reopen it:
+
+```markdown
+> [!IMPORTANT]
+> **DECIDED AGAINST — closed, not on the roadmap.** \<one-line rationale, quoting the recorded decision + who decided>. **Revisit trigger:** \<the narrow condition that would reopen it, or "none recorded">. Nothing here is planned work. *(Banner per the decided-against convention, #635.)*
+```
+
 `Refs #N` / `Part of #N` (non-closing links), never `Closes #N`; the repo's auto-close setting stays **off**.
 
 ## Lane self-sync — check before you start, check before you stop
