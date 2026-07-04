@@ -1477,7 +1477,7 @@ function collRender(st){
   const on = !!st.collecting;
   start.disabled = on; stop.disabled = !on;
   const box = document.getElementById('collStatus');
-  box.textContent = collDescribe(st); box.className = 'capstatus' + (on ? ' ok' : '');
+  box.textContent = collDescribe(st); box.className = 'capstatus' + (on ? ' run' : '');
 }
 async function collPoll(){
   try{ collRender((await apiJson('/collection/status', {cache:'no-store'})).data); }
