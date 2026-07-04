@@ -79,7 +79,7 @@ def test_missing_level_is_none() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# the AC: level=dry renders the Dry · Parched chip, not '?'
+# the AC: level=dry renders the Dry · parched chip, not '?'
 # --------------------------------------------------------------------------- #
 
 
@@ -97,6 +97,8 @@ def test_lowercase_dry_renders_the_dry_chip_not_a_question_mark(tmp_path: Path) 
     p = tmp_path / "a.csv"
     p.write_text(_HEADER + _COLS + _row("s2", 2900, "dry"), encoding="utf-8")
     s = build_context(parse_files([str(p)]), registry=reg)["sensors"][0]
-    assert s["band_ui"] == "Dry" and s["mood"] == "Parched"  # BAND_UI["DRY"]
+    # band_ui from BAND_UI["DRY"]; mood is the canonical lowercase word read from
+    # mood-band-map.json (ruling #638 / #653), not the old authored "Parched".
+    assert s["band_ui"] == "Dry" and s["mood"] == "parched"
     assert s["band_ui"] != "?"
     assert s["band_color"] == "#E8703A"  # the real DRY colour, not the '?' grey
