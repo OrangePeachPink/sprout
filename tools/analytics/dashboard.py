@@ -514,19 +514,27 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
             for r in rs
         ]
         last = rs[-1]
-        # #583 (the HONESTY rule): NO_SIGNAL earns no band colour and no value
-        # display - a floating input's number is noise, and showing it implies
-        # signal. The raw rows stay fully queryable; only the card display gates.
-        no_signal = last.quality_flag == "NO_SIGNAL"
-        if no_signal:
-            ui = ("no signal", "#9A8480", "Unwired")
-        else:
-            ui = BAND_UI.get(last.band or "", ("?", "#9A8480", "Unknown"))
         # #486: attribute this channel to a plant via the fleet registry - honest
         # None on an unknown device or unassigned channel, never an invented name.
         # (last.sensor_id, not the group key - the key may be device-scoped, #583)
         # #602: attribute via the canonical id - the registry entry lives there
         plant = reg.plant_for(_canon(last.device_id), last.sensor_id)
+        # #616 (the #575 HONESTY rule, end-to-end): a floating pin reads OK /
+        # SATURATED at the firmware level, so the firmware quality_flag alone
+        # can't catch it - the registry's unwired declaration must too. A
+        # REGISTERED device whose channel has no plant assignment is declared-
+        # unwired: no band, no trend, `—`. Guard: an UNregistered device (a
+        # fresh checkout with no config, or a board not yet in the registry) is
+        # never gated this way - we don't claim to know its wiring, so its real
+        # firmware-quality reading still renders. Raw rows stay queryable (house
+        # rule: display gates only). The fix for a newly-wired-but-unassigned
+        # channel is to assign its plant in config (Design-QA's timing caveat).
+        registered = reg.device(_canon(last.device_id)) is not None
+        no_signal = last.quality_flag == "NO_SIGNAL" or (registered and plant is None)
+        if no_signal:
+            ui = ("no signal", "#9A8480", "Unwired")
+        else:
+            ui = BAND_UI.get(last.band or "", ("?", "#9A8480", "Unknown"))
         # #562 (ADR-0023 v2): the last reading's interior-ambient context, only
         # ever value+tag together - a context value never renders untagged.
         ambient = None
@@ -816,14 +824,21 @@ def _device_groups(reg, device_ids_in_data, by_sensor, sensors, segments) -> lis
             )
             else "serial"
         )
-        # HONESTY: cal_verified=false surfaces as the device's own header claim
-        # (firmware emits "# board cal: PLACEHOLDER" when not bench-verified,
-        # #436) - never a guess. Absent line = the board compiled cal-verified.
-        cal_provisional = any(
+        # #617 HONESTY: fail CLOSED - "bench-verified" must be EARNED by positive
+        # evidence, never inferred from silence. The tethered serial banner is
+        # meaningful: a board that CAN emit "# board cal: PLACEHOLDER" and doesn't
+        # is positively asserting cal_verified=true (#436). But that banner never
+        # rides WiFi telemetry, so over WiFi its absence proves nothing - reading
+        # it as verified is exactly the fail-open that let the newest, LEAST-
+        # calibrated boards claim the strongest calibration. So: a WiFi group is
+        # provisional until it can state its own cal (Firmware's served-cal-state
+        # half, #617b / ADR-0027 rider 3); a serial group's banner still decides.
+        has_placeholder = any(
             reg.canonical_for(seg.device_id) == did
             and any("board cal: PLACEHOLDER" in ln for ln in seg.raw_lines)
             for seg in segments
         )
+        cal_provisional = transport == "wifi" or has_placeholder
         groups.append(
             {
                 "device_id": did,
