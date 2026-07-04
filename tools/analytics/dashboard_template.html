@@ -550,7 +550,7 @@ function cardFor(s){
     : `<span class="sid">${chanLabel}</span> <span class="gpio">GPIO ${s.gpio} · ${s.channel}</span>`));
   // HONESTY (#583): an unwired input shows '—', never a floating-noise number
   c.appendChild(el('div','raw', (s.no_signal ? '—' : fmt(s.raw_last)) + '<span class="rawu"> raw</span>'));
-  const pill = el('span','pill', `${s.band_ui} <span style="opacity:.8">· ${s.mood}</span>`);
+  const pill = el('span','pill', `${s.band_ui}${s.mood ? ` <span style="opacity:.8">· ${s.mood}</span>` : ''}`);
   pill.style.background = s.band_color;
   const pwrap = el('div'); pwrap.appendChild(pill); c.appendChild(pwrap);
   const meta = el('div','meta');
@@ -920,7 +920,7 @@ function renderDetail(sid){
   const dh = el('div','dhead');
   dh.style.borderLeft = `5px solid ${s.color}`; dh.style.paddingLeft = '14px';
   dh.appendChild(el('div', null, `<div class="raw">${fmt(s.raw_last)}<span class="rawu"> raw</span></div>`));
-  const pill = el('span','pill', `${s.band_ui} · ${s.mood}`); pill.style.background = s.band_color;
+  const pill = el('span','pill', `${s.band_ui}${s.mood ? ` · ${s.mood}` : ''}`); pill.style.background = s.band_color;
   const meta = el('div'); meta.appendChild(pill);
   meta.appendChild(el('div','small muted', `GPIO ${s.gpio} · ${s.channel} · fw band <span class="mono">${s.band_fw}</span> · in band ${fmtHours(f.band_now_hours)} · n=${fmt(s.n)}`));
   dh.appendChild(meta);
