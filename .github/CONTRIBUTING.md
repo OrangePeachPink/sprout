@@ -191,6 +191,21 @@ Workflow spins a **new issue** for the remainder (linked both ways, with the con
 closes the original — so a tail never gets swept into the merge dustbin and lost. A PR that misses the
 issue's *main point* is not closed — it's flagged back.
 
+**Closing a duplicate or superseded issue — leave a top-of-body banner (#635).** The close-reason
+("not planned") and board column ("Won't Do") say *what* but never *why*, and your explanatory comment sits
+at the **bottom** of the thread — so a developer onboarded later lands at the top of the body with zero
+context. When you close as a duplicate or superseded, **prepend** this banner to the original body (never
+replace it — the original text is history), and optionally prefix the title `[DUPE → #NNN]`:
+
+```markdown
+> [!IMPORTANT]
+> **DUPLICATE — closed, not on the roadmap.** Superseded by **#NNN** (reason — e.g. *first-filed wins, parallel-cut collision*). Anything of value here was folded into #NNN. Nothing in this thread is planned work. *(Banner per the duplicate-context convention, #635.)*
+```
+
+Use **SUPERSEDED** in place of **DUPLICATE** when the work was overtaken by shipped functionality rather than a
+single newer issue. **Look before you label:** banner only genuinely dead threads — verify the issue wasn't
+*reopened and merged* as the real implementation before tombstoning it.
+
 `Refs #N` / `Part of #N` (non-closing links), never `Closes #N`; the repo's auto-close setting stays **off**.
 
 ## Lane self-sync — check before you start, check before you stop
