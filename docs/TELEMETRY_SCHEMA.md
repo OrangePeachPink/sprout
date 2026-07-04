@@ -51,7 +51,7 @@ the cross-project core both repos carry.
 | 3 | `timestamp_local` | host | yes | `2026-06-23 09:05:30.123` | host TZ, human |
 | 4 | `sample_id` | host | yes | `12345` | logger monotonic counter |
 | 5 | `session_id` | dev | yes **[propose→sibling-AQ]** | `3f9a1c` | per-boot; reboot = new id |
-| 6 | `device_id` | dev | yes | `Sprout ESP32` | pretty default (chip model), or a user-set `!name` (NVS); no MAC |
+| 6 | `device_id` | dev | yes | `a1b2c3` | **stable minted id** under the ADR-0027 bump — a short id from the first-boot NVS UUID; never MAC-derived (ADR-0020); the friendly *name* moves to the registry (#592). *Pre-bump/v1 logs carry the pretty `!name` here — distinguish by `schema_version`.* |
 | 7 | `firmware_version` | dev | yes | `0.5.0` | |
 | 8 | `logger_version` | host | yes | `plants_logger_0_1` | |
 | 9 | `millis_ms` | dev | yes | `30000` | device monotonic ms since boot; 64-bit via `esp_timer` — no 49.7-day wrap (B4/B5) |
@@ -273,6 +273,13 @@ emitting v1 unchanged. v2 is additive-only (new optional columns) so a v1 row is
 those columns empty — no breaking change, no migration required for existing logs. Implementing /
 enforcing v2 in `parse_v1.py` and the firmware/logger emitters is separate future work, gated on
 ratification.
+
+**Identity bump (ADR-0027, Accepted 2026-07-04):** separately from v2's additive columns, ADR-0027 repurposes
+`device_id` (§6) from a mutable friendly name to a **short stable minted id** (the friendly name moves to the
+registry, #592). Because that changes an existing column's *meaning* (not additive), it carries a **`schema_version`
+bump** so a reader distinguishes pre-bump logs (`device_id`=name) from post-bump (`device_id`=stable-id); a one-time
+map re-keys the three legacy bench identities (ADR-0027 §9). This strengthens §11.2's dedupe key, whose lead
+term `device_id` becomes genuinely stable. Firmware mint+emit is #601; the UUID-keyed registry is Data's slice.
 
 **Why now:** §1's "time is host-authoritative" and this file's `session_id`-only identity model
 assume one tethered device. The untethered/multi-device path ([PRD-0005](prd/0005-untethered-sprout.md))

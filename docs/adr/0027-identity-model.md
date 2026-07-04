@@ -1,7 +1,9 @@
 # ADR-0027 — Device / Channel / Probe / Plant / Site identity model
 
-**Status:** Proposed — *drafted by Firmware at the bench (2026-07-04) from the three-family fleet
-bring-up (#584); Trellis owns and advances it through the ADR pipeline; Workflow gates the draft PR.*
+**Status:** Accepted — *drafted by Firmware at the bench (2026-07-04) from the three-family fleet
+bring-up (#584); concluded + ratified by Trellis per the maintainer's shepherd/conclude directive
+(2026-07-04). Sub-decision **1b is RESOLVED = Option B** (see §1b); the only remaining open is calibration
+portability — a flagged bench test (§6), not a blocker. Was Proposed 2026-07-04 → Accepted same day.*
 Establishes a stable-UUID identity model; reframes the already-merged #602 coalescing as an interim
 legacy bridge rather than the permanent strategy.
 
@@ -71,6 +73,26 @@ Where exactly it rides is a **sub-decision for Trellis / Data**, between:
 
 Firmware's lean is (B) or (A) over a new canonical column; the final call is Trellis / Data's against
 the shared contract. Full UUID and all rich fields live registry-side regardless.
+
+**Resolved (Trellis, 2026-07-04): Option B.** `device_id` — already a canonical column — becomes the short
+stable minted id; the friendly *name* moves to the registry (which already carries a `name` field, #592) and
+MAY additionally ride the payload as `name=` for raw-log legibility (byte budget permitting — Firmware's
+call on the 19200 path). **Rationale:** B fixes the conflation *at its root* — `device_id` becomes a true
+stable identifier (its proper job) instead of a mutable label masquerading as an id in the "id" column,
+which is the exact conflation this ADR exists to end. It **converges the in-flight work**: the dashboard
+fence already keys on `device_id` (#587), so it stays correct and only its *display* swaps to `regdev.name`
+(already the planned binding), and #602 coalescing retires as designed (§8/§9) rather than remaining a
+permanent crutch. It **strengthens the §11.2 dedupe key** `(device_id, …)` by making its lead term genuinely
+stable. And a 6-hex id is *shorter* than today's friendly string — byte-favorable at 19200 baud.
+
+This is **not** the additive-only change §11's v2 is: repurposing `device_id`'s meaning requires a **`schema_version`
+bump** (pre-bump logs carry `device_id`=name; post-bump carry `device_id`=stable-id; a reader distinguishes them
+by version) plus the tiny 2nd-epoch migration of the three legacy bench identities (§9). That cost is deliberate
+and — per the pre-release posture (zero users, everything committed) — effectively free now; it never gets
+cheaper. *(Option A — stable id in the payload, `device_id` left as the name — was considered and rejected: it is
+additive/safer, but it leaves the conflation in the canonical column and forces the fence to re-point onto a
+payload key anyway — trading a clean normalization for a permanent redundancy. The maintainer may override to A
+at ratification if additive-safety is preferred for install-day sequencing.)*
 
 ### 2. Five host-side entities, each `stable_uuid` + mutable label
 
@@ -174,8 +196,9 @@ UUID-keyed.
 
 ## Open (routed)
 
-- **Trellis:** ratify the model; register the wire **schema_version bump**; and settle the 1b
-  sub-decision (where the short id rides) against the `CANONICAL_COLUMNS` / companion contract.
+- **Trellis:** DONE — model concluded/ratified; **1b resolved = Option B** (§1b); the wire
+  `schema_version` bump is registered in `TELEMETRY_SCHEMA.md` §6/§11 (device_id becomes the stable minted
+  id, name → registry). No remaining Trellis blocker; calibration portability is a bench test.
 - **Firmware — #601 (open) IS this model's first slice:** mint + emit the stable id at first boot.
   Do **not** build a parallel "distinct default name" band-aid in the Wave-1 patch if this ADR lands
   this week — the mint solves the collision structurally.
