@@ -164,12 +164,16 @@ body {{ font-family: var(--font-ui); background: var(--bg); color: var(--ink);
 .empty {{ max-width: 32rem; text-align: center; padding: 2rem; }}
 .empty h1 {{ font-family: var(--font-display); color: var(--leaf); }}
 .empty p {{ color: var(--muted); }}
+.empty a {{ color: var(--leaf); font-family: var(--font-ui); font-weight: 600;
+  text-decoration: none; }}
+.empty a:hover {{ text-decoration: underline; }}
 </style>
 </head>
 <body>
 <div class="empty">
 <h1>Sprout</h1>
 {message}
+<p><a href="/">&larr; Back to the dashboard</a></p>
 </div>
 </body>
 </html>
