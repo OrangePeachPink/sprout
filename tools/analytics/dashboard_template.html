@@ -179,6 +179,10 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .scard .raw { font-family: var(--font-data); font-weight: 600; font-size: 34px; line-height: 1; margin: 6px 0 2px; }
 .scard .rawu { color: var(--muted); font-size: 11px; }
 .pill { display: inline-block; color: #fff; font-weight: 600; font-size: 12px; border-radius: var(--r-pill); padding: 2px 10px; }
+/* #658: the instrument's own band on an unassigned card — instrument grammar
+   (#652 [fw] · [band], no mood, no colour chip), subordinate to the "No plant"
+   pill. Muted data font so it reads as a bench reading, never a plant claim. */
+.fwband { margin-left: 8px; font-family: var(--font-data); font-size: 11px; color: var(--muted); }
 .scard .meta { margin-top: 10px; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 12px; }
 .scard .meta > * { min-width: 0; }  /* let columns shrink to their track - never overflow + clip the card (#101) */
 .scard .meta .num { color: var(--ink); overflow-wrap: anywhere; }  /* a long value wraps, never bleeds across */
@@ -561,7 +565,13 @@ function cardFor(s){
   c.appendChild(el('div','raw', (s.no_signal ? '—' : fmt(s.raw_last)) + '<span class="rawu"> raw</span>'));
   const pill = el('span','pill', `${s.band_ui} <span style="opacity:.8">· ${s.mood}</span>`);
   pill.style.background = s.band_color;
-  const pwrap = el('div'); pwrap.appendChild(pill); c.appendChild(pwrap);
+  const pwrap = el('div'); pwrap.appendChild(pill);
+  // #658: on an unassigned card, ride the instrument's own band beside the "No
+  // plant" pill — `fw · <band>` in instrument grammar (#652), no mood, no colour.
+  // The label your eyes need as probes move between cups; the #656 honesty line
+  // stays put (still "No plant", still no moisture claim).
+  if(s.unassigned && s.band_fw){ pwrap.appendChild(el('span','fwband', `fw · ${s.band_fw}`)); }
+  c.appendChild(pwrap);
   const meta = el('div','meta');
   const add = (l,v) => { meta.appendChild(el('span','muted small',l)); meta.appendChild(el('span','num small',v)); };
   if(s.no_signal){

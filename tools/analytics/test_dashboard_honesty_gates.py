@@ -28,10 +28,16 @@ _COLS = (
 
 
 def _soil(
-    device: str, sid: str, raw: int, *, quality: str = "OK", extra: str = ""
+    device: str,
+    sid: str,
+    raw: int,
+    *,
+    quality: str = "OK",
+    level: str = "well watered",
+    extra: str = "",
 ) -> str:
     ts = "2026-07-04T00:00:30.000Z"
-    payload = "level=well watered;gpio=36" + (f";{extra}" if extra else "")
+    payload = f"level={level};gpio=36" + (f";{extra}" if extra else "")
     return (
         f"plants.soil,{ts},{ts[:-1]},sess1,{device},{sid},{raw},{quality},{payload}\n"
     )
@@ -100,6 +106,32 @@ def test_unassigned_channel_makes_no_plant_moisture_claim(tmp_path: Path) -> Non
     assert s["plant_name"] is None and s["plant_id"] is None
     assert s["mood"] == "No plant"  # never "Thriving"/"Moist" for an unmapped pin
     assert s["raw_last"] == 1500  # ...but the truth is still visible
+
+
+def test_unassigned_channel_exposes_fw_band_for_the_bench_label(tmp_path: Path) -> None:
+    # #658: the fw-band bench affordance renders `fw · <band>` from s.band_fw on an
+    # unassigned card - the label your eyes need as probes move between cups. Pin
+    # that the data is present AND the #656 honesty line holds: the instrument's
+    # own band is exposed, but NO moisture mood and NO band colour are claimed.
+    reg = Registry(
+        devices=[
+            Device(
+                device_id="classic",
+                board="esp32dev",
+                label=None,
+                channels={},
+                base_url="http://classic.local",
+            )
+        ]
+    )
+    # the real bench read: air-dry ADC on a connected-but-unassigned probe
+    log = _write(tmp_path, [_soil("classic", "s1", 3057, level="air-dry")])
+    s = build_context(parse_files([str(log)]), registry=reg)["sensors"][0]
+    assert s["unassigned"] is True
+    assert s["band_fw"] == "air-dry"  # the instrument's band the label renders
+    assert s["mood"] == "No plant"  # ...with no moisture mood (the honesty line)
+    assert s["band_color"] == "#9A8480"  # neutral - never a band-coloured chip
+    assert s["raw_last"] == 3057  # the raw the bench watches during calibration
 
 
 def test_registered_channel_with_a_plant_still_earns_its_band(tmp_path: Path) -> None:
