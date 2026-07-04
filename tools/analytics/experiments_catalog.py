@@ -31,6 +31,7 @@ if str(_HERE) not in sys.path:
 from bench_packages import (  # noqa: E402  (landed bench packages, #444)
     bench_card,
     load_bench_packages,
+    soft_wrap,
 )
 from dashboard import FONTS_CSS, TOKENS_CSS  # noqa: E402  (reuse the one token source)
 from timefmt import local_first_system  # noqa: E402  (local-first lab labels, #328)
@@ -122,11 +123,11 @@ def _card(e: dict) -> str:
     eid = esc(str(e["experiment_id"]))
     return (
         f'<a class="ecard" href="/lab/{eid}">'  # click -> detail (#157)
-        f'<div class="ecard-h"><h3>{esc(str(e["title"]))}</h3>'
+        f'<div class="ecard-h"><h3>{soft_wrap(esc(str(e["title"])))}</h3>'
         f'<span class="ewhen">{esc(_fmt_when(e.get("started_utc")))}</span></div>'
         f'<div class="emeta">{dur} · {esc(samples)}{esc(rate)}</div>'
         f'<div class="echips">{chips}</div>'
-        f'<div class="efoot"><span class="eid">{eid}</span>'
+        f'<div class="efoot"><span class="eid">{soft_wrap(eid)}</span>'
         f'<span class="equal">{esc(" · ".join(quality))}</span></div>'
         "</a>"
     )
