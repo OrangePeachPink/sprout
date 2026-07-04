@@ -899,7 +899,22 @@ void setup()
         .idle_core_mask = 0,
         .trigger_panic = true,
     };
-    esp_task_wdt_init(&wdt_cfg);
+    /* #599: arduino-esp32 3.x / IDF5 auto-inits the Task WDT before setup(), so a
+     * bare esp_task_wdt_init() returns ESP_ERR_INVALID_STATE ("already initialized")
+     * and OUR WDT_TIMEOUT_MS is silently dropped - the framework default (~5 s) stands
+     * while printHeader() above already announced WDT_TIMEOUT_MS. Reconfigure in that
+     * case so the configured timeout actually applies; the WDT is the autonomous-
+     * pumping safety guard (#93 / #94), so a silently-wrong timeout is unacceptable. */
+    esp_err_t wdt_err = esp_task_wdt_init(&wdt_cfg);
+    if (wdt_err == ESP_ERR_INVALID_STATE) {
+        wdt_err = esp_task_wdt_reconfigure(
+            &wdt_cfg); /* framework pre-inited; apply ours */
+    }
+    if (wdt_err != ESP_OK) {
+        Serial.printf("# WARN task-wdt not configured (err=%d); timeout may be "
+                      "the framework default\n",
+                      (int)wdt_err);
+    }
     esp_task_wdt_add(NULL);
 }
 
