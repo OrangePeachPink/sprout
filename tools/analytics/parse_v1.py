@@ -88,6 +88,13 @@ BANDS_WET_TO_DRY = [
     "air-dry",
 ]
 BANDS_DRY_TO_WET = list(reversed(BANDS_WET_TO_DRY))
+# Case-insensitive map to the canonical band token (#655). Firmware casing has
+# drifted - older builds emit `dry` where the canon is `DRY` - and the canon set
+# is mixed-case (`DRY`/`OK` upper, the rest lower), so it is not a simple .upper().
+# Normalizing the DERIVED band here fixes every case-sensitive consumer at once
+# (BAND_UI, the band index, #626) at the single parse boundary (ADR-0021), while
+# the raw `payload['level']` stays byte-for-byte untouched.
+_CANON_BAND = {name.lower(): name for name in BANDS_WET_TO_DRY}
 # Reconciled firmware values (main.cpp:63, #255). Used only when a segment's
 # provenance header lacks a "cal bounds" line; prefer header-derived bounds always.
 DEFAULT_CAL_BOUNDS = (3050, 2140, 1830, 1520, 1150, 1050)
@@ -296,8 +303,16 @@ class Reading:
 
     @property
     def band(self) -> str | None:
-        """Device-emitted band (``payload.level``) - the per-row ground truth."""
-        return self.payload.get("level")
+        """Device-emitted band (``payload.level``) - the per-row ground truth,
+        normalized to the canonical band token's casing (#655). The raw
+        ``payload['level']`` is untouched; only this derived accessor
+        canonicalizes casing, so a firmware that emits ``dry`` still renders
+        ``DRY`` everywhere (BAND_UI, the band index, #626). An unrecognized value
+        passes through unchanged - no invented mapping."""
+        raw = self.payload.get("level")
+        if raw is None:
+            return None
+        return _CANON_BAND.get(raw.lower(), raw)
 
     @property
     def role(self) -> str | None:
