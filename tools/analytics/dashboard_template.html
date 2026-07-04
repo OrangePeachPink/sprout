@@ -39,6 +39,19 @@ header.top > div:first-child { flex: 1 1 300px; min-width: 260px; }
 header.top .sub { color: var(--muted); margin-top: 4px; }
 .controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .controls .refreshed { color: var(--muted); font-size: 11px; font-family: var(--font-data); max-width: 210px; text-align: right; }
+/* #614: top-level tab nav — Monitor / Capture / Lab. The main view leads with results. */
+.tabnav { display: flex; gap: 4px; margin-bottom: var(--space-md); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.tab { font-family: var(--font-ui); font-size: 14px; font-weight: 600; color: var(--muted);
+  background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  padding: 9px 16px; cursor: pointer; text-decoration: none; border-radius: var(--r-control) var(--r-control) 0 0; }
+.tab:hover { color: var(--ink); background: var(--surface-2); }
+.tab.active { color: var(--ink); border-bottom-color: var(--leaf); }
+/* compact collection strip: the Monitor tab leads with results, so the controls sit slim on top */
+.card.compact { padding: 11px 16px; margin-bottom: var(--space-md); }
+.card.compact .panel-h { margin-bottom: 8px; }
+.card.compact .panel-h h2 { font-size: 15px; }
+.card.compact .panel-h .cap { display: none; }
+.card.compact .capctl { display: inline-flex; margin: 0 18px 0 0; vertical-align: middle; }
 .btn { font-family: var(--font-ui); font-size: 12px; font-weight: 600; cursor: pointer;
   border: 1px solid var(--border); background: var(--surface); color: var(--ink);
   border-radius: var(--r-pill); padding: 6px 14px; text-decoration: none; }
@@ -295,12 +308,17 @@ footer.prov code { font-family: var(--font-data); }
       <button class="btn" id="refreshBtn" type="button">↻ Refresh</button>
       <label class="auto" id="autoLbl"><input type="checkbox" id="autoChk"> auto</label>
       <button class="btn" id="themeBtn" type="button">soil mode</button>
-      <a class="btn" href="/lab" title="Experiment catalog — past captures, isolated from the monitor log">🧪 Experiments</a>
       <button class="btn" id="quitBtn" type="button" hidden>⏻ Stop server</button>
     </div>
   </header>
 
-  <section class="card" id="monitorCard">
+  <nav class="tabnav" role="tablist" aria-label="Views">
+    <button class="tab active" type="button" data-tab="monitor" role="tab" aria-selected="true">Monitor</button>
+    <button class="tab" type="button" data-tab="capture" role="tab" aria-selected="false">Capture</button>
+    <a class="tab" href="/lab" role="tab">Lab</a>
+  </nav>
+
+  <section class="card compact" id="monitorCard">
     <div class="panel-h">
       <h2>Monitor <span class="proposed" title="the always-on baseline logger, appended to logs/">logging mode</span></h2>
       <span class="cap">the always-on logger — appends to <span class="mono">logs/</span>; start/stop it here, no terminal</span>
@@ -1076,6 +1094,30 @@ function backToOverview(){ currentDetail=null; if(charts.detail){ charts.detail.
   document.getElementById('detail').style.display='none'; document.getElementById('overview').style.display='block';
   renderOverview(); window.scrollTo(0,0); }
 
+/* ---- #614: top-level tabs (Monitor / Capture / Lab). Client-side, deep-linked
+   via #capture / #monitor. Monitor leads with results; Capture is off the flow;
+   Lab is its own /lab route. The single-plant detail lives inside Monitor. ---- */
+function showTab(name, rerender){
+  const cap = name === 'capture';
+  document.getElementById('captureCard').style.display = cap ? '' : 'none';
+  document.getElementById('monitorCard').style.display = cap ? 'none' : '';
+  document.getElementById('overview').style.display = cap ? 'none' : (currentDetail ? 'none' : 'block');
+  document.getElementById('detail').style.display = (!cap && currentDetail) ? 'block' : 'none';
+  document.querySelectorAll('.tabnav .tab[data-tab]').forEach(t=>{
+    const on = t.dataset.tab === (cap ? 'capture' : 'monitor');
+    t.classList.toggle('active', on); t.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  const hash = cap ? '#capture' : '#monitor';
+  if(location.hash !== hash) history.replaceState(null, '', hash);
+  // charts hidden while on Capture size to 0; re-fit when we return to Monitor.
+  if(rerender && !cap && !currentDetail) renderAll();
+}
+function initTabs(){
+  document.querySelectorAll('.tabnav .tab[data-tab]').forEach(t=>
+    t.addEventListener('click', ()=>showTab(t.dataset.tab, true)));
+  showTab(location.hash.slice(1) === 'capture' ? 'capture' : 'monitor', false);
+}
+
 /* ---- render everything (re-runnable for live refresh) ---- */
 function renderAll(){
   if(currentDetail) renderDetail(currentDetail);  // detail mode: no hidden overview charts
@@ -1577,6 +1619,7 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
   }
 
   applyTheme();
+  initTabs();
   renderAll();
   setRange(curRange);
   // Tick the freshness line even with no new data, so a frozen logger or a dead
