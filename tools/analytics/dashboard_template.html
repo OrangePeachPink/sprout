@@ -139,6 +139,9 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .proposed, .btn { white-space: nowrap; }
 .btn.primary { background: var(--leaf); border-color: var(--leaf); color: #fff; }
 .btn.primary:hover { background: #2C9247; border-color: #2C9247; }
+/* a disabled primary must read as disabled, not as an active green CTA */
+.btn.primary:disabled { background: var(--surface-2); border-color: var(--border); color: var(--muted); }
+.btn.primary:disabled:hover { background: var(--surface-2); border-color: var(--border); }
 #monitorCard, #captureCard { position: relative; overflow: hidden; }
 #monitorCard::before, #captureCard::before { content: ""; position: absolute;
   left: 0; top: 0; bottom: 0; width: 5px; }
