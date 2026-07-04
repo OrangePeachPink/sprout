@@ -827,9 +827,16 @@ def _device_groups(reg, device_ids_in_data, by_sensor, sensors, segments) -> lis
         groups.append(
             {
                 "device_id": did,
-                # the ratified `name` field (it falls back to a legacy `label`
-                # at parse time, #583); an unregistered device stays its own id
-                "name": (getattr(regdev, "name", None) or did or "Sprout"),
+                # the ratified `name` field first; then the legacy `label` (the
+                # parse path folds label into name, but a directly-constructed
+                # Device may carry label only); an unregistered device stays
+                # its own id - never an invented friendly name (#583/#602)
+                "name": (
+                    getattr(regdev, "name", None)
+                    or getattr(regdev, "label", None)
+                    or did
+                    or "Sprout"
+                ),
                 "hostname": hostname,
                 "transport": transport,
                 "board": getattr(regdev, "board", None),
