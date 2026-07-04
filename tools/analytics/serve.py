@@ -158,7 +158,7 @@ def _empty_state_html(had_any_logged: bool) -> str:
 <style>
 {fonts}
 {tokens}
-body {{ font-family: var(--font-body); background: var(--bg); color: var(--ink);
+body {{ font-family: var(--font-ui); background: var(--bg); color: var(--ink);
   display: flex; align-items: center; justify-content: center; min-height: 100vh;
   margin: 0; }}
 .empty {{ max-width: 32rem; text-align: center; padding: 2rem; }}
