@@ -35,6 +35,7 @@
 #include "commands.h"
 #include "run_meta.h"
 #include "board_capability.h" /* per-board capability descriptor + gate seam (#273) */
+#include "device_uid.h" /* #601 stable-id base32 mint (ADR-0027 §1b) */
 #include "calibration.h" /* SENSOR_CAL_BOUNDARY[ch] — per-channel raw->band (#170) */
 
 /* The calibration table and the firmware must agree on the channel count. */
@@ -58,9 +59,17 @@ static_assert(SENSOR_CAL_CHANNELS == NUM_SENSORS,
 #define GIT_REV "nogit"  /* overridden by scripts/git_rev.py at build */
 #endif
 
-/* Per-boot identity (#188): friendly name, never a hardware fingerprint. */
-static char g_device_id[32] = "Sprout ESP32";
-static bool g_device_id_custom = false;
+/* Identity (ADR-0027 §1b / #601). device_id is the STABLE minted id - a 6-char
+ * base32 nonce (device_uid lib), minted once in setup() after RF is up and
+ * persisted to NVS; never the friendly name, never MAC/eFuse-derived (ADR-0020).
+ * Empty until minted (setup mints before printHeader + the first telemetry row). */
+static char g_device_id[32] = "";
+/* The friendly, re-nameable label (#188 / #600). Rides telemetry as name= on every
+ * row (#601); the registry (#592) is its authoritative home, this is the device's
+ * cached copy so the banner / GET-/ show a human name without a lookup (ADR-0027
+ * rider 2). Loaded from NVS "device_name" in commands_init; set by !name. */
+static char g_device_name[32] = "Sprout ESP32";
+static bool g_device_name_custom = false;
 static char g_session_id[12] = "000000";
 
 /* Device-owned time provenance (#278, ADR-0018 + schema v2 §11.1/§11.2, ratified
@@ -501,9 +510,10 @@ static void printHeader()
              run_meta_label(&g_run_meta));
     Serial.println(buf);
     snprintf(buf, sizeof(buf),
-             "# device_id=%s (%s)  chip=%s  adc=ADC1,12bit,11dB,eFuseCal=off",
-             g_device_id, g_device_id_custom ? "custom" : "default",
-             ESP.getChipModel());
+             "# device_id=%s  name=%s (%s)  chip=%s  "
+             "adc=ADC1,12bit,11dB,eFuseCal=off",
+             g_device_id, g_device_name,
+             g_device_name_custom ? "custom" : "default", ESP.getChipModel());
     Serial.println(buf);
     /* Capability provenance (#273 / ADR-0019): the board declares what it CAN do,
      * so multi-board data is self-describing and WiFi features (#21) have a gate. */
@@ -647,8 +657,9 @@ static void handleRoot()
     char buf[512];
     int n = snprintf(
         buf, sizeof(buf),
-        "Sprout %s\nfw=%s git=%s board=%s\nwifi=%s ip=%s\nuptime_ms=%lu\n\n",
-        g_device_id, PLANTS_FW_VERSION, GIT_REV, BOARD_CAP.name,
+        "Sprout %s\ndevice_id=%s fw=%s git=%s board=%s\nwifi=%s ip=%s\n"
+        "uptime_ms=%lu\n\n",
+        g_device_name, g_device_id, PLANTS_FW_VERSION, GIT_REV, BOARD_CAP.name,
         wifi_net_state_name(g_wifi.state), WiFi.localIP().toString().c_str(),
         millis());
     for (int ch = 0; ch < NUM_SENSORS && n > 0 && (size_t)n < sizeof(buf);
@@ -855,9 +866,10 @@ void setup()
      * The supervisor owns the cadence now, so !cad/!cfg retune g_sys.sample_period_ms;
      * !water/!stop/!auto act on g_irrig. */
     commands_ctx_t cmd_ctx = {
-        g_device_id,
-        sizeof(g_device_id),
-        &g_device_id_custom,
+        g_device_id, /* device_uid: the minted nonce, read-only for !ver (#601) */
+        g_device_name,
+        sizeof(g_device_name),
+        &g_device_name_custom,
         &g_sys.sample_period_ms,
         &g_cadence_from_nvs,
         &g_cadence_temp,
@@ -907,6 +919,19 @@ void setup()
         g_http.begin();
     }
     wifi_net_init(&g_wifi);
+
+    /* #601 / ADR-0027 §1b: mint-or-load the stable device_id (a base32 nonce).
+     * Placed AFTER wifi_net_init so the SoC RNG is seeded - esp_random() is only
+     * truly random once RF is up; minting earlier could make two identical
+     * fresh-flashed boards mint the SAME id and recreate the collision this closes.
+     * Minted once, persisted to NVS, reused forever; a factory flash wipes NVS and
+     * yields a new id (correct). Never MAC/eFuse-derived (ADR-0020). Runs before
+     * printHeader() + the first telemetry row so device_id is never empty on the wire. */
+    g_prefs.getString("device_uid", g_device_id, sizeof(g_device_id));
+    if (strlen(g_device_id) != DEVICE_UID_LEN) {
+        device_uid_encode(esp_random(), g_device_id);
+        g_prefs.putString("device_uid", g_device_id);
+    }
 
     printHeader();
 

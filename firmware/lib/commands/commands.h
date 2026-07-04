@@ -30,9 +30,15 @@ extern "C" {
  * keeping this header free of Arduino includes.
  */
 typedef struct {
-    char *device_id;        /* writable, max device_id_len bytes          */
-    size_t device_id_len;
-    bool *device_id_custom; /* true when operator set a custom name       */
+    /* Identity (ADR-0027 §1b / #601): device_uid = the stable minted base32 nonce,
+     * READ-ONLY here (owned + minted by main.cpp) - shown by !ver, re-persisted by
+     * !cfg. device_name = the writable friendly label, set by !name, cached in NVS
+     * "device_name"; it rides telemetry as name= and the registry (#592) is its
+     * authoritative home. */
+    const char *device_uid;
+    char *device_name; /* writable, max device_name_len bytes        */
+    size_t device_name_len;
+    bool *device_name_custom; /* true when operator set a custom name       */
     /* &g_sys.sample_period_ms — the FSM idle cadence (#227); !cad/!cfg retune it */
     uint32_t *sample_period_ms;
     bool *cadence_from_nvs; /* true when the persisted default came from NVS */

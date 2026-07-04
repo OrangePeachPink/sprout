@@ -110,8 +110,8 @@ static void handle_ping(const char *args, char *reply, size_t replen)
 static void handle_ver(const char *args, char *reply, size_t replen)
 {
     (void)args;
-    snprintf(reply, replen, "# ack ver fw=%s device_id=%s git=%s",
-             s_ctx.fw_version, s_ctx.device_id, GIT_REV);
+    snprintf(reply, replen, "# ack ver fw=%s device_id=%s name=%s git=%s",
+             s_ctx.fw_version, s_ctx.device_uid, s_ctx.device_name, GIT_REV);
 }
 
 /* !cfg,reset - clear persisted config and apply compile-time defaults (#90). */
@@ -119,46 +119,50 @@ static void handle_cfg(const char *args, char *reply, size_t replen)
 {
     if (strcmp(args, "reset") == 0) {
         prefs()->clear();
+        /* #601: identity is durable - a config reset is NOT a factory flash, so
+         * re-persist the minted device_id that clear() just wiped from NVS. */
+        prefs()->putString("device_uid", s_ctx.device_uid);
         *s_ctx.sample_period_ms = (uint32_t)s_ctx.cadence_default_ms;
         *s_ctx.cadence_from_nvs = false;
         *s_ctx.cadence_temp = false;
-        derive_default_id(s_ctx.device_id, s_ctx.device_id_len);
-        *s_ctx.device_id_custom = false;
-        snprintf(reply, replen, "# ack cfg reset cad=%lu device_id=%s",
-                 s_ctx.cadence_default_ms, s_ctx.device_id);
+        derive_default_id(s_ctx.device_name, s_ctx.device_name_len);
+        *s_ctx.device_name_custom = false;
+        snprintf(reply, replen, "# ack cfg reset cad=%lu name=%s",
+                 s_ctx.cadence_default_ms, s_ctx.device_name);
     } else {
         snprintf(reply, replen, "# nak err=cfg (use: !cfg,reset)");
     }
 }
 
 /*
- * !name,<string> - set a custom device name (#188), persisted to NVS (#90).
- * An empty arg clears back to the chip-model default.
- * Sanitized for CSV: commas + control chars -> '_'.
+ * !name,<string> - set the friendly device NAME (#188 / #601) - the re-nameable
+ * label, NOT the stable device_id (which is a minted base32 nonce, ADR-0027 §1b).
+ * Persisted to NVS "device_name" (#90). An empty arg clears back to the chip-model
+ * default. Sanitized for CSV: commas + control chars -> '_'.
  */
 static void handle_name(const char *args, char *reply, size_t replen)
 {
     if (args[0] == '\0') {
         prefs()->remove("device_name");
-        derive_default_id(s_ctx.device_id, s_ctx.device_id_len);
-        *s_ctx.device_id_custom = false;
-        snprintf(reply, replen, "# ack name device_id=%s (default)",
-                 s_ctx.device_id);
+        derive_default_id(s_ctx.device_name, s_ctx.device_name_len);
+        *s_ctx.device_name_custom = false;
+        snprintf(reply, replen, "# ack name device_id=%s name=%s (default)",
+                 s_ctx.device_uid, s_ctx.device_name);
         return;
     }
-    char clean[32]; /* matches device_id_len in practice */
+    char clean[32]; /* matches device_name_len in practice */
     size_t j = 0;
     for (size_t i = 0; args[i] && j < sizeof(clean) - 1; i++) {
         char c = args[i];
         clean[j++] = (c == ',' || c < 0x20 || c == 0x7f) ? '_' : c;
     }
     clean[j] = '\0';
-    strncpy(s_ctx.device_id, clean, s_ctx.device_id_len - 1);
-    s_ctx.device_id[s_ctx.device_id_len - 1] = '\0';
-    prefs()->putString("device_name", s_ctx.device_id);
-    *s_ctx.device_id_custom = true;
-    snprintf(reply, replen, "# ack name device_id=%s (custom)",
-             s_ctx.device_id);
+    strncpy(s_ctx.device_name, clean, s_ctx.device_name_len - 1);
+    s_ctx.device_name[s_ctx.device_name_len - 1] = '\0';
+    prefs()->putString("device_name", s_ctx.device_name);
+    *s_ctx.device_name_custom = true;
+    snprintf(reply, replen, "# ack name device_id=%s name=%s (custom)",
+             s_ctx.device_uid, s_ctx.device_name);
 }
 
 /*
@@ -342,11 +346,11 @@ void commands_init(commands_ctx_t *ctx)
     char name[32];
     size_t n = p->getString("device_name", name, sizeof(name));
     if (n > 0 && name[0] != '\0') {
-        strncpy(s_ctx.device_id, name, s_ctx.device_id_len - 1);
-        s_ctx.device_id[s_ctx.device_id_len - 1] = '\0';
-        *s_ctx.device_id_custom = true;
+        strncpy(s_ctx.device_name, name, s_ctx.device_name_len - 1);
+        s_ctx.device_name[s_ctx.device_name_len - 1] = '\0';
+        *s_ctx.device_name_custom = true;
     } else {
-        derive_default_id(s_ctx.device_id, s_ctx.device_id_len);
+        derive_default_id(s_ctx.device_name, s_ctx.device_name_len);
     }
 
     /* WiFi credentials (#21): load whatever !wifi persisted last session. Empty
