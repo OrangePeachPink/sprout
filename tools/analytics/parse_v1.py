@@ -92,6 +92,13 @@ BANDS_DRY_TO_WET = list(reversed(BANDS_WET_TO_DRY))
 # provenance header lacks a "cal bounds" line; prefer header-derived bounds always.
 DEFAULT_CAL_BOUNDS = (3050, 2140, 1830, 1520, 1150, 1050)
 
+# The schema_version at which `device_id` becomes the stable minted id (ADR-0027
+# §1b, Accepted; #618). `>= 3` ⇒ stable id + friendly `name=` in payload; `< 3`
+# ⇒ `device_id` is a mutable name (v1 monitor, v2 experiment-capture). Not 2:
+# `schema_version=2` is already live-emitted by experiment_capture.py with
+# `device_id`=name, so reusing it would misclassify every shipped experiment row.
+STABLE_ID_SCHEMA_VERSION = 3
+
 _KV_RE = re.compile(r"(\w+)=(.*?)(?=\s+\w+=|$)")
 _SENSOR_RE = re.compile(r"ch(\d+)=GPIO(\d+)/(\S+)")
 
@@ -355,6 +362,37 @@ class Reading:
         ``weather_openmeteo``). Separate from ``context_source`` because
         mixed-source rows are the common case - the SHT45 has no pressure."""
         return self.payload.get("pressure_context_source")
+
+    @property
+    def device_id_is_stable_id(self) -> bool:
+        """Version-aware provenance for the ``device_id`` column (#618, ADR-0027).
+
+        The column stays a string; only its *meaning* is version-gated.
+        ``schema_version >= 3`` ⇒ ``device_id`` is the stable minted id (a 6-char
+        Crockford base32 nonce, ADR-0027 §1b/§6). ``< 3`` (v1 monitor, v2
+        experiment-capture) ⇒ it is a mutable friendly name - the legacy epoch
+        the #602 map bridges. A row with no schema_version at all is treated as
+        legacy (name), never guessed as stable."""
+        return (self.schema_version or 0) >= STABLE_ID_SCHEMA_VERSION
+
+    @property
+    def device_name(self) -> str | None:
+        """The friendly device label (#618, ADR-0027 §1b rider): rides payload
+        ``name=`` on every v3 row - both legibility and the pre-mint **degrade
+        identifier** (a row emitted before the UUID is minted has no valid
+        ``device_id``, and ``name`` is the only identity it carries). ``None``
+        on a pre-v3 row, where the friendly name is the ``device_id`` column
+        itself."""
+        return self.payload.get("name")
+
+    @property
+    def device_display_name(self) -> str:
+        """The human-facing device name, version-agnostic: the payload ``name``
+        when present (v3, or a pre-mint row), else the ``device_id`` column
+        (pre-v3, where the id *is* the name). One accessor a consumer can use
+        without knowing the row's epoch - the display half of the #587 fence's
+        planned ``regdev.name`` swap."""
+        return self.device_name or self.device_id
 
 
 def dedupe_key(r: Reading) -> tuple[str, str, int | None, str, str]:
