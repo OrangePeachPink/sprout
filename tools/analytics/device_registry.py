@@ -14,11 +14,20 @@ fleet - which mirrors the operator's home layout - lives in the gitignored
 `config/devices.local.json`; a committed `config/devices.example.json` is the shape
 template and the demo/test default.
 
-**The stable contract is this module's API** (`plant_for`, `all_plants`, `devices`),
-not the JSON layout: consumers depend on the functions. The `schema_version: 1` shape
+**The stable contract is this module's API** (`plant_for`, `probe_for`, `all_plants`,
+`devices`), not the JSON layout: consumers depend on the functions, so the identity
+re-keying (#619) is absorbed here without touching them. The `schema_version: 1` shape
 is **ratified** (Trellis 2026-07-03, #583/#300) — including the per-device card-header
 fields `name` (friendly identity) and `hostname` (synthetic `.local` name, ADR-0020),
 and the guarantee that `devices` list order is the dashboard's first-seen card order.
+
+**Identity re-keying (ADR-0027, Accepted; #619).** `device_id` is the board's
+**stable minted id** — the registry key, opaque here (the registry never validates its
+format; stable-id-ness is a wire property gated by `schema_version >= 3`, #618).
+`name`/`hostname` are the mutable labels over it. A channel binding splits **Channel**
+(the board port, the token key) from **Probe** (the physical sticker `s1..s12` in that
+port, ADR-0027 §5) — `probe_for` answers "which probe is on this pin". W1 scope is
+**labels only**: no time-versioned assignment table, no Site, no moves (ADR-0027 W2+).
 
 Honest attribution: an unknown device or an unassigned channel returns ``None`` - the
 registry never invents a plant. A missing or malformed config yields an **empty**
@@ -42,10 +51,19 @@ _EXAMPLE = _REPO / "config" / "devices.example.json"
 class Device:
     """One board in the fleet + its per-channel plant assignments."""
 
+    # #619 (ADR-0027): device_id is the **stable minted id** — the registry key.
+    # Opaque here (the registry never validates its format; stable-id-ness is a
+    # wire property gated by schema_version >= 3, #618). name/hostname (#592) are
+    # the mutable labels over it; renaming edits the label, never this key. A
+    # pre-mint / legacy config may still key on a friendly name (bridged by
+    # previous_ids/canonical_for, #602) — the key is opaque either way.
     device_id: str
     board: str | None
     label: str | None
-    # channel token (s1..s4) -> {"plant_id": str, "plant_name": str|None}
+    # channel token (the board PORT, s1..s4) -> {"probe": str|None, "plant_id":
+    # str, "plant_name": str|None}. #619 splits Channel (the port) from Probe
+    # (the physical sticker s1..s12 plugged into it, ADR-0027 §5): the port keys
+    # the binding, `probe` is the label answering "which probe is on this pin".
     channels: dict[str, dict] = field(default_factory=dict)
     # The device's served root (#486, e.g. "http://192.168.1.42") - the live view
     # polls its GET /telemetry (#276) when set. None = tethered/serial-only.
@@ -72,6 +90,16 @@ class Device:
             return None
         return {"plant_id": a["plant_id"], "plant_name": a.get("plant_name")}
 
+    def probe_for(self, channel: str) -> str | None:
+        """The probe sticker (s1..s12, ADR-0027 §5) plugged into this port, or
+        None if unassigned - the "which probe" answer, W1 labels-only (#619).
+        A probe carries its own QA/cal history (W2); here it is just the label."""
+        a = self.channels.get(channel)
+        if not isinstance(a, dict):
+            return None
+        probe = a.get("probe")
+        return probe if isinstance(probe, str) and probe else None
+
 
 @dataclass(frozen=True)
 class Registry:
@@ -93,6 +121,13 @@ class Registry:
         or unassigned - never a guess."""
         d = self.device(device_id)
         return d.plant_for(channel) if d else None
+
+    def probe_for(self, device_id: str, channel: str) -> str | None:
+        """The probe sticker on (device, channel), or None (#619). Resolves the
+        device through ``canonical_for`` so a probe binding survives a legacy
+        rename the same way plant attribution does (#602/#604)."""
+        d = self.device(self.canonical_for(device_id))
+        return d.probe_for(channel) if d else None
 
     def served_devices(self) -> list[Device]:
         """Devices with a ``base_url`` - the WiFi-polled part of the fleet (#486).

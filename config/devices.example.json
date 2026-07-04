@@ -1,36 +1,36 @@
 {
-  "_note": "TEMPLATE. Copy to config/devices.local.json (gitignored) and describe YOUR fleet: each ESP32 board and which plant sits on each capacitive channel. This is the multi-device registry (#485) the monitor-all view (#486) reads to attribute N devices' streams to the 11 plants. The JSON shape (schema_version 1) is RATIFIED (Trellis 2026-07-03, #583/#300). Per-device card-header fields (#583, ADR-0020): 'name' = friendly identity (re-nameable, never a MAC; falls back to a legacy 'label'); 'hostname' = the synthetic '.local' name (null for a tethered device — the card shows its serial port instead; the xxxx is the device's install-suffix, not a MAC). Order in this array is the dashboard's first-seen card order — never re-sorted by state. Optional per-device 'base_url' (the served root, e.g. http://192.168.1.42): when set, the live dashboard also polls that device's GET /telemetry (#276) — omit it for tethered/serial-only devices (the example ships with none so a fresh checkout never blocks polling a placeholder address). Optional per-device 'previous_ids' (#602): device_ids this board reported under BEFORE its current name (renames mint new identities — no hardware anchor #188); the dashboard + fleet logger coalesce that history into this device's one card/file lineage at display time, raw records untouched. An id listed here that equals another device's CURRENT device_id is ignored (a live identity is never swallowed). Consumers depend on device_registry.py's functions, not this file's layout. Placeholder values below.",
+  "_note": "TEMPLATE. Copy to config/devices.local.json (gitignored) and describe YOUR fleet. This is the multi-device registry (#485) the monitor-all view (#486) reads to attribute N devices' streams to the plants. IDENTITY (ADR-0027, Accepted): 'device_id' is the board's STABLE MINTED ID — a 6-char Crockford base32 nonce the firmware mints at first boot and emits on the wire at schema_version>=3 (#601/#618). It is the registry KEY and never changes on rename. The registry treats it as opaque (it does not validate the format). 'name'/'hostname' (#592) are the MUTABLE LABELS over it — renaming edits the label, never the key. A pre-mint / legacy fleet may still key on a friendly name (e.g. 'sprout-classic-01') and migrate later via 'previous_ids' (#602/#604) — the key is opaque either way; the placeholders below use base32-shaped ids to show the target shape. CHANNELS: the token (s1..s4) is the board PORT; 'probe' is the physical sticker (s1..s12) plugged into that port (ADR-0027 §5 splits Channel from Probe — the maintainer thinks in probes and plants, the pin is a lookup); 'plant_id'/'plant_name' is the plant on that channel. Order in this array is the dashboard's first-seen card order (#583). Optional 'base_url' (served root, e.g. http://192.168.1.42): live-polled when set — omit for tethered/serial-only (the example ships none so a fresh checkout never blocks polling a placeholder). Optional 'previous_ids' (#602): ids this board reported under before its current key; coalesced into one card/file lineage at display time, raw records untouched; an id equal to another device's live device_id is ignored (a live identity is never swallowed). Consumers depend on device_registry.py's functions, not this file's layout. W1 scope (#619): labels only — no assignment table / Site / moves (those are ADR-0027 W2+). Placeholder values below.",
   "schema_version": 1,
   "devices": [
     {
-      "device_id": "sprout-classic-01",
+      "device_id": "k7m2rt",
       "board": "esp32dev",
       "name": "the classic (living room)",
       "hostname": null,
       "channels": {
-        "s1": { "plant_id": "P01", "plant_name": "placeholder" },
-        "s2": { "plant_id": "P02", "plant_name": "placeholder" },
-        "s3": { "plant_id": "P03", "plant_name": "placeholder" },
-        "s4": { "plant_id": "P04", "plant_name": "placeholder" }
+        "s1": { "probe": "s1", "plant_id": "p01", "plant_name": "placeholder" },
+        "s2": { "probe": "s2", "plant_id": "p02", "plant_name": "placeholder" },
+        "s3": { "probe": "s3", "plant_id": "p03", "plant_name": "placeholder" },
+        "s4": { "probe": "s4", "plant_id": "p04", "plant_name": "placeholder" }
       }
     },
     {
-      "device_id": "sprout-s3-01",
+      "device_id": "b4x9dz",
       "board": "esp32-s3-devkitc-1",
       "name": "the S3 (placeholder location)",
       "hostname": "sprout-s3-xxxx.local",
       "channels": {
-        "s1": { "plant_id": "P05", "plant_name": "placeholder" },
-        "s2": { "plant_id": "P06", "plant_name": "placeholder" }
+        "s1": { "probe": "s5", "plant_id": "p05", "plant_name": "placeholder" },
+        "s2": { "probe": "s6", "plant_id": "p06", "plant_name": "placeholder" }
       }
     },
     {
-      "device_id": "sprout-c5-01",
+      "device_id": "q2n8fw",
       "board": "esp32-c5-devkitc-1",
       "name": "the C5 (placeholder location)",
       "hostname": "sprout-c5-xxxx.local",
       "channels": {
-        "s1": { "plant_id": "P07", "plant_name": "placeholder" }
+        "s1": { "probe": "s9", "plant_id": "p07", "plant_name": "placeholder" }
       }
     }
   ]

@@ -208,3 +208,68 @@ def test_committed_example_carries_name_for_every_device() -> None:
         return
     reg = dr.load_registry(example)
     assert all(d.name for d in reg.devices)
+
+
+# --------------------------------------------------------------------------- #
+# #619 — UUID-keyed registry: stable-id key + probe labels (ADR-0027 W1)
+# --------------------------------------------------------------------------- #
+
+
+def test_probe_for_returns_the_sticker_label(tmp_path: Path) -> None:
+    doc = {
+        "devices": [
+            {
+                "device_id": "k7m2rt",  # a stable minted id (opaque key)
+                "channels": {
+                    "s1": {"probe": "s3", "plant_id": "p01", "plant_name": "Fern"},
+                    "s2": {"plant_id": "p02"},  # plant but no probe assigned
+                },
+            }
+        ]
+    }
+    reg = dr.load_registry(_write(tmp_path, doc))
+    assert reg.probe_for("k7m2rt", "s1") == "s3"  # the sticker, not the port
+    assert reg.probe_for("k7m2rt", "s2") is None  # port bound, probe unassigned
+    assert reg.probe_for("k7m2rt", "s4") is None  # channel absent
+    assert reg.probe_for("no-such", "s1") is None  # unknown device
+    # channel + probe are distinct: the port is s1, the probe on it is s3
+    assert reg.plant_for("k7m2rt", "s1") == {"plant_id": "p01", "plant_name": "Fern"}
+
+
+def test_probe_for_resolves_through_a_legacy_rename(tmp_path: Path) -> None:
+    # a probe binding survives a legacy name->uuid rename the same way plant
+    # attribution does (canonical_for, #602/#604)
+    doc = {
+        "devices": [
+            {
+                "device_id": "k7m2rt",
+                "previous_ids": ["classic"],
+                "channels": {"s1": {"probe": "s3", "plant_id": "p01"}},
+            }
+        ]
+    }
+    reg = dr.load_registry(_write(tmp_path, doc))
+    assert reg.probe_for("classic", "s1") == "s3"  # old id resolves to the probe
+
+
+def test_device_id_is_an_opaque_key_any_string(tmp_path: Path) -> None:
+    # the registry never validates the id format - a base32 stable id and a
+    # legacy friendly name are both valid keys (#619: stable-id-ness is a wire
+    # property #618, not a registry-key check)
+    for did in ("k7m2rt", "sprout-classic-01", "Sprout ESP32"):
+        reg = dr.load_registry(_write(tmp_path, {"devices": [{"device_id": did}]}))
+        assert reg.device(did) is not None
+
+
+def test_committed_example_is_uuid_shaped_with_probes() -> None:
+    # the template demonstrates the ADR-0027 target shape: base32-ish keys,
+    # name as the label, a probe sticker per bound channel
+    example = _CONFIG / "devices.example.json"
+    if not example.exists():
+        return
+    reg = dr.load_registry(example)
+    classic = reg.devices[0]
+    assert classic.name and classic.name != classic.device_id  # key != label
+    assert reg.probe_for(classic.device_id, "s1")  # a probe sticker is bound
+    # and the fresh-checkout guard still holds (no base_url in the example)
+    assert reg.served_devices() == []
