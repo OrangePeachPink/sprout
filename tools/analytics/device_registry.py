@@ -58,6 +58,12 @@ class Device:
     # `base_url`, which is an IP, not a hostname.
     name: str | None = None
     hostname: str | None = None
+    # Identity continuity (#602): device_ids this board reported under BEFORE its
+    # current name. Renames mint brand-new identities (no hardware anchor, #188),
+    # which orphans history; listing prior ids here lets consumers coalesce a
+    # board's whole history into one card AT DISPLAY/GROUPING TIME - raw records
+    # are never rewritten (they truthfully say what the board reported then).
+    previous_ids: tuple[str, ...] = ()
 
     def plant_for(self, channel: str) -> dict | None:
         """The {plant_id, plant_name} on a channel, or None if unassigned."""
@@ -93,6 +99,26 @@ class Registry:
         Empty when the config assigns none, so the live view stays tethered-only."""
         return [d for d in self.devices if d.base_url]
 
+    def canonical_for(self, device_id: str | None) -> str | None:
+        """The canonical identity for ``device_id`` (#602): if it is listed in
+        some device's ``previous_ids``, that device's current id; otherwise the
+        id unchanged (unknown ids are never remapped - no invented lineage).
+
+        Guards, both deterministic and honest:
+        - an alias that equals any REGISTERED device_id is ignored - a live
+          identity can never be swallowed as someone else's past;
+        - if two devices claim the same alias, the first in registry order wins
+          (the config's first-seen order is already the ratified tiebreak)."""
+        if not device_id:
+            return device_id
+        live = {d.device_id for d in self.devices}
+        if device_id in live:
+            return device_id  # a current identity is always itself
+        for d in self.devices:  # registry order = first claim wins
+            if device_id in d.previous_ids:
+                return d.device_id
+        return device_id
+
     def all_plants(self) -> list[dict]:
         """Every assigned plant across the fleet, de-duplicated by plant_id and sorted.
 
@@ -122,6 +148,12 @@ def _device_from_dict(raw: dict) -> Device | None:
     hostname = raw.get("hostname")
     label = raw.get("label")
     name = raw.get("name")
+    prev = raw.get("previous_ids")
+    previous_ids = (
+        tuple(x for x in prev if isinstance(x, str) and x)
+        if isinstance(prev, list)
+        else ()
+    )
     return Device(
         device_id=did,
         board=raw.get("board"),
@@ -131,6 +163,7 @@ def _device_from_dict(raw: dict) -> Device | None:
         # friendly name; a legacy config carrying only `label` still populates it
         name=name if isinstance(name, str) and name else label,
         hostname=hostname if isinstance(hostname, str) and hostname else None,
+        previous_ids=previous_ids,
     )
 
 
