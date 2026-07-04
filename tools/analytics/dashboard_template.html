@@ -320,6 +320,7 @@ footer.prov code { font-family: var(--font-data); }
     <button class="tab active" type="button" data-tab="monitor" role="tab" aria-selected="true">Monitor</button>
     <button class="tab" type="button" data-tab="capture" role="tab" aria-selected="false">Capture</button>
     <a class="tab" href="/lab" role="tab">Lab</a>
+    <button class="tab" type="button" data-tab="diagnostics" role="tab" aria-selected="false">Diagnostics &amp; Logs</button>
   </nav>
 
   <section class="card compact" id="monitorCard">
@@ -404,7 +405,14 @@ footer.prov code { font-family: var(--font-data); }
       <div class="chartbox"><canvas id="trajChart"></canvas></div>
       <div class="legend" id="trajLegend"></div>
     </section>
+  </div><!-- /#overview — Monitor's glanceable plant view ends here -->
 
+  <!-- #614 amendment (maintainer 2026-07-04): the long, always-growing surfaces
+       live in Diagnostics & Logs, off Monitor so they stop crowding the bench
+       working view. Split: spread + distribution (mid-tier, Design-QA's call) →
+       here; quality timeline, data integrity, bench provenance, segment listing →
+       here; fleet groups + cards + ladder + trajectory stay on Monitor. -->
+  <div id="diagnostics" style="display:none">
     <section class="card">
       <div class="panel-h"><h2>Cross-channel spread</h2><span class="cap">max − min raw across each device's co-located probes — fenced per device, never blended across pots (C1: pin + placement variance)</span></div>
       <div class="chartbox short"><canvas id="spreadChart"></canvas></div>
@@ -1126,24 +1134,30 @@ function backToOverview(){ currentDetail=null; if(charts.detail){ charts.detail.
    via #capture / #monitor. Monitor leads with results; Capture is off the flow;
    Lab is its own /lab route. The single-plant detail lives inside Monitor. ---- */
 function showTab(name, rerender){
-  const cap = name === 'capture';
-  document.getElementById('captureCard').style.display = cap ? '' : 'none';
-  document.getElementById('monitorCard').style.display = cap ? 'none' : '';
-  document.getElementById('overview').style.display = cap ? 'none' : (currentDetail ? 'none' : 'block');
-  document.getElementById('detail').style.display = (!cap && currentDetail) ? 'block' : 'none';
+  const tabs = ['monitor', 'capture', 'diagnostics'];   // Lab is its own /lab route
+  if(!tabs.includes(name)) name = 'monitor';
+  const isMon = name === 'monitor', isCap = name === 'capture', isDiag = name === 'diagnostics';
+  // Monitor = the collection strip + the glanceable plant view (or an open detail).
+  document.getElementById('monitorCard').style.display = isMon ? '' : 'none';
+  document.getElementById('overview').style.display = (isMon && !currentDetail) ? 'block' : 'none';
+  document.getElementById('detail').style.display = (isMon && currentDetail) ? 'block' : 'none';
+  document.getElementById('captureCard').style.display = isCap ? '' : 'none';
+  // Diagnostics & Logs = the long, always-growing surfaces, off Monitor (amendment).
+  document.getElementById('diagnostics').style.display = isDiag ? 'block' : 'none';
   document.querySelectorAll('.tabnav .tab[data-tab]').forEach(t=>{
-    const on = t.dataset.tab === (cap ? 'capture' : 'monitor');
+    const on = t.dataset.tab === name;
     t.classList.toggle('active', on); t.setAttribute('aria-selected', on ? 'true' : 'false');
   });
-  const hash = cap ? '#capture' : '#monitor';
+  const hash = '#' + name;
   if(location.hash !== hash) history.replaceState(null, '', hash);
-  // charts hidden while on Capture size to 0; re-fit when we return to Monitor.
-  if(rerender && !cap && !currentDetail) renderAll();
+  // charts in a hidden tab size to 0; re-fit when a chart-bearing tab (Monitor's
+  // trajectory, or Diagnostics' spread/distribution) becomes visible.
+  if(rerender && ((isMon && !currentDetail) || isDiag)) renderAll();
 }
 function initTabs(){
   document.querySelectorAll('.tabnav .tab[data-tab]').forEach(t=>
     t.addEventListener('click', ()=>showTab(t.dataset.tab, true)));
-  showTab(location.hash.slice(1) === 'capture' ? 'capture' : 'monitor', false);
+  showTab(location.hash.slice(1), false);   // deep-link #capture / #diagnostics, else Monitor
 }
 
 /* ---- render everything (re-runnable for live refresh) ---- */
