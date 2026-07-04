@@ -1,9 +1,11 @@
 # ADR-0025 — Config provenance & no-auto-adjust
 
-**Status:** Proposed — *drafted by Trellis from the #416 RFC (all four lanes converged). The **inline** slice is
-already built + Sage-ratified (`gain=16`, PR #452); this ADR generalizes the model and defines the `config_id`
-snapshot mechanism for Data to implement. Awaiting Data's `config_id` shape confirmation + maintainer
-ratification.*
+**Status:** Accepted — *drafted by Trellis from the #416 RFC (all four lanes converged); the **inline** slice
+is built + Sage-ratified (`gain=16`, PR #452). **Data confirmed the `config_id` shape RATIFY-ready** (#576 /
+PR #456, 2026-07-04, evidence-checked against the real logger / `parse_v1` / firmware substrate), with two
+precisions now folded into Decision 3 (per-row ref rides `payload` k=v, never a canonical column; the hash is
+firmware-computed). Ratified per the maintainer's spare-word directive (2026-07-04); merge = accept. Was
+Proposed 2026-07-01 → Accepted.*
 **Date:** 2026-07-01
 **Owner:** Architecture (Trellis) — the provenance model; Data owns the `config_id` / header / storage
 implementation, Firmware the emit, Sage the setting *values*.
@@ -54,7 +56,10 @@ Provenance rides two surfaces, split by **interpretation-locality**:
 
 ### 3. `config_id` is the comparability boundary
 
-`config_id` is a **stable hash of the active config snapshot**, emitted in the header and referenced by rows.
+`config_id` is a **stable hash of the active config snapshot** — **firmware-computed** — emitted in the header
+and referenced per-row via a **`payload` k=v key**, never a new `CANONICAL_COLUMNS` column (the companion
+shared-core byte-identity binding; the same pattern ADR-0027 ratified for `name=` and ADR-0023 for
+`context_source`).
 **Same `config_id` ⇒ rows are directly comparable. A `config_id` change ⇒ an explicit, machine-detectable
 comparability boundary** — which is exactly the "what's comparable, what isn't, how to interpret across a
 change" the RFC asked for. It also **enforces** no-auto-adjust: an *unexpected* `config_id` change is the
