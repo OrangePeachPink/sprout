@@ -347,8 +347,13 @@ static bool g_as7263_ok = false;
  * OUTSIDE the ENABLE_ENV_SENSORS guard. */
 static void emitEnvLine(const telemetry_env_row_t *row)
 {
-    char line[256];
-    if (telemetry_format_env_row(line, sizeof(line), row) >= 0) {
+    char line[300]; /* #601: name= adds up to ~38 bytes vs the prior 256 */
+    /* #601: stamp the friendly name onto every env row (payload name=). The row
+     * literals the callers build leave .name NULL (zero-init); set it here at the
+     * single choke point rather than in each of the ~6 env-row literals. */
+    telemetry_env_row_t r = *row;
+    r.name = g_device_name;
+    if (telemetry_format_env_row(line, sizeof(line), &r) >= 0) {
         char crc[6];
         snprintf(crc, sizeof(crc), "*%02X", telemetry_checksum(line));
         Serial.print(line);
@@ -498,8 +503,12 @@ static void printHeader()
         [256]; /* per-channel name@position can run long on the sensors line */
     int n;
     Serial.println();
-    Serial.println("# plants telemetry  schema_version=1  "
-                   "contract=docs/TELEMETRY_SCHEMA.md@v1");
+    /* #601 / ADR-0027 §1b: schema_version=3 declares device_id is the stable minted
+     * id (not the friendly name) + name= rides every payload. The host reads THIS
+     * banner line for the version (plants_logger.schema_version_from_header) and
+     * applies the >=3 rule (parse_v1). v2 is taken by experiment-capture, so this is 3. */
+    Serial.println("# plants telemetry  schema_version=3  "
+                   "contract=docs/TELEMETRY_SCHEMA.md@v3");
 #ifdef WDT_WEDGE_TEST
     Serial.println("# *** WDT WEDGE-TEST BUILD (esp32dev_wdttest) *** "
                    "!wedge strands ch0 + hangs the loop -> watchdog must "
@@ -1106,6 +1115,7 @@ void loop()
                 g_device_seq++, /* #278: one tick per emitted row, every channel */
                 synced ? TIME_SOURCE_DEVICE_SYNCED : TIME_SOURCE_DEVICE_UPTIME,
                 ts, /* real UTC when synced; "" = honestly NULL (#278) */
+                g_device_name, /* #601: friendly name -> payload name= on every row */
             };
             if (telemetry_format_soil_row(line, sizeof(line), &row) >= 0) {
                 char crc[6];

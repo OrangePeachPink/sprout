@@ -920,35 +920,32 @@ void t_env_row(void)
     /* SHT45 temp row: factory-calibrated -> value+unit populated; placement in
      * sensor_position; degC unit (ratified #377). */
     telemetry_env_row_t t = {"plants.env",   "3f9a1c",
-                             "Sprout ESP32", "0.7.0",
+                             "k7m2rt",       "0.7.0",
                              123456ULL,      "SHT45",
                              "sht45",        "breadboard_near_esp32",
                              "ambient_temp", "26214",
                              "24.99",        "degC",
-                             "OK",           "mount=breadboard_near_esp32"};
+                             "OK",           "mount=breadboard_near_esp32",
+                             "classic"}; /* #601: name field */
     TEST_ASSERT_TRUE_MESSAGE(telemetry_format_env_row(buf, sizeof(buf), &t) > 0,
                              "env temp row formatted");
     TEST_ASSERT_NOT_NULL_MESSAGE(
-        strstr(buf, "plants.env,3f9a1c,Sprout ESP32,0.7.0,123456,SHT45,sht45,"
+        strstr(buf, "plants.env,3f9a1c,k7m2rt,0.7.0,123456,SHT45,sht45,"
                     "breadboard_near_esp32,ambient_temp,26214,24.99,degC,OK,"),
         "SHT45 row columns in order (value+unit populated)");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, "name=classic;"),
+                                 "#601: name= leads the env payload");
 
     /* AS7263 tidy NIR row: one band, raw count, value+unit empty. */
     telemetry_env_row_t n = {
-        "plants.env",
-        "3f9a1c",
-        "Sprout ESP32",
-        "0.7.0",
-        123456ULL,
-        "AS7263",
-        "as7263",
-        "breadboard_near_esp32",
-        "nir_610",
-        "1234",
-        "",
-        "",
-        "OK",
-        "gain=64;itime_ms=140;aim=skylight_beam;not_canopy"};
+        "plants.env", "3f9a1c",
+        "k7m2rt",     "0.7.0",
+        123456ULL,    "AS7263",
+        "as7263",     "breadboard_near_esp32",
+        "nir_610",    "1234",
+        "",           "",
+        "OK",         "gain=64;itime_ms=140;aim=skylight_beam;not_canopy",
+        "classic"}; /* #601: name field */
     TEST_ASSERT_TRUE_MESSAGE(telemetry_format_env_row(buf, sizeof(buf), &n) > 0,
                              "env nir row formatted");
     TEST_ASSERT_NOT_NULL_MESSAGE(
@@ -989,10 +986,13 @@ void t_soil_row_time_provenance(void)
         42,
         "device_uptime",
         "",
+        "classic", /* #601: name field */
     };
     TEST_ASSERT_TRUE_MESSAGE(
         telemetry_format_soil_row(buf, sizeof(buf), &unsynced) > 0,
         "unsynced row formatted");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, "name=classic;"),
+                                 "#601: name= leads the soil payload");
     TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, "device_seq=42"),
                                  "device_seq in payload");
     TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, "time_source=device_uptime"),
@@ -1019,6 +1019,7 @@ void t_soil_row_time_provenance(void)
         43,
         "device_synced",
         "2026-07-01T14:05:30.000Z",
+        "classic", /* #601: name field */
     };
     TEST_ASSERT_TRUE_MESSAGE(
         telemetry_format_soil_row(buf, sizeof(buf), &synced) > 0,
