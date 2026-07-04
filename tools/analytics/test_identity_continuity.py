@@ -261,3 +261,48 @@ def test_fleet_writer_coalesces_file_lineage_row_stays_truthful(
     assert files[0].name.startswith("classic_")  # ONE file lineage, canonical
     row = parse_files([str(files[0])]).readings[0]
     assert row.device_id == "Sprout ESP32"  # the row stays truthful (raw)
+
+
+# --------------------------------------------------------------------------- #
+# #620 — the real 2nd-epoch migration: 3 legacy identities -> the classic's
+# minted stable id (y9d41p). Regression-locks the deliberate call.
+# --------------------------------------------------------------------------- #
+
+
+def test_classic_three_legacy_ids_map_to_the_minted_nonce() -> None:
+    # the migration record: docs/experiments/2026-07-04_identity-migration-classic.md
+    classic = Device(
+        device_id="y9d41p",  # the minted nonce, live-verified #632
+        board="esp32dev",
+        label=None,
+        name="classic",
+        channels={
+            "s1": {"probe": "s1", "plant_id": "p01", "plant_name": "the classic"}
+        },
+        previous_ids=("plants_esp32_f4e9d4", "Sprout ESP32", "classic"),
+    )
+    reg = Registry(devices=[classic])
+    for legacy in ("plants_esp32_f4e9d4", "Sprout ESP32", "classic"):
+        assert reg.canonical_for(legacy) == "y9d41p"
+    # the minted id is itself (a live identity is never swallowed - #604 guard)
+    assert reg.canonical_for("y9d41p") == "y9d41p"
+    # an unrelated board's default is NOT coalesced (the guard against the
+    # shared-default ambiguity Firmware flagged): only ids in previous_ids map
+    assert reg.canonical_for("some-other-board") == "some-other-board"
+
+
+def test_migration_never_swallows_a_live_sibling_on_the_shared_default() -> None:
+    # if the S3 were ever (mis)registered with the shared default as its live id,
+    # the classic's alias must not swallow it - the permanent #604 invariant that
+    # makes the shared-default map safe going forward
+    classic = Device(
+        device_id="y9d41p",
+        board=None,
+        label=None,
+        name="classic",
+        channels={},
+        previous_ids=("Sprout ESP32",),
+    )
+    s3 = Device(device_id="Sprout ESP32", board=None, label=None, channels={})
+    reg = Registry(devices=[classic, s3])
+    assert reg.canonical_for("Sprout ESP32") == "Sprout ESP32"  # stays the live sibling
