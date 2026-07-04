@@ -203,8 +203,8 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .kpi .k .l { color: var(--muted); font-size: 11px; }
 
 /* quality strips */
-.qrow { display: grid; grid-template-columns: 40px 1fr; align-items: center; gap: 10px; margin-bottom: 6px; }
-.qrow .ql { font-family: var(--font-data); font-weight: 600; }
+.qrow { display: grid; grid-template-columns: minmax(96px, max-content) 1fr; align-items: center; gap: 10px; margin-bottom: 6px; }
+.qrow .ql { font-family: var(--font-data); font-weight: 600; white-space: nowrap; }
 .strip { display: flex; height: 18px; border-radius: 5px; overflow: hidden; border: 1px solid var(--border); position: relative; }
 .strip .cell { flex: 1 1 0; }
 .strip .gapmark { position: absolute; top: 0; bottom: 0; min-width: 2px;
