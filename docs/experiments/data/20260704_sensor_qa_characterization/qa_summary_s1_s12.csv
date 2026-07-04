@@ -1,0 +1,13 @@
+probe,session,air_raw,wet_floor_raw,recovery_raw,wiped_dry_raw,verdict,note
+s1,prior,,,,,PASS,prior session; deployed; minimal onboard corrosion
+s2,prior,,,,,PASS,prior session; deployed; notable onboard corrosion
+s3,prior,3085,1017,3054,,PASS,water-contaminated then recovered; minor onboard corrosion
+s4,prior,,,,,PASS,prior session; deployed; minimal onboard corrosion
+s5,2026-07-04,3083,938,3069,2989,PASS,
+s6,2026-07-04,3112,977,3108,3040,PASS,
+s7,2026-07-04,3069,871,3076,3022,PASS,dry-down curve probe
+s8,2026-07-04,3077,890,3078,3013,PASS,
+s9,2026-07-04,3079,873,3082,3076,PASS,
+s10,2026-07-04,3082,871,3098,3095,PASS,
+s11,2026-07-04,3105,848,3102,3103,PASS,
+s12,2026-07-04,3082,1026,3089,3099,PASS,batch wet-floor 1026 = position artifact; solo full-depth read = 889

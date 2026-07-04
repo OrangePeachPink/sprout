@@ -1,0 +1,38 @@
+{
+  "experiment_id": "20260704_sensor_qa_characterization",
+  "date_local": "2026-07-04",
+  "lane": "Firmware",
+  "refs": {
+    "qa_issue": "#476",
+    "wave1_umbrella": "#584",
+    "cal_portability": "#621",
+    "corrosion": "#657",
+    "calibration": "#170"
+  },
+  "purpose": "Wave-1 12-probe QA (s1-s12, air->wet->recovery) on the cal-verified classic station, plus probe characterization: dry-down dynamics (s7), immersion-depth sensitivity (s12), and a water-temperature-vs-position-noise study. Characterization input for a future probe-keyed calibration (#621); not a cal ratification.",
+  "fast_path_for_data": [
+    "depth_sweep_s12.csv (raw: 131 samples, s12 full->empty in 8x12.5% pours; includes pull-out air transients)",
+    "qa_summary_s1_s12.csv (summary: per-probe air/wet-floor/recovery/wiped verdicts)",
+    "s7_drydown.csv (summary: phase anchors of the unwiped dry-down curve, tau~2s)",
+    "temp_position_study.csv (summary: room/40F/140F position-averaged means)"
+  ],
+  "row_count": 131,
+  "raw_slice_count": 1,
+  "summary_slice_count": 3,
+  "aggregation_boundary": "Firmware provides raw depth-sweep samples and per-probe/phase summaries with method notes. Data owns any downstream aggregation or promotion into calibration reconciliation.",
+  "honest_gap_policy": "Only depth_sweep_s12.csv is a full raw sample stream. QA/dry-down/temperature CSVs are per-probe or phase summaries; the full raw serial stayed in the maintainer's local archive. s1-s4 QA is from a prior session (ranges only). The temperature study was run at full saturation only. Do not fabricate missing raw rows or mid-range temp points.",
+  "pii_posture": "Relative repo paths, local timestamps, probe IDs (s1-s12), raw ADC counts, board device_id nonce (y9d41p), and bench notes only. No home coordinates, MAC/USB IDs, SSIDs, or personal identifiers.",
+  "bench_conditions": {
+    "station": "classic (device_id y9d41p, ESP32-D0WD, esp32dev) - cal-verified QA station",
+    "probe_model": "UMLIFE v2 capacitive (TLC555)",
+    "read_method": "serial 19200, DTR/RTS deasserted (no reset), !cad session cadence (~0.5-2 s)",
+    "water": "tap water cups; temp study cup1=40F ice water, cup2=140F"
+  },
+  "key_observations": [
+    "12/12 probes PASS air->wet->recovery; >=11 Wave-1 launch bar cleared with a spare.",
+    "Immersion depth is bottom-heavy: upper ~50% of the water column is a saturation plateau, lower ~50% carries ~90% of the dynamic range.",
+    "Dry-down tau ~2 s, ~95% recovery in ~3-4 s (unwiped) - sensor lag negligible vs soil dynamics.",
+    "Water temperature ~0.1 count/degF at saturation; a 100F swing (z~0.87) stays below the ~55-count position-noise floor. Negligible for irrigation.",
+    "Calibration is per-channel not per-probe (#621); s12's 1026 batch wet-floor was position/coupling, solo read floored at 889."
+  ]
+}
