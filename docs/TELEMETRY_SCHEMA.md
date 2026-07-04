@@ -276,12 +276,14 @@ ratification.
 
 **Identity bump (ADR-0027, Accepted 2026-07-04):** separately from v2's additive columns, ADR-0027 repurposes
 `device_id` (§6) from a mutable friendly name to a **short stable minted id** (the friendly name moves to the
-registry, #592). Because that changes an existing column's *meaning* (not additive), it is set at **`schema_version=3`** — **not** 2,
+registry, #592). Because that changes an existing column's *meaning* (not additive), it is set at
+**`schema_version=3`** — **not** 2,
 which is already live-emitted by the experiment-capture isolated writer (`experiment_capture.py`, `device_id`=name).
 The reader rule is therefore unambiguous: **`schema_version >= 3` ⇒ `device_id` is the stable minted id**; `<3` (v1
 monitor, v2 experiment-capture) ⇒ it is a friendly name. §11's additive device-owned-time columns ride the same v3
 monitor emission. A one-time map re-keys the three legacy bench identities (ADR-0027 §9). Format is a 6-char
-Crockford base32 nonce (§6); the friendly name rides payload `name=` on every row as the pre-mint degrade identifier. The companion air-quality project, which has
+Crockford base32 nonce (§6); the friendly name rides payload `name=` on every row as the pre-mint degrade
+identifier. The companion air-quality project, which has
 no schema built yet, adopts the post-bump semantics from its first implementation —
 stable-id-in-the-id-column from day one, no legacy epoch on that side (ADR-0027 rider 1).
 This strengthens §11.2's dedupe key, whose lead

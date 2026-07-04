@@ -81,7 +81,8 @@ identifier** as much as legibility: under B a row emitted before the UUID is min
 factory-fresh first boot) has no valid `device_id`, and `name=` is the only identity it can carry. It is
 ~free (+~10 bytes ≈ 0.06% of the 19200 budget, Data-measured) and does **not** undo B — a clearly-labelled
 `name=` payload field is a separate honest label, not the conflation-in-the-id-column B removes. It closes B's
-one genuine regression vs A (which kept the name in the id column as its fallback). **Rationale:** B fixes the conflation *at its root* — `device_id` becomes a true
+one genuine regression vs A (which kept the name in the id column as its fallback). **Rationale:** B fixes
+the conflation *at its root* — `device_id` becomes a true
 stable identifier (its proper job) instead of a mutable label masquerading as an id in the "id" column,
 which is the exact conflation this ADR exists to end. It **converges the in-flight work**: the dashboard
 fence already keys on `device_id` (#587), so it stays correct and only its *display* swaps to `regdev.name`
