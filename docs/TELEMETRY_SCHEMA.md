@@ -278,7 +278,10 @@ ratification.
 `device_id` (§6) from a mutable friendly name to a **short stable minted id** (the friendly name moves to the
 registry, #592). Because that changes an existing column's *meaning* (not additive), it carries a **`schema_version`
 bump** so a reader distinguishes pre-bump logs (`device_id`=name) from post-bump (`device_id`=stable-id); a one-time
-map re-keys the three legacy bench identities (ADR-0027 §9). This strengthens §11.2's dedupe key, whose lead
+map re-keys the three legacy bench identities (ADR-0027 §9). The companion air-quality project, which has
+no schema built yet, adopts the post-bump semantics from its first implementation —
+stable-id-in-the-id-column from day one, no legacy epoch on that side (ADR-0027 rider 1).
+This strengthens §11.2's dedupe key, whose lead
 term `device_id` becomes genuinely stable. Firmware mint+emit is #601; the UUID-keyed registry is Data's slice.
 
 **Why now:** §1's "time is host-authoritative" and this file's `session_id`-only identity model

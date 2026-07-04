@@ -94,6 +94,25 @@ additive/safer, but it leaves the conflation in the canonical column and forces 
 payload key anyway — trading a clean normalization for a permanent redundancy. The maintainer may override to A
 at ratification if additive-safety is preferred for install-day sequencing.)*
 
+**Ratification riders (Workflow gate, 2026-07-04 — maintainer-directed):**
+
+1. **The companion air-quality project adopts these semantics from its first
+   implementation.** It has no schema built yet, so the bump costs it nothing — it
+   inherits the *improved* base design (stable id in the id column from day one, no
+   legacy epoch, no migration). Recorded here and in `TELEMETRY_SCHEMA.md` §6 as the
+   cross-project contract; the ADOPTION carry-over note gains it when that project's
+   development starts.
+2. **The device keeps a cached copy of its own name.** "The name moves to the
+   registry" means the registry is the *authoritative home*, not the sole copy: the
+   board caches its current label in NVS (set via #600's rename path) so on-device
+   surfaces — the boot banner today, the W2 glanceable display (#20) — can show a
+   human name without a registry round-trip. Registry wins on conflict.
+3. **Bench legibility is a requirement, not a courtesy:** the boot banner and the
+   `GET /` status page print **both** (`device_id=a1b2c3  name=classic`). Raw
+   telemetry rows may add `name=` per the byte-budget clause above, but the
+   banner/status surfaces always carry the pair — a human at a serial monitor or a
+   browser must never need a lookup table to know which board is talking.
+
 ### 2. Five host-side entities, each `stable_uuid` + mutable label
 
 Device (board), Channel (`device_uuid` + port/GPIO), Probe (sticker + QA + calibration), Plant, and
