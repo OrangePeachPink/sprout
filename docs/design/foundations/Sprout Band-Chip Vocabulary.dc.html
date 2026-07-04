@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens/sprout-tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+</style>
+</helmet>
+<div style="min-height:100vh; background:var(--bg); color:var(--ink); font-family:var(--font-ui); -webkit-font-smoothing:antialiased; padding:38px 40px 64px;">
+  <div style="max-width:960px; margin:0 auto; display:flex; flex-direction:column; gap:22px;">
+
+    <!-- HEADER -->
+    <header>
+      <div style="display:flex; align-items:center; gap:9px; font-family:var(--font-data); font-size:12px; color:var(--muted); margin-bottom:11px; flex-wrap:wrap;">
+        <span style="width:24px; height:24px; border-radius:7px; background:var(--surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex:none;">
+          <svg width="13" height="16" viewBox="0 0 24 28" fill="none" stroke="var(--leaf)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="var(--sprout)"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="var(--leaf)"></path></svg>
+        </span>
+        <span>band-chip vocabulary</span>
+        <span style="opacity:.5;">·</span>
+        <span style="color:var(--st-fault); font-weight:600;">ruling</span>
+        <span style="opacity:.5;">·</span>
+        <span>Item 1</span>
+        <span style="opacity:.5;">·</span>
+        <span>supersedes “Card Chip Mood Ruling”</span>
+      </div>
+      <h1 style="font-family:var(--font-display); font-weight:700; font-size:38px; line-height:1.05; margin:0; letter-spacing:-0.01em; max-width:22ch;">The chip reads the band — the same way, everywhere.</h1>
+      <p style="margin:13px 0 0; font-size:15.5px; line-height:1.58; color:var(--muted); max-width:72ch;">Mood is a <strong style="color:var(--ink); font-weight:600;">1:1 function of the seven calibrated bands</strong>, never dialled for drama (ADR-0007 §3/§5, ADR-0004). The ratified source is <span style="font-family:var(--font-data); color:var(--ink); font-size:13.5px;">mood-band-map.json</span>. Three problems reached QA: the dashboard chip's word list <strong style="color:var(--ink); font-weight:600;">drifted off the map on 3 of 7 bands</strong> (all toward alarm); the chip <strong style="color:var(--ink); font-weight:600;">reads two different ways</strong> across surfaces; and two words <strong style="color:var(--ink); font-weight:600;">collide with other labels</strong> on the same card. This rules all three so a coder can apply them from one word map with no further questions.</p>
+    </header>
+
+    <!-- ============ A · RECONCILED TABLE ============ -->
+    <section style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:22px 24px;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:4px; flex-wrap:wrap;">
+        <h2 style="font-family:var(--font-display); font-weight:700; font-size:22px; color:var(--ink); margin:0;">A · One reconciled word list</h2>
+        <span style="font-family:var(--font-data); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.14em; color:var(--muted);">code ↔ map end as one</span>
+      </div>
+      <p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:var(--muted); max-width:76ch;">The canonical <span style="font-family:var(--font-data); color:var(--ink); font-size:13px;">fw level ↔ UI band ↔ mood</span> triple. The map is already correct — it is the dashboard's separate chip word list that diverged. Fixing means binding the code to the map, not editing the map.</p>
+
+      <div style="display:grid; grid-template-columns:1.35fr 1.1fr 1.15fr 1.5fr 0.7fr; gap:12px; padding:0 4px 8px; font-family:var(--font-data); font-size:10.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted);">
+        <span>fw level</span><span>UI band</span><span>chip today</span><span>ratified mood</span><span style="text-align:right;">verdict</span>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <!-- Saturated FIX -->
+        <div style="display:grid; grid-template-columns:1.35fr 1.1fr 1.15fr 1.5fr 0.7fr; gap:12px; align-items:center; background:color-mix(in srgb, var(--st-fault) 6%, var(--surface)); border:1px solid color-mix(in srgb, var(--st-fault) 22%, var(--border)); border-radius:var(--r-tile); padding:11px 14px;">
+          <span style="font-family:var(--font-data); font-size:12.5px; color:var(--muted);">submerged</span>
+          <div style="display:flex; align-items:center; gap:8px;"><span style="width:11px; height:11px; border-radius:3px; background:var(--band-saturated); flex:none;"></span><span style="font-weight:700; font-size:13.5px; color:var(--ink);">Saturated</span></div>
+          <span style="font-family:var(--font-data); font-size:12.5px; color:var(--st-fault); text-decoration:line-through; text-decoration-color:color-mix(in srgb, var(--st-fault) 55%, transparent);">Drowning</span>
+          <span style="font-family:var(--font-data); font-size:13.5px; font-weight:600; color:var(--ink);">soaked</span>
+          <span style="text-align:right; font-family:var(--font-data); font-size:11px; font-weight:700; color:var(--st-fault); text-transform:uppercase;">fix</span>
+        </div>
+        <!-- Wet FIX -->
+        <div style="display:grid; grid-template-columns:1.35fr 1.1fr 1.15fr 1.5fr 0.7fr; gap:12px; align-items:center; background:color-mix(in srgb, var(--st-fault) 6%, var(--surface)); border:1px solid color-mix(in srgb, var(--st-fault) 22%, var(--border)); border-radius:var(--r-tile); padding:11px 14px;">
+          <span style="font-family:var(--font-data); font-size:12.5px; color:var(--muted);">overwatered</span>
+          <div style="display:flex; align-items:center; gap:8px;"><span style="width:11px; height:11px; border-radius:3px; background:var(--band-wet); flex:none;"></span><span style="font-weight:700; font-size:13.5px; color:var(--ink);">Wet</span></div>
+          <span style="font-family:var(--font-data); font-size:12.5px; color:var(--st-fault); text-decoration:line-through; text-decoration-color:color-mix(in srgb, var(--st-fault) 55%, transparent);">Soggy</span>
+          <span style="font-family:var(--font-data); font-size:13.5px; font-weight:600; color:var(--ink);">refreshed</span>
+          <span style="text-align:right; font-family:var(--font-data); font-size:11px; font-weight:700; color:var(--st-fault); text-transform:uppercase;">fix</span>
+        </div>
+        <!-- Moist OK -->
+        <div style="display:grid; grid-template-columns:1.35fr 1.1fr 1.15fr 1.5fr 0.7fr; gap:12px; align-items:center; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:11px 14px;">
+          <span style="font-family:var(--font-data); font-size:12.5px; color:var(--muted);">well watered</span>
+          <div style="display:flex; align-items:center; gap:8px;"><span style="width:11px; height:11px; border-radius:3px; background:var(--band-moist); flex:none;"></span><span style="font-weight:700; font-size:13.5px; color:var(--ink);">Moist</span></div>
+          <span style="font-family:var(--font-data); font-size:12.5px; color:var(--muted);">Thriving</span>
+          <span style="font-family:var(--font-data); font-size:13.5px; font-weight:600; color:var(--ink);">thriving</span>
+          <span style="text-align:right; font-family:var(--font-data); font-size:11px; font-weight:700; color:var(--leaf); text-transform:uppercase;">ok</span>
+        </div>
+        <!-- Ideal OK -->
+        <div style="display:grid; grid-template-columns:1.35fr 1.1fr 1.15fr 1.5fr 0.7fr; gap:12px; align-items:center; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:11px 14px;">
+          <span style="font-family:var(--font-data); font-size:12.5px; color:var(--muted);">OK</span>
+          <div style="display:flex; align-items:center; gap:8px;"><span style="width:11px; height:11px; border-radius:3px; background:var(--band-ideal); flex:none;"></span><span style="font-weight:700; font-size:13.5px; color:var(--ink);">Ideal</span></div>
+          <span style="font-family:var(--font-data); font-size:12.5px; color:var(--muted);">Content</span>
+          <span style="font-family:var(--font-data); font-size:13.5px; font-weight:600; color:var(--ink);">content</span>
+          <span style="text-align:right; font-family:var(--font-data); font-size:11px; font-weight:700; color:var(--leaf); text-transform:uppercase;">ok</span>
+        </div>
+        <!-- Drying OK -->
+        <div style="display:grid; grid-template-columns:1.35fr 1.1fr 1.15fr 1.5fr 0.7fr; gap:12px; align-items:center; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:11px 14px;">
+          <span style="font-family:var(--font-data); font-size:12.5px; color:var(--muted);">needs water</span>
+          <div style="display:flex; align-items:center; gap:8px;"><span style="width:11px; height:11px; border-radius:3px; background:var(--band-drying); flex:none;"></span><span style="font-weight:700; font-size:13.5px; color:var(--ink);">Drying</span></div>
+          <span style="font-family:var(--font-data); font-size:12.5px; color:var(--muted);">Thirsty</span>
+          <span style="font-family:var(--font-data); font-size:13.5px; font-weight:600; color:var(--ink);">thirsty</span>
+          <span style="text-align:right; font-family:var(--font-data); font-size:11px; font-weight:700; color:var(--leaf); text-transform:uppercase;">ok</span>
+        </div>
+        <!-- Dry OK -->
+        <div style="display:grid; grid-template-columns:1.35fr 1.1fr 1.15fr 1.5fr 0.7fr; gap:12px; align-items:center; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:11px 14px;">
+          <span style="font-family:var(--font-data); font-size:12.5px; color:var(--muted);">DRY</span>
+          <div style="display:flex; align-items:center; gap:8px;"><span style="width:11px; height:11px; border-radius:3px; background:var(--band-dry); flex:none;"></span><span style="font-weight:700; font-size:13.5px; color:var(--ink);">Dry</span></div>
+          <span style="font-family:var(--font-data); font-size:12.5px; color:var(--muted);">Parched</span>
+          <span style="font-family:var(--font-data); font-size:13.5px; font-weight:600; color:var(--ink);">parched <span style="font-size:10.5px; color:var(--st-dry);">†</span></span>
+          <span style="text-align:right; font-family:var(--font-data); font-size:11px; font-weight:700; color:var(--leaf); text-transform:uppercase;">ok</span>
+        </div>
+        <!-- Parched FIX -->
+        <div style="display:grid; grid-template-columns:1.35fr 1.1fr 1.15fr 1.5fr 0.7fr; gap:12px; align-items:center; background:color-mix(in srgb, var(--st-fault) 6%, var(--surface)); border:1px solid color-mix(in srgb, var(--st-fault) 22%, var(--border)); border-radius:var(--r-tile); padding:11px 14px;">
+          <span style="font-family:var(--font-data); font-size:12.5px; color:var(--muted);">air-dry</span>
+          <div style="display:flex; align-items:center; gap:8px;"><span style="width:11px; height:11px; border-radius:3px; background:var(--band-parched); flex:none;"></span><span style="font-weight:700; font-size:13.5px; color:var(--ink);">Parched</span></div>
+          <span style="font-family:var(--font-data); font-size:12.5px; color:var(--st-fault); text-decoration:line-through; text-decoration-color:color-mix(in srgb, var(--st-fault) 55%, transparent);">Critical</span>
+          <span style="font-family:var(--font-data); font-size:13.5px; font-weight:600; color:var(--ink);">faint <span style="font-size:11px; color:var(--muted); font-weight:500;">· “check me”</span></span>
+          <span style="text-align:right; font-family:var(--font-data); font-size:11px; font-weight:700; color:var(--st-fault); text-transform:uppercase;">fix</span>
+        </div>
+      </div>
+
+      <div style="margin-top:16px; padding-top:15px; border-top:1px solid var(--border); display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px;">
+        <div><div style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--band-saturated); margin-bottom:3px;">Drowning → soaked</div><div style="font-size:12px; line-height:1.5; color:var(--muted);">“Drowning” personifies death and panic. “soaked” states the fact — fully saturated — and lets the plant keep its dignity.</div></div>
+        <div><div style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--band-wet); margin-bottom:3px;">Soggy → refreshed</div><div style="font-size:12px; line-height:1.5; color:var(--muted);">“Soggy” is a small judgment. “refreshed” frames overwatered as the plant having had a big drink — fact, then a fond feeling.</div></div>
+        <div><div style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--band-parched); margin-bottom:3px;">Critical → faint · “check me”</div><div style="font-size:12px; line-height:1.5; color:var(--muted);">“Critical” declares an emergency — a direct breach of the air-dry “never dramatize” rule. “faint” names the ambiguity: dry, or maybe not in soil.</div></div>
+      </div>
+      <div style="margin-top:12px; font-size:12px; line-height:1.5; color:var(--muted);"><span style="color:var(--st-dry);">†</span> “parched” is the ratified <em>mood</em> for the DRY band and stays — its homograph with the air-dry band name <strong style="color:var(--ink);">Parched</strong> is handled in section C, not by changing the map.</div>
+    </section>
+
+    <!-- ============ B · CHIP GRAMMAR ============ -->
+    <section style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:22px 24px;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:4px; flex-wrap:wrap;">
+        <h2 style="font-family:var(--font-display); font-weight:700; font-size:22px; color:var(--ink); margin:0;">B · One grammar, two surfaces</h2>
+        <span style="font-family:var(--font-data); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.14em; color:var(--muted);">ADR-0007 §6 boundary</span>
+      </div>
+      <p style="margin:0 0 18px; font-size:14px; line-height:1.6; color:var(--muted); max-width:76ch;">The same reading shows as <span style="font-family:var(--font-data); color:var(--ink); font-size:13px;">Saturated · Drowning</span> on the summary card and <span style="font-family:var(--font-data); color:var(--ink); font-size:13px;">submerged · Saturated</span> on the detail readout. That isn't an accident to unify away — the two surfaces sit on opposite sides of the character↔instrument boundary. The rule makes the split intentional and the <strong style="color:var(--ink);">UI band word the shared anchor</strong> on both.</p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <!-- Ambient summary -->
+        <div style="position:relative; overflow:hidden; border:1px solid color-mix(in srgb, var(--leaf) 32%, var(--border)); border-radius:var(--r-tile); padding:18px 18px 20px; background:color-mix(in srgb, var(--leaf) 5%, var(--surface));">
+          <div style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--leaf); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px;">ambient / summary card</div>
+          <div style="font-size:13px; color:var(--muted); margin-bottom:14px;">character present</div>
+          <div style="display:inline-flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-pill); padding:6px 13px; box-shadow:var(--e1);">
+            <span style="width:9px; height:9px; border-radius:50%; background:var(--band-saturated);"></span>
+            <span style="font-weight:700; font-size:13.5px; color:var(--ink);">Saturated</span>
+            <span style="color:var(--muted);">·</span>
+            <span style="font-family:var(--font-data); font-size:13px; color:var(--ink);">soaked</span>
+          </div>
+          <div style="margin-top:15px; font-family:var(--font-data); font-size:13px; color:var(--ink);">[ UI band ] · [ mood ]</div>
+          <div style="margin-top:6px; font-size:12.5px; line-height:1.55; color:var(--muted);">Band first (the calibrated truth), mood second (the feeling) — <em>fact, then feeling</em>, per the voice. Mood belongs here: a summary/ambient surface is where the character lives.</div>
+        </div>
+        <!-- Instrument detail -->
+        <div style="position:relative; overflow:hidden; border:1px solid var(--border); border-radius:var(--r-tile); padding:18px 18px 20px; background:var(--surface-2);">
+          <div style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--ink); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px;">instrument / detail readout</div>
+          <div style="font-size:13px; color:var(--muted); margin-bottom:14px;">instrument only — no mood</div>
+          <div style="display:inline-flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:6px 13px; box-shadow:var(--e1); font-family:var(--font-data);">
+            <span style="font-size:12.5px; color:var(--muted);">submerged</span>
+            <span style="color:var(--muted);">·</span>
+            <span style="font-size:13px; font-weight:600; color:var(--ink);">Saturated</span>
+          </div>
+          <div style="margin-top:15px; font-family:var(--font-data); font-size:13px; color:var(--ink);">[ fw level ] · [ UI band ]</div>
+          <div style="margin-top:6px; font-size:12.5px; line-height:1.55; color:var(--muted);">The per-probe stat card is a dense numeric readout — §6 keeps the character out. fw level (firmware truth) → UI band. <strong style="color:var(--ink);">No mood word here.</strong></div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px; display:flex; align-items:flex-start; gap:10px; background:color-mix(in srgb, var(--leaf) 6%, var(--surface)); border:1px solid color-mix(in srgb, var(--leaf) 22%, var(--border)); border-radius:var(--r-tile); padding:12px 15px;">
+        <span style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--leaf); text-transform:uppercase; letter-spacing:.08em; flex:none; margin-top:1px;">the invariant</span>
+        <div style="font-size:13px; line-height:1.55; color:var(--ink);">The <strong>UI band word</strong> appears on every surface and is the anchor. The summary <em>appends</em> the mood; the instrument <em>prepends</em> the fw level. A surface adds exactly one token to the band — and the readout never adds the mood.</div>
+      </div>
+    </section>
+
+    <!-- ============ C · COLLISIONS ============ -->
+    <section style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:22px 24px;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:4px; flex-wrap:wrap;">
+        <h2 style="font-family:var(--font-display); font-weight:700; font-size:22px; color:var(--ink); margin:0;">C · Two word collisions</h2>
+        <span style="font-family:var(--font-data); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.14em; color:var(--muted);">one line each</span>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <!-- Collision 1 -->
+        <div style="border:1px solid var(--border); border-radius:var(--r-tile); padding:15px 16px; background:var(--surface-2);">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:9px; flex-wrap:wrap;">
+            <span style="font-weight:700; font-size:14.5px; color:var(--ink);">“Saturated” band  vs  SATURATED quality flag</span>
+            <span style="font-family:var(--font-data); font-size:10.5px; font-weight:700; color:var(--leaf); text-transform:uppercase; background:color-mix(in srgb, var(--leaf) 12%, var(--surface)); border-radius:999px; padding:3px 9px;">rename the flag</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; font-family:var(--font-data); font-size:12px;">
+            <span style="display:inline-flex; align-items:center; gap:7px; background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:4px 11px;"><span style="width:8px; height:8px; border-radius:2px; background:var(--band-saturated);"></span>Saturated <span style="color:var(--muted);">band</span></span>
+            <span style="color:var(--muted);">and two rows below</span>
+            <span style="display:inline-flex; align-items:center; gap:7px; background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:4px 11px;">quality <span style="color:var(--st-fault); text-decoration:line-through;">SATURATED</span> <span style="color:var(--muted);">→</span> <span style="color:var(--ink); font-weight:600;">RAILED</span></span>
+          </div>
+          <div style="font-size:13px; line-height:1.55; color:var(--ink);">Rename the <strong>quality flag</strong>, not the band. The band names <em>where the reading sits</em> (wettest lane); the flag names a <em>data-integrity fault</em> — the ADC pinned at its rail, reading suspect. <span style="font-family:var(--font-data); font-size:12.5px;">RAILED</span> is precise instrument language, stays in the mono quality register (<span style="font-family:var(--font-data); font-size:12.5px;">OK · SUSPECT · RAILED · NO_SIGNAL</span>), and can never be mistaken for the band. Display-string change only — no token moves (<span style="font-family:var(--font-data); font-size:12.5px;">--q-saturated</span> keeps its value). <span style="color:var(--muted);">(“PEGGED” is an acceptable synonym if Data prefers it.)</span></div>
+        </div>
+        <!-- Collision 2 -->
+        <div style="border:1px solid var(--border); border-radius:var(--r-tile); padding:15px 16px; background:var(--surface-2);">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:9px; flex-wrap:wrap;">
+            <span style="font-weight:700; font-size:14.5px; color:var(--ink);">“Parched” band  vs  “parched” mood</span>
+            <span style="font-family:var(--font-data); font-size:10.5px; font-weight:700; color:var(--leaf); text-transform:uppercase; background:color-mix(in srgb, var(--leaf) 12%, var(--surface)); border-radius:999px; padding:3px 9px;">keep — disambiguate by rule</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; font-family:var(--font-data); font-size:12px;">
+            <span style="display:inline-flex; align-items:center; gap:7px; white-space:nowrap; background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:4px 11px;"><span style="width:8px; height:8px; border-radius:2px; background:var(--band-dry); flex:none;"></span>Dry · <span style="color:var(--ink);">parched</span></span>
+            <span style="color:var(--muted);">one band drier</span>
+            <span style="display:inline-flex; align-items:center; gap:7px; white-space:nowrap; background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:4px 11px;"><span style="width:8px; height:8px; border-radius:2px; background:var(--band-parched); flex:none;"></span><span style="font-weight:600; color:var(--ink);">Parched</span> · faint</span>
+          </div>
+          <div style="font-size:13px; line-height:1.55; color:var(--ink);">Keep both — they never occupy the same slot. <strong>Band names render Title-case and are always the anchor (first) token; mood words render lowercase and only ever appear second, on the summary card.</strong> So <span style="font-family:var(--font-data); font-size:12.5px;">Parched</span> is only ever a leading band token and <span style="font-family:var(--font-data); font-size:12.5px;">parched</span> only ever a trailing mood token — and a chip shows exactly one band, so both can never appear together. Reuse-only, no map change.</div>
+          <div style="margin-top:10px; display:flex; align-items:flex-start; gap:9px; font-size:12px; line-height:1.5; color:var(--muted); border-top:1px dashed var(--border); padding-top:10px;">
+            <span style="font-family:var(--font-data); font-size:10px; font-weight:700; color:var(--st-predicted); text-transform:uppercase; flex:none; margin-top:1px;">fallback</span>
+            <span>If the maintainer wants zero homograph even under all-caps styling, rename the DRY mood <span style="font-family:var(--font-data);">parched → dry-mouthed</span>. That edits <span style="font-family:var(--font-data);">mood-band-map.json</span> (+ ADR-0007 §5, + <span style="font-family:var(--font-data);">sprout-mark.js</span> mirror) and needs voice-lane + maintainer sign-off — so it's flagged, not shipped.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ HANDOFF ============ -->
+    <section style="position:relative; overflow:hidden; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e2); padding:20px 24px;">
+      <div style="position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--leaf);"></div>
+      <div style="display:flex; align-items:flex-start; gap:12px;">
+        <span style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--leaf); text-transform:uppercase; letter-spacing:.08em; flex:none; margin-top:2px;">for Data</span>
+        <div style="font-size:13.5px; line-height:1.62; color:var(--ink);">
+          <div style="margin-bottom:9px;"><strong>Reuse-only — no new tokens.</strong> One PR against the dashboard word map:</div>
+          <div style="display:flex; flex-direction:column; gap:7px;">
+            <div style="display:flex; gap:9px;"><span style="color:var(--leaf); font-weight:700;">1</span><span>Bind the summary chip's word list to <span style="font-family:var(--font-data); font-size:12.5px; color:var(--st-predicted);">mood-band-map.json</span> — retiring the local list fixes <span style="font-family:var(--font-data); font-size:12.5px;">Drowning→soaked</span>, <span style="font-family:var(--font-data); font-size:12.5px;">Soggy→refreshed</span>, <span style="font-family:var(--font-data); font-size:12.5px;">Critical→faint</span> in one move and stops future drift.</span></div>
+            <div style="display:flex; gap:9px;"><span style="color:var(--leaf); font-weight:700;">2</span><span>Chip grammar: summary = <span style="font-family:var(--font-data); font-size:12.5px;">band · mood</span>; per-probe detail readout = <span style="font-family:var(--font-data); font-size:12.5px;">fw · band</span>, no mood.</span></div>
+            <div style="display:flex; gap:9px;"><span style="color:var(--leaf); font-weight:700;">3</span><span>Rename the quality flag label <span style="font-family:var(--font-data); font-size:12.5px;">SATURATED → RAILED</span>. Keep band names Title-case + anchor-first, moods lowercase + summary-only.</span></div>
+          </div>
+          <div style="margin-top:11px; font-size:12.5px; color:var(--muted);">The map itself is unchanged (already correct). The one map-touching option — the <span style="font-family:var(--font-data);">parched</span> fallback rename — is flagged for approval, not part of this PR.</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:960,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -136,20 +136,42 @@ class NoDataYet(Exception):
 
 def _empty_state_html(had_any_logged: bool) -> str:
     """A genuine first-run page (#543) - no readings yet is not an error state, so
-    it gets its own honest, on-tone response rather than the 500 error path."""
+    it gets its own honest, on-tone response rather than the 500 error path.
+
+    On a genuinely fresh checkout it is also the operator's **launchpad** (#644):
+    the ``Start all collection`` control lives on the full dashboard shell, which
+    only renders once data exists - so at zero data the "one Start" moment had no
+    button to press (chicken-and-egg). This page carries a working Start control
+    so install day is never a dead-end. It posts the same ``/collection/start``
+    (ADR-0014's one action) the shell's button does, then watches ``/data.json``
+    and hands off to the live dashboard the instant the first reading lands - it
+    never fakes progress. (The filtered-to-zero case already has data, so it gets
+    a plain clear-the-filter message, no Start control.)"""
     tokens = TOKENS_CSS.read_text(encoding="utf-8") if TOKENS_CSS.exists() else ""
     fonts = FONTS_CSS.read_text(encoding="utf-8") if FONTS_CSS.exists() else ""
     if had_any_logged:
         message = (
             "<p>No readings match the current range/channel filter.</p>"
-            "<p>Clear the filter, or widen the time range, to see logged data.</p>"
+            '<p><a href="/">Clear the filter</a>, or widen the time range, to see '
+            "logged data.</p>"
         )
+        launchpad = ""
+        script = ""
     else:
         message = (
             "<p>No readings yet - this is a fresh checkout with nothing logged.</p>"
-            "<p>Start the Monitor or run an Experiment Capture, then reload "
-            "this page.</p>"
+            "<p>Press <strong>Start all collection</strong> below to begin polling "
+            "every registered device. This page opens the live dashboard the moment "
+            "the first reading lands.</p>"
         )
+        launchpad = (
+            '<div class="launch">'
+            '<button class="btn primary" id="collStart" type="button">'
+            "▶ Start all collection</button>"
+            '<p class="status" id="collStatus" role="status" aria-live="polite"></p>'
+            "</div>"
+        )
+        script = _EMPTY_STATE_SCRIPT
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -158,22 +180,94 @@ def _empty_state_html(had_any_logged: bool) -> str:
 <style>
 {fonts}
 {tokens}
-body {{ font-family: var(--font-body); background: var(--bg); color: var(--ink);
+body {{ font-family: var(--font-ui); background: var(--bg); color: var(--ink);
   display: flex; align-items: center; justify-content: center; min-height: 100vh;
   margin: 0; }}
 .empty {{ max-width: 32rem; text-align: center; padding: 2rem; }}
 .empty h1 {{ font-family: var(--font-display); color: var(--leaf); }}
 .empty p {{ color: var(--muted); }}
+.empty a {{ color: var(--leaf); font-family: var(--font-ui); font-weight: 600;
+  text-decoration: none; }}
+.empty a:hover {{ text-decoration: underline; }}
+.launch {{ margin-top: 1.5rem; }}
+/* mirrors the ratified .btn/.btn.primary (dashboard_template.html) - the empty
+   page loads only tokens+fonts, not the shell CSS, so the shared button style is
+   restated here from the SAME tokens, never re-invented. */
+.btn {{ font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+  color: var(--ink); border-radius: var(--r-pill); padding: 6px 14px;
+  text-decoration: none; }}
+.btn:hover {{ border-color: var(--leaf); }}
+.btn:disabled {{ opacity: .5; cursor: not-allowed; }}
+.btn.primary {{ background: var(--leaf); border-color: var(--leaf); color: #fff; }}
+.btn.primary:hover {{ background: #2C9247; border-color: #2C9247; }}
+.status {{ margin-top: .75rem; min-height: 1.2em; color: var(--muted);
+  font-family: var(--font-ui); font-size: 12px; }}
 </style>
 </head>
 <body>
 <div class="empty">
 <h1>Sprout</h1>
 {message}
+{launchpad}
 </div>
+{script}
 </body>
 </html>
 """
+
+
+# The launchpad's behavior (kept out of the f-string so its JS braces need no
+# doubling). Posts ADR-0014's one action, surfaces an honest refusal (the server
+# returns 400 "nothing to collect from" when no device is registered yet - never
+# a fake success), and on success polls /data.json, handing off to the live
+# dashboard exactly when real data exists (#644).
+_EMPTY_STATE_SCRIPT = """<script>
+(function () {
+  var btn = document.getElementById('collStart');
+  var box = document.getElementById('collStatus');
+  if (!btn) return;
+  var watching = null;
+  function watch() {
+    if (watching) return;
+    watching = setInterval(function () {
+      fetch('data.json', { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (!j.empty) { clearInterval(watching); location.reload(); }
+        })
+        .catch(function () { /* transient - keep waiting for a first reading */ });
+    }, 5000);
+  }
+  btn.addEventListener('click', function () {
+    btn.disabled = true;
+    box.textContent = 'starting…';
+    fetch('/collection/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ port: null })
+    })
+      .then(function (r) {
+        return r.json().then(function (j) {
+          return { ok: r.ok, status: r.status, j: j };
+        });
+      })
+      .then(function (res) {
+        if (!res.ok || (res.j && res.j.error)) {
+          btn.disabled = false;
+          box.textContent = '⚠ ' + ((res.j && res.j.error) || ('HTTP ' + res.status));
+          return;
+        }
+        box.textContent = '✓ collection started — waiting for the first reading…';
+        watch();
+      })
+      .catch(function (e) {
+        btn.disabled = false;
+        box.textContent = '⚠ start failed: ' + e;
+      });
+  });
+})();
+</script>"""
 
 
 def _live_trace(eid: str | None, experiments_dir: object = None) -> list[dict]:

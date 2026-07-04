@@ -18,15 +18,17 @@ def _row(pid: int, command: str) -> dict:
     return {"pid": pid, "command": command}
 
 
-def test_classifies_monitor_and_capture() -> None:
+def test_classifies_monitor_capture_and_fleet() -> None:
     rows = [
         _row(111, r"C:\python.exe C:\tools\logger\plants_logger.py --port COM6"),
         _row(222, r"C:\pythonw.exe tools/capture/experiment_capture.py --subject x"),
+        _row(333, r"C:\pythonw.exe tools/logger/fleet_logger.py --cadence-s 30"),
     ]
     found = sp.list_sprout_processes(raw_query=lambda: rows)
     assert {(p["pid"], p["role"]) for p in found} == {
         (111, "monitor"),
         (222, "capture"),
+        (333, "fleet"),  # #493 F1: the untethered poller is now discoverable
     }
 
 

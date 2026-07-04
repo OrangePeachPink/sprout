@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 """Find live Sprout-spawned child processes by command line (#493, identifiability).
 
-`plants_logger.py` (Monitor mode) and `experiment_capture.py` (bounded captures) are
-spawned headless (``CREATE_NO_WINDOW``) with a generic ``python.exe``/``pythonw.exe``
-name (control.py / monitor_control.py) - by design, so no extra console window
+`plants_logger.py` (Monitor mode), `experiment_capture.py` (bounded captures), and
+`fleet_logger.py` (the untethered WiFi poller, #582) are spawned headless
+(``CREATE_NO_WINDOW``) with a generic ``python.exe``/``pythonw.exe`` name (control.py
+/ monitor_control.py / fleet_control.py) - by design, so no extra console window
 appears. The cost: if a session's window/browser tab is closed without an explicit
 "Stop server" click, the child keeps running with **nothing visible in Task
 Manager** to identify it as Sprout's without inspecting each process's command-line
 arguments - exactly what a live incident needed OS-forensics (``Win32_Process``) to
-diagnose (#493).
+diagnose (#493). The fleet poller especially: WiFi has no COM port to reveal it, so
+before #493 F2 gave it a named lock file, a stray one was fully invisible.
 
 This formalizes that diagnostic into a real, testable command: query the OS process
-table for any `python(w).exe` whose command line names `plants_logger` or
-`experiment_capture`, and report each one's PID + role, so "is anything of mine
-still running, and what is it" is one command instead of a forensic investigation.
+table for any `python(w).exe` whose command line names `plants_logger`,
+`experiment_capture`, or `fleet_logger`, and report each one's PID + role, so "is
+anything of mine still running, and what is it" is one command instead of a forensic
+investigation.
 
 Scope (see #493's discussion): this is the **identifiability** half of that issue.
 It does not stop, kill, or manage anything - it only reports, so the operator (or
@@ -29,7 +32,7 @@ import json
 import subprocess
 import sys
 
-_MARKERS = ("plants_logger", "experiment_capture")
+_MARKERS = ("plants_logger", "experiment_capture", "fleet_logger")
 
 
 def _classify(command: str) -> str | None:
@@ -38,6 +41,8 @@ def _classify(command: str) -> str | None:
         return "monitor"
     if "experiment_capture" in command:
         return "capture"
+    if "fleet_logger" in command:
+        return "fleet"  # the untethered WiFi poller (#582), now discoverable (#493 F1)
     return None
 
 

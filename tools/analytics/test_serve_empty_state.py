@@ -85,6 +85,40 @@ def test_filtered_copy_does_not_claim_fresh_checkout() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# _empty_state_html() - the install-day launchpad (#644)
+# --------------------------------------------------------------------------- #
+
+
+def test_fresh_checkout_carries_a_working_start_control() -> None:
+    # the operator's "one Start" must be reachable at zero data (chicken-and-egg
+    # before #644: the shell's button only rendered once data existed).
+    html = _empty_state_html(had_any_logged=False)
+    assert 'id="collStart"' in html
+    assert "Start all collection" in html
+    # and it wires to ADR-0014's one action, not a dead button
+    assert "/collection/start" in html
+
+
+def test_filtered_state_has_no_start_control() -> None:
+    # data already exists in the filtered case - the fix is to clear the filter,
+    # not to start collecting, so no Start button belongs there.
+    html = _empty_state_html(had_any_logged=True)
+    assert "collStart" not in html
+    assert 'href="/"' in html  # a real way back to the unfiltered view
+
+
+def test_empty_state_uses_a_real_font_token() -> None:
+    # regression: the page referenced var(--font-body), which sprout-tokens.css
+    # does not define, so first-run text fell back to an off-brand serif (#644).
+    for html in (
+        _empty_state_html(had_any_logged=False),
+        _empty_state_html(had_any_logged=True),
+    ):
+        assert "var(--font-body)" not in html
+        assert "var(--font-ui)" in html
+
+
+# --------------------------------------------------------------------------- #
 # End-to-end: the literal #543 repro against a real running server
 # --------------------------------------------------------------------------- #
 
@@ -121,6 +155,10 @@ def test_fresh_checkout_serves_200_not_500(tmp_path: Path) -> None:
                 assert resp.status == 200
                 body = resp.read().decode("utf-8")
                 assert "fresh checkout" in body
+                # #644: the install-day Start control survives the real HTTP path,
+                # not just the pure function - the "one Start" is reachable here.
+                assert 'id="collStart"' in body
+                assert "/collection/start" in body
         except urllib.error.HTTPError as exc:
             raise AssertionError(f"/ must not 500 on a fresh checkout: {exc}") from exc
 

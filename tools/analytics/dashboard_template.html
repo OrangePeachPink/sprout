@@ -34,9 +34,10 @@ h3 { font-size: 14px; font-weight: 600; }
 .small { font-size: 12px; }
 .tiny { font-size: 11px; }
 
-header.top { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-md); margin-bottom: var(--space-lg); }
+header.top { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-md); margin-bottom: var(--space-lg); flex-wrap: wrap; }
+header.top > div:first-child { flex: 1 1 300px; min-width: 260px; }
 header.top .sub { color: var(--muted); margin-top: 4px; }
-.controls { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .controls .refreshed { color: var(--muted); font-size: 11px; font-family: var(--font-data); max-width: 210px; text-align: right; }
 .btn { font-family: var(--font-ui); font-size: 12px; font-weight: 600; cursor: pointer;
   border: 1px solid var(--border); background: var(--surface); color: var(--ink);
@@ -139,6 +140,9 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .proposed, .btn { white-space: nowrap; }
 .btn.primary { background: var(--leaf); border-color: var(--leaf); color: #fff; }
 .btn.primary:hover { background: #2C9247; border-color: #2C9247; }
+/* a disabled primary must read as disabled, not as an active green CTA */
+.btn.primary:disabled { background: var(--surface-2); border-color: var(--border); color: var(--muted); }
+.btn.primary:disabled:hover { background: var(--surface-2); border-color: var(--border); }
 #monitorCard, #captureCard { position: relative; overflow: hidden; }
 #monitorCard::before, #captureCard::before { content: ""; position: absolute;
   left: 0; top: 0; bottom: 0; width: 5px; }
@@ -203,8 +207,8 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .kpi .k .l { color: var(--muted); font-size: 11px; }
 
 /* quality strips */
-.qrow { display: grid; grid-template-columns: 40px 1fr; align-items: center; gap: 10px; margin-bottom: 6px; }
-.qrow .ql { font-family: var(--font-data); font-weight: 600; }
+.qrow { display: grid; grid-template-columns: minmax(96px, max-content) 1fr; align-items: center; gap: 10px; margin-bottom: 6px; }
+.qrow .ql { font-family: var(--font-data); font-weight: 600; white-space: nowrap; }
 .strip { display: flex; height: 18px; border-radius: 5px; overflow: hidden; border: 1px solid var(--border); position: relative; }
 .strip .cell { flex: 1 1 0; }
 .strip .gapmark { position: absolute; top: 0; bottom: 0; min-width: 2px;
@@ -374,7 +378,7 @@ footer.prov code { font-family: var(--font-data); }
     </section>
 
     <section class="card">
-      <div class="panel-h"><h2>Raw trajectory — 4 channels</h2><span class="cap">higher = drier · band shading behind · hover for local time</span></div>
+      <div class="panel-h"><h2>Raw trajectory — <span id="trajCount">channels</span></h2><span class="cap">higher = drier · band shading behind · hover for local time</span></div>
       <div class="chartbox"><canvas id="trajChart"></canvas></div>
       <div class="legend" id="trajLegend"></div>
     </section>
@@ -458,10 +462,13 @@ function destroyCharts(){ for(const k in charts){ if(charts[k]) charts[k].destro
 /* ---- header ---- */
 function renderHeader(){
   const m = DASH.meta;
+  const devCount = (DASH.devices && DASH.devices.length) || 1;
   document.getElementById('subline').innerHTML =
-    `4 co-located probes · <span class="mono">origplant</span> · fw <span class="mono">${m.fw||'?'}</span> ` +
-    `· ${DASH.sensors.length} channels · ${fmt(DASH.integrity.total)} readings · ` +
+    `${devCount} device${devCount === 1 ? '' : 's'} · ${DASH.sensors.length} channels · ` +
+    `fw <span class="mono">${m.fw||'?'}</span> · ${fmt(DASH.integrity.total)} readings · ` +
     `${m.total_hours}h since ${m.start_display || m.start_local}`;
+  const tc = document.getElementById('trajCount');
+  if (tc) tc.textContent = `${DASH.sensors.length} channels`;
   renderFreshness();
   renderChannelChips();
 }
@@ -548,7 +555,9 @@ function cardFor(s){
   c.appendChild(el('div', null, s.plant_name
     ? `<span class="sid">${s.plant_name}</span> <span class="gpio">${chanLabel} · GPIO ${s.gpio} · ${s.channel}</span>`
     : `<span class="sid">${chanLabel}</span> <span class="gpio">GPIO ${s.gpio} · ${s.channel}</span>`));
-  // HONESTY (#583): an unwired input shows '—', never a floating-noise number
+  // HONESTY (#583/#616): only a genuine NO_SIGNAL blanks the raw to '—'. An
+  // *unassigned* channel (registered, live, no plant yet) shows its real raw —
+  // hiding a connected probe's ADC read as "dead" at the bench (2026-07-04).
   c.appendChild(el('div','raw', (s.no_signal ? '—' : fmt(s.raw_last)) + '<span class="rawu"> raw</span>'));
   const pill = el('span','pill', `${s.band_ui}${s.mood ? ` <span style="opacity:.8">· ${s.mood}</span>` : ''}`);
   pill.style.background = s.band_color;
