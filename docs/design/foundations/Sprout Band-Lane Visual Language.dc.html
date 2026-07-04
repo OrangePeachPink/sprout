@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens/sprout-tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+</style>
+</helmet>
+<div style="min-height:100vh; background:var(--bg); color:var(--ink); font-family:var(--font-ui); -webkit-font-smoothing:antialiased; padding:38px 40px 64px;">
+  <div style="max-width:1040px; margin:0 auto; display:flex; flex-direction:column; gap:22px;">
+
+    <!-- ============ HEADER ============ -->
+    <header>
+      <div style="display:flex; align-items:center; gap:9px; font-family:var(--font-data); font-size:12px; color:var(--muted); margin-bottom:11px; flex-wrap:wrap;">
+        <span style="width:24px; height:24px; border-radius:7px; background:var(--surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex:none;">
+          <svg width="13" height="16" viewBox="0 0 24 28" fill="none" stroke="var(--leaf)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 26 V12"></path><path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="var(--sprout)"></path><path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="var(--leaf)"></path></svg>
+        </span>
+        <span>band-lane visual language</span>
+        <span style="opacity:.5;">·</span>
+        <span style="color:var(--st-predicted); font-weight:600;">#625</span>
+        <span style="opacity:.5;">·</span>
+        <span>PRD-0007 · slice 1</span>
+        <span style="opacity:.5;">·</span>
+        <span>reuses the calibration ladder</span>
+      </div>
+      <h1 style="font-family:var(--font-display); font-weight:700; font-size:39px; line-height:1.06; margin:0; letter-spacing:-0.01em; max-width:20ch;">Where a plant lived, and how it moved.</h1>
+      <p style="margin:13px 0 0; font-size:15.5px; line-height:1.58; color:var(--muted); max-width:70ch;">The <span style="color:var(--ink); font-weight:600;">range &amp; movement band-lane view</span> is the live counterpart to the calibration ladder: the same seven bands, same order, same <span style="font-family:var(--font-data); color:var(--ink); font-size:13.5px;">--band-*</span> tokens — but reading a chosen window instead of a static config. This page rules the visual language Data builds against: the <strong style="color:var(--ink); font-weight:600;">marker set</strong>, the <strong style="color:var(--ink); font-weight:600;">range whisker</strong>, the <strong style="color:var(--ink); font-weight:600;">movement connector</strong>, the <strong style="color:var(--ink); font-weight:600;">window selector</strong>, and the <strong style="color:var(--ink); font-weight:600;">honest empty &amp; excluded states</strong>. Every choice is weighed against one test: does it claim more than the calibration can back?</p>
+    </header>
+
+    <!-- ============ THE SUBSTRATE ============ -->
+    <section style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:22px 24px;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:4px; flex-wrap:wrap;">
+        <h2 style="font-family:var(--font-display); font-weight:700; font-size:22px; color:var(--ink); margin:0;">The substrate: seven shared lanes</h2>
+        <span style="font-family:var(--font-data); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.14em; color:var(--muted);">R1 · same names · order · tokens</span>
+      </div>
+      <p style="margin:0 0 18px; font-size:14px; line-height:1.6; color:var(--muted); max-width:74ch;">Driest at the top, wettest at the bottom — the calibration ladder's exact orientation, so the two views read as one instrument. Bands are the only vertical scale; entities are placed <em>onto</em> these lanes, never given their own axis.</p>
+
+      <div>
+        <!-- lane: Parched -->
+        <div style="display:flex; align-items:stretch; height:46px; border-radius:9px; overflow:hidden; margin-bottom:6px; border:1px solid var(--border); background:color-mix(in srgb, var(--band-parched) 11%, var(--surface));">
+          <div style="width:184px; display:flex; align-items:center; gap:9px; padding:0 14px; flex:none;">
+            <span style="width:11px; height:11px; border-radius:3px; background:var(--band-parched); flex:none;"></span>
+            <span style="font-weight:700; font-size:13.5px; color:var(--ink);">Parched</span>
+            <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted);">air-dry</span>
+          </div>
+          <div style="flex:1; display:flex; align-items:center; gap:12px; padding:0 14px;">
+            <span style="font-family:var(--font-data); font-size:12px; color:var(--muted);"><span style="color:var(--ink);">3400</span> – <span style="border-bottom:1.5px dashed var(--muted);">3050</span></span>
+            <span style="font-size:12px; color:var(--st-fault); font-weight:600; background:color-mix(in srgb, var(--band-parched) 16%, var(--surface)); border-radius:999px; padding:2px 10px;">diagnostic — “probe may not be in soil”</span>
+          </div>
+        </div>
+        <!-- lane: Dry -->
+        <div style="display:flex; align-items:stretch; height:46px; border-radius:9px; overflow:hidden; margin-bottom:6px; border:1px solid var(--border); background:color-mix(in srgb, var(--band-dry) 11%, var(--surface));">
+          <div style="width:184px; display:flex; align-items:center; gap:9px; padding:0 14px; flex:none;">
+            <span style="width:11px; height:11px; border-radius:3px; background:var(--band-dry); flex:none;"></span>
+            <span style="font-weight:700; font-size:13.5px; color:var(--ink);">Dry</span>
+            <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted);">DRY</span>
+          </div>
+          <div style="flex:1; display:flex; align-items:center; gap:12px; padding:0 14px;">
+            <span style="font-family:var(--font-data); font-size:12px; color:var(--muted);"><span style="border-bottom:1.5px dashed var(--muted);">3050</span> – <span style="border-bottom:1.5px dashed var(--muted);">2140</span></span>
+            <span style="font-size:12.5px; color:var(--muted);">needs water</span>
+          </div>
+        </div>
+        <!-- lane: Drying -->
+        <div style="display:flex; align-items:stretch; height:46px; border-radius:9px; overflow:hidden; margin-bottom:6px; border:1px solid var(--border); background:color-mix(in srgb, var(--band-drying) 12%, var(--surface));">
+          <div style="width:184px; display:flex; align-items:center; gap:9px; padding:0 14px; flex:none;">
+            <span style="width:11px; height:11px; border-radius:3px; background:var(--band-drying); flex:none;"></span>
+            <span style="font-weight:700; font-size:13.5px; color:var(--ink);">Drying</span>
+            <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted);">needs water</span>
+          </div>
+          <div style="flex:1; display:flex; align-items:center; gap:12px; padding:0 14px;">
+            <span style="font-family:var(--font-data); font-size:12px; color:var(--muted);"><span style="border-bottom:1.5px dashed var(--muted);">2140</span> – <span style="border-bottom:1.5px dashed var(--muted);">1830</span></span>
+            <span style="font-size:12.5px; color:var(--muted);">thirsty, no rush</span>
+          </div>
+        </div>
+        <!-- lane: Ideal -->
+        <div style="display:flex; align-items:stretch; height:46px; border-radius:9px; overflow:hidden; margin-bottom:6px; border:1px solid var(--border); background:color-mix(in srgb, var(--band-ideal) 14%, var(--surface));">
+          <div style="width:184px; display:flex; align-items:center; gap:9px; padding:0 14px; flex:none;">
+            <span style="width:11px; height:11px; border-radius:3px; background:var(--band-ideal); flex:none;"></span>
+            <span style="font-weight:700; font-size:13.5px; color:var(--ink);">Ideal</span>
+            <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted);">OK</span>
+          </div>
+          <div style="flex:1; display:flex; align-items:center; gap:12px; padding:0 14px;">
+            <span style="font-family:var(--font-data); font-size:12px; color:var(--muted);"><span style="border-bottom:1.5px dashed var(--muted);">1830</span> – <span style="border-bottom:1.5px dashed var(--muted);">1520</span></span>
+            <span style="font-size:12.5px; color:var(--muted);">comfortable</span>
+          </div>
+        </div>
+        <!-- lane: Moist -->
+        <div style="display:flex; align-items:stretch; height:46px; border-radius:9px; overflow:hidden; margin-bottom:6px; border:1px solid var(--border); background:color-mix(in srgb, var(--band-moist) 13%, var(--surface));">
+          <div style="width:184px; display:flex; align-items:center; gap:9px; padding:0 14px; flex:none;">
+            <span style="width:11px; height:11px; border-radius:3px; background:var(--band-moist); flex:none;"></span>
+            <span style="font-weight:700; font-size:13.5px; color:var(--ink);">Moist</span>
+            <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted);">well watered</span>
+          </div>
+          <div style="flex:1; display:flex; align-items:center; gap:12px; padding:0 14px;">
+            <span style="font-family:var(--font-data); font-size:12px; color:var(--muted);"><span style="border-bottom:1.5px dashed var(--muted);">1520</span> – <span style="border-bottom:1.5px dashed var(--muted);">1150</span></span>
+            <span style="font-size:12.5px; color:var(--muted);">thriving</span>
+          </div>
+        </div>
+        <!-- lane: Wet -->
+        <div style="display:flex; align-items:stretch; height:46px; border-radius:9px; overflow:hidden; margin-bottom:6px; border:1px solid var(--border); background:color-mix(in srgb, var(--band-wet) 12%, var(--surface));">
+          <div style="width:184px; display:flex; align-items:center; gap:9px; padding:0 14px; flex:none;">
+            <span style="width:11px; height:11px; border-radius:3px; background:var(--band-wet); flex:none;"></span>
+            <span style="font-weight:700; font-size:13.5px; color:var(--ink);">Wet</span>
+            <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted);">overwatered</span>
+          </div>
+          <div style="flex:1; display:flex; align-items:center; gap:12px; padding:0 14px;">
+            <span style="font-family:var(--font-data); font-size:12px; color:var(--muted);"><span style="border-bottom:1.5px dashed var(--muted);">1150</span> – <span style="border-bottom:1.5px dashed var(--muted);">1050</span></span>
+            <span style="font-size:12.5px; color:var(--muted);">refreshed</span>
+          </div>
+        </div>
+        <!-- lane: Saturated -->
+        <div style="display:flex; align-items:stretch; height:46px; border-radius:9px; overflow:hidden; border:1px solid var(--border); background:color-mix(in srgb, var(--band-saturated) 12%, var(--surface));">
+          <div style="width:184px; display:flex; align-items:center; gap:9px; padding:0 14px; flex:none;">
+            <span style="width:11px; height:11px; border-radius:3px; background:var(--band-saturated); flex:none;"></span>
+            <span style="font-weight:700; font-size:13.5px; color:var(--ink);">Saturated</span>
+            <span style="font-family:var(--font-data); font-size:10.5px; color:var(--muted);">submerged</span>
+          </div>
+          <div style="flex:1; display:flex; align-items:center; gap:12px; padding:0 14px;">
+            <span style="font-family:var(--font-data); font-size:12px; color:var(--muted);"><span style="border-bottom:1.5px dashed var(--muted);">1050</span> – <span style="color:var(--ink);">900</span></span>
+            <span style="font-size:12.5px; color:var(--muted);">soaking it all in</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+        <span style="font-family:var(--font-data); font-size:11px; color:var(--muted); display:flex; align-items:center; gap:7px;"><span style="width:20px; border-bottom:1.5px dashed var(--muted);"></span> interior boundaries A2-pending</span>
+        <span style="opacity:.4;">·</span>
+        <span style="font-family:var(--font-data); font-size:11px; color:var(--muted);"><span style="color:var(--ink);">solid</span> = ratified endpoint (air-dry ceiling · submerged floor)</span>
+      </div>
+    </section>
+
+    <!-- ============ HERO: READING ONE ENTITY ============ -->
+    <section style="position:relative; overflow:hidden; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e2); padding:22px 24px;">
+      <div style="position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--leaf);"></div>
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:4px; flex-wrap:wrap;">
+        <h2 style="font-family:var(--font-display); font-weight:700; font-size:22px; color:var(--ink); margin:0;">One window, three plants, five marks</h2>
+        <span style="font-family:var(--font-data); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.14em; color:var(--leaf);">the whole vocabulary at once</span>
+      </div>
+      <p style="margin:0 0 20px; font-size:14px; line-height:1.6; color:var(--muted); max-width:74ch;">A 7-day window. Each plant is one column of marks on the shared lanes — a soft <strong style="color:var(--ink); font-weight:600;">reach field</strong> (where it lived), a <strong style="color:var(--ink); font-weight:600;">now dot</strong> (where it is), a <strong style="color:var(--ink); font-weight:600;">from triangle</strong> + dotted <strong style="color:var(--ink); font-weight:600;">connector</strong> (its last move), and <strong style="color:var(--ink); font-weight:600;">reach diamonds</strong> capping the span.</p>
+
+      <!-- name strip -->
+      <div style="position:relative; height:26px; margin-bottom:2px;">
+        <div style="position:absolute; left:260px; transform:translateX(-50%); display:flex; align-items:center; gap:6px; font-family:var(--font-data); font-size:11.5px; color:var(--ink); white-space:nowrap;"><span style="width:9px;height:9px;border-radius:50%;background:var(--band-moist);"></span>Monstera · s1</div>
+        <div style="position:absolute; left:490px; transform:translateX(-50%); display:flex; align-items:center; gap:6px; font-family:var(--font-data); font-size:11.5px; color:var(--ink); white-space:nowrap;"><span style="width:9px;height:9px;border-radius:50%;background:var(--band-drying);"></span>Fern · s2</div>
+        <div style="position:absolute; left:670px; transform:translateX(-50%); display:flex; align-items:center; gap:6px; font-family:var(--font-data); font-size:11.5px; color:var(--muted); white-space:nowrap;"><span style="width:9px;height:9px;border-radius:50%;border:2px solid var(--band-moist);box-sizing:border-box;"></span>S3 · s4 <span style="font-size:10px; color:var(--st-predicted);">provisional</span></div>
+      </div>
+
+      <!-- lane block + overlay -->
+      <div style="position:relative; width:100%; min-width:760px;">
+        <!-- 7 contiguous lanes, 44px each -->
+        <div style="display:flex; align-items:center; height:44px; border-radius:8px 8px 0 0; background:color-mix(in srgb, var(--band-parched) 11%, var(--surface));"><div style="width:170px; display:flex; align-items:center; gap:8px; padding:0 14px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--band-parched);"></span><span style="font-weight:700; font-size:13px; color:var(--ink);">Parched</span></div></div>
+        <div style="display:flex; align-items:center; height:44px; background:color-mix(in srgb, var(--band-dry) 11%, var(--surface));"><div style="width:170px; display:flex; align-items:center; gap:8px; padding:0 14px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--band-dry);"></span><span style="font-weight:700; font-size:13px; color:var(--ink);">Dry</span></div></div>
+        <div style="display:flex; align-items:center; height:44px; background:color-mix(in srgb, var(--band-drying) 12%, var(--surface));"><div style="width:170px; display:flex; align-items:center; gap:8px; padding:0 14px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--band-drying);"></span><span style="font-weight:700; font-size:13px; color:var(--ink);">Drying</span></div></div>
+        <div style="display:flex; align-items:center; height:44px; background:color-mix(in srgb, var(--band-ideal) 14%, var(--surface));"><div style="width:170px; display:flex; align-items:center; gap:8px; padding:0 14px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--band-ideal);"></span><span style="font-weight:700; font-size:13px; color:var(--ink);">Ideal</span></div></div>
+        <div style="display:flex; align-items:center; height:44px; background:color-mix(in srgb, var(--band-moist) 13%, var(--surface));"><div style="width:170px; display:flex; align-items:center; gap:8px; padding:0 14px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--band-moist);"></span><span style="font-weight:700; font-size:13px; color:var(--ink);">Moist</span></div></div>
+        <div style="display:flex; align-items:center; height:44px; background:color-mix(in srgb, var(--band-wet) 12%, var(--surface));"><div style="width:170px; display:flex; align-items:center; gap:8px; padding:0 14px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--band-wet);"></span><span style="font-weight:700; font-size:13px; color:var(--ink);">Wet</span></div></div>
+        <div style="display:flex; align-items:center; height:44px; border-radius:0 0 8px 8px; background:color-mix(in srgb, var(--band-saturated) 12%, var(--surface));"><div style="width:170px; display:flex; align-items:center; gap:8px; padding:0 14px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--band-saturated);"></span><span style="font-weight:700; font-size:13px; color:var(--ink);">Saturated</span></div></div>
+
+        <!-- OVERLAY: plotting column, left origin at x=170, y-centers 22/66/110/154/198/242/286 -->
+        <div style="position:absolute; top:0; left:170px; right:0; bottom:0;">
+
+          <!-- ===== ENTITY A · Monstera · axis 90 ===== reach Drying(110)..Wet(242); now Moist(198); from Ideal(154) -->
+          <div style="position:absolute; left:79px; top:110px; width:22px; height:132px; border-radius:11px; background:color-mix(in srgb, var(--band-moist) 24%, transparent);"></div>
+          <div style="position:absolute; left:84px; top:105px; width:11px; height:11px; background:var(--surface); border:2px solid var(--band-drying); transform:rotate(45deg);"></div>
+          <div style="position:absolute; left:84px; top:237px; width:11px; height:11px; background:var(--surface); border:2px solid var(--band-wet); transform:rotate(45deg);"></div>
+          <div style="position:absolute; left:89px; top:154px; height:44px; border-left:2px dotted var(--band-moist);"></div>
+          <svg style="position:absolute; left:82px; top:147px;" width="16" height="14" viewBox="0 0 16 14"><path d="M8 13 L1.5 2 L14.5 2 Z" fill="var(--surface)" stroke="var(--band-ideal)" stroke-width="2" stroke-linejoin="round"></path></svg>
+          <div style="position:absolute; left:81px; top:189px; width:18px; height:18px; border-radius:50%; background:var(--band-moist); box-shadow:0 0 0 3px var(--surface), var(--e1);"></div>
+
+          <!-- ===== ENTITY B · Fern · axis 320 ===== reach Dry(66)..Ideal(154); now Drying(110); from Ideal(154) -->
+          <div style="position:absolute; left:309px; top:66px; width:22px; height:88px; border-radius:11px; background:color-mix(in srgb, var(--band-drying) 24%, transparent);"></div>
+          <div style="position:absolute; left:314px; top:61px; width:11px; height:11px; background:var(--surface); border:2px solid var(--band-dry); transform:rotate(45deg);"></div>
+          <div style="position:absolute; left:314px; top:149px; width:11px; height:11px; background:var(--surface); border:2px solid var(--band-ideal); transform:rotate(45deg);"></div>
+          <div style="position:absolute; left:319px; top:110px; height:44px; border-left:2px dotted var(--band-drying);"></div>
+          <svg style="position:absolute; left:312px; top:150px;" width="16" height="14" viewBox="0 0 16 14"><path d="M8 1 L1.5 12 L14.5 12 Z" fill="var(--surface)" stroke="var(--band-ideal)" stroke-width="2" stroke-linejoin="round"></path></svg>
+          <div style="position:absolute; left:311px; top:101px; width:18px; height:18px; border-radius:50%; background:var(--band-drying); box-shadow:0 0 0 3px var(--surface), var(--e1);"></div>
+
+          <!-- ===== ENTITY C · S3 provisional · axis 500 ===== now Moist(198) open ring, no move -->
+          <div style="position:absolute; left:491px; top:189px; width:18px; height:18px; border-radius:50%; background:transparent; border:2.5px solid var(--band-moist); box-shadow:0 0 0 3px var(--surface);"></div>
+          <div style="position:absolute; left:516px; top:192px; font-family:var(--font-data); font-size:10px; color:var(--st-predicted); white-space:nowrap;">provisional</div>
+        </div>
+      </div>
+
+      <!-- reading captions -->
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:20px;">
+        <div style="background:color-mix(in srgb, var(--band-moist) 8%, var(--surface)); border:1px solid var(--border); border-radius:var(--r-tile); padding:11px 14px;"><div style="font-family:var(--font-data); font-size:11px; color:var(--ink); font-weight:600; margin-bottom:3px;">① Monstera · s1</div><div style="font-size:12.5px; line-height:1.5; color:var(--muted);">Ranged <span style="color:var(--ink);">drying → wet</span> this week; last move <span style="color:var(--ink);">ideal → moist</span>; sitting <span style="color:var(--ink);">moist</span> now.</div></div>
+        <div style="background:color-mix(in srgb, var(--band-drying) 8%, var(--surface)); border:1px solid var(--border); border-radius:var(--r-tile); padding:11px 14px;"><div style="font-family:var(--font-data); font-size:11px; color:var(--ink); font-weight:600; margin-bottom:3px;">② Fern · s2</div><div style="font-size:12.5px; line-height:1.5; color:var(--muted);">Ranged <span style="color:var(--ink);">dry → ideal</span>; last move <span style="color:var(--ink);">ideal → drying</span>; <span style="color:var(--ink);">drying</span> now — thirsty, no rush.</div></div>
+        <div style="background:color-mix(in srgb, var(--st-predicted) 8%, var(--surface)); border:1px solid var(--border); border-radius:var(--r-tile); padding:11px 14px;"><div style="font-family:var(--font-data); font-size:11px; color:var(--ink); font-weight:600; margin-bottom:3px;">③ S3 · s4</div><div style="font-size:12.5px; line-height:1.5; color:var(--muted);">One reading, <span style="color:var(--ink);">cal_verified=false</span> — an open ring, no reach or move claimed until it ratifies.</div></div>
+      </div>
+    </section>
+
+    <!-- ============ MARKER VOCABULARY ============ -->
+    <section style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:22px 24px;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:4px; flex-wrap:wrap;">
+        <h2 style="font-family:var(--font-display); font-weight:700; font-size:22px; color:var(--ink); margin:0;">Marker set — the ruling</h2>
+        <span style="font-family:var(--font-data); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.14em; color:var(--muted);">reconciles the one-off · R2 · R4 · R7</span>
+      </div>
+      <p style="margin:0 0 18px; font-size:14px; line-height:1.6; color:var(--muted); max-width:74ch;">The one-off reached for filled/open circle, triangle and diamond. Ratified into five marks, each with exactly one job — so a shape never means two things, and no mark ever claims a reading we don't have.</p>
+
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <!-- now dot -->
+        <div style="display:grid; grid-template-columns:64px 1fr; gap:16px; align-items:center; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:14px 16px;">
+          <div style="display:flex; align-items:center; justify-content:center;"><span style="width:18px; height:18px; border-radius:50%; background:var(--band-moist); box-shadow:0 0 0 3px var(--surface), var(--e1);"></span></div>
+          <div><div style="font-weight:700; font-size:14.5px; color:var(--ink);">Now dot <span style="font-weight:500; color:var(--muted); font-size:13px;">— filled circle</span></div><div style="font-size:13px; line-height:1.5; color:var(--muted); margin-top:2px;">Current band, from a <span style="font-family:var(--font-data); color:var(--ink); font-size:12px;">cal_verified=true</span> reading. Filled in the band's own color. Exactly one per entity.</div></div>
+        </div>
+        <!-- provisional ring -->
+        <div style="display:grid; grid-template-columns:64px 1fr; gap:16px; align-items:center; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:14px 16px;">
+          <div style="display:flex; align-items:center; justify-content:center;"><span style="width:18px; height:18px; border-radius:50%; background:transparent; border:2.5px solid var(--band-moist); box-shadow:0 0 0 3px var(--surface);"></span></div>
+          <div><div style="font-weight:700; font-size:14.5px; color:var(--ink);">Provisional ring <span style="font-weight:500; color:var(--muted); font-size:13px;">— open circle</span></div><div style="font-size:13px; line-height:1.5; color:var(--muted); margin-top:2px;">Same “now” role, but <span style="font-family:var(--font-data); color:var(--ink); font-size:12px;">cal_verified=false</span>. The hollow centre <em>is</em> the honesty signal — a lane we can place but not yet certify. Never earns a reach or connector.</div></div>
+        </div>
+        <!-- from triangle -->
+        <div style="display:grid; grid-template-columns:64px 1fr; gap:16px; align-items:center; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:14px 16px;">
+          <div style="display:flex; align-items:center; justify-content:center;"><svg width="18" height="16" viewBox="0 0 16 14"><path d="M8 13 L1.5 2 L14.5 2 Z" fill="var(--surface)" stroke="var(--band-drying)" stroke-width="2" stroke-linejoin="round"></path></svg></div>
+          <div><div style="font-weight:700; font-size:14.5px; color:var(--ink);">From triangle <span style="font-weight:500; color:var(--muted); font-size:13px;">— hollow triangle</span></div><div style="font-size:13px; line-height:1.5; color:var(--muted); margin-top:2px;">Where the entity started this window. The <strong style="color:var(--ink);">apex points toward the now dot</strong> — that's the direction of travel. Hollow, so it never reads as a live reading.</div></div>
+        </div>
+        <!-- reach diamond -->
+        <div style="display:grid; grid-template-columns:64px 1fr; gap:16px; align-items:center; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:14px 16px;">
+          <div style="display:flex; align-items:center; justify-content:center;"><span style="width:12px; height:12px; background:var(--surface); border:2px solid var(--band-wet); transform:rotate(45deg); display:block;"></span></div>
+          <div><div style="font-weight:700; font-size:14.5px; color:var(--ink);">Reach diamond <span style="font-weight:500; color:var(--muted); font-size:13px;">— hollow diamond, ×2</span></div><div style="font-size:13px; line-height:1.5; color:var(--muted); margin-top:2px;">Caps the reach field at the <span style="color:var(--ink);">wettest</span> and <span style="color:var(--ink);">driest</span> bands touched. A distinct shape on purpose — an <em>extent</em> mark, not “a reading is here now.”</div></div>
+        </div>
+        <!-- connector -->
+        <div style="display:grid; grid-template-columns:64px 1fr; gap:16px; align-items:center; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:14px 16px;">
+          <div style="display:flex; align-items:center; justify-content:center;"><span style="width:0; height:34px; border-left:2px dotted var(--band-moist); display:block;"></span></div>
+          <div><div style="font-weight:700; font-size:14.5px; color:var(--ink);">Movement connector <span style="font-weight:500; color:var(--muted); font-size:13px;">— dotted, stepped</span></div><div style="font-size:13px; line-height:1.5; color:var(--muted); margin-top:2px;">Links observed positions from-dot to now. <strong style="color:var(--ink);">Dotted, never solid</strong> — a transition between two readings, not a continuous path. See below.</div></div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px; display:flex; align-items:flex-start; gap:10px; background:color-mix(in srgb, var(--st-fault) 7%, var(--surface)); border:1px solid color-mix(in srgb, var(--st-fault) 22%, var(--border)); border-radius:var(--r-tile); padding:12px 15px;">
+        <span style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--st-fault); text-transform:uppercase; letter-spacing:.08em; flex:none; margin-top:1px;">hard rule</span>
+        <div style="font-size:13px; line-height:1.55; color:var(--ink);">No mark ever lands on the <strong>Parched (air-dry)</strong> lane for an unwired or NO_SIGNAL entity. Air-dry doubles as “probe may not be in soil” — a dot there would fabricate “bone-dry.” Those entities get <em>no</em> mark at all.</div>
+      </div>
+    </section>
+
+    <!-- ============ RANGE WHISKER ============ -->
+    <section style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:22px 24px;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:4px; flex-wrap:wrap;">
+        <h2 style="font-family:var(--font-display); font-weight:700; font-size:22px; color:var(--ink); margin:0;">Reach: band-span, not raw min–max</h2>
+        <span style="font-family:var(--font-data); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.14em; color:var(--muted);">R3 · honesty-weighted</span>
+      </div>
+      <p style="margin:0 0 18px; font-size:14px; line-height:1.6; color:var(--muted); max-width:74ch;">The open question: a band-span whisker, or raw min–max mapped onto the lanes? While the interior boundaries are <span style="font-family:var(--font-data); color:var(--ink); font-size:13px;">A2</span>-pending, sub-lane precision is precision we can't back. <strong style="color:var(--ink);">Band-span wins for v1.</strong></p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <!-- CHOSEN -->
+        <div style="position:relative; overflow:hidden; border:1px solid color-mix(in srgb, var(--leaf) 34%, var(--border)); border-radius:var(--r-tile); padding:16px 16px 18px; background:color-mix(in srgb, var(--leaf) 5%, var(--surface));">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;"><span style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--leaf); text-transform:uppercase; letter-spacing:.08em;">✓ chosen — band-span</span></div>
+          <div style="display:flex; gap:16px;">
+            <div style="flex:none; width:150px;">
+              <div style="height:26px; display:flex; align-items:center; padding-left:8px; border-radius:5px 5px 0 0; background:color-mix(in srgb, var(--band-drying) 12%, var(--surface)); font-size:11.5px; font-weight:600; color:var(--ink);">Drying</div>
+              <div style="height:26px; display:flex; align-items:center; padding-left:8px; background:color-mix(in srgb, var(--band-ideal) 14%, var(--surface)); font-size:11.5px; font-weight:600; color:var(--ink);">Ideal</div>
+              <div style="height:26px; display:flex; align-items:center; padding-left:8px; border-radius:0 0 5px 5px; background:color-mix(in srgb, var(--band-moist) 13%, var(--surface)); font-size:11.5px; font-weight:600; color:var(--ink);">Moist</div>
+            </div>
+            <div style="position:relative; flex:1;">
+              <!-- whisker spans whole lanes 0..78 (3*26) -->
+              <div style="position:absolute; left:14px; top:13px; width:16px; height:52px; border-radius:8px; background:color-mix(in srgb, var(--band-ideal) 26%, transparent);"></div>
+              <div style="position:absolute; left:16px; top:8px; width:11px; height:11px; background:var(--surface); border:2px solid var(--band-drying); transform:rotate(45deg);"></div>
+              <div style="position:absolute; left:16px; top:60px; width:11px; height:11px; background:var(--surface); border:2px solid var(--band-moist); transform:rotate(45deg);"></div>
+            </div>
+          </div>
+          <p style="margin:16px 0 0; font-size:12.5px; line-height:1.55; color:var(--muted);">Caps snap to whole lanes. Claims only “it was in these bands” — exactly what calibration supports today.</p>
+        </div>
+        <!-- REJECTED -->
+        <sc-if value="{{ showRejected }}" hint-placeholder-val="{{ true }}">
+        <div style="position:relative; overflow:hidden; border:1px solid var(--border); border-radius:var(--r-tile); padding:16px 16px 18px; background:var(--surface);">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;"><span style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--st-fault); text-transform:uppercase; letter-spacing:.08em;">✗ deferred — raw min–max</span></div>
+          <div style="display:flex; gap:16px;">
+            <div style="flex:none; width:150px;">
+              <div style="height:26px; display:flex; align-items:center; padding-left:8px; border-radius:5px 5px 0 0; background:color-mix(in srgb, var(--band-drying) 12%, var(--surface)); font-size:11.5px; font-weight:600; color:var(--ink);">Drying</div>
+              <div style="height:26px; display:flex; align-items:center; padding-left:8px; background:color-mix(in srgb, var(--band-ideal) 14%, var(--surface)); font-size:11.5px; font-weight:600; color:var(--ink);">Ideal</div>
+              <div style="height:26px; display:flex; align-items:center; padding-left:8px; border-radius:0 0 5px 5px; background:color-mix(in srgb, var(--band-moist) 13%, var(--surface)); font-size:11.5px; font-weight:600; color:var(--ink);">Moist</div>
+            </div>
+            <div style="position:relative; flex:1;">
+              <!-- whisker at arbitrary sub-lane offsets implying precision -->
+              <div style="position:absolute; left:14px; top:20px; width:16px; height:40px; border-radius:8px; background:color-mix(in srgb, var(--muted) 22%, transparent);"></div>
+              <div style="position:absolute; left:16px; top:15px; width:11px; height:11px; background:var(--surface); border:2px solid var(--muted); transform:rotate(45deg);"></div>
+              <div style="position:absolute; left:16px; top:55px; width:11px; height:11px; background:var(--surface); border:2px solid var(--muted); transform:rotate(45deg);"></div>
+              <div style="position:absolute; left:36px; top:12px; font-family:var(--font-data); font-size:10px; color:var(--st-fault);">↑ implies exact interior cut</div>
+            </div>
+          </div>
+          <p style="margin:16px 0 0; font-size:12.5px; line-height:1.55; color:var(--muted);">Sub-lane caps read as exact ADC boundaries — but those cuts are A2-pending. Returns once interior boundaries ratify.</p>
+        </div>
+        </sc-if>
+      </div>
+    </section>
+
+    <!-- ============ MOVEMENT CONNECTOR ============ -->
+    <section style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:22px 24px;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:4px; flex-wrap:wrap;">
+        <h2 style="font-family:var(--font-display); font-weight:700; font-size:22px; color:var(--ink); margin:0;">Movement: discrete, never continuous</h2>
+        <span style="font-family:var(--font-data); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.14em; color:var(--muted);">R4</span>
+      </div>
+      <p style="margin:0 0 18px; font-size:14px; line-height:1.6; color:var(--muted); max-width:74ch;">Movement is drawn from the readings we actually took. A smooth diagonal invents the moments <em>between</em> them; a dotted step-connector says “was here, now here” and nothing more.</p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <!-- CHOSEN discrete -->
+        <div style="position:relative; overflow:hidden; border:1px solid color-mix(in srgb, var(--leaf) 34%, var(--border)); border-radius:var(--r-tile); padding:16px; background:color-mix(in srgb, var(--leaf) 5%, var(--surface));">
+          <div style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--leaf); text-transform:uppercase; letter-spacing:.08em; margin-bottom:14px;">✓ chosen — dotted step + from-triangle</div>
+          <div style="display:flex; gap:16px;">
+            <div style="flex:none; width:120px;">
+              <div style="height:30px; display:flex; align-items:center; padding-left:8px; border-radius:5px 5px 0 0; background:color-mix(in srgb, var(--band-drying) 12%, var(--surface)); font-size:11.5px; font-weight:600; color:var(--ink);">Drying</div>
+              <div style="height:30px; display:flex; align-items:center; padding-left:8px; background:color-mix(in srgb, var(--band-ideal) 14%, var(--surface)); font-size:11.5px; font-weight:600; color:var(--ink);">Ideal</div>
+              <div style="height:30px; display:flex; align-items:center; padding-left:8px; border-radius:0 0 5px 5px; background:color-mix(in srgb, var(--band-moist) 13%, var(--surface)); font-size:11.5px; font-weight:600; color:var(--ink);">Moist</div>
+            </div>
+            <div style="position:relative; flex:1;">
+              <svg style="position:absolute; left:18px; top:8px;" width="16" height="14" viewBox="0 0 16 14"><path d="M8 1 L1.5 12 L14.5 12 Z" fill="var(--surface)" stroke="var(--band-drying)" stroke-width="2" stroke-linejoin="round"></path></svg>
+              <div style="position:absolute; left:25px; top:15px; height:60px; border-left:2px dotted var(--band-moist);"></div>
+              <div style="position:absolute; left:17px; top:66px; width:18px; height:18px; border-radius:50%; background:var(--band-moist); box-shadow:0 0 0 3px var(--surface), var(--e1);"></div>
+            </div>
+          </div>
+          <p style="margin:14px 0 0; font-size:12.5px; line-height:1.55; color:var(--muted);">Two readings, two marks, a dotted link. Reads as a jump between observations — honest about what we saw.</p>
+        </div>
+        <!-- REJECTED continuous -->
+        <sc-if value="{{ showRejected }}" hint-placeholder-val="{{ true }}">
+        <div style="position:relative; overflow:hidden; border:1px solid var(--border); border-radius:var(--r-tile); padding:16px; background:var(--surface);">
+          <div style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--st-fault); text-transform:uppercase; letter-spacing:.08em; margin-bottom:14px;">✗ rejected — solid interpolated line</div>
+          <div style="display:flex; gap:16px;">
+            <div style="flex:none; width:120px;">
+              <div style="height:30px; display:flex; align-items:center; padding-left:8px; border-radius:5px 5px 0 0; background:color-mix(in srgb, var(--band-drying) 12%, var(--surface)); font-size:11.5px; font-weight:600; color:var(--ink);">Drying</div>
+              <div style="height:30px; display:flex; align-items:center; padding-left:8px; background:color-mix(in srgb, var(--band-ideal) 14%, var(--surface)); font-size:11.5px; font-weight:600; color:var(--ink);">Ideal</div>
+              <div style="height:30px; display:flex; align-items:center; padding-left:8px; border-radius:0 0 5px 5px; background:color-mix(in srgb, var(--band-moist) 13%, var(--surface)); font-size:11.5px; font-weight:600; color:var(--ink);">Moist</div>
+            </div>
+            <div style="position:relative; flex:1;">
+              <svg style="position:absolute; left:0; top:0;" width="80" height="90" viewBox="0 0 80 90"><line x1="26" y1="15" x2="26" y2="75" stroke="var(--st-fault)" stroke-width="2.5"></line></svg>
+              <div style="position:absolute; left:38px; top:38px; font-family:var(--font-data); font-size:10px; color:var(--st-fault); max-width:110px; line-height:1.35;">invents every band in between</div>
+            </div>
+          </div>
+          <p style="margin:14px 0 0; font-size:12.5px; line-height:1.55; color:var(--muted);">A continuous slope claims the plant passed smoothly through Ideal at a known rate — a reading we never took.</p>
+        </div>
+        </sc-if>
+      </div>
+    </section>
+
+    <!-- ============ WINDOW SELECTOR ============ -->
+    <section style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:22px 24px;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:4px; flex-wrap:wrap;">
+        <h2 style="font-family:var(--font-display); font-weight:700; font-size:22px; color:var(--ink); margin:0;">Window selector</h2>
+        <span style="font-family:var(--font-data); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.14em; color:var(--muted);">R5 · reuses the range vocabulary</span>
+      </div>
+      <p style="margin:0 0 18px; font-size:14px; line-height:1.6; color:var(--muted); max-width:74ch;">One segmented control, the same words the rest of Sprout already uses for ranges. Two anchors: a short <strong style="color:var(--ink);">event</strong> (~15 min — watch one watering play out) and a long <strong style="color:var(--ink);">horizon</strong> (a dry-down cycle).</p>
+
+      <div style="display:inline-flex; align-items:center; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-pill); padding:4px; gap:2px; flex-wrap:wrap;">
+        <span style="font-family:var(--font-data); font-size:12.5px; font-weight:600; color:var(--surface); background:var(--leaf); border-radius:var(--r-pill); padding:7px 15px;">15 min</span>
+        <span style="font-family:var(--font-data); font-size:12.5px; font-weight:500; color:var(--muted); padding:7px 15px;">1 h</span>
+        <span style="font-family:var(--font-data); font-size:12.5px; font-weight:500; color:var(--muted); padding:7px 15px;">24 h</span>
+        <span style="font-family:var(--font-data); font-size:12.5px; font-weight:500; color:var(--muted); padding:7px 15px;">7 d</span>
+        <span style="font-family:var(--font-data); font-size:12.5px; font-weight:500; color:var(--muted); padding:7px 15px; display:inline-flex; align-items:center; gap:6px;">since last re-water <span style="width:6px; height:6px; border-radius:50%; background:var(--st-predicted);"></span></span>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;">
+        <div style="flex:1; min-width:230px; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:12px 15px;">
+          <div style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--leaf); text-transform:uppercase; letter-spacing:.08em; margin-bottom:5px;">event · 15 min</div>
+          <div style="font-size:12.5px; line-height:1.5; color:var(--muted);">Dry → watered → diffusing → resettling to a new moist median. Marks are dense; connector shows each observed step.</div>
+        </div>
+        <div style="flex:1; min-width:230px; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:12px 15px;">
+          <div style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--leaf); text-transform:uppercase; letter-spacing:.08em; margin-bottom:5px;">horizon · 24 h / 7 d</div>
+          <div style="font-size:12.5px; line-height:1.5; color:var(--muted);">A full dry-down. Reach field is the story; the connector reduces to the net from → now move.</div>
+        </div>
+        <div style="flex:1; min-width:230px; background:color-mix(in srgb, var(--st-predicted) 7%, var(--surface)); border:1px solid color-mix(in srgb, var(--st-predicted) 26%, var(--border)); border-radius:var(--r-tile); padding:12px 15px;">
+          <div style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--st-predicted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:5px;">provisional · since last re-water</div>
+          <div style="font-size:12.5px; line-height:1.5; color:var(--muted);">Needs a watering-event stream that doesn't exist yet. Ships <strong style="color:var(--ink);">disabled with a dot</strong> until that anchor lands — never guessed from a wet jump.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ HONEST EMPTY & EXCLUDED STATES ============ -->
+    <section style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:22px 24px;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:4px; flex-wrap:wrap;">
+        <h2 style="font-family:var(--font-display); font-weight:700; font-size:22px; color:var(--ink); margin:0;">Honest empty &amp; excluded states</h2>
+        <span style="font-family:var(--font-data); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.14em; color:var(--muted);">R7 · R8 · consistent with #486</span>
+      </div>
+      <p style="margin:0 0 18px; font-size:14px; line-height:1.6; color:var(--muted); max-width:74ch;">An unearned mark is the one thing this view must never draw. Four ways a row can have nothing honest to place — each says so plainly, in Sprout's voice.</p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+        <!-- unwired / NO_SIGNAL -->
+        <div style="border:1px solid var(--border); border-radius:var(--r-tile); padding:15px 16px; background:var(--surface-2);">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:9px;"><span style="font-family:var(--font-data); font-size:11px; font-weight:700; color:var(--q-nosignal);">— NO_SIGNAL / unwired</span></div>
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+            <div style="flex:1; height:34px; border-radius:7px; border:1px dashed var(--border); display:flex; align-items:center; padding:0 12px; background:repeating-linear-gradient(135deg, transparent, transparent 6px, color-mix(in srgb, var(--muted) 8%, transparent) 6px, color-mix(in srgb, var(--muted) 8%, transparent) 12px);"><span style="font-family:var(--font-data); font-size:16px; color:var(--muted); font-weight:600;">—</span><span style="font-size:12px; color:var(--muted); margin-left:12px;">no band placed</span></div>
+          </div>
+          <div style="font-size:12.5px; line-height:1.5; color:var(--ink); font-style:italic;">“I can barely feel my soil — am I truly bone-dry, or has my sensor slipped?”</div>
+          <div style="font-size:11.5px; line-height:1.45; color:var(--muted); margin-top:7px;">No mark on any lane — least of all Parched. The row holds its place; the reason is named, not dramatized.</div>
+        </div>
+        <!-- provisional cal -->
+        <div style="border:1px solid var(--border); border-radius:var(--r-tile); padding:15px 16px; background:var(--surface-2);">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:9px;"><span style="font-family:var(--font-data); font-size:11px; font-weight:700; color:var(--st-predicted);">cal_verified = false</span></div>
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+            <div style="flex:1; height:34px; border-radius:7px; background:color-mix(in srgb, var(--band-moist) 13%, var(--surface)); display:flex; align-items:center; padding:0 12px; gap:10px;"><span style="width:16px; height:16px; border-radius:50%; background:transparent; border:2.5px solid var(--band-moist); box-sizing:border-box;"></span><span style="font-size:12px; color:var(--muted);">open ring · provisional</span></div>
+          </div>
+          <div style="font-size:12.5px; line-height:1.5; color:var(--ink);">Position placed, authority withheld — a hollow ring and a <span style="font-family:var(--font-data); font-size:11.5px; color:var(--st-predicted);">provisional</span> tag.</div>
+          <div style="font-size:11.5px; line-height:1.45; color:var(--muted); margin-top:7px;">No reach or connector until the band ratifies (C1 · #170). Bands render, authority doesn't.</div>
+        </div>
+        <!-- empty window -->
+        <div style="border:1px solid var(--border); border-radius:var(--r-tile); padding:15px 16px; background:var(--surface-2);">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:9px;"><span style="font-family:var(--font-data); font-size:11px; font-weight:700; color:var(--muted);">EMPTY WINDOW</span></div>
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+            <div style="flex:1; height:34px; border-radius:7px; border:1px solid var(--border); display:flex; align-items:center; padding:0 12px; background:var(--surface);"><span style="font-size:12px; color:var(--muted);">lanes drawn · no marks this window</span></div>
+          </div>
+          <div style="font-size:12.5px; line-height:1.5; color:var(--ink);">The entity is wired and calibrated — it simply hasn't reported inside the chosen window yet.</div>
+          <div style="font-size:11.5px; line-height:1.45; color:var(--muted); margin-top:7px;">Lanes stay visible so the scale is legible; a quiet line says “no readings in this window yet.”</div>
+        </div>
+        <!-- excluded / per-device -->
+        <div style="border:1px solid var(--border); border-radius:var(--r-tile); padding:15px 16px; background:var(--surface-2);">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:9px;"><span style="font-family:var(--font-data); font-size:11px; font-weight:700; color:var(--muted);">EXCLUDED · per-device fence</span></div>
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+            <div style="flex:1; height:34px; border-radius:7px; border:1px solid var(--border); display:flex; align-items:center; padding:0 12px; background:var(--surface); gap:8px;"><span style="width:8px; height:8px; border-radius:2px; background:var(--muted);"></span><span style="font-size:12px; color:var(--muted);">belongs to another device group</span></div>
+          </div>
+          <div style="font-size:12.5px; line-height:1.5; color:var(--ink);">An entity belongs to exactly one device — no cross-device roll-up onto shared lanes.</div>
+          <div style="font-size:11.5px; line-height:1.45; color:var(--muted); margin-top:7px;">Filtered-out entities are named as out-of-scope, never silently merged into another device's picture.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ GUARDRAILS / HANDOFF ============ -->
+    <section>
+      <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:12px;">
+        <h2 style="font-family:var(--font-display); font-weight:600; font-size:13px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin:0;">Guardrails</h2>
+        <span style="font-size:13px; color:var(--muted);">what stays true no matter how the live view is built</span>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="display:grid; grid-template-columns:26px 1fr; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); padding:13px 16px;"><span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--leaf);">1</span><div style="font-size:13.5px; line-height:1.55; color:var(--ink);"><strong>Bands are the only scale.</strong> Raw + band words, never a %. The lanes carry wet→dry; a mark's job is position and identity, not a number.</div></div>
+        <div style="display:grid; grid-template-columns:26px 1fr; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); padding:13px 16px;"><span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--leaf);">2</span><div style="font-size:13.5px; line-height:1.55; color:var(--ink);"><strong>Never claim an unobserved reading.</strong> Reach snaps to whole bands; movement is dotted and discrete; empty is empty. Precision we don't have is precision we don't draw.</div></div>
+        <div style="display:grid; grid-template-columns:26px 1fr; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); padding:13px 16px;"><span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--leaf);">3</span><div style="font-size:13.5px; line-height:1.55; color:var(--ink);"><strong>Air-dry is ambiguous, so it's diagnostic.</strong> A NO_SIGNAL or unwired entity earns no mark — never a false “bone-dry” on the Parched lane.</div></div>
+        <div style="display:grid; grid-template-columns:26px 1fr; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); padding:13px 16px;"><span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--leaf);">4</span><div style="font-size:13.5px; line-height:1.55; color:var(--ink);"><strong>One device, one fence.</strong> Entities never roll up across devices; the shared lanes are a scale, not a merge.</div></div>
+      </div>
+      <div style="margin-top:14px; display:flex; align-items:flex-start; gap:10px; font-size:12.5px; line-height:1.55; color:var(--muted); padding:12px 15px; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile);">
+        <span style="font-family:var(--font-data); font-size:11px; font-weight:600; color:var(--ink); text-transform:uppercase; letter-spacing:.08em; flex:none;">the split</span>
+        <span><strong style="color:var(--ink);">Design</strong> rules the marker set, the reach/movement semantics, the window vocabulary and the honest states here. <strong style="color:var(--ink);">Data</strong> builds the live view against them — R6 live cadence, R9 identity/provenance from the registry, and the interior-boundary refit once A2 ratifies.</span>
+      </div>
+    </section>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1040,&quot;height&quot;:900},&quot;showRejected&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Spec&quot;,&quot;label&quot;:&quot;Show rejected alternatives&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showRejected: this.props.showRejected ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>
