@@ -1,7 +1,9 @@
 # ADR-0027 — Device / Channel / Probe / Plant / Site identity model
 
-**Status:** Proposed — *drafted by Firmware at the bench (2026-07-04) from the three-family fleet
-bring-up (#584); Trellis owns and advances it through the ADR pipeline; Workflow gates the draft PR.*
+**Status:** Accepted — *drafted by Firmware at the bench (2026-07-04) from the three-family fleet
+bring-up (#584); concluded + ratified by Trellis per the maintainer's shepherd/conclude directive
+(2026-07-04). Sub-decision **1b is RESOLVED = Option B** (see §1b); the only remaining open is calibration
+portability — a flagged bench test (§6), not a blocker. Was Proposed 2026-07-04 → Accepted same day.*
 Establishes a stable-UUID identity model; reframes the already-merged #602 coalescing as an interim
 legacy bridge rather than the permanent strategy.
 
@@ -72,6 +74,59 @@ Where exactly it rides is a **sub-decision for Trellis / Data**, between:
 Firmware's lean is (B) or (A) over a new canonical column; the final call is Trellis / Data's against
 the shared contract. Full UUID and all rich fields live registry-side regardless.
 
+**Resolved (Trellis, 2026-07-04): Option B.** `device_id` — already a canonical column — becomes the short
+stable minted id; the friendly *name* moves to the registry (which already carries a `name` field, #592) and
+**must** additionally ride the payload as `name=` on **every** telemetry row — the pre-mint **degrade
+identifier** as much as legibility: under B a row emitted before the UUID is minted (NVS wipe, mint race,
+factory-fresh first boot) has no valid `device_id`, and `name=` is the only identity it can carry. It is
+~free (+~10 bytes ≈ 0.06% of the 19200 budget, Data-measured) and does **not** undo B — a clearly-labelled
+`name=` payload field is a separate honest label, not the conflation-in-the-id-column B removes. It closes B's
+one genuine regression vs A (which kept the name in the id column as its fallback). **Rationale:** B fixes
+the conflation *at its root* — `device_id` becomes a true
+stable identifier (its proper job) instead of a mutable label masquerading as an id in the "id" column,
+which is the exact conflation this ADR exists to end. It **converges the in-flight work**: the dashboard
+fence already keys on `device_id` (#587), so it stays correct and only its *display* swaps to `regdev.name`
+(already the planned binding), and #602 coalescing retires as designed (§8/§9) rather than remaining a
+permanent crutch. It **strengthens the §11.2 dedupe key** `(device_id, …)` by making its lead term genuinely
+stable. And the id is *shorter* than today's friendly string — byte-favorable at 19200 baud. **Format (Firmware's
+call, registered in §6):** a **6-char Crockford base32** nonce (lowercase `0-9 a-z` minus the lookalikes
+`i l o u`) — ~1.07 billion values, ~64× hex's space at the same 6-char width, and a power-of-two alphabet so
+it mints **unbiased** straight from `esp_random()` (base36 would need rejection-sampling). Since this nonce
+*is* `device_id`, the human-safe alphabet matters — a person occasionally reads/types it from a raw log.
+
+This is **not** the additive-only change §11's v2 is: repurposing `device_id`'s meaning requires a **`schema_version`
+bump** (pre-bump logs carry `device_id`=name; post-bump carry `device_id`=stable-id; a reader distinguishes them
+by version). **The number is `schema_version = 3`**, not 2: `2` is **already live-emitted** by the
+experiment-capture isolated writer (`experiment_capture.py`, still `device_id`=name), so reusing it would
+misclassify every shipped experiment row — the reader rule is **`schema_version >= 3` ⇒ `device_id` is the
+stable minted id**, and §11's additive device-owned-time columns ride the same v3 monitor emission (Data's
+"collapse into one bump" instinct, corrected from 2 to 3). This carries the tiny 2nd-epoch migration of the
+three legacy bench identities (§9). That cost is deliberate
+and — per the pre-release posture (zero users, everything committed) — effectively free now; it never gets
+cheaper. *(Option A — stable id in the payload, `device_id` left as the name — was considered and rejected: it is
+additive/safer, but it leaves the conflation in the canonical column and forces the fence to re-point onto a
+payload key anyway — trading a clean normalization for a permanent redundancy. The maintainer may override to A
+at ratification if additive-safety is preferred for install-day sequencing.)*
+
+**Ratification riders (Workflow gate, 2026-07-04 — maintainer-directed):**
+
+1. **The companion air-quality project adopts these semantics from its first
+   implementation.** It has no schema built yet, so the bump costs it nothing — it
+   inherits the *improved* base design (stable id in the id column from day one, no
+   legacy epoch, no migration). Recorded here and in `TELEMETRY_SCHEMA.md` §6 as the
+   cross-project contract; the ADOPTION carry-over note gains it when that project's
+   development starts.
+2. **The device keeps a cached copy of its own name.** "The name moves to the
+   registry" means the registry is the *authoritative home*, not the sole copy: the
+   board caches its current label in NVS (set via #600's rename path) so on-device
+   surfaces — the boot banner today, the W2 glanceable display (#20) — can show a
+   human name without a registry round-trip. Registry wins on conflict.
+3. **Bench legibility is a requirement, not a courtesy:** the boot banner and the
+   `GET /` status page print **both** (`device_id=a1b2c3  name=classic`). Raw
+   telemetry rows **carry** `name=` on every row (the required pre-mint degrade
+   identifier, §1b); the banner/status surfaces always carry the pair — a human at a serial monitor or a
+   browser must never need a lookup table to know which board is talking.
+
 ### 2. Five host-side entities, each `stable_uuid` + mutable label
 
 Device (board), Channel (`device_uuid` + port/GPIO), Probe (sticker + QA + calibration), Plant, and
@@ -129,7 +184,10 @@ not silent**. These are load-bearing for the UUID model, not disposable.
 Add the short stable id; one-time map the legacy bench identities (`plants_esp32_f4e9d4`,
 `Sprout ESP32`) onto the classic's UUID; keep the 1st-epoch originals archived in the records store.
 The merged #602 coalescing serves as the **interim legacy bridge** until the migration lands, after
-which runtime coalescing may retire.
+which only the **live-data runtime** coalescing retires. The v1-epoch `canonical_for` map over the committed,
+name-keyed archive stays **permanent** — those rows are never rewritten (§8's provenance law), so the migration
+re-keys *new* data forward without ever mutating or over-deleting the historical record; #602's map lives on
+purely as the reader for pre-migration logs. *(Data's §8/§9 precision.)*
 
 ## Wave scoping
 
@@ -174,8 +232,9 @@ UUID-keyed.
 
 ## Open (routed)
 
-- **Trellis:** ratify the model; register the wire **schema_version bump**; and settle the 1b
-  sub-decision (where the short id rides) against the `CANONICAL_COLUMNS` / companion contract.
+- **Trellis:** DONE — model concluded/ratified; **1b resolved = Option B** (§1b); the wire
+  `schema_version` bump is registered in `TELEMETRY_SCHEMA.md` §6/§11 (device_id becomes the stable minted
+  id, name → registry). No remaining Trellis blocker; calibration portability is a bench test.
 - **Firmware — #601 (open) IS this model's first slice:** mint + emit the stable id at first boot.
   Do **not** build a parallel "distinct default name" band-aid in the Wave-1 patch if this ADR lands
   this week — the mint solves the collision structurally.
