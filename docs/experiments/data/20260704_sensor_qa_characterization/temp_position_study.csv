@@ -1,0 +1,4 @@
+condition,temp_f,temp_c,mean_raw,n,sd,note
+room_control,,,896,4,,ambient; not thermometer-measured
+cold_cup1,40,4,902.5,10,32.1,ice water; two repositioned reads (930 then 875); position scatter ~55
+hot_cup2,140,60,912.8,22,28.6,in-water only; pre-insertion air transient excluded; cold->hot z~0.87

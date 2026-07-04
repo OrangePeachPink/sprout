@@ -192,6 +192,10 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .scard .raw { font-family: var(--font-data); font-weight: 600; font-size: 34px; line-height: 1; margin: 6px 0 2px; }
 .scard .rawu { color: var(--muted); font-size: 11px; }
 .pill { display: inline-block; color: #fff; font-weight: 600; font-size: 12px; border-radius: var(--r-pill); padding: 2px 10px; }
+/* #658: the instrument's own band on an unassigned card — instrument grammar
+   (#652 [fw] · [band], no mood, no colour chip), subordinate to the "No plant"
+   pill. Muted data font so it reads as a bench reading, never a plant claim. */
+.fwband { margin-left: 8px; font-family: var(--font-data); font-size: 11px; color: var(--muted); }
 .scard .meta { margin-top: 10px; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 12px; }
 .scard .meta > * { min-width: 0; }  /* let columns shrink to their track - never overflow + clip the card (#101) */
 .scard .meta .num { color: var(--ink); overflow-wrap: anywhere; }  /* a long value wraps, never bleeds across */
@@ -402,7 +406,7 @@ footer.prov code { font-family: var(--font-data); }
     </section>
 
     <section class="card">
-      <div class="panel-h"><h2>Cross-channel spread</h2><span class="cap">max − min raw across the four co-located probes (C1: pin + placement variance)</span></div>
+      <div class="panel-h"><h2>Cross-channel spread</h2><span class="cap">max − min raw across each device's co-located probes — fenced per device, never blended across pots (C1: pin + placement variance)</span></div>
       <div class="chartbox short"><canvas id="spreadChart"></canvas></div>
       <div class="kpi" id="spreadKpi"></div>
     </section>
@@ -577,9 +581,15 @@ function cardFor(s){
   // *unassigned* channel (registered, live, no plant yet) shows its real raw —
   // hiding a connected probe's ADC read as "dead" at the bench (2026-07-04).
   c.appendChild(el('div','raw', (s.no_signal ? '—' : fmt(s.raw_last)) + '<span class="rawu"> raw</span>'));
-  const pill = el('span','pill', `${s.band_ui} <span style="opacity:.8">· ${s.mood}</span>`);
+  const pill = el('span','pill', `${s.band_ui}${s.mood ? ` <span style="opacity:.8">· ${s.mood}</span>` : ''}`);
   pill.style.background = s.band_color;
-  const pwrap = el('div'); pwrap.appendChild(pill); c.appendChild(pwrap);
+  const pwrap = el('div'); pwrap.appendChild(pill);
+  // #658: on an unassigned card, ride the instrument's own band beside the "No
+  // plant" pill — `fw · <band>` in instrument grammar (#652), no mood, no colour.
+  // The label your eyes need as probes move between cups; the #656 honesty line
+  // stays put (still "No plant", still no moisture claim).
+  if(s.unassigned && s.band_fw){ pwrap.appendChild(el('span','fwband', `fw · ${s.band_fw}`)); }
+  c.appendChild(pwrap);
   const meta = el('div','meta');
   const add = (l,v) => { meta.appendChild(el('span','muted small',l)); meta.appendChild(el('span','num small',v)); };
   if(s.no_signal){
@@ -731,22 +741,40 @@ function renderTraj(){
 }
 
 function renderSpread(){
-  const sg = withGapBreaks(DASH.spread.points, null);
+  // #651: DASH.spread is now a per-device list (fenced, never blended across pots).
+  const series = Array.isArray(DASH.spread) ? DASH.spread : [];
+  const multi = series.length > 1;
+  const purple = css('--st-predicted')||'#7C5CFF';
+  const nameFor = sid => { const d=(DASH.devices||[]).find(x=>x.device_id===sid); return (d&&(d.name||d.device_id))||sid||'device'; };
+  // single device -> the established spread purple (tethered view unchanged); multi
+  // -> reuse each device's own channel colour (palette-free — the canonical
+  // multi-device series palette is the held #625 decision, adopted here when it lands).
+  const colorFor = sid => { if(!multi) return purple; const s=(DASH.sensors||[]).find(x=>x.device_id===sid); return (s&&s.color)||purple; };
+  const datasets = series.map(sp=>{
+    const sg = withGapBreaks(sp.points, null); const col = colorFor(sp.device_id);
+    return { label: multi? `spread · ${nameFor(sp.device_id)}` : 'spread', data:sg.points, parsing:false,
+      borderColor:col, backgroundColor:hexA(col,0.12), borderWidth:1.6, pointRadius:0,
+      fill:!multi, tension:0.2, spanGaps:false };
+  });
   charts.spread = new Chart(document.getElementById('spreadChart'), {
     type:'line',
-    data:{ datasets:[{ label:'spread', data:sg.points, parsing:false,
-      borderColor:css('--st-predicted')||'#7C5CFF', backgroundColor:hexA('#7C5CFF',0.12),
-      borderWidth:1.6, pointRadius:0, fill:true, tension:0.2, spanGaps:false }] },
+    data:{ datasets },
     options:{ responsive:true, maintainAspectRatio:false, animation:false,
       scales: baseScales('hours since start (local)', 'raw spread (counts)'),
-      plugins:{ legend:{display:false}, gapShade:{ gaps: DASH.gaps },
-        tooltip:{ callbacks:{ label:it=>`spread ${fmt(it.parsed.y)} counts` } } } },
+      plugins:{ legend:{display:multi}, gapShade:{ gaps: DASH.gaps },
+        tooltip:{ callbacks:{ label:it=>`${it.dataset.label}: ${fmt(it.parsed.y)} counts` } } } },
     plugins:[gapShade]
   });
-  const k = document.getElementById('spreadKpi'); k.innerHTML = ''; const sp=DASH.spread;
-  [['current',sp.current],['mean',sp.mean],['median',sp.median],['max',sp.max]].forEach(([l,v])=>{
-    const box=el('div','k'); box.appendChild(el('div','v num', v!=null? fmt(v)+' ' : '— ')); box.appendChild(el('div','l',l+' spread')); k.appendChild(box);
-  });
+  const k = document.getElementById('spreadKpi'); k.innerHTML = '';
+  if(multi){
+    // per-device: one box each, the device's MAX spread (the co-located-probe health signal)
+    series.forEach(sp=>{ const box=el('div','k'); box.appendChild(el('div','v num', sp.max!=null? fmt(sp.max)+' ' : '— ')); box.appendChild(el('div','l', `${nameFor(sp.device_id)} max`)); k.appendChild(box); });
+  } else {
+    const sp = series[0] || {current:null,mean:null,median:null,max:null};
+    [['current',sp.current],['mean',sp.mean],['median',sp.median],['max',sp.max]].forEach(([l,v])=>{
+      const box=el('div','k'); box.appendChild(el('div','v num', v!=null? fmt(v)+' ' : '— ')); box.appendChild(el('div','l',l+' spread')); k.appendChild(box);
+    });
+  }
 }
 
 function renderDist(){
@@ -947,7 +975,7 @@ function renderDetail(sid){
   const dh = el('div','dhead');
   dh.style.borderLeft = `5px solid ${s.color}`; dh.style.paddingLeft = '14px';
   dh.appendChild(el('div', null, `<div class="raw">${fmt(s.raw_last)}<span class="rawu"> raw</span></div>`));
-  const pill = el('span','pill', `${s.band_ui} · ${s.mood}`); pill.style.background = s.band_color;
+  const pill = el('span','pill', `${s.band_ui}${s.mood ? ` · ${s.mood}` : ''}`); pill.style.background = s.band_color;
   const meta = el('div'); meta.appendChild(pill);
   meta.appendChild(el('div','small muted', `GPIO ${s.gpio} · ${s.channel} · fw band <span class="mono">${s.band_fw}</span> · in band ${fmtHours(f.band_now_hours)} · n=${fmt(s.n)}`));
   dh.appendChild(meta);
@@ -1528,7 +1556,7 @@ function collRender(st){
   const on = !!st.collecting;
   start.disabled = on; stop.disabled = !on;
   const box = document.getElementById('collStatus');
-  box.textContent = collDescribe(st); box.className = 'capstatus' + (on ? ' ok' : '');
+  box.textContent = collDescribe(st); box.className = 'capstatus' + (on ? ' run' : '');
 }
 async function collPoll(){
   try{ collRender((await apiJson('/collection/status', {cache:'no-store'})).data); }
@@ -1583,6 +1611,10 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
     if(autoChk.checked){ autoTimer = setInterval(refresh, AUTO_MS); refresh(); }
     else if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
   });
+  // #613 (safe half): a live view should be live by default. Auto-refresh defaults
+  // ON when served live; the operator can still toggle it off. (Auto-STARTING
+  // collection is the separate W2 decision - untouched here.)
+  if(LIVE){ autoChk.checked = true; autoTimer = setInterval(refresh, AUTO_MS); }
 
   document.querySelectorAll('.rangebtn').forEach(b=> b.addEventListener('click', ()=> setRange(b.dataset.r)));
 

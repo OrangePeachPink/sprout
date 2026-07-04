@@ -50,8 +50,10 @@ def test_soil_views_uncontaminated_and_renders(tmp_path: Path) -> None:
     ctx = build_context(_parse(tmp_path))
     # only the four soil channels reach the soil views
     assert sorted(s["id"] for s in ctx["sensors"]) == ["s1", "s2", "s3", "s4"]
-    # cross-channel spread is soil-only (~120), NOT polluted by NIR counts (800+)
-    assert ctx["spread"]["max"] is not None and ctx["spread"]["max"] < 300
+    # cross-channel spread is soil-only (~120), NOT polluted by NIR counts (800+).
+    # #651: spread is now a per-device list; this fixture is one device.
+    assert ctx["spread"], "expected a per-device spread series"
+    assert max(s["max"] for s in ctx["spread"]) < 300
     # calibrated env value/unit does not trip the soil raw-only contract (#324)
     assert ctx["provenance"]["contract"]["raw_only"] is True
     # the full dashboard renders without error on the mixed log

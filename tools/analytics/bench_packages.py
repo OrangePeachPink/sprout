@@ -119,6 +119,14 @@ def load_bench_packages(data_dir: str | Path | None = None) -> list[dict]:
     return entries
 
 
+def soft_wrap(escaped: str) -> str:
+    """Add ``<wbr>`` break opportunities after ``_`` / ``-`` so a long experiment
+    title/id wraps at token boundaries instead of mid-word (#596 flag). Input must
+    already be HTML-escaped; the ``<wbr>`` tags are injected literally. Shared by the
+    app-capture card (``experiments_catalog._card``) and the bench card below."""
+    return escaped.replace("_", "_<wbr>").replace("-", "-<wbr>")
+
+
 def bench_card(e: dict) -> str:
     """A bench-package catalog card — a sibling of the app-capture ``ecard``, with a
     ``bench`` marker class, linking to the ``/lab/bench/<id>`` detail page."""
@@ -137,14 +145,15 @@ def bench_card(e: dict) -> str:
         for k, v in (e.get("refs") or {}).items()
     )
     eid = esc(str(e["experiment_id"]))
+    path = soft_wrap(esc(str(e.get("package_path") or "")))
     return (
         f'<a class="ecard bench" href="/lab/bench/{eid}">'
-        f'<div class="ecard-h"><h3>{esc(str(e["title"]))}</h3>'
+        f'<div class="ecard-h"><h3>{soft_wrap(esc(str(e["title"])))}</h3>'
         f'<span class="ewhen">{esc(str(e.get("date_local") or "—"))}</span></div>'
         f'<div class="emeta">{esc(" · ".join(bits))}</div>'
         f'<div class="echips">{chips}</div>'
-        f'<div class="efoot"><span class="eid">{eid}</span>'
-        f'<span class="equal mono">{esc(str(e.get("package_path") or ""))}</span></div>'
+        f'<div class="efoot"><span class="eid">{soft_wrap(eid)}</span>'
+        f'<span class="equal mono">{path}</span></div>'
         "</a>"
     )
 

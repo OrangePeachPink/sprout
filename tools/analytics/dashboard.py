@@ -90,17 +90,41 @@ RANGE_HOURS: dict[str, float | None] = {
     "all": None,
 }
 
-# firmware band -> (Sprout UI band name, token color, mood label). Mood is band-
-# derived (Sprout principle); full personality copy lives in the .dc.html source.
-BAND_UI: dict[str, tuple[str, str, str]] = {
-    "submerged": ("Saturated", "#0E7A86", "Drowning"),
-    "overwatered": ("Wet", "#17B6C4", "Soggy"),
-    "well watered": ("Moist", "#34A853", "Thriving"),
-    "OK": ("Ideal", "#8BD24F", "Content"),
-    "needs water": ("Drying", "#F5A623", "Thirsty"),
-    "DRY": ("Dry", "#E8703A", "Parched"),
-    "air-dry": ("Parched", "#E0483D", "Critical"),
+# firmware band -> (Sprout UI band name, token color). The mood word is NOT
+# authored here - it is read 1:1 from the design system's single source of truth,
+# mood-band-map.json (see MOOD_BY_BAND below), per the card-chip ruling (#638).
+# Binding the chip to the map is what stops the vocabulary drifting toward drama
+# again (the #596 finding: submerged/overwatered/air-dry read Drowning/Soggy/
+# Critical instead of the map's soaked/refreshed/faint).
+BAND_UI: dict[str, tuple[str, str]] = {
+    "submerged": ("Saturated", "#0E7A86"),
+    "overwatered": ("Wet", "#17B6C4"),
+    "well watered": ("Moist", "#34A853"),
+    "OK": ("Ideal", "#8BD24F"),
+    "needs water": ("Drying", "#F5A623"),
+    "DRY": ("Dry", "#E8703A"),
+    "air-dry": ("Parched", "#E0483D"),
 }
+
+# The canonical chip mood, one word per calibrated band, READ from the design
+# system's single source of truth (ADR-0007 §5, ADR-0008; ruling #638). Chips
+# never author a mood - if a word isn't in the map, it isn't a chip. Degrades to
+# band-only (empty map) if the design doc is absent in a stripped deploy, rather
+# than crashing the dashboard.
+_MOOD_MAP_PATH = (
+    _HERE.parents[1] / "docs" / "design" / "components" / "mood-band-map.json"
+)
+
+
+def _load_mood_map() -> dict[str, str]:
+    try:
+        data = json.loads(_MOOD_MAP_PATH.read_text(encoding="utf-8"))
+        return {b["fwLevel"]: b["mood"] for b in data.get("bands", [])}
+    except (OSError, ValueError, KeyError, TypeError):
+        return {}
+
+
+MOOD_BY_BAND: dict[str, str] = _load_mood_map()
 BAND_NAMES_DRY_TO_WET = [
     "air-dry",
     "DRY",
@@ -166,13 +190,13 @@ def _band_ranges(bounds: list[int], lo: int, hi: int) -> list[dict[str, object]]
     edges = [hi, *bounds, lo]
     out: list[dict[str, object]] = []
     for i, name in enumerate(BAND_NAMES_DRY_TO_WET):
-        ui, color, mood = BAND_UI[name]
+        ui, color = BAND_UI[name]
         out.append(
             {
                 "fw": name,
                 "ui": ui,
                 "color": color,
-                "mood": mood,
+                "mood": MOOD_BY_BAND.get(name, ""),
                 "lo": edges[i + 1],
                 "hi": edges[i],
             }
@@ -540,11 +564,12 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         no_signal = last.quality_flag == "NO_SIGNAL"
         unassigned = registered and plant is None and not no_signal
         if no_signal:
-            ui = ("no signal", "#9A8480", "Unwired")
+            band_ui, band_color, mood = "no signal", "#9A8480", "Unwired"
         elif unassigned:
-            ui = ("unassigned", "#9A8480", "No plant")
+            band_ui, band_color, mood = "unassigned", "#9A8480", "No plant"
         else:
-            ui = BAND_UI.get(last.band or "", ("?", "#9A8480", "Unknown"))
+            band_ui, band_color = BAND_UI.get(last.band or "", ("?", "#9A8480"))
+            mood = MOOD_BY_BAND.get(last.band or "", "")
         # #562 (ADR-0023 v2): the last reading's interior-ambient context, only
         # ever value+tag together - a context value never renders untagged.
         ambient = None
@@ -588,9 +613,9 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
                 "raw_median": int(statistics.median(raws)),
                 "raw_last": last.raw_value,
                 "band_fw": last.band,
-                "band_ui": ui[0],
-                "band_color": ui[1],
-                "mood": ui[2],
+                "band_ui": band_ui,
+                "band_color": band_color,
+                "mood": mood,
                 "spread_last": last.spread,
                 "quality_last": last.quality_flag,
                 "slope_per_hr": _round_opt(_slope_per_hour(pairs), 2),
@@ -632,17 +657,29 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         for sw in _soil_data.sweeps()
         if any(r.raw_value is not None for r in sw.by_sensor.values())
     ]
-    spread_points = []
-    spreads = []
+    # Cross-channel spread, FENCED per device (#651 / #575): a sweep's spread is
+    # max-min across its CO-LOCATED probes, and each sweep belongs to one device
+    # (sweeps key on session_id, which is device-owned). The old code folded every
+    # device's per-sweep spread into ONE global series + one mean/max - blending
+    # separate pots into a number with no physical meaning. Now each device keeps
+    # its own spread series; a lone probe has no peer to spread against (skipped);
+    # a single-device install is exactly one series, numerically unchanged.
+    spread_by_dev: dict[str | None, dict] = {}
     for sw in sweeps:
-        vals = [r.raw_value for r in sw.by_sensor.values() if r.raw_value is not None]
-        if len(vals) < 2 or sw.timestamp_utc is None:
+        if sw.timestamp_utc is None:
             continue
-        sp = max(vals) - min(vals)
-        spreads.append(sp)
-        spread_points.append(
-            {"x": round(_hours_since(sw.timestamp_utc, start), 4), "y": sp}
-        )
+        per_dev: dict[str | None, list[int]] = {}
+        for r in sw.by_sensor.values():
+            if r.raw_value is not None:
+                per_dev.setdefault(_canon(r.device_id), []).append(r.raw_value)
+        x = round(_hours_since(sw.timestamp_utc, start), 4)
+        for dev, vals in per_dev.items():
+            if len(vals) < 2:
+                continue  # no co-located peer -> no meaningful spread
+            sp = max(vals) - min(vals)
+            d = spread_by_dev.setdefault(dev, {"points": [], "spreads": []})
+            d["points"].append({"x": x, "y": sp})
+            d["spreads"].append(sp)
 
     sessions = _sessions(soil)
     gaps = _gaps(sweeps, start)
@@ -656,9 +693,21 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         idx = _dec_idx(len(ts["points"]), MAX_TRAJ_POINTS)
         ts["points"] = [ts["points"][i] for i in idx]
         ts["local"] = [ts["local"][i] for i in idx]
-    spread_points = [
-        spread_points[i] for i in _dec_idx(len(spread_points), MAX_TRAJ_POINTS)
-    ]
+    spread_series = []
+    for dev, d in spread_by_dev.items():
+        pts = [d["points"][i] for i in _dec_idx(len(d["points"]), MAX_TRAJ_POINTS)]
+        s = d["spreads"]
+        spread_series.append(
+            {
+                "device_id": dev,
+                "points": pts,
+                "current": s[-1],
+                "mean": round(statistics.fmean(s), 1),
+                "median": int(statistics.median(s)),
+                "max": max(s),
+                "n": len(s),
+            }
+        )
 
     last_seg = _latest_segment(data.segments)  # #496: chronological, not file order
     total_h = _hours_since(soil[-1].timestamp_utc, start)
@@ -771,13 +820,7 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
             or meta["start_local"],
             "datasets": trajectory_sets,
         },
-        "spread": {
-            "points": spread_points,
-            "mean": round(statistics.fmean(spreads), 1) if spreads else None,
-            "median": int(statistics.median(spreads)) if spreads else None,
-            "current": spreads[-1] if spreads else None,
-            "max": max(spreads) if spreads else None,
-        },
+        "spread": spread_series,  # #651: per-device, fenced - never blended across pots
         "distribution": distribution,
         "quality": quality,
         "integrity": integrity,

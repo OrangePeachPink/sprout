@@ -1,0 +1,6 @@
+phase,t_from_pull_s,raw,note
+air_baseline,,3002,pre-dunk air-dry reference
+submerged_floor,,829,in-cup wettest (hold)
+climbing,1.5,1264,unwiped drip recovery
+recovered_95pct,3.5,2985,~95% of wet-to-dry range; tau~2s
+settled_plateau,6.0,3040,air-dry plateau
