@@ -378,7 +378,7 @@ footer.prov code { font-family: var(--font-data); }
     </section>
 
     <section class="card">
-      <div class="panel-h"><h2>Raw trajectory — 4 channels</h2><span class="cap">higher = drier · band shading behind · hover for local time</span></div>
+      <div class="panel-h"><h2>Raw trajectory — <span id="trajCount">channels</span></h2><span class="cap">higher = drier · band shading behind · hover for local time</span></div>
       <div class="chartbox"><canvas id="trajChart"></canvas></div>
       <div class="legend" id="trajLegend"></div>
     </section>
@@ -462,10 +462,13 @@ function destroyCharts(){ for(const k in charts){ if(charts[k]) charts[k].destro
 /* ---- header ---- */
 function renderHeader(){
   const m = DASH.meta;
+  const devCount = (DASH.devices && DASH.devices.length) || 1;
   document.getElementById('subline').innerHTML =
-    `4 co-located probes · <span class="mono">origplant</span> · fw <span class="mono">${m.fw||'?'}</span> ` +
-    `· ${DASH.sensors.length} channels · ${fmt(DASH.integrity.total)} readings · ` +
+    `${devCount} device${devCount === 1 ? '' : 's'} · ${DASH.sensors.length} channels · ` +
+    `fw <span class="mono">${m.fw||'?'}</span> · ${fmt(DASH.integrity.total)} readings · ` +
     `${m.total_hours}h since ${m.start_display || m.start_local}`;
+  const tc = document.getElementById('trajCount');
+  if (tc) tc.textContent = `${DASH.sensors.length} channels`;
   renderFreshness();
   renderChannelChips();
 }
