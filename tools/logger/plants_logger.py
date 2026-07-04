@@ -168,6 +168,20 @@ def cadence_ms_from_header(header_lines):
     return None
 
 
+def schema_version_from_header(header_lines):
+    """Pull the device's ``schema_version`` from its ``#`` header block; None if
+    absent (#618). The device is the authority on its own wire schema (v3 =
+    stable device_id, ADR-0027); the logger reflects it into the segment header
+    it writes, so ``parse_v1`` reads one unambiguous value instead of depending
+    on which of two ``schema_version=`` lines happens to come last."""
+    for ln in header_lines:
+        for tok in ln.replace(",", " ").split():
+            if tok.startswith("schema_version="):
+                with contextlib.suppress(ValueError):
+                    return int(tok[len("schema_version=") :])
+    return None
+
+
 def stall_timeout_s(cadence_ms, *, mult=STALL_MULT, floor_s=STALL_FLOOR_S):
     """Seconds of no data before forcing a reconnect. Keys off cadence when known,
     with a floor so a slow (30 s) cadence + idle line-noise never false-trips."""
@@ -340,10 +354,20 @@ class RotatingCsv:
         # writes this file - the serial logger by default, the fleet logger
         # when it constructs its own writers. Never a borrowed identity.
         self._logger_version = logger_version or LOGGER_VERSION
+        # #618: the wire schema_version the device declares (v3 = stable
+        # device_id, ADR-0027). Default 1 (legacy) until a device header reveals
+        # it; the logger reflects it so parse_v1 reads one unambiguous value.
+        self._schema_version = 1
         os.makedirs(logdir, exist_ok=True)
 
     def set_header(self, lines):
         self.header_lines = [ln.rstrip("\n") for ln in lines]
+        # #618: reflect the device's declared schema_version into our own header
+        # line, so a v3 device (stable device_id) is logged as v3 - not silently
+        # stamped v1 by a hardcoded logger claim that then fights the device's.
+        v = schema_version_from_header(self.header_lines)
+        if v is not None:
+            self._schema_version = v
 
     def _roll(self, now):
         day = now.strftime("%Y%m%d")
@@ -364,7 +388,7 @@ class RotatingCsv:
         self.writer = csv.writer(self.fh)
         self.fh.write(
             f"# log_start_utc={iso_utc(now)}  tz_offset={tz_offset(now)}  "
-            f"logger={self._logger_version}  schema_version=1\n"
+            f"logger={self._logger_version}  schema_version={self._schema_version}\n"
         )
         for ln in self.header_lines:
             self.fh.write(ln + "\n")
