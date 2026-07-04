@@ -34,9 +34,10 @@ h3 { font-size: 14px; font-weight: 600; }
 .small { font-size: 12px; }
 .tiny { font-size: 11px; }
 
-header.top { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-md); margin-bottom: var(--space-lg); }
+header.top { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-md); margin-bottom: var(--space-lg); flex-wrap: wrap; }
+header.top > div:first-child { flex: 1 1 300px; min-width: 260px; }
 header.top .sub { color: var(--muted); margin-top: 4px; }
-.controls { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .controls .refreshed { color: var(--muted); font-size: 11px; font-family: var(--font-data); max-width: 210px; text-align: right; }
 .btn { font-family: var(--font-ui); font-size: 12px; font-weight: 600; cursor: pointer;
   border: 1px solid var(--border); background: var(--surface); color: var(--ink);
