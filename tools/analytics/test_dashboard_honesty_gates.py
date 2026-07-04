@@ -48,29 +48,58 @@ def _write(tmp_path: Path, rows: list[str], name="a.csv", header=_HEADER) -> Pat
 # --------------------------------------------------------------------------- #
 
 
-def test_registered_channel_with_no_plant_reads_unwired_despite_ok_quality(
+def test_registered_channel_with_no_plant_is_unassigned_not_no_signal(
     tmp_path: Path,
 ) -> None:
-    # the S3 case: a registered board, a floating pin reading OK at firmware
-    # level, no plant assigned -> unwired, no band. This is the exact HONESTY FAIL.
+    # bench feedback (2026-07-04, live QA over WiFi): a registered board reporting
+    # a REAL reading with no plant assigned yet is *unassigned*, NOT *no signal*.
+    # The old gate blanked it - reading a connected probe's valid air-dry ADC as
+    # "the probe is dead". The honest split: show the raw (raw counts are truth),
+    # but make NO plant-moisture claim (the floating-pin protection lives in the
+    # suppressed MOOD, not in hiding the reading).
     reg = Registry(
         devices=[
             Device(
                 device_id="sprout-s3-01",
                 board="esp32-s3",
                 label=None,
-                channels={},  # declared unwired
+                channels={},  # no plant assigned yet
                 base_url="http://s3.local",
             )
         ]
     )
     log = _write(tmp_path, [_soil("sprout-s3-01", "s1", 1650, quality="OK")])
     s = build_context(parse_files([str(log)]), registry=reg)["sensors"][0]
-    assert s["no_signal"] is True
-    assert s["band_ui"] == "no signal" and s["mood"] == "Unwired"
-    assert s["band_color"] == "#9A8480"  # never a band colour
-    # ...but the raw row is still fully present + queryable (display gates only)
+    assert s["no_signal"] is False  # a live reading is NOT "no signal"
+    assert s["unassigned"] is True
+    assert s["band_ui"] == "unassigned" and s["mood"] == "No plant"
+    assert s["band_color"] == "#9A8480"  # neutral, never a moisture-band colour
+    # the raw is now SHOWN (not blanked): the bench can watch the signal live
     assert s["raw_last"] == 1650
+
+
+def test_unassigned_channel_makes_no_plant_moisture_claim(tmp_path: Path) -> None:
+    # the #616 protection preserved differently: a floating pin can read a
+    # plausible band, so an unassigned channel must never present a moisture MOOD
+    # or a plant name - even though its raw is shown.
+    reg = Registry(
+        devices=[
+            Device(
+                device_id="classic",
+                board="esp32dev",
+                label=None,
+                channels={},
+                base_url="http://classic.local",
+            )
+        ]
+    )
+    # 1500 would classify as a wet band if we (wrongly) claimed one
+    log = _write(tmp_path, [_soil("classic", "s1", 1500, quality="OK")])
+    s = build_context(parse_files([str(log)]), registry=reg)["sensors"][0]
+    assert s["unassigned"] is True
+    assert s["plant_name"] is None and s["plant_id"] is None
+    assert s["mood"] == "No plant"  # never "Thriving"/"Moist" for an unmapped pin
+    assert s["raw_last"] == 1500  # ...but the truth is still visible
 
 
 def test_registered_channel_with_a_plant_still_earns_its_band(tmp_path: Path) -> None:
