@@ -548,7 +548,9 @@ function cardFor(s){
   c.appendChild(el('div', null, s.plant_name
     ? `<span class="sid">${s.plant_name}</span> <span class="gpio">${chanLabel} · GPIO ${s.gpio} · ${s.channel}</span>`
     : `<span class="sid">${chanLabel}</span> <span class="gpio">GPIO ${s.gpio} · ${s.channel}</span>`));
-  // HONESTY (#583): an unwired input shows '—', never a floating-noise number
+  // HONESTY (#583/#616): only a genuine NO_SIGNAL blanks the raw to '—'. An
+  // *unassigned* channel (registered, live, no plant yet) shows its real raw —
+  // hiding a connected probe's ADC read as "dead" at the bench (2026-07-04).
   c.appendChild(el('div','raw', (s.no_signal ? '—' : fmt(s.raw_last)) + '<span class="rawu"> raw</span>'));
   const pill = el('span','pill', `${s.band_ui} <span style="opacity:.8">· ${s.mood}</span>`);
   pill.style.background = s.band_color;

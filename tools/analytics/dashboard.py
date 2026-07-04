@@ -519,20 +519,30 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         # (last.sensor_id, not the group key - the key may be device-scoped, #583)
         # #602: attribute via the canonical id - the registry entry lives there
         plant = reg.plant_for(_canon(last.device_id), last.sensor_id)
-        # #616 (the #575 HONESTY rule, end-to-end): a floating pin reads OK /
-        # SATURATED at the firmware level, so the firmware quality_flag alone
-        # can't catch it - the registry's unwired declaration must too. A
-        # REGISTERED device whose channel has no plant assignment is declared-
-        # unwired: no band, no trend, `—`. Guard: an UNregistered device (a
-        # fresh checkout with no config, or a board not yet in the registry) is
-        # never gated this way - we don't claim to know its wiring, so its real
-        # firmware-quality reading still renders. Raw rows stay queryable (house
-        # rule: display gates only). The fix for a newly-wired-but-unassigned
-        # channel is to assign its plant in config (Design-QA's timing caveat).
+        # #616 (the #575 HONESTY rule) split into two states after bench feedback
+        # (2026-07-04, live QA over WiFi): a REGISTERED channel with no plant
+        # assigned is *unassigned*, which is NOT the same as *no signal*.
+        #  - no_signal  = the firmware itself reports NO_SIGNAL. There is no valid
+        #    reading, so blank it: `—`, no band, no trend.
+        #  - unassigned = registered, reporting a real reading, but no plant mapped
+        #    yet (bench QA / pre-install). The prior gate blanked this too - reading
+        #    a connected probe's valid air-dry ADC as "the probe is dead", which is
+        #    a dishonesty in the OTHER direction: raw counts are truth (#575's own
+        #    law). So SHOW its raw + quality + stats, but make NO plant-moisture
+        #    claim - the prominent band MOOD is the plant-monitoring assertion #616
+        #    guards (a floating pin can read a plausible band), so an unassigned
+        #    channel presents "No plant", never a mood.
+        # Guard unchanged: an UNregistered device (fresh checkout, or a board not
+        # yet in the registry) is never gated - we don't claim to know its wiring,
+        # so its real reading keeps its band. Net: never hide a real reading,
+        # never claim an unmapped plant. Raw rows stay queryable either way.
         registered = reg.device(_canon(last.device_id)) is not None
-        no_signal = last.quality_flag == "NO_SIGNAL" or (registered and plant is None)
+        no_signal = last.quality_flag == "NO_SIGNAL"
+        unassigned = registered and plant is None and not no_signal
         if no_signal:
             ui = ("no signal", "#9A8480", "Unwired")
+        elif unassigned:
+            ui = ("unassigned", "#9A8480", "No plant")
         else:
             ui = BAND_UI.get(last.band or "", ("?", "#9A8480", "Unknown"))
         # #562 (ADR-0023 v2): the last reading's interior-ambient context, only
@@ -563,6 +573,7 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
                 "sensor_id": last.sensor_id,  # the bare channel token (#583)
                 "device_id": _canon(last.device_id) or None,  # canonical (#602)
                 "no_signal": no_signal,
+                "unassigned": unassigned,  # registered, live, no plant yet (#616 bench)
                 "plant_id": plant["plant_id"] if plant else None,
                 "plant_name": plant["plant_name"] if plant else None,
                 "ambient": ambient,
