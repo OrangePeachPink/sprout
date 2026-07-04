@@ -85,8 +85,10 @@ def test_env_rows_do_not_pollute_soil_views(tmp_path: Path) -> None:
         s["id"].startswith(("ambient", "nir", "env")) for s in ctx["sensors"]
     )
     # cross-channel spread is soil-only: ~50 (s2-s1), NOT polluted by NIR counts (1234+)
-    spread_max = ctx["spread"]["max"]
-    assert spread_max is not None and spread_max < 200, ctx["spread"]
+    # #651: spread is a per-device list; assert the max across series.
+    assert ctx["spread"], ctx["spread"]
+    spread_max = max(s["max"] for s in ctx["spread"])
+    assert spread_max < 200, ctx["spread"]
     # integrity counts only the soil readings (4), not the 4 env rows
     assert ctx["integrity"]["total"] == 4, ctx["integrity"]["total"]
 

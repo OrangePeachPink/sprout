@@ -632,17 +632,29 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         for sw in _soil_data.sweeps()
         if any(r.raw_value is not None for r in sw.by_sensor.values())
     ]
-    spread_points = []
-    spreads = []
+    # Cross-channel spread, FENCED per device (#651 / #575): a sweep's spread is
+    # max-min across its CO-LOCATED probes, and each sweep belongs to one device
+    # (sweeps key on session_id, which is device-owned). The old code folded every
+    # device's per-sweep spread into ONE global series + one mean/max - blending
+    # separate pots into a number with no physical meaning. Now each device keeps
+    # its own spread series; a lone probe has no peer to spread against (skipped);
+    # a single-device install is exactly one series, numerically unchanged.
+    spread_by_dev: dict[str | None, dict] = {}
     for sw in sweeps:
-        vals = [r.raw_value for r in sw.by_sensor.values() if r.raw_value is not None]
-        if len(vals) < 2 or sw.timestamp_utc is None:
+        if sw.timestamp_utc is None:
             continue
-        sp = max(vals) - min(vals)
-        spreads.append(sp)
-        spread_points.append(
-            {"x": round(_hours_since(sw.timestamp_utc, start), 4), "y": sp}
-        )
+        per_dev: dict[str | None, list[int]] = {}
+        for r in sw.by_sensor.values():
+            if r.raw_value is not None:
+                per_dev.setdefault(_canon(r.device_id), []).append(r.raw_value)
+        x = round(_hours_since(sw.timestamp_utc, start), 4)
+        for dev, vals in per_dev.items():
+            if len(vals) < 2:
+                continue  # no co-located peer -> no meaningful spread
+            sp = max(vals) - min(vals)
+            d = spread_by_dev.setdefault(dev, {"points": [], "spreads": []})
+            d["points"].append({"x": x, "y": sp})
+            d["spreads"].append(sp)
 
     sessions = _sessions(soil)
     gaps = _gaps(sweeps, start)
@@ -656,9 +668,21 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         idx = _dec_idx(len(ts["points"]), MAX_TRAJ_POINTS)
         ts["points"] = [ts["points"][i] for i in idx]
         ts["local"] = [ts["local"][i] for i in idx]
-    spread_points = [
-        spread_points[i] for i in _dec_idx(len(spread_points), MAX_TRAJ_POINTS)
-    ]
+    spread_series = []
+    for dev, d in spread_by_dev.items():
+        pts = [d["points"][i] for i in _dec_idx(len(d["points"]), MAX_TRAJ_POINTS)]
+        s = d["spreads"]
+        spread_series.append(
+            {
+                "device_id": dev,
+                "points": pts,
+                "current": s[-1],
+                "mean": round(statistics.fmean(s), 1),
+                "median": int(statistics.median(s)),
+                "max": max(s),
+                "n": len(s),
+            }
+        )
 
     last_seg = _latest_segment(data.segments)  # #496: chronological, not file order
     total_h = _hours_since(soil[-1].timestamp_utc, start)
@@ -771,13 +795,7 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
             or meta["start_local"],
             "datasets": trajectory_sets,
         },
-        "spread": {
-            "points": spread_points,
-            "mean": round(statistics.fmean(spreads), 1) if spreads else None,
-            "median": int(statistics.median(spreads)) if spreads else None,
-            "current": spreads[-1] if spreads else None,
-            "max": max(spreads) if spreads else None,
-        },
+        "spread": spread_series,  # #651: per-device, fenced - never blended across pots
         "distribution": distribution,
         "quality": quality,
         "integrity": integrity,
