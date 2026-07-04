@@ -1,6 +1,6 @@
 # PRD: Range & movement band-lane view
 
-**Status:** Draft <!-- Draft → Accepted → Implemented -->
+**Status:** Accepted — maintainer, 2026-07-04 <!-- Draft → Accepted → Implemented -->
 **Date:** 2026-07-03
 **Owner:** Design lane (visual language) + Data lane (build) — requested by the maintainer
 **Epic / issues:** TBD once Accepted (break into vertical slices under an epic)
