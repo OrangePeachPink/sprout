@@ -98,6 +98,23 @@ to a token; a repeated animated glyph belongs to one component — not a copy in
 **Provenance.** `_archive/pre-v3-originals/` (the fourteen pages); superseded by the aligned pages across
 `foundations/`, `brand/`, `voice/`, `motion/`, `go-to-market/`, and `merch/`.
 
+## 6 · The mood-only chip ruling — before the full vocabulary
+
+**What it was.** `Sprout Card Chip Mood Ruling.dc.html` fixed the three off-map chip words
+(Drowning→soaked, Soggy→refreshed, Critical→faint) — Problem A of the chip vocabulary, and nothing more.
+
+**Why superseded.** The chip needed three rulings, not one: the word list (A), a grammar across the two
+surfaces that read differently (B), and two word collisions on the same card (C). The mood-only page was a
+true subset; keeping it beside the fuller ruling would have left two chip-vocab documents, one stale. The
+replacement — **Sprout Band-Chip Vocabulary** (Item 1) — carries the same reconciled table and adds the
+grammar and the collision resolutions.
+
+**The useful anti-pattern.** A ruling that fixes one symptom of a three-part problem invites a second
+ruling that contradicts it. Scope the ruling to the whole problem, or say plainly what it defers.
+
+**Provenance.** Live successor: `foundations/Sprout Band-Chip Vocabulary.dc.html`. Original bytes in Git
+history (`git log --all -- "docs/design/foundations/Sprout Card Chip Mood Ruling.dc.html"`).
+
 ---
 
 *Supersede, never delete (ADR-0010) — honored here by distillation: the reasoning is preserved above, the bytes
