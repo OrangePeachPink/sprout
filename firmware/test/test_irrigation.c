@@ -27,6 +27,7 @@
 #include "board_capability.h" /* #273 capability descriptor + gate seam */
 #include "calibration.h" /* SENSOR_CAL_BOUNDARY — per-channel raw->band (#170) */
 #include "wifi_net.h" /* #21 connect-scaffold state machine */
+#include "device_uid.h" /* #601 stable-id base32 mint (ADR-0027 §1b) */
 
 /* -------------------------------------------------------------------------- */
 /* synthetic rig: ADC source + pump observer + event sink                     */
@@ -1317,6 +1318,37 @@ void t_cal_ch_line(void)
 }
 
 /* -------------------------------------------------------------------------- */
+/* device_uid: the stable-id base32 mint (#601 / ADR-0027 §1b)                */
+/* -------------------------------------------------------------------------- */
+
+static void t_device_uid_encode(void)
+{
+    char id[DEVICE_UID_LEN + 1];
+
+    /* deterministic regression pins: all-zero -> all '0'; all-ones (each 5-bit
+     * slice = 31) -> the last alphabet char 'z'. */
+    device_uid_encode(0x00000000u, id);
+    TEST_ASSERT_EQUAL_STRING("000000", id);
+    device_uid_encode(0xFFFFFFFFu, id);
+    TEST_ASSERT_EQUAL_STRING("zzzzzz", id);
+
+    /* always exactly DEVICE_UID_LEN chars + a terminator */
+    device_uid_encode(0x12345678u, id);
+    TEST_ASSERT_EQUAL_UINT(DEVICE_UID_LEN, strlen(id));
+
+    /* every char is Crockford base32 (0-9 a-z) and NEVER a lookalike i/l/o/u */
+    for (unsigned k = 0; k < 200; k++) {
+        device_uid_encode(k * 2654435761u,
+                          id); /* Knuth mix - deterministic spread */
+        for (unsigned j = 0; j < DEVICE_UID_LEN; j++) {
+            char c = id[j];
+            TEST_ASSERT_TRUE((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z'));
+            TEST_ASSERT_TRUE(c != 'i' && c != 'l' && c != 'o' && c != 'u');
+        }
+    }
+}
+
+/* -------------------------------------------------------------------------- */
 /* runner                                                                     */
 /* -------------------------------------------------------------------------- */
 
@@ -1345,5 +1377,6 @@ int main(void)
     RUN_TEST(t_per_channel_cal);
     RUN_TEST(t_cal_ch_line);
     RUN_TEST(t_wifi_net_state_machine);
+    RUN_TEST(t_device_uid_encode);
     return UNITY_END();
 }
