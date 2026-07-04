@@ -3,7 +3,7 @@
 **Status:** Accepted — maintainer, 2026-07-04 <!-- Draft → Accepted → Implemented -->
 **Date:** 2026-07-03
 **Owner:** Design lane (visual language) + Data lane (build) — requested by the maintainer
-**Epic / issues:** TBD once Accepted (break into vertical slices under an epic)
+**Epic / issues:** #623 (epic — vertical slices routed to Workflow)
 
 ---
 
