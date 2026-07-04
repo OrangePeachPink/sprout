@@ -75,6 +75,7 @@ if _ANALYTICS not in sys.path:
     sys.path.insert(0, _ANALYTICS)
 
 from device_registry import load_registry  # noqa: E402
+from fleet_lock import FleetAlreadyRunning, FleetLock  # noqa: E402
 from ingest_store import Store  # noqa: E402
 from parse_v1 import parse_file  # noqa: E402
 from plants_logger import RotatingCsv, _append_payload  # noqa: E402
@@ -233,9 +234,22 @@ class FleetLogger:
         except Exception as e:
             self._log(f"[fleet] archive step failed (non-fatal): {e}")
 
-    def run(self, *, max_polls: int | None = None) -> None:
-        """The steady loop: seed the restart-dedupe window, then poll forever
-        (or ``max_polls`` times - tests and --once use this)."""
+    def run(self, *, max_polls: int | None = None, lock: object | None = None) -> bool:
+        """The steady loop: take the cross-process singleton, seed the
+        restart-dedupe window, then poll forever (or ``max_polls`` times - tests
+        and --once use this). Returns True if it ran, False if refused because
+        another poller already holds the lock (#493 F2).
+
+        ``lock`` is injectable (a context-like object exposing ``acquire``/
+        ``release``); it defaults to a real :class:`FleetLock` keyed on
+        ``logdir`` - the mutex WiFi lacks (a COM port can't be double-opened; an
+        HTTP poll can, so two loggers would interleave one CSV)."""
+        lock = FleetLock(self.logdir) if lock is None else lock
+        try:
+            lock.acquire()
+        except FleetAlreadyRunning as e:
+            self._log(f"[fleet] {e}")
+            return False
         seeded = seed_store_from_disk(self.store, self.logdir)
         if seeded:
             self._log(f"[fleet] restart dedupe seeded from disk ({seeded} rows)")
@@ -262,6 +276,9 @@ class FleetLogger:
                     if w.fh:
                         w.fh.close()
             self._archive(include_all=True)  # the active segments are now closed
+            with contextlib.suppress(Exception):
+                lock.release()
+        return True
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -282,8 +299,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
     fl = FleetLogger(args.logdir, cadence_s=args.cadence_s)
-    fl.run(max_polls=1 if args.once else None)
-    return 0
+    ran = fl.run(max_polls=1 if args.once else None)
+    return 0 if ran else 1  # refused (another poller live) is a nonzero exit
 
 
 if __name__ == "__main__":
