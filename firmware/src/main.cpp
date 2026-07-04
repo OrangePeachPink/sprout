@@ -2,7 +2,7 @@
  * plants - capacitive soil-moisture + pump auto-watering controller
  * Target: classic ESP32 (SoC marked ESP-32D / ESP32-D0WD class)
  *
- * schema v1 - FOUR soil sensors, supervisor-driven (#94/#227, ADR-0016). The
+ * schema v3 - FOUR soil sensors, supervisor-driven (#94/#227, ADR-0016). The
  * irrigation supervisor (lib/irrigation) is the SINGLE sample & actuation
  * authority: ticked every loop, it owns the ADC sweep (one channel at a time,
  * never while a pump runs), classifies each channel, vetoes on health, and — when
@@ -625,11 +625,11 @@ static void printHeader()
         "# authoritative: raw_value (ADC counts) + band (payload 'level'); "
         "value/unit are NULL - reserved for a future calibrated VWC, never an "
         "uncalibrated %.");
-    /* Time provenance (#278, ADR-0018/schema v2 §11.1) - LIVE sync state, not a
+    /* Time provenance (#278, ADR-0018/schema §11.1) - LIVE sync state, not a
      * static claim: device_synced only once SNTP has actually answered. */
     snprintf(buf, sizeof(buf),
              "# time: source=%s - device_seq/time_source ride each row's "
-             "payload, schema v2 §11.1/§11.2",
+             "payload, schema v3 §11.1/§11.2",
              timeIsSynced() ? "device_synced (NTP)"
                             : "device_uptime (unsynced; NTP arms on WiFi "
                               "connect, #278)");
@@ -837,7 +837,7 @@ void setup()
     Serial.print("# boot plants controller fw=");
     Serial.print(PLANTS_FW_VERSION);
     Serial.println(
-        " - schema v1, 4 soil sensors, supervisor-driven "
+        " - schema v3, 4 soil sensors, supervisor-driven "
         "(autonomous dosing DISARMED; manual !water; fail-safe OFF)");
 
     /* BOARD_LED_NONE (255): no verified heartbeat pin for this board - skip rather
