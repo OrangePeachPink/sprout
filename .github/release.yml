@@ -1,3 +1,5 @@
+# Categorizes auto-generated GitHub Release notes by `type:` label (ADR-0009 §6).
+# `type:chore` is intentionally excluded from notes — git history is its record.
 changelog:
   exclude:
     labels:
@@ -15,6 +17,6 @@ changelog:
     - title: "📖 Documentation"
       labels:
         - type:docs
-    - title: "⚙️ Chores"
+    - title: "🔧 Other changes"
       labels:
-        - type:chore
+        - "*"
