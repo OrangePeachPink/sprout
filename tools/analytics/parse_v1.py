@@ -99,6 +99,18 @@ _CANON_BAND = {name.lower(): name for name in BANDS_WET_TO_DRY}
 # provenance header lacks a "cal bounds" line; prefer header-derived bounds always.
 DEFAULT_CAL_BOUNDS = (3050, 2140, 1830, 1520, 1150, 1050)
 
+# A capacitive soil probe cannot read WETTER than fully submerged in water. On the
+# classic's scale the physical wet rail is ~900 raw ("wetter than a cup of water");
+# a reading below it is not moisture - it is a fault (a short, water-contamination,
+# or a disconnected ADC floating near 0). This conservative floor sits well below
+# any genuine saturation on either board (classic-in-water ~900; the compressed C5
+# ~810, #443), so it catches the observed faults - a dead board reading 0-7, and
+# the contaminated P11 s3 that stuck at ~420 - without false-flagging real
+# saturated soil. It is DERIVED (a display/analysis gate); the raw value on the
+# wire and in the log is never altered. A per-board (cal-derived) floor is the
+# robust long-term answer (#670); this fixed floor is the safe interim.
+IMPLAUSIBLE_WET_FLOOR = 500
+
 # The schema_version at which `device_id` becomes the stable minted id (ADR-0027
 # §1b, Accepted; #618). `>= 3` ⇒ stable id + friendly `name=` in payload; `< 3`
 # ⇒ `device_id` is a mutable name (v1 monitor, v2 experiment-capture). Not 2:
@@ -313,6 +325,19 @@ class Reading:
         if raw is None:
             return None
         return _CANON_BAND.get(raw.lower(), raw)
+
+    @property
+    def implausible_wet(self) -> bool:
+        """True if a soil raw is below the physical wet rail (#670) - a reading no
+        capacitive probe can produce from moisture (a short, water-contamination,
+        or a disconnected ADC near 0). A derived fault signal; the raw is never
+        altered. Only meaningful for soil rows (env readings sit at ~27000, far
+        above the floor, so they never trip it)."""
+        return (
+            self.record_type.startswith("plants.soil")
+            and self.raw_value is not None
+            and self.raw_value < IMPLAUSIBLE_WET_FLOOR
+        )
 
     @property
     def role(self) -> str | None:

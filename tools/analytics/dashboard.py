@@ -567,9 +567,18 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         # s1..s8) - surface it as the sensor identity so `sN` in the UI = her
         # sticker, never a channel index. None when the config hasn't mapped it.
         probe = reg.probe_for(_canon(last.device_id), last.sensor_id)
+        # #670: a soil raw below the physical wet rail is impossible from moisture -
+        # it's a fault (short / water-contamination / disconnected ADC near 0). It
+        # takes priority over every other state: a faulted reading is NOT a band,
+        # NOT "saturated", and NOT a plant status. Raw stays shown (truth), but the
+        # chip reads "sensor fault" so a dead probe can't masquerade as a drowning
+        # plant (the live s3-1 board reading 0-7 as "Saturated" is exactly this).
+        sensor_fault = last.implausible_wet
         no_signal = last.quality_flag == "NO_SIGNAL"
-        unassigned = registered and plant is None and not no_signal
-        if no_signal:
+        unassigned = registered and plant is None and not no_signal and not sensor_fault
+        if sensor_fault:
+            band_ui, band_color, mood = "sensor fault", "#9A8480", "Implausible"
+        elif no_signal:
             band_ui, band_color, mood = "no signal", "#9A8480", "Unwired"
         elif unassigned:
             band_ui, band_color, mood = "unassigned", "#9A8480", "No plant"
@@ -605,6 +614,7 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
                 "device_id": _canon(last.device_id) or None,  # canonical (#602)
                 "no_signal": no_signal,
                 "unassigned": unassigned,  # registered, live, no plant yet (#616 bench)
+                "sensor_fault": sensor_fault,  # sub-wet-rail impossible reading (#670)
                 "plant_id": plant["plant_id"] if plant else None,
                 "plant_name": plant["plant_name"] if plant else None,
                 "plant_type": plant.get("plant_type") if plant else None,  # #713

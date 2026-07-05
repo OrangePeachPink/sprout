@@ -180,6 +180,82 @@ def test_firmware_no_signal_still_gates_even_when_registered(tmp_path: Path) -> 
 
 
 # --------------------------------------------------------------------------- #
+# #670: a sub-wet-rail soil raw is a SENSOR FAULT, never a moisture band
+# --------------------------------------------------------------------------- #
+
+
+def test_sub_wet_rail_reading_is_a_sensor_fault_not_a_band(tmp_path: Path) -> None:
+    # the P11 s3 case: an assigned channel whose probe shorted and stuck at ~420 -
+    # below the physical wet rail. It must read "sensor fault", NOT the moisture
+    # band the firmware emitted (submerged) - a dead probe can't be a drowning plant.
+    reg = Registry(
+        devices=[
+            Device(
+                device_id="classic",
+                board="esp32dev",
+                label=None,
+                channels={"s3": {"plant_id": "p11", "plant_name": "corn-plant"}},
+            )
+        ]
+    )
+    log = _write(tmp_path, [_soil("classic", "s3", 420, level="submerged")])
+    s = build_context(parse_files([str(log)]), registry=reg)["sensors"][0]
+    assert s["sensor_fault"] is True
+    assert s["band_ui"] == "sensor fault" and s["mood"] == "Implausible"
+    assert s["band_ui"] != "Saturated"  # never renders the impossible band
+    assert s["raw_last"] == 420  # ...but the raw is preserved (truth, still shown)
+
+
+def test_dead_board_near_zero_reads_as_fault_not_saturated(tmp_path: Path) -> None:
+    # the live s3-1 board case: a disconnected board floating to ~0-7 raw was
+    # rendering all four channels as "Saturated - soaked". Zero is a fault.
+    reg = Registry(
+        devices=[
+            Device(device_id="s3-1", board=None, label=None, channels={}),
+        ]
+    )
+    log = _write(tmp_path, [_soil("s3-1", "s1", 4, level="submerged")])
+    s = build_context(parse_files([str(log)]), registry=reg)["sensors"][0]
+    assert s["sensor_fault"] is True
+    assert s["band_ui"] == "sensor fault"
+
+
+def test_genuine_saturation_is_not_a_fault(tmp_path: Path) -> None:
+    # a real saturated reading (just below the wettest cal bound, but ABOVE the
+    # physical rail) is honest wet soil - it must keep its band, not trip the fault.
+    reg = Registry(
+        devices=[
+            Device(
+                device_id="classic",
+                board="esp32dev",
+                label=None,
+                channels={"s1": {"plant_id": "p01", "plant_name": "pothos"}},
+            )
+        ]
+    )
+    log = _write(tmp_path, [_soil("classic", "s1", 980, level="submerged")])
+    s = build_context(parse_files([str(log)]), registry=reg)["sensors"][0]
+    assert s["sensor_fault"] is False
+    assert s["band_ui"] != "sensor fault"  # 980 is real saturation, not a fault
+
+
+def test_implausible_wet_is_a_parse_boundary_flag_raw_untouched(tmp_path: Path) -> None:
+    # the flag lives on Reading (the single boundary), raw preserved; env readings
+    # (huge raw) never trip it.
+    from parse_v1 import IMPLAUSIBLE_WET_FLOOR
+
+    log = _write(
+        tmp_path,
+        [_soil("classic", "s1", 420), _soil("classic", "s2", 980)],
+    )
+    readings = {r.sensor_id: r for r in parse_files([str(log)]).readings}
+    assert readings["s1"].implausible_wet is True
+    assert readings["s1"].raw_value == 420  # raw never altered
+    assert readings["s2"].implausible_wet is False
+    assert IMPLAUSIBLE_WET_FLOOR == 500  # documented, tunable floor
+
+
+# --------------------------------------------------------------------------- #
 # #617: cal_provisional fails CLOSED - WiFi can't claim bench-verified from silence
 # --------------------------------------------------------------------------- #
 
