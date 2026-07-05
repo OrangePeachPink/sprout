@@ -27,16 +27,16 @@ Both live boards held their IPs on solid brick power. The yellow was never neede
 `channels` are keyed by the on-wire `sensor_id` (board **port**); `probe` = the physical sticker seated in it
 (ADR-0027 channel≠probe — on the C5, probes s5–s8 sit on ports that emit `s3/s4/s1/s2`).
 
-| Plant | Probe | Board / port | Species (confidence) |
-| --- | --- | --- | --- |
-| p01 | s5 | C5 / s3 | Pothos, small (genus conf.) |
-| p02 | s2 | classic / s2 | Pothos, XXL (genus conf.) |
-| p03 | s7 | C5 / s4 | Pothos, XL (genus conf.) |
-| p04 | s4 | classic / s4 | Dracaena / cane-type (guess) |
-| p06 | s3 | classic / s3 | Anthurium "Lovable Hearts" (named) |
-| p07 | s6 | C5 / s2 | Bromeliad (described) |
-| p10 | s8 | C5 / s1 | Pothos, office comparator (genus conf.) |
-| p11 | s1 | classic / s1 | "Miniature corn-plant"-like (described) |
+| Plant | Probe | Board (nonce) | Port | GPIO | Species (confidence) |
+| --- | --- | --- | --- | --- | --- |
+| p01 | s5 | official C5 (8gtt1h) | s3 | GPIO1 | Pothos, small (genus conf.) |
+| p02 | s2 | classic (y9d41p) | s2 | GPIO35 | Pothos, XXL (genus conf.) |
+| p03 | s7 | official C5 (8gtt1h) | s4 | GPIO4 | Pothos, XL (genus conf.) |
+| p04 | s4 | classic (y9d41p) | s4 | GPIO39 | Dracaena / cane-type (guess) |
+| p06 | s3 | classic (y9d41p) | s3 | GPIO36 | Anthurium "Lovable Hearts" (named) |
+| p07 | s6 | official C5 (8gtt1h) | s2 | GPIO6 | Bromeliad (described) |
+| p10 | s8 | official C5 (8gtt1h) | s1 | GPIO5 | Pothos, office comparator (genus conf.) |
+| p11 | s1 | classic (y9d41p) | s1 | GPIO34 | "Miniature corn-plant"-like (described) |
 
 ## Live in-soil readings (at go-live)
 
@@ -112,6 +112,55 @@ Watering verdict (prediction + live): **water p02/p03/p10**, light **p04/p11**, 
 - The 3 sensorless plants have **no dashboard card yet** (ADR-0028 W2 / #20, unbuilt).
 - The yellow C5 is **down** (deferred recovery).
 - Watering predictions are **inference from bench evidence**, not calibration-ratified.
+
+## Power topology & placement
+
+Windowsill right-side outlet (US 110 V, grounded) → ungrounded 2-plug extension to the center-back ledge.
+Both boards on **brick power only, no PC USB**:
+
+| MCU | Brick | Cable | Note |
+| --- | --- | --- | --- |
+| classic (y9d41p) | **Apple 20 W / 3 A** | charge-only | the fix — a marginal phone brick browned out WiFi on TX |
+| official C5 (8gtt1h) | phone brick (Meta 20 W USB-C **or** Samsung 1.55 A USB-A) | USB-C / A→C | **confirm which — GAP** |
+| yellow C5 | (unplugged) | — | shelved spare |
+
+**Insertion-depth rule used:** seat each probe so the **lower ~50% of the blade** is in the root-zone soil —
+that's the measuring element (#660 depth sweep). Burying only the tip wastes the sensitive half.
+
+**GAPS to fill (fast, needs your eyes):** per-plant windowsill position (left→right order); pot size/soil per
+plant if not already in the Sage survey; and which phone brick actually feeds the official C5.
+
+## Board disposition
+
+| Board | `device_id` | Disposition | Why |
+| --- | --- | --- | --- |
+| classic | y9d41p | **DEPLOYED** | cal-verified, 4 plants + env (SHT45 / AS7263) |
+| official C5 | 8gtt1h | **DEPLOYED** | 4 plants; placeholder cal (#443) |
+| yellow C5 | yyvvpd | **SHELVED — hot spare** | minted + clean-boot verified (#637); soil continuity **not** completed (blocked today by a flaky CH340 port, a `rst:0x15` USB reset loop, and no-WiFi-on-brick). Needs a clean re-flash + WiFi re-onboard before redeploy. Drop-in third when a reason appears. |
+| S3 | (esp32s3) | **AWAITING SOLDER** | header pins not soldered; never a Wave-1 candidate |
+
+**Yellow thermal note (owed):** the yellow was **not thermally characterized** — its bring-up was
+electrical/continuity only, now shelved. ROM boot log showed a benign `MSPI Timing` PSRAM error (app boots
+past it) but **no thermal or brownout event**; `die_temp` was not captured. Flag for the recovery pass.
+
+## Known-conditions register (per probe)
+
+| Probe | Stress history | Corrosion (#657) | Cal note |
+| --- | --- | --- | --- |
+| s1 | water-contaminated (recovered) | minimal (deployed) | — |
+| s2 | reverse-polarity (recovered) | **notable** (deployed) | **C1 wet-bias** — gain+offset (calibration.h) |
+| s3 | dry-down reference probe | minor (deployed) | — |
+| s4 | — | minimal (deployed) | — |
+| s5–s12 | new units | **pristine** (never deployed) | provisional per-channel only |
+
+All four deployed probes (s1–s4) show onboard-connector corrosion by degree → **#657 waterproofing before the
+pumps (#94)**. New units (s5–s12) are clean.
+
+## Wedge safety check (#599) — NOT run this session
+
+Honest gap: the ~30-second `!wedge` watchdog / fail-safe confirmation was **not run** this session (boards went
+straight to untethered brick + WiFi; no serial at go-live). The classic's D1 wedge passed on a *prior* session
+(fleet capstone), but there is **no new wedge confirmation** for this install — **#599 stays open.**
 
 ## Open items (the save — what's next)
 
