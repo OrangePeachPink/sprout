@@ -54,6 +54,48 @@ at each release.
 A milestone is created **when a build is planned**, numbered **by its content** per §2 — not
 pre-allocated to inflate ahead of the work. **No milestone = backlog.**
 
+### 5. Wave ↔ version mapping (the release train)
+
+The roadmap ships as **waves**; each wave and its point-releases map to versions by a fixed rule:
+
+> **Wave X.Y → `v0.(6+X).Y`.** A wave's `.0` is its **MINOR** (the headline new capability);
+> each `.Y` (Y > 0) is a **PATCH** point-release that *stabilizes* the wave — fixes, polish, docs,
+> robustness — with no new headline capability.
+
+| Wave | Theme | Version |
+|---|---|---|
+| 1 | Monitor (shipped 2026-07-04) | `v0.7.0` |
+| 1.1 | Stabilize | `v0.7.1` |
+| 2 | Predict & Deliver | `v0.8.0` |
+| 2.1 | Stabilize | `v0.8.1` |
+| 3 | Pumps | `v0.9.0` |
+| 3.1 + polish | Stabilize | `v0.9.x` |
+| 4 | Public | `v1.0.0` |
+
+This keeps §2's discipline intact — new capability still earns the MINOR (it anchors a wave's `.0`),
+fixes still ride a PATCH — while giving the roadmap a predictable version line. `1.0.0` stays the
+deliberate Wave-4 public declaration (§2), never reached by counting.
+
+**Milestones are the spine.** A GitHub **milestone = a version** (`v0.7.1`, `v0.8.0`, …) — the single
+source of truth for "what ships when" (native progress bar + release-note source). The project board's
+**Wave** field is the coarse roadmap lens; the **milestone** is authoritative for a build's contents.
+
+### 6. Release criteria — a release is not done until its notes exist
+
+Cutting a release is a Workflow-lane gate with these criteria:
+
+1. The version's **milestone** is complete (or its scope is deliberately closed).
+2. A **GitHub Release** is cut at the version tag with **auto-generated notes**
+   (`gh release create vX.Y.Z --generate-notes`), categorized by `.github/release.yml` (by `type:`
+   label), then **curated** for readability. Notes are **tag-to-tag** — which is why the `v0.7.0`
+   baseline tag matters: without a prior tag, generation dumps the whole history.
+3. **`CHANGELOG.md`** gets the same version section — the appendable in-repo record (§3, per-component).
+4. The **firmware version constant** (`firmware/include/config.h`) is synced to the release version (§3).
+
+Auto-generated notes are the default; hand-curation refines them. The first release (`v0.7.0`) is
+hand-curated because it predates any baseline tag. `type:chore` work is intentionally excluded from
+release notes (git history is its record).
+
 ## Consequences
 
 - One version line is simple and standard; the CHANGELOG carries the per-component detail the single
