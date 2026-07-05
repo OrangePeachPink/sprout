@@ -69,7 +69,7 @@ decision, not a soil-suitability one:
 
 Two MCUs × 4 channels = 8 = the entire instrumentable population, **exactly**. The third board was always
 headroom (ADR-0028: sensorless plants are first-class "alive, not probed," never degraded). **Current schema
-has no dashboard representation for a probe-less plant yet — that is W2 (#20), unbuilt** — so p05/p08/p09 are
+has no dashboard representation for a probe-less plant yet — that is W2 (#679), unbuilt** — so p05/p08/p09 are
 documented here and in the plant survey but render no card by design (no probe → no reading).
 
 ## Registry
@@ -109,7 +109,7 @@ Watering verdict (prediction + live): **water p02/p03/p10**, light **p04/p11**, 
 ## Honest scope
 
 - C5 bands are **provisional** (#443 — the C5's ADC is uncalibrated; only the classic is cal-verified).
-- The 3 sensorless plants have **no dashboard card yet** (ADR-0028 W2 / #20, unbuilt).
+- The 3 sensorless plants have **no dashboard card yet** (ADR-0028 W2 / #679, unbuilt).
 - The yellow C5 is **down** (deferred recovery).
 - Watering predictions are **inference from bench evidence**, not calibration-ratified.
 
@@ -199,7 +199,7 @@ straight to untethered brick + WiFi; no serial at go-live). The classic's D1 wed
 | C5 ADC calibration | **#443** | bands provisional until done |
 | Per-probe calibration | **#621** | cal that travels with the probe |
 | Sensor-fault quality flag | **#673** | filed this session (firmware + parse-boundary) |
-| Sensorless plant dashboard | **#20** | ADR-0028 W2 — render p05/p08/p09 honestly |
+| Sensorless plant dashboard | **#679** | ADR-0028 W2 — render p05/p08/p09 honestly |
 | WiFi RSSI in telemetry | *(unfiled)* | low-priority diagnostic for install-spot decisions |
 | Waterproofing before pumps | **#657** | pre-#94 corrosion mitigation |
 | DHCP reservations for fleet | *(unfiled)* | stabilize board IPs so the registry doesn't drift |
@@ -214,6 +214,6 @@ maintainer's local archive.
 `pioarduino/platform-espressif32#55.03.39` (ADR-0024, #529); a mid-session VS Code / PlatformIO package reload
 re-fetched the *same* pinned tag — no toolchain drift, deployed baseline reproducible.
 
-Refs: #584 · #660 · #667 · #443 · #621 · #673 · #657 · #20 · #631 · #276 · #486 · ADR-0027 · ADR-0028.
+Refs: #584 · #660 · #667 · #443 · #621 · #673 · #657 · #679 · #631 · #276 · #486 · ADR-0027 · ADR-0028.
 
 — Firmware 🔧
