@@ -1,7 +1,7 @@
 # Wave-1 go-live — 8 plants live in soil — 2026-07-04
 <!-- cspell:words drydown dracaena anthurium bromeliad pothos succulent cachepot cactus marginata -->
 <!-- cspell:words eFuseCal RFC nonce brownout esptool untethered rootball prewire deasserted -->
-<!-- cspell:words yyvvpd instrumentable MSPI RSSI -->
+<!-- cspell:words yyvvpd instrumentable MSPI RSSI rootbound terracotta wicks -->
 
 **Wave-1 is live.** Eight instrumented windowsill plants captured live in soil over WiFi, across two proven
 ESP32 boards. This packet is the install-day / go-live record and the session "save": the fleet, the install
@@ -121,14 +121,40 @@ Both boards on **brick power only, no PC USB**:
 | MCU | Brick | Cable | Note |
 | --- | --- | --- | --- |
 | classic (y9d41p) | **Apple 20 W / 3 A** | charge-only | the fix — a marginal phone brick browned out WiFi on TX |
-| official C5 (8gtt1h) | phone brick (Meta 20 W USB-C **or** Samsung 1.55 A USB-A) | USB-C / A→C | **confirm which — GAP** |
+| official C5 (8gtt1h) | **Samsung 5 V / 1.55 A** | USB-A → C | confirmed |
 | yellow C5 | (unplugged) | — | shelved spare |
 
 **Insertion-depth rule used:** seat each probe so the **lower ~50% of the blade** is in the root-zone soil —
 that's the measuring element (#660 depth sweep). Burying only the tip wastes the sensitive half.
 
-**GAPS to fill (fast, needs your eyes):** per-plant windowsill position (left→right order); pot size/soil per
-plant if not already in the Sage survey; and which phone brick actually feeds the official C5.
+**Placement:** the two boards split the sill — **classic serves the LEFT ledge, official C5 the RIGHT.**
+
+- **Left ledge:** p02, p04, p06, p11 (classic) + **p08 cactus** (sensorless)
+- **Right ledge:** p01, p03, p07, p10 (official C5) + **p09 succulent** + **p05 braided Dracaena** (sensorless)
+
+## Pot & soil observations (per plant)
+
+Pot Ø = top-edge diameter, tape-measured across the centerline past the plant (approximate).
+
+| Plant | Ledge | Pot Ø | Soil / root notes |
+| --- | --- | --- | --- |
+| p01 | R | 6" | home; drought-cycled soil (poor wicking) |
+| p02 | L | 10" | largest; home; drought-cycled |
+| p03 | R | 9" | home; drought-cycled |
+| p04 | L | 8" (shallow, wide) | 2 of 3 original plants died → ~⅔ pot is defunct rootballs (no support); ~1" decorative moss top (minimal aid). **Behaves like a much smaller pot.** |
+| p05 | R | 6" | *sensorless* — braided *Dracaena marginata*, hard rootbound; roots grown into the inner/outer-pot gap and sip from water pooled there over the week |
+| p06 | L | 5" | Anthurium; drought-stressed but now retaining (live = well-watered) |
+| p07 | R | 4.5" | rootbound; **tight watertight outer pot** → water pours into the inner/outer gap and stagnates; **no visible topsoil** (all leaves), no evaporation channel → chronically waterlogged (drainage-first, per Sage) |
+| p08 | L | 2" | *sensorless* — cactus; low soil (~50–60% depth), minimal roots, spills on any bump |
+| p09 | R | 2" | *sensorless* — succulent; nearly all roots, almost no soil |
+| p10 | R | 6" | **terracotta + built-in drip tray** (resoaks within 20–30 min of watering); office plant, 4 yr × ~1 cup/week → **clumpiest / moistest soil, best probe contact of the fleet** |
+| p11 | L | 6" | office corn-plant-like; top-core reservoir holds ~⅛ cup |
+
+**Fleet soil context:** the home plants (p01–p09 except p07) have been through repeated **over-dry / drought
+cycles**, so their soil no longer diffuses or wicks well across the pot — a real driver of the within-pot
+heterogeneity the survey saw. Quarterly **kitchen-sink soak + leaf-rinse** is the maintainer's rejuvenation
+routine (home plants). p07 stays waterlogged even after a 3-week skip; p10 (office-cared) is the retention
+outlier — its consistent care shows in the soil.
 
 ## Board disposition
 
@@ -139,9 +165,11 @@ plant if not already in the Sage survey; and which phone brick actually feeds th
 | yellow C5 | yyvvpd | **SHELVED — hot spare** | minted + clean-boot verified (#637); soil continuity **not** completed (blocked today by a flaky CH340 port, a `rst:0x15` USB reset loop, and no-WiFi-on-brick). Needs a clean re-flash + WiFi re-onboard before redeploy. Drop-in third when a reason appears. |
 | S3 | (esp32s3) | **AWAITING SOLDER** | header pins not soldered; never a Wave-1 candidate |
 
-**Yellow thermal note (owed):** the yellow was **not thermally characterized** — its bring-up was
-electrical/continuity only, now shelved. ROM boot log showed a benign `MSPI Timing` PSRAM error (app boots
-past it) but **no thermal or brownout event**; `die_temp` was not captured. Flag for the recovery pass.
+**Yellow thermal note:** under normal firmware operation (connected + probed from the PC), the yellow ran at
+**normal temps — no thermal issue observed** (maintainer, live). The session's trouble was purely the USB
+power / `rst:0x15` reset loop, **not thermal**; the ROM boot log showed a benign `MSPI Timing` PSRAM error
+(app boots past it) and no brownout. So the shelved spare carries **no known thermal concern** — a formal
+`die_temp` characterization can wait for the recovery pass.
 
 ## Known-conditions register (per probe)
 
