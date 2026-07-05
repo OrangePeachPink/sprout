@@ -320,6 +320,9 @@ stalling until the next relay.
 - `type:*` — the kind of work (mirrors the commit `type:` vocabulary)
 - `area:*` — the subsystem (control / logging / sensing / actuators / analytics)
 - `layer:*` — `firmware` (needs a reflash) vs `host` (build anytime)
+- `for:*` — routing hint to a lane (a best-guess owner, not a commitment — Workflow still triages):
+  `for:firmware` (incl. bench) · `for:data` · `for:design` (→ DesignQA) · `for:dx` · `for:trellis` ·
+  `for:workflow` · `for:maintainer`. See the lane roster in [AGENTS.md](../AGENTS.md#the-lanes).
 - `blocks:*` — milestone **gates**, independent of Priority: `blocks:pumps`, `blocks:public-release`,
   `blocks:data-integrity`. Filter by these to see what stands between us and pumps / a public release /
   trustworthy data.
