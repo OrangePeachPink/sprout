@@ -148,7 +148,7 @@ Pot Ø = top-edge diameter, tape-measured across the centerline past the plant (
 | p08 | L | 2" | *sensorless* — cactus; low soil (~50–60% depth), minimal roots, spills on any bump |
 | p09 | R | 2" | *sensorless* — succulent; nearly all roots, almost no soil |
 | p10 | R | 6" | **terracotta + built-in drip tray** (resoaks within 20–30 min of watering); office plant, 4 yr × ~1 cup/week → **clumpiest / moistest soil, best probe contact of the fleet** |
-| p11 | L | 6" | office corn-plant-like; top-core reservoir holds ~⅛ cup |
+| p11 | L | 6" | office corn-plant-like; **same terracotta pot + built-in drip tray as p10** (resoak benefit); top-core reservoir ~⅛ cup; very non-uniform wetting |
 
 **Fleet soil context:** the home plants (p01–p09 except p07) have been through repeated **over-dry / drought
 cycles**, so their soil no longer diffuses or wicks well across the pot — a real driver of the within-pot
