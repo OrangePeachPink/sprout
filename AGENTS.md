@@ -152,9 +152,11 @@ wiring/power changes and with Data on schema extensions for new sensor readings.
 ## Workflow & GitHub
 
 - **Issues are the ledger.** Every unit of work is an issue (open via the forms). IDs are `#N`.
-- **The [board][board]** is the working view. Fields: **Status** (Backlog → In Progress →
+- **The [board][board]** is the working view. Native fields: **Status** (Backlog → In Progress →
   Needs Verification → **Ready to Merge** → Done / Won't Do) · **Priority** (P0–P3, execution order) ·
-  **Size** (XS–XL) · **Verification** (Pending / Approved / Conditional / Changes requested).
+  **Size** (XS–XL) · **Milestone** (target version — see below) · **Verification** (Pending / Approved /
+  Conditional / Changes requested) · native **Sub-issues progress**. *(The old custom "Wave" field is
+  retired — milestones are the roadmap spine.)*
 - **Discussions** = the idea inbox · **PRDs** (`docs/prd/`) = specs for larger features ·
   **ADRs** (`docs/adr/`) = significant or hard-to-reverse decisions (any lane may author one in its area).
 - **The verification gate (the rule that matters most), two stages:** the implementer builds to the issue's
@@ -171,6 +173,30 @@ wiring/power changes and with Data on schema extensions for new sensor readings.
 - **`main` is protected:** PR required, squash-merge, no direct pushes, no force-push/deletion.
 - **Gate labels** `blocks:pumps` / `blocks:public-release` / `blocks:data-integrity` mark
   milestone gates, independent of Priority.
+- **Milestones = versions = the roadmap/release spine** ([ADR-0009](docs/adr/0009-versioning-and-release-policy.md)).
+  A milestone is a shippable SemVer version (`v0.7.1`, `v0.8.0`, …) and the home for its planned work —
+  **no milestone = backlog.** The roadmap runs `v0.7.0` (Monitor, shipped) → `v0.9.0` (pumps) → `v0.9.9`
+  (pre-release playbook) → **`v1.0.0`** (the deliberate public release, never reached by counting).
+- **Releases carry the notes.** Cutting a **GitHub Release** at a version tag **auto-generates** notes from
+  the PRs merged since the last tag, categorized by `.github/release.yml` (`type:` labels), then curated.
+  A release isn't done until its notes **and** a [`CHANGELOG.md`](CHANGELOG.md) entry exist (ADR-0009 §6).
+  So a PR's title + `type:` label *are* release-notes copy — write them accordingly.
+
+## GitHub-native by default — don't reinvent the wheel
+
+Prefer the standard GitHub primitive over a custom one, **every time.** Before building a new process,
+field, tool, or template, check whether GitHub already provides it:
+
+- work items → **Issues** · ideas/specs → **Discussions** + **PRDs** · decisions → **ADRs**
+- a body of work → an **epic** with **native sub-issues** (progress bar), not a prose checklist
+- a shippable version → a **Milestone** · a shipped version → a **Release** with **auto-generated notes**
+- planning views, **labels**, issue/PR **templates**, protected branches, CODEOWNERS → the native features
+
+Custom mechanisms (a bespoke field, a hand-rolled tracker, a from-scratch template) need a real
+justification and usually an ADR. **Reinventing standard process is how a small project drifts into pain
+and exhausts its maintainer.** If you notice drift — a custom thing doing a native thing's job — **push
+back and propose the native path.** This is a direct investment in the DX North Star: contributors already
+know GitHub, so every bit of bespoke machinery we *don't* build is friction a future contributor never meets.
 
 ## Branches & commits
 
