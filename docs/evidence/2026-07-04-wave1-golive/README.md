@@ -210,6 +210,10 @@ Firmware bench + install session, 2026-07-04 (install day / Wave-1 go-live). Liv
 (`/telemetry`) at capture time on brick-powered, untethered boards; raw streams and any photos in the
 maintainer's local archive.
 
+**Build provenance:** fw 0.7.0 builds against the exact-pinned toolchain
+`pioarduino/platform-espressif32#55.03.39` (ADR-0024, #529); a mid-session VS Code / PlatformIO package reload
+re-fetched the *same* pinned tag — no toolchain drift, deployed baseline reproducible.
+
 Refs: #584 · #660 · #667 · #443 · #621 · #673 · #657 · #20 · #631 · #276 · #486 · ADR-0027 · ADR-0028.
 
 — Firmware 🔧
