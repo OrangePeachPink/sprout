@@ -126,6 +126,14 @@ lint-fw base="origin/main":
 format-fw base="origin/main":
     {{py}} tools/clang_format_changed_lines.py --base {{base}}
 
+# Epic sub-issue hygiene (ADR-0003 §2): warn on `epic`-labelled issues that track children
+# as `- [ ] #N` prose checkboxes instead of native sub-issues. Reads live issue data via your
+# authenticated `gh` (same script CI's epic-hygiene workflow runs, so local == CI).
+#   just lint-epics            # warn-only
+#   just lint-epics --strict   # non-zero exit if any finding
+lint-epics *ARGS:
+    {{py}} tools/dx/lint_epic_subissues.py {{ARGS}}
+
 # Run every pre-commit hook across the repo — the single definition of lint/format/hygiene.
 pre-commit:
     uv run --frozen pre-commit run --all-files

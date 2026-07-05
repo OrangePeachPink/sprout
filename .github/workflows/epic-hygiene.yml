@@ -1,0 +1,44 @@
+name: epic hygiene
+
+# Self-enforces the ADR-0003 §2 standard — "an Epic is a parent issue with native
+# sub-issues (progress bar)" — by warning when an `epic`-labelled issue tracks its
+# children as `- [ ] #N` prose checkboxes instead. WARN-ONLY: this never blocks a
+# merge (it has no relationship to a PR); it surfaces drift so an epic doesn't
+# silently lose a child that split off after its body was written (e.g. #302).
+#
+# Lives OUTSIDE ci.yml on purpose: it reads live issue + sub-issue data (not files),
+# so it needs `issues: read` and issue/schedule triggers — a different model than the
+# PR/file gate. Same script runs locally via `just lint-epics`.
+
+on:
+  workflow_dispatch: {}
+  # Immediate feedback the moment an epic is created or its checklist is edited.
+  issues:
+    types: [opened, edited, labeled]
+  # Weekly backstop so drift on an untouched epic still gets surfaced.
+  schedule:
+    - cron: "0 15 * * 1" # Mondays 15:00 UTC
+
+# Least privilege: read issues (incl. sub-issues) + the checked-out code. No writes.
+permissions:
+  contents: read
+  issues: read
+
+concurrency:
+  group: epic-hygiene-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  epics:
+    name: epic sub-issue hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # The lint is stdlib + `gh` only (no third-party deps), so it runs on the
+      # runner's Python directly — deliberately independent of the uv/PlatformIO
+      # toolchain so this hygiene job stays fast and never waits on an install.
+      - name: Epic sub-issue hygiene (ADR-0003 §2) — warn-only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/dx/lint_epic_subissues.py
