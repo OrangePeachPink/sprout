@@ -32,15 +32,26 @@ Operating rules for any agent (or human) working in this repository.
 
 ## The lanes
 
-Sprout is built by coordinated lanes. Stay in yours; route cross-lane needs through the maintainer.
+Sprout is built by coordinated agent lanes — all on Claude Code with full repo + GitHub read/write
+(Firmware runs as a Claude Code sub-agent inside VS Code). Stay in yours; route cross-lane needs through
+the maintainer.
 
 | Lane | Scope | Owns |
 |---|---|---|
-| **Firmware** | ESP32 control, sensing, actuators (`firmware/`) | ADR-0001, the native C test harness |
-| **Data** | host logger, analytics, the served dashboard | ADR-0005, ADR-0006 |
-| **Design** | design system, brand, voice (repo read-only; lands via commit-proxy) | ADR-0004, ADR-0007, ADR-0008 |
-| **Sage / Bench** | physical bench, sensor characterization, calibration evidence, lab procedures | bench evidence docs, calibration ADRs (read-only on firmware + data pipelines) |
-| **Workflow** | issues, board, releases, process | .github/CONTRIBUTING.md, this file |
+| **Trellis** | Senior technical architect — cross-cutting architecture, ADR authorship + review, gap analysis, "does this decision merit an ADR?" | the ADR register's health; architecture reviews |
+| **Data** | Host logger, analytics, ML / predictive analysis, and the served dashboard + front-end | ADR-0005, ADR-0006 |
+| **DX** | Developer, user & consumer experience; **documentation maintainer** (docs stay consistent + current — a real consumer-facing concern); community & awareness, the go-public **marketing/visibility strategy**, social engagement, and onboarding the maintainer's contributor identity + graph | the contributor front door, onboarding, `docs/contributing/` |
+| **DesignQA** | **All design work** — design system, brand, voice, *and* design-QA of the running app | ADR-0004, ADR-0007, ADR-0008 |
+| **Firmware** | ESP32 control, sensing, actuators (`firmware/`) **+ the physical bench** — flash, probe serial, characterize sensors, capture calibration evidence | ADR-0001, the native C test harness, bench evidence + the capability-stage vocabulary (below) |
+| **Workflow** | Issues, board, milestones/releases, process; the **GitHub-native** guide; the **PR validation gate** before the maintainer reviews | .github/CONTRIBUTING.md, this file, the release train |
+| **Veronica** | *Human* maintainer — vision, ideation, product direction, merges, hardware approvals | the repo; the final call |
+
+**Escalation, not a lane:** *Claude Design (Web)* is a creative-brainstorming / prototyping resource
+DesignQA or the maintainer can pull in when a design need wants divergent exploration — its output lands
+through DesignQA.
+
+**Retired lanes:** *Sage* (bench work folded into **Firmware**) and *Ingest* (design intake folded into
+**DesignQA**). Don't route new work to either — it will not get done.
 
 ## Lane attribution
 
@@ -104,32 +115,24 @@ Full protocol + the sweep checklist: [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
 When an issue comes up mid-lane and can't route through Workflow first, tag it `for:<lane>` to flag a
 **first-approximate recipient** — a best-guess owner so it doesn't sit without one. The family:
-`for:firmware` · `for:data` · `for:design` · `for:dx` · `for:ingest` · `for:sage` · `for:trellis` · `for:workflow`.
+`for:firmware` (incl. bench) · `for:data` · `for:design` (→ DesignQA) · `for:dx` · `for:trellis` ·
+`for:workflow` · `for:maintainer`.
 
 - It's a routing **hint**, not an assignment or a commitment — Workflow still triages, slices, and gates.
 - Use `for:workflow` when you're unsure, or when an item explicitly needs the pipeline (e.g. "please slice
   this"); `for:trellis` flags an architecture / gap review.
 
-## Sage / Bench lane
+## Bench work (Firmware lane)
 
-**Platform:** Codex (local machine with full codebase access + `gh` CLI) · **Sign-off:** `— Sage` · **Label:** `for:sage`
+Bench-and-lab work — hardware bring-up, sensor characterization, calibration evidence, bench-safety
+procedures, and experiment-method documentation — is owned by **Firmware**. The maintainer is the hands
+(wiring, power, plants); Firmware flashes, probes serial, reads the microcontrollers, and writes the
+evidence. **Sign-off:** `— Firmware` · **Label:** `for:firmware`, plus `needs:hardware` for anything that
+needs a physical session (the maintainer's bench queue).
 
-Sage is the bench-and-lab evidence lane — hardware bring-up, sensor characterization, calibration
-evidence, bench safety procedures, and experiment method documentation.
-
-**Scope defaults** (process controls — Sage has local repo + GitHub access; these are lane boundaries,
-not platform limitations):
-
-| Can write | Deferred to owning lane |
-|---|---|
-| Issue comments, bench procedure docs, evidence docs | Firmware source (`firmware/`) |
-| Dated bench photos, artifact documentation, "what this proves" notes | Data pipeline code and raw logs |
-| PRD and ADR drafts in Sage's domain | Production config |
-| `docs/` bench notes and calibration records | |
-
-**Capability-stage vocabulary:** Sage uses these terms to describe how far a feature or sensor
-configuration has progressed through physical validation. Use them consistently in issues, evidence
-docs, and ADRs so any lane can read bench state at a glance:
+**Capability-stage vocabulary:** describes how far a feature or sensor configuration has progressed through
+physical validation. Use it consistently in issues, evidence docs, and ADRs so any lane can read bench
+state at a glance:
 
 | Stage | Meaning |
 |---|---|
@@ -140,14 +143,11 @@ docs, and ADRs so any lane can read bench state at a glance:
 | `plant-deployed` | Running in an actual pot with a plant; real-world data flowing |
 | `autonomous-enabled` | System making watering decisions without manual intervention |
 
-Current state: pumps/relay are **code-staged**; sensors are **bench-wired**.
+Current state: the 8-sensor windowsill fleet is **plant-deployed** (live over WiFi since v0.7.0);
+pumps/relay remain **code-staged**.
 
-**Bench priorities (current runway):** plant dry-baseline, consolidated dry-safety bench (#191),
-sensor characterization + C1 calibration (#170), sunlight/heat/ADC artifact isolation, fast-cadence
-capture quality (#82).
-
-Route bench-adjacent issues with `for:sage`; Sage coordinates bench procedures with Firmware on
-wiring/power changes and with Data on schema extensions for new sensor readings.
+Firmware coordinates bench procedures with **Data** on schema extensions for new sensor readings and
+raises wiring/power changes to the maintainer. Route bench-adjacent work `for:firmware` + `needs:hardware`.
 
 ## Workflow & GitHub
 
