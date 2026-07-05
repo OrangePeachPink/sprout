@@ -96,6 +96,20 @@ Auto-generated notes are the default; hand-curation refines them. The first rele
 hand-curated because it predates any baseline tag. `type:chore` work is intentionally excluded from
 release notes (git history is its record).
 
+**Release-notes quality bar** — notes are a per-version *changelog*, not product documentation (that job
+belongs to the README, the docs, and the app). Approving a release's notes means checking these five, not
+exhaustiveness:
+
+1. **Honest** — every claim true; no overstatement (never "complete / validated / compliant" unless
+   verified); known limitations disclosed.
+2. **At altitude** — a ~30-second skim conveys *what this version delivers and what it doesn't*, not a
+   commit-by-commit history.
+3. **Version-framed** — a first release states it is the baseline; every later release is a *delta since
+   the previous tag*.
+4. **No invented history** — never reconstruct notes for versions that didn't exist; git history is the
+   pre-baseline record.
+5. **Points to the record** — links to docs / issues for the full how-and-why rather than duplicating them.
+
 ## Consequences
 
 - One version line is simple and standard; the CHANGELOG carries the per-component detail the single
