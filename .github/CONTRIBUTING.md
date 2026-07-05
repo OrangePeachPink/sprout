@@ -20,17 +20,20 @@ Discussion.
 ## The board
 
 The [**Sprout board**](https://github.com/users/OrangePeachPink/projects/2) is the working view of every
-issue. Four fields drive it:
+issue. These native fields drive it:
 
 | Field | Values | Means |
 |---|---|---|
 | **Status** | Backlog → In Progress → Needs Verification → Ready to Merge → Done · Won't Do | where the work is in its life |
 | **Priority** | P0 · P1 · P2 · P3 | execution order (P0 = do first) |
 | **Size** | XS · S · M · L · XL | rough effort (feeds velocity) |
+| **Milestone** | `v0.7.1`, `v0.8.0`, … | the target **version** (see [Releases & versioning](#releases--versioning)) |
 | **Verification** | Pending · Approved · Conditional · Changes requested | the reviewer's disposition at the gate |
 
 Priority, Size, and Verification are **board fields, not labels** — they sort and chart without
-cluttering the issue's label list.
+cluttering the issue's label list. **Milestone is GitHub's native release container** — it groups a
+version's work and drives its progress bar and release notes. *(An earlier custom "Wave" field was
+retired in favor of milestones — we use the standard primitive.)*
 
 ## Opening an issue
 
@@ -225,6 +228,29 @@ Preserve any **revisit trigger** in the banner — the narrow condition that wou
 ```
 
 `Refs #N` / `Part of #N` (non-closing links), never `Closes #N`; the repo's auto-close setting stays **off**.
+
+## Releases & versioning
+
+Sprout ships as **versioned milestones** — standard SemVer, defined in
+[ADR-0009](../docs/adr/0009-versioning-and-release-policy.md):
+
+- A **milestone** (`v0.7.1`, `v0.8.0`, …) is a shippable **version** and the home for its planned work —
+  **no milestone = backlog.** The roadmap runs from `v0.7.0` (Monitor, shipped) toward **`v1.0.0`** (the
+  deliberate public release). **MINOR** (`0.X.0`) earns a new user-facing capability; **PATCH** (`0.X.Y`)
+  is fixes / polish / docs; `1.0.0` is chosen on purpose, never reached by counting. ADR-0009 §5 has the
+  full version roadmap.
+- When a milestone ships, we cut a **GitHub Release** at the version tag. Its notes are
+  **auto-generated** from the PRs merged since the previous tag, grouped by each PR's **`type:` label**
+  (`.github/release.yml`), then lightly curated. **Your PR title + `type:` label become the release
+  notes** — so write the title as the line you'd want a stranger to read. (`type:chore` is excluded.)
+- The **[CHANGELOG](../CHANGELOG.md)** is the same record, in-repo and appendable, with per-component detail.
+
+## GitHub-native by default
+
+We run standard GitHub the standard way — **Issues, Milestones, Releases, Discussions, sub-issues,
+labels, issue/PR templates, protected `main`.** If a process here looks bespoke, it probably shouldn't be:
+prefer the native primitive, and if you spot a custom thing doing a native thing's job, **say so.** The
+less custom machinery you have to learn, the faster you can help — that's the whole point.
 
 ## Lane self-sync — check before you start, check before you stop
 
