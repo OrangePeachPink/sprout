@@ -22,9 +22,15 @@
 ## What Sprout is
 
 Sprout is a small, honest, **automatic plant-care system** for a windowsill: capacitive soil-moisture probes
-and a little pump, driven by an **ESP32**, with a **Python** logger and analytics behind it and a served
-**dashboard** out front. It watches the soil, classifies it into seven calibrated moisture bands, and (once
-calibration is in) waters before a plant is ever in trouble.
+on one or more **ESP32-class boards** — each reporting **over Wi-Fi (untethered)** or a USB-serial cable —
+with a **Python** logger and analytics behind them and a served **dashboard** out front. It watches the soil,
+classifies it into seven calibrated moisture bands, and (once calibration is in) waters before a plant is
+ever in trouble.
+
+The minimum Sprout is deliberately small: **a microcontroller and one soil sensor is already a complete
+Sprout** ([ADR-0028](docs/adr/0028-optional-peripherals-doctrine.md)) — a pump, an OLED, and extra probes are
+optional enhancements, never an entry bar. And it's past the bench: as of the **v0.7.0 go-live, eight plants
+run live in soil**, reporting over Wi-Fi or serial with each session saved to the catalog.
 
 It's a learning-and-portfolio build, made to be **enjoyable to run and trustworthy to read** — process and
 tooling sized to match, not over-engineered.
@@ -67,9 +73,9 @@ index.
   </a>
 </p>
 
-<p align="center"><sub>The live dashboard (light + soil mode) serves at
-<code>tools/analytics/serve.py</code>; the design system &amp; mood system live in
-<a href="docs/design/">docs/design/</a>.</sub></p>
+<p align="center"><sub>The served dashboard — <strong>Monitor · Capture · Provenance</strong> — opens with
+one command (<code>just start</code>, via <code>tools/analytics/serve.py</code>); the design system &amp;
+mood system live in <a href="docs/design/">docs/design/</a>.</sub></p>
 
 ## The brand
 
@@ -101,7 +107,7 @@ A few principles the whole system is built to, so the data can always be trusted
 | Mini submersible DC water pump | 4 | DC 2.5-6 V (rated ~3 / 4.5 V), ~0.18 A, ~100 L/h, submersible. **DC only - never mains.** |
 | 4-channel relay module | 1 | 5 V module. Active-high vs active-low and 3.3 V-drive compatibility **to be bench-verified.** |
 | PVC vinyl tubing | ~4 m | ID ~5.54 mm / OD ~8.20 mm. |
-| Microcontroller | 1 | **ESP32** (classic dual-core; SoC marked `ESP-32D`, ESP32-D0WD class) from the SunFounder ESP32 kit. 3.3 V ADC matches the 0-3.0 V sensor output; 4 sensors on ADC1 (avoid ADC2 = WiFi); WiFi/BT for monitoring. |
+| Microcontroller | 1+ | **ESP32** (classic dual-core; SoC marked `ESP-32D`, ESP32-D0WD class) from the SunFounder ESP32 kit is the baseline. Firmware also builds for **ESP32-S3** and **ESP32-C5** boards — the multi-board fleet, per-board serial paths, and pin maps live in [`docs/hardware/BOARDS.md`](docs/hardware/BOARDS.md). 3.3 V ADC matches the 0-3.0 V sensor output; 4 sensors on ADC1 (avoid ADC2 = WiFi); WiFi/BT for monitoring. |
 | Status display | 1 | 1.3" SH1106 128x64 I2C OLED (Hosyond 5-pack). On the I2C bus (GPIO21/22), powered at 3.3 V. Shows status / last-watered / errors. |
 
 (Kit provenance is recorded in the local `parts` inventory: UMLIFE watering kit. The SunFounder ESP32 kit
@@ -117,7 +123,9 @@ Firmware lives in [`firmware/`](firmware/) as a PlatformIO project (ESP32, Ardui
 - Upload: `pio run -t upload`
 - Monitor: `pio device monitor` (19200 baud, set in `platformio.ini`)
 
-Board env is `esp32dev` (classic ESP32). Pin assignments and tunables live in `firmware/include/config.h`.
+Board env is `esp32dev` (classic ESP32); the `esp32s3` and ESP32-C5 envs build from the same source for the
+wider fleet — see [`docs/hardware/BOARDS.md`](docs/hardware/BOARDS.md) for per-board serial paths and pin
+maps. Pin assignments and tunables live in `firmware/include/config.h`.
 The build cache and resolved libraries (`firmware/.pio/`) are git-ignored.
 
 For data capture, prefer the host-side logger (`tools/logger/plants_logger.py`) over the raw monitor: it
