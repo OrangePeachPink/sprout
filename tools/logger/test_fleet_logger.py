@@ -33,12 +33,13 @@ def _line(
     raw: int = 1900,
     millis: int = 60000,
     seq: int | None = 101,
+    session: str = "sessW",
 ) -> str:
     payload = "level=needs water;gpio=4"
     if seq is not None:
         payload += f";device_seq={seq};time_source=device_uptime"
     body = (
-        f"plants.soil,sessW,{device},0.8.0,{millis},UMLIFE_v2_TLC555,"
+        f"plants.soil,{session},{device},0.8.0,{millis},UMLIFE_v2_TLC555,"
         f"{sensor},shelf,soil_moisture,{raw},,,OK,{payload}"
     )
     crc = 0
@@ -121,6 +122,70 @@ def test_fleet_fills_soil_rows_from_the_onboard_sht45(tmp_path: Path) -> None:
     assert r.temp_context_c == 21.5
     assert r.rh_context_pct == 55.0
     assert r.context_source == "sht45_onrig"  # payload tag (k=v, no new column)
+
+
+# --------------------------------------------------------------------------- #
+# #712: host session-tolerance — a reset-driven session change is not churn
+# --------------------------------------------------------------------------- #
+
+
+def test_reset_driven_session_change_stays_one_file_lineage(tmp_path: Path) -> None:
+    # the reconnect storm's host half (#712): a device resets mid-run (port-reopen
+    # auto-reset / crash loop - the firmware fix is #566) -> a NEW session_id + a
+    # device_seq reset. The host must TOLERATE it, not churn: ONE file lineage per
+    # device (the writer keys on device, never session - RotatingCsv rolls on
+    # size/UTC-day, never a session change), and BOTH reboot epochs preserved
+    # (session_id is load-bearing in the dedupe key - #703).
+    responses = iter(
+        [
+            _response(_line(device="dev-0", raw=1900, seq=5, session="sessA")),
+            _response(_line(device="dev-0", raw=1950, seq=1, session="sessB")),  # reset
+        ]
+    )
+    reg = Registry(
+        devices=[
+            Device(device_id="dev-0", board=None, label=None, channels={}, base_url="u")
+        ]
+    )
+    fl = FleetLogger(
+        str(tmp_path),
+        registry=reg,
+        adapter_factory=lambda url: DeviceAdapter(url, fetch=lambda u: next(responses)),
+        log=str,
+    )
+    fl.poll_once()  # session A
+    fl.poll_once()  # session B — the reset
+    assert len(list(tmp_path.glob("*.csv"))) == 1  # no per-session file churn
+    soil = _soil_rows(tmp_path)
+    assert {r.session_id for r in soil} == {"sessA", "sessB"}  # both epochs kept
+    assert len(soil) == 2  # neither reboot reading dropped
+
+
+def test_a_within_session_replay_is_still_deduped(tmp_path: Path) -> None:
+    # the tolerance must not weaken dedupe: the SAME (session, device_seq) served
+    # again (a store-and-forward replay) is still dropped exactly once.
+    responses = iter(
+        [
+            _response(_line(device="dev-0", raw=1900, seq=5, session="sessA")),
+            _response(
+                _line(device="dev-0", raw=1900, seq=5, session="sessA")
+            ),  # replay
+        ]
+    )
+    reg = Registry(
+        devices=[
+            Device(device_id="dev-0", board=None, label=None, channels={}, base_url="u")
+        ]
+    )
+    fl = FleetLogger(
+        str(tmp_path),
+        registry=reg,
+        adapter_factory=lambda url: DeviceAdapter(url, fetch=lambda u: next(responses)),
+        log=str,
+    )
+    fl.poll_once()
+    fl.poll_once()  # exact replay
+    assert len(_soil_rows(tmp_path)) == 1  # the replay is dropped, not churned
 
 
 def test_soil_rows_stay_honestly_empty_with_no_env(tmp_path: Path) -> None:
