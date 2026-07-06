@@ -958,7 +958,23 @@ def _device_groups(reg, device_ids_in_data, by_sensor, sensors, segments) -> lis
             and any("board cal: PLACEHOLDER" in ln for ln in seg.raw_lines)
             for seg in segments
         )
-        cal_provisional = transport == "wifi" or has_placeholder
+        # #404 host cal-state reader: the served-cal-state half of #617b. A board
+        # that POSITIVELY asserts a verified per-channel cal over the wire (a
+        # `# cal_ch` line, #507, with confidence calibrated/corroborated) earns
+        # not-provisional even over WiFi - opening the #617 fail-closed for a
+        # positive assertion, never for silence. So the bench-calibrated classic
+        # (#248) stops rendering `cal · provisional` once it emits its cal_ch;
+        # the uncalibrated C5 (confidence=provisional) stays provisional. A
+        # PLACEHOLDER banner still forces provisional (a stated non-cal wins).
+        cal_verified = any(
+            reg.canonical_for(seg.device_id) == did
+            and any(
+                cc.confidence in ("calibrated", "corroborated")
+                for cc in seg.per_channel_cal.values()
+            )
+            for seg in segments
+        )
+        cal_provisional = has_placeholder or (transport == "wifi" and not cal_verified)
         groups.append(
             {
                 "device_id": did,
