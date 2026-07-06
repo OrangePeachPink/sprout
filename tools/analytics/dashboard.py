@@ -93,6 +93,10 @@ GAP_CADENCE_MULT = 3
 # client also derives against (it mirrors the template's STATE_ONLINE_S so the
 # server-side gate and the viewer-clock gate never disagree). Tunable here.
 STALE_AFTER_S = 180
+# #719: the firmware's own declared version (the "latest firmware" a device SHOULD
+# be running), read from the firmware source of truth. Data reads it read-only to
+# flag a board that's behind; Firmware owns the value.
+FW_CONFIG = _REPO / "firmware" / "include" / "config.h"
 # Time-range windows (E8). None = all history.
 RANGE_HOURS: dict[str, float | None] = {
     "1h": 1.0,
@@ -211,6 +215,95 @@ def _age_seconds(ts: datetime | None, now: datetime) -> float | None:
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
     return (now - ts).total_seconds()
+
+
+# --------------------------------------------------------------------------- #
+# version resolution (#719): masthead firmware + app/server version + behind cue
+# --------------------------------------------------------------------------- #
+def _ver_tuple(v: str | None) -> tuple:
+    """Comparable version key from a dotted string. Non-numeric leading parts
+    (a git-ish suffix, a `-rc1`) truncate the tuple rather than guess an order,
+    so a comparison is only made where it's honest."""
+    if not v:
+        return ()
+    out: list[int] = []
+    for part in str(v).strip().lstrip("vV").split("."):
+        num = ""
+        for ch in part:
+            if ch.isdigit():
+                num += ch
+            else:
+                break
+        if not num:
+            break
+        out.append(int(num))
+    return tuple(out)
+
+
+def _declared_fw_version() -> str | None:
+    """The firmware's own declared latest version (``PLANTS_FW_VERSION`` in the
+    firmware config). Read-only from Data's side (Firmware owns the value); None
+    if the firmware source isn't in this checkout."""
+    try:
+        text = FW_CONFIG.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    for line in text.splitlines():
+        s = line.strip()
+        if "PLANTS_FW_VERSION" in s and '"' in s:
+            return s.split('"')[1] or None
+    return None
+
+
+def _versions_block(device_groups: list, server: dict) -> dict:
+    """The masthead version panel (#719): fleet firmware (value or the honest
+    mix), the one app==server product version, and a 'behind latest / restart
+    needed' cue - so the operator never has to ask which build is running.
+    """
+    fw_by_dev = [
+        (g.get("name") or g.get("device_id"), g.get("fw"))
+        for g in device_groups
+        if g.get("fw")
+    ]
+    distinct = sorted({fw for _n, fw in fw_by_dev}, key=_ver_tuple)
+    fw_value = distinct[0] if len(distinct) == 1 else None
+    latest = _declared_fw_version()
+    # a device is "behind" only when BOTH versions parse and it's strictly lower
+    behind = [
+        {"device": n, "fw": fw}
+        for n, fw in fw_by_dev
+        if latest and _ver_tuple(fw) and _ver_tuple(fw) < _ver_tuple(latest)
+    ]
+    product = server.get("version")
+    return {
+        # app and server are the same program reading one constant -> equal by
+        # construction; surfaced explicitly so the UI can show ONE labelled value.
+        "app": product,
+        "server": product,
+        "app_server_match": True,
+        "firmware": {
+            "value": fw_value,  # single value when the fleet agrees
+            "mixed": len(distinct) > 1,  # honest 'devices differ' state
+            "all": distinct,
+            "latest": latest,  # firmware's own declared latest (may be None)
+            "behind": behind,  # boards strictly below latest
+        },
+        # running server predates the checked-out code -> a restart shows newer app
+        "server_stale": bool(server.get("stale")),
+        "restart_needed": bool(server.get("stale")) or bool(behind),
+    }
+
+
+def _fw_masthead(versions: dict) -> str | None:
+    """The single firmware string the masthead shows instead of a bare 'fw ?':
+    the agreed value, or an explicit mix like ``mixed (0.6.9, 0.7.0)``. None only
+    when no device reported any firmware at all."""
+    fw = versions["firmware"]
+    if fw["value"]:
+        return fw["value"]
+    if fw["all"]:
+        return "mixed (" + ", ".join(fw["all"]) + ")"
+    return None
 
 
 def _band_ranges(bounds: list[int], lo: int, hi: int) -> list[dict[str, object]]:
@@ -1094,6 +1187,12 @@ def build_context(
         "devices_stale": stale_devices,
         "stale_after_s": STALE_AFTER_S,
     }
+    # #719: resolve the three versions for the masthead - fleet firmware (value or
+    # the honest mix), the one app==server product version, and a behind/restart
+    # cue. `meta["fw"]` becomes the resolved fleet firmware so the masthead never
+    # shows a bare "fw ?" (it was the latest SEGMENT's fw, which can be blank).
+    versions = _versions_block(device_groups, provenance_block["server"])
+    meta["fw"] = _fw_masthead(versions) or meta["fw"]
 
     # PRD-0002 R3 (#368): join solar + optional weather onto the soil window. Offline-
     # first — {"available": False} when no location config, so the UI just omits it.
@@ -1102,6 +1201,7 @@ def build_context(
     return {
         "meta": meta,
         "fleet_health": fleet_health,  # #698 live count excludes stale boards
+        "versions": versions,  # #719 masthead: fw + app/server + behind cue
         "provenance": provenance_block,
         "env": env,
         "cal": {"bounds": bounds, "moist_range": list(mrange), "bands": bands},
