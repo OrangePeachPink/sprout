@@ -560,7 +560,13 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         # yet in the registry) is never gated - we don't claim to know its wiring,
         # so its real reading keeps its band. Net: never hide a real reading,
         # never claim an unmapped plant. Raw rows stay queryable either way.
-        registered = reg.device(_canon(last.device_id)) is not None
+        regdev = reg.device(_canon(last.device_id))
+        registered = regdev is not None
+        # #713: `sensor_id`/`channel` is the board PORT (the repurposed s1..s4);
+        # `probe` is the physical sensor label the user stuck on the cable (her
+        # s1..s8) - surface it as the sensor identity so `sN` in the UI = her
+        # sticker, never a channel index. None when the config hasn't mapped it.
+        probe = reg.probe_for(_canon(last.device_id), last.sensor_id)
         no_signal = last.quality_flag == "NO_SIGNAL"
         unassigned = registered and plant is None and not no_signal
         if no_signal:
@@ -601,6 +607,11 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
                 "unassigned": unassigned,  # registered, live, no plant yet (#616 bench)
                 "plant_id": plant["plant_id"] if plant else None,
                 "plant_name": plant["plant_name"] if plant else None,
+                "plant_type": plant.get("plant_type") if plant else None,  # #713
+                "pot_size": plant.get("pot_size") if plant else None,  # #713
+                "probe": probe,  # #713: the physical sensor label (her sN sticker)
+                "device_name": getattr(regdev, "name", None),  # #713 friendly board
+                "device_side": getattr(regdev, "side", None),  # #713 left/right
                 "ambient": ambient,
                 "pressure": pressure,
                 "gpio": last.gpio,
@@ -907,6 +918,7 @@ def _device_groups(reg, device_ids_in_data, by_sensor, sensors, segments) -> lis
                     or "Sprout"
                 ),
                 "hostname": hostname,
+                "side": getattr(regdev, "side", None),  # #713 physical placement
                 "transport": transport,
                 "board": getattr(regdev, "board", None),
                 "fw": last.firmware_version or None,
