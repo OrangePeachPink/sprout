@@ -124,9 +124,22 @@ class DeviceAdapter:
     interior temp/RH, so no interior key is even reachable from here."""
 
     def __init__(
-        self, base_url: str, *, fetch=None, clock=None, pressure_source=None
+        self,
+        base_url: str,
+        *,
+        fetch=None,
+        clock=None,
+        pressure_source=None,
+        candidates=None,
+        on_resolved=None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
+        # #676: ordered addresses to try — the mDNS hostname first (stable across
+        # DHCP), the configured IP as a fallback. Defaults to the single base_url
+        # so existing callers/tests are unchanged. `on_resolved(working_url)` fires
+        # when a board answers, for registry self-heal.
+        self._candidates = [c.rstrip("/") for c in (candidates or [base_url]) if c]
+        self._on_resolved = on_resolved
         self._fetch = fetch if fetch is not None else _http_get
         self._clock = clock if clock is not None else self._utc_now
         self._pressure_source = pressure_source
@@ -138,19 +151,29 @@ class DeviceAdapter:
 
     def load(self, inputs: list[str] | None = None) -> LogData:
         # `inputs` isn't meaningful for a single device's own endpoint - this
-        # adapter always reads its one configured base_url, matching the seam's
+        # adapter always reads its own discovered address, matching the seam's
         # contract (a caller never needs to know which transport it's reading
         # from, or pass transport-specific args through a generic call site).
-        try:
-            text = self._fetch(f"{self._base_url}/telemetry")
-        except (urllib.error.URLError, OSError, TimeoutError):
-            return LogData()  # unreachable device - honest empty, not a crash
+        # #676: try each candidate in order (mDNS hostname first, IP fallback) and
+        # use the first that ANSWERS - so a board that rebooted to a new DHCP IP is
+        # still reached by name, no registry hand-edit.
+        text = None
+        working = None
+        for url in self._candidates:
+            try:
+                text = self._fetch(f"{url}/telemetry")
+                working = url
+                break
+            except (urllib.error.URLError, OSError, TimeoutError):
+                continue  # this address is unreachable - try the next candidate
+        if text is None:
+            return LogData()  # no candidate reachable - honest empty, not a crash
 
         now = self._clock()  # one poll, one shared "observed at" moment
         # #567: one pressure read per poll (not per row) - every soil row in
         # this poll shares the same observed-at moment, so one value is honest.
         pressure = self._pressure_source() if self._pressure_source else None
-        seg = SegmentHeader(source=self._base_url)
+        seg = SegmentHeader(source=working)
         readings = []
         for line in text.splitlines():
             line = line.strip()
@@ -178,7 +201,11 @@ class DeviceAdapter:
         if not readings:
             return LogData()
         seg.device_id = readings[0].device_id
-        return LogData(readings=readings, segments=[seg], sources=[self._base_url])
+        # #676: the board answered at `working` - let the caller self-heal the
+        # registry if that's a fresh address (best-effort; never affects the poll).
+        if self._on_resolved is not None:
+            self._on_resolved(working)
+        return LogData(readings=readings, segments=[seg], sources=[working])
 
 
 class FleetAdapter:
