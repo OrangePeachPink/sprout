@@ -57,22 +57,27 @@ repos:
         pass_filenames: false
 
   # markdownlint via the repo's own .markdownlint-cli2.jsonc (globs + ignores), so it
-  # behaves identically to just / CI. Uses system npx (node is a standard dev tool).
-  # Version PINNED (like cspell@10.0.1, #240) so npx resolves the same toolchain every
-  # run — kills the unpinned-npx drift-flake class DX flagged on #226.
+  # behaves identically to just / CI. Runs as a pre-commit-managed `language: node` hook:
+  # pre-commit builds its own nodeenv and invokes node.exe DIRECTLY — no `cmd.exe /c
+  # npx.CMD` shim layers (the focus-stealing console windows #664 diagnosed on Windows,
+  # dozens/hour across five lanes), and nothing re-resolves per run. Version PINNED via
+  # additional_dependencies (like cspell@10.0.1, #240) so the toolchain resolves the same
+  # every run — kills the unpinned-npx drift-flake class DX flagged on #226.
   - repo: local
     hooks:
       - id: markdownlint-cli2
         name: markdownlint-cli2
-        entry: npx --yes markdownlint-cli2@0.22.1
-        language: system
+        entry: markdownlint-cli2
+        language: node
+        additional_dependencies: ['markdownlint-cli2@0.22.1']
         types: [markdown]
         pass_filenames: false
 
   # cspell — prose spelling, driven by the repo's own cspell.json dictionary (#109). Scoped to
-  # Markdown (docs/design/** is cspell-ignored — Design's brand words). Same system-npx pattern
-  # as markdownlint, so local == CI with no package.json. (Python/firmware scope is a later
-  # step — checking code identifiers needs its own tuning to avoid false positives.)
+  # Markdown (docs/design/** is cspell-ignored — Design's brand words). Same `language: node`
+  # pattern as markdownlint (#664 — node.exe direct, no cmd.exe/npx shim), so local == CI with
+  # no package.json. (Python/firmware scope is a later step — checking code identifiers needs
+  # its own tuning to avoid false positives.)
   #
   # Advisory, not a gate (#524): one day, four PRs, six red-CI-and-bounce round trips for
   # legitimate specialist/vendor terms and English spelling variants, zero real typos caught.
@@ -98,9 +103,12 @@ repos:
       - id: cspell
         name: cspell
         # Repo-wide on every commit (pass_filenames:false + always_run) so LOCAL scope == CI's
-        # `pre-commit run --all-files`; pinned (#226) so the toolchain resolves the same version every run.
-        entry: npx --yes cspell@10.0.1 lint --no-progress --no-summary --no-must-find-files --no-exit-code --gitignore-root . "**/*.md"
-        language: system
+        # `pre-commit run --all-files`; pinned via additional_dependencies (#226) so the toolchain
+        # resolves the same version every run. `language: node` (not system npx) — pre-commit invokes
+        # node.exe directly, no `cmd.exe /c npx.CMD` shim (the #664 focus-stealer fix).
+        entry: cspell lint --no-progress --no-summary --no-must-find-files --no-exit-code --gitignore-root . "**/*.md"
+        language: node
+        additional_dependencies: ['cspell@10.0.1']
         pass_filenames: false
         always_run: true
         verbose: true
