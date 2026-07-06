@@ -14,7 +14,7 @@
 | 1 | classic ESP32 / NodeMCU-32S / ESP-32D | ESP32-D0WD (Xtensa LX6 ×2) | CP2102 (UART) | 4 MB | ✅ baseline (`esp32dev`), unchanged |
 | 2a | `c5-official-01` — Espressif ESP32-C5-DevKitC-1-**N8R8** (official; box + silkscreen + module can agree) | ESP32-C5 (RISC-V, dual-band Wi-Fi 6) | CP210x on the `UART` port (COM11) **+ native USB** on the `USB` port (COM12) | **8 MB + 8 MB PSRAM** | 🟡 builds today (#529); `flash_id` + pins pending |
 | 2b | `c5-yellow-01` — ESP32-C5-KITC-A clone (module can: `ESPC5-32 H4`) | ESP32-C5 | CH340 on the one tested port (COM10); 2nd port unconfirmed | unknown until `flash_id` (possibly 4 MB) | 🟡 builds today; identity resolved, USB split partial |
-| 3 | `s3-n8r2-01` — ESP32-S3-N8R2 dual-USB | ESP32-S3 (Xtensa LX7 ×2) | port **labeled `COM`** enumerated as **native USB serial/JTAG** (`303A:4001`, COM7) — see the serial section | 8 MB + 2 MB PSRAM (module can) | 🟡 builds today; `flash_id` blocked on manual bootloader entry |
+| 3 | `s3-n8r2-01` — ESP32-S3-N8R2 dual-USB | ESP32-S3 (Xtensa LX7 ×2) | native USB serial/JTAG (`303A:4001`, COM7) is the **only** working port — the CH343 UART-bridge port is dead (#443); see the serial section | 8 MB + 2 MB PSRAM (`flash_id`-confirmed 2026-07-03) | 🟢 builds + flashes via native USB (esptool-direct) |
 
 > Identity source of truth: the #443 intake evidence packet,
 > [`docs/evidence/2026-07-01-esp32-s3-c5-intake/`](../evidence/2026-07-01-esp32-s3-c5-intake/README.md)
@@ -110,16 +110,34 @@ question and the pin-assignment question are separate, and only the first is res
   the native port is a bonus (flashing/JTAG) — no CDC flag needed.
 - **C5 yellow (`c5-yellow-01`)** — CH340 on the one tested port (COM10), classic-like.
   Second physical port unconfirmed — record it before relying on it.
-- **S3 (`s3-n8r2-01`) — intake fact that changes the picture:** the port **labeled `COM`**
-  enumerated as **native USB serial/JTAG** (`303A:4001`, COM7) — NOT a UART bridge. Since
-  the `esp32-s3-devkitc-1` board id defaults to `CDCOnBoot: Disabled`, `Serial` currently
-  targets UART0, which may surface on the *other* physical port — or nowhere, if this board
-  has no bridge chip (some dual-port S3 boards wire both ports to native USB + UART0 header
-  pins only). **Bench next step decides it:** identify the second port; if only native-USB
-  enumerates, add `build_flags = -D ARDUINO_USB_CDC_ON_BOOT=1` to `[env:esp32s3]` (one
-  line, ready to add — not added speculatively). The intake `flash_id` failure
-  (`No serial data received` on COM7) is consistent with native USB-JTAG needing manual
-  bootloader entry — retry per the packet's resume point.
+- **S3 (`s3-n8r2-01`) — RESOLVED at the bench (2026-07-03, #443):** the port **labeled `COM`**
+  enumerates as **native USB serial/JTAG** (`303A:4001`, COM7) — NOT a UART bridge — and the
+  board's **CH343 UART-bridge port is dead**, so the native USB port is the *only* working
+  path. `[env:esp32s3]` therefore now carries `-D ARDUINO_USB_CDC_ON_BOOT=1` in
+  `platformio.ini` (no longer speculative): the `esp32-s3-devkitc-1` board id defaults to
+  `CDCOnBoot: Disabled`, and this flag routes Arduino `Serial` to the native port so telemetry
+  comes out there — which is also the simpler untethered setup. The intake `flash_id` failure
+  (`No serial data received` on COM7) was the native USB-JTAG needing manual-bootloader entry;
+  driven that way, `esptool flash_id` succeeded and **confirmed the N8R2 marking** (8 MB flash,
+  2 MB PSRAM). See the flash procedure below.
+
+## Flashing a native-USB-JTAG board (the esptool-direct fallback)
+
+When a board exposes only the native USB serial/JTAG port (like `s3-n8r2-01`, or a C5 driven on
+its `USB` port), PlatformIO's auto-detect can miss it and `upload` / `flash_id` returns
+`No serial data received`. The fallback is manual-bootloader entry + esptool aimed straight at
+the native port:
+
+1. **Enter the bootloader by hand** — hold **BOOT (GPIO0)**, tap **RESET**, release BOOT. The
+   port re-enumerates in download mode.
+2. **Point the tools at that exact port** — `esptool --port COMx flash_id` first to confirm
+   flash size + PSRAM (this is how the S3's N8R2 marking was confirmed on 2026-07-03), then
+   `pio run -e esp32s3 -t upload --upload-port COMx` to flash.
+3. **Tap RESET** to run the new firmware. With `ARDUINO_USB_CDC_ON_BOOT=1` set (S3), `Serial`
+   and the telemetry stream come back out that same native port — no second cable needed.
+
+The classic ESP32 and the C5/S3 *UART-bridge* ports need none of this: PlatformIO auto-detects
+them and `pio run -t upload` just works.
 
 ## Integration status (updated 2026-07-01 — most of the original plan is now DONE)
 
