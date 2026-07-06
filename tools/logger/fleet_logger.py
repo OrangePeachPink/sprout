@@ -74,12 +74,34 @@ _ANALYTICS = os.path.normpath(os.path.join(_HERE, "..", "analytics"))
 if _ANALYTICS not in sys.path:
     sys.path.insert(0, _ANALYTICS)
 
+from context_fill import ContextFiller  # noqa: E402
 from device_registry import load_registry  # noqa: E402
 from fleet_lock import FleetAlreadyRunning, FleetLock  # noqa: E402
 from ingest_store import Store  # noqa: E402
 from parse_v1 import parse_file  # noqa: E402
 from plants_logger import RotatingCsv, _append_payload  # noqa: E402
 from source_adapter import DeviceAdapter  # noqa: E402
+
+
+def _apply_context(row: dict, context: dict) -> dict:
+    """Merge a ContextFiller fill into a pre-parsed row the SAME way
+    ``plants_logger.stamp_row`` does (#701): value keys land in their reserved
+    CANONICAL columns, the ``*_source`` tag keys ride payload k=v (never a new
+    column - the shared-core binding). None/empty leaves the row untouched
+    (honestly empty). The row keeps its raw truth; only the reserved context
+    columns/tags are filled."""
+    if not context:
+        return row
+    for col in ("temp_context_c", "rh_context_pct", "pressure_context_hpa"):
+        if context.get(col):
+            row[col] = context[col]
+    payload = row.get("payload", "")
+    for tag_key in ("context_source", "pressure_context_source"):
+        if context.get(tag_key):
+            payload = _append_payload(payload, tag_key, context[tag_key])
+    row["payload"] = payload
+    return row
+
 
 FLEET_LOGGER_VERSION = "fleet_logger_0_1"
 DEFAULT_CADENCE_S = 30.0  # decision 2: matches the device sweep
@@ -166,6 +188,11 @@ class FleetLogger:
         # across polls; writers keep one rolling segment per device.
         self._adapters: dict[str, object] = {}
         self._writers: dict[str, RotatingCsv] = {}
+        # #701: one ContextFiller per device - each board's own plant-local SHT45
+        # fills only its own soil rows (never cross-fill across boards). Persistent
+        # so a soil row can be filled from an env reading observed a poll or two
+        # earlier, within the freshness window.
+        self._fillers: dict[str, ContextFiller] = {}
         self.appended = 0
         self.polls = 0
 
@@ -173,6 +200,14 @@ class FleetLogger:
         if base_url not in self._adapters:
             self._adapters[base_url] = self._adapter_factory(base_url)
         return self._adapters[base_url]
+
+    def _filler(self, device_id: str) -> ContextFiller:
+        # #701: INTERIOR ambient (temp/RH) only - the DeviceAdapter already fills
+        # the pressure exception (#572), so pressure_source stays None here to avoid
+        # double-filling; the two coexist (adapter=pressure, filler=interior).
+        if device_id not in self._fillers:
+            self._fillers[device_id] = ContextFiller(pressure_source=None)
+        return self._fillers[device_id]
 
     def _writer(self, device_id: str) -> RotatingCsv:
         if device_id not in self._writers:
@@ -201,6 +236,14 @@ class FleetLogger:
         appended = 0
         for device in reg.served_devices():
             data = self._adapter(device.base_url).load()
+            filler = self._filler(canon(device.device_id) or device.base_url)
+            # #701 pass 1: warm this device's ambient cache from its env rows
+            # BEFORE filling any soil row, so a soil row gets the freshest context
+            # from the same poll (mirrors the tethered logger's observe-then-fill).
+            for r in data.readings:
+                if r.record_type.startswith("plants.env"):
+                    filler.observe(r.row)
+            # #701 pass 2: dedupe + fill soil-row interior context + persist.
             for r in data.readings:
                 if not self.store.ingest(r):
                     continue  # an exact replay of a row already persisted
@@ -210,6 +253,10 @@ class FleetLogger:
                 row["payload"] = _append_payload(
                     row.get("payload", ""), "transport", "wifi_poll"
                 )
+                # #701: fill soil rows with this board's plant-local ambient (the
+                # join-free ADR-0023 deliverable), matching the tethered path.
+                if r.record_type.startswith("plants.soil"):
+                    row = _apply_context(row, filler.context_for())
                 # #602: the WRITER key (file naming/lineage) coalesces to the
                 # canonical identity so a renamed board keeps one file lineage;
                 # the row itself keeps the id the device truthfully reported.
