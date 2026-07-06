@@ -81,6 +81,48 @@ from source_adapter import (  # noqa: E402  (the source-adapter seam, #277/#486)
 
 _REPO = _HERE.parents[1]
 
+# #808: the Diagnostics "Reference" front-door links (#758) point at docs/ files,
+# but serve.py had no /docs route so they 404'd live. A scoped, read-only,
+# traversal-guarded static route serves the repo docs/ tree (localhost only).
+_DOCS_ROOT = _REPO / "docs"
+_DOCS_CTYPES = {
+    ".md": "text/plain; charset=utf-8",  # readable in-browser, never a download
+    ".html": "text/html; charset=utf-8",
+    ".htm": "text/html; charset=utf-8",
+    ".js": "application/javascript; charset=utf-8",  # e.g. the .dc.html's support.js
+    ".css": "text/css; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".ico": "image/x-icon",
+}
+
+
+def docs_content_type(name: str) -> str:
+    """The Content-Type for a docs file by extension; an unknown type degrades to
+    readable ``text/plain`` (never an octet-stream download)."""
+    return _DOCS_CTYPES.get(Path(name).suffix.lower(), "text/plain; charset=utf-8")
+
+
+def resolve_docs_path(rel: str, *, root: Path = _DOCS_ROOT) -> Path | None:
+    """Resolve a ``/docs/`` request to a real file **inside** ``root``, or ``None``
+    if it escapes the tree or isn't a file. The traversal guard resolves ``..`` and
+    symlinks and confirms the target stays under ``root`` (#808: reject ``..``)."""
+    rel = (rel or "").lstrip("/")
+    root_r = root.resolve()
+    try:
+        target = (root_r / rel).resolve()
+    except (OSError, ValueError):
+        return None
+    if target != root_r and root_r not in target.parents:
+        return None  # escaped the docs tree - reject
+    return target if target.is_file() else None
+
+
 _CAPTURE_DIR = _REPO / "tools" / "capture"
 if str(_CAPTURE_DIR) not in sys.path:
     sys.path.insert(0, str(_CAPTURE_DIR))
@@ -372,6 +414,36 @@ class DashboardHandler(BaseHTTPRequestHandler):
     def _send_json(self, obj: object, status: int = 200) -> None:
         self._send(json.dumps(obj), "application/json; charset=utf-8", status=status)
 
+    def _send_raw(self, raw: bytes, ctype: str, status: int = 200) -> None:
+        """Send already-encoded bytes (for #808 docs static files, incl. images/JS
+        the ``str``-only ``_send`` can't carry)."""
+        self.send_response(status)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(raw)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(raw)
+
+    def _serve_docs(self, rel: str) -> None:
+        """#808: serve a read-only file from the repo ``docs/`` tree, traversal-
+        guarded. 403 on an escape attempt, 404 on a miss - never reads outside."""
+        target = resolve_docs_path(rel)
+        if target is None:
+            # a traversal attempt is forbidden; a plain missing file is a 404
+            traversal = ".." in rel or rel.startswith(("/", "\\"))
+            self._send(
+                "forbidden" if traversal else "not found",
+                "text/plain; charset=utf-8",
+                status=403 if traversal else 404,
+            )
+            return
+        try:
+            raw = target.read_bytes()
+        except OSError:
+            self._send("not found", "text/plain; charset=utf-8", status=404)
+            return
+        self._send_raw(raw, docs_content_type(target.name))
+
     def do_GET(self) -> None:  # http.server dispatch name
         parsed = urlparse(self.path)
         q = parse_qs(parsed.query)
@@ -403,6 +475,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json(status_all(_MONITOR, _FLEET))
             elif parsed.path == "/serial/owner":  # who holds the port (#330)
                 self._send_json(serial_lock.owner_status())
+            elif parsed.path.startswith("/docs/"):  # #808: front-door docs, guarded
+                self._serve_docs(unquote(parsed.path[len("/docs/") :]))
             elif parsed.path == "/lab":  # the Lab Notebook catalog (#154 + bench #444)
                 self._send(render_catalog(load_combined()), "text/html; charset=utf-8")
             elif parsed.path == "/lab/experiments.json":
