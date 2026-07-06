@@ -17,6 +17,15 @@ untethered/multi-device prerequisite for [ADR-0018](adr/0018-dual-mode-transport
 **not yet implemented or enforced** — that's separate follow-on build work. Bump on any breaking column
 change; the version is written in every file's header block so one loader can read mixed-version history.
 
+**`schema_version=3`** shipped the stable minted `device_id` + payload `name=` (ADR-0027, §2).
+**`schema_version=4` is LIVE** (the #739 bundle — the single wire revision after v3): `config_id=`
+provenance (#576), `rssi=`/`uptime_s=`/`heap=` diagnostics (#669), and the `SENSOR_FAULT`
+`quality_flag` value + `fault=` reason (#670). **v4 is a strict superset of v3** — every addition
+rides `payload` or the `#` header; **ZERO new `CANONICAL_COLUMNS`** (the companion air-quality
+shared core stays byte-identical). Reader rule: **`>=4` ⇒ full v4 vocabulary**, layered on
+**`>=3` ⇒ `device_id` is the stable minted id**; `parse_v1` branches once at `>=4`, never
+stitching a v3 row into v4 vocab. Details in §13.
+
 ---
 
 ## 1. Principles
@@ -124,17 +133,30 @@ dose may surface as an interruption, which is honest, not wrong.)*
 Adopt the sibling air-quality project's enum verbatim — richer than plants' old binary `ok|WARN` and it upgrades plants'
 own diagnostics:
 
-`OK · WARMING · BASELINE_LEARNING · SUSPECT · SATURATED · ESTIMATED · NO_SIGNAL · ERROR`
+`OK · WARMING · BASELINE_LEARNING · SUSPECT · SATURATED · ESTIMATED · NO_SIGNAL · SENSOR_FAULT · ERROR`
+
+**`SENSOR_FAULT` is a `schema_version=4` addition** (#670, ratified in the #739 v4 bundle) —
+one coarse, honest value meaning *"this reading is not trustworthy as moisture."* **[propose→sibling-AQ]**
+the shared enum gains this one value; existing values are unchanged (additive, the #652
+"quality_flag-is-a-wire-value" precedent). The **specific** reason rides `payload` `fault=` (§6) so the
+shared enum stays small: `fault=stuck_wet` (short / water-contamination) or `fault=dead_adc`
+(disconnected / ADC floating to ~0).
 
 **Plants soil mapping:**
 
 | condition | flag | source |
 | --- | --- | --- |
+| raw **strictly below** the board physical wet rail (impossibly wet: short / contamination / dead ADC) | `SENSOR_FAULT` | **v4 #670** — firmware self-declares from the per-board `wet_rail_raw` (ADR-0019; classic 900); reason in payload `fault=` |
 | healthy reading, spread within bound | `OK` | normal |
 | sample spread > `spread_warn_raw` (noisy/contact) | `SUSPECT` | `health_warn` |
 | floating/disconnected probe (incoherent, ~4095 spread) | `NO_SIGNAL` | classifier health |
-| ADC railed (raw pegged at 0 or 4095) | `SATURATED` | raw clamp check |
+| ADC railed **high** (raw pegged at ~4095, dry rail) | `SATURATED` | raw clamp check |
 | *(reserved, unused by soil)* | `WARMING`, `BASELINE_LEARNING`, `ESTIMATED`, `ERROR` | — |
+
+> **v4 fix (#670):** the pre-v4 rule flagged a **low** rail (`raw <= 5`) as `SATURATED`, which masked a
+> dead board (the live `s3-1` reading `0/7/4/1`) as four drowning plants. Under v4 a sub-wet-rail raw is
+> `SENSOR_FAULT`, never `SATURATED`. **Raw is preserved (ADR-0006)** — the fault annotates the trust flag;
+> the real raw stays on the wire and in the log. `SATURATED` now means the **dry** (high) rail only.
 
 **Plants env mapping (`plants.env`, ratified by Data for #373/#374):**
 
@@ -188,6 +210,16 @@ and the first `=` splits key/value, so values *may* contain spaces (e.g. `level=
 Host-appended keys (additive, never touching device keys): `host_monotonic_ms` (#9), the §11 v2 keys
 (`device_seq`, `time_source`, `device_timestamp_utc`), and the §12 context tags (`context_source`,
 `pressure_context_source`).
+
+**`schema_version=4` device keys (the #739 v4 bundle — all payload, ZERO new canonical columns):**
+
+| key | on | meaning |
+| --- | --- | --- |
+| `config_id=<8hex>` | every row (soil + env) | #576 / ADR-0025 — firmware-computed fingerprint of the active config snapshot (ADC/sampling/cal/cadence). Same id ⇒ rows are directly comparable; a change is a comparability boundary + the no-auto-adjust alarm. Header-authoritative (`# config_id=` line); **`parse_v1` reads it, never re-derives.** |
+| `fault=stuck_wet｜dead_adc` | soil, only when `quality_flag=SENSOR_FAULT` | #670 — the specific fault reason (see §4). |
+| `rssi=<dBm>` | soil, **connected-only** | #669 — WiFi signal strength (a negative int). **Honest-absent** (ADR-0028): a serial/tethered or unassociated row **omits the key entirely** — never a fake `0`. Only the dBm value; **never SSID/BSSID/MAC** (privacy fence). |
+| `uptime_s=<s>` | every soil row | #669 — seconds since boot (board diagnostic; transport-independent). |
+| `heap=<bytes>` | every soil row | #669 — free heap bytes (board diagnostic). |
 
 ---
 
@@ -430,3 +462,49 @@ Staleness bound: a value older than 3 h never fills (synoptic pressure moves ~<1
 indoor≈outdoor claim stays honest to a few hPa); offline, the cache ages out and fills stop —
 columns stay honestly empty (R9). The archive ingestion (#367) also fetches `surface_pressure` now
 for analysis-time joins; older cached windows simply lack the field (never refetched).
+
+---
+
+## 13. Schema v4 (LIVE — #739, one bundled wire revision)
+
+The data-contract rule (#739): a wire change ships **together, in one revision** — one `schema_version`
+bump, one `parse_v1` extension, one `TELEMETRY_SCHEMA.md` rev, one fleet reflash. v4 is that bundle.
+**Trellis-ratified** against ADR-0006/0018/0021/0025/0027 and the companion shared-core binding; the
+load-bearing check holds — **v4 adds zero `CANONICAL_COLUMNS` positional columns**, so the byte-identical
+shared core with the companion air-quality project is preserved. Everything below rides `payload` k=v or a
+`#` header line.
+
+### 13.1 `config_id` — config provenance (#576, ADR-0025)
+
+A **stable FNV-1a-32 fingerprint (8 lowercase hex)** of the active config snapshot — ADC resolution/atten,
+`SAMPLES_PER_READ`/`SAMPLES_TRIM`/`ADC_DISCARD`, deadband, confirm windows, spread bound, sample cadence,
+sensor pins, the **live** per-channel cal bounds, and (env build only) the I²C clock + AS7263 gain/itime.
+
+- **Firmware-computed** — several inputs (trim, discard, I²C addrs) are firmware constants the host never
+  sees, so only the board can honestly hash them. `parse_v1` **reads** the emitted id; it never re-derives
+  (it may optionally re-hash the visible `# cfg:` fields as a *diagnostic*, never as the source of truth).
+- **Two surfaces:** header-authoritative `# config_id=<hex>` line + a per-row `payload` `config_id=<hex>`
+  ref on every soil **and** env row (a lone row stays self-interpreting — the #155 flatten, a pasted bug
+  report, a store-and-forward replay all keep it). Same-`config_id` ⇒ directly comparable; a change ⇒ a
+  machine-detectable comparability boundary + the no-auto-adjust alarm (ADR-0025). Subsumes the schema-v2
+  `cal_profile_version` (#300) — a re-cal rolls `config_id` automatically.
+- **v1 scope:** computed once at boot after cal load; a *runtime* cal/cadence retune does not yet re-roll it
+  (a follow-on) — set-once-held is the doctrine, so the boot fingerprint is honest.
+
+### 13.2 `rssi` / `uptime_s` / `heap` — board diagnostics (#669)
+
+- `rssi=<dBm>` (negative int) — WiFi signal strength, **connected-only + honest-absent** (ADR-0028): an
+  unassociated or serial/tethered row **omits** the key, never a fake `0`. **Only the dBm number** — never
+  SSID/BSSID/MAC (privacy fence). Answers placement/drift/interference from the log.
+- `uptime_s`, `heap` — seconds since boot and free heap, on **every** soil row (transport-independent).
+- **Cadence:** every row (the implementers' call, #669 mandates none) — cheap vs. the 30 s soil cadence.
+
+### 13.3 `SENSOR_FAULT` + `fault=` — physically-impossible readings (#670)
+
+A capacitive probe **cannot** read below its physical wet rail; a sub-rail raw is a fault, not moisture.
+See §4 for the enum value + the mapping table. Firmware self-declares from the **per-board `wet_rail_raw`**
+(ADR-0019 descriptor; classic 900, below the #248 saturated anchors; unverified boards carry the classic
+placeholder until #443). The coarse `SENSOR_FAULT` token rides `quality_flag`; the specific reason
+(`stuck_wet` | `dead_adc`) rides `payload` `fault=`. **Raw is preserved (ADR-0006).** Firmware's wire flag =
+the physical-impossibility call; the host-side derived *remediation* gate (what to do about it) is separate,
+lives at the parse boundary, and tunes without a reflash (the #652 two-thresholds-two-homes split).

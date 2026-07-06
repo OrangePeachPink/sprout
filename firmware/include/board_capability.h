@@ -55,6 +55,16 @@ typedef struct {
      * the classic placeholder" - never silently treated as real calibration. */
     uint16_t cal_boundary[BOARD_CAL_BOUNDARY_COUNT];
     bool cal_verified;
+    /* #670 (ADR-0019 board-profile value, never a magic literal): the physical
+     * fully-submerged raw ("wet rail"). A capacitive probe CANNOT read below this
+     * - a sub-rail raw is a fault (short / water contamination, or a dead ADC
+     * floating low), never real moisture. Firmware self-declares SENSOR_FAULT
+     * from it. Per-board because the C5's compressed scale rails lower (#443).
+     * Classic is bench-real (900, below the #248 saturated anchors: center 978,
+     * min probe 926; equals config.h SENSOR_WET_RAW by design). The unverified
+     * boards carry the classic placeholder until #443 measures their real rail -
+     * same honesty posture as their placeholder cal_boundary (cal_verified=false). */
+    uint16_t wet_rail_raw;
 } board_capability_t;
 
 /* --- the capability matrix (add a board = add a #elif) -------------------- */
@@ -73,7 +83,8 @@ typedef struct {
      21,                                                                       \
      22,                                                                       \
      {3050, 2140, 1830, 1520, 1150, 1050},                                     \
-     true}
+     true,                                                                     \
+     900}
 #elif defined(CONFIG_IDF_TARGET_ESP32S3)
 /* ANTICIPATED map (docs/hardware/BOARDS.md) - all VALID S3 GPIOs, continuity
  * NOT yet meter-verified (B1) so cal_verified=false. Refined 2026-07-03: the
@@ -97,7 +108,8 @@ typedef struct {
      8,                                                                        \
      9,                                                                        \
      {3050, 2140, 1830, 1520, 1150, 1050},                                     \
-     false}
+     false,                                                                    \
+     900}
 #elif defined(CONFIG_IDF_TARGET_ESP32C5)
 /* ANTICIPATED map - C5 datasheet + DevKitC-1 v1.2 user guide (#443 candidates).
  * VALID existent GPIOs (C5 = GPIO0-28). Replaces the classic placeholder
@@ -125,7 +137,8 @@ typedef struct {
      23,                                                                       \
      24,                                                                       \
      {3050, 2140, 1830, 1520, 1150, 1050},                                     \
-     false}
+     false,                                                                    \
+     900}
 #else
 /* host / native tests / an unknown target: assume the Tier-0 floor - tethered
  * monitor, no WiFi, no persistence. A real no-WiFi board (e.g. an AVR) adds its
@@ -142,7 +155,8 @@ typedef struct {
      21,                                                                       \
      22,                                                                       \
      {3050, 2140, 1830, 1520, 1150, 1050},                                     \
-     false}
+     false,                                                                    \
+     900}
 #endif
 
 static const board_capability_t BOARD_CAP = BOARD_CAPABILITY;

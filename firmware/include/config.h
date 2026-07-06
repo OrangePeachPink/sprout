@@ -50,7 +50,12 @@ constexpr const char *RUN_LABEL = "4probe-coloc-origplant";
 // one constant, so they can NEVER drift out of sync - they did exactly once (#601:
 // boot line said v1 while the header said v3). Bump here and everywhere follows.
 // >= 3 => device_id is the stable minted id + name= rides the payload.
-constexpr int PLANTS_SCHEMA_VERSION = 3;
+// >= 4 => the v4 bundle (#739, one wire revision): config_id= per-row provenance
+//   ref (#576/ADR-0025), rssi=/uptime_s=/heap= board diagnostics (#669), and the
+//   SENSOR_FAULT quality_flag value + fault= reason (#670). v4 is a strict superset
+//   of v3 - all additive payload/header, ZERO new CANONICAL_COLUMNS (the companion
+//   shared-core stays byte-identical); parse_v1 branches once at >=4, never stitches.
+constexpr int PLANTS_SCHEMA_VERSION = 4;
 constexpr const char *RECORD_TYPE_SOIL = "plants.soil";       // namespaced record_type
 constexpr const char *SENSOR_MODEL     = "UMLIFE_v2_TLC555";  // probe family
 constexpr const char *SENSOR_POSITION  = "origplant";        // all four co-located now; per-channel at repot

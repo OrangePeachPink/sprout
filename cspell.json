@@ -44,6 +44,11 @@
     "resoak",
     "rootbound",
     "itime",
+    // #739 schema-v4 telemetry wire keys + config-snapshot abbreviations.
+    "rssi",
+    "BSSID",
+    "atten",
+    "addrs",
     // Contextual env-source names (#418 / ADR-0023): the Zigbee protocol and the
     // `context_source` identifiers sht45_onrig / weather_openmeteo (cspell splits
     // snake_case, so it sees "onrig" / "openmeteo" as tokens).

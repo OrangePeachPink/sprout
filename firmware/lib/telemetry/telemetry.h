@@ -12,6 +12,7 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "moisture_classifier.h"
 
 #ifdef __cplusplus
@@ -55,6 +56,23 @@ typedef struct {
      * payload on every row (device_id is now the stable nonce; name= is the
      * pre-mint degrade identifier + human legibility). "" or NULL -> empty value. */
     const char *name;
+    /* --- #739 schema v4 additions: ALL ride payload k=v / the header - ZERO new
+     * CANONICAL_COLUMNS (Trellis's shared-core byte-identity constraint holds). --- */
+    uint16_t
+        wet_rail_raw; /* #670: board physical wet rail (BOARD_CAP.wet_rail_raw);
+                              a raw below it -> SENSOR_FAULT + payload fault=<reason>.
+                              0 disables the check (unknown rail -> never self-flag). */
+    const char
+        *config_id; /* #576 / ADR-0025: firmware-computed config fingerprint,
+                              rides payload config_id= (never a canonical column);
+                              parse_v1 reads it, never re-derives. NULL/"" omits it. */
+    /* #669 board diagnostics (payload). rssi is WiFi-only: rssi_present=false on a
+     * serial/tethered row OMITS rssi= entirely - honest-absent, never a fake 0
+     * (ADR-0028). uptime_s/heap ride every row (transport-independent). */
+    bool rssi_present; /* true only when associated to WiFi              */
+    int rssi_dbm; /* WiFi.RSSI() dBm (negative); ignored when !rssi_present */
+    uint32_t uptime_s; /* seconds since boot (up_ms / 1000)             */
+    uint32_t heap_free; /* esp_get_free_heap_size() bytes                */
 } telemetry_soil_row_t;
 
 /*
@@ -64,10 +82,35 @@ typedef struct {
 uint8_t telemetry_checksum(const char *s);
 
 /*
- * Map classifier health to the shared quality_flag enum (TELEMETRY_SCHEMA.md S4).
- * Returns one of: "OK", "SUSPECT", "NO_SIGNAL", "SATURATED".
+ * FNV-1a 32-bit hash (incremental) - the config_id fingerprint primitive (#576 /
+ * ADR-0025). Seed with TELEMETRY_FNV1A32_INIT, fold each config-snapshot field's
+ * canonical string in order, then format the final result as 8 lowercase hex.
+ * Pure C, deterministic, no allocation - native-testable against a known vector.
  */
-const char *telemetry_quality_flag(const moisture_state_t *st);
+#define TELEMETRY_FNV1A32_INIT 2166136261u
+uint32_t telemetry_fnv1a32(uint32_t h, const void *data, size_t len);
+
+/*
+ * Map classifier state to the shared quality_flag enum (TELEMETRY_SCHEMA.md S4).
+ * Returns one of: "SENSOR_FAULT", "SATURATED", "NO_SIGNAL", "SUSPECT", "OK".
+ * #670: a raw STRICTLY BELOW the board's physical wet rail (wet_rail_raw, from the
+ * board profile) is physically impossible - flagged SENSOR_FAULT, which takes
+ * precedence (raw is preserved per ADR-0006; only the trust flag changes). Callers
+ * pass BOARD_CAP.wet_rail_raw; native tests pass the classic 900.
+ */
+const char *telemetry_quality_flag(const moisture_state_t *st,
+                                   uint16_t wet_rail_raw);
+
+/*
+ * #670 companion reason for the payload `fault=` key: "dead_adc" when the raw floats
+ * at/below TELEMETRY_DEAD_ADC_MAX (disconnected / dead ADC), "stuck_wet" when it is
+ * below the wet rail but not near-zero (short / water contamination), NULL when the
+ * raw is NOT a fault. The coarse SENSOR_FAULT token stays in quality_flag (the shared
+ * enum is kept small); the specific reason rides payload so the enum can't balloon
+ * (Trellis's #739 binding). Same wet_rail_raw the flag uses.
+ */
+#define TELEMETRY_DEAD_ADC_MAX 50
+const char *telemetry_fault_reason(uint16_t raw, uint16_t wet_rail_raw);
 
 /*
  * Format one soil telemetry CSV row into buf WITHOUT the trailing "*HH" checksum.
@@ -106,6 +149,9 @@ typedef struct {
     const char *quality_flag; /* shared enum (S4)                     */
     const char *payload; /* ";"-sep k=v, incl. the placement note */
     const char *name; /* #601: friendly name, emitted as name= before payload */
+    const char
+        *config_id; /* #576 / ADR-0025: same config fingerprint, appended to
+                              payload as config_id= (never a canonical column). */
 } telemetry_env_row_t;
 
 /* Format one plants.env CSV row WITHOUT the trailing "*HH". Returns chars written

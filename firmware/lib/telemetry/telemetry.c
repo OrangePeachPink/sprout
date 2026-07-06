@@ -11,14 +11,39 @@ uint8_t telemetry_checksum(const char *s)
     return c;
 }
 
-const char *telemetry_quality_flag(const moisture_state_t *st)
+uint32_t telemetry_fnv1a32(uint32_t h, const void *data, size_t len)
+{
+    const uint8_t *p = (const uint8_t *)data;
+    for (size_t i = 0; i < len; i++) {
+        h ^= p[i];
+        h *= 16777619u; /* FNV-1a 32-bit prime */
+    }
+    return h;
+}
+
+const char *telemetry_quality_flag(const moisture_state_t *st,
+                                   uint16_t wet_rail_raw)
 {
     uint16_t raw = st->last_raw;
-    if (raw >= 4090 || raw <= 5) return "SATURATED";  /* ADC railed */
+    /* #670: a raw below the physical wet rail is impossible - a fault (short /
+     * water contamination) or a dead ADC floating low, never real moisture. Takes
+     * precedence; raw is preserved (ADR-0006). This replaces the old
+     * `raw <= 5 -> SATURATED`, which masked dead boards as drowning plants (the
+     * live s3-1 0/7/4/1 case). wet_rail_raw==0 disables the check (unknown rail). */
+    if (wet_rail_raw > 0 && raw < wet_rail_raw) return "SENSOR_FAULT";
+    if (raw >= 4090) return "SATURATED"; /* dry-rail: ADC railed high */
     if (st->last_spread >= 2000)
-        return "NO_SIGNAL";  /* floating / disconnected */
-    if (st->health_warn) return "SUSPECT";    /* noisy / poor contact */
+        return "NO_SIGNAL"; /* floating / disconnected */
+    if (st->health_warn) return "SUSPECT"; /* noisy / poor contact */
     return "OK";
+}
+
+const char *telemetry_fault_reason(uint16_t raw, uint16_t wet_rail_raw)
+{
+    if (wet_rail_raw == 0 || raw >= wet_rail_raw) return NULL; /* not a fault */
+    if (raw <= TELEMETRY_DEAD_ADC_MAX)
+        return "dead_adc"; /* floating to ~0: disconnected / dead ADC */
+    return "stuck_wet"; /* below the rail but not near-zero: short / contamination */
 }
 
 int telemetry_format_soil_row(char *buf, size_t buflen,
@@ -31,7 +56,8 @@ int telemetry_format_soil_row(char *buf, size_t buflen,
      * schema §11) ride the payload too - additive, doesn't touch the 14-column CSV
      * shape. device_timestamp_utc is OMITTED (not an empty key) when NULL/unsynced -
      * absence, not a guessed value, is the honest NULL here. */
-    char payload[200]; /* #601: +name= (up to ~38 bytes) vs the prior 160 */
+    char payload
+        [256]; /* #601 name= + #739 v4 payload keys (config_id/fault/diag) */
     int len =
         snprintf(payload, sizeof(payload),
                  "name=%s;level=%s;role=%s;spread=%u;gpio=%d;device_seq=%lu;"
@@ -40,22 +66,49 @@ int telemetry_format_soil_row(char *buf, size_t buflen,
                  moisture_level_is_display(r->level) ? "disp" : "diag",
                  (unsigned)r->state->last_spread, r->gpio_pin,
                  (unsigned long)r->device_seq, r->time_source);
+    /* Each append is bounds-guarded; a would-be overflow just drops the tail key
+     * (snprintf still NUL-terminates - never a partial-but-unterminated payload). */
     if (r->device_timestamp_utc && r->device_timestamp_utc[0] != '\0' &&
         len > 0 && (size_t)len < sizeof(payload)) {
-        snprintf(payload + len, sizeof(payload) - (size_t)len,
-                 ";device_timestamp_utc=%s", r->device_timestamp_utc);
+        len += snprintf(payload + len, sizeof(payload) - (size_t)len,
+                        ";device_timestamp_utc=%s", r->device_timestamp_utc);
     }
+    /* #576 / ADR-0025: per-row config-provenance ref (firmware-computed hash). */
+    if (r->config_id && r->config_id[0] != '\0' && len > 0 &&
+        (size_t)len < sizeof(payload)) {
+        len += snprintf(payload + len, sizeof(payload) - (size_t)len,
+                        ";config_id=%s", r->config_id);
+    }
+    /* #670: the specific fault reason rides payload; the coarse SENSOR_FAULT token
+     * is in quality_flag (below). NULL when the raw is not a fault. */
+    const char *fault = telemetry_fault_reason(r->raw, r->wet_rail_raw);
+    if (fault && len > 0 && (size_t)len < sizeof(payload)) {
+        len += snprintf(payload + len, sizeof(payload) - (size_t)len,
+                        ";fault=%s", fault);
+    }
+    /* #669: rssi is honest-absent off WiFi (omit, never a fake 0); uptime_s/heap
+     * ride every row (transport-independent board diagnostics). */
+    if (r->rssi_present && len > 0 && (size_t)len < sizeof(payload)) {
+        len += snprintf(payload + len, sizeof(payload) - (size_t)len,
+                        ";rssi=%d", r->rssi_dbm);
+    }
+    if (len > 0 && (size_t)len < sizeof(payload)) {
+        len += snprintf(payload + len, sizeof(payload) - (size_t)len,
+                        ";uptime_s=%lu;heap=%lu", (unsigned long)r->uptime_s,
+                        (unsigned long)r->heap_free);
+    }
+    (void)len;
 
     /*
      * Compact device CSV row — host prepends time/sequence columns (B2 split).
      * value + unit are emitted NULL (empty fields): raw_value (ADC counts) and
      * the band (payload 'level') are authoritative (#38).
      */
-    int n = snprintf(buf, buflen, "%s,%s,%s,%s,%llu,%s,%s,%s,%s,%u,,,%s,%s",
-                     r->record_type, r->session_id, r->device_id, r->fw_version,
-                     r->up_ms, r->sensor_model, r->sensor_name,
-                     r->sensor_position, r->channel_str, (unsigned)r->raw,
-                     telemetry_quality_flag(r->state), payload);
+    int n = snprintf(
+        buf, buflen, "%s,%s,%s,%s,%llu,%s,%s,%s,%s,%u,,,%s,%s", r->record_type,
+        r->session_id, r->device_id, r->fw_version, r->up_ms, r->sensor_model,
+        r->sensor_name, r->sensor_position, r->channel_str, (unsigned)r->raw,
+        telemetry_quality_flag(r->state, r->wet_rail_raw), payload);
     return (n >= 0 && (size_t)n < buflen) ? n : -1;
 }
 
@@ -72,6 +125,13 @@ int telemetry_format_env_row(char *buf, size_t buflen,
         r->sensor_model, r->sensor_id, r->sensor_position, r->channel,
         r->raw_value, r->value, r->unit, r->quality_flag,
         r->name ? r->name : "", r->payload);
+    /* #576 / ADR-0025: append the config-provenance ref to the payload column (the
+     * last field) so env rows are as self-interpreting as soil rows. */
+    if (r->config_id && r->config_id[0] != '\0' && n > 0 &&
+        (size_t)n < buflen) {
+        n += snprintf(buf + n, buflen - (size_t)n, ";config_id=%s",
+                      r->config_id);
+    }
     return (n >= 0 && (size_t)n < buflen) ? n : -1;
 }
 
