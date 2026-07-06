@@ -231,8 +231,13 @@ no board). Coverage is **visible, not gated**.
 - Idea not ready to build → **Discussions.** Ready, assignable, "done" definable in a sentence
   → an **Issue** (use the forms).
 - Labels: `type:*` (work kind) · `area:*` (control/logging/sensing/actuators/analytics/design) ·
-  `layer:*` (firmware/host) · `blocks:*` (gates) · `good first issue` · `help wanted` ·
-  `needs-verification`. Priority / Size / Verification live on the **board**, not as labels.
+  `layer:*` (firmware/host) · `blocks:*` (gates) · `needs:maintainer` (the maintainer's queue) ·
+  `good first issue` · `help wanted`. Priority / Size live on the **board**, not as labels.
+- **The verification signal is the Status column and nothing else** (#729, maintainer-ruled):
+  `Needs Verification` = evidence posted, awaiting review · `Ready to Merge` = certified GO.
+  The reviewer's disposition lives in the certification comment; changes-requested = the card
+  returns to In Progress with the reason. The old `Verification` field and `needs-verification`
+  label are retired — one signal, no drift.
 
 ## Design & brand guidance
 
