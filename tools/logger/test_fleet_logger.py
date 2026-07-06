@@ -68,8 +68,88 @@ def _served(text_by_url: dict[str, str]):
     return registry, factory
 
 
+def _env_line(
+    *,
+    device: str = "sprout-s3-01",
+    channel: str = "ambient_temp",
+    value: str = "21.5",
+    unit: str = "degC",
+    model: str = "SHT45",
+    millis: int = 60000,
+) -> str:
+    """One served plants.env row (the on-board SHT45's ambient reading)."""
+    body = (
+        f"plants.env,sessW,{device},0.8.0,{millis},{model},"
+        f"sht45,shelf,{channel},,{value},{unit},OK,"
+    )
+    crc = 0
+    for ch in body:
+        crc ^= ord(ch) & 0xFF
+    return f"{body}*{crc:02X}"
+
+
 def _response(*lines: str) -> str:
     return _DEVICE_COLS + "\n" + "\n".join(lines) + "\n"
+
+
+def _soil_rows(logdir: Path) -> list:
+    return [
+        r
+        for r in parse_files([str(logdir)]).readings
+        if r.record_type.startswith("plants.soil")
+    ]
+
+
+# --------------------------------------------------------------------------- #
+# #701: the fleet logger fills soil rows with the board's plant-local SHT45
+# --------------------------------------------------------------------------- #
+
+
+def test_fleet_fills_soil_rows_from_the_onboard_sht45(tmp_path: Path) -> None:
+    resp = _response(
+        _env_line(device="dev-0", channel="ambient_temp", value="21.5"),
+        _env_line(device="dev-0", channel="ambient_rh", value="55.0", unit="pct"),
+        _line(device="dev-0", sensor="s1", raw=1900),
+    )
+    reg, factory = _served({"http://a": resp})
+    fl = FleetLogger(str(tmp_path), registry=reg, adapter_factory=factory, log=str)
+    assert fl.poll_once() >= 1
+    soil = _soil_rows(tmp_path)
+    assert soil
+    r = soil[-1]
+    # the join-free ADR-0023 fill now reaches the untethered spine
+    assert r.temp_context_c == 21.5
+    assert r.rh_context_pct == 55.0
+    assert r.context_source == "sht45_onrig"  # payload tag (k=v, no new column)
+
+
+def test_soil_rows_stay_honestly_empty_with_no_env(tmp_path: Path) -> None:
+    resp = _response(_line(device="dev-0", sensor="s1", raw=1900))
+    reg, factory = _served({"http://a": resp})
+    fl = FleetLogger(str(tmp_path), registry=reg, adapter_factory=factory, log=str)
+    fl.poll_once()
+    r = _soil_rows(tmp_path)[-1]
+    assert r.temp_context_c is None and r.rh_context_pct is None
+    assert r.context_source is None  # nothing fresh -> honestly empty
+
+
+def test_context_never_cross_fills_between_boards(tmp_path: Path) -> None:
+    # device A has an SHT45; device B does not. B's soil must NOT borrow A's
+    # ambient - the per-device fillers keep each board's context its own.
+    reg, factory = _served(
+        {
+            "http://a": _response(
+                _env_line(device="dev-0", channel="ambient_temp", value="21.5"),
+                _line(device="dev-0", sensor="s1", raw=1900),
+            ),
+            "http://b": _response(_line(device="dev-1", sensor="s1", raw=2000)),
+        }
+    )
+    fl = FleetLogger(str(tmp_path), registry=reg, adapter_factory=factory, log=str)
+    fl.poll_once()
+    by_dev = {r.device_id: r for r in _soil_rows(tmp_path)}
+    assert by_dev["dev-0"].temp_context_c == 21.5  # its own SHT45 filled it
+    assert by_dev["dev-1"].temp_context_c is None  # no cross-fill from dev-0
 
 
 # --------------------------------------------------------------------------- #
