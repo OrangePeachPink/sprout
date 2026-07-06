@@ -311,7 +311,7 @@ footer.prov code { font-family: var(--font-data); }
       <span class="refreshed" id="refreshed"></span>
       <button class="btn" id="refreshBtn" type="button">↻ Refresh</button>
       <label class="auto" id="autoLbl"><input type="checkbox" id="autoChk"> auto</label>
-      <button class="btn" id="themeBtn" type="button">soil mode</button>
+      <button class="btn" id="themeBtn" type="button" aria-label="Switch to dark mode" title="Switch to dark mode">🌙 Dark</button>
       <button class="btn" id="quitBtn" type="button" hidden>⏻ Stop server</button>
     </div>
   </header>
@@ -1616,7 +1616,16 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
   const refreshBtn=document.getElementById('refreshBtn'), autoChk=document.getElementById('autoChk');
 
   let theme='light'; try{ theme = localStorage.getItem('sprout-theme')||'light'; }catch(e){}
-  function applyTheme(){ root.setAttribute('data-theme', theme); themeBtn.textContent = theme==='dark'? 'light mode':'soil mode'; }
+  // #723: a standard, discoverable light/dark toggle — "soil mode" retired (ratified). The button shows
+  // the mode you'll switch TO (icon + word), with an accessible label; no cute name to decode.
+  function applyTheme(){
+    root.setAttribute('data-theme', theme);
+    const dark = theme==='dark';
+    themeBtn.textContent = dark ? '☀️ Light' : '🌙 Dark';
+    const to = dark ? 'light' : 'dark';
+    themeBtn.setAttribute('aria-label', `Switch to ${to} mode`);
+    themeBtn.title = `Switch to ${to} mode`;
+  }
   themeBtn.addEventListener('click', ()=>{ theme = theme==='dark'?'light':'dark'; try{ localStorage.setItem('sprout-theme',theme);}catch(e){} applyTheme(); renderAll(); });
 
   refreshBtn.addEventListener('click', refresh);
