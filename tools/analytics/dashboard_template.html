@@ -1535,7 +1535,7 @@ async function refresh(){
   btn.classList.add('busy'); btn.disabled = true;
   try{
     let chParam = '';
-    if(activeChannels){ const all=(DASH.meta&&DASH.meta.all_channels)||[]; if(activeChannels.size < all.length) chParam = '&channels='+[...activeChannels].join(','); }
+    if(activeChannels){ const all=liveChannelIds(); if(activeChannels.size < all.length) chParam = '&channels='+[...activeChannels].join(','); }
     const r = await fetch(`data.json?range=${curRange}${chParam}`, {cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     DASH = await r.json();
@@ -1567,22 +1567,31 @@ function setRange(r){
 }
 
 /* ---- channel on/off (E10) ---- */
+// #805: the toggle is per LIVE PLANT, plant-first — not the sN channel index (which collided with the
+// probe label and only ever exposed 4). Keys are the canonical scoped sensor id (s1@device), so the
+// server-side filter (filter_channels, #583, which accepts scoped ids) is unchanged; retired excluded.
+function liveChannelIds(){
+  const r = new Set((DASH.devices||[]).filter(d=>d.retired).map(d=>d.device_id));
+  return (DASH.sensors||[]).filter(s=>!r.has(s.device_id)).map(s=>s.id);
+}
 function renderChannelChips(){
-  const all = (DASH.meta && DASH.meta.all_channels) || [];
-  if(activeChannels === null) activeChannels = new Set(all);
+  const ids = liveChannelIds();
+  if(activeChannels === null) activeChannels = new Set(ids);
   const wrap = document.getElementById('chansel'); if(!wrap) return;
   wrap.innerHTML = '';
-  all.forEach(sid=>{
-    const on = activeChannels.has(sid);
-    const chip = el('button', 'chanchip' + (on?'':' off'), sid); chip.type = 'button';
-    if(on) chip.style.background = chanColor(sid);
-    chip.title = (on ? 'hide ' : 'show ') + sid;
-    chip.addEventListener('click', ()=> toggleChannel(sid));
+  const byId = {}; (DASH.sensors||[]).forEach(s=>byId[s.id]=s);
+  ids.forEach(id=>{
+    const s = byId[id]; const label = s ? plantLabel(s) : id;
+    const on = activeChannels.has(id);
+    const chip = el('button', 'chanchip' + (on?'':' off'), label); chip.type = 'button';
+    if(on && s) chip.style.background = s.color;
+    chip.title = (on ? 'hide ' : 'show ') + label;
+    chip.addEventListener('click', ()=> toggleChannel(id));
     wrap.appendChild(chip);
   });
 }
 function toggleChannel(sid){
-  if(activeChannels === null) activeChannels = new Set((DASH.meta && DASH.meta.all_channels) || []);
+  if(activeChannels === null) activeChannels = new Set(liveChannelIds());
   if(activeChannels.has(sid)){ if(activeChannels.size > 1) activeChannels.delete(sid); }
   else activeChannels.add(sid);
   renderChannelChips();
