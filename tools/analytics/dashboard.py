@@ -133,6 +133,23 @@ def _load_mood_map() -> dict[str, str]:
 
 
 MOOD_BY_BAND: dict[str, str] = _load_mood_map()
+
+
+# #722: header orientation line, from the voice pool (never hard-coded). Load-once,
+# degrade-to-empty like the mood map — a stripped deploy without the doc just omits it.
+_VOICE_PATH = _HERE.parents[1] / "docs" / "design" / "components" / "voice-strings.json"
+
+
+def _load_orientation() -> str:
+    try:
+        data = json.loads(_VOICE_PATH.read_text(encoding="utf-8"))
+        lines = data.get("bySurface", {}).get("orientation", [])
+        return lines[0] if lines else ""
+    except (OSError, ValueError, KeyError, TypeError, IndexError):
+        return ""
+
+
+ORIENTATION: str = _load_orientation()
 BAND_NAMES_DRY_TO_WET = [
     "air-dry",
     "DRY",
@@ -1053,6 +1070,7 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         "meta": meta,
         "provenance": provenance_block,
         "env": env,
+        "orientation": ORIENTATION,  # #722: header voice line, read from the voice pool
         "cal": {"bounds": bounds, "moist_range": list(mrange), "bands": bands},
         "sensors": sensors,
         "devices": device_groups,
