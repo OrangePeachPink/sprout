@@ -467,6 +467,35 @@ def _latest_segment(segments: list):
 # --------------------------------------------------------------------------- #
 # context build
 # --------------------------------------------------------------------------- #
+def _water_position(band, raw, bands, mrange):
+    """#715 'water now?' geometry for one reading. Returns
+    ``(band_lo, band_hi, band_pos, dryness)``:
+
+    - ``band_lo``/``band_hi`` - the raw bounds of the reading's current band
+      (lo = wetter edge, hi = drier edge);
+    - ``band_pos`` - 0.0 (wet edge) .. 1.0 (dry edge) WITHIN that band, so two
+      plants in the same band differ by where they sit (2,894-in-DRY vs 2,265);
+    - ``dryness`` - 0.0 (wettest) .. 1.0 (driest) across the whole moist range, a
+      sortable urgency scalar (higher = more urgent; DesignQA orders on it).
+
+    All ``None`` when there is no real banded reading - no invented urgency where
+    there's no signal (the #616 honesty line). Cross-board ``dryness`` is subject
+    to the C5 compressed scale (#170) until per-board cal; within a board it's exact."""
+    if raw is None or not band:
+        return None, None, None, None
+    wet, dry = mrange  # (wettest raw, driest raw), e.g. (900, 3400)
+    span = dry - wet
+    dryness = max(0.0, min(1.0, (raw - wet) / span)) if span else None
+    br = next((b for b in bands if b["fw"] == band), None)
+    band_lo = band_hi = band_pos = None
+    if br is not None:
+        band_lo, band_hi = br["lo"], br["hi"]
+        bspan = band_hi - band_lo
+        if bspan:
+            band_pos = max(0.0, min(1.0, (raw - band_lo) / bspan))
+    return band_lo, band_hi, band_pos, dryness
+
+
 def build_context(data: LogData, registry: Registry | None = None) -> dict:
     """``registry`` defaults to ``device_registry.load_registry()`` (the local
     fleet config, falling back to the committed example/demo shape, #486) - pass
@@ -607,6 +636,13 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
                 "hpa": last.pressure_context_hpa,
                 "source": last.pressure_context_source,
             }
+        # #715: within-band position + a sortable dryness for the "water now?"
+        # view; None where there's no real banded reading (honesty, #616).
+        band_lo, band_hi, band_pos, dryness = (
+            (None, None, None, None)
+            if no_signal or unassigned
+            else _water_position(last.band, last.raw_value, bands, mrange)
+        )
         sensors.append(
             {
                 "id": sid,
@@ -636,6 +672,10 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
                 "band_fw": last.band,
                 "band_ui": band_ui,
                 "band_color": band_color,
+                "band_lo": band_lo,  # #715 current band raw bounds (wet..dry edge)
+                "band_hi": band_hi,
+                "band_pos": band_pos,  # #715 0=wet edge .. 1=dry edge within band
+                "dryness": dryness,  # #715 0=wettest .. 1=driest (sortable urgency)
                 "mood": mood,
                 "spread_last": last.spread,
                 "quality_last": last.quality_flag,
