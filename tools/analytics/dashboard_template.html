@@ -585,10 +585,6 @@ function renderCards(){
         co.title = 'History coalesced from prior device ids (raw untouched): ' + d.also_reported_as.join(' · ');
         h.appendChild(co);
       }
-      if(d.cal_provisional){                            // HONESTY: provisional-band banner until #170
-        group.appendChild(el('div','calbanner',
-          'Board calibration is provisional (not bench-verified for this board) — bands render provisional until per-channel cal (#170).'));
-      }
     } else if (DASH.devices && DASH.devices.length===1 && d.device_id){
       // slim ribbon: the single-device case keeps today's flat card wall
       const rib = el('div','devribbon mono');
@@ -609,6 +605,14 @@ function renderCards(){
     group.appendChild(cardsWrap);
     wrap.appendChild(group);
   });
+  // #687: one fleet-level provisional note instead of a full orange banner repeated on every group. The
+  // compact per-device "cal · provisional" chip still marks which boards; this drops the repeated banners.
+  const provDevs = devices.filter(x => x.cal_provisional);
+  if(provDevs.length){
+    const msg = (provDevs.length === devices.length ? 'All boards are' : `${provDevs.length} of ${devices.length} boards are`) +
+      ' calibration-provisional — bands render provisional until per-channel calibration (#170).';
+    wrap.insertBefore(el('div','calbanner', msg), wrap.firstChild);
+  }
 }
 
 function cardFor(s){
