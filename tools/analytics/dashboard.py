@@ -117,6 +117,7 @@ RANGE_HOURS: dict[str, float | None] = {
     "3h": 3.0,
     "12h": 12.0,
     "24h": 24.0,
+    "48h": 48.0,  # #821: between 1 day and 7 days — same windowing as every chip
     "7d": 24.0 * 7,
     "30d": 24.0 * 30,
     "all": None,
