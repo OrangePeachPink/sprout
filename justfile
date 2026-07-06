@@ -57,6 +57,17 @@ dash *ARGS:
 processes:
     {{py}} tools/analytics/sprout_processes.py
 
+# Headless collection lifecycle (#689): see/start/stop collection without the dashboard.
+# `just collection status|start|stop` - parity with the dashboard's one-action "Start all
+# collection" (ADR-0014). `status` reuses `just processes`; `start` posts to a running server.
+collection ACTION="status" *ARGS:
+    {{py}} tools/dx/collection.py {{ACTION}} {{ARGS}}
+
+# Stop every running collector (monitor + fleet) headlessly - graceful, then hard-kill (#689).
+# The recourse when a browser tab closed or a collector orphaned and there's no Stop button.
+stop-collection *ARGS:
+    {{py}} tools/dx/collection.py stop {{ARGS}}
+
 # ============================================================================
 #  CAPTURE lane — host-side serial capture (the device-side runtime).
 # ============================================================================
