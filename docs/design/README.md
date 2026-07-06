@@ -9,7 +9,9 @@ whole system. Start there:
 
 - **`tokens/`** — the token contract (`sprout-tokens.css`), consumed, not redefined.
 - **`components/`** — the living mark, motion, and shared component code.
-- **`foundations/`** — the design system + the Brand Consistency Pass (the standard + its changelog).
+- **`foundations/`** — the design system, the [design doctrine](foundations/design-doctrine.md) (the
+  four-question test + the two-jobs split rule — the north star every surface is judged against), and the
+  Brand Consistency Pass (the standard + its changelog).
 - **`brand/`** — the brand guide, the mark, banners, and the social-preview image.
 - **`voice/`** — voice & personality.
 - **`onboarding/`** — first-meeting surfaces: the front doors, the sensor guide, untethered states.
