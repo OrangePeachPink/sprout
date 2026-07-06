@@ -720,10 +720,19 @@ function renderTraj(){
   const lo = Math.min(...DASH.sensors.map(s=>s.raw_min));
   const hi = Math.max(...DASH.sensors.map(s=>s.raw_max));
   const pad = Math.max(40, (hi-lo)*0.6);
+  // #686 interim: at fleet scale 13 series cycle a 4-colour palette, so lines collide. Keep each channel's
+  // existing hue (colour = channel) and distinguish DEVICES by line style (solid / dashed / dotted / dash-dot)
+  // — all series become tellable-apart using only existing tokens. The full creative palette is v0.8.0 / Claude Design.
+  const _devIds = (DASH.devices||[]).map(x=>x.device_id).filter(Boolean);
+  const _DASHES = [[], [7,4], [2,3], [10,4,2,4]];
+  const _dashFor = did => { const i = _devIds.indexOf(did); return _DASHES[(i<0?0:i) % _DASHES.length]; };
+  const _multiDev = _devIds.length > 1;
   const datasets = DASH.trajectory.datasets.map(d=>{
     const g = withGapBreaks(d.points, d.local);
+    const _s = (DASH.sensors||[]).find(x=>x.id===d.id);
+    const _dash = _multiDev ? _dashFor(_s && _s.device_id) : [];
     return { label:d.id, data:g.points, parsing:false, borderColor:d.color, backgroundColor:d.color,
-      borderWidth:1.6, pointRadius:0, tension:0.25, spanGaps:false, _local:g.locals };
+      borderWidth:1.6, borderDash:_dash, pointRadius:0, tension:0.25, spanGaps:false, _local:g.locals };
   });
   charts.traj = new Chart(document.getElementById('trajChart'), {
     type:'line', data:{ datasets },
