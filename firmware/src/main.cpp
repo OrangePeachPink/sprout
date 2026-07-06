@@ -46,6 +46,7 @@ static_assert(SENSOR_CAL_CHANNELS == NUM_SENSORS,
 #include <WebServer.h> /* core-bundled, no lib_deps entry needed */
 #include <DNSServer.h> /* captive-portal catch-all DNS (#275, core-bundled) */
 #include <ESPmDNS.h> /* #676: sprout-<device_id>.local advertisement (core-bundled) */
+#include <ArduinoOTA.h> /* #302 Phase-0: LAN OTA receiver (core-bundled) */
 #include <time.h> /* NTP-on-connect (#278): configTime/gmtime_r/strftime */
 #include <sys/time.h> /* gettimeofday - ms precision for device_timestamp_utc */
 
@@ -1131,6 +1132,24 @@ void loop()
                     "# mDNS: begin failed - reach me by IP/subnet-scan "
                     "this session");
             }
+            /* #302 Phase-0 OTA (maintainer-ruled interim; NOT the ADR-0026 fence).
+             * Standard ArduinoOTA receiver: LAN-only (espota over the local net),
+             * password-gated (OTA_PASSWORD), armed ONLY here on the WiFi-connected
+             * edge. Hostname reuses the mDNS nonce so the fleet OTA-targets by name.
+             * An OTA update reboots the chip -> boot re-runs allRelaysOff() (#93), so
+             * a mid-update reset can never strand a relay; OTA stays outside the
+             * safety loop. Re-armed on each association edge. */
+            ArduinoOTA.setHostname(host);
+            ArduinoOTA.setPassword(OTA_PASSWORD);
+            ArduinoOTA.onStart([]() {
+                Serial.println("# OTA: update start (rebooting after)");
+            });
+            ArduinoOTA.onError([](ota_error_t e) {
+                Serial.printf("# OTA: error %u\n", (unsigned)e);
+            });
+            ArduinoOTA.begin();
+            Serial.printf("# OTA: armed on %s.local (LAN, password-gated)\n",
+                          host);
         }
         if (g_wifi.state == WIFI_NET_PORTAL &&
             prevWifiState != WIFI_NET_PORTAL) {
@@ -1141,6 +1160,8 @@ void loop()
             g_dns.processNextRequest(); /* captive-detection DNS catch-all */
         g_http
             .handleClient(); /* cheap no-op until a client actually connects */
+        if (g_wifi.state == WIFI_NET_CONNECTED)
+            ArduinoOTA.handle(); /* #302: service OTA only while associated */
     }
 
     /* The supervisor is the single sample & actuation authority (ADR-0016): tick it
