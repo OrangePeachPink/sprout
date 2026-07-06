@@ -746,7 +746,11 @@ function cardFor(s){
   // board/side, never GPIO/channel (wiring lives behind the detail's "Wiring details") and never the
   // @device_id machine key.
   const probe = s.probe || s.sensor_id;
-  const board = s.device_name ? (s.device_side ? `${s.device_name} (${s.device_side})` : s.device_name) : null;
+  // #806: the card shows a FRIENDLY short board name (the part before the technical parenthetical) + the
+  // physical side (left/right) when the registry has it — honest-absent until the maintainer populates it.
+  // The full technical name ("… (ESP32-D0WD - env + soil)") stays behind the detail's Wiring details.
+  const boardShort = s.device_name ? s.device_name.split(' (')[0].trim() : null;
+  const board = boardShort ? (s.device_side ? `${boardShort} (${s.device_side})` : boardShort) : null;
   const lead = s.plant_name || s.plant_id || probe || s.id;
   // drop any part that already IS the lead (an unassigned card leads with the probe itself)
   const idbits = [[s.plant_type, s.pot_size].filter(Boolean).join(' · '), probe, board].filter(Boolean).filter(x => x !== lead).join(' · ');
