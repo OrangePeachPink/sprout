@@ -215,6 +215,8 @@ def _age_seconds(ts: datetime | None, now: datetime) -> float | None:
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
     return (now - ts).total_seconds()
+
+
 # --------------------------------------------------------------------------- #
 # version resolution (#719): masthead firmware + app/server version + behind cue
 # --------------------------------------------------------------------------- #
