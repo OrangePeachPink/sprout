@@ -5,6 +5,12 @@
         "platformio.platformio-ide"
     ],
     "unwantedRecommendations": [
-        "ms-vscode.cpptools-extension-pack"
+        "ms-vscode.cpptools-extension-pack",
+        // pioarduino IDE is a FORK of platformio-ide; running both makes two extensions fight over
+        // the one PlatformIO Core + penv (re-provision churn, #692). Keep the official platformio-ide
+        // above; the pioarduino *platform* pinned in platformio.ini already gives newer-Espressif
+        // (S3/C5) support without the extension conflict. PlatformIO may still re-add it to
+        // "recommendations" on configure - listing it here suppresses the install prompt regardless.
+        "pioarduino.pioarduino-ide"
     ]
 }
