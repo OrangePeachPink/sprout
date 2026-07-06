@@ -79,6 +79,14 @@ LOGS_DIR = _REPO / "logs"
 MAX_TRAJ_POINTS = 2000
 # A sample-to-sample gap longer than this is a logging interruption, surfaced (E9).
 GAP_THRESHOLD_S = 120
+# #699: over the WiFi fleet each board polls at its OWN cadence, so a per-device
+# gap is judged relative to that device's median poll interval, floored at the
+# documented GAP_THRESHOLD_S. A gap = a poll-to-poll delta over
+# max(GAP_THRESHOLD_S, GAP_CADENCE_MULT x median interval) - so a slow 60 s WiFi
+# poller isn't spammed with false gaps and a fast 5 s serial log still surfaces a
+# real 2-minute dropout. Same honest-data law as the aggregate: surfaced, never
+# bridged.
+GAP_CADENCE_MULT = 3
 # Time-range windows (E8). None = all history.
 RANGE_HOURS: dict[str, float | None] = {
     "1h": 1.0,
@@ -297,6 +305,135 @@ def _gaps(sweeps: list, start: datetime) -> list[dict]:
                 }
             )
     return out
+
+
+def _device_timeline(sweeps: list, canon=None) -> dict:
+    """Per-device poll timestamps over the window, in time order (#699).
+
+    A sweep keys on ``session_id``, which is device-owned, so a sweep is normally
+    one device's one poll - but we still split defensively by each reading's
+    canonical device_id (#602) so a mixed/legacy log divides cleanly. One entry
+    per (device, sweep): the sweep IS the poll, regardless of how many probes it
+    carried. Returns ``{device_id: [(utc, local), ...]}``.
+    """
+    canon = canon or (lambda d: d)
+    per: dict[str | None, list] = {}
+    for sw in sweeps:
+        if sw.timestamp_utc is None:
+            continue
+        seen: set = set()
+        for r in sw.by_sensor.values():
+            if r.raw_value is None:
+                continue
+            dev = canon(r.device_id)
+            if dev in seen:
+                continue
+            seen.add(dev)
+            per.setdefault(dev, []).append((sw.timestamp_utc, r.timestamp_local))
+    for dev in per:
+        per[dev].sort(key=lambda t: t[0])
+    return per
+
+
+def _device_gap_threshold_s(series: list) -> float:
+    """The adaptive per-device gap threshold in seconds (#699): a floor of
+    GAP_THRESHOLD_S, raised to GAP_CADENCE_MULT x this device's median poll
+    interval when it polls slower than the floor implies."""
+    if len(series) < 2:
+        return float(GAP_THRESHOLD_S)
+    deltas = [(b[0] - a[0]).total_seconds() for a, b in zip(series, series[1:])]
+    med = statistics.median(deltas)
+    return max(float(GAP_THRESHOLD_S), GAP_CADENCE_MULT * med)
+
+
+def _gaps_by_device(sweeps: list, start: datetime, canon=None) -> dict:
+    """Per-device logging interruptions - the fleet extension of #373/#374 (#699).
+
+    Each device is judged against its OWN cadence (``_device_gap_threshold_s``),
+    so a WiFi board that drops for a stretch and comes back shows an honest gap,
+    never a silently-bridged line that reads as continuous. Aggregate ``_gaps``
+    is unchanged; this is the fenced, per-device view (#575's identity rule).
+    """
+    out: dict[str | None, list[dict]] = {}
+    for dev, series in _device_timeline(sweeps, canon).items():
+        thr = _device_gap_threshold_s(series)
+        gaps: list[dict] = []
+        for (ua, la), (ub, _lb) in zip(series, series[1:]):
+            dt = (ub - ua).total_seconds()
+            if dt > thr:
+                gaps.append(
+                    {
+                        "x0": round(_hours_since(ua, start), 4),
+                        "x1": round(_hours_since(ub, start), 4),
+                        "dur_min": round(dt / 60, 1),
+                        "at_local": la.strftime("%m-%d %H:%M:%S") if la else "",
+                    }
+                )
+        out[dev] = gaps
+    return out
+
+
+def _continuity(
+    sweeps: list, start: datetime, gaps_by_device: dict, canon=None
+) -> dict:
+    """Per-device continuity summary so a human can trust a line has no HIDDEN
+    holes (#699): coverage over the device's observed span, its longest gap, and
+    its most recent gap. ``coverage_pct`` = 100 x (1 - summed gap time / span).
+    """
+    timeline = _device_timeline(sweeps, canon)
+    out: dict[str | None, dict] = {}
+    for dev, series in timeline.items():
+        gaps = gaps_by_device.get(dev, [])
+        if not series:
+            out[dev] = {
+                "coverage_pct": None,
+                "longest_gap_min": None,
+                "last_gap_min": None,
+                "gap_count": 0,
+            }
+            continue
+        span_h = _hours_since(series[-1][0], start) - _hours_since(series[0][0], start)
+        gap_h = sum(g["dur_min"] for g in gaps) / 60.0
+        coverage = None
+        if span_h > 0:
+            coverage = round(100.0 * max(0.0, 1.0 - gap_h / span_h), 1)
+        out[dev] = {
+            "coverage_pct": coverage,
+            "longest_gap_min": max((g["dur_min"] for g in gaps), default=None),
+            "last_gap_min": gaps[-1]["dur_min"] if gaps else None,
+            "last_gap_at": gaps[-1]["at_local"] if gaps else None,
+            "gap_count": len(gaps),
+        }
+    return out
+
+
+def _insert_breaks(points: list, local: list) -> tuple[list, list]:
+    """Split a trajectory line across a real dropout (#699): insert a null-y break
+    where a point-to-point time delta exceeds the series' adaptive gap threshold,
+    so the chart never draws a straight line interpolated across a hole. Keeps the
+    parallel ``local`` tooltip array aligned. Runs AFTER decimation so the break
+    survives thinning. Chart.js renders a null y as a line break (spanGaps=false).
+    """
+    if len(points) < 3:
+        return points, local
+    dxs = [
+        points[i]["x"] - points[i - 1]["x"]
+        for i in range(1, len(points))
+        if points[i]["y"] is not None and points[i - 1]["y"] is not None
+    ]
+    pos = [d for d in dxs if d > 0]
+    if not pos:
+        return points, local
+    thr_h = max(GAP_THRESHOLD_S / 3600.0, GAP_CADENCE_MULT * statistics.median(pos))
+    out_p: list = []
+    out_l: list = []
+    for i, p in enumerate(points):
+        if i and (p["x"] - points[i - 1]["x"]) > thr_h:
+            out_p.append({"x": round((points[i - 1]["x"] + p["x"]) / 2, 4), "y": None})
+            out_l.append("")
+        out_p.append(p)
+        out_l.append(local[i])
+    return out_p, out_l
 
 
 # --------------------------------------------------------------------------- #
@@ -749,6 +886,11 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
 
     sessions = _sessions(soil)
     gaps = _gaps(sweeps, start)
+    # #699: the fenced, per-device continuity view - each board judged on its own
+    # cadence, so a WiFi dropout renders as an honest per-device gap (never a
+    # silently-bridged line). Aggregate `gaps` above is unchanged.
+    gaps_by_device = _gaps_by_device(sweeps, start, _canon)
+    continuity = _continuity(sweeps, start, gaps_by_device, _canon)
     distribution = _distribution(by_sensor, sensor_ids, colors)
     quality = _quality_strips(by_sensor, sensor_ids, soil, start)
     integrity = _integrity(soil, sweeps, by_sensor, sensor_ids, sessions)
@@ -759,6 +901,9 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         idx = _dec_idx(len(ts["points"]), MAX_TRAJ_POINTS)
         ts["points"] = [ts["points"][i] for i in idx]
         ts["local"] = [ts["local"][i] for i in idx]
+        # #699: break the line across a real dropout (post-decimation) so the
+        # chart never interpolates a straight segment over a WiFi hole.
+        ts["points"], ts["local"] = _insert_breaks(ts["points"], ts["local"])
     spread_series = []
     for dev, d in spread_by_dev.items():
         pts = [d["points"][i] for i in _dec_idx(len(d["points"]), MAX_TRAJ_POINTS)]
@@ -865,7 +1010,7 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
     # #583: the per-device groups the template renders (the #575 spec's eight
     # rules). Single device -> one group + the slim ribbon (COLLAPSE).
     device_groups = _device_groups(
-        reg, device_ids_in_data, by_sensor, sensors, data.segments
+        reg, device_ids_in_data, by_sensor, sensors, data.segments, continuity
     )
 
     # PRD-0002 R3 (#368): join solar + optional weather onto the soil window. Offline-
@@ -891,10 +1036,15 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         "quality": quality,
         "integrity": integrity,
         "gaps": gaps,
+        # #699: per-device dropouts, keyed by canonical device_id, for the
+        # per-device continuity ribbon + fenced chart breaks.
+        "gaps_by_device": {(k or ""): v for k, v in gaps_by_device.items()},
     }
 
 
-def _device_groups(reg, device_ids_in_data, by_sensor, sensors, segments) -> list:
+def _device_groups(
+    reg, device_ids_in_data, by_sensor, sensors, segments, continuity=None
+) -> list:
     """The per-device group headers (#583, the #575 spec's eight rules).
 
     - ORDER: registry order first (the config's first-seen list), then
@@ -985,6 +1135,17 @@ def _device_groups(reg, device_ids_in_data, by_sensor, sensors, segments) -> lis
                 ),
                 "cal_provisional": cal_provisional,
                 "also_reported_as": also_reported_as,  # honest coalesce (#602)
+                # #699: this board's own continuity (coverage/longest/last gap),
+                # so a WiFi dropout is visible per device - never fleet-averaged.
+                "continuity": (continuity or {}).get(
+                    did,
+                    {
+                        "coverage_pct": None,
+                        "longest_gap_min": None,
+                        "last_gap_min": None,
+                        "gap_count": 0,
+                    },
+                ),
                 "sensors": entry_ids,
             }
         )
