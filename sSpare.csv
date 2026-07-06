@@ -1,6 +1,0 @@
-# schema_version=3  fw=0.7.0  git=abc  session_id=sSpare
-# cal bounds(dry>wet): 3050 2140 1830 1520 1150 1050  [moist% 900..3400]
-record_type,timestamp_utc,timestamp_local,session_id,device_id,millis_ms,sensor_id,raw_value,quality_flag,payload
-plants.soil,2026-07-05T02:59:20.000Z,2026-07-05 02:59:20.000,sSpare,spare9,360000,s1,3000,OK,transport=wifi_poll;level=DRY
-plants.soil,2026-07-05T02:59:40.000Z,2026-07-05 02:59:40.000,sSpare,spare9,380000,s1,3000,OK,transport=wifi_poll;level=DRY
-plants.soil,2026-07-05T03:00:00.000Z,2026-07-05 03:00:00.000,sSpare,spare9,400000,s1,3000,OK,transport=wifi_poll;level=DRY
