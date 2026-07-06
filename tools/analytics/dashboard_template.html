@@ -511,6 +511,14 @@ function renderHeader(){
 // offline stamps its age live — never a server-baked age that goes stale.
 const STATE_ONLINE_S = 180;
 function fmtAge(s){ return s<60 ? Math.floor(s)+'s ago' : s<3600 ? Math.floor(s/60)+'m ago' : s<86400 ? Math.floor(s/3600)+'h ago' : Math.floor(s/86400)+'d ago'; }
+// #720: a UTC ISO string -> a friendly LOCAL time for display. UTC is not a human clock
+// (Veronica's 0.7.0 retro). The *_utc field itself stays canonical - this is display only,
+// a projection of UTC (Trellis binding), never a data change. Unparseable -> shown as-is.
+function fmtLocal(iso){
+  if(!iso) return iso || '';
+  const d = new Date(iso);
+  return isNaN(d) ? iso : d.toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
 function deviceState(d){
   if(!d.last_seen_utc) return {label:'no data', color:'var(--q-nosignal)', offline:true};
   const age = (Date.now() - Date.parse(d.last_seen_utc))/1000;
@@ -936,7 +944,7 @@ function renderProvenance(){  // #324 bench-evidence panel
   if(d.legacy_converted) deviceRows.push(['note', 'LEGACY-CONVERTED — not the live device', 'warn']);
   wrap.innerHTML =
     grp('server / app', [
-      ['app git', sha], ['branch', s.branch], ['started', s.start_utc], staleRow,
+      ['app git', sha], ['branch', s.branch], ['started', fmtLocal(s.start_utc)], staleRow,
     ]) +
     grp('device / firmware', deviceRows) +
     grp('contract / calibration', [
@@ -1523,7 +1531,7 @@ function monRenderOwner(o){  // #330: surface a stale marker (+ recovery) or a l
   if(!o || !o.present){ el.hidden = true; el.innerHTML = ''; return; }
   el.hidden = false;
   const who = `${o.mode || '?'} · pid ${o.pid} · ${o.port || 'port ?'}`;
-  const when = o.opened_utc ? ` · opened ${o.opened_utc}` : '';
+  const when = o.opened_utc ? ` · opened ${fmtLocal(o.opened_utc)}` : '';
   if(o.stale){
     el.className = 'serialowner stale';
     el.innerHTML = `<span>⚠ stale port marker — owner is gone: ${who}${when}. `
