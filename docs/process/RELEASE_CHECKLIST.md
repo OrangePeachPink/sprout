@@ -53,6 +53,13 @@ the vehicle that *executes* this list at release time; this doc is the source-of
   reset; merge #103 then (it's content-validated now).
 - [ ] **No self-hosted runner on a public repo** — plants uses GitHub-hosted (`ubuntu-latest`), so it's
   clean; confirm before flipping visibility.
+- [ ] **Revert the sprint CI posture (#740/#741)** — during the private launch sprint, per-PR CI runs the
+  *fast lane only* (lint + hygiene); the firmware compile, native-C tests, and the experimental-board
+  matrix moved to the **weekly battery** (`weekly-battery.yml` + on-demand dispatch) to save Actions
+  minutes. Before public, **restore full per-PR coverage** so outside contributors get the complete gate
+  on every PR: re-add the `firmware` + `experimental-boards` jobs to `ci.yml` (restore the `push: main`
+  trigger if wanted), and drop the "Temporary sprint posture" note from `CONTRIBUTING.md`. Public
+  contributors must never depend on a weekly cadence for firmware validation.
 
 ## Pages & presentation
 
