@@ -1106,6 +1106,9 @@ def build_context(
         "env": env,
         "cal": {"bounds": bounds, "moist_range": list(mrange), "bands": bands},
         "sensors": sensors,
+        # #679 (ADR-0028): plants present by design but not probed - rendered as
+        # first-class "alive, not probed" cards, never as missing/no-signal.
+        "sensorless": reg.sensorless_plants(),
         "devices": device_groups,
         "trajectory": {
             "start_local": meta["start_local"],

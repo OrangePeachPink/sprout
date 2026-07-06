@@ -118,6 +118,12 @@ class Registry:
     """The known fleet - a lookup over devices + their plant assignments."""
 
     devices: list[Device] = field(default_factory=list)
+    # #679 (ADR-0028): plants that are present BY DESIGN but not probed - a tiny
+    # pot, a hard rootball, a cactus that doesn't want a spike. First-class "alive,
+    # not probed", never degraded / no-signal / error. Each entry: {plant_id,
+    # plant_name, plant_type?, pot_size?, reason?}. Empty when none configured
+    # (absent-safe) - so a fleet with every plant probed sees no change.
+    sensorless: list[dict] = field(default_factory=list)
 
     def device_ids(self) -> list[str]:
         return [d.device_id for d in self.devices]
@@ -184,6 +190,25 @@ class Registry:
                     }
         return [seen[k] for k in sorted(seen)]
 
+    def sensorless_plants(self) -> list[dict]:
+        """The probe-less plants present by design (ADR-0028, #679), sorted by
+        plant_id for a stable card order. Excludes any plant_id that IS actually
+        probed on some channel - a plant can't be both probed and sensorless, and
+        a real reading always wins (honest: never show a live plant as unprobed)."""
+        probed = {p["plant_id"] for p in self.all_plants()}
+        out: dict[str, dict] = {}
+        for s in self.sensorless:
+            pid = s.get("plant_id")
+            if pid and pid not in probed and pid not in out:
+                out[pid] = {
+                    "plant_id": pid,
+                    "plant_name": s.get("plant_name"),
+                    "plant_type": s.get("plant_type"),
+                    "pot_size": s.get("pot_size"),
+                    "reason": s.get("reason"),
+                }
+        return [out[k] for k in sorted(out)]
+
 
 def _device_from_dict(raw: dict) -> Device | None:
     did = raw.get("device_id")
@@ -239,4 +264,12 @@ def load_registry(path: str | Path | None = None) -> Registry:
         for d in (_device_from_dict(x) for x in doc["devices"] if isinstance(x, dict))
         if d is not None
     ]
-    return Registry(devices=devices)
+    # #679 (ADR-0028): the optional top-level `sensorless` roster - plants present
+    # by design but not probed. Absent-safe: a config without it yields [].
+    raw_sl = doc.get("sensorless")
+    sensorless = (
+        [x for x in raw_sl if isinstance(x, dict) and x.get("plant_id")]
+        if isinstance(raw_sl, list)
+        else []
+    )
+    return Registry(devices=devices, sensorless=sensorless)

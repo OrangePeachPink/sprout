@@ -186,6 +186,12 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
   box-shadow: var(--e1); padding: var(--space-md); position: relative; overflow: hidden; cursor: pointer;
   transition: box-shadow .12s, transform .12s; }
 .scard:hover { box-shadow: var(--e2); transform: translateY(-2px); }
+/* #679 (ADR-0028): a probe-less plant is present + first-class — a dashed edge
+   marks "no probe yet" (an invitation), NOT the fault palette. Not clickable
+   (no detail view without data), so no hover-lift. */
+.scard.sensorless { border-style: dashed; cursor: default; box-shadow: none; }
+.scard.sensorless:hover { box-shadow: none; transform: none; }
+.scard.sensorless .raw { color: var(--muted); font-size: 15px; }
 .scard .accent { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; }
 .scard .sid { font-family: var(--font-display); font-weight: 700; font-size: 16px; }
 .scard .gpio, .scard .idmeta { color: var(--muted); font-size: 11px; font-family: var(--font-data); }
@@ -605,6 +611,18 @@ function renderCards(){
     group.appendChild(cardsWrap);
     wrap.appendChild(group);
   });
+  // #679 (ADR-0028): plants present BY DESIGN but not probed render as first-class
+  // "alive, not probed" cards — an enhancement invitation, never error/no-signal.
+  const sl = DASH.sensorless || [];
+  if(sl.length){
+    const grp = el('div','devgroup');
+    grp.appendChild(el('div','devribbon',
+      `Present, not probed · ${sl.length} plant${sl.length===1?'':'s'} — alive by design, not degraded (ADR-0028)`));
+    const cw = el('div','cards');
+    sl.forEach(p => cw.appendChild(sensorlessCard(p)));
+    grp.appendChild(cw);
+    wrap.appendChild(grp);
+  }
   // #687: one fleet-level provisional note instead of a full orange banner repeated on every group. The
   // compact per-device "cal · provisional" chip still marks which boards; this drops the repeated banners.
   const provDevs = devices.filter(x => x.cal_provisional);
@@ -676,6 +694,25 @@ function cardFor(s){
     add('pressure', `${s.pressure.hpa} hPa <span class="muted">(${s.pressure.source} · exterior)</span>`);
   }
   c.appendChild(meta);
+  return c;
+}
+
+// #679 (ADR-0028): a probe-less plant's card — present, named, first-class. It
+// makes NO moisture claim (there's no probe) and never reads as error/no-signal;
+// it invites a probe instead. A calm, distinct accent, not the fault palette.
+function sensorlessCard(p){
+  const c = el('div','scard sensorless');
+  c.appendChild(el('div','accent')).style.background = 'var(--st-predicted, #8a6fd6)';
+  const lead = p.plant_name || p.plant_id;
+  const meta = [p.plant_type, p.pot_size].filter(Boolean).join(' · ');
+  c.appendChild(el('div', null, `<span class="sid">${lead}</span>${meta ? ` <span class="idmeta">${meta}</span>` : ''}`));
+  c.appendChild(el('div','raw muted', '<span class="rawu">not probed</span>'));
+  const pill = el('span','pill', 'alive · not probed');
+  pill.style.background = 'var(--surface-2)'; pill.style.color = 'var(--ink)'; pill.style.border = '1px solid var(--border)';
+  const pw = el('div'); pw.appendChild(pill);
+  if(p.reason) pw.appendChild(el('div','small muted', `by design — ${p.reason}`));
+  pw.appendChild(el('div','small muted', 'add a probe to start monitoring'));
+  c.appendChild(pw);
   return c;
 }
 
