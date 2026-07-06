@@ -1345,6 +1345,16 @@ def build_context(
         "retire_after_h": RETIRE_AFTER_H,
     }
 
+    # #807: the Moisture-history chart plots only LIVE channels — a retired rig's
+    # channels drop out, so the chart AND its header count agree with the masthead's
+    # active count (8), never counting a retired/faulted channel or calling it a
+    # "plant". Same active set the fleet subline uses (#683). Legacy single-device
+    # logs (device_id None, never retired) are unaffected.
+    _sid_to_dev = {s["id"]: s.get("device_id") for s in sensors}
+    trajectory_sets = [
+        ts for ts in trajectory_sets if _sid_to_dev.get(ts["id"]) in _active_ids
+    ]
+
     # PRD-0002 R3 (#368): join solar + optional weather onto the soil window. Offline-
     # first — {"available": False} when no location config, so the UI just omits it.
     env = build_env_context(start, soil[-1].timestamp_utc)
@@ -1373,6 +1383,9 @@ def build_context(
             "start_axis": meta.get("start_display", "").split(" · UTC ")[0]
             or meta["start_local"],
             "datasets": trajectory_sets,
+            # #807: live plotted channels — the header count agrees with the chart
+            # and the masthead's active count (never the retired-inclusive total).
+            "plant_count": len(trajectory_sets),
         },
         "spread": spread_series,  # #651: per-device, fenced - never blended across pots
         "distribution": distribution,

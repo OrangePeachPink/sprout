@@ -613,8 +613,16 @@ function renderHeader(){
     `fw <span class="mono">${m.fw||'?'}</span>${appBit} · ${fmt(DASH.integrity.total)} readings · ` +
     `${m.total_hours}h since ${m.start_display || m.start_local}${cue}`;
   const tc = document.getElementById('trajCount');
-  // #718: plant-first, and name the window so it reads as history over a range
-  if (tc){ const n = DASH.sensors.length; tc.textContent = `· ${n} plant${n===1?'':'s'} · ${curRange==='all'?'all history':'last '+curRange}`; }
+  // #718: plant-first, and name the window so it reads as history over a range.
+  // #807: count the LIVE plotted channels (trajectory.plant_count), not every
+  // sensor incl. retired rigs — so this agrees with the masthead's active count
+  // and never labels a retired/faulted channel a "plant".
+  if (tc){
+    const T = DASH.trajectory || {};
+    const n = (T.plant_count != null) ? T.plant_count
+      : ((T.datasets && T.datasets.length) != null ? T.datasets.length : DASH.sensors.length);
+    tc.textContent = `· ${n} plant${n===1?'':'s'} · ${curRange==='all'?'all history':'last '+curRange}`;
+  }
   renderFreshness();
   renderChannelChips();
 }
