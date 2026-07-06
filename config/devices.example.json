@@ -36,5 +36,9 @@
         "s1": { "probe": "s9", "plant_id": "p07", "plant_name": "placeholder" }
       }
     }
+  ],
+  "_sensorless_note": "OPTIONAL (ADR-0028, #679): plants present in the collection BY DESIGN but not probed — a tiny pot, a hard rootball, a cactus that doesn't want a spike. They render as first-class 'alive, not probed' cards (an enhancement invitation), never as missing/no-signal/error. Each entry: {plant_id, plant_name, plant_type?, pot_size?, reason?}. Absent-safe: omit this key entirely when every plant is probed. A plant_id here that IS also probed on a channel is ignored (a real reading always wins).",
+  "sensorless": [
+    { "plant_id": "p08", "plant_name": "placeholder", "plant_type": "cactus", "pot_size": "4in", "reason": "no spike — a cactus doesn't want one" }
   ]
 }
