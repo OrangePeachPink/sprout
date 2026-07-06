@@ -898,8 +898,12 @@ function renderQuality(){
 }
 
 function renderIntegrity(){
+  // #685: a bounded summary + a log-LOCATOR (the pointers to hand an agent), not
+  // an unbounded per-session dump. The DOM stays small regardless of dataset size
+  // (the old per-session table hit ~8k rows under the #712 reset storm).
   const I = DASH.integrity; const wrap = document.getElementById('integrity'); wrap.innerHTML = '';
   const t = el('table','grid');
+  const sessNote = (I.sessions_total>I.sessions.length) ? ` (showing last ${I.sessions.length})` : '';
   const rows = [
     ['readings (rows)', fmt(I.total)],
     ['sweeps (sample ticks)', fmt(I.sweeps)],
@@ -912,10 +916,35 @@ function renderIntegrity(){
       : '—'],
     ['span (local)', `${I.span_start} → ${I.span_end}`],
     ['duration', I.duration],
+    ['sessions', fmt(I.sessions_total!=null? I.sessions_total : I.sessions.length) + sessNote],
   ];
   rows.forEach(([l,v])=>{ const tr=el('tr'); tr.appendChild(el('td',null,l)); tr.appendChild(el('td','num',v)); t.appendChild(tr); });
   wrap.appendChild(t);
 
+  // #685: "your data lives here" — the log dir(s), active segment file(s), and
+  // archive location an operator hands an agent to dive into the raw data.
+  const L = I.locator || {};
+  wrap.appendChild(el('div','small muted', 'your data lives here (hand these to an agent to debug):'));
+  const lt = el('table','grid');
+  const locRows = [
+    ['log dir(s)', (L.log_dirs&&L.log_dirs.length)? L.log_dirs.map(d=>`<code>${d}</code>`).join('<br>') : '—'],
+    ['active file(s)', L.active_count? `<code>${(L.active_files||[]).join('</code>, <code>')}</code>` : '—'],
+    ['archive', `<code>${L.archive_dir||'—'}</code>${L.archive_count? ' · '+fmt(L.archive_count)+' segment(s)' : ''}`],
+  ];
+  locRows.forEach(([l,v])=>{ const tr=el('tr'); tr.appendChild(el('td',null,l)); const td=el('td','small'); td.innerHTML=v; tr.appendChild(td); lt.appendChild(tr); });
+  wrap.appendChild(lt);
+
+  // rows per device (fenced by identity, #575) — bounded by device count.
+  const pd = I.per_device || [];
+  if(pd.length){
+    const td_ = el('table','grid'); td_.style.marginTop='14px';
+    td_.appendChild((()=>{ const tr=el('tr'); tr.appendChild(el('th',null,'device')); tr.appendChild(el('th','num','rows')); return tr; })());
+    pd.forEach(p=>{ const tr=el('tr'); tr.appendChild(el('td','mono',p.device_id)); tr.appendChild(el('td','num',fmt(p.n))); td_.appendChild(tr); });
+    wrap.appendChild(el('div','small muted', 'rows per device:'));
+    wrap.appendChild(td_);
+  }
+
+  // per-channel counts (bounded, ~4) + the honest dropped-sample note.
   const t2 = el('table','grid'); t2.style.marginTop='14px';
   t2.appendChild((()=>{ const tr=el('tr'); tr.appendChild(el('th',null,'sensor')); tr.appendChild(el('th','num','rows')); tr.appendChild(el('th',null,'note')); return tr; })());
   I.per_sensor.forEach(p=>{ const tr=el('tr'); if(p.n!==I.count_max) tr.className='warnrow';
@@ -928,24 +957,14 @@ function renderIntegrity(){
       `⚠ channel row counts differ by <b>${I.count_gap}</b> — ${I.partial_sweeps} sweep(s) are missing a sensor. Real dropped samples, surfaced not smoothed.`));
   }
 
-  const t3 = el('table','grid'); t3.style.marginTop='14px';
-  t3.appendChild((()=>{ const tr=el('tr'); ['session','start (local)','end (local)','rows'].forEach((h,i)=>tr.appendChild(el('th', i===3?'num':null, h))); return tr; })());
-  I.sessions.forEach(s=>{ const tr=el('tr'); tr.appendChild(el('td','mono',s.session_id));
-    tr.appendChild(el('td','mono small',s.start)); tr.appendChild(el('td','mono small',s.end)); tr.appendChild(el('td','num',fmt(s.n))); t3.appendChild(tr); });
-  wrap.appendChild(el('div','small muted', 'sessions (a reflash / port reopen starts a new one):'));
-  wrap.appendChild(t3);
-
+  // gap SUMMARY (bounded) — count + longest; the full detail is in the log files.
   const gaps = DASH.gaps || [];
-  wrap.appendChild(el('div','small muted', 'logging gaps (interruptions in the capture):'));
   if(!gaps.length){
-    wrap.appendChild(el('div','small', 'none — continuous'));
+    wrap.appendChild(el('div','small muted', 'logging gaps: none — continuous'));
   } else {
-    const gt = el('table','grid');
-    gt.appendChild((()=>{ const tr=el('tr'); ['#','at (local)','duration'].forEach((h,i)=>tr.appendChild(el('th', i===2?'num':null, h))); return tr; })());
-    gaps.forEach((g,i)=>{ const tr=el('tr'); tr.className='warnrow';
-      tr.appendChild(el('td','mono', String(i+1))); tr.appendChild(el('td','mono small', g.at_local));
-      tr.appendChild(el('td','num', g.dur_min+' min')); gt.appendChild(tr); });
-    wrap.appendChild(gt);
+    const longest = Math.max.apply(null, gaps.map(g=>g.dur_min));
+    wrap.appendChild(el('div','note',
+      `⚠ ${fmt(gaps.length)} logging gap(s) — longest ${longest} min. Real interruptions, surfaced not smoothed (see the log files above for detail).`));
   }
 }
 

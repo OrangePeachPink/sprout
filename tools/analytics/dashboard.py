@@ -97,6 +97,11 @@ STALE_AFTER_S = 180
 # be running), read from the firmware source of truth. Data reads it read-only to
 # flag a board that's behind; Firmware owns the value.
 FW_CONFIG = _REPO / "firmware" / "include" / "config.h"
+# #685: the Diagnostics integrity panel keeps the DOM BOUNDED regardless of dataset
+# size - the full per-session dump grew to ~8k rows under the #712 reset storm and
+# re-rendered every refresh. We ship a compact summary + the last N sessions + a
+# total; the rest is in the log files the locator points at.
+SESSIONS_SHOWN = 20
 # Time-range windows (E8). None = all history.
 RANGE_HOURS: dict[str, float | None] = {
     "1h": 1.0,
@@ -1053,6 +1058,21 @@ def build_context(
     distribution = _distribution(by_sensor, sensor_ids, colors)
     quality = _quality_strips(by_sensor, sensor_ids, soil, start)
     integrity = _integrity(soil, sweeps, by_sensor, sensor_ids, sessions)
+    # #685: per-DEVICE row counts (fenced by canonical id) + the log-locator, and
+    # bound the session list so the Diagnostics panel stays small regardless of
+    # dataset size. A reset storm (#712) can mint thousands of sessions; we show
+    # the total + the most recent SESSIONS_SHOWN, not an ~8k-row DOM dump.
+    _per_dev_counts: dict[str, int] = {}
+    for r in soil:
+        _d = _canon(r.device_id) or "—"
+        _per_dev_counts[_d] = _per_dev_counts.get(_d, 0) + 1
+    integrity["per_device"] = [
+        {"device_id": d, "n": n}
+        for d, n in sorted(_per_dev_counts.items(), key=lambda kv: -kv[1])
+    ]
+    integrity["locator"] = _locator(data.sources)
+    integrity["sessions_total"] = len(integrity["sessions"])
+    integrity["sessions"] = integrity["sessions"][-SESSIONS_SHOWN:]
 
     # E8: thin only the plotted series for long ranges; stats/forecasts above
     # already consumed the full windowed data.
@@ -1364,6 +1384,33 @@ def _device_groups(
             }
         )
     return groups
+
+
+def _locator(sources: list[str]) -> dict:
+    """#685: 'your data lives here' - the log dir(s), the active segment file(s),
+    and the archive location an operator would hand an agent to dive into the raw
+    data. Repo-relative where the file is inside the repo, else the full path;
+    forward-slashed for a copy-pasteable, OS-neutral pointer."""
+    repo = str(_REPO).replace("\\", "/")
+    arch = str(ARCHIVE_DIR).replace("\\", "/")
+
+    def rel(p: str) -> str:
+        p2 = str(p).replace("\\", "/")
+        return p2[len(repo) + 1 :] if p2.startswith(repo + "/") else p2
+
+    active: list[str] = []
+    archived: list[str] = []
+    for s in sources:
+        s2 = str(s).replace("\\", "/")
+        (archived if s2.startswith(arch) else active).append(s2)
+    log_dirs = sorted({"/".join(a.split("/")[:-1]) for a in active})
+    return {
+        "log_dirs": [rel(d) for d in log_dirs] or [rel(str(LOGS_DIR))],
+        "active_files": [a.split("/")[-1] for a in active],
+        "active_count": len(active),
+        "archive_dir": rel(str(ARCHIVE_DIR)),
+        "archive_count": len(archived),
+    }
 
 
 def _round_opt(v: float | None, n: int) -> float | None:
