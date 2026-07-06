@@ -18,6 +18,7 @@
     "loading":      ["One moment — reading the soil."],
     "onboarding":   ["Hi, I'm Sprout. Pop a probe in the soil and I'll take it from here."],
     "readme":       ["Hi, I'm Sprout. Here's how I keep four plants happy."],
+    "orientation":  ["I'm Sprout — I watch the soil in every pot, so you can tell at a glance who needs water and who's happy.", "I keep an eye on each plant's soil and surface who's thirsty first — so watering is a quick glance, not a guess."],
     "social":       ["Day 30: still alive, still green. We're a good team."]
   }
 }
