@@ -1,0 +1,55 @@
+name: release draft on milestone close
+
+# ADR-0009 §6 automated (#728): closing a version milestone (title `vX.Y.Z`) leaves a DRAFT
+# GitHub Release with auto-generated notes (categorized by .github/release.yml from each PR's
+# `type:` label, tag-to-tag since the previous release). The maintainer curates + publishes —
+# publishing is what creates the tag. Guards: only vX.Y.Z-titled milestones; skips if a
+# release for that tag already exists. Fires once per release cycle — negligible minutes.
+
+on:
+  milestone:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag to draft (e.g. v0.7.1) — for manual/retry runs"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  draft:
+    name: draft the release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve version
+        id: v
+        env:
+          MS_TITLE: ${{ github.event.milestone.title }}
+          INPUT_V: ${{ inputs.version }}
+        run: |
+          v="${INPUT_V:-$MS_TITLE}"
+          if ! echo "$v" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "not a version milestone ('$v') — nothing to draft"; echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$v" >> "$GITHUB_OUTPUT"; echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Draft release with generated notes
+        if: steps.v.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.v.outputs.version }}
+        run: |
+          if gh release view "$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "release $V already exists — leaving it alone"; exit 0
+          fi
+          gh release create "$V" \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft \
+            --generate-notes \
+            --target "$GITHUB_SHA" \
+            --title "$V"
+          echo "::notice title=Release drafted::$V drafted with generated notes — curate against the ADR-0009 quality bar, then publish (publishing creates the tag)."
