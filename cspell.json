@@ -249,7 +249,14 @@
     "wayfinding",
     "winget",
     "worktree",
-    "xblw"
+    "xblw",
+    // #789 (DesignQA v0.7.1 flag): advisory terms in PLATFORMIO_TROUBLESHOOTING.md +
+    // RELEASE_CUT.md - the PlatformIO env dir (penv), the pyvenv.cfg marker, the Windows
+    // USERPROFILE env var, and "milestoned" (verb). Legit terms, not typos.
+    "penv",
+    "pyvenv",
+    "USERPROFILE",
+    "milestoned"
   ],
   "flagWords": []
 }
