@@ -37,6 +37,8 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 import provenance  # noqa: E402  (sibling - server/app provenance for the panel, #324)
+from band_movement import as_dict as _movement_as_dict  # noqa: E402  (#650 substrate)
+from band_movement import band_movements  # noqa: E402  (#650 -> #627/#717 view)
 from device_registry import Registry, load_registry  # noqa: E402  (#486 attribution)
 from forecast import fit_line, forecast_payload  # noqa: E402
 from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
@@ -800,6 +802,64 @@ def _settled_readings(rs: list) -> list:
     return valid[first_soil:] if first_soil is not None else valid
 
 
+def _band_trend(m) -> dict:
+    """Which way an entity is drifting across the bands over the window (#717) —
+    net movement from where it started to where it is now, in the honest unit of
+    *bands*, never a slope. `dir`: 'drying' (toward "water me"), 'wetting', or
+    'steady'. Read off the discrete transition trail, so it's step-truthful."""
+    trail = m.transitions
+    start = trail[0]["band"] if trail else m.current["band"]
+    now_b = m.current["band"]
+    si = BAND_NAMES_DRY_TO_WET.index(start) if start in BAND_NAMES_DRY_TO_WET else None
+    ni = BAND_NAMES_DRY_TO_WET.index(now_b) if now_b in BAND_NAMES_DRY_TO_WET else None
+    if si is None or ni is None or ni == si:
+        direction = "steady"
+    elif ni < si:  # index: air-dry=0 .. submerged=6, lower = drier
+        direction = "drying"
+    else:
+        direction = "wetting"
+    return {
+        "dir": direction,
+        "from_band": start,
+        "to_band": now_b,
+        "steps": (ni - si) if (si is not None and ni is not None) else 0,
+    }
+
+
+def _band_history(soil: list, reg: Registry) -> list[dict]:
+    """The band-movement view substrate (#627/#717, PRD-0007 slice 3), assembled
+    from the merged #650 substrate + registry plant-first identity. Per entity:
+    where it sits across the 7 bands now, the touched-band span, the discrete
+    movement trail, a detected re-water window (labeled), and a net trend. Honest:
+    device-emitted bands only (never re-thresholded), discrete transitions (never
+    an interpolated line), per-device fenced (#650 R8), plant-first labels (#717),
+    and a plant with no band-bearing reading yields nothing (R7)."""
+    out: list[dict] = []
+    for m in band_movements(soil, canonical=reg.canonical_for):
+        plant = reg.plant_for(m.device_id, m.sensor_id)
+        probe = reg.probe_for(m.device_id, m.sensor_id)
+        label = (
+            (plant.get("plant_name") if plant else None)
+            or (plant.get("plant_id") if plant else None)
+            or probe
+            or m.sensor_id
+        )
+        d = _movement_as_dict(m)
+        d["plant_id"] = plant.get("plant_id") if plant else None
+        d["plant_name"] = plant.get("plant_name") if plant else None
+        d["label"] = label
+        d["trend"] = _band_trend(m)
+        d["current_index"] = (
+            BAND_NAMES_DRY_TO_WET.index(m.current["band"])
+            if m.current["band"] in BAND_NAMES_DRY_TO_WET
+            else None
+        )
+        d["driest_index"] = BAND_NAMES_DRY_TO_WET.index(d["driest"])
+        d["wettest_index"] = BAND_NAMES_DRY_TO_WET.index(d["wettest"])
+        out.append(d)
+    return out
+
+
 def build_context(
     data: LogData, registry: Registry | None = None, now: datetime | None = None
 ) -> dict:
@@ -1301,6 +1361,10 @@ def build_context(
         # #679 (ADR-0028): plants present by design but not probed - rendered as
         # first-class "alive, not probed" cards, never as missing/no-signal.
         "sensorless": reg.sensorless_plants(),
+        # #627/#717 (PRD-0007 slice 3): the band-movement view substrate - per
+        # plant, where it sits across the 7 bands + how it's drifting over the
+        # window. Reads from the merged #650 substrate; no new data-plane work.
+        "band_history": _band_history(soil, reg),
         "devices": device_groups,
         "fleet": fleet,  # #683: active vs retired counts for the honest subline
         "trajectory": {
