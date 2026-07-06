@@ -415,6 +415,15 @@ footer.prov code { font-family: var(--font-data); }
        here; quality timeline, data integrity, bench provenance, segment listing →
        here; fleet groups + cards + ladder + trajectory stay on Monitor. -->
   <div id="diagnostics" style="display:none">
+    <!-- #758: the project's two front doors, reachable from inside the running app. Reference material
+         lives in Diagnostics & Logs, off the daily Monitor view (doctrine two-jobs split, #716). -->
+    <section class="card">
+      <div class="panel-h"><h2>Reference</h2><span class="cap">the project's two front doors — open either from here</span></div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;font-family:var(--font-ui)">
+        <a href="docs/README.md" style="color:var(--leaf);text-decoration:none">📖 Docs Front Door</a>
+        <a href="docs/design/Sprout%20Design%20Library.dc.html" style="color:var(--leaf);text-decoration:none">🎨 Sprout Design Library</a>
+      </div>
+    </section>
     <section class="card">
       <div class="panel-h"><h2>Cross-channel spread</h2><span class="cap">max − min raw across each device's co-located probes — fenced per device, never blended across pots (C1: pin + placement variance)</span></div>
       <div class="chartbox short"><canvas id="spreadChart"></canvas></div>
