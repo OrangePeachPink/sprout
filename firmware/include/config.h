@@ -167,6 +167,17 @@ constexpr uint32_t WIFI_CONNECT_TIMEOUT_MS =
 constexpr uint32_t WIFI_RETRY_BACKOFF_MS =
     30000UL; // wait this long after a failed attempt
 constexpr int WIFI_HTTP_PORT = 80; // served-status skeleton (#21)
+// --- Phase-0 OTA (#302, maintainer-ruled interim; NOT the ADR-0026 fence) -----
+// ArduinoOTA is LAN-only (espota over the local net, mDNS-advertised) and armed only
+// while WiFi-connected. It is PASSWORD-gated: the espota password below. This is a
+// deliberately weak Phase-0 interim - a shared, LAN-scoped default, overridable per
+// build with `-D OTA_PASSWORD='"..."'`. The real posture (signed images + a
+// verified-marker + key management) is ADR-0026, staged as a follow-up amendment;
+// do NOT treat this as the security fence. Public-repo note: this is a placeholder,
+// not a secret - exploiting it still requires being on the LAN.
+#ifndef OTA_PASSWORD
+#define OTA_PASSWORD "sprout-phase0"
+#endif
 // NTP-on-connect (#278/#276, ADR-0018 §3): SNTP arms on WiFi association; rows
 // flip time_source=device_uptime -> device_synced once the clock is real.
 constexpr const char *WIFI_NTP_SERVER = "pool.ntp.org";
