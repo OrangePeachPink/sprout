@@ -1502,6 +1502,34 @@ void t_soil_row_v4(void)
                                  "#670/ADR-0006 raw 420 preserved on the wire");
 }
 
+/* #676 / ADR-0020 §2: the mDNS hostname is the fixed prefix + the minted device_id
+ * nonce (synthetic, never a hardware id), and a legal single-label .local host. */
+void t_device_hostname(void)
+{
+    char h[16];
+    int n = device_uid_hostname("k7m2rt", h, sizeof(h));
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("sprout-k7m2rt", h,
+                                     "#676 hostname = sprout-<device_id>");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(13, n, "len = prefix(7) + uid(6)");
+    TEST_ASSERT_NOT_NULL_MESSAGE(
+        strstr(h, "k7m2rt"),
+        "carries the minted nonce (synthetic, no MAC/silicon id)");
+    /* all chars are valid DNS-label chars (lowercase base32 + the one hyphen) */
+    for (int i = 0; h[i]; i++) {
+        char c = h[i];
+        TEST_ASSERT_TRUE_MESSAGE(c == '-' || (c >= '0' && c <= '9') ||
+                                     (c >= 'a' && c <= 'z'),
+                                 "hostname stays a legal DNS label");
+    }
+    /* truncation + NULL guards -> -1, never a partial/unsafe host */
+    char small[8];
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        -1, device_uid_hostname("k7m2rt", small, sizeof(small)),
+        "too-small buffer -> -1");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(-1, device_uid_hostname(NULL, h, sizeof(h)),
+                                  "NULL uid -> -1");
+}
+
 /* -------------------------------------------------------------------------- */
 /* runner                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -1535,5 +1563,6 @@ int main(void)
     RUN_TEST(t_cal_ch_line);
     RUN_TEST(t_wifi_net_state_machine);
     RUN_TEST(t_device_uid_encode);
+    RUN_TEST(t_device_hostname);
     return UNITY_END();
 }
