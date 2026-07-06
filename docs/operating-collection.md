@@ -46,6 +46,19 @@ If a process refuses to stop, `just stop-collection` reports its pid and the exa
 powershell -Command "Stop-Process -Id <pid> -Force"
 ```
 
+## Fleet addressing — name, not IP (#676)
+
+The WiFi fleet is reached **by name**, not by a hardcoded IP. Each board advertises an mDNS
+hostname `sprout-<device_id>.local` (the `device_id` nonce, ADR-0020 §2 / #760), stable across
+DHCP churn. The dashboard server (`serve.py`) tries that hostname **first** and the registry's
+configured `base_url` IP only as a fallback, and **self-heals** the registry (`config/devices.local.json`)
+when a board answers at a fresh IP — so a board that power-cycles onto a new DHCP lease stays
+reachable with **no registry hand-edit** (the install-day subnet-scan friction is gone).
+
+Low-tech complement: if your network has no working mDNS responder, set a **DHCP reservation**
+per board on the router (pin each `device_id`'s MAC to a fixed IP) and keep the `base_url` IPs in
+`config/devices.local.json`. mDNS and reservations are independent — either alone suffices.
+
 ## What DX owns vs Data owns
 
 DX owns this headless **stop/reclaim** surface + the `just` recipes; **Data** owns the

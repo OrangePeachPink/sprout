@@ -307,10 +307,23 @@ def _fleet_adapter(registry=None):
         from weather_pressure import latest_pressure as _pressure
     except ImportError:
         _pressure = None
+    # #676: address each board by its stable mDNS hostname first (sprout-<id>.local,
+    # survives DHCP), the configured IP as a fallback; self-heal the registry when a
+    # board answers at a fresh address. A missing mDNS responder degrades to the IP.
+    from fleet_resolve import candidate_base_urls, make_healer
+
     return FleetAdapter(
         [
             tethered,
-            *(DeviceAdapter(d.base_url, pressure_source=_pressure) for d in served),
+            *(
+                DeviceAdapter(
+                    d.base_url,
+                    candidates=candidate_base_urls(d),
+                    on_resolved=make_healer(d),
+                    pressure_source=_pressure,
+                )
+                for d in served
+            ),
         ]
     )
 
