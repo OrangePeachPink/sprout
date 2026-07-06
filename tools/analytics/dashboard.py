@@ -79,6 +79,13 @@ LOGS_DIR = _REPO / "logs"
 MAX_TRAJ_POINTS = 2000
 # A sample-to-sample gap longer than this is a logging interruption, surfaced (E9).
 GAP_THRESHOLD_S = 120
+# #683: a device silent for longer than this (relative to the freshest reading in
+# the whole fleet - the live edge) auto-demotes to a slim "retired" row so a dead
+# pre-launch test rig stops crowding the live glance view. Distinct from staleness
+# (#698, minutes): retirement is the hours-scale "this board is gone" demotion. An
+# explicit registry `retired` flag retires a board regardless of age. Documented,
+# tunable; data is always preserved (still in the logs / Diagnostics).
+RETIRE_AFTER_H = 12.0
 # #699: over the WiFi fleet each board polls at its OWN cadence, so a per-device
 # gap is judged relative to that device's median poll interval, floored at the
 # documented GAP_THRESHOLD_S. A gap = a poll-to-poll delta over
@@ -1241,6 +1248,43 @@ def build_context(
     versions = _versions_block(device_groups, provenance_block["server"])
     meta["fw"] = _fw_masthead(versions) or meta["fw"]
 
+    # #683: device lifecycle. A board is RETIRED - demoted to a slim row, dropped
+    # from the active fleet count - when the registry marks it `retired`, OR when
+    # it has been silent for > RETIRE_AFTER_H relative to the freshest reading in
+    # the whole fleet (the live edge; deterministic, no wall-clock, so a dead
+    # pre-launch test rig auto-demotes without a registry edit). Reversible +
+    # honest: raw data is untouched; only the glance view de-emphasizes it.
+    _fleet_edge = soil[-1].timestamp_utc
+    _retire_cut = _fleet_edge - timedelta(hours=RETIRE_AFTER_H)
+    for g in device_groups:
+        _regdev = reg.device(g["device_id"]) if g.get("device_id") else None
+        _reg_retired = bool(getattr(_regdev, "retired", False))
+        _auto = False
+        _ls = g.get("last_seen_utc")
+        if _ls:
+            try:
+                _last = datetime.strptime(_ls, "%Y-%m-%dT%H:%M:%SZ").replace(
+                    tzinfo=_fleet_edge.tzinfo
+                )
+                _auto = _last < _retire_cut
+            except ValueError:
+                _auto = False
+        g["retired"] = _reg_retired or _auto
+        g["retired_reason"] = (
+            "archived" if _reg_retired else ("offline" if _auto else None)
+        )
+
+    # #683: the fleet summary counts only ACTIVE (non-retired) devices + their
+    # channels, so a demoted test rig never inflates "N devices · N channels".
+    _active_ids = {g["device_id"] for g in device_groups if not g["retired"]}
+    _active_channels = sum(1 for s in sensors if s.get("device_id") in _active_ids)
+    fleet = {
+        "devices_active": sum(1 for g in device_groups if not g["retired"]),
+        "devices_retired": sum(1 for g in device_groups if g["retired"]),
+        "channels_active": _active_channels,
+        "retire_after_h": RETIRE_AFTER_H,
+    }
+
     # PRD-0002 R3 (#368): join solar + optional weather onto the soil window. Offline-
     # first — {"available": False} when no location config, so the UI just omits it.
     env = build_env_context(start, soil[-1].timestamp_utc)
@@ -1258,6 +1302,7 @@ def build_context(
         # first-class "alive, not probed" cards, never as missing/no-signal.
         "sensorless": reg.sensorless_plants(),
         "devices": device_groups,
+        "fleet": fleet,  # #683: active vs retired counts for the honest subline
         "trajectory": {
             "start_local": meta["start_local"],
             # local-first chart-axis anchor (#328): local + zone, no UTC secondary.

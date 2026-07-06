@@ -87,6 +87,12 @@ class Device:
     # board's whole history into one card AT DISPLAY/GROUPING TIME - raw records
     # are never rewritten (they truthfully say what the board reported then).
     previous_ids: tuple[str, ...] = ()
+    # #683: device lifecycle. A pre-launch test rig or a decommissioned board is
+    # marked `retired` in the registry so it stops rendering as a live fleet group
+    # and drops out of the "N devices · N channels" summary - its data is fully
+    # preserved (still in the logs / Diagnostics), just de-emphasized on the glance
+    # view. Reversible: clear the flag and it returns to the live fleet.
+    retired: bool = False
 
     def plant_for(self, channel: str) -> dict | None:
         """The plant on a channel: {plant_id, plant_name, plant_type, pot_size}, or
@@ -238,6 +244,7 @@ def _device_from_dict(raw: dict) -> Device | None:
         hostname=hostname if isinstance(hostname, str) and hostname else None,
         side=side if isinstance(side, str) and side else None,
         previous_ids=previous_ids,
+        retired=bool(raw.get("retired")),  # #683 device lifecycle
     )
 
 
