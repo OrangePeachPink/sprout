@@ -1,0 +1,135 @@
+name: weekly full battery
+
+# The comprehensive backstop for the #740 velocity-first sprint posture: everything the
+# per-PR gate no longer runs — the PlatformIO firmware compile + native C tests and the
+# experimental-board matrix — plus the fast lint lane, all together, once a week (and on
+# demand via dispatch, e.g. before cutting a release or after a firmware-heavy day).
+# Findings become follow-up patches (maintainer-accepted trade, #740). Revert-before-public:
+# these jobs return to per-PR blocking CI per #740's launch checklist.
+
+on:
+  schedule:
+    - cron: "0 14 * * 1" # Mondays 14:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly-battery
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: lint + hygiene (full)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up uv (+ the locked Python)
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          version: "0.11.14"
+
+      - name: Set up just
+        uses: extractions/setup-just@v4
+
+      - name: Sync the locked environment
+        run: uv sync --locked
+
+      - name: Cache npx tooling (markdownlint / cspell)
+        uses: actions/cache@v6
+        with:
+          path: ~/.npm
+          key: npx-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: npx-${{ runner.os }}-
+
+      - name: Lint + format + hygiene
+        run: SKIP=clang-format uv run pre-commit run --all-files --show-diff-on-failure
+
+      - name: Tests — host Python
+        run: just test-host
+
+  firmware:
+    name: firmware (native tests + compile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up uv (+ the locked Python)
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          version: "0.11.14"
+
+      - name: Set up just
+        uses: extractions/setup-just@v4
+
+      - name: Sync the locked environment
+        run: uv sync --locked
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+          restore-keys: pio-${{ runner.os }}-
+
+      - name: Tests — native C firmware logic
+        run: just test-native
+
+      - name: Compile firmware (ESP32 — catch src/ regressions)
+        run: just build
+
+  # Experimental boards (#436 S3, #442 C5) — still non-blocking-informational (ADR-0024);
+  # step-level continue-on-error keeps the job's own check green while a warning
+  # annotation surfaces a real break (#504).
+  experimental-boards:
+    name: experimental board (${{ matrix.env }}) — non-blocking
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [esp32s3, esp32c5]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up uv (+ the locked Python)
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          version: "0.11.14"
+
+      - name: Set up just
+        uses: extractions/setup-just@v4
+
+      - name: Sync the locked environment
+        run: uv sync --locked
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.platformio
+          key: pio-experimental-${{ matrix.env }}-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+          restore-keys: pio-experimental-${{ matrix.env }}-${{ runner.os }}-
+
+      - name: Compile-check (${{ matrix.env }})
+        id: compile
+        continue-on-error: true
+        run: pio run -d firmware -e ${{ matrix.env }}
+
+      - name: Surface a non-blocking failure
+        if: steps.compile.outcome == 'failure'
+        run: |
+          echo "::warning title=Experimental board compile failed (non-blocking)::${{ matrix.env }} failed to compile on the pinned toolchain. Non-blocking (ADR-0024) - see the Compile-check log, then fix or file it."

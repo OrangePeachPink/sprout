@@ -10,12 +10,12 @@ name: epic hygiene
 # so it needs `issues: read` and issue/schedule triggers — a different model than the
 # PR/file gate. Same script runs locally via `just lint-epics`.
 
+# Minutes-burn fix (#740): the per-issue-event trigger fired a runner job on EVERY issue
+# open/edit/label — triage days generate 50+ of those. Weekly + on-demand is the right
+# cadence for a warn-only drift check; `just lint-epics` covers any instant need locally.
 on:
   workflow_dispatch: {}
-  # Immediate feedback the moment an epic is created or its checklist is edited.
-  issues:
-    types: [opened, edited, labeled]
-  # Weekly backstop so drift on an untouched epic still gets surfaced.
+  # Weekly sweep; drift on an epic surfaces here (or run `just lint-epics` locally).
   schedule:
     - cron: "0 15 * * 1" # Mondays 15:00 UTC
 

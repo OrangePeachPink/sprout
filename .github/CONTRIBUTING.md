@@ -98,6 +98,13 @@ maintainer confirms `area:` / `layer:` at triage.
 > skips firmware tests." CI runs everything for predictability and to prevent local≠remote drift.
 > Path-filtering would re-introduce exactly the class of surprise we deliberately closed.
 >
+> ⚠️ **Temporary sprint posture (#740, private phase only):** remote per-PR CI currently runs the *fast lane
+> only* (lint + hygiene + host tests); the firmware compile, native C tests, and experimental boards run in a
+> **weekly full battery** (+ on-demand dispatch) instead — an Actions-minutes decision, velocity over
+> per-commit remote coverage. **`just check` locally is therefore the real full gate during the sprint** —
+> run it before pushing, and post local `just test-native` + `just build` evidence on firmware-touching PRs.
+> This posture is reverted per #740's launch checklist before the repo goes public.
+>
 > **The one exception — clang-format:** it runs on the *lines you changed*, not `--all-files`, because the
 > firmware carries intentional manual column alignment a full-tree reformat would destroy (AGENTS.md
 > §code-style; changed-lines via `git-clang-format`, #352). Edit a file and only your touched lines are
