@@ -277,6 +277,7 @@ class SegmentHeader:
     cal_bounds: list[int] = field(default_factory=list)
     cal_bounds_source: str = ""  # "header" | "default" — set by _parse_header_lines
     per_channel_cal: dict[str, ChannelCal] = field(default_factory=dict)  # #404
+    config_id: str | None = None  # #576/v4 — header-authoritative config fingerprint
     moist_range: tuple[int, int] | None = None
     cfg: dict[str, str] = field(default_factory=dict)
     source: str | None = None
@@ -357,6 +358,46 @@ class Reading:
         device-side half of the dedupe key; survives a store-and-forward
         reconnect/replay, resets only on reboot. None on a v1-only row."""
         return _int(self.payload.get("device_seq"))
+
+    # --- schema v4 (#739 bundle, TELEMETRY_SCHEMA §13) — all payload k=v, so they
+    # read None on a v3/v2/v1 row (never stitched): only a >=4 board emits them. ---
+
+    @property
+    def config_id(self) -> str | None:
+        """Firmware-computed config fingerprint (#576/ADR-0025, schema v4) - an
+        8-hex FNV-1a-32 of the active ADC/sampling/cal/cadence snapshot. Same id
+        ⇒ rows are directly comparable; a change is a comparability boundary. Read
+        from the row's ``payload`` (header-authoritative on the segment); parse_v1
+        reads it, never re-derives. None on a pre-v4 row."""
+        return self.payload.get("config_id") or None
+
+    @property
+    def rssi(self) -> int | None:
+        """WiFi signal strength in dBm (#669, schema v4), a negative int.
+        Honest-absent (ADR-0028): a serial/tethered or unassociated row omits the
+        key entirely - None, never a fake 0. Only dBm ever rides the wire (never
+        SSID/BSSID/MAC - the privacy fence)."""
+        return _int(self.payload.get("rssi"))
+
+    @property
+    def uptime_s(self) -> int | None:
+        """Seconds since board boot (#669, schema v4) - a transport-independent
+        board diagnostic. None on a pre-v4 row."""
+        return _int(self.payload.get("uptime_s"))
+
+    @property
+    def heap(self) -> int | None:
+        """Free heap bytes (#669, schema v4) - a board health diagnostic. None on
+        a pre-v4 row."""
+        return _int(self.payload.get("heap"))
+
+    @property
+    def fault(self) -> str | None:
+        """The specific sensor-fault reason (#670, schema v4): ``stuck_wet`` (short
+        / water-contamination) or ``dead_adc``. Present only when the firmware
+        self-declares ``quality_flag=SENSOR_FAULT`` (the wire value; the reason
+        rides payload so the shared enum stays small). None otherwise."""
+        return self.payload.get("fault") or None
 
     @property
     def time_source(self) -> str | None:
@@ -620,6 +661,7 @@ def _apply_kv(h: SegmentHeader, kv: dict[str, str]) -> None:
     h.built = kv.get("built", h.built)
     h.run = kv.get("run", h.run)
     h.device_id = kv.get("device_id", h.device_id)
+    h.config_id = kv.get("config_id", h.config_id)  # #576/v4 — header-authoritative
     h.mac = kv.get("mac", h.mac)
     h.chip = kv.get("chip", h.chip)
     h.adc = kv.get("adc", h.adc)

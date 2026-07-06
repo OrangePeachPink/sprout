@@ -146,6 +146,7 @@ QUALITY_COLOR = {
     "SUSPECT": "#F5A623",
     "SATURATED": "#17B6C4",
     "NO_SIGNAL": "#9A8480",
+    "SENSOR_FAULT": "#9A8480",  # #739/v4 firmware self-declared fault (#670 wire half)
     "ERROR": "#E0483D",
     "WARMING": "#F5A623",
     "BASELINE_LEARNING": "#F5A623",
@@ -159,6 +160,7 @@ QUALITY_SEVERITY = {
     "SUSPECT": 2,
     "SATURATED": 3,
     "NO_SIGNAL": 4,
+    "SENSOR_FAULT": 5,  # #739/v4 — a self-declared fault is top-severity
     "ERROR": 5,
 }
 QUALITY_COLS = 72  # heat-strip resolution
@@ -602,7 +604,10 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         # NOT "saturated", and NOT a plant status. Raw stays shown (truth), but the
         # chip reads "sensor fault" so a dead probe can't masquerade as a drowning
         # plant (the live s3-1 board reading 0-7 as "Saturated" is exactly this).
-        sensor_fault = last.implausible_wet
+        # #739/v4: honor the firmware's self-declared SENSOR_FAULT (per-board
+        # wet_rail_raw, #670 wire half) in addition to the host-derived sub-rail
+        # gate - either source means the reading is a fault, never a moisture band.
+        sensor_fault = last.implausible_wet or last.quality_flag == "SENSOR_FAULT"
         no_signal = last.quality_flag == "NO_SIGNAL"
         unassigned = registered and plant is None and not no_signal and not sensor_fault
         if sensor_fault:
