@@ -1276,7 +1276,10 @@ function plantLabel(x){
 // plants, and a jump-to-any-plant picker, so moving among 11+ plants no longer
 // means returning to the list every time. Order follows the card wall (DASH.sensors).
 function buildPlantNav(sid){
-  const list = DASH.sensors || [];
+  // #804: the jump list is plant-first + live only. Retired-device sensors (no plant → they would fall
+  // back to sN@deviceid) live in Diagnostics now (#683), not the plant navigator.
+  const _retired = new Set((DASH.devices||[]).filter(d=>d.retired).map(d=>d.device_id));
+  const list = (DASH.sensors || []).filter(x=>!_retired.has(x.device_id));
   const idx = list.findIndex(x=>x.id===sid);
   const nav = el('div','detailnav');
   const back = el('button','btn','← Back to all plants');
