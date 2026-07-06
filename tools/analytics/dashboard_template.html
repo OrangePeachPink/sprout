@@ -301,6 +301,7 @@ footer.prov code { font-family: var(--font-data); }
   <header class="top">
     <div>
       <h1>🌱 Sprout — soil moisture</h1>
+      <div class="orient" id="orient" style="color:var(--ink);font-size:13px;margin-top:5px;max-width:64ch"></div>
       <div class="sub" id="subline"></div>
     </div>
     <div class="controls">
@@ -517,6 +518,9 @@ function destroyCharts(){ for(const k in charts){ if(charts[k]) charts[k].destro
 function renderHeader(){
   const m = DASH.meta;
   const devCount = (DASH.devices && DASH.devices.length) || 1;
+  // #722: the header orientation line, from the voice pool (DASH.orientation); omitted if the pool is absent.
+  const _orient = document.getElementById('orient');
+  if(_orient){ _orient.textContent = DASH.orientation || ''; _orient.style.display = DASH.orientation ? '' : 'none'; }
   document.getElementById('subline').innerHTML =
     `${devCount} device${devCount === 1 ? '' : 's'} · ${DASH.sensors.length} channels · ` +
     `fw <span class="mono">${m.fw||'?'}</span> · ${fmt(DASH.integrity.total)} readings · ` +
