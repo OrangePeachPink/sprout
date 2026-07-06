@@ -26,12 +26,17 @@ inbound beyond the LAN.** Concretely:
 
 1. **WiFi credentials are NVS-local secrets.** Saved to NVS, **never logged, never emitted in telemetry, never
    served**. They exist only to join the network. (Extends ADR-0015: credentials are the canonical secret.)
-2. **Synthetic network identity (no hardware IDs).** The hostname / mDNS name derives from the pretty / `!name`
-   identity (#188) — e.g. `sprout-greenhouse-a1b2.local` — **never the MAC or a chip serial** (ADR-0015). A reset or
-   rename changes it; nothing ties it to the silicon. To avoid LAN collisions (two `sprout-greenhouse` devices)
-   the hostname is **`friendly` + a generated non-hardware install suffix** (NVS-stored, *not* silicon-derived).
-   The friendly / `!name` text is **sanitized** — a personal-looking name is warned against — because the mDNS
-   hostname **broadcasts on the LAN**, so a raw `!name` is a PII surface (ADR-0015; cousin of #290).
+2. **Synthetic network identity (no hardware IDs).** The mDNS hostname is **`sprout-<device_id>`** — the board's
+   **stable minted nonce** (a 6-char Crockford base32 id, ADR-0027) — advertised as `sprout-<device_id>.local`
+   (#676 / #760). **Never the MAC or a chip serial** (ADR-0015): the nonce is random, NVS-stored, non-hardware.
+   *Reconciled 2026-07-06 (post-ADR-0027):* the original wording here was **`friendly` + a generated non-hardware
+   install suffix** (e.g. `sprout-greenhouse-a1b2.local`); the minted nonce **realises that intent better** —
+   (a) it is **stable across renames** (a friendly-name hostname would break every cached `base_url` on rename;
+   the network address must be stable, while the friendly name is display-only per ADR-0027), (b) it is
+   **PII-safe by construction** (a random nonce is never personal, so the mDNS broadcast carries no `!name` —
+   this **resolves** the broadcast-PII concern that drove `!name` sanitisation *for the hostname*; that
+   sanitisation now applies only to the friendly name as a **display** label, ADR-0015 / #290), and (c) the
+   ~1.07-billion nonce space makes LAN collisions vanishingly unlikely, so no separate collision suffix is needed.
 3. **No inbound exposure beyond the LAN.** The on-device server binds to the local network only: **no open ports
    to the internet, no remote management, no inbound control of actuation** (the single-authority rule, ADR-0016,
    must absorb any future remote path — there is none now). Local-network and fully-local only (PRD-0005
