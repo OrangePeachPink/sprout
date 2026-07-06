@@ -35,6 +35,10 @@ reports/weather/
 # fleet (home layout) stays local; the placeholder template IS committed.
 config/devices.local.json
 !config/devices.example.json
+# Plant / pot / site profile registry (#675, ADR-0029): pot sizes + home placement
+# describe the maintainer's windowsill; the real instance stays local, template committed.
+config/plant_profiles.local.json
+!config/plant_profiles.example.json
 credentials.h
 # identifier-guard denylist (#558): operator-sensitive literals the guard greps
 # committed text for - home network names + hostnames, and any term to keep out of the
