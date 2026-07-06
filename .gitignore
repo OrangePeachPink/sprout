@@ -12,8 +12,10 @@ desktop.ini
 *.swp
 *~
 
-# Agent / session state (never track)
-.claude/
+# Agent / session state (never track) — but COMMIT the shared project settings
+# (commit/PR attribution policy) so every lane's worktree inherits it.
+.claude/*
+!.claude/settings.json
 
 # Secrets / local config (KEEP OUT OF GIT)
 .env

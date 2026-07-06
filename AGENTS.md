@@ -60,15 +60,20 @@ who did what at a glance.
 
 - **Sign-off:** end PR bodies, issue/PR comments, ADRs, docs, and copy decks with `— <Lane>` (emoji
   optional). E.g. `— Firmware`, `— Data 🌱`, `— Trellis`. The maintainer signs merge/squash commits `-v`.
-- **Commit trailer:** add a `Lane: <Lane>` trailer alongside the `Co-Authored-By:` line, so attribution
-  lands in `git log` / `git blame` — machine-readable and permanent:
+- **Commit trailer:** add a `Lane: <Lane>` trailer, so attribution lands in `git log` / `git blame` —
+  machine-readable and permanent:
 
   ```text
   feat(actuators): wire the relay driver to a bounded pulse
 
   Lane: Firmware
-  Co-Authored-By: Claude <noreply@anthropic.com>
   ```
+
+- **Author identity = the maintainer's.** Commits author as `OrangePeachPink` with the GitHub **noreply**
+  email (never a personal address — commit emails are public forever once the repo is). Do **not** add AI
+  co-author trailers (`Co-Authored-By: Claude …`) — the project `.claude/settings.json` disables the
+  automatic one; don't re-add it by hand. The `Lane:` trailer + sign-off are the honest, human-readable
+  record of agent work; the contributor graph belongs to the maintainer.
 
 ## Lane self-audit
 
