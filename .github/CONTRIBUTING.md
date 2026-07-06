@@ -153,6 +153,11 @@ You only need the ESP32 on USB for the flash step. *(Under the hood these are pl
 in the Codespace). That's the whole list. First flash on a fresh board? **[FLASHING.md](../docs/FLASHING.md)**
 walks you in.
 
+**PlatformIO reinstalling on every VS Code restart, or otherwise acting up?**
+**[PlatformIO troubleshooting](../docs/PLATFORMIO_TROUBLESHOOTING.md)** tells a normal one-time
+re-provision apart from a loop (the `penv.stale-*` breadcrumb test), covers the dual-Python trigger,
+and gives a safe clean-reset runbook.
+
 > **Brand-new to microcontrollers?** A gentle, deliberately-separate Arduino starter on-ramp is on the way
 > ([#387](https://github.com/OrangePeachPink/plants/issues/387)) — it hands back the tunable constants and
 > shared terms, then graduates you to this VS Code / Codespaces project.
