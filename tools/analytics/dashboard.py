@@ -498,6 +498,31 @@ def _water_position(band, raw, bands, mrange):
     return band_lo, band_hi, band_pos, dryness
 
 
+def _settled_readings(rs: list) -> list:
+    """#697: the settled + valid subset a channel's SUMMARY stats (median / range /
+    mean / slope) should use - so a freshly-installed probe's stats track its soil
+    value, not the insertion transient or fault zeros.
+
+    Drops what isn't real soil moisture: faulted / implausible (#670) and no-signal
+    samples (the `median 2` / `range 0-x` case = startup/fault zeros). Then strips
+    the LEADING fresh-insertion air-dry run (the probe read air before it settled
+    into soil) - but ONLY if the channel later left air-dry, so a genuinely air-dry
+    plant (a cactus, an unwatered pot) keeps all its samples. Returns the full
+    non-None set if nothing survives, so stats are never empty. The trajectory
+    chart still plots the FULL raw history - this trims only the summary window."""
+    valid = [
+        r
+        for r in rs
+        if r.raw_value is not None
+        and not r.implausible_wet
+        and r.quality_flag not in ("NO_SIGNAL", "SENSOR_FAULT")
+    ]
+    if not valid:
+        return [r for r in rs if r.raw_value is not None]
+    first_soil = next((i for i, r in enumerate(valid) if r.band != "air-dry"), None)
+    return valid[first_soil:] if first_soil is not None else valid
+
+
 def build_context(data: LogData, registry: Registry | None = None) -> dict:
     """``registry`` defaults to ``device_registry.load_registry()`` (the local
     fleet config, falling back to the committed example/demo shape, #486) - pass
@@ -564,6 +589,13 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         raws = [r.raw_value for r in rs]
         pairs = [(_hours_since(r.timestamp_utc, start), r.raw_value) for r in rs]
         points = [{"x": round(h, 4), "y": v} for h, v in pairs]
+        # #697: the SUMMARY stats use the settled+valid window (fault zeros + the
+        # insertion warmup excluded); the trajectory above keeps the full history.
+        settled = _settled_readings(rs)
+        sraws = [r.raw_value for r in settled] or raws
+        spairs = [
+            (_hours_since(r.timestamp_utc, start), r.raw_value) for r in settled
+        ] or pairs
         locals_ = [
             r.timestamp_local.strftime("%m-%d %H:%M:%S") if r.timestamp_local else ""
             for r in rs
@@ -669,10 +701,10 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
                 "channel": last.channel,
                 "color": colors[sid],
                 "n": len(rs),
-                "raw_min": min(raws),
-                "raw_max": max(raws),
-                "raw_mean": round(statistics.fmean(raws), 1),
-                "raw_median": int(statistics.median(raws)),
+                "raw_min": min(sraws),  # #697: settled window, not the warmup/faults
+                "raw_max": max(sraws),
+                "raw_mean": round(statistics.fmean(sraws), 1),
+                "raw_median": int(statistics.median(sraws)),
                 "raw_last": last.raw_value,
                 "band_fw": last.band,
                 "band_ui": band_ui,
@@ -684,7 +716,7 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
                 "mood": mood,
                 "spread_last": last.spread,
                 "quality_last": last.quality_flag,
-                "slope_per_hr": _round_opt(_slope_per_hour(pairs), 2),
+                "slope_per_hr": _round_opt(_slope_per_hour(spairs), 2),
                 "forecast": forecast_payload(sid, rs, bounds),
             }
         )
