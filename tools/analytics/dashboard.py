@@ -87,6 +87,12 @@ GAP_THRESHOLD_S = 120
 # real 2-minute dropout. Same honest-data law as the aggregate: surfaced, never
 # bridged.
 GAP_CADENCE_MULT = 3
+# #698: a device with no reading within this window is STALE/offline - its last
+# value must not read as the live reading, and it drops out of the online count.
+# 180 s = ~6 sweep intervals at the 30 s cadence; the one canonical threshold the
+# client also derives against (it mirrors the template's STATE_ONLINE_S so the
+# server-side gate and the viewer-clock gate never disagree). Tunable here.
+STALE_AFTER_S = 180
 # Time-range windows (E8). None = all history.
 RANGE_HOURS: dict[str, float | None] = {
     "1h": 1.0,
@@ -193,6 +199,18 @@ def _slope_per_hour(pairs: list[tuple[float, float]]) -> float | None:
 
 def _hours_since(ts: datetime, start: datetime) -> float:
     return (ts - start).total_seconds() / 3600.0
+
+
+def _age_seconds(ts: datetime | None, now: datetime) -> float | None:
+    """Seconds between a reading's UTC stamp and ``now`` (#698); None if absent.
+    Both are normalised to aware-UTC so a naive parse stamp never raises."""
+    if ts is None:
+        return None
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    return (now - ts).total_seconds()
 
 
 def _band_ranges(bounds: list[int], lo: int, hi: int) -> list[dict[str, object]]:
@@ -660,12 +678,16 @@ def _settled_readings(rs: list) -> list:
     return valid[first_soil:] if first_soil is not None else valid
 
 
-def build_context(data: LogData, registry: Registry | None = None) -> dict:
+def build_context(
+    data: LogData, registry: Registry | None = None, now: datetime | None = None
+) -> dict:
     """``registry`` defaults to ``device_registry.load_registry()`` (the local
     fleet config, falling back to the committed example/demo shape, #486) - pass
     one explicitly to test attribution without touching real/example config
-    files."""
+    files. ``now`` (default: wall-clock UTC) is the staleness reference (#698),
+    injected so live/just-stale/long-offline are deterministically testable."""
     reg = registry if registry is not None else load_registry()
+    now = now or datetime.now(timezone.utc)
     soil = [
         r
         for r in data.readings
@@ -817,11 +839,23 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
             if no_signal or unassigned
             else _water_position(last.band, last.raw_value, bands, mrange)
         )
+        # #698: how long since THIS channel last reported. A stale card must show
+        # its last value labelled "last seen Nh ago", never as the live reading,
+        # and drops out of the online count. Deterministic vs the injected `now`.
+        age_s = _age_seconds(last.timestamp_utc, now)
+        stale = age_s is not None and age_s > STALE_AFTER_S
         sensors.append(
             {
                 "id": sid,
                 "sensor_id": last.sensor_id,  # the bare channel token (#583)
                 "device_id": _canon(last.device_id) or None,  # canonical (#602)
+                "stale": stale,  # #698: no reading within STALE_AFTER_S
+                "age_s": int(age_s) if age_s is not None else None,  # #698
+                "last_seen_utc": (  # #698: the stamp the "last seen" label reads
+                    last.timestamp_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+                    if last.timestamp_utc
+                    else None
+                ),
                 "no_signal": no_signal,
                 "unassigned": unassigned,  # registered, live, no plant yet (#616 bench)
                 "sensor_fault": sensor_fault,  # sub-wet-rail impossible reading (#670)
@@ -969,6 +1003,11 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
         "parser": "tools/analytics/parse_v1.py (E6)",
         "all_channels": list(sensor_ids),
         "sources": data.sources,
+        "stale_after_s": STALE_AFTER_S,  # #698: one canonical staleness window
+        # the staleness reference used for the server-side stale flags (#698), so
+        # a static snapshot's baked ages are interpretable; the client prefers its
+        # own viewer clock for the live view.
+        "as_of_utc": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "generated_local": datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %z"),
         "start_local": (
             soil[0].timestamp_local.strftime("%Y-%m-%d %H:%M:%S")
@@ -1042,8 +1081,19 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
     # #583: the per-device groups the template renders (the #575 spec's eight
     # rules). Single device -> one group + the slim ribbon (COLLAPSE).
     device_groups = _device_groups(
-        reg, device_ids_in_data, by_sensor, sensors, data.segments, continuity
+        reg, device_ids_in_data, by_sensor, sensors, data.segments, continuity, now
     )
+
+    # #698: the server-side live-fleet count EXCLUDES stale devices, so an offline
+    # spare board never inflates "N online". Deterministic vs `now`; the client
+    # re-derives the same split live using `stale_after_s` + the viewer's clock.
+    stale_devices = sum(1 for g in device_groups if g.get("stale"))
+    fleet_health = {
+        "devices_total": len(device_groups),
+        "devices_online": len(device_groups) - stale_devices,
+        "devices_stale": stale_devices,
+        "stale_after_s": STALE_AFTER_S,
+    }
 
     # PRD-0002 R3 (#368): join solar + optional weather onto the soil window. Offline-
     # first — {"available": False} when no location config, so the UI just omits it.
@@ -1051,6 +1101,7 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
 
     return {
         "meta": meta,
+        "fleet_health": fleet_health,  # #698 live count excludes stale boards
         "provenance": provenance_block,
         "env": env,
         "cal": {"bounds": bounds, "moist_range": list(mrange), "bands": bands},
@@ -1075,7 +1126,7 @@ def build_context(data: LogData, registry: Registry | None = None) -> dict:
 
 
 def _device_groups(
-    reg, device_ids_in_data, by_sensor, sensors, segments, continuity=None
+    reg, device_ids_in_data, by_sensor, sensors, segments, continuity=None, now=None
 ) -> list:
     """The per-device group headers (#583, the #575 spec's eight rules).
 
@@ -1193,6 +1244,21 @@ def _device_groups(
                         "last_gap_min": None,
                         "gap_count": 0,
                     },
+                ),
+                # #698: server-side staleness (age since last reading vs `now`),
+                # the tested contract behind the client's viewer-clock derivation.
+                # A stale group is de-emphasized and out of the online count; it
+                # restores automatically once age drops back under the window.
+                "stale": (
+                    _age_seconds(last.timestamp_utc, now) > STALE_AFTER_S
+                    if now is not None and last.timestamp_utc is not None
+                    else False
+                ),
+                "age_s": (
+                    int(_age_seconds(last.timestamp_utc, now))
+                    if now is not None
+                    and _age_seconds(last.timestamp_utc, now) is not None
+                    else None
                 ),
                 "sensors": entry_ids,
             }
