@@ -200,6 +200,11 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
   padding: 6px 10px; max-width: 260px; cursor: pointer; }
 .detailnav .plantpick:hover { border-color: var(--leaf); }
 .detailnav .detailpos { margin-left: auto; }
+/* #683: a retired board is one slim, de-emphasized row — present, not prominent. */
+.devgroup.retired { opacity: .62; }
+.devribbon.retired { font-size: 12px; padding: 4px 8px; border: 1px dashed var(--border);
+  border-radius: var(--r-control); background: var(--surface-2); }
+.devribbon.retired .devname { font-family: var(--font-ui); font-weight: 600; color: var(--ink); }
 .scard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-tile);
   box-shadow: var(--e1); padding: var(--space-md); position: relative; overflow: hidden; cursor: pointer;
   transition: box-shadow .12s, transform .12s; }
@@ -544,12 +549,18 @@ function destroyCharts(){ for(const k in charts){ if(charts[k]) charts[k].destro
 /* ---- header ---- */
 function renderHeader(){
   const m = DASH.meta;
-  const devCount = (DASH.devices && DASH.devices.length) || 1;
   // #722: the header orientation line, from the voice pool (DASH.orientation); omitted if the pool is absent.
   const _orient = document.getElementById('orient');
   if(_orient){ _orient.textContent = DASH.orientation || ''; _orient.style.display = DASH.orientation ? '' : 'none'; }
+  // #683: the subline counts only ACTIVE (non-retired) devices/channels, so a
+  // demoted test rig never inflates it. `retired` boards are noted separately.
+  // (#683's fleet-aware devCount supersedes the simple devices.length count.)
+  const F = DASH.fleet || {};
+  const devCount = (F.devices_active != null) ? F.devices_active : ((DASH.devices && DASH.devices.length) || 1);
+  const chCount = (F.channels_active != null) ? F.channels_active : DASH.sensors.length;
+  const retiredBit = F.devices_retired ? ` · <span class="muted">${F.devices_retired} retired</span>` : '';
   document.getElementById('subline').innerHTML =
-    `${devCount} device${devCount === 1 ? '' : 's'} · ${DASH.sensors.length} channels · ` +
+    `${devCount} device${devCount === 1 ? '' : 's'} · ${chCount} channels${retiredBit} · ` +
     `fw <span class="mono">${m.fw||'?'}</span> · ${fmt(DASH.integrity.total)} readings · ` +
     `${m.total_hours}h since ${m.start_display || m.start_local}`;
   const tc = document.getElementById('trajCount');
@@ -592,6 +603,22 @@ function renderCards(){
   devices.forEach(d => {
     const group = el('div','devgroup');
     const st = deviceState(d);
+    // #683: a RETIRED board (registry-archived, or auto-demoted after > N h
+    // silent) collapses to one slim row instead of a full group + card wall - so
+    // a dead test rig stops crowding the live glance. Its data is untouched
+    // (still in the logs / Diagnostics); this is de-emphasis, not deletion.
+    if(d.retired){
+      const reason = d.retired_reason==='archived' ? 'retired · archived' : 'retired · offline';
+      const row = el('div','devgroup retired');
+      const rib = el('div','devribbon mono retired');
+      rib.innerHTML =
+        `<span class="devname">${d.name||d.device_id||'device'}</span> · ` +
+        `<span class="muted">${reason}</span> · <span class="muted">${st.label}</span> · ` +
+        `<span class="muted">${(d.sensors||[]).length} ch · data kept in Diagnostics</span>`;
+      row.appendChild(rib);
+      wrap.appendChild(row);
+      return;                                            // no full group, no cards
+    }
     if(multi){                                          // full header: the device is the fence
       const h = el('div','devheader');
       h.appendChild(el('span','devname', d.name));
