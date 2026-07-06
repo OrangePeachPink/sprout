@@ -315,8 +315,10 @@ footer.prov code { font-family: var(--font-data); }
         <button class="rangebtn" data-r="all" type="button">all</button>
       </div>
       <span class="refreshed" id="refreshed"></span>
-      <button class="btn" id="refreshBtn" type="button">↻ Refresh</button>
-      <label class="auto" id="autoLbl"><input type="checkbox" id="autoChk"> auto</label>
+      <!-- #724: always-live model — the redundant `auto` toggle is retired (a live
+           view auto-refreshes by default). Refresh keeps ONE distinct job: force an
+           immediate full-data update now, rather than waiting for the next tick. -->
+      <button class="btn" id="refreshBtn" type="button" title="Update now — the view is already live; this skips the wait for the next refresh">↻ Refresh now</button>
       <button class="btn" id="themeBtn" type="button" aria-label="Switch to dark mode" title="Switch to dark mode">🌙 Dark</button>
       <button class="btn" id="quitBtn" type="button" hidden>⏻ Stop server</button>
     </div>
@@ -1699,7 +1701,7 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
 /* ---- controls + boot ---- */
 (function(){
   const themeBtn=document.getElementById('themeBtn'), root=document.documentElement;
-  const refreshBtn=document.getElementById('refreshBtn'), autoChk=document.getElementById('autoChk');
+  const refreshBtn=document.getElementById('refreshBtn');
 
   let theme='light'; try{ theme = localStorage.getItem('sprout-theme')||'light'; }catch(e){}
   // #723: a standard, discoverable light/dark toggle — "soil mode" retired (ratified). The button shows
@@ -1715,15 +1717,13 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
   themeBtn.addEventListener('click', ()=>{ theme = theme==='dark'?'light':'dark'; try{ localStorage.setItem('sprout-theme',theme);}catch(e){} applyTheme(); renderAll(); });
 
   refreshBtn.addEventListener('click', refresh);
-  if(!LIVE){ autoChk.disabled = true; document.getElementById('autoLbl').title = 'Serve via tools/analytics/serve.py for live data'; }
-  autoChk.addEventListener('change', ()=>{
-    if(autoChk.checked){ autoTimer = setInterval(refresh, AUTO_MS); refresh(); }
-    else if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
-  });
-  // #613 (safe half): a live view should be live by default. Auto-refresh defaults
-  // ON when served live; the operator can still toggle it off. (Auto-STARTING
-  // collection is the separate W2 decision - untouched here.)
-  if(LIVE){ autoChk.checked = true; autoTimer = setInterval(refresh, AUTO_MS); }
+  // #724: always-live model. A live view auto-refreshes by default (the `auto`
+  // toggle it used to gate was redundant, #613's toggle retired). Served live ->
+  // the periodic full-data refresh runs unconditionally; `Refresh now` just skips
+  // the wait for the next tick. In a static snapshot there's nothing to refresh,
+  // so the timer never starts and `Refresh now` explains it needs serve.py.
+  // (Auto-STARTING collection is the separate W2 decision - untouched here.)
+  if(LIVE){ autoTimer = setInterval(refresh, AUTO_MS); }
 
   document.querySelectorAll('.rangebtn').forEach(b=> b.addEventListener('click', ()=> setRange(b.dataset.r)));
 
