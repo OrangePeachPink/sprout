@@ -466,7 +466,7 @@ footer.prov code { font-family: var(--font-data); }
     </section>
 
     <section class="card">
-      <div class="panel-h"><h2>Watering status</h2><span class="cap">each plant's current band · raw ADC, higher = drier</span></div>
+      <div class="panel-h"><h2>Watering status</h2><span class="cap">each plant's current band · raw ADC, higher = drier · the band lags raw by ~1 reading on a fast change (anti-flap hysteresis, #678) — read raw for live transients</span></div>
       <div class="ladder" id="ladder"></div>
     </section>
 

@@ -207,6 +207,14 @@ Raw rows carry `event_id` (null when idle); one event-table row per event with: 
 and the first `=` splits key/value, so values *may* contain spaces (e.g. `level=well watered`). Plants
 `plants.soil` keys: `level` (band name, e.g. `OK`/`well watered`), `role` (`disp`|`diag`),
 `spread` (raw spread of kept samples), `gpio`. Example: `level=well watered;role=disp;spread=48;gpio=36`.
+
+> **`level` lags `raw_value` by ~1 tick on fast transients (#678, intended).** The band label carries
+> **anti-flap hysteresis**: the classifier holds the committed band across a `deadband`-wide gap plus a ms
+> confirmation window (`lib/moisture_classifier`), so a band *change is confirmed, not chased sample-to-sample*.
+> At the 30 s cadence the confirm window rounds to ~1 sample, so on a bench dunk `raw_value` can already read
+> 888 while `level` still says `dry` (and 2985 while still `submerged`, #660) — correct for slow soil, a known
+> surprise on hand-poked transients. **`raw_value` is the authoritative fast signal (ADR-0006); the band is the
+> smoothed index.** Read `raw_value`, not `level`, when watching a live transient. (See GLOSSARY "Band-label lag".)
 Host-appended keys (additive, never touching device keys): `host_monotonic_ms` (#9), the §11 v2 keys
 (`device_seq`, `time_source`, `device_timestamp_utc`), and the §12 context tags (`context_source`,
 `pressure_context_source`).

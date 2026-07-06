@@ -71,6 +71,15 @@ every lane. If two lanes use the same word for different things, or different wo
   status color, and watering derive from the **band**, never the index.
 - **Band** — one of the **7** calibrated firmware moisture classes (`air-dry → DRY → needs water → OK →
   well watered → overwatered → submerged`); the calibrated truth shown beside raw ADC. **not** the index.
+- **Band-label lag** *(👤 user-facing)* — on a **fast transient** (a bench dunk, install poke) the `level`
+  **band** trails the raw ADC by **~1 cadence tick** — raw already dropped to 888 while the label still read
+  `dry`; raw back to 2985 while still `submerged` (#660). This is **intended anti-flap hysteresis**, not a bug:
+  the classifier holds the committed band across a `deadband`-wide gap (±deadband/2 on each boundary) plus a
+  ms confirmation window, so a band **change must be confirmed**, not chased sample-to-sample — trading
+  transient-responsiveness for stability in slow soil (band flapping would be noise, not signal). At the 30 s
+  cadence the confirm window rounds to ~1 sample, so the lag is ~1 tick (`READ_INTERVAL_MS`, `lib/moisture_classifier`).
+  **Raw ADC stays the authoritative fast signal** (ADR-0006: raw is truth; the band is a smoothed index) — read
+  raw, not the band, when watching a live transient. (#678)
 - **Raw-only contract** — firmware writes empty `value`/`unit` (`,,`) for `plants.soil` (DEC-#38): soil is
   uncalibrated, so an engineering value would be false precision. **Soil-specific** — a factory-calibrated env
   sensor (SHT45) *does* carry real `value`/`unit`.
