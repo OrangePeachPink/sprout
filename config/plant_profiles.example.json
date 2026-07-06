@@ -1,0 +1,46 @@
+{
+  "_note": "TEMPLATE (ADR-0029). Copy to config/plant_profiles.local.json (gitignored) and describe YOUR plants. This is the slowly-changing DIMENSION the inference tier (PRD-0008) joins to telemetry facts on the stable plant_id (ADR-0027) — it is NOT telemetry (never on the wire, never per-row). Storage mirrors the device registry: this template ships committed with PLACEHOLDER values; the real instance (pot sizes + home placement = your windowsill) stays local-only per ADR-0015. Every field is ABSENT-SAFE (ADR-0028): a plant is fully monitored with only plant_id + label; everything else sharpens prediction. species_guess carries species_confidence (a guess is labelled a guess, ADR-0006); effective_size_class is an explicit judgement distinct from the measured diameter_in; open_questions is first-class so the model never forces false certainty. Vocabularies are in ADR-0029 §4. Placeholder values below.",
+  "schema_version": 1,
+  "plants": [
+    {
+      "plant_id": "p01",
+      "label": "p01",
+      "species_guess": "pothos",
+      "species_confidence": "low",
+      "placement": { "window": "example-window", "ledge": "left", "device": "k7m2rt", "channel": "s1" },
+      "pot": {
+        "diameter_in": 6,
+        "shape": "standard",
+        "material": "plastic",
+        "has_drip_tray": false,
+        "outer_pot_seal": "none",
+        "effective_size_class": "~6in"
+      },
+      "soil_root": {
+        "soil_depth_pct": 90,
+        "root_bound": "none",
+        "dead_rootball_fraction": 0.0,
+        "decorative_top": "none"
+      },
+      "hydrology": {
+        "water_delivery_path": "topsoil",
+        "retention_class": "good",
+        "drainage_note": "example — normal drainage",
+        "probe_contact_quality": "good"
+      },
+      "care": {
+        "care_origin": "home",
+        "watering_cadence": "example — as-needed",
+        "rejuvenation_routine": "example — quarterly sink soak + leaf spray, 30-min drip-dry",
+        "drought_cycled": true
+      },
+      "open_questions": ""
+    },
+    {
+      "plant_id": "p02",
+      "label": "p02",
+      "placement": { "sensorless": true },
+      "open_questions": "example — a minimal, sensorless profile: plant_id + label is a complete entry; a sensorless plant is monitored nowhere yet but still a first-class record (ADR-0028)."
+    }
+  ]
+}
