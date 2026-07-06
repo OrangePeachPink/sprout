@@ -45,10 +45,12 @@
   --q-saturated: #17B6C4;
   --q-nosignal: #9A8480;
 
-  /* type */
-  --font-display: "Baloo 2", sans-serif;
-  --font-ui: "Hanken Grotesk", sans-serif;
-  --font-data: "JetBrains Mono", monospace;
+  /* type - metrically-aware fallback stacks (#116): if a brand face fails to load, degrade to an
+   * intentional, close system font, never to bare generic sans-serif/monospace (which reads off-brand
+   * AND overflows layout - the #101 part-1 clipping mechanism). Belt-and-suspenders on #106's embed. */
+  --font-display: "Baloo 2", ui-rounded, "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-ui: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Consolas, Menlo, monospace;
 
   /* space - 4px base */
   --space-xs: 4px;
