@@ -186,7 +186,9 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .scard:hover { box-shadow: var(--e2); transform: translateY(-2px); }
 .scard .accent { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; }
 .scard .sid { font-family: var(--font-display); font-weight: 700; font-size: 16px; }
-.scard .gpio { color: var(--muted); font-size: 11px; font-family: var(--font-data); }
+.scard .gpio, .scard .idmeta { color: var(--muted); font-size: 11px; font-family: var(--font-data); }
+details.wiring { margin-top: 10px; }
+details.wiring > summary { cursor: pointer; color: var(--muted); font-size: 12px; font-family: var(--font-data); }
 .scard .drill { position: absolute; top: 12px; right: 14px; color: var(--muted); font-size: 11px; font-weight: 600; }
 .scard:hover .drill { color: var(--leaf); }
 .scard .raw { font-family: var(--font-data); font-weight: 600; font-size: 34px; line-height: 1; margin: 6px 0 2px; }
@@ -549,10 +551,11 @@ function renderCards(){
       h.appendChild(cal);
       group.appendChild(h);
       if(d.also_reported_as && d.also_reported_as.length){
-        // #602: the display-time identity coalesce is VISIBLE, never silent —
-        // these rows truthfully carried the old ids on the wire (raw untouched).
-        group.appendChild(el('div','devribbon mono',
-          'history coalesced from: ' + d.also_reported_as.join(' · ')));
+        // #688: the coalesce stays discoverable (honesty preserved, #602) but off the glance line —
+        // a de-emphasized hover tag, not a jargon ribbon. Raw was untouched; the old ids rode the wire.
+        const co = el('span','devid mono', '· coalesced ⓘ');
+        co.title = 'History coalesced from prior device ids (raw untouched): ' + d.also_reported_as.join(' · ');
+        h.appendChild(co);
       }
       if(d.cal_provisional){                            // HONESTY: provisional-band banner until #170
         group.appendChild(el('div','calbanner',
@@ -577,14 +580,19 @@ function renderCards(){
 }
 
 function cardFor(s){
-  const c = el('div','scard'); c.title = `Open the ${s.id} single-plant view`;
+  const c = el('div','scard'); c.title = `Open the ${s.plant_name || s.plant_id || s.probe || s.id} single-plant view`;
   c.addEventListener('click', () => showDetail(s.id));
   c.appendChild(el('div','accent')).style.background = s.no_signal ? 'var(--q-nosignal)' : s.color;
   c.appendChild(el('div','drill', 'details →'));
-  const chanLabel = s.sensor_id || s.id;
-  c.appendChild(el('div', null, s.plant_name
-    ? `<span class="sid">${s.plant_name}</span> <span class="gpio">${chanLabel} · GPIO ${s.gpio} · ${s.channel}</span>`
-    : `<span class="sid">${chanLabel}</span> <span class="gpio">GPIO ${s.gpio} · ${s.channel}</span>`));
+  // #713/#714/#688: lead with the plant; identity meta = her physical probe (sN sticker) + friendly
+  // board/side, never GPIO/channel (wiring lives behind the detail's "Wiring details") and never the
+  // @device_id machine key.
+  const probe = s.probe || s.sensor_id;
+  const board = s.device_name ? (s.device_side ? `${s.device_name} (${s.device_side})` : s.device_name) : null;
+  const lead = s.plant_name || s.plant_id || probe || s.id;
+  // drop any part that already IS the lead (an unassigned card leads with the probe itself)
+  const idbits = [[s.plant_type, s.pot_size].filter(Boolean).join(' · '), probe, board].filter(Boolean).filter(x => x !== lead).join(' · ');
+  c.appendChild(el('div', null, `<span class="sid">${lead}</span>${idbits ? ` <span class="idmeta">${idbits}</span>` : ''}`));
   // HONESTY (#583/#616): only a genuine NO_SIGNAL blanks the raw to '—'. An
   // *unassigned* channel (registered, live, no plant yet) shows its real raw —
   // hiding a connected probe's ADC read as "dead" at the bench (2026-07-04).
@@ -744,7 +752,7 @@ function renderTraj(){
   const lg = document.getElementById('trajLegend'); lg.innerHTML = '';
   DASH.sensors.forEach(s=>{
     const it=el('div','it'); const d=el('span','dot'); d.style.background=s.color; it.appendChild(d);
-    it.appendChild(el('span',null, `${s.id} <span class="muted">GPIO ${s.gpio}</span>`)); lg.appendChild(it);
+    it.appendChild(el('span',null, s.plant_name || s.plant_id || s.probe || s.id)); lg.appendChild(it);  // #713/#714: plant-first, no GPIO (chart title/time = #718)
   });
 }
 
@@ -978,18 +986,24 @@ function renderDetail(sid){
   const head = el('section','card');
   const hr = el('div','panel-h');
   const back = el('button','btn','← all channels'); back.addEventListener('click', backToOverview);
-  hr.appendChild(el('h2', null, `${s.id} <span class="muted" style="font-weight:400">single-plant view</span> <span class="proposed" title="endpoints ratified; interior boundaries pending A2">interior bands proposed</span>`));
+  hr.appendChild(el('h2', null, `${s.plant_name || s.plant_id || s.probe || s.id} <span class="muted" style="font-weight:400">single-plant view</span> <span class="proposed" title="endpoints ratified; interior boundaries pending A2">interior bands proposed</span>`));
   hr.appendChild(back); head.appendChild(hr);
   const dh = el('div','dhead');
   dh.style.borderLeft = `5px solid ${s.color}`; dh.style.paddingLeft = '14px';
   dh.appendChild(el('div', null, `<div class="raw">${fmt(s.raw_last)}<span class="rawu"> raw</span></div>`));
   const pill = el('span','pill', `${s.band_ui}${s.mood ? ` · ${s.mood}` : ''}`); pill.style.background = s.band_color;
   const meta = el('div'); meta.appendChild(pill);
-  meta.appendChild(el('div','small muted', `GPIO ${s.gpio} · ${s.channel} · fw band <span class="mono">${s.band_fw}</span> · in band ${fmtHours(f.band_now_hours)} · n=${fmt(s.n)}`));
+  meta.appendChild(el('div','small muted', `fw band <span class="mono">${s.band_fw}</span> · in band ${fmtHours(f.band_now_hours)} · n=${fmt(s.n)}`));
   dh.appendChild(meta);
   head.appendChild(dh);
   /* headroom gauge */
   head.appendChild(buildGauge(s, f));
+  /* #714: the wiring map (probe -> GPIO/channel -> board) lives behind an explicit expand — never on the
+     glance card, never in the detail header. */
+  const wiring = el('details','wiring');
+  wiring.appendChild(el('summary', null, 'Wiring details'));
+  wiring.appendChild(el('div','small muted', [s.probe||s.sensor_id, `GPIO ${s.gpio}`, s.channel, s.device_name && (s.device_side?`${s.device_name} (${s.device_side})`:s.device_name)].filter(Boolean).join(' · ')));
+  head.appendChild(wiring);
   det.appendChild(head);
 
   /* forecasts */
