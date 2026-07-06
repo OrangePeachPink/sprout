@@ -72,6 +72,15 @@ the Core penv use it. The lowest-friction options:
 You don't need to chase an exact version — you need **one** interpreter answering for PlatformIO, not
 two.
 
+**Related trap — don't run two PlatformIO *extensions*.** Installing **both** the official
+**PlatformIO IDE** (`platformio.platformio-ide`) and the **pioarduino IDE** (`pioarduino.pioarduino-ide`,
+a *fork* of it) is the same churn from a different angle: two extensions fight over the one PlatformIO
+Core + `penv` and re-provision each other in circles. Keep **only** `platformio.platformio-ide` — the
+pioarduino *platform* pinned in `firmware/platformio.ini` already gives you the newer-Espressif (S3/C5)
+support, no fork extension needed. The repo lists the fork in `firmware/.vscode/extensions.json` →
+`unwantedRecommendations`, so VS Code won't prompt you to install it; if a prompt ever slips through
+(e.g. PlatformIO re-adds it on configure), **dismiss it — don't install**.
+
 ---
 
 ## 3. "PlatformIO acting weird?" — the clean-reset runbook
