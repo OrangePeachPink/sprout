@@ -25,6 +25,7 @@
 #include <esp_timer.h>
 #include <esp_task_wdt.h>
 #include <esp_idf_version.h> /* ESP_IDF_VERSION - the watchdog API split at IDF5 (#499) */
+#include <esp_ota_ops.h> /* #302 menu-1: boot-validation rollback (mark-app-valid) */
 #include <Preferences.h>
 #include <string.h>
 #include "config.h"
@@ -77,6 +78,20 @@ static char g_session_id[12] = "000000";
  * config snapshot). Computed once at boot after cal load (computeConfigId), before
  * printHeader; emitted in the header AND on every row's payload (config_id=). */
 static char g_config_id[9] = "";
+
+/* #302 menu-1 boot-validation rollback. The Arduino core (esp32-hal-misc) marks a
+ * freshly-OTA'd image VALID at boot by default (weak verifyRollbackLater()==false).
+ * Overriding it to TRUE defers the verdict to US: an OTA'd image boots
+ * ESP_OTA_IMG_PENDING_VERIFY and we call esp_ota_mark_app_valid_cancel_rollback()
+ * only after a HEALTHY boot (WiFi up + a telemetry sweep emitted). A crash/reboot
+ * before that -> the bootloader reverts to the previous image on its own = no
+ * furniture dance for a bad push. Wired (esptool) flashes boot VALID (never pending),
+ * so they are unaffected. This is ADR-0026's "verified-marker" arriving early. */
+extern "C" bool verifyRollbackLater()
+{
+    return true;
+}
+static bool g_ota_marked_valid = false;
 
 /* Device-owned time provenance (#278, ADR-0018 + schema v2 §11.1/§11.2, ratified
  * 2026-07-01). device_seq: monotonic per emitted telemetry row, survives a
@@ -1144,6 +1159,13 @@ void loop()
             ArduinoOTA.onStart([]() {
                 Serial.println("# OTA: update start (rebooting after)");
             });
+            /* #302 menu-2: an OTA write blocks the loop for 10-30 s; without feeding
+             * it here the honest 8 s task-WDT (#599) would fire mid-transfer and reset
+             * the board. onProgress runs per chunk, so resetting the WDT here keeps it
+             * fed for the write - the WDT stays a real backstop, OTA still finishes.
+             * (Benign either way: an interrupted write only touches the INACTIVE slot.) */
+            ArduinoOTA.onProgress(
+                [](unsigned int, unsigned int) { esp_task_wdt_reset(); });
             ArduinoOTA.onError([](ota_error_t e) {
                 Serial.printf("# OTA: error %u\n", (unsigned)e);
             });
@@ -1262,6 +1284,17 @@ void loop()
                 snprintf(g_last_row[ch], sizeof(g_last_row[ch]), "%s%s", line,
                          crc);
             }
+        }
+
+        /* #302 menu-1: a full sweep just emitted -> this boot is healthy (setup ran,
+         * sensors read, classifier ran, rows out). Once WiFi is also up, confirm the
+         * running image so an OTA'd board cancels its pending rollback and keeps the
+         * new firmware. A wired-flashed image is never PENDING_VERIFY, so this is a
+         * harmless once-only no-op there. Retries each sweep until WiFi is up. */
+        if (!g_ota_marked_valid && g_wifi.state == WIFI_NET_CONNECTED) {
+            esp_ota_mark_app_valid_cancel_rollback();
+            g_ota_marked_valid = true;
+            Serial.println("# OTA: running image marked valid (healthy boot)");
         }
 
         /* Reprint header every 20 emissions so a long scroll stays self-describing. */

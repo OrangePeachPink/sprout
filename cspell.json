@@ -86,6 +86,7 @@
     "esp32dev",
     "espressif",
     "esptool",
+    "espota",
     "flashable",
     "wdttest",
     "flake8",
