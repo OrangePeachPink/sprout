@@ -251,12 +251,14 @@ class SerialReader(Reader):
         self._firmware = _empty_provenance()  # filled by _wait_for_banner (#329)
 
     def _default_open(self):
-        import serial  # real-path only; tests inject open_fn
+        from serial_open import open_no_reset  # #566-B: never reset on open (#712)
 
         kw = {"timeout": 1}
         if os.name != "nt":  # Windows serial is exclusive already; POSIX needs the flag
             kw["exclusive"] = True
-        return serial.Serial(self._port, self._baud, **kw)
+        # never-assert DTR/RTS so re-opening the port doesn't reset the board and
+        # mint a new session (the reconnect storm). esptool is unaffected (own path).
+        return open_no_reset(self._port, self._baud, **kw)
 
     def _readline(self) -> str:
         raw = self._ser.readline()
