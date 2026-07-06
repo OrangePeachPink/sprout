@@ -24,13 +24,18 @@ issue. These native fields drive it:
 
 | Field | Values | Means |
 |---|---|---|
-| **Status** | Backlog → In Progress → Needs Verification → Ready to Merge → Done · Won't Do | where the work is in its life |
+| **Status** | Backlog → In Progress → Needs Verification → Ready to Merge → Done · Won't Do | where the work is in its life — **and the one and only verification signal** (#729) |
 | **Priority** | P0 · P1 · P2 · P3 | execution order (P0 = do first) |
 | **Size** | XS · S · M · L · XL | rough effort (feeds velocity) |
 | **Milestone** | `v0.7.1`, `v0.8.0`, … | the target **version** (see [Releases & versioning](#releases--versioning)) |
-| **Verification** | Pending · Approved · Conditional · Changes requested | the reviewer's disposition at the gate |
 
-Priority, Size, and Verification are **board fields, not labels** — they sort and chart without
+**One verification signal (#729, maintainer-ruled):** the Status column carries the whole gate —
+`Needs Verification` = evidence posted, awaiting review; `Ready to Merge` = certified GO. The
+reviewer's disposition lives in the certification comment; changes-requested returns the card to
+In Progress with the reason. The former `Verification` field and `needs-verification` label are
+**retired** — one signal, nothing to drift.
+
+Priority and Size are **board fields, not labels** — they sort and chart without
 cluttering the issue's label list. **Milestone is GitHub's native release container** — it groups a
 version's work and drives its progress bar and release notes. *(An earlier custom "Wave" field was
 retired in favor of milestones — we use the standard primitive.)*
@@ -368,10 +373,11 @@ stalling until the next relay.
   trustworthy data.
 - `needs:hardware` — blocked on a **maintainer hardware/bench session** (wiring, pump/relay setup, hardware
   not yet on hand). The maintainer's hardware queue; **lanes skip these** when sweeping Backlog.
-- `needs-verification` — set when an issue enters the gate (above)
+- `needs:maintainer` — certified and sitting in the **maintainer's merge/action queue**.
 - `good first issue` / `help wanted` — welcoming places to start
 
-Priority, Size, and Verification are **board fields**, not labels — see [The board](#the-board).
+Priority and Size are **board fields**, not labels; the verification state is the **Status column**
+itself (#729) — see [The board](#the-board).
 
 ## Where we'd love help
 
