@@ -143,6 +143,33 @@ def test_heal_rewrites_the_base_url(tmp_path: Path) -> None:
     assert urls["other"] == "http://192.168.1.5"  # untouched
 
 
+def test_heal_logs_the_change_never_silent(tmp_path: Path) -> None:
+    # #676 AC: a registry rewritten under the operator is announced, not silent.
+    cfg = tmp_path / "devices.local.json"
+    cfg.write_text(
+        json.dumps(
+            {"devices": [{"device_id": "y9d41p", "base_url": "http://192.168.1.9"}]}
+        ),
+        encoding="utf-8",
+    )
+    lines: list[str] = []
+    assert heal_base_url("y9d41p", "http://192.168.1.42", path=cfg, log=lines.append)
+    assert lines == [
+        "self-heal (#676): y9d41p base_url http://192.168.1.9 → http://192.168.1.42"
+    ]
+
+
+def test_heal_noop_emits_no_log(tmp_path: Path) -> None:
+    cfg = tmp_path / "devices.local.json"
+    cfg.write_text(
+        json.dumps({"devices": [{"device_id": "y9d41p", "base_url": "http://a"}]}),
+        encoding="utf-8",
+    )
+    lines: list[str] = []
+    assert heal_base_url("y9d41p", "http://a", path=cfg, log=lines.append) is False
+    assert lines == []  # nothing written -> nothing announced
+
+
 def test_heal_is_a_noop_when_unchanged(tmp_path: Path) -> None:
     cfg = tmp_path / "devices.local.json"
     cfg.write_text(

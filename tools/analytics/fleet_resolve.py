@@ -80,35 +80,45 @@ def heal_base_url(
     path: Path | None = None,
     reader=None,
     writer=None,
+    log=None,
 ) -> bool:
     """Best-effort: rewrite the local registry so ``device_id``'s ``base_url`` is
     ``new_base_url`` (self-heal after a board moved). Matches on ``device_id`` or
     any of its ``previous_ids`` (#602). Returns True if a device was updated and
-    written. **Never raises** — a read-only or absent config just isn't healed, so
-    a poll never crashes on a self-heal attempt. ``reader``/``writer`` are
-    injectable for tests (default: read/write the local JSON config)."""
+    written, and **logs the change** — a registry file rewritten under the operator
+    is announced, never silent (#676 AC: honestly logged, no mystery-meat edit).
+    **Never raises** — a read-only or absent config just isn't healed, so a poll
+    never crashes on a self-heal attempt. ``reader``/``writer``/``log`` are
+    injectable for tests (default: read/write the local JSON config, print to the
+    console in serve.py's style)."""
     cfg = path or _LOCAL_CONFIG
+    emit = log if log is not None else print
     try:
         text = reader(cfg) if reader else cfg.read_text(encoding="utf-8")
         doc = json.loads(text)
         devices = doc.get("devices")
         if not isinstance(devices, list):
             return False
-        changed = False
+        heals: list[tuple[str, str]] = []  # (matched device_id, old base_url)
         for d in devices:
             if not isinstance(d, dict):
                 continue
             ids = {d.get("device_id"), *(d.get("previous_ids") or [])}
             if device_id in ids and d.get("base_url") != new_base_url:
+                heals.append((d.get("device_id") or device_id, d.get("base_url")))
                 d["base_url"] = new_base_url
-                changed = True
-        if not changed:
+        if not heals:
             return False
         out = json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
         if writer:
             writer(cfg, out)
         else:
             cfg.write_text(out, encoding="utf-8")
+        # announce the edit AFTER it persists (never claim a heal that didn't land)
+        for did, old in heals:
+            emit(
+                f"self-heal (#676): {did} base_url {old or '(unset)'} → {new_base_url}"
+            )
         return True
     except (OSError, ValueError, TypeError):
         return False
