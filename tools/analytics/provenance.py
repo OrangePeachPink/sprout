@@ -59,6 +59,36 @@ def git_dirty() -> bool:
 # The SHA the server captured at boot — frozen, so staleness can be detected live.
 _BOOT_SHA = git_sha()
 
+# #719: the single product version line (ADR-0009 §1) is pyproject's `version`,
+# synced repo-wide each release. App and server are the SAME program, so they read
+# THIS one constant - which is exactly why they can never disagree. Read once at
+# import; degrades to None (never a guessed number) if pyproject is absent/odd.
+_PYPROJECT = _REPO / "pyproject.toml"
+
+
+def _read_product_version() -> str | None:
+    try:
+        for line in _PYPROJECT.read_text(encoding="utf-8").splitlines():
+            s = line.strip()
+            if s.startswith("version") and "=" in s:
+                # `version = "0.7.0"  # comment` -> 0.7.0
+                val = s.split("=", 1)[1].split("#", 1)[0].strip()
+                return val.strip("\"'") or None
+    except OSError:
+        pass
+    return None
+
+
+PRODUCT_VERSION = _read_product_version()
+
+
+def product_version() -> str | None:
+    """The one product version (ADR-0009 §1) both the app and the server report.
+
+    They share this single constant by construction, so "is the app version the
+    same as the server version?" is answered structurally: yes, always."""
+    return PRODUCT_VERSION
+
 
 def server_provenance() -> dict:
     """App/server provenance for the panel.
@@ -78,4 +108,5 @@ def server_provenance() -> dict:
         "dirty": git_dirty(),
         "start_utc": SERVER_START_UTC,
         "stale": stale,
+        "version": PRODUCT_VERSION,  # #719: app==server version, one constant
     }
