@@ -71,6 +71,10 @@ static char g_device_id[32] = "";
 static char g_device_name[32] = "Sprout ESP32";
 static bool g_device_name_custom = false;
 static char g_session_id[12] = "000000";
+/* #576 / ADR-0025: the config-provenance fingerprint (8 hex, FNV-1a over the
+ * config snapshot). Computed once at boot after cal load (computeConfigId), before
+ * printHeader; emitted in the header AND on every row's payload (config_id=). */
+static char g_config_id[9] = "";
 
 /* Device-owned time provenance (#278, ADR-0018 + schema v2 §11.1/§11.2, ratified
  * 2026-07-01). device_seq: monotonic per emitted telemetry row, survives a
@@ -347,12 +351,14 @@ static bool g_as7263_ok = false;
  * OUTSIDE the ENABLE_ENV_SENSORS guard. */
 static void emitEnvLine(const telemetry_env_row_t *row)
 {
-    char line[300]; /* #601: name= adds up to ~38 bytes vs the prior 256 */
+    char line[384]; /* #601 name= + #739 v4 config_id= vs the prior 256 */
     /* #601: stamp the friendly name onto every env row (payload name=). The row
      * literals the callers build leave .name NULL (zero-init); set it here at the
-     * single choke point rather than in each of the ~6 env-row literals. */
+     * single choke point rather than in each of the ~6 env-row literals.
+     * #576: same for config_id - one place, so every env row references it too. */
     telemetry_env_row_t r = *row;
     r.name = g_device_name;
+    r.config_id = g_config_id;
     if (telemetry_format_env_row(line, sizeof(line), &r) >= 0) {
         char crc[6];
         snprintf(crc, sizeof(crc), "*%02X", telemetry_checksum(line));
@@ -497,6 +503,60 @@ static void emitEnvRows(unsigned long long up_ms)
 
 /* ---- provenance header -------------------------------------------------- */
 
+/* #576 / ADR-0025: compute the config_id - a stable FNV-1a fingerprint over the
+ * config snapshot the header already prints (ADC/sampling/cal/cadence, + the env
+ * I2C/AS7263 knobs on an env build). Same config -> same id; any set-once knob
+ * change -> a new id (the cross-session comparability boundary + the no-auto-adjust
+ * alarm). FIRMWARE-computed: several inputs (trim, discard, I2C addrs) are firmware
+ * constants the host never sees, so only the board can honestly hash them; parse_v1
+ * reads the emitted id, never re-derives (Decision 3 / Data's #576 confirmation).
+ * Called once at boot after cal load, before printHeader. v1 scope: a *runtime* cal
+ * or cadence retune does not yet re-roll the id (follow-on) - set-once-held is the
+ * doctrine, so this honestly fingerprints the boot config. */
+static void computeConfigId()
+{
+    uint32_t h = TELEMETRY_FNV1A32_INIT;
+    char b[128];
+    int m = snprintf(
+        b, sizeof(b),
+        "sv=%d;adc=%ubit,11dB,eFuseCal=off;smp=%u;trim=%u;disc=%u;db=%u;"
+        "cms=%lu/%lu/%lu;spr=%u;cad=%lu",
+        PLANTS_SCHEMA_VERSION, (unsigned)BOARD_CAP.adc_bits,
+        (unsigned)cfg.sample_count, (unsigned)cfg.trim_each_side,
+        (unsigned)ADC_DISCARD, (unsigned)cfg.deadband_raw,
+        (unsigned long)cfg.confirm_ms_soil, (unsigned long)cfg.confirm_ms_dry,
+        (unsigned long)cfg.confirm_ms_wet, (unsigned)cfg.spread_warn_raw,
+        (unsigned long)g_sys.sample_period_ms);
+    if (m > 0) h = telemetry_fnv1a32(h, b, (size_t)m);
+    /* sensor pins (part of the ADC snapshot, ADR-0019) */
+    for (int ch = 0; ch < NUM_SENSORS; ch++) {
+        m = snprintf(b, sizeof(b), ";pin%d=%d", ch, SENSOR_PINS[ch]);
+        if (m > 0) h = telemetry_fnv1a32(h, b, (size_t)m);
+    }
+    /* per-channel LIVE cal boundaries (#295 folds into the snapshot, so a re-cal
+     * rolls config_id - it subsumes cal_profile_version, ADR-0025 Consequences). */
+    for (int ch = 0; ch < NUM_SENSORS; ch++) {
+        int n2 = snprintf(b, sizeof(b), ";cal%d=", ch);
+        for (int i = 0;
+             i < MOISTURE_BOUNDARY_COUNT && n2 > 0 && (size_t)n2 < sizeof(b);
+             i++)
+            n2 += snprintf(b + n2, sizeof(b) - (size_t)n2, "%u,",
+                           (unsigned)g_mcfg[ch].boundary[i]);
+        if (n2 > 0)
+            h = telemetry_fnv1a32(
+                h, b, (size_t)n2 < sizeof(b) ? (size_t)n2 : sizeof(b) - 1);
+    }
+#ifdef ENABLE_ENV_SENSORS
+    /* env-shaping knobs only fold in when env sensors are actually built (an env
+     * build and a soil-only build have genuinely different active configs). */
+    m = snprintf(b, sizeof(b), ";i2c=%lu;as7263_gain=%u;as7263_itime=%u",
+                 (unsigned long)ENV_I2C_HZ, (unsigned)AS7263_CFG_GAIN,
+                 (unsigned)AS7263_CFG_ITIME);
+    if (m > 0) h = telemetry_fnv1a32(h, b, (size_t)m);
+#endif
+    snprintf(g_config_id, sizeof(g_config_id), "%08lx", (unsigned long)h);
+}
+
 static void printHeader()
 {
     char buf
@@ -560,8 +620,9 @@ static void printHeader()
     Serial.println(buf);
     n = snprintf(buf, sizeof(buf), "# health:");
     for (int i = 0; i < NUM_SENSORS && n < (int)sizeof(buf); i++)
-        n += snprintf(buf + n, sizeof(buf) - n, " ch%d=%s", i,
-                      telemetry_quality_flag(&state[i]));
+        n +=
+            snprintf(buf + n, sizeof(buf) - n, " ch%d=%s", i,
+                     telemetry_quality_flag(&state[i], BOARD_CAP.wet_rail_raw));
     if (n < (int)sizeof(buf))
         snprintf(
             buf + n, sizeof(buf) - n,
@@ -593,6 +654,11 @@ static void printHeader()
         (unsigned)cfg.deadband_raw, (unsigned long)cfg.confirm_ms_soil,
         (unsigned long)cfg.confirm_ms_dry, (unsigned long)cfg.confirm_ms_wet,
         (unsigned)cfg.spread_warn_raw, (unsigned)ADC_DISCARD);
+    Serial.println(buf);
+    /* #576 / ADR-0025: the config-provenance fingerprint of the snapshot above
+     * (ADC/sampling/cal/cadence). Rides every row's payload config_id= too; a
+     * change is a comparability boundary. parse_v1 reads it, never re-derives. */
+    snprintf(buf, sizeof(buf), "# config_id=%s", g_config_id);
     Serial.println(buf);
     snprintf(buf, sizeof(buf),
              "# safety: fail-safe OFF (4ch CW-022 active-low, off=HIGH)  "
@@ -678,11 +744,12 @@ static void handleRoot()
         millis());
     for (int ch = 0; ch < NUM_SENSORS && n > 0 && (size_t)n < sizeof(buf);
          ch++) {
-        n += snprintf(buf + n, sizeof(buf) - (size_t)n,
-                      "ch%d: level=%s raw=%u quality=%s\n", ch,
-                      moisture_level_name(state[ch].committed),
-                      (unsigned)state[ch].last_raw,
-                      telemetry_quality_flag(&state[ch]));
+        n += snprintf(
+            buf + n, sizeof(buf) - (size_t)n,
+            "ch%d: level=%s raw=%u quality=%s\n", ch,
+            moisture_level_name(state[ch].committed),
+            (unsigned)state[ch].last_raw,
+            telemetry_quality_flag(&state[ch], BOARD_CAP.wet_rail_raw));
     }
     g_http.send(200, "text/plain", buf);
 }
@@ -950,6 +1017,10 @@ void setup()
         g_prefs.putString("device_uid", g_device_id);
     }
 
+    /* #576 / ADR-0025: fingerprint the active config AFTER cal load, BEFORE the
+     * header + first row, so the id is on the wire from the very first line. */
+    computeConfigId();
+
     printHeader();
 
     /* Task watchdog LAST: setup's own work won't trip it; loop() feeds it every
@@ -1101,11 +1172,21 @@ void loop()
         bool synced = timeIsSynced();
         if (synced) isoUtcNow(ts, sizeof(ts));
 
+        /* #669 board diagnostics, read once per sweep (all four rows share them).
+         * rssi is honest-absent off WiFi: wifi_up=false -> the row omits rssi=
+         * entirely (never a fake 0, ADR-0028). uptime_s/heap ride every row. Only
+         * the RSSI number is emitted - never SSID/BSSID/MAC (privacy fence). */
+        bool wifi_up = board_has_wifi() && g_wifi.state == WIFI_NET_CONNECTED;
+        int rssi_now = wifi_up ? (int)WiFi.RSSI() : 0;
+        uint32_t uptime_s_now = (uint32_t)(up_ms / 1000ULL);
+        uint32_t heap_now = (uint32_t)ESP.getFreeHeap();
+
         Serial
             .println(); /* B6.2 sacrificial sync: absorbs a post-idle framing glitch */
         for (int ch = 0; ch < NUM_SENSORS; ch++) {
             /* Format the CSV row via lib/telemetry; values come from FSM state. */
-            char line[300];
+            char line
+                [384]; /* #739 v4: payload grew (config_id/fault/diag keys) */
             telemetry_soil_row_t row = {
                 RECORD_TYPE_SOIL,
                 g_session_id,
@@ -1124,6 +1205,12 @@ void loop()
                 synced ? TIME_SOURCE_DEVICE_SYNCED : TIME_SOURCE_DEVICE_UPTIME,
                 ts, /* real UTC when synced; "" = honestly NULL (#278) */
                 g_device_name, /* #601: friendly name -> payload name= on every row */
+                BOARD_CAP.wet_rail_raw, /* #670: sub-rail raw -> SENSOR_FAULT */
+                g_config_id, /* #576 / ADR-0025: payload config_id= */
+                wifi_up, /* #669 rssi_present */
+                rssi_now, /* #669 rssi_dbm (ignored when !wifi_up) */
+                uptime_s_now, /* #669 uptime_s */
+                heap_now, /* #669 heap= */
             };
             if (telemetry_format_soil_row(line, sizeof(line), &row) >= 0) {
                 char crc[6];

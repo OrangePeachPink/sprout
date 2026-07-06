@@ -1349,6 +1349,159 @@ static void t_device_uid_encode(void)
     }
 }
 
+/* #576 / ADR-0025: the config_id fingerprint primitive (FNV-1a 32-bit).
+ * Deterministic, order/additive-consistent, and a config change moves the id. */
+void t_config_id_hash(void)
+{
+    /* Published FNV-1a 32 vectors: "" -> the offset basis; "a" -> 0xe40c292c. */
+    TEST_ASSERT_EQUAL_HEX32_MESSAGE(
+        0x811c9dc5u, telemetry_fnv1a32(TELEMETRY_FNV1A32_INIT, "", 0),
+        "FNV-1a of empty = the offset basis");
+    TEST_ASSERT_EQUAL_HEX32_MESSAGE(
+        0xe40c292cu, telemetry_fnv1a32(TELEMETRY_FNV1A32_INIT, "a", 1),
+        "FNV-1a('a') matches the published vector");
+    /* incremental fold (how computeConfigId builds it) == one-shot over "ab" */
+    uint32_t one_shot = telemetry_fnv1a32(TELEMETRY_FNV1A32_INIT, "ab", 2);
+    uint32_t folded = telemetry_fnv1a32(
+        telemetry_fnv1a32(TELEMETRY_FNV1A32_INIT, "a", 1), "b", 1);
+    TEST_ASSERT_EQUAL_HEX32_MESSAGE(one_shot, folded,
+                                    "incremental fold == one-shot");
+    /* a config change moves the id (the comparability boundary). */
+    TEST_ASSERT_TRUE_MESSAGE(
+        telemetry_fnv1a32(TELEMETRY_FNV1A32_INIT, "smp=100", 7) !=
+            telemetry_fnv1a32(TELEMETRY_FNV1A32_INIT, "smp=50", 6),
+        "a changed config value moves config_id");
+}
+
+/* #670: a raw STRICTLY below the board's physical wet rail is a fault, not moisture
+ * and not "saturated" (the old raw<=5 bug that masked the dead s3-1 board). Coarse
+ * SENSOR_FAULT in quality_flag; specific reason (dead_adc/stuck_wet) in payload. */
+void t_sensor_fault(void)
+{
+    moisture_cfg_t cfg = (moisture_cfg_t)MOISTURE_CFG_DEFAULT;
+    moisture_state_t st;
+    moisture_init(&st, &cfg,
+                  1300); /* neutral spread/health; raw set per case */
+    const uint16_t rail = 900; /* classic wet rail (BOARD_CAP.wet_rail_raw) */
+
+    /* dead ADC floating to ~0 (the live s3-1 0/7/4/1 case). */
+    st.last_raw = 4;
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "SENSOR_FAULT", telemetry_quality_flag(&st, rail),
+        "raw 4 (dead ADC) below the wet rail = SENSOR_FAULT, not SATURATED");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("dead_adc",
+                                     telemetry_fault_reason(4, rail),
+                                     "near-zero raw -> dead_adc reason");
+
+    /* shorted / contaminated probe reading impossibly wet (the P11 s3 ~420). */
+    st.last_raw = 420;
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "SENSOR_FAULT", telemetry_quality_flag(&st, rail),
+        "raw 420 below the wet rail = SENSOR_FAULT");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "stuck_wet", telemetry_fault_reason(420, rail),
+        "sub-rail but not near-zero -> stuck_wet reason");
+
+    /* genuine full saturation (>= the rail) is NOT a fault (acceptance: no false
+     * flag of real saturation). */
+    st.last_raw = 930;
+    TEST_ASSERT_TRUE_MESSAGE(
+        strcmp("SENSOR_FAULT", telemetry_quality_flag(&st, rail)) != 0,
+        "raw 930 (genuine saturation) is NOT a fault");
+    TEST_ASSERT_NULL_MESSAGE(telemetry_fault_reason(930, rail),
+                             "genuine saturation has no fault reason");
+    TEST_ASSERT_NULL_MESSAGE(
+        telemetry_fault_reason(900, rail),
+        "exactly at the rail is not a fault (strict below)");
+
+    /* wet_rail==0 disables self-flagging (unknown rail -> never claim a fault). */
+    st.last_raw = 4;
+    TEST_ASSERT_TRUE_MESSAGE(
+        strcmp("SENSOR_FAULT", telemetry_quality_flag(&st, 0)) != 0,
+        "wet_rail=0 disables the fault check");
+    TEST_ASSERT_NULL_MESSAGE(telemetry_fault_reason(4, 0),
+                             "wet_rail=0 -> no fault reason");
+}
+
+/* #739 v4 soil-row emit: config_id + honest-absent rssi + uptime_s/heap in payload,
+ * and the #670 fault flag/reason with raw preserved (ADR-0006). */
+void t_soil_row_v4(void)
+{
+    moisture_cfg_t cfg = (moisture_cfg_t)MOISTURE_CFG_DEFAULT;
+    moisture_state_t st;
+    moisture_init(&st, &cfg, 1300);
+    st.last_raw = 1300;
+    char buf[384];
+
+    telemetry_soil_row_t row = {
+        "plants.soil",
+        "3f9a1c",
+        "Sprout ESP32",
+        "0.7.0",
+        123456ULL,
+        "UMLIFE_v2_TLC555",
+        "s3",
+        "origplant",
+        "soil_moisture",
+        36,
+        1300,
+        MOIST_WELL_WATERED,
+        &st,
+        7,
+        "device_uptime",
+        "",
+        "classic",
+        /* v4: */ 900 /*wet_rail*/,
+        "a1b2c3d4" /*config_id*/,
+        true /*rssi_present*/,
+        -57 /*rssi_dbm*/,
+        3600 /*uptime_s*/,
+        214112 /*heap*/,
+    };
+    /* connected: config_id + rssi + uptime_s + heap all present, no fault. */
+    TEST_ASSERT_TRUE_MESSAGE(telemetry_format_soil_row(buf, sizeof(buf), &row) >
+                                 0,
+                             "v4 row formatted");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, ";config_id=a1b2c3d4"),
+                                 "#576 config_id rides payload");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, ";rssi=-57"),
+                                 "#669 rssi present when connected");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, ";uptime_s=3600"),
+                                 "#669 uptime_s in payload");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, ";heap=214112"),
+                                 "#669 heap in payload");
+    TEST_ASSERT_NULL_MESSAGE(strstr(buf, "SENSOR_FAULT"),
+                             "healthy row is not SENSOR_FAULT");
+    TEST_ASSERT_NULL_MESSAGE(strstr(buf, ";fault="),
+                             "healthy row has no fault key");
+
+    /* honest-absent (ADR-0028): a serial/tethered row OMITS rssi= entirely. */
+    row.rssi_present = false;
+    TEST_ASSERT_TRUE_MESSAGE(telemetry_format_soil_row(buf, sizeof(buf), &row) >
+                                 0,
+                             "tethered row formatted");
+    TEST_ASSERT_NULL_MESSAGE(
+        strstr(buf, "rssi="),
+        "#669/ADR-0028 rssi OMITTED off WiFi (never a fake 0)");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, ";uptime_s=3600"),
+                                 "uptime_s still rides every row off WiFi");
+
+    /* a sub-rail fault row: SENSOR_FAULT flag + fault=stuck_wet, raw preserved. */
+    st.last_raw = 420;
+    row.raw = 420;
+    row.rssi_present = true;
+    TEST_ASSERT_TRUE_MESSAGE(telemetry_format_soil_row(buf, sizeof(buf), &row) >
+                                 0,
+                             "fault row formatted");
+    TEST_ASSERT_NOT_NULL_MESSAGE(
+        strstr(buf, "SENSOR_FAULT"),
+        "#670 sub-rail -> SENSOR_FAULT in quality_flag");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, ";fault=stuck_wet"),
+                                 "#670 specific reason rides payload");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, ",420,"),
+                                 "#670/ADR-0006 raw 420 preserved on the wire");
+}
+
 /* -------------------------------------------------------------------------- */
 /* runner                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -1375,6 +1528,9 @@ int main(void)
     RUN_TEST(t_as7263);
     RUN_TEST(t_env_row);
     RUN_TEST(t_soil_row_time_provenance);
+    RUN_TEST(t_config_id_hash);
+    RUN_TEST(t_sensor_fault);
+    RUN_TEST(t_soil_row_v4);
     RUN_TEST(t_per_channel_cal);
     RUN_TEST(t_cal_ch_line);
     RUN_TEST(t_wifi_net_state_machine);
