@@ -851,6 +851,9 @@ setInterval(() => {
 /* ---- calibration ladder ---- */
 function renderLadder(){
   const wrap = document.getElementById('ladder'); wrap.innerHTML = '';
+  // #803: plant-first chips (never sN@deviceid), and exclude retired-device sensors — they live in
+  // Diagnostics now (#683), so the live watering-status ladder shows only the active plants.
+  const _retired = new Set((DASH.devices||[]).filter(d=>d.retired).map(d=>d.device_id));
   DASH.cal.bands.forEach(b => {
     const row = el('div','ladrow');
     row.style.background = hexA(b.color, 0.10);
@@ -858,8 +861,8 @@ function renderLadder(){
     row.appendChild(el('div', null, `<span class="nm">${b.ui}</span> <span class="uin">${b.fw}</span>`));
     row.appendChild(el('div','rg', `${fmt(b.lo)} – ${fmt(b.hi)}`));
     const here = el('div','here');
-    DASH.sensors.filter(s => s.raw_last>=b.lo && s.raw_last<b.hi).forEach(s => {
-      const chip = el('span','chip', `${s.id} ${fmt(s.raw_last)}`); chip.style.background = s.color;
+    DASH.sensors.filter(s => s.raw_last>=b.lo && s.raw_last<b.hi && !_retired.has(s.device_id)).forEach(s => {
+      const chip = el('span','chip', `${plantLabel(s)} ${fmt(s.raw_last)}`); chip.style.background = s.color;
       here.appendChild(chip);
     });
     row.appendChild(here);
