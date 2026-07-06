@@ -56,6 +56,12 @@ try:
     import serial_lock
 except Exception:
     serial_lock = None
+# #566-B / #712: open the port WITHOUT asserting DTR/RTS, so a monitor reconnect
+# never resets the board (which minted a new session every ~30 s -> the storm).
+try:
+    from serial_open import open_no_reset
+except Exception:
+    open_no_reset = None
 
 LOGGER_VERSION = "plants_logger_0_4"
 
@@ -523,6 +529,11 @@ def run(
     if open_fn is None:  # real path; tests inject a fake serial factory
 
         def open_fn():
+            # #566-B / #712: never-assert DTR/RTS on open so the monitor
+            # reconnecting doesn't reset the board (esptool is unaffected - its
+            # own path). Falls back to a plain open only if the helper is absent.
+            if open_no_reset is not None:
+                return open_no_reset(port, baud, timeout=2)
             return serial.Serial(port, baud, timeout=2)
 
     # Floor timeout until the header reveals the real cadence, then retune (#417).
