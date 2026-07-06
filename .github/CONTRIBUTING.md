@@ -92,11 +92,12 @@ maintainer confirms `area:` / `layer:` at triage.
 > **GitHub Codespaces already has both** (its base image bundles `gcc`, and `pip install platformio` is a
 > quick add) — see the Firmware section below, or just push and let CI run the full gate for you.
 >
-> **Why CI runs everything on every PR:** `just check` (what CI runs) is the same full gate as your machine —
-> on purpose. Pre-commit *hooks* are file-type-scoped for speed (e.g. `clang-format` only touches `.c`/`.h`
-> files) — but the *test* step above is not type-scoped, so don't read "hooks are scoped" as "a docs change
-> skips firmware tests." CI runs everything for predictability and to prevent local≠remote drift.
-> Path-filtering would re-introduce exactly the class of surprise we deliberately closed.
+> **Why CI is designed to run everything (the default posture — currently overridden; see the sprint note
+> below):** `just check` is the same full gate as your machine — on purpose. Pre-commit *hooks* are
+> file-type-scoped for speed (e.g. `clang-format` only touches `.c`/`.h` files) — but the *test* step above is
+> not type-scoped, so don't read "hooks are scoped" as "a docs change skips firmware tests." Running
+> everything is what buys predictability and prevents local≠remote drift; path-filtering would re-introduce
+> exactly the class of surprise we deliberately closed.
 >
 > ⚠️ **Temporary sprint posture (#740, private phase only):** remote per-PR CI currently runs the *fast lane
 > only* (lint + hygiene + host tests); the firmware compile, native C tests, and experimental boards run in a

@@ -49,6 +49,10 @@ New here? You need only two tools — **[uv](https://docs.astral.sh/uv/)** (env 
 ready-made env in the browser. Then `just` lists every command, and `just check` runs the same lint + format +
 tests that CI does.
 
+Once the dashboard is up, click **▶ Start all collection** — that single action begins polling every
+collection path at once (the serial monitor *and* the Wi-Fi fleet). On a brand-new install with no data yet,
+the honest empty-state hands you the same Start button, so day one is never a dead-end.
+
 ## How it works
 
 ```text
