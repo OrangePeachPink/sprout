@@ -86,10 +86,11 @@ def _build(tmp_path: Path, spare_age: timedelta):
     return ctx, devs, sens
 
 
-def test_threshold_is_a_documented_tunable_constant() -> None:
+def test_threshold_is_a_documented_tunable_constant(tmp_path: Path) -> None:
     assert isinstance(STALE_AFTER_S, int) and STALE_AFTER_S > 0
-    # exposed so the client derives against the ONE canonical window
-    ctx, _d, _s = _build(Path("."), timedelta(hours=9))
+    # exposed so the client derives against the ONE canonical window. Use tmp_path
+    # (not "."): _build writes fixture CSVs, which must never land in the repo root.
+    ctx, _d, _s = _build(tmp_path, timedelta(hours=9))
     assert ctx["meta"]["stale_after_s"] == STALE_AFTER_S
     assert ctx["fleet_health"]["stale_after_s"] == STALE_AFTER_S
 
