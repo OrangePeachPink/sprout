@@ -58,6 +58,17 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .btn:hover { border-color: var(--leaf); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 .btn.busy { opacity: .6; }
+/* #721: 'Stop server' is a destructive, different CLASS of action — it kills the
+   running app. It gets its own separated place, danger weight, an explanation, and
+   a VISIBLE two-press confirm, so it never reads as just another toolbar button. */
+.ctl-sep { width: 1px; align-self: stretch; background: var(--border); margin: 2px 2px; }
+.dangerzone { display: inline-flex; align-items: center; gap: 8px; padding-left: 4px; }
+.dangerzone .danger-note { font-size: 11px; color: var(--muted); max-width: 190px; line-height: 1.25; }
+.btn.danger { border-color: color-mix(in srgb, var(--st-fault, #c0392b) 45%, var(--border));
+  color: var(--st-fault, #c0392b); background: color-mix(in srgb, var(--st-fault, #c0392b) 7%, var(--surface)); }
+.btn.danger:hover { border-color: var(--st-fault, #c0392b); }
+.btn.danger.armed { background: var(--st-fault, #c0392b); color: #fff; border-color: var(--st-fault, #c0392b); }
+.dangerzone .danger-note.armed { color: var(--st-fault, #c0392b); font-weight: 700; }
 .auto { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; }
 .auto input { accent-color: var(--leaf); }
 .rangesel { display: inline-flex; border: 1px solid var(--border); border-radius: var(--r-pill); overflow: hidden; }
@@ -318,7 +329,16 @@ footer.prov code { font-family: var(--font-data); }
       <button class="btn" id="refreshBtn" type="button">↻ Refresh</button>
       <label class="auto" id="autoLbl"><input type="checkbox" id="autoChk"> auto</label>
       <button class="btn" id="themeBtn" type="button" aria-label="Switch to dark mode" title="Switch to dark mode">🌙 Dark</button>
-      <button class="btn" id="quitBtn" type="button" hidden>⏻ Stop server</button>
+      <!-- #721: Stop server is its own class of action (it kills the running app),
+           so it lives in a separated danger zone with an explanation + a visible
+           two-press confirm — not a look-alike button beside the theme toggle. -->
+      <span class="ctl-sep" id="dangerSep" aria-hidden="true" hidden></span>
+      <div class="dangerzone" id="dangerZone" hidden>
+        <button class="btn danger" id="quitBtn" type="button"
+          aria-label="Stop the local monitoring server"
+          title="Stops the local monitoring server (this app). Use it when you're done for the session — logging pauses until you start it again. Press once to arm, then again to confirm.">⏻ Stop server</button>
+        <span class="danger-note" id="quitNote">Shuts down the app · press twice to confirm</span>
+      </div>
     </div>
   </header>
 
@@ -1681,16 +1701,27 @@ async function collStop(){
 let quitArmed = false;
 async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's not a 1-click kill
   const btn = document.getElementById('quitBtn');
+  const note = document.getElementById('quitNote');
   if(!quitArmed){
-    quitArmed = true; btn.textContent = '⏻ click to confirm';
-    setTimeout(()=>{ if(quitArmed){ quitArmed=false; btn.textContent='⏻ Stop server'; } }, 4000);
+    // #721: make the confirm step VISIBLE — arm the button (danger fill) and say
+    // plainly a second press is required, with an auto-cancel so a stray click
+    // never lingers armed.
+    quitArmed = true;
+    btn.classList.add('armed'); btn.textContent = '⏻ Press again to confirm';
+    if(note){ note.textContent = 'This stops the app — press again to confirm, or wait to cancel'; note.classList.add('armed'); }
+    setTimeout(()=>{ if(quitArmed){
+      quitArmed=false; btn.classList.remove('armed'); btn.textContent='⏻ Stop server';
+      if(note){ note.textContent='Shuts down the app · press twice to confirm'; note.classList.remove('armed'); }
+    } }, 4000);
     return;
   }
-  quitArmed = false; btn.disabled = true; btn.textContent = 'stopping…';
+  quitArmed = false; btn.classList.remove('armed'); btn.disabled = true; btn.textContent = 'stopping…';
+  if(note){ note.textContent = 'stopping the server…'; note.classList.remove('armed'); }
   if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
   try{ await fetch('/quit', {method:'POST'}); }
   catch(e){ /* the socket drops as the server exits - expected */ }
   btn.textContent = '⏻ server stopped';
+  if(note) note.textContent = 'you can close this tab';
   document.body.style.opacity = '0.55';
   const sub = document.getElementById('subline');
   if(sub) sub.textContent = 'server stopped — you can close this tab.';
@@ -1747,7 +1778,10 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
     monPoll();  // reflect the logger's current state on load
     collPoll(); // ...and the combined collection plane (#588)
     monPollTimer = setInterval(() => { monPoll(); collPoll(); }, 5000);  // keep it live (handoff #129) + stoppable on API-down (#130)
-    quitBtn.hidden = false;  // the in-UI stop only applies to a live server
+    // #721: reveal the separated danger zone (+ its divider) — the in-UI stop
+    // only applies to a live server; a static snapshot has nothing to stop.
+    document.getElementById('dangerZone').hidden = false;
+    document.getElementById('dangerSep').hidden = false;
     quitBtn.addEventListener('click', quitServer);
     capPoll();  // reflect any in-flight capture on load
   } else {
