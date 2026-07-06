@@ -45,6 +45,7 @@ static_assert(SENSOR_CAL_CHANNELS == NUM_SENSORS,
 #include <WiFi.h>
 #include <WebServer.h> /* core-bundled, no lib_deps entry needed */
 #include <DNSServer.h> /* captive-portal catch-all DNS (#275, core-bundled) */
+#include <ESPmDNS.h> /* #676: sprout-<device_id>.local advertisement (core-bundled) */
 #include <time.h> /* NTP-on-connect (#278): configTime/gmtime_r/strftime */
 #include <sys/time.h> /* gettimeofday - ms precision for device_timestamp_utc */
 
@@ -1111,6 +1112,25 @@ void loop()
                      "ip=%s",
                      WiFi.localIP().toString().c_str());
             Serial.println(ipbuf);
+            /* #676 / ADR-0020 §2: advertise sprout-<device_id>.local so the fleet
+             * is reachable by a STABLE synthetic name across DHCP churn (install-day
+             * pain: every board grabbed a new IP on power-cycle -> stale registry
+             * base_urls + repeated hand subnet-scans). Hostname = the minted nonce,
+             * NEVER a MAC/silicon id (ADR-0020). Also advertise the HTTP service so
+             * serve.py can resolve base_url by name. Re-begins cleanly on each
+             * association edge (survives a reconnect). Best-effort: mDNS is a
+             * convenience layer, never a dependency of the safety loop. */
+            char host[8 + DEVICE_UID_LEN];
+            if (device_uid_hostname(g_device_id, host, sizeof(host)) > 0 &&
+                MDNS.begin(host)) {
+                MDNS.addService("http", "tcp", WIFI_HTTP_PORT);
+                Serial.printf("# mDNS: http://%s.local  (device_id=%s)\n", host,
+                              g_device_id);
+            } else {
+                Serial.println(
+                    "# mDNS: begin failed - reach me by IP/subnet-scan "
+                    "this session");
+            }
         }
         if (g_wifi.state == WIFI_NET_PORTAL &&
             prevWifiState != WIFI_NET_PORTAL) {
