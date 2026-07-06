@@ -82,6 +82,24 @@ jobs:
       - name: Tests — host Python
         run: just test-host
 
+      # Warn-only release-notes hygiene (#730): PR titles become release-notes lines,
+      # grouped by `type:` label (ADR-0009 §6) — a missing type: label or placeholder
+      # title silently makes bad notes. Rides this job (zero extra runner spend);
+      # never fails the build.
+      - name: Release-notes hygiene — PR title + type label (warn-only)
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          case ",$PR_LABELS," in
+            *,type:*) : ;;
+            *) echo "::warning title=No type label::This PR has no type:* label - it lands in the release notes uncategorized (ADR-0009 §6). Add type:feat/fix/docs/refactor/chore." ;;
+          esac
+          if [ "${#PR_TITLE}" -lt 20 ] || echo "$PR_TITLE" | grep -Eqi '^(wip|fix|update|changes|misc|test)[[:punct:]]*$'; then
+            echo "::warning title=Title is release-notes copy::'$PR_TITLE' will appear verbatim in the auto-generated release notes - consider a fuller, self-explanatory title."
+          fi
+
   # The single required status check (the ruleset requires "gate"). During the sprint
   # posture it aggregates the fast lane only; the weekly battery (weekly-battery.yml)
   # is the firmware/board backstop. Revert via #740's checklist before going public.

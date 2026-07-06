@@ -34,11 +34,16 @@ the vehicle that *executes* this list at release time; this doc is the source-of
 - [ ] **`CONTRIBUTORS` / `AUTHORS`** — name the maintainer at first public release (resume/credibility).
 - [ ] **`CITATION.cff`** — present (#122); confirm metadata before public.
 
-## Release mechanism (ADR-0009)
+## Release mechanism (ADR-0009) — ✅ BUILT; the ritual lives in RELEASE_CUT.md
 
-- [ ] **Wire the changelog** — `git-cliff`-generated `CHANGELOG`, deferred to the first release (ADR-0002 #9 / ADR-0009).
-- [ ] **Tag + `just ship`** — the ADR-0009 release ritual (CHANGELOG → tag → ship).
-- [ ] **Versioning scheme** — confirm per ADR-0009 before the first tagged release.
+*(This section pre-dated the first release and is superseded — kept as record, per-item disposition:)*
+
+- [x] **Changelog** — hand-curated [`CHANGELOG.md`](../../CHANGELOG.md) + GitHub auto-generated notes
+      (`.github/release.yml`) shipped with v0.7.0; the git-cliff idea was not adopted.
+- [x] **The release ritual** — the per-release, turnkey checklist is
+      **[RELEASE_CUT.md](RELEASE_CUT.md)** (milestone close → auto-drafted notes → quality bar →
+      CHANGELOG → publish creates the tag). First exercised for v0.7.0/v0.7.1.
+- [x] **Versioning scheme** — ADR-0009 §5: milestones = versions; the roadmap runs `v0.7.0 → v1.0.0`.
 
 ## Branch protection & CI
 
