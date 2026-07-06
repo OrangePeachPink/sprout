@@ -443,7 +443,11 @@ footer.prov code { font-family: var(--font-data); }
     </section>
 
     <section class="card">
-      <div class="panel-h"><h2>Raw trajectory — <span id="trajCount">channels</span></h2><span class="cap">higher = drier · band shading behind · hover for local time</span></div>
+      <!-- #718: plain-language title + a one-line "what am I looking at". It's a
+           HISTORY view over the header's selected window; the range buttons up top
+           control it. Higher = drier; band colours shade behind. -->
+      <div class="panel-h"><h2>Moisture history <span id="trajCount" class="muted" style="font-weight:400"></span></h2>
+        <span class="cap">how each plant's soil reading has moved over the selected window (set by the range buttons above) — higher = drier, band colours behind, hover for the local time</span></div>
       <div class="chartbox"><canvas id="trajChart"></canvas></div>
       <div class="legend" id="trajLegend"></div>
     </section>
@@ -559,7 +563,8 @@ function renderHeader(){
     `fw <span class="mono">${m.fw||'?'}</span> · ${fmt(DASH.integrity.total)} readings · ` +
     `${m.total_hours}h since ${m.start_display || m.start_local}`;
   const tc = document.getElementById('trajCount');
-  if (tc) tc.textContent = `${DASH.sensors.length} channels`;
+  // #718: plant-first, and name the window so it reads as history over a range
+  if (tc){ const n = DASH.sensors.length; tc.textContent = `· ${n} plant${n===1?'':'s'} · ${curRange==='all'?'all history':'last '+curRange}`; }
   renderFreshness();
   renderChannelChips();
 }
@@ -859,7 +864,7 @@ function renderTraj(){
     const g = withGapBreaks(d.points, d.local);
     const _s = (DASH.sensors||[]).find(x=>x.id===d.id);
     const _dash = _multiDev ? _dashFor(_s && _s.device_id) : [];
-    return { label:d.id, data:g.points, parsing:false, borderColor:d.color, backgroundColor:d.color,
+    return { label:(d.label||d.id), data:g.points, parsing:false, borderColor:d.color, backgroundColor:d.color,
       borderWidth:1.6, borderDash:_dash, pointRadius:0, tension:0.25, spanGaps:false, _local:g.locals };
   });
   charts.traj = new Chart(document.getElementById('trajChart'), {
@@ -869,7 +874,9 @@ function renderTraj(){
       interaction:{ mode:'nearest', intersect:false },
       scales:{
         ...baseScales(`hours since ${DASH.trajectory.start_axis || DASH.trajectory.start_local}`, 'raw ADC  (higher = drier)'),
-        y:{ ...baseScales('', 'raw ADC  (higher = drier)').y, suggestedMin: lo-pad, suggestedMax: hi+pad }
+        // #718/#711: clamp the y-floor to 0 — raw ADC is never negative, so the
+        // padding must not push the axis below zero (the negative-padding nit).
+        y:{ ...baseScales('', 'raw ADC  (higher = drier)').y, suggestedMin: Math.max(0, lo-pad), suggestedMax: hi+pad, min: Math.max(0, lo-pad) }
       },
       plugins:{
         legend:{ display:false },

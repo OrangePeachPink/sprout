@@ -1017,9 +1017,19 @@ def build_context(
                 "y1": round(_fit.intercept + _fit.slope * x1, 1),
                 "slope": round(_fit.slope, 2),
             }
+        # #718: a plant-first label for the legend + tooltip - never the machine
+        # id or GPIO. Falls back to plant_id -> probe -> the raw sid when a channel
+        # has no plant mapped (honest: shows what's known, invents nothing).
+        _traj_label = (
+            (plant.get("plant_name") if plant else None)
+            or (plant.get("plant_id") if plant else None)
+            or probe
+            or sid
+        )
         trajectory_sets.append(
             {
                 "id": sid,
+                "label": _traj_label,  # #718 plant-first legend/tooltip label
                 "color": colors[sid],
                 "points": points,
                 "local": locals_,
