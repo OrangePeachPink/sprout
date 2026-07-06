@@ -72,6 +72,21 @@ the Core penv use it. The lowest-friction options:
 You don't need to chase an exact version — you need **one** interpreter answering for PlatformIO, not
 two.
 
+**Confirmed fix (2026-07-06) — Python 3.14 is the poison.** PlatformIO 6.1.19 **cannot build its penv
+under Python 3.14** (`uv installation via pip failed, exit 106`), so a `pipx`-installed CLI on 3.14
+re-wedges the shared penv every time it runs *after* the extension (on its own `≤3.13` Python)
+re-provisions it — `pyvenv.cfg` gets wiped and every `just build` fails. A plain penv reset (§3) alone
+won't hold; it rebuilds straight back onto 3.14. Put the CLI on a Python **`≤3.13`**:
+
+```powershell
+pipx reinstall platformio --python 3.12   # 3.12.13 works; anything <= 3.13 is the happy path
+```
+
+Then clear the wedged env once (§3) so it rebuilds clean under 3.12. **Verified on the reference
+machine (2026-07-06):** after the reinstall, `esp32dev`, `esp32s3`, and `esp32c5` all build SUCCESS, a
+second build is instant (~6 s) with no re-wedge, and `just test-native` stays green. (The extension may
+still sit on a *different* `≤3.13` interpreter — that's fine, both build cleanly; only 3.14 breaks it.)
+
 **Related trap — don't run two PlatformIO *extensions*.** Installing **both** the official
 **PlatformIO IDE** (`platformio.platformio-ide`) and the **pioarduino IDE** (`pioarduino.pioarduino-ide`,
 a *fork* of it) is the same churn from a different angle: two extensions fight over the one PlatformIO
