@@ -1158,6 +1158,11 @@ function showTab(name, rerender){
   document.getElementById('captureCard').style.display = isCap ? '' : 'none';
   // Diagnostics & Logs = the long, always-growing surfaces, off Monitor (amendment).
   document.getElementById('diagnostics').style.display = isDiag ? 'block' : 'none';
+  // #708: Monitor-only view controls don't ride on tabs where they do nothing (they read as dead controls).
+  // Channel toggles filter only Monitor's cards/trajectory -> Monitor only. The range windows every chart
+  // (Monitor + Diagnostics) -> hidden on Capture only. Refresh / auto / theme / Stop-server stay global.
+  const chansel = document.getElementById('chansel'); if(chansel) chansel.style.display = isMon ? '' : 'none';
+  const rangesel = document.getElementById('rangesel'); if(rangesel) rangesel.style.display = isCap ? 'none' : '';
   document.querySelectorAll('.tabnav .tab[data-tab]').forEach(t=>{
     const on = t.dataset.tab === name;
     t.classList.toggle('active', on); t.setAttribute('aria-selected', on ? 'true' : 'false');
