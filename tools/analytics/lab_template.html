@@ -38,9 +38,22 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f
   font-size: 11px; font-family: var(--font-data); color: var(--muted); }
 .efoot > * { min-width: 0; overflow-wrap: break-word; }
 .empty { color: var(--muted); }
+.tabnav { display: flex; gap: 4px; margin-bottom: var(--space-md); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.tab { font-family: var(--font-ui); font-size: 14px; font-weight: 600; color: var(--muted);
+  background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  padding: 9px 16px; cursor: pointer; text-decoration: none; border-radius: var(--r-control) var(--r-control) 0 0; }
+.tab:hover { color: var(--ink); background: var(--surface-2); }
+.tab.active { color: var(--ink); border-bottom-color: var(--leaf); }
 </style>
 </head>
 <body>
+  <!-- #684: the shell's four-tab nav on /lab pages so Lab stays a first-class tab (links, Lab active). -->
+  <nav class="tabnav" role="tablist" aria-label="Views">
+    <a class="tab" href="/#monitor" role="tab">Monitor</a>
+    <a class="tab" href="/#capture" role="tab">Capture</a>
+    <a class="tab active" href="/lab" role="tab" aria-selected="true">Lab</a>
+    <a class="tab" href="/#diagnostics" role="tab">Diagnostics &amp; Logs</a>
+  </nav>
   <div class="top">
     <div>
       <h1>🌱 Experiments</h1>
