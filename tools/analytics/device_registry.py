@@ -76,6 +76,11 @@ class Device:
     # `base_url`, which is an IP, not a hostname.
     name: str | None = None
     hostname: str | None = None
+    # Physical placement (#713): where this board sits so the human can find the
+    # plant by eye - e.g. "left"/"right" on the ledge. The maintainer named the
+    # boards (ESPclassic / C5Official) and told the app which side each is on;
+    # `side` carries that. Absent-safe (None when not configured).
+    side: str | None = None
     # Identity continuity (#602): device_ids this board reported under BEFORE its
     # current name. Renames mint brand-new identities (no hardware anchor, #188),
     # which orphans history; listing prior ids here lets consumers coalesce a
@@ -84,11 +89,18 @@ class Device:
     previous_ids: tuple[str, ...] = ()
 
     def plant_for(self, channel: str) -> dict | None:
-        """The {plant_id, plant_name} on a channel, or None if unassigned."""
+        """The plant on a channel: {plant_id, plant_name, plant_type, pot_size}, or
+        None if unassigned. #713 leads with the plant, so type/pot_size ride along
+        as optional plant-first enrichment - absent-safe (None when not configured)."""
         a = self.channels.get(channel)
         if not isinstance(a, dict) or not a.get("plant_id"):
             return None
-        return {"plant_id": a["plant_id"], "plant_name": a.get("plant_name")}
+        return {
+            "plant_id": a["plant_id"],
+            "plant_name": a.get("plant_name"),
+            "plant_type": a.get("plant_type"),
+            "pot_size": a.get("pot_size"),
+        }
 
     def probe_for(self, channel: str) -> str | None:
         """The probe sticker (s1..s12, ADR-0027 §5) plugged into this port, or
@@ -181,6 +193,7 @@ def _device_from_dict(raw: dict) -> Device | None:
     channels = channels if isinstance(channels, dict) else {}
     base_url = raw.get("base_url")
     hostname = raw.get("hostname")
+    side = raw.get("side")  # #713: physical placement (left/right)
     label = raw.get("label")
     name = raw.get("name")
     prev = raw.get("previous_ids")
@@ -198,6 +211,7 @@ def _device_from_dict(raw: dict) -> Device | None:
         # friendly name; a legacy config carrying only `label` still populates it
         name=name if isinstance(name, str) and name else label,
         hostname=hostname if isinstance(hostname, str) and hostname else None,
+        side=side if isinstance(side, str) and side else None,
         previous_ids=previous_ids,
     )
 

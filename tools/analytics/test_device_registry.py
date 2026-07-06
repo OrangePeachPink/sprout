@@ -54,6 +54,8 @@ def test_loads_devices_and_channels(tmp_path: Path) -> None:
     assert reg.plant_for("sprout-classic-01", "s1") == {
         "plant_id": "P01",
         "plant_name": "Monstera",
+        "plant_type": None,  # #713 plant-first enrichment, absent-safe
+        "pot_size": None,
     }
 
 
@@ -233,7 +235,12 @@ def test_probe_for_returns_the_sticker_label(tmp_path: Path) -> None:
     assert reg.probe_for("k7m2rt", "s4") is None  # channel absent
     assert reg.probe_for("no-such", "s1") is None  # unknown device
     # channel + probe are distinct: the port is s1, the probe on it is s3
-    assert reg.plant_for("k7m2rt", "s1") == {"plant_id": "p01", "plant_name": "Fern"}
+    assert reg.plant_for("k7m2rt", "s1") == {
+        "plant_id": "p01",
+        "plant_name": "Fern",
+        "plant_type": None,
+        "pot_size": None,
+    }
 
 
 def test_probe_for_resolves_through_a_legacy_rename(tmp_path: Path) -> None:
