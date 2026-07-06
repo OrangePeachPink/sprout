@@ -156,7 +156,9 @@ raises wiring/power changes to the maintainer. Route bench-adjacent work `for:fi
   Needs Verification → **Ready to Merge** → Done / Won't Do) · **Priority** (P0–P3, execution order) ·
   **Size** (XS–XL) · **Milestone** (target version — see below) · **Verification** (Pending / Approved /
   Conditional / Changes requested) · native **Sub-issues progress**. *(The old custom "Wave" field is
-  retired — milestones are the roadmap spine.)*
+  retired — milestones are the roadmap spine.)* **Priority & Size meanings are the standard** — set them
+  on the board, never in comments; definitions in
+  [CONTRIBUTING](.github/CONTRIBUTING.md#priority--size--the-standard).
 - **Discussions** = the idea inbox · **PRDs** (`docs/prd/`) = specs for larger features ·
   **ADRs** (`docs/adr/`) = significant or hard-to-reverse decisions (any lane may author one in its area).
 - **The verification gate (the rule that matters most), two stages:** the implementer builds to the issue's

@@ -35,6 +35,33 @@ cluttering the issue's label list. **Milestone is GitHub's native release contai
 version's work and drives its progress bar and release notes. *(An earlier custom "Wave" field was
 retired in favor of milestones — we use the standard primitive.)*
 
+### Priority & Size — the standard
+
+**Priority (P0–P3)** — execution order. It's a *field*, so it sorts and groups every view:
+
+| | Meaning |
+|---|---|
+| **P0** | Drop everything — the live product is broken, unsafe, or losing data. Rare. |
+| **P1** | This release — blocks the release's goal, or fixes a real user-facing pain. |
+| **P2** | This release *if capacity allows* — valuable, not blocking. |
+| **P3** | Nice-to-have — do if cheap, else defer to a later release. |
+
+*No Priority set = not yet triaged* — the triage view surfaces these on purpose.
+
+**Size (XS–XL)** — T-shirt effort. It feeds velocity and lets you size a release at a glance:
+
+| Size | Effort | |
+|---|---|---|
+| **XS** | minutes — a *nit* | **just do it** (verified + approved: faster than scheduling it) |
+| **S** | hours | |
+| **M** | a day or two | |
+| **L** | about a week | |
+| **XL** | weeks | **too big — split it** (an epic smell) |
+
+Set both on the **board** (or the issue's Projects sidebar) — **never in comments** (a comment can't
+sort a view). By the end of triage, every open issue (not Done / Won't Do) should carry a Priority and
+a Size.
+
 ## Opening an issue
 
 Use the **issue forms** (New issue → Feature / Bug / Task). They capture the area, layer, and details a
