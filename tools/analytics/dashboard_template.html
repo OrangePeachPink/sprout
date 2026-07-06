@@ -398,7 +398,7 @@ footer.prov code { font-family: var(--font-data); }
     </section>
 
     <section class="card">
-      <div class="panel-h"><h2>Calibration ladder</h2><span class="cap">raw ADC · higher = drier · endpoints ratified · interior boundaries pending A2</span></div>
+      <div class="panel-h"><h2>Watering status</h2><span class="cap">each plant's current band · raw ADC, higher = drier</span></div>
       <div class="ladder" id="ladder"></div>
     </section>
 
@@ -439,6 +439,13 @@ footer.prov code { font-family: var(--font-data); }
       <div class="panel-h"><h2>Quality timeline</h2><span class="cap" id="qcap"></span></div>
       <div id="qstrips"></div>
       <div class="legend" id="qlegend"></div>
+    </section>
+
+    <!-- #716: the calibration REFERENCE lives here (Diagnostics), split off the Monitor "Watering status"
+         live view — band definitions + ratification state, the two-jobs split (live -> Monitor, cal -> here). -->
+    <section class="card">
+      <div class="panel-h"><h2>Calibration reference</h2><span class="cap">the band definitions readings are scored against · endpoints ratified · interior boundaries pending A2 · per-channel cal pending (#170)</span></div>
+      <div class="ladder" id="calref"></div>
     </section>
 
     <section class="card">
@@ -675,6 +682,19 @@ function renderLadder(){
       here.appendChild(chip);
     });
     row.appendChild(here);
+    wrap.appendChild(row);
+  });
+}
+
+// #716: the calibration REFERENCE — band definitions + ratification state, on Diagnostics & Logs. Same
+// band lanes as the Monitor watering-status view, minus the live chips (definition, not live reading).
+function renderCalRef(){
+  const wrap = document.getElementById('calref'); if(!wrap) return; wrap.innerHTML = '';
+  DASH.cal.bands.forEach(b => {
+    const row = el('div','ladrow'); row.style.background = hexA(b.color, 0.10);
+    const sw = el('div','sw'); sw.style.background = b.color; row.appendChild(sw);
+    row.appendChild(el('div', null, `<span class="nm">${b.ui}</span> <span class="uin">${b.fw}</span>`));
+    row.appendChild(el('div','rg', `${fmt(b.lo)} – ${fmt(b.hi)}`));
     wrap.appendChild(row);
   });
 }
@@ -964,7 +984,7 @@ function renderProvenance(){  // #324 bench-evidence panel
 
 function renderOverview(){
   destroyCharts();
-  renderHeader(); renderCards(); renderLadder();
+  renderHeader(); renderCards(); renderLadder(); renderCalRef();
   renderTraj(); renderSpread(); renderDist();
   renderQuality(); renderIntegrity(); renderProvenance(); renderProv();
   if(!LIVE) applyStaticChannels();
