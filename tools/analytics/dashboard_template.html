@@ -193,6 +193,13 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .calbanner { font-size: 12px; color: var(--st-dry); background: var(--surface);
   border: 1px dashed var(--st-dry); border-radius: var(--r-tile); padding: 8px 12px; }
 .devribbon { font-size: 11px; color: var(--muted); padding: 0 2px; }
+/* #725: single-plant detail navigator — back / prev / jump / next. */
+.detailnav { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.detailnav .plantpick { font-family: var(--font-ui); font-size: 13px; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-control);
+  padding: 6px 10px; max-width: 260px; cursor: pointer; }
+.detailnav .plantpick:hover { border-color: var(--leaf); }
+.detailnav .detailpos { margin-left: auto; }
 .scard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-tile);
   box-shadow: var(--e1); padding: var(--space-md); position: relative; overflow: hidden; cursor: pointer;
   transition: box-shadow .12s, transform .12s; }
@@ -1068,6 +1075,38 @@ function etaLine(eta, label, caveat){
   return card;
 }
 
+// #725: a plant-first label for the detail nav (prev/next tooltips + picker).
+function plantLabel(x){
+  const name = x.plant_name || x.plant_id || x.probe || x.id;
+  const side = x.device_side ? ` · ${x.device_side}` : '';
+  return `${name}${side}`;
+}
+// #725: the detail-view navigator — a clear Back to the wall, Prev/Next between
+// plants, and a jump-to-any-plant picker, so moving among 11+ plants no longer
+// means returning to the list every time. Order follows the card wall (DASH.sensors).
+function buildPlantNav(sid){
+  const list = DASH.sensors || [];
+  const idx = list.findIndex(x=>x.id===sid);
+  const nav = el('div','detailnav');
+  const back = el('button','btn','← Back to all plants');
+  back.addEventListener('click', backToOverview);
+  const prev = el('button','btn','‹ Prev'), next = el('button','btn','Next ›');
+  if(list.length < 2 || idx < 0){ prev.disabled = true; next.disabled = true; }
+  else {
+    const p = list[(idx-1+list.length)%list.length], n = list[(idx+1)%list.length];
+    prev.title = 'Previous: ' + plantLabel(p);
+    next.title = 'Next: ' + plantLabel(n);
+    prev.addEventListener('click', ()=> showDetail(p.id));
+    next.addEventListener('click', ()=> showDetail(n.id));
+  }
+  const pick = el('select','plantpick'); pick.setAttribute('aria-label','Jump to plant');
+  list.forEach(x=>{ const o=document.createElement('option'); o.value=x.id; o.textContent=plantLabel(x); if(x.id===sid) o.selected=true; pick.appendChild(o); });
+  pick.addEventListener('change', ()=> showDetail(pick.value));
+  const pos = el('span','small muted detailpos', idx>=0 ? `${idx+1} of ${list.length}` : '');
+  nav.append(back, prev, pick, next, pos);
+  return nav;
+}
+
 function renderDetail(sid){
   currentDetail = sid;
   const s = DASH.sensors.find(x=>x.id===sid); if(!s){ backToOverview(); return; }
@@ -1075,12 +1114,14 @@ function renderDetail(sid){
   const det = document.getElementById('detail'); det.innerHTML = '';
   if(charts.detail){ charts.detail.destroy(); delete charts.detail; }
 
+  /* #725: plant navigator at the top — back / prev / jump / next */
+  det.appendChild(buildPlantNav(sid));
+
   /* header */
   const head = el('section','card');
   const hr = el('div','panel-h');
-  const back = el('button','btn','← all channels'); back.addEventListener('click', backToOverview);
   hr.appendChild(el('h2', null, `${s.plant_name || s.plant_id || s.probe || s.id} <span class="muted" style="font-weight:400">single-plant view</span> <span class="proposed" title="endpoints ratified; interior boundaries pending A2">interior bands proposed</span>`));
-  hr.appendChild(back); head.appendChild(hr);
+  head.appendChild(hr);
   const dh = el('div','dhead');
   dh.style.borderLeft = `5px solid ${s.color}`; dh.style.paddingLeft = '14px';
   dh.appendChild(el('div', null, `<div class="raw">${fmt(s.raw_last)}<span class="rawu"> raw</span></div>`));
@@ -1761,6 +1802,19 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
   if(LIVE){ autoTimer = setInterval(refresh, AUTO_MS); }
 
   document.querySelectorAll('.rangebtn').forEach(b=> b.addEventListener('click', ()=> setRange(b.dataset.r)));
+
+  // #725: keyboard nav in the single-plant view — ←/→ move between plants,
+  // Esc goes back to the wall. Ignored while typing in a field or picker.
+  document.addEventListener('keydown', (e)=>{
+    if(!currentDetail) return;
+    const tag = (e.target && e.target.tagName) || '';
+    if(tag==='INPUT' || tag==='SELECT' || tag==='TEXTAREA') return;
+    const list = DASH.sensors || []; const idx = list.findIndex(x=>x.id===currentDetail);
+    if(idx < 0) return;
+    if(e.key==='ArrowRight'){ e.preventDefault(); showDetail(list[(idx+1)%list.length].id); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); showDetail(list[(idx-1+list.length)%list.length].id); }
+    else if(e.key==='Escape'){ e.preventDefault(); backToOverview(); }
+  });
 
   const capStartBtn = document.getElementById('capStart'), capStopBtn = document.getElementById('capStop');
   const quitBtn = document.getElementById('quitBtn');
