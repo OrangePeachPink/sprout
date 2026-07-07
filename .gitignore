@@ -14,8 +14,8 @@ desktop.ini
 
 # Agent / session state (never track) — but COMMIT the shared project settings
 # (commit/PR attribution policy) so every lane's worktree inherits it.
-.claude/*
-!.claude/settings.json
+**/.claude/*
+!/.claude/settings.json
 
 # Secrets / local config (KEEP OUT OF GIT)
 .env
@@ -44,6 +44,8 @@ credentials.h
 # committed text for - home network names + hostnames, and any term to keep out of the
 # public tree (e.g. unannounced companion-project codenames). Committing it would leak them.
 config/identifiers.local.txt
+# Pre-edit backups of the local configs (e.g. devices.local.json.bak-<ts>) - local safety copies.
+config/*.local.json.bak*
 
 # PlatformIO
 .pio/
