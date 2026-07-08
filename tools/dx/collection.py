@@ -47,7 +47,11 @@ _ANALYTICS = Path(__file__).resolve().parents[1] / "analytics"
 if str(_ANALYTICS) not in sys.path:
     sys.path.insert(0, str(_ANALYTICS))
 
-from sprout_processes import list_sprout_processes  # noqa: E402  (path set above)
+from sprout_processes import (  # noqa: E402  (path set above)
+    format_collector_line,
+    group_launch_trees,
+    list_sprout_processes,
+)
 
 PORT = 8765
 BASE_URL = f"http://127.0.0.1:{PORT}"
@@ -146,9 +150,10 @@ def cmd_status(args) -> int:
     if not procs:
         print("no live Sprout collectors.")
         return 0
-    print(f"{len(procs)} live Sprout collector(s):")
-    for p in procs:
-        print(f"  pid {p['pid']:<8} {p['role']:<8} {p['command']}")
+    trees = group_launch_trees(procs)  # 1 logical collector per launch tree (#811)
+    print(f"{len(trees)} live Sprout collector(s):")
+    for t in trees:
+        print(format_collector_line(t))
     print("\nStop them headlessly:  just stop-collection")
     return 0
 

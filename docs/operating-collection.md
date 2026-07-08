@@ -13,13 +13,26 @@ you're scripting.
 
 | Command | Does |
 | --- | --- |
-| `just collection status` | List every live collector by **pid + role** (monitor / fleet / capture). Same view as `just processes`. |
+| `just collection status` | List every live **logical** collector — grouped by launch tree (#811), **role + tree pids** (monitor / fleet / capture). Same view as `just processes`. |
 | `just collection start` | Start all collection — parity with the dashboard's **▶ Start all collection** (ADR-0014). Needs a running server (`just start` first). |
 | `just collection stop` | Stop **every** live collector — graceful first, hard-kill any that don't exit. No dashboard needed. |
 | `just stop-collection` | Shortcut for `just collection stop`. |
 
 Useful flags on `stop`: `--dry-run` (show what *would* stop, kill nothing), `--role monitor|fleet`
 (scope to one path), `--grace <seconds>` (how long to wait before the hard-kill).
+
+## One collector, two PIDs — the launch tree (#811)
+
+Every collector runs as a **2-process launch tree**: a parent launcher and its worker child, and
+on the OS process table *both* carry the script name in their command line (the Python-launcher
+double-process). So one logical **fleet** appears as **two `python.exe` rows** — parent →
+child, e.g. `39692 → 24608`.
+
+`just collection status` and `just processes` **group by launch tree** and report the *logical*
+collector — `fleet  pids 39692->24608`, **not** two `fleet` rows. Read the two PIDs as one
+collector, not a duplicate: that miscount is exactly what produced #691's false "4 zombie
+collectors" finding (and burned a live reclaim). The server's `/collection/status` is the
+independent cross-check and agrees by construction.
 
 ## Why this exists — the orphan problem
 
