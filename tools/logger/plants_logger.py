@@ -159,6 +159,27 @@ STALL_FLOOR_S = (
 )
 RECONNECT_SLEEP_S = 2.0
 
+# #813 (F5-B): a monitor started against an ABSENT port (never existed, or gone for
+# good) must not spin forever — the bench has no permanent serial device, so a
+# stale tethered session used to retry a dead COM port for days. Back off
+# exponentially from PORT_RETRY_BASE_S to PORT_RETRY_MAX_S, and GIVE UP (announced +
+# non-zero exit) after PORT_ABSENT_GIVEUP_S of *continuous* absence. A port that
+# returns within the window resets the timer and resumes — a transient USB blip
+# never kills the monitor (#691's blip-resilience).
+PORT_RETRY_BASE_S = 3.0
+PORT_RETRY_MAX_S = 30.0
+PORT_ABSENT_GIVEUP_S = 300.0  # ~5 min
+GIVE_UP_EXIT = 3  # honest, distinct exit code for "port absent, gave up"
+
+
+def _fmt_dur(seconds: float) -> str:
+    """A terse human duration for the give-up/backoff lines: 45s, 5m, 5m30s."""
+    s = int(seconds)
+    if s < 60:
+        return f"{s}s"
+    m, s = divmod(s, 60)
+    return f"{m}m" if s == 0 else f"{m}m{s}s"
+
 
 class _SerialStall(Exception):
     """Raised in the read loop when the watchdog trips; reuses the reconnect path."""
@@ -539,13 +560,36 @@ def run(
     # Floor timeout until the header reveals the real cadence, then retune (#417).
     watchdog = StallWatchdog(stall_timeout_s(None), clock=clock)
     _archive_step(logdir, include_all=False)  # back up closed segments from prior runs
+    # #813: bounded absent-port retry. `absent_since` is the monotonic mark of the
+    # first failure in the current run of failures; a successful open clears it, so
+    # a transient blip never counts toward give-up.
+    absent_since: float | None = None
+    retry_s = PORT_RETRY_BASE_S
     while True:
         try:
             ser = open_fn()
         except Exception as e:
-            print(f"[logger] cannot open {port} ({e}); retrying in 3s")
-            sleep(3)
+            now_m = clock()
+            if absent_since is None:
+                absent_since = now_m
+            absent_for = now_m - absent_since
+            if absent_for >= PORT_ABSENT_GIVEUP_S:
+                # #813 (F5-B): announced give-up + honest exit, never a silent spin
+                print(
+                    f"[logger] monitor: {port} absent for {_fmt_dur(absent_for)} "
+                    f"— stopping; restart collection when the board is back"
+                )
+                _lock_release()  # don't leave a stale advisory lock behind
+                return GIVE_UP_EXIT
+            print(
+                f"[logger] cannot open {port} ({e}); retrying in {retry_s:.0f}s "
+                f"(absent {_fmt_dur(absent_for)} / {_fmt_dur(PORT_ABSENT_GIVEUP_S)})"
+            )
+            sleep(retry_s)
+            retry_s = min(PORT_RETRY_MAX_S, retry_s * 2)  # exponential backoff
             continue
+        absent_since = None  # connected -> the absence run is over (blip survived)
+        retry_s = PORT_RETRY_BASE_S
         print(f"[logger] connected {port} @ {baud}  ->  {logdir}")
         _lock_claim(port)  # advisory: the monitor now owns the port (ADR-0011 #64)
         watchdog.mark_data()  # a fresh connection resets the stall clock
@@ -660,7 +704,9 @@ def main():
     port = args.port or autodetect_port()
     if not port:
         sys.exit("No serial port found. Specify --port.")
-    run(port, args.baud, args.logdir, args.maxbytes)
+    # #813: propagate run()'s give-up exit code (GIVE_UP_EXIT when the port stays
+    # absent past the window) so `just`/the control plane can see the honest stop.
+    sys.exit(run(port, args.baud, args.logdir, args.maxbytes) or 0)
 
 
 if __name__ == "__main__":
