@@ -90,7 +90,32 @@ Watch for the same trap elsewhere in the sweep (the trajectory chart, the integr
 
 ---
 
-## 3. Scope
+## 3. The out-of-box fence
+
+Sprout's promise is simple: **get an ESP32 + a soil-moisture kit + this software, and it works.** The
+golden path — the one every user is expected to walk — **may never require soldering, board modification,
+or any tool or skill beyond "plug in the kit."**
+
+Power-user options are welcome, but they are **documented as optional, never load-bearing**: the default,
+recommended, first-run experience must complete with the kit as shipped and nothing more.
+
+The test before recommending anything that touches hardware or setup: _can the North-Star user do this
+out of the box?_ Ask that **before** weighing technical merits. A recommendation can be superior on our
+bench and still disqualifying — because the iron, the solder, the practice boards, and the attrition they
+imply silently break the promise, and no other gate catches it.
+
+**Precedent — #566.** A required, user-facing soldering mod (an EN-pin cap) survived every review with
+only its _technical_ merits examined; it was rejected on product grounds because a required solder joint
+is not "plug in the kit." Option A (the solder mod) rejected; option B (host-side) ruled. That is the
+concrete story this fence exists to stop from recurring.
+
+This fence complements ADR-0028, which fences required _parts_; this one fences required **skills, tools,
+and physical modifications**. (DX co-owns the review-lens half of #801 — the check that any hardware/setup
+recommendation answers the out-of-box question first.)
+
+---
+
+## 4. Scope
 
 This doctrine applies to every plant-facing surface: Monitor, the single-plant detail, Lab, the charts,
 and Diagnostics & Logs, plus any surface added later. It is enforced surface-by-surface through the
