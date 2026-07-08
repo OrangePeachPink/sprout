@@ -1,0 +1,10 @@
+# ~22h post-water snapshot (single reading). captured_utc=2026-07-07T23:58:20.175Z. watering was ~2026-07-07T02:07-02:34Z (~21.5-21.8h prior).
+plant_id,plant,board_octet,channel,raw,band
+p01,Pothos small* (unwatered),85,s3,1591,OK
+p02,Pothos (XXL),87,s2,2423,dry
+p03,Pothos (XL),85,s4,1961,needs water
+p04,Dracaena (cane),87,s4,1607,OK
+p06,Anthurium* (unwatered),87,s3,1522,well watered
+p07,Bromeliad,85,s2,2136,needs water
+p10,Pothos (office),85,s1,2012,needs water
+p11,Corn-plant (mini),87,s1,1491,well watered

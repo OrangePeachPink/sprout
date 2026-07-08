@@ -1,0 +1,10 @@
+# ~24h final snapshot. captured_utc=2026-07-08T02:00:20.175Z. original pours ~2026-07-07T02:07-02:34Z (~23.7h prior); XXL dose-3 ~2026-07-08T00:20Z (primed).
+plant_id,plant,board_octet,channel,raw,band
+p01,Pothos small* (unwatered),85,s3,1580,OK
+p02,Pothos (XXL),87,s2,663,submerged
+p03,Pothos (XL),85,s4,1951,needs water
+p04,Dracaena (cane),87,s4,1623,OK
+p06,Anthurium* (unwatered),87,s3,1533,well watered
+p07,Bromeliad,85,s2,2130,needs water
+p10,Pothos (office),85,s1,2022,needs water
+p11,Corn-plant (mini),87,s1,1484,well watered
