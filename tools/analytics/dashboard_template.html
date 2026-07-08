@@ -929,13 +929,51 @@ function renderCalRef(){
 }
 
 /* ---- shared chart bits ---- */
-function baseScales(xTitle, yTitle){
+function baseScales(xTitle, yTitle, hoursAgo){
+  // #841: on trajectory charts the x-axis reads "hours ago" - 0 = now at the RIGHT
+  // edge (this.max is pinned to the latest reading by hoursAgoX), counting back to
+  // the left (-1h, -2h ...). Other charts keep the forward "Nh since start" labels.
+  // snap to the nearest half-hour so integer AND half-hour steps (the 1h/3h windows)
+  // label cleanly; 0 = now. (Plain Math.round would fold -0.5h into "now".)
+  const tick = hoursAgo
+    ? function(v){ const d = Math.round((v - this.max) * 2) / 2; return d === 0 ? 'now' : d + 'h'; }
+    : (v => v + 'h');
   return {
     x: { type:'linear', title:{display:true, text:xTitle, color:css('--muted')},
-         ticks:{ color:css('--muted'), callback:v=>v+'h' }, grid:{ color:gridColor() } },
+         ticks:{ color:css('--muted'), callback:tick }, grid:{ color:gridColor() } },
     y: { title:{display:true, text:yTitle, color:css('--muted')},
          ticks:{ color:css('--muted') }, grid:{ color:gridColor() } }
   };
+}
+function hoursAgoX(datasets, xTitle){
+  // #841: anchor the trajectory x-axis so now = 0 sits at the right edge and the
+  // window counts backward to the left. maxX (the latest reading) is the anchor, so
+  // the live point always lands at the same spot instead of floating each load; the
+  // left edge is now - RANGE_H[curRange] (the selected window). Data x-coordinates
+  // stay "hours since start" - band/gap/night shading and the trend line, which read
+  // those same coordinates via getPixelForValue, re-anchor for free.
+  const xs = [];
+  datasets.forEach(ds => (ds.data || []).forEach(p => { if(p && p.x != null) xs.push(p.x); }));
+  const maxX = xs.length ? Math.max(...xs) : 0;
+  const hrs = RANGE_H[curRange];
+  const minX = (hrs == null) ? (xs.length ? Math.min(...xs) : 0) : Math.max(0, maxX - hrs);
+  const x = baseScales(xTitle, '', true).x;
+  x.max = maxX;                                    // latest reading = right edge = now
+  x.min = (hrs == null) ? undefined : minX;        // left edge = now - selected window
+  // Force an evenly-spaced tick set anchored AT now (maxX) so a "now" label lands
+  // exactly on the right edge and every step is a clean hours-ago multiple - Chart.js
+  // "nice" ticks otherwise float and rarely hit the edge (the alignment #841 asks for).
+  const NICE = [0.5, 1, 2, 3, 4, 6, 12, 24, 48, 72, 168];
+  x.afterBuildTicks = (scale) => {
+    const lo = (scale.min == null) ? minX : scale.min;
+    const span = Math.max(1e-6, scale.max - lo);
+    const step = NICE.find(s => span / s <= 8) || Math.ceil(span / 8);
+    const ticks = [];
+    for (let v = scale.max; v > lo + 1e-6; v -= step) ticks.push({ value: v });
+    ticks.push({ value: lo });                     // always include the true left edge
+    scale.ticks = ticks.reverse();
+  };
+  return x;
 }
 const bandShade = {
   id:'bandShade',
@@ -1006,7 +1044,9 @@ function renderTraj(){
       responsive:true, maintainAspectRatio:false, animation:false,
       interaction:{ mode:'nearest', intersect:false },
       scales:{
-        ...baseScales(`hours since ${DASH.trajectory.start_axis || DASH.trajectory.start_local}`, 'raw ADC  (higher = drier)'),
+        // #841: now = 0 pinned to the right edge, counting back (hours-ago); was
+        // "hours since <start>" running forward from the left.
+        x: hoursAgoX(datasets, 'hours ago  (0 = now, at right)'),
         // #718/#711: clamp the y-floor to 0 — raw ADC is never negative, so the
         // padding must not push the axis below zero (the negative-padding nit).
         y:{ ...baseScales('', 'raw ADC  (higher = drier)').y, suggestedMin: Math.max(0, lo-pad), suggestedMax: hi+pad, min: Math.max(0, lo-pad) }
@@ -1461,8 +1501,8 @@ function buildDetailChart(s){
     type:'line', data:{ datasets },
     options:{ responsive:true, maintainAspectRatio:false, animation:false,
       interaction:{ mode:'nearest', intersect:false },
-      scales:{ ...baseScales(`hours since ${DASH.trajectory.start_axis || DASH.trajectory.start_local}`, 'raw ADC (higher = drier)'),
-        y:{ ...baseScales('','raw ADC (higher = drier)').y, suggestedMin: Math.max(0, lo-pad), suggestedMax: hi+pad, min: Math.max(0, lo-pad) } },  // #797: floor at 0 (raw ADC can't be negative), same clamp as the trajectory
+      scales:{ x: hoursAgoX(datasets, 'hours ago  (0 = now, at right)'),  // #841: now=0 at right
+        y:{ ...baseScales('','raw ADC (higher = drier)').y, suggestedMin: Math.max(0, lo-pad), suggestedMax: hi+pad, min: Math.max(0, lo-pad) } },  // #797: floor at 0 (raw ADC can't be negative)
       plugins:{ legend:{display:false}, bandShade:{ bands: DASH.cal.bands }, gapShade:{ gaps: DASH.gaps },
         tooltip:{ callbacks:{
           title:(items)=>{ const it=items[0]; if(it.dataset._trend) return 'trend'; const loc=it.dataset._local[it.dataIndex]; return loc; },
