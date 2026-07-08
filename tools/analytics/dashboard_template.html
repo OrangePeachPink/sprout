@@ -1462,7 +1462,7 @@ function buildDetailChart(s){
     options:{ responsive:true, maintainAspectRatio:false, animation:false,
       interaction:{ mode:'nearest', intersect:false },
       scales:{ ...baseScales(`hours since ${DASH.trajectory.start_axis || DASH.trajectory.start_local}`, 'raw ADC (higher = drier)'),
-        y:{ ...baseScales('','raw ADC (higher = drier)').y, suggestedMin: lo-pad, suggestedMax: hi+pad } },
+        y:{ ...baseScales('','raw ADC (higher = drier)').y, suggestedMin: Math.max(0, lo-pad), suggestedMax: hi+pad, min: Math.max(0, lo-pad) } },  // #797: floor at 0 (raw ADC can't be negative), same clamp as the trajectory
       plugins:{ legend:{display:false}, bandShade:{ bands: DASH.cal.bands }, gapShade:{ gaps: DASH.gaps },
         tooltip:{ callbacks:{
           title:(items)=>{ const it=items[0]; if(it.dataset._trend) return 'trend'; const loc=it.dataset._local[it.dataIndex]; return loc; },
