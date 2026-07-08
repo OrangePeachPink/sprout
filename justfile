@@ -102,13 +102,15 @@ flash *ARGS:
     {{pio}} run -d firmware -t upload {{ARGS}}
 
 # OTA-flash a board over WiFi by its mDNS device_id (#302 Phase-0, LAN-only). No USB.
-#   e.g.  just ota k7m2rt      (targets sprout-k7m2rt.local)
+#   e.g.  just ota k7m2rt              (classic esp32dev — targets sprout-k7m2rt.local)
+#         just ota n3jhsp esp32c5      (C5 board — uses the esp32c5_ota env)
+# Board-aware: the optional 2nd arg selects the <board>_ota env (default esp32dev).
 # Prereqs: the board already runs OTA firmware (>= this build) + has WiFi creds set.
 # Honest limits: a DEAD or NEW/unprovisioned board has no OTA receiver — flash it WIRED
-# (just flash). Password is the Phase-0 placeholder in the esp32dev_ota env. See
+# (just flash). Password is the Phase-0 placeholder in the <board>_ota env. See
 # docs/OTA_FLASH.md.
-ota device *ARGS:
-    {{pio}} run -d firmware -e esp32dev_ota -t upload --upload-port sprout-{{device}}.local {{ARGS}}
+ota device board="esp32dev" *ARGS:
+    {{pio}} run -d firmware -e {{board}}_ota -t upload --upload-port sprout-{{device}}.local {{ARGS}}
 
 # Native host C unit tests for the firmware logic — no ESP32, no flash. (#260)
 # Runs via PlatformIO env:native (Unity framework, host compiler).
