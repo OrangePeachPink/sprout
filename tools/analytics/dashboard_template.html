@@ -1920,7 +1920,16 @@ async function monStop(){
 function collDescribe(st){
   const bit = (name, s) => {
     if(!s) return name + ': —';
-    if(s.state === 'running') return name + ': running' + (s.devices ? ` (${s.devices} device${s.devices===1?'':'s'})` : '');
+    if(s.state === 'running'){
+      // #812: say "N of M answering" when some configured devices aren't responding;
+      // "M devices" only when all M answer (so a dead board is never hidden).
+      const conf = (s.configured != null) ? s.configured : s.devices;
+      if(!conf) return name + ': running';
+      const ans = (s.answering != null) ? s.answering : conf;
+      return name + ': running' + (ans < conf
+        ? ` (${ans} of ${conf} answering)`
+        : ` (${conf} device${conf===1?'':'s'})`);
+    }
     if(s.state === 'skipped') return name + ': skipped — ' + (s.reason || '');
     return name + ': ' + s.state;
   };
