@@ -48,18 +48,11 @@ from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
 from source_adapter import (  # noqa: E402  (the source-adapter seam, #277)
     TetheredAdapter,
 )
-from timefmt import local_first  # noqa: E402  (local-time-first display labels, #328)
+from timefmt import (  # noqa: E402  (local-time-first display labels, #328/#840)
+    local_first_system,
+)
 
 _REPO = _HERE.parents[1]
-
-
-def _tz_offset_hours(reading) -> float | None:
-    """The rig-local UTC offset (hours) implied by a reading's paired stamps, for
-    local-first display (#328); None if either stamp is missing."""
-    if reading.timestamp_local is not None and reading.timestamp_utc is not None:
-        delta = reading.timestamp_local - reading.timestamp_utc.replace(tzinfo=None)
-        return round(delta.total_seconds() / 3600, 2)
-    return None
 
 
 TOKENS_CSS = _REPO / "docs" / "design" / "tokens" / "sprout-tokens.css"
@@ -1196,8 +1189,6 @@ def build_context(
 
     last_seg = _latest_segment(data.segments)  # #496: chronological, not file order
     total_h = _hours_since(soil[-1].timestamp_utc, start)
-    _host_off = datetime.now().astimezone().utcoffset()
-    _host_off_h = _host_off.total_seconds() / 3600 if _host_off else None
     meta = {
         "device_id": getattr(last_seg, "device_id", None),
         "fw": getattr(last_seg, "firmware_version", None),
@@ -1228,29 +1219,24 @@ def build_context(
             if soil[-1].timestamp_local
             else ""
         ),
-        # Local-first display labels (#328): local time + explicit zone + UTC
-        # secondary. The *_local fields above stay machine values — start_local
-        # anchors the chart axis and last_local is JS-Date-parsed for freshness.
+        # Local-first display labels (#328, #840): the header/date fields + chart
+        # axis read in the rig's LOCAL zone (host tz, abbreviated e.g. CDT) with
+        # NO UTC secondary — UTC is not a human clock (#720). The *_local fields
+        # above stay machine values; the canonical *_utc data is untouched.
         "start_display": (
-            local_first(
-                soil[0].timestamp_utc,
-                tz_offset_hours=_tz_offset_hours(soil[0]),
-                seconds=True,
-            )
+            local_first_system(soil[0].timestamp_utc, seconds=True, utc_secondary=False)
             if soil[0].timestamp_utc
             else ""
         ),
         "last_display": (
-            local_first(
-                soil[-1].timestamp_utc,
-                tz_offset_hours=_tz_offset_hours(soil[-1]),
-                seconds=True,
+            local_first_system(
+                soil[-1].timestamp_utc, seconds=True, utc_secondary=False
             )
             if soil[-1].timestamp_utc
             else ""
         ),
-        "generated_display": local_first(
-            datetime.now(timezone.utc), tz_offset_hours=_host_off_h, seconds=True
+        "generated_display": local_first_system(
+            datetime.now(timezone.utc), seconds=True, utc_secondary=False
         ),
     }
 
