@@ -1,3 +1,4 @@
+# DATA QUALITY: this whole file is p02/s2 (XXL) data, and p02/s2 was throwing SENSOR ERRORS in this window (non-physical swings, no watering). Values are erroneous - preserved as fault evidence. See README DATA QUALITY WARNING.
 # plant=p02 Pothos (XXL) d3 sensor=s2 ip=192.168.68.87 dose_ml=237.0
 ts_utc,device_seq,raw,band
 2026-07-08T00:20:14+00:00,34943,2426,dry

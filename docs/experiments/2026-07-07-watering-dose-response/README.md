@@ -9,11 +9,18 @@ evidence + the operator write-up.
 Higher raw = drier. Bands are per-board provisional (calibration #170; the C5's real anchors are #667,
 wired in by #767). Doses are measured cups from a 2-cup kitchen cup.
 
+> **DATA QUALITY WARNING — p02 (XXL) sensor fault.** The p02/s2 probe threw **erroneous readings** in the
+> dose-3 window: with **no watering** after the ~00:20Z pour, it swung **661 (submerged) at ~02:00Z → ~2840
+> (dry) at ~02:23Z** — a jump soil cannot make untouched. **All p02 dose-3 data is unreliable and marked
+> suspect.** The "priming worked / submerged" conclusion an earlier draft drew from it is **RETRACTED** (see
+> the priming section). Raw values are preserved as-is — they ARE the evidence of the fault. Every OTHER
+> plant's data is unaffected. Maintainer-caught, 2026-07-08.
+
 ## Trajectory (baseline to acute to 90 min to ~22 h to ~24 h)
 
 | Plant | Pot | Dose (total) | Baseline | Acute | 90 min | ~22 h | ~24 h | Band |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| p02 Pothos XXL | 10in | 1.5c + 1c primed | 2945 | 2135 | 2368 | 2423 | **661** | submerged |
+| p02 Pothos XXL | 10in | 1.5c + 1c primed | 2945 | 2135 | 2368 | 2423 | **661 (BAD)** | SENSOR ERROR - see warning |
 | p03 Pothos XL | 9in | 1.25c | 2334 | 2240 | 2053 | 1961 | 1949 | needs water |
 | p04 Dracaena | 8in* | 0.75c | 2700 | 2389 | 1855 | 1607 | 1623 | OK |
 | p10 Pothos office | 6in | 0.5c | 2446 | 1714 | 1848 | 2012 | 2023 | needs water |
@@ -51,16 +58,20 @@ drift was small and consistent (one direction). The XL faithfully tracked its sl
 earlier "won't budge" was a borrowed-endpoint label artifact plus hydrophobic soil, not a stuck probe
 (resolved with its own #667 anchors). This is a clean drift baseline for the #829 burn-in retest.
 
-## The priming result (session headline)
+## The priming result — RETRACTED (p02/s2 sensor fault)
 
-The XXL (10 in) resisted **three** top-water pours (1.5 cups over 24 h) — every dip drained back to **dry**;
-water never held at the probe (hydrophobic soil). Then a **4th cup on now-primed soil** (surface tension
-broken by the earlier pours) penetrated, and the probe read **submerged (661)** — a ~1760-count swing from
-its dry baseline, still holding ~1.6 h later.
+**CORRECTION (2026-07-08, maintainer-caught).** An earlier draft made this the session headline: that a
+primed 4th cup cracked the hydrophobic XXL pot and drove it to "submerged (661)." **That is withdrawn — it
+rested entirely on a faulting sensor.**
 
-**Confirmed: prime-then-dose cracks a hydrophobic big pot where repeated cold top-pours fail.** A bottom-soak
-remains the gentler alternative; priming is the top-water path that works. (Note: submerged is very wet —
-watch the XXL for over-saturation as it redistributes.)
+The maintainer confirmed **no watering happened** after the ~00:20Z dose-3 pour, yet p02/s2 read **661
+(submerged) at ~02:00Z then ~2840 (dry) ~23 min later** — soil cannot swing like that untouched. So the
+**entire XXL dose-3 trajectory (the 1704 acute dip, the 661 "submerged") is UNRELIABLE and NOT a finding.**
+The priming hypothesis is **untested here** — the instrument on this plant could neither confirm nor deny it.
+
+Likely cause: probe-head/electronics **water contamination** from the repeated watering (the same failure
+mode as sensor #1 in `SENSOR_QA.md`). Action: dry + re-verify the p02/s2 probe; fold into the #829 retest.
+The raw CSVs keep the erroneous values as-is (they ARE the evidence of the fault), flagged in-file.
 
 ## Doctrine note
 
