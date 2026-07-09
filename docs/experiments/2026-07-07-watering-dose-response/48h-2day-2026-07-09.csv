@@ -1,0 +1,11 @@
+# ~48h (2-day) post-watering snapshot. captured_utc=2026-07-09T02:22:20.064Z. original pours ~2026-07-07T02:07-02:34Z (~48h prior).
+# NOTE: p02 (XXL) SELF-HEALED from the 24h sensor fault - this ~48h reading is the recovered, trustworthy value (corroborated by soil-feel + tray). See README.
+plant_id,plant,board_octet,channel,raw,band
+p01,Pothos small* (unwatered),85,s3,1625,OK
+p02,Pothos (XXL),87,s2,2092,needs water
+p03,Pothos (XL),85,s4,1967,needs water
+p04,Dracaena (cane),87,s4,1729,OK
+p06,Anthurium* (unwatered),87,s3,1617,OK
+p07,Bromeliad,85,s2,2138,needs water
+p10,Pothos (office),85,s1,2227,dry
+p11,Corn-plant (mini),87,s1,1601,OK
