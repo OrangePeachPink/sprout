@@ -140,7 +140,7 @@ settle, a half-broken toolchain), rebuild it deliberately instead of fighting it
 
 Old `penv.stale-*` backups can be deleted once a fresh build passes — they're just PlatformIO's own
 rollback copies (each is small, but they add up). See
-[#695](https://github.com/OrangePeachPink/plants/issues/695) for the housekeeping pass.
+[#695](https://github.com/OrangePeachPink/sprout/issues/695) for the housekeeping pass.
 
 ---
 
@@ -163,5 +163,5 @@ error from `platform list`, your install is fine.
 - [CONTRIBUTING → Firmware](../.github/CONTRIBUTING.md#firmware--build-test-flash-no-arduino-ide) — the firmware front door.
 - [FLASHING.md](FLASHING.md) — first flash on a fresh board.
 - [BRINGUP.md](BRINGUP.md) — board bring-up.
-- [#259](https://github.com/OrangePeachPink/plants/issues/259) — firmware toolchain onboarding (the
+- [#259](https://github.com/OrangePeachPink/sprout/issues/259) — firmware toolchain onboarding (the
   "no ambient compiler" front-door work this sits beside).

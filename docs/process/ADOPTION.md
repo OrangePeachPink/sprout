@@ -18,7 +18,7 @@ and there's one path now. Let's grow it.
 
 `BACKLOG.md` is retired. **Issues** are the ledger · the
 **[board](https://github.com/users/OrangePeachPink/projects/2)** is the working view ·
-**[Discussions](https://github.com/OrangePeachPink/plants/discussions)** are the idea inbox. Every backlog
+**[Discussions](https://github.com/OrangePeachPink/sprout/discussions)** are the idea inbox. Every backlog
 item (A1–E10) is now an issue. The full loop — branch → PR with `Refs #N` → the review-before-close
 **verification gate** — is in [CONTRIBUTING.md](../../.github/CONTRIBUTING.md). Read it once; it's short.
 
@@ -63,7 +63,7 @@ enforced (merged PRs don't auto-close). This is the trust contract that lets fou
   polish), and a voice pass over this welcome whenever you like.
 - **A welcome gift to shape:** an **animated "a day in the life of Sprout"** for the repo home — something
   elegant that draws people in the moment they land. Tracked as
-  [#42](https://github.com/OrangePeachPink/plants/issues/42); the vision is yours to own.
+  [#42](https://github.com/OrangePeachPink/sprout/issues/42); the vision is yours to own.
 
 ### Commit-proxy operating mode
 

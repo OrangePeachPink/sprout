@@ -51,7 +51,7 @@ links in then.)*
 Three installs and it works:
 
 ```text
-git clone https://github.com/OrangePeachPink/plants && cd plants
+git clone https://github.com/OrangePeachPink/sprout && cd plants
 uv sync                     # the exact, locked dev environment
 uv run pre-commit install   # the quality checks run themselves on every commit
 just start                  # launch Sprout — opens the dashboard

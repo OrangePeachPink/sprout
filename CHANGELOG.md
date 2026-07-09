@@ -4,7 +4,7 @@ All notable changes to Sprout are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); Sprout adheres to
 [Semantic Versioning](https://semver.org) per [ADR-0009](docs/adr/0009-versioning-and-release-policy.md).
 
-Each version is also published as a [GitHub Release](https://github.com/OrangePeachPink/plants/releases)
+Each version is also published as a [GitHub Release](https://github.com/OrangePeachPink/sprout/releases)
 (auto-generated tag-to-tag via `.github/release.yml`, then curated). This file is the appendable,
 in-repo record; per ADR-0009 §3 it states what changed **per component** (firmware / host / docs).
 
@@ -13,7 +13,7 @@ in-repo record; per ADR-0009 §3 it states what changed **per component** (firmw
 ### v0.7.1 — Wave 1.1: Stabilize _(in progress)_
 
 Point-release on top of `v0.7.0`: fixes, polish, docs, and fleet robustness — no new headline
-capability (new features land in `v0.8.0`). Scope tracked in the [`v0.7.1` milestone](https://github.com/OrangePeachPink/plants/milestone/2).
+capability (new features land in `v0.8.0`). Scope tracked in the [`v0.7.1` milestone](https://github.com/OrangePeachPink/sprout/milestone/2).
 
 ## [0.7.0] — 2026-07-04 — Wave 1: Monitor
 
@@ -47,5 +47,5 @@ ESP32s — one power cord each, zero data cables — all live in one dashboard, 
 - The `!wedge` safety check was not re-run at install (#599).
 - The yellow C5 spare needs a recovery re-flash before redeploy.
 
-[Unreleased]: https://github.com/OrangePeachPink/plants/compare/v0.7.0...HEAD
-[0.7.0]: https://github.com/OrangePeachPink/plants/releases/tag/v0.7.0
+[Unreleased]: https://github.com/OrangePeachPink/sprout/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/OrangePeachPink/sprout/releases/tag/v0.7.0

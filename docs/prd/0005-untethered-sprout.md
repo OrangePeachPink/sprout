@@ -4,7 +4,7 @@
 **Date:** 2026-06-27
 **Owner:** Workflow (synthesis) — binds every lane (Firmware, Data, Design, DX; Trellis advisory)
 **Lane:** cross-cutting
-**Source:** [Discussion #243](https://github.com/OrangePeachPink/plants/discussions/243) — *"Sprout needs light and
+**Source:** [Discussion #243](https://github.com/OrangePeachPink/sprout/discussions/243) — *"Sprout needs light and
 water to grow, not USB cables"*
 **Bound ADRs (to be drafted):** dual-mode transport & durability (extends ADR-0006) · capability & sensor matrix ·
 network identity & secrets (extends ADR-0015)

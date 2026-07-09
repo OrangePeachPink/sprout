@@ -9,9 +9,9 @@
 [ADR-0011](../adr/0011-experiment-capture-control-plane.md) /
 [ADR-0012](../adr/0012-experiment-data-architecture.md) (how captures are recorded),
 [PRD-0001](0001-experiment-capture-mode.md) (Experiment capture — the recording side this reviews).
-Builds on / folds in [#27](https://github.com/OrangePeachPink/plants/issues/27) (DuckDB/parquet analysis tier),
-[#24](https://github.com/OrangePeachPink/plants/issues/24) (review analytics + per-cycle features),
-[#17](https://github.com/OrangePeachPink/plants/issues/17) (calendar/temporal fields). A new ADR
+Builds on / folds in [#27](https://github.com/OrangePeachPink/sprout/issues/27) (DuckDB/parquet analysis tier),
+[#24](https://github.com/OrangePeachPink/sprout/issues/24) (review analytics + per-cycle features),
+[#17](https://github.com/OrangePeachPink/sprout/issues/17) (calendar/temporal fields). A new ADR
 (experiment-notebook data model + notes durability + analysis tier) is authored when the data-model slice is cut.
 
 ---

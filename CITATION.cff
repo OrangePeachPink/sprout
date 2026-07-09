@@ -10,8 +10,8 @@ type: software
 # claim portfolio credit when the repo goes public.
 authors:
   - name: "OrangePeachPink"
-repository-code: "https://github.com/OrangePeachPink/plants"
-url: "https://github.com/OrangePeachPink/plants"
+repository-code: "https://github.com/OrangePeachPink/sprout"
+url: "https://github.com/OrangePeachPink/sprout"
 version: "0.7.0"
 keywords:
   - soil-moisture

@@ -42,7 +42,7 @@ import re
 import subprocess
 import sys
 
-DEFAULT_REPO = "OrangePeachPink/plants"
+DEFAULT_REPO = "OrangePeachPink/sprout"
 EPIC_LABEL = "epic"
 CHECKBOX = re.compile(r"^\s*-\s*\[[ xX]\]")
 REF = re.compile(r"#(\d+)")

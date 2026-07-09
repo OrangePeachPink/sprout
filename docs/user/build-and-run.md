@@ -76,8 +76,8 @@ covers the common cases in plain language.
 
 ---
 
-*Build & run guide ([#141](https://github.com/OrangePeachPink/plants/issues/141), part of the
-[User Front Door epic](https://github.com/OrangePeachPink/plants/issues/134)). Builds on the
+*Build & run guide ([#141](https://github.com/OrangePeachPink/sprout/issues/141), part of the
+[User Front Door epic](https://github.com/OrangePeachPink/sprout/issues/134)). Builds on the
 project's wiring/bring-up history — see [STATUS.md](../STATUS.md) for current firmware standing.
 The watering section is a placeholder by design, not an oversight — it fills in once the
 autonomous watering loop (#94) is safety-gated and live. Content by DX; a later Design pass dresses
