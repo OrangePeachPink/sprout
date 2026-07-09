@@ -77,11 +77,16 @@ class TetheredAdapter:
     A behavior-preserving wrap — identical output to calling
     ``gather_inputs()``/``parse_files()`` directly today."""
 
-    def __init__(self, discover=None) -> None:
+    def __init__(self, discover=None, parse_fn=None) -> None:
         # `discover` is the caller's own file-discovery function (dashboard.py's
         # gather_inputs); None means "no auto-discovery" — the caller must always
         # pass explicit inputs, which is a valid, testable configuration on its own.
         self._discover = discover
+        # #827: the parse step is injectable so serve.py can pass a parse-once,
+        # mtime-aware cache (parse_cache.ParseCache.load) instead of re-reading the
+        # whole corpus each request. None keeps the direct, behaviour-preserving
+        # parse_files — same inputs, same merged LogData either way.
+        self._parse_fn = parse_fn or parse_files
 
     def load(self, inputs: list[str] | None = None) -> LogData:
         if inputs is not None:
@@ -90,7 +95,7 @@ class TetheredAdapter:
             resolved = self._discover()
         else:
             resolved = []
-        return parse_files(resolved)
+        return self._parse_fn(resolved)
 
 
 def _http_get(url: str, timeout: float = _FETCH_TIMEOUT_S) -> str:

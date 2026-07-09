@@ -73,6 +73,7 @@ from lab_studies import (  # noqa: E402  (Lab studies #159)
     render_study_detail,
     save_study,
 )
+from parse_cache import ParseCache  # noqa: E402  (parse-once corpus cache, #827)
 from source_adapter import (  # noqa: E402  (the source-adapter seam, #277/#486)
     DeviceAdapter,
     FleetAdapter,
@@ -80,6 +81,13 @@ from source_adapter import (  # noqa: E402  (the source-adapter seam, #277/#486)
 )
 
 _REPO = _HERE.parents[1]
+
+# #827: parse the log corpus ONCE and hold it in memory across requests. serve.py is a
+# single long-lived process, so one module-global cache is the right scope; each
+# request re-``stat``s the files, so a changed/rotated file is still picked up (the
+# tethered adapter reads through ``_PARSE_CACHE.load`` below). Freshness is bounded by
+# the request cadence, never a frozen snapshot.
+_PARSE_CACHE = ParseCache()
 
 # #808: the Diagnostics "Reference" front-door links (#758) point at docs/ files,
 # but serve.py had no /docs route so they 404'd live. A scoped, read-only,
@@ -342,7 +350,10 @@ def _fleet_adapter(registry=None):
     missing weather layer degrades to no pressure fill, never a broken view."""
     reg = registry if registry is not None else load_registry()
     served = reg.served_devices()
-    tethered = TetheredAdapter()
+    # #827: read the tethered CSV corpus through the parse-once cache (the 20 s/request
+    # re-parse). Live WiFi devices below stay per-request - they're a cheap HTTP fetch
+    # of current telemetry and MUST NOT be cached (that would serve stale readings).
+    tethered = TetheredAdapter(parse_fn=_PARSE_CACHE.load)
     if not served:
         return tethered
     try:
