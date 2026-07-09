@@ -1,0 +1,14 @@
+S3 (zdy5ze) OTA round-trip over espota/WiFi — 2026-07-08 (board on a power BRICK, no USB)
+Curated from _scratch/s3ota.log. Upload progress 0->100% elided; compile lines elided.
+MAC-clean (espota does no chip-serial connect). RFC1918 IPs retained (ADR-0015 evidence-safe).
+Invocation: pio run -e esp32s3_ota -t upload --upload-port 192.168.68.67  (host_ip pinned to maintainer LAN IP)
+-------------------------------------------------------------------------------
+CURRENT: upload_protocol = espota
+Sending invitation to 192.168.68.67
+Authenticating (PBKDF2-HMAC-SHA256)...
+Uploading: [============================================================] 100% Done...
+20:48:54 [INFO]: Waiting for result...
+20:48:54 [INFO]: Result attempt 1: 'OK'
+20:48:54 [INFO]: Success
+========================= [SUCCESS] Took 62.11 seconds =========================
+========================= 1 succeeded in 00:01:02.108 =========================
