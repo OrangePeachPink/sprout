@@ -73,7 +73,7 @@ mid-edge `GND` instead.**
 
 ## driver_photos/ (removed — archived locally) - Silicon Labs CP210x driver (Windows Device Manager, 2026-06-21)
 
-All seven are the CP210x Properties dialog on host `MICRODEV`, device "Silicon Labs CP210x USB to UART
+All seven are the CP210x Properties dialog on the dev host, device "Silicon Labs CP210x USB to UART
 Bridge (COM6)".
 
 | File | Device Manager view | Key readable text |

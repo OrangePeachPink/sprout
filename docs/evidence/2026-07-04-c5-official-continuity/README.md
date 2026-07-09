@@ -20,7 +20,7 @@ work — the last gate before probes go into plants.
 | Chip / target | ESP32-C5 / `esp32-c5`, fw 0.7.0 (`git f469007`) | banner |
 | ADC | ADC1, 12-bit, 11 dB, **eFuseCal=off** | banner |
 | Board cal | **PLACEHOLDER** (classic endpoints, not bench-verified for C5) | `calibration.h` / #443 |
-| WiFi | connected, `192.168.68.85` | banner |
+| WiFi | connected, `192.168.x.85` | banner |
 | Default cadence | 30 000 ms (bumped to 2 000 ms for this session) | banner / `!cad` ack |
 
 ## Power verified by meter (before any probe)

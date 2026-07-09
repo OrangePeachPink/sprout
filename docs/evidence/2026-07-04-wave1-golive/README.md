@@ -16,8 +16,8 @@ verdicts, registry authoring). Boards run **untethered on brick power, served ov
 
 | Board | `device_id` | IP | Role | Status |
 | --- | --- | --- | --- | --- |
-| classic | `y9d41p` | 192.168.68.87 | ESP32-D0WD, 4 soil + SHT45 + AS7263, **cal-verified** | live |
-| official C5 | `8gtt1h` | 192.168.68.85 | ESP32-C5, 4 soil, **placeholder cal (#443)** | live |
+| classic | `y9d41p` | 192.168.x.87 | ESP32-D0WD, 4 soil + SHT45 + AS7263, **cal-verified** | live |
+| official C5 | `8gtt1h` | 192.168.x.85 | ESP32-C5, 4 soil, **placeholder cal (#443)** | live |
 | yellow C5 | `yyvvpd` | (down) | ESP32-C5 KITC-A clone | **deferred — needs recovery** |
 
 Both live boards held their IPs on solid brick power. The yellow was never needed — see config below.

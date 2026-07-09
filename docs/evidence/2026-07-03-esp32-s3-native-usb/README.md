@@ -86,7 +86,7 @@ On a reset with credentials stored, serial showed a clean auto-rejoin with **no 
 
 ```text
 0.4s  # net: state=idle creds=set
-2.1s  # net: state=connected creds=set ip=192.168.68.62
+2.1s  # net: state=connected creds=set ip=192.168.x.62
 ```
 
 Association in ~2.1 s, IP printed on the connect edge (the #579 quality-of-life line that
@@ -97,18 +97,18 @@ rejoin without human action.
 
 Both served from the device's own IP with no data cable attached.
 
-`GET http://192.168.68.62/` — human status page:
+`GET http://192.168.x.62/` — human status page:
 
 ```text
 Sprout Sprout ESP32
 fw=0.7.0 git=6570f72+dirty board=esp32-s3
-wifi=connected ip=192.168.68.62
+wifi=connected ip=192.168.x.62
 uptime_ms=19552
 ch0: level=submerged raw=2 quality=SATURATED
 ...
 ```
 
-`GET http://192.168.68.62/telemetry` — the same schema-shaped rows as the serial wire
+`GET http://192.168.x.62/telemetry` — the same schema-shaped rows as the serial wire
 (ADR-0018 §4, "one schema, every transport"):
 
 ```text

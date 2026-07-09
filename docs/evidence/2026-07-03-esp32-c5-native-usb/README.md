@@ -72,15 +72,15 @@ Captive-portal onboarding from a phone (`Sprout-Setup-XXXX` → home creds → s
 
 ```text
 # portal: down (joined the network)
-# net: state=connected creds=set ip=192.168.68.85
+# net: state=connected creds=set ip=192.168.x.85
 ```
 
 After association, telemetry carried `time_source=device_synced` with real UTC
 (`2026-07-03T19:55:34.503Z`) — NTP-on-connect on C5. Both served endpoints work over WiFi, no
 cable:
 
-`GET http://192.168.68.85/` → `board=esp32-c5  wifi=connected  ip=192.168.68.85` + per-channel
-readings. `GET http://192.168.68.85/telemetry` → schema-shaped rows (ADR-0018 §4), e.g.:
+`GET http://192.168.x.85/` → `board=esp32-c5  wifi=connected  ip=192.168.x.85` + per-channel
+readings. `GET http://192.168.x.85/telemetry` → schema-shaped rows (ADR-0018 §4), e.g.:
 
 ```text
 plants.soil,98ad36,Sprout ESP32,0.7.0,240001,UMLIFE_v2_TLC555,s3,origplant,soil_moisture,0,,,SATURATED,level=submerged;role=diag;spread=92;gpio=1;device_seq=28;time_source=device_synced;device_timestamp_utc=2026-07-03T19:55:34.503Z*6E
