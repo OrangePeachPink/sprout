@@ -69,17 +69,31 @@ index.
 
 ## A look
 
+**Today — the live dashboard.** One command (`just start`) serves this: a functional **Monitor · Capture ·
+Lab** view — raw ADC and the calibrated band for every probe, plus the calibration ladder. Plain and
+unpolished on purpose, and honest about what it reads: probes in dry air show **Parched**, probes sitting
+in water show **Drowning**, because the dashboard shows what the capture actually contains.
+
+<p align="center">
+  <img src="docs/design/brand/readme-dashboard.png"
+       alt="The live Sprout dashboard — per-device channel cards with raw ADC, calibrated band, and a calibration ladder"
+       width="100%">
+</p>
+
+**Where we're headed.** This is the design *direction* — Sprout as a calm, first-person character, the
+mood system in motion across a day. It's a concept, not a screenshot, and not built yet — a great place for
+a UI/UX contributor to jump in ([#867](https://github.com/OrangePeachPink/sprout/issues/867)).
+
 <p align="center">
   <a href="docs/design/motion/Sprout%20Welcome.dc.html">
     <img src="docs/design/motion/welcome-loop.gif"
-         alt="A day in the life of Sprout — the calibrated mood system in motion across one day"
+         alt="Brand concept — Sprout's calibrated mood system in motion across one day (design, not a screenshot)"
          width="100%">
   </a>
 </p>
 
-<p align="center"><sub>The served dashboard — <strong>Monitor · Capture · Provenance</strong> — opens with
-one command (<code>just start</code>, via <code>tools/analytics/serve.py</code>); the design system &amp;
-mood system live in <a href="docs/design/">docs/design/</a>.</sub></p>
+<p align="center"><sub>Concept, not the app. The design system &amp; mood system live in
+<a href="docs/design/">docs/design/</a>.</sub></p>
 
 ## The brand
 
