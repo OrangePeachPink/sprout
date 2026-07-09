@@ -79,15 +79,40 @@ No invented normalized value is used anywhere here — raw + calibrated band are
 open question of honest cross-board/per-sensor band display on one chart is tracked at #832. Boards report
 `fw=0.7.0` while running v0.7.1 code; that version-string identity gap is tracked at #831.
 
+## 48-hour (2-day) follow-up (captured 2026-07-09T02:22Z, ~48 h post-pour)
+
+Snapshot: `48h-2day-2026-07-09.csv`. All plants reading sensibly; slow drying across the 24 h to 48 h window, as expected.
+
+| Plant | 24 h | ~48 h | 48 h band | 2-day trend |
+| --- | --- | --- | --- | --- |
+| p02 XXL | *(24 h = sensor fault)* | **2092** | needs water | **recovered** — first clean post-fault reading; soil-feel + tray corroborate |
+| p03 XL | 1949 | **1967** | needs water | ~flat, holding needs-water |
+| p04 Dracaena | 1623 | **1729** | OK | slow drying, holding OK |
+| p10 office | 2023 | **2227** | dry | dried into DRY — the ~2-day cycle bottoming out |
+| p07 Bromeliad | 2136 | **2138** | needs water | flat — **stagnant pot; probe may mislead, investigate in person before watering** |
+| p11 mini | 1486 | **1601** | OK | slow drying (well-watered to OK) |
+| p06 Anthurium* | 1533 | **1617** | OK | unwatered slow-dry baseline |
+| p01 small* | 1576 | **1625** | OK | unwatered slow-dry baseline |
+
+Notes for the next session:
+
+- **p02 XXL recovered** from the 24 h probe fault (probe-head contamination, dried off overnight) — the
+  ~2092 / needs-water reading is trustworthy and matches the soil-feel + tray. See the self-heal closure on #834.
+- **The three Pothos (XXL, XL, office)** are all in needs-water/dry — the planned watering targets tomorrow.
+- **p07 Bromeliad** reads needs-water, but its watertight/stagnant pot can hold standing water in the
+  inner/outer gap while the probe sits in a dry pocket — flagged for an **in-person investigation** before
+  any watering (do not dose off the sensor).
+- Unwatered baselines (p06, p01) drifted only slightly over 48 h — the ambient 2-day drying rate.
+
 ## Data files
 
-Per-plant 30 s response curves (isolated captures) plus two fleet snapshots:
+Per-plant 30 s response curves (isolated captures) plus three fleet snapshots:
 
 - `p02-pothos-xxl.csv`, `p02-pothos-xxl-d2.csv`, `p02-pothos-xxl-d3.csv` — the XXL across all three pours
 - `p03-pothos-xl.csv`, `p03-pothos-xl-d2.csv` — the XL
 - `p04-dracaena-cane.csv`, `p04-dracaena-cane-d2.csv` — the Dracaena
 - `p07-bromeliad.csv`, `p10-pothos-office.csv`, `p11-corn-plant-mini.csv` — single-dose plants
-- `22h-snapshot-2026-07-07.csv`, `24h-final-2026-07-08.csv` — fleet-wide snapshots
+- `22h-snapshot-2026-07-07.csv`, `24h-final-2026-07-08.csv`, `48h-2day-2026-07-09.csv` — fleet-wide snapshots
 
 Columns: `ts_utc, device_seq, raw, band` (per-plant) and `plant_id, plant, board_octet, channel, raw, band`
 (snapshots). RFC1918 IPs retained (evidence-safe, ADR-0015); no MACs.
