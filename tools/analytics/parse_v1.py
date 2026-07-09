@@ -777,34 +777,52 @@ def _resolve(paths: list[str | Path]) -> list[Path]:
     return out
 
 
+class _ParseState:
+    """The line-by-line parse state threaded through a file (#859): the column
+    layout in effect, the current segment, and any header lines buffered before
+    their segment commits. Extracted so the whole-file parse and the parse cache's
+    byte-offset tail-append share ONE per-line rule (no drift) — the cache seeds a
+    fresh state from a file's last segment and resumes from the parsed byte offset."""
+
+    __slots__ = ("cols", "current", "header_buf")
+
+    def __init__(self) -> None:
+        self.cols: list[str] = list(CANONICAL_COLUMNS)
+        self.current: SegmentHeader | None = None
+        self.header_buf: list[str] = []
+
+
+def _consume_line(line: str, data: LogData, source: str, st: _ParseState) -> None:
+    """Fold one newline-stripped ``line`` into ``data``, advancing ``st`` — the one
+    per-line rule :func:`parse_file` and the cache tail-append (#859) both use."""
+    if not line.strip():
+        return
+    if line.startswith("#"):
+        st.header_buf.append(line)
+        return
+    fields = next(csv.reader([line]))
+    if fields and fields[0] == "record_type":
+        st.cols = fields
+        st.current = _parse_header_lines(st.header_buf, st.cols, source)
+        data.segments.append(st.current)
+        st.header_buf = []
+        return
+    if st.current is None:
+        st.current = _parse_header_lines(st.header_buf, st.cols, source)
+        data.segments.append(st.current)
+        st.header_buf = []
+    data.readings.append(_reading_from_row(_row_dict(st.cols, fields), st.current))
+
+
 def parse_file(path: str | Path, into: LogData | None = None) -> LogData:
     """Parse one log file (``.csv`` or ``.csv.gz``) into a ``LogData``."""
     data = into if into is not None else LogData()
     path = Path(path)
     data.sources.append(str(path))
-    header_buf: list[str] = []
-    cols: list[str] = list(CANONICAL_COLUMNS)
-    current: SegmentHeader | None = None
+    st = _ParseState()
     with _open_text(path) as fh:
         for raw_line in fh:
-            line = raw_line.rstrip("\r\n")
-            if not line.strip():
-                continue
-            if line.startswith("#"):
-                header_buf.append(line)
-                continue
-            fields = next(csv.reader([line]))
-            if fields and fields[0] == "record_type":
-                cols = fields
-                current = _parse_header_lines(header_buf, cols, str(path))
-                data.segments.append(current)
-                header_buf = []
-                continue
-            if current is None:
-                current = _parse_header_lines(header_buf, cols, str(path))
-                data.segments.append(current)
-                header_buf = []
-            data.readings.append(_reading_from_row(_row_dict(cols, fields), current))
+            _consume_line(raw_line.rstrip("\r\n"), data, str(path), st)
     return data
 
 

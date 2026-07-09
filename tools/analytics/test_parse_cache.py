@@ -77,7 +77,8 @@ def test_only_the_grown_file_is_reparsed_and_new_rows_appear(tmp_path: Path) -> 
     with a.open("a", encoding="utf-8") as fh:
         fh.write(_row(10, 1600) + _row(11, 1601))
     out = cache.load([str(tmp_path)])
-    assert calls[str(a)] == 2  # a re-parsed (it grew)
+    # #859: a grown file is TAIL-appended, NOT fully re-parsed -> parse_one stays at 1
+    assert calls[str(a)] == 1  # NOT re-parsed whole; only the tail bytes were read
     assert calls[str(b)] == 1  # b reused from memory (unchanged)
     assert 1601 in [r.raw_value for r in out.readings]  # the fresh rows are served
 
@@ -118,3 +119,71 @@ def test_vanished_file_is_evicted(tmp_path: Path) -> None:
     out = cache.load([str(tmp_path)])
     assert cache.stats()["files"] == 1  # footprint tracks the live corpus
     assert all(r.raw_value < 2000 for r in out.readings)  # b's rows gone
+
+
+# --------------------------------------------------------------------------- #
+# #859: byte-offset tail-append — correctness fence = tail == full parse
+# --------------------------------------------------------------------------- #
+
+
+def _reads(data) -> list[tuple]:
+    return [(r.timestamp_utc, r.sensor_id, r.raw_value) for r in data.readings]
+
+
+def test_tail_append_matches_a_full_parse_of_the_grown_file(tmp_path: Path) -> None:
+    a = tmp_path / "a.csv"
+    _write(a, [_row(i, 1500 + i) for i in range(5)])
+    cache = ParseCache()
+    cache.load([str(tmp_path)])  # full parse, anchors the tail
+    with a.open("a", encoding="utf-8") as fh:  # a poll appends rows
+        for i in range(5, 12):
+            fh.write(_row(i, 1500 + i))
+    tailed = cache.load([str(tmp_path)])  # tail-append only the new bytes
+    full = parse_files([str(tmp_path)])  # ground truth
+    assert _reads(tailed) == _reads(full)  # row-for-row identical
+    assert len(tailed.segments) == len(full.segments)
+
+
+def test_tail_handles_a_new_segment_header_appended(tmp_path: Path) -> None:
+    # a mid-file re-init (fresh header block + rows) must be captured, not skipped
+    a = tmp_path / "a.csv"
+    _write(a, [_row(i, 1500 + i) for i in range(3)])
+    cache = ParseCache()
+    cache.load([str(tmp_path)])
+    with a.open("a", encoding="utf-8") as fh:
+        fh.write(_HEADER + _COLS + "".join(_row(i, 1700 + i) for i in range(3)))
+    tailed = cache.load([str(tmp_path)])
+    full = parse_files([str(tmp_path)])
+    assert _reads(tailed) == _reads(full)
+    assert len(tailed.segments) == len(full.segments)  # the new segment is captured
+
+
+def test_partial_trailing_line_is_deferred_then_completed(tmp_path: Path) -> None:
+    # a half-written row (no trailing newline) must not be served; when the writer
+    # finishes the line it lands, and the result matches a full parse.
+    a = tmp_path / "a.csv"
+    _write(a, [_row(i, 1500 + i) for i in range(3)])
+    cache = ParseCache()
+    cache.load([str(tmp_path)])
+    with a.open("a", encoding="utf-8") as fh:
+        fh.write(_row(9, 1999).rstrip("\n"))  # a mid-write: no newline yet
+    mid = cache.load([str(tmp_path)])
+    assert 1999 not in [r.raw_value for r in mid.readings]  # not served half-written
+    with a.open("a", encoding="utf-8") as fh:
+        fh.write("\n")  # the writer completes the row
+    done = cache.load([str(tmp_path)])
+    assert 1999 in [r.raw_value for r in done.readings]  # now it lands
+    assert _reads(done) == _reads(parse_files([str(tmp_path)]))
+
+
+def test_repeated_polls_tail_incrementally(tmp_path: Path) -> None:
+    # several poll-sized appends in a row, each staying consistent with a full parse
+    a = tmp_path / "a.csv"
+    _write(a, [_row(0, 1500)])
+    cache = ParseCache()
+    cache.load([str(tmp_path)])
+    for i in range(1, 6):
+        with a.open("a", encoding="utf-8") as fh:
+            fh.write(_row(i, 1500 + i))
+        got = cache.load([str(tmp_path)])
+        assert _reads(got) == _reads(parse_files([str(tmp_path)]))
