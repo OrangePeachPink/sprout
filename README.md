@@ -8,8 +8,8 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-ESP32-17B6C4" alt="ESP32">
-  <img src="https://img.shields.io/github/v/release/OrangePeachPink/sprout?label=firmware&amp;color=8BD24F"
-    alt="firmware version (latest release)">
+  <img src="https://img.shields.io/github/v/release/OrangePeachPink/sprout?label=release&amp;color=8BD24F"
+    alt="latest release version">
   <img src="https://img.shields.io/badge/soil-honest-E8703A" alt="honest by default">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-007EC6" alt="MIT license"></a>
   <a href="https://github.com/OrangePeachPink/sprout/actions/workflows/ci.yml"><img
