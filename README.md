@@ -16,8 +16,9 @@
     src="https://github.com/OrangePeachPink/sprout/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 </p>
 
-> **Hi, I'm Sprout.** I keep a windowsill of plants properly watered — and I tell you, in plain words, how
-> each one is doing. No guesswork, no fake percentages: I read the soil honestly and speak for the plant.
+> **Hi, I'm Sprout.** I watch a windowsill of plants and tell you, in plain words, how each one is doing —
+> no guesswork, no fake percentages: I read the soil honestly and speak for the plant. (Watering? On my
+> roadmap — and true to form, I won't claim it until it's calibrated.)
 
 ---
 
@@ -26,8 +27,8 @@
 Sprout is a small, honest, **automatic plant-care system** for a windowsill: capacitive soil-moisture probes
 on one or more **ESP32-class boards** — each reporting **over Wi-Fi (untethered)** or a USB-serial cable —
 with a **Python** logger and analytics behind them and a served **dashboard** out front. It watches the soil,
-classifies it into seven calibrated moisture bands, and (once calibration is in) waters before a plant is
-ever in trouble.
+classifies it into seven calibrated moisture bands, and (once calibration is in) will water before a plant
+is ever in trouble.
 
 The minimum Sprout is deliberately small: **a microcontroller and one soil sensor is already a complete
 Sprout** ([ADR-0028](docs/adr/0028-optional-peripherals-doctrine.md)) — a pump, an OLED, and extra probes are
