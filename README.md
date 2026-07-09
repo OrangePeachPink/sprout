@@ -193,6 +193,30 @@ Looking for somewhere to jump in? **[Contributors Welcome](docs/CONTRIBUTORS_WEL
 of things we'd love a hand with — resistive-sensor support, board configs beyond ESP32 + Arduino, and a
 host-the-stack tier.
 
+## License
+
+Sprout is **[MIT-licensed](LICENSE)** — a deliberate choice, not a default. MIT is a **permissive** license:
+you can do almost anything with the code, and you're *never* required to open-source your own changes — the
+thing that sets it apart from "copyleft" licenses like the **GPL** (GNU General Public License), which *do*
+require it when you share the software. About as few strings as open source has: **do almost anything, just
+keep the notice.**
+
+**As a user** — use it, fork it, learn from it, build on it: for a windowsill, a classroom, or a product you
+sell. Commercial use is fine. No permission to ask, no fee, no catch. The one obligation is to keep the
+copyright line and license text with the code.
+
+**As a contributor** — you keep the copyright on what *you* write. **No CLA** (Contributor License Agreement —
+the legal form some projects make you sign before they'll accept your code), **no copyright assignment, no
+paperwork.** Opening a PR just means your contribution ships under the same MIT terms — which is what keeps
+Sprout free for the next person. It's also why the copyright reads *"Veronica K. Hogue and Sprout
+contributors"*: the moment you contribute, that **"and contributors" is you.**
+
+**No warranty** — it's provided as-is. (We read the soil honestly; we don't promise your monstera survives
+your vacation.)
+
+We picked the friendliest license we could so the distance between *"I found this repo"* and *"I'm using and
+improving it"* is as close to zero as open source allows. Take it and grow something. 🌱
+
 ---
 
 <p align="center"><sub>Sprout · plants with a pulse · <b>tend well.</b></sub></p>
