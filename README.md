@@ -10,8 +10,9 @@
   <img src="https://img.shields.io/badge/platform-ESP32-17B6C4" alt="ESP32">
   <img src="https://img.shields.io/badge/firmware-v0.7.0-8BD24F" alt="firmware v0.7.0">
   <img src="https://img.shields.io/badge/soil-honest-E8703A" alt="honest by default">
-  <a href="https://github.com/OrangePeachPink/plants/actions/workflows/ci.yml"><img
-    src="https://github.com/OrangePeachPink/plants/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-007EC6" alt="MIT license"></a>
+  <a href="https://github.com/OrangePeachPink/sprout/actions/workflows/ci.yml"><img
+    src="https://github.com/OrangePeachPink/sprout/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 </p>
 
 > **Hi, I'm Sprout.** I keep a windowsill of plants properly watered — and I tell you, in plain words, how
@@ -32,13 +33,13 @@ Sprout** ([ADR-0028](docs/adr/0028-optional-peripherals-doctrine.md)) — a pump
 optional enhancements, never an entry bar. And it's past the bench: as of the **v0.7.0 go-live, eight plants
 run live in soil**, reporting over Wi-Fi or serial with each session saved to the catalog.
 
-It's a learning-and-portfolio build, made to be **enjoyable to run and trustworthy to read** — process and
+It's an open-source learning-and-portfolio build, made to be **enjoyable to run and trustworthy to read** — process and
 tooling sized to match, not over-engineered.
 
 ## Quick start
 
 ```text
-git clone https://github.com/OrangePeachPink/plants && cd plants
+git clone https://github.com/OrangePeachPink/sprout && cd sprout
 uv sync                     # reproduce the exact, locked dev environment
 uv run pre-commit install   # the conventions auto-apply on every commit
 just start                  # run Sprout — opens the dashboard in your browser
@@ -69,17 +70,31 @@ index.
 
 ## A look
 
+**Today — the live dashboard.** One command (`just start`) serves this: a functional **Monitor · Capture ·
+Lab** view — raw ADC and the calibrated band for every probe, plus the calibration ladder. Plain and
+unpolished on purpose, and honest about what it reads: probes in dry air show **Parched**, probes sitting
+in water show **Drowning**, because the dashboard shows what the capture actually contains.
+
+<p align="center">
+  <img src="docs/design/brand/readme-dashboard.png"
+       alt="The live Sprout dashboard — per-device channel cards with raw ADC, calibrated band, and a calibration ladder"
+       width="100%">
+</p>
+
+**Where we're headed.** This is the design *direction* — Sprout as a calm, first-person character, the
+mood system in motion across a day. It's a concept, not a screenshot, and not built yet — a great place for
+a UI/UX contributor to jump in ([#867](https://github.com/OrangePeachPink/sprout/issues/867)).
+
 <p align="center">
   <a href="docs/design/motion/Sprout%20Welcome.dc.html">
     <img src="docs/design/motion/welcome-loop.gif"
-         alt="A day in the life of Sprout — the calibrated mood system in motion across one day"
+         alt="Brand concept — Sprout's calibrated mood system in motion across one day (design, not a screenshot)"
          width="100%">
   </a>
 </p>
 
-<p align="center"><sub>The served dashboard — <strong>Monitor · Capture · Provenance</strong> — opens with
-one command (<code>just start</code>, via <code>tools/analytics/serve.py</code>); the design system &amp;
-mood system live in <a href="docs/design/">docs/design/</a>.</sub></p>
+<p align="center"><sub>Concept, not the app. The design system &amp; mood system live in
+<a href="docs/design/">docs/design/</a>.</sub></p>
 
 ## The brand
 
@@ -159,9 +174,8 @@ whitespace/EOL hygiene — run identically on your machine and in CI, so style i
 | Endings / encoding | git + EditorConfig | [`.gitattributes`](.gitattributes) · [`.editorconfig`](.editorconfig) |
 
 Ruff is the modern all-in-one (it replaces flake8 / isort / pyupgrade / black), pinned in the locked env. The
-firmware C formatter is being re-introduced into the gate idempotently
-([#120](https://github.com/OrangePeachPink/plants/issues/120)); until then, format new / changed C by hand
-(`clang-tidy` static analysis stays advisory, not build-blocking).
+firmware C formatter (clang-format) runs in the gate on changed lines, pinned in the same locked env;
+`clang-tidy` static analysis stays advisory, not build-blocking.
 
 ## Where to look
 
@@ -175,17 +189,18 @@ firmware C formatter is being re-introduced into the gate idempotently
 
 ## Status
 
-Four co-located probes observe soil moisture. The firmware ships a **manual operator-commanded bounded pump
-pulse** (`!water` / `!stop`), but the relay path is **bench-unverified** (issue #191) and autonomous watering
-is gated behind real per-probe calibration (issue #94 — the safety-first order: *make watering correct before
-it's possible*). The firmware roadmap and current standing live in the
+**Monitoring is live.** As of the v0.7.0 go-live, eight plants report in soil over Wi-Fi or serial, each
+session saved to the catalog. **Watering is deliberately gated:** the firmware ships a **manual
+operator-commanded bounded pump pulse** (`!water` / `!stop`), but the relay path is **bench-unverified**
+(issue #191) and autonomous watering waits on real per-probe calibration (issue #94 — the safety-first
+order: *make watering correct before it's possible*). The firmware roadmap and current standing live in the
 [handoff notes](docs/HANDOFF_2026-06-23.md).
 
 ## Contributing
 
 Work is proposed, tracked, and merged through GitHub — **Issues** are the ledger, the
 **[project board](https://github.com/users/OrangePeachPink/projects/2)** is the working view, and
-**[Discussions](https://github.com/OrangePeachPink/plants/discussions)** are the idea inbox. The full loop
+**[Discussions](https://github.com/OrangePeachPink/sprout/discussions)** are the idea inbox. The full loop
 (branch → PR with `Refs #N` → the review-before-close **verification gate**) lives in
 **[CONTRIBUTING.md](.github/CONTRIBUTING.md)**.
 
@@ -218,5 +233,9 @@ We picked the friendliest license we could so the distance between *"I found thi
 improving it"* is as close to zero as open source allows. Take it and grow something. 🌱
 
 ---
+
+<p align="center"><sub>Built in the open by
+<a href="https://github.com/OrangePeachPink">V. K. Hogue</a> · source under
+<a href="LICENSE">MIT</a>.</sub></p>
 
 <p align="center"><sub>Sprout · plants with a pulse · <b>tend well.</b></sub></p>
