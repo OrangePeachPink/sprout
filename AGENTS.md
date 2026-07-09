@@ -18,6 +18,18 @@ Operating rules for any agent (or human) working in this repository.
 >   follow the band, never the index.
 > - **`main` is protected** — PRs only, squash-merge, no direct pushes.
 
+## Status — going public (2026-07-09)
+
+- **Repo renamed:** `OrangePeachPink/plants` → **`OrangePeachPink/sprout`**. Old URLs 301-redirect, but
+  use the new name in all new work. (Local checkout folders keep the `plants` name — cosmetic only.)
+- **License: MIT** is in place (`LICENSE` at repo root, GitHub-detected) — copyright
+  `Veronica K. Hogue and Sprout contributors`.
+- **Public release: today.** Treat everything — commits, docs, issues, PRs, comments — as
+  **public-facing from now on**: no personal identifiers, internal IPs/hostnames, secrets, or
+  unreleased-sensitive material. The visibility flip happens **after** the final pre-publish sweep
+  (#861) closes — the network-identifier genericize plus the CONTRIBUTORS / SECURITY.md / CoC /
+  MIT-badge items.
+
 ## Reading order
 
 1. **This file** — operating rules.

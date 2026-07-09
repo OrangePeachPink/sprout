@@ -63,5 +63,5 @@ If you want Sprout untethered, get an **ESP32** — they're a few dollars and Wi
 
 ---
 
-*The "what you need" onboarding guide ([#272](https://github.com/OrangePeachPink/plants/issues/272)), a slice of
+*The "what you need" onboarding guide ([#272](https://github.com/OrangePeachPink/sprout/issues/272)), a slice of
 PRD-0005 (Untethered Sprout). Content by DX; a later Design pass dresses it in Sprout tokens + voice.*

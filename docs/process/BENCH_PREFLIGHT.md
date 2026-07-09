@@ -7,10 +7,10 @@ the 2026-06-28 bench session, where every one of these seams showed up for real.
 > **Scope:** this is the preflight for **sensor capture** — the rig that is *bench-wired and trusted today*
 > (ESP32 + four capacitive probes on the breadboard). Pumps and the relay board are **code-staged only**
 > (not connected, never powered). When relay/pump sessions begin, the **dry-safety preflight**
-> ([#191](https://github.com/OrangePeachPink/plants/issues/191) ·
-> [#93](https://github.com/OrangePeachPink/plants/issues/93) ·
-> [#215](https://github.com/OrangePeachPink/plants/issues/215) ·
-> [#2](https://github.com/OrangePeachPink/plants/issues/2)) gates that separately — this checklist does
+> ([#191](https://github.com/OrangePeachPink/sprout/issues/191) ·
+> [#93](https://github.com/OrangePeachPink/sprout/issues/93) ·
+> [#215](https://github.com/OrangePeachPink/sprout/issues/215) ·
+> [#2](https://github.com/OrangePeachPink/sprout/issues/2)) gates that separately — this checklist does
 > **not** cover actuation.
 >
 > **Capability-stage vocabulary** (Sage's, used throughout): *code-staged → bench-wired → dry-verified →
@@ -43,7 +43,7 @@ about what's running:
 These are routinely confused; they touch different things. Decide each independently.
 
 - [ ] **App/server restart** — `just start` (it serves + opens the dashboard; `--restart` takes over a stale
-  server, [#127](https://github.com/OrangePeachPink/plants/issues/127)). This restarts the **Python host app
+  server, [#127](https://github.com/OrangePeachPink/sprout/issues/127)). This restarts the **Python host app
   only**. It does **not** touch the ESP32. Do this when the served code changed or a server is stale.
 - [ ] **Firmware flash** — `just flash` (`pio run -t upload`). This changes what runs **on the ESP32** and
   needs the board connected + your OK. Do this only when firmware changed.
@@ -74,7 +74,7 @@ Rules:
 stop that process; do not fight it with retries.
 
 **Known trap — an orphaned logger can outlive the window that started it**
-([#493](https://github.com/OrangePeachPink/plants/issues/493)). Closing the browser tab/window does **not**
+([#493](https://github.com/OrangePeachPink/sprout/issues/493)). Closing the browser tab/window does **not**
 currently signal `plants_logger.py` / `experiment_capture.py` to stop — only an explicit **`/quit`** click
 does. A closed window can leave a **headless** logger process running for hours, silently holding the port,
 invisible in Task Manager (it has no window and a generic `python.exe` name). If "port busy" persists after
@@ -115,7 +115,7 @@ synthetic row that lands in an evidence folder is a provenance break.
 The biggest live gotcha from 2026-06-28: **the experiment cadence is written to firmware NVS and persists.**
 The experiment UI is **not** a per-run setting — it changes the device cadence *until changed again*. After a
 0.5 s experiment, the next monitor log **inherited 0.5 s** and produced very dense files
-([#82](https://github.com/OrangePeachPink/plants/issues/82) tracks fast-cadence quality).
+([#82](https://github.com/OrangePeachPink/sprout/issues/82) tracks fast-cadence quality).
 
 - [ ] **Choose an intentional cadence** before any long monitor logging (e.g. 5 s for hours-long holds; 0.5–1 s
   only for short transition tests).
@@ -139,7 +139,7 @@ After flashing, read the fresh boot/provenance banner from a monitor log and con
   (pumps are code-staged; this line must stay this way until a dry-safety session deliberately changes it).
 - [ ] `cadence_ms=NNNN (nvs)` is the cadence you want (see §4).
 - [ ] **`cal bounds(...)` line is readable** — a corrupted-looking cal-bounds banner is a flag
-  ([#295](https://github.com/OrangePeachPink/plants/issues/295)); calibration provenance must stay legible.
+  ([#295](https://github.com/OrangePeachPink/sprout/issues/295)); calibration provenance must stay legible.
 
 ## 6. Raw-only CSV contract — `raw_value` is the evidence column
 
@@ -154,15 +154,15 @@ truth (the 0–100 index is a labelled relative position, never VWC). Capture CS
 **Stop condition — contract violation:** a capture with **populated `value`/`unit`** predates or violates the
 raw-only contract → **exclude it from evidence** (on 2026-06-28 the `common-cup` capture was dropped for
 exactly this: non-empty `value/unit` + only 3 sweeps). Refs
-[#294](https://github.com/OrangePeachPink/plants/issues/294) /
-[#307](https://github.com/OrangePeachPink/plants/issues/307).
+[#294](https://github.com/OrangePeachPink/sprout/issues/294) /
+[#307](https://github.com/OrangePeachPink/sprout/issues/307).
 
 ## 7. Local-time labels
 
 - [ ] Label every capture **local time first, UTC second** — e.g. `13:02 local / 18:02 UTC` — matching the
   bench-session log style.
 - [ ] Dashboard local-time-first labels are tracked in
-  [#328](https://github.com/OrangePeachPink/plants/issues/328); until that lands, keep writing both by hand so
+  [#328](https://github.com/OrangePeachPink/sprout/issues/328); until that lands, keep writing both by hand so
   bench screenshots and the log read the same.
 
 ---
@@ -175,7 +175,7 @@ exactly this: non-empty `value/unit` + only 3 sweeps). Refs
 
 ---
 
-*Bench preflight checklist ([#332](https://github.com/OrangePeachPink/plants/issues/332)) — the **process**
+*Bench preflight checklist ([#332](https://github.com/OrangePeachPink/sprout/issues/332)) — the **process**
 half of the pair; Sage's [bench checklist](../experiments/bench-preflight-checklist.md) is the **run** half.
 DX-drafted from the 2026-06-28 bench session; **Sage owns the bench-accuracy review** — physical/port/cadence/
 banner facts are Sage's to confirm or correct. Pairs with the dry-safety preflight (#191/#93/#215/#2) for the

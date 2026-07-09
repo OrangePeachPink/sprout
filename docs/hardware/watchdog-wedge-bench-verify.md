@@ -7,9 +7,9 @@
 evidence.
 
 Two bench sessions, same window, same board. Recorded here because the results only lived in GitHub
-issue comments ([#518](https://github.com/OrangePeachPink/plants/pull/518#issuecomment-4859820930),
-[#93](https://github.com/OrangePeachPink/plants/issues/93#issuecomment-4859892470),
-[#191](https://github.com/OrangePeachPink/plants/issues/191#issuecomment-4859947087)) until now —
+issue comments ([#518](https://github.com/OrangePeachPink/sprout/pull/518#issuecomment-4859820930),
+[#93](https://github.com/OrangePeachPink/sprout/issues/93#issuecomment-4859892470),
+[#191](https://github.com/OrangePeachPink/sprout/issues/191#issuecomment-4859947087)) until now —
 this is the durable, repo-tracked copy.
 
 ## Session 1 — #278 device-owned time, live hardware confirmation

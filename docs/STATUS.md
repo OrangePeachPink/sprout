@@ -44,7 +44,7 @@ the relay path is **bench-unverified** (#191) and autonomous watering is gated (
 | You want… | Go to |
 | --- | --- |
 | The live working view (issues by status) | [Project board #2](https://github.com/users/OrangePeachPink/projects/2) |
-| Ideas / proposals inbox | [Discussions](https://github.com/OrangePeachPink/plants/discussions) |
+| Ideas / proposals inbox | [Discussions](https://github.com/OrangePeachPink/sprout/discussions) |
 | Decisions of record | [`docs/adr/`](adr/) |
 | How to contribute (the verification gate) | [`.github/CONTRIBUTING.md`](../.github/CONTRIBUTING.md) |
 | Wiring & power plan | [`WIRING.md`](WIRING.md) *(historical baseline)* |

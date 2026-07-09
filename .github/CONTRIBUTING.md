@@ -9,9 +9,9 @@ one path now. **Tend well.**
 
 | You have… | Put it in… |
 |---|---|
-| a question, a loose idea, a "should we…?" | [**Discussions**](https://github.com/OrangePeachPink/plants/discussions) — the idea inbox |
+| a question, a loose idea, a "should we…?" | [**Discussions**](https://github.com/OrangePeachPink/sprout/discussions) — the idea inbox |
 | a written requirement for a larger feature | a **PRD** in [`docs/prd/`](docs/prd/) |
-| a concrete, shippable piece of work | a [**GitHub Issue**](https://github.com/OrangePeachPink/plants/issues) (use the forms) |
+| a concrete, shippable piece of work | a [**GitHub Issue**](https://github.com/OrangePeachPink/sprout/issues) (use the forms) |
 | a change that implements an issue | a **Pull Request** |
 
 The test: *can I assign it and define "done" in a sentence?* → Issue. *Is it a question or a maybe?* →
@@ -165,7 +165,7 @@ re-provision apart from a loop (the `penv.stale-*` breadcrumb test), covers the 
 and gives a safe clean-reset runbook.
 
 > **Brand-new to microcontrollers?** A gentle, deliberately-separate Arduino starter on-ramp is on the way
-> ([#387](https://github.com/OrangePeachPink/plants/issues/387)) — it hands back the tunable constants and
+> ([#387](https://github.com/OrangePeachPink/sprout/issues/387)) — it hands back the tunable constants and
 > shared terms, then graduates you to this VS Code / Codespaces project.
 
 ## The lifecycle & the verification gate (Workflow certifies, then the maintainer merges)
@@ -387,5 +387,5 @@ host-the-stack tier. At launch these graduate into `help wanted` issues; until t
 
 ## Questions?
 
-Ask in [**Discussions → Q&A**](https://github.com/OrangePeachPink/plants/discussions/categories/q-a).
+Ask in [**Discussions → Q&A**](https://github.com/OrangePeachPink/sprout/discussions/categories/q-a).
 No setup question is too small.

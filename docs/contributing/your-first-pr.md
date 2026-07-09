@@ -31,7 +31,7 @@ You need three tools. Each does one job:
 ## Step 1 — Get Sprout running
 
 ```text
-git clone https://github.com/OrangePeachPink/plants && cd plants
+git clone https://github.com/OrangePeachPink/sprout && cd plants
 uv sync                     # reproduce the exact, locked dev environment
 uv run pre-commit install   # the quality checks auto-run on every commit
 just start                  # launch Sprout — opens the dashboard in your browser
@@ -43,7 +43,7 @@ dashboard — if a browser tab appears, you're running Sprout. 🌱
 
 ## Step 2 — Find something to work on
 
-- A question or a loose idea? → **[Discussions](https://github.com/OrangePeachPink/plants/discussions)**, the
+- A question or a loose idea? → **[Discussions](https://github.com/OrangePeachPink/sprout/discussions)**, the
   idea inbox. No setup question is too small.
 - A concrete, shippable piece of work? → an **Issue**. Browse the
   [Sprout board](https://github.com/users/OrangePeachPink/projects/2) and look for the **`good first issue`**

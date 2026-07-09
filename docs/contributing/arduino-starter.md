@@ -86,7 +86,7 @@ built:
 
 ---
 
-*Arduino beginner on-ramp (part of the [Arduino On-Ramp epic](https://github.com/OrangePeachPink/plants/issues/435))
+*Arduino beginner on-ramp (part of the [Arduino On-Ramp epic](https://github.com/OrangePeachPink/sprout/issues/435))
 — the framing + copy. The real sketch, built by Firmware to this spec, lives at
 [`arduino-starter/arduino-starter.ino`](../../arduino-starter/arduino-starter.ino) — one file, no libraries,
 matching this page's constants and voice exactly. DX owns the words; Sage validates the real bench anchors

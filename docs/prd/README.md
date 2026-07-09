@@ -1,7 +1,7 @@
 # Product Requirements Docs (`docs/prd/`)
 
 A PRD captures **what we're building and why**, before the how — for work that's bigger than a single
-issue. It's the level between a loose idea (a [Discussion](https://github.com/OrangePeachPink/plants/discussions))
+issue. It's the level between a loose idea (a [Discussion](https://github.com/OrangePeachPink/sprout/discussions))
 and the shippable slices that implement it (Issues). See
 [ADR-0003 §4](../adr/0003-work-pipeline.md).
 

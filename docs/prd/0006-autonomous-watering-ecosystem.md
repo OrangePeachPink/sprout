@@ -4,7 +4,7 @@
 **Date:** 2026-07-01
 **Owner:** Workflow (synthesis) — binds Data, Design, Firmware, DX
 **Lane:** cross-cutting
-**Source:** maintainer vision, [#443](https://github.com/OrangePeachPink/plants/issues/443) comment (2026-07-01)
+**Source:** maintainer vision, [#443](https://github.com/OrangePeachPink/sprout/issues/443) comment (2026-07-01)
 **Bound ADRs (to be drafted):** notification model & preferences · basin depletion / runway estimation
 **Epic / issues:** #477 (parent) · R1 #478 · R2 #479 · R3 #480 · R4 #481 · R5 #482 · basin sensing #19
 
