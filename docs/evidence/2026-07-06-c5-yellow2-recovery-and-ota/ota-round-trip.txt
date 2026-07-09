@@ -1,14 +1,14 @@
 OTA round-trip evidence — n3jhsp (C5Yellow2) over espota/WiFi — 2026-07-06
 Curated from the successful run (_scratch/c5ota2.log). Upload progress 0->100% elided.
 MAC-clean: espota does no chip-serial connect, so no MAC is printed. RFC1918 IPs retained (ADR-0015 evidence-safe).
-Invocation: pio run -e esp32c5_ota -t upload --upload-port 192.168.68.63  (host_ip pinned to the maintainer LAN IP)
+Invocation: pio run -e esp32c5_ota -t upload --upload-port 192.168.x.63  (host_ip pinned to the maintainer LAN IP)
 ---------------------------------------------------------------------------
 Successfully created ESP32-C5 image.
 Successfully created ESP32-C5 image.
 Uploading .pio\build\esp32c5_ota\firmware.bin
-20:24:06 [DEBUG]: Options: Namespace(esp_ip='192.168.68.63', host_ip='192.168.68.80', esp_port=3232, host_port=36431, auth='sprout-phase0', md5_target=False, image='.pio\\build\\esp32c5_ota\\firmware.bin', spiffs=False, debug=True, progress=True, timeout=10)
+20:24:06 [DEBUG]: Options: Namespace(esp_ip='192.168.x.63', host_ip='192.168.x.80', esp_port=3232, host_port=36431, auth='sprout-phase0', md5_target=False, image='.pio\\build\\esp32c5_ota\\firmware.bin', spiffs=False, debug=True, progress=True, timeout=10)
 20:24:06 [INFO]: Upload size: 1268736
-Sending invitation to 192.168.68.63
+Sending invitation to 192.168.x.63
 Authenticating (PBKDF2-HMAC-SHA256)...
 Uploading: [============================================================] 100% Done...
 20:24:19 [INFO]: Waiting for result...

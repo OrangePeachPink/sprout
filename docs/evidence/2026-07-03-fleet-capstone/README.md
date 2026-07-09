@@ -17,9 +17,9 @@ issue #573). Private RFC1918 IPs are evidence-safe and kept.
 
 | Name (`device_id`) | Chip | Board target | IP (WiFi) | Env sensors | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `classic` | ESP32-D0WD-V3 | `esp32dev` | 192.168.68.87 | SHT45 + AS7263 | the skylight-confound instrument; only board with env |
-| `s3-1` | ESP32-S3-N8R2 | `esp32s3` | 192.168.68.62 | — | generic clone, native-USB path (dead CH343 right port) |
-| `c5off1` | ESP32-C5 (rev v1.2) | `esp32c5` | 192.168.68.85 | — | official Espressif DevKitC-1, dual-band WiFi 6 |
+| `classic` | ESP32-D0WD-V3 | `esp32dev` | 192.168.x.87 | SHT45 + AS7263 | the skylight-confound instrument; only board with env |
+| `s3-1` | ESP32-S3-N8R2 | `esp32s3` | 192.168.x.62 | — | generic clone, native-USB path (dead CH343 right port) |
+| `c5off1` | ESP32-C5 (rev v1.2) | `esp32c5` | 192.168.x.85 | — | official Espressif DevKitC-1, dual-band WiFi 6 |
 
 All three: firmware **0.7.0** (the merged multi-board build, #591 + #595), `time_source =
 device_synced` (NTP-on-connect, #278), serving `GET /` + `GET /telemetry` over WiFi with no
@@ -33,9 +33,9 @@ given a unique identity over serial (`!name,<id>`, NMEA-checksummed, sanitized, 
 NVS so it survives reboots), then confirmed **on the wire** over WiFi:
 
 ```text
-classic  -> GET http://192.168.68.87/telemetry  ->  plants.soil,2bf545,classic,0.7.0,...
-s3-1     -> GET http://192.168.68.62/telemetry  ->  plants.soil,b23473,s3-1,0.7.0,...
-c5off1   -> GET http://192.168.68.85/telemetry  ->  plants.soil,da935c,c5off1,0.7.0,...
+classic  -> GET http://192.168.x.87/telemetry  ->  plants.soil,2bf545,classic,0.7.0,...
+s3-1     -> GET http://192.168.x.62/telemetry  ->  plants.soil,b23473,s3-1,0.7.0,...
+c5off1   -> GET http://192.168.x.85/telemetry  ->  plants.soil,da935c,c5off1,0.7.0,...
 ```
 
 Naming is **serial-only today** — a real usability gap for an untethered product, filed as

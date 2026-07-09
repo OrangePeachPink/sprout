@@ -65,7 +65,7 @@ is now documented as a gotcha in the env (left un-hardcoded so the env isn't tie
 
 | File | Bytes | sha256 | What |
 | --- | --- | --- | --- |
-| `ota-round-trip.txt` | 1356 | `43d738983eabc403ee6f3a97d67ef79f84eb698d8708bdb1a3b4f8afdae0b426` | Curated espota transcript (success run; progress elided). MAC-clean; RFC1918 IPs retained. |
+| `ota-round-trip.txt` | 1352 | `5b47324b052042992a93f7ebe196d4265d5b3ad42be42fc6e5a49db1e40a2195` | Curated espota transcript (success run; progress elided). MAC-clean; home LAN subnet genericized to `192.168.x.x` for publish (#861). |
 
 ## Refs
 
