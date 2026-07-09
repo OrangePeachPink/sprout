@@ -14,8 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import sprout_processes as sp
 
 
-def _row(pid: int, command: str) -> dict:
-    return {"pid": pid, "command": command}
+def _row(pid: int, command: str, ppid: int | None = None) -> dict:
+    return {"pid": pid, "command": command, "ppid": ppid}
 
 
 def test_classifies_monitor_capture_and_fleet() -> None:
@@ -68,3 +68,58 @@ def test_main_prints_report(capsys) -> None:
     assert rc == 0
     out = capsys.readouterr().out
     assert out.strip()  # never silent - always says found-or-not
+
+
+# --- #811: count logical collectors by launch tree, not tree-member rows ---
+
+
+def test_list_carries_ppid_through() -> None:
+    rows = [_row(24608, "pythonw.exe tools/logger/fleet_logger.py", ppid=39692)]
+    found = sp.list_sprout_processes(raw_query=lambda: rows)
+    assert found[0]["ppid"] == 39692
+
+
+def test_group_collapses_parent_child_into_one_collector() -> None:
+    # The launch tree: parent launcher + worker child, both naming the script
+    # (#811). One logical fleet, reported launcher-first.
+    rows = [
+        _row(39692, "python.exe tools/logger/fleet_logger.py", ppid=1200),  # launcher
+        _row(24608, "python.exe tools/logger/fleet_logger.py", ppid=39692),  # worker
+    ]
+    procs = sp.list_sprout_processes(raw_query=lambda: rows)
+    trees = sp.group_launch_trees(procs)
+    assert len(trees) == 1
+    assert trees[0]["role"] == "fleet"
+    assert trees[0]["pids"] == [39692, 24608]  # launcher first
+
+
+def test_report_counts_logical_collectors_not_tree_members() -> None:
+    rows = [
+        _row(39692, "python.exe fleet_logger.py", ppid=1200),
+        _row(24608, "python.exe fleet_logger.py", ppid=39692),
+    ]
+    procs = sp.list_sprout_processes(raw_query=lambda: rows)
+    report = sp._report(procs)
+    assert "1 live Sprout collector" in report  # NOT "2"
+    assert "39692->24608" in report  # the tree, one line
+    assert report.count("fleet") == 1  # one row, not two
+
+
+def test_two_independent_same_role_stay_separate() -> None:
+    # Two real fleets (unrelated parents) must not be merged just by shared role.
+    rows = [
+        _row(100, "python.exe fleet_logger.py", ppid=1),
+        _row(200, "python.exe fleet_logger.py", ppid=2),
+    ]
+    procs = sp.list_sprout_processes(raw_query=lambda: rows)
+    assert len(sp.group_launch_trees(procs)) == 2
+
+
+def test_group_without_ppid_each_stands_alone() -> None:
+    # No parentage available -> honest degradation: one entry per proc, never merged.
+    rows = [
+        _row(100, "python.exe fleet_logger.py"),
+        _row(200, "python.exe fleet_logger.py"),
+    ]
+    procs = sp.list_sprout_processes(raw_query=lambda: rows)
+    assert len(sp.group_launch_trees(procs)) == 2
