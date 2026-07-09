@@ -89,6 +89,13 @@ RETIRE_AFTER_H = 12.0
 # real 2-minute dropout. Same honest-data law as the aggregate: surfaced, never
 # bridged.
 GAP_CADENCE_MULT = 3
+# #839 Fix B: a logging gap this long (default 1.5 days) is a *window boundary*, not
+# a dropout. The trajectory PLOTS only the most recent contiguous run, so a stale
+# pre-gap pocket - e.g. reconnect-storm data (#712) a coalesced identity legitimately
+# inherited (#602) - can't stretch the axis or bury the live signal. Only the plotted
+# points clip; stats / forecast / band-history keep the FULL windowed data (#80). Set
+# well above any real WiFi/serial dropout so only a genuine multi-day outage triggers.
+TRAJ_GAP_BOUNDARY_H = 36.0
 # #698: a device with no reading within this window is STALE/offline - its last
 # value must not read as the live reading, and it drops out of the online count.
 # 180 s = ~6 sweep intervals at the 30 s cadence; the one canonical threshold the
@@ -228,6 +235,22 @@ def _slope_per_hour(pairs: list[tuple[float, float]]) -> float | None:
 
 def _hours_since(ts: datetime, start: datetime) -> float:
     return (ts - start).total_seconds() / 3600.0
+
+
+def _recent_run_start(soil: list, boundary_h: float) -> datetime:
+    """The timestamp where the most recent CONTIGUOUS run begins (#839 Fix B). Walk
+    back from the newest reading; the first poll-to-poll gap >= ``boundary_h`` ends the
+    run, and everything before it is a stale pre-gap pocket that must not stretch or
+    bury the live trajectory. Returns ``soil[0]``'s timestamp when there is no such
+    multi-day gap, so the common single-run case is unchanged. ``soil`` must be sorted
+    ascending by ``timestamp_utc`` (build_context sorts it)."""
+    thr = boundary_h * 3600.0
+    run_start = soil[0].timestamp_utc
+    for i in range(len(soil) - 1, 0, -1):
+        if (soil[i].timestamp_utc - soil[i - 1].timestamp_utc).total_seconds() >= thr:
+            run_start = soil[i].timestamp_utc
+            break
+    return run_start
 
 
 def _age_seconds(ts: datetime | None, now: datetime) -> float | None:
@@ -876,6 +899,10 @@ def build_context(
         raise ValueError("no plants.soil readings with raw_value + timestamp")
 
     start = soil[0].timestamp_utc
+    # #839 Fix B: the trajectory PLOT is clipped to the most recent contiguous run so
+    # a stale pre-gap pocket can't dominate the live view; stats keep the full window
+    # (#80). No multi-day gap => recent_start == start => every plot is unchanged.
+    recent_start = _recent_run_start(soil, TRAJ_GAP_BOUNDARY_H)
 
     seg = next((s for s in reversed(data.segments) if s.cal_bounds), None)
     bounds = list(seg.cal_bounds) if seg else list(DEFAULT_CAL_BOUNDS)
@@ -923,9 +950,16 @@ def build_context(
         rs = by_sensor[sid]
         raws = [r.raw_value for r in rs]
         pairs = [(_hours_since(r.timestamp_utc, start), r.raw_value) for r in rs]
-        points = [{"x": round(h, 4), "y": v} for h, v in pairs]
+        # #839 Fix B: the PLOT (points + trend + labels) uses only readings in the
+        # recent contiguous run; stats below keep the full windowed `rs` (#80). With
+        # no multi-day gap, recent_start == start so plot_rs == rs (byte-identical).
+        plot_rs = [r for r in rs if r.timestamp_utc >= recent_start]
+        plot_pairs = [
+            (_hours_since(r.timestamp_utc, start), r.raw_value) for r in plot_rs
+        ]
+        points = [{"x": round(h, 4), "y": v} for h, v in plot_pairs]
         # #697: the SUMMARY stats use the settled+valid window (fault zeros + the
-        # insertion warmup excluded); the trajectory above keeps the full history.
+        # insertion warmup excluded); the trajectory above keeps the recent-run plot.
         settled = _settled_readings(rs)
         sraws = [r.raw_value for r in settled] or raws
         spairs = [
@@ -933,7 +967,7 @@ def build_context(
         ] or pairs
         locals_ = [
             r.timestamp_local.strftime("%m-%d %H:%M:%S") if r.timestamp_local else ""
-            for r in rs
+            for r in plot_rs
         ]
         last = rs[-1]
         # #486: attribute this channel to a plant via the fleet registry - honest
@@ -1067,10 +1101,13 @@ def build_context(
                 "forecast": forecast_payload(sid, rs, bounds),
             }
         )
-        _fit = fit_line(pairs)
+        # #839 Fix B: fit the dashed trend over the recent-run plot, not the full
+        # window - a trend that spanned the stale pre-gap pocket (0..180 h) was the
+        # one line that still drew across the empty window in the bug report.
+        _fit = fit_line(plot_pairs)
         trend = None
-        if _fit and len(pairs) >= 3:
-            x0, x1 = pairs[0][0], pairs[-1][0]
+        if _fit and len(plot_pairs) >= 3:
+            x0, x1 = plot_pairs[0][0], plot_pairs[-1][0]
             trend = {
                 "x0": round(x0, 4),
                 "y0": round(_fit.intercept + _fit.slope * x0, 1),
