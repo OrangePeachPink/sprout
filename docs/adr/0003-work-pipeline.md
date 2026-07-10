@@ -45,6 +45,11 @@ gauntlet.
 | **Issue** | one independently shippable, reviewable slice | a GitHub **Issue** |
 | **Change** | the implementation | a **PR** referencing the issue |
 
+> **Authoring an epic:** its **state lives exclusively in the native sub-issue list** (the progress bar).
+> The body carries doctrine, scope notes, and sequencing — **never work-item task-list checkboxes** (`- [ ]`
+> / `- [x]`). Two trackers drift silently (#739); the epic-hygiene lint
+> ([`tools/dx/lint_epic_subissues.py`](../../tools/dx/lint_epic_subissues.py)) flags it at event time (#810).
+
 ## 3. Ideas & questions — GitHub Discussions (the inbox)
 
 **What it is:** a forum-style space (its own repo tab) for open-ended conversation that isn't a

@@ -1,44 +1,66 @@
 name: epic hygiene
 
 # Self-enforces the ADR-0003 §2 standard — "an Epic is a parent issue with native
-# sub-issues (progress bar)" — by warning when an `epic`-labelled issue tracks its
-# children as `- [ ] #N` prose checkboxes instead. WARN-ONLY: this never blocks a
-# merge (it has no relationship to a PR); it surfaces drift so an epic doesn't
+# sub-issues (progress bar)" — by warning when an `epic`-labelled issue tracks work
+# as body `- [ ]` checkboxes, or leaves bundle/scope refs unattached. WARN-ONLY: it
+# never blocks a merge (no relationship to a PR); it surfaces drift so an epic doesn't
 # silently lose a child that split off after its body was written (e.g. #302).
 #
 # Lives OUTSIDE ci.yml on purpose: it reads live issue + sub-issue data (not files),
-# so it needs `issues: read` and issue/schedule triggers — a different model than the
-# PR/file gate. Same script runs locally via `just lint-epics`.
-
-# Minutes-burn fix (#740): the per-issue-event trigger fired a runner job on EVERY issue
-# open/edit/label — triage days generate 50+ of those. Weekly + on-demand is the right
-# cadence for a warn-only drift check; `just lint-epics` covers any instant need locally.
+# so it needs issue triggers + the `issues` scope — a different model than the PR/file
+# gate. Same script runs locally via `just lint-epics`.
+#
+# Two paths (#810):
+#   * sweep   — weekly + on-demand full scan -> warn-only annotations (issues: read).
+#   * comment — on each issue open/edit/label, JOB-GATED to `epic`-labelled issues,
+#               posts ONE idempotent hygiene comment on that epic (issues: write).
+# The #740 minutes-burn concern (a per-event trigger firing a job on all 50+ daily
+# issue events) is solved by the job-level `if: epic` gate — a skipped job is not
+# billed — not by deferring to a weekly-only cadence.
 on:
   workflow_dispatch: {}
-  # Weekly sweep; drift on an epic surfaces here (or run `just lint-epics` locally).
   schedule:
-    - cron: "0 15 * * 1" # Mondays 15:00 UTC
-
-# Least privilege: read issues (incl. sub-issues) + the checked-out code. No writes.
-permissions:
-  contents: read
-  issues: read
+    - cron: "0 15 * * 1" # Mondays 15:00 UTC — the backstop sweep.
+  issues:
+    types: [opened, edited, labeled]
 
 concurrency:
-  group: epic-hygiene-${{ github.ref }}
+  # Coalesce rapid edits of the same epic; the sweep keys off the ref.
+  group: epic-hygiene-${{ github.event.issue.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  epics:
-    name: epic sub-issue hygiene
+  # Weekly + on-demand full scan across every open epic. Warn-only annotations; no writes.
+  sweep:
+    name: epic sub-issue hygiene (sweep)
+    if: github.event_name != 'issues'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
     steps:
       - uses: actions/checkout@v7
-
-      # The lint is stdlib + `gh` only (no third-party deps), so it runs on the
-      # runner's Python directly — deliberately independent of the uv/PlatformIO
-      # toolchain so this hygiene job stays fast and never waits on an install.
-      - name: Epic sub-issue hygiene (ADR-0003 §2) — warn-only
+      # stdlib + `gh` only (no third-party deps) — runs on the runner's Python directly,
+      # deliberately independent of the uv/PlatformIO toolchain so it stays fast.
+      - name: Sweep all open epics (ADR-0003 §2) — warn-only
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 tools/dx/lint_epic_subissues.py
+
+  # Per-epic event path — gated to `epic`-labelled issues so non-epic issue events skip
+  # at ZERO cost (a skipped job is not billed). Posts/updates ONE marker-tagged comment.
+  epic-comment:
+    name: epic hygiene comment
+    if: github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'epic')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Idempotent hygiene comment on the edited epic (ADR-0003 §2)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          python3 tools/dx/lint_epic_subissues.py
+          --issue ${{ github.event.issue.number }} --comment
