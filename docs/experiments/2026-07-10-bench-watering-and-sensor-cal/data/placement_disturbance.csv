@@ -1,0 +1,5 @@
+plant,physical_sensor,channel,pre_pull_raw,post_reinsert_raw,delta,watered_flag,ts
+Corn (mini),#1,s1,1800,2254,454,unwatered,2026-07-10T17:11:47.803Z
+Anthurium,#3,s3,1709,2198,489,unwatered,2026-07-10T17:11:47.803Z
+XXL,#2,s2,1802,1536,-266,watered~2c,2026-07-10T17:11:47.803Z
+Dracaena cane,#4,s4,1245,1455,210,watered 1c,2026-07-10T17:11:47.803Z

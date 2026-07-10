@@ -1,0 +1,10 @@
+# FINAL post-watering snapshot (all sensors re-seated post-#829). captured_utc=2026-07-10T18:34:43.583Z
+plant_id,plant,board_octet,channel,raw,band
+p11,Corn-plant (mini),87,s1,2238,dry
+p06,Anthurium* (unwatered),87,s3,2202,dry
+p01,Pothos small*,85,s3,1977,needs water
+p03,Pothos (XL),85,s4,1907,needs water
+p07,Bromeliad,85,s2,1902,needs water
+p10,Pothos (office),85,s1,1594,OK
+p02,Pothos (XXL),87,s2,1524,OK
+p04,Dracaena cane,87,s4,1433,well watered
