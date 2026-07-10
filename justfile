@@ -120,8 +120,8 @@ test-native:
 # ============================================================================
 #  TEST — the whole harness (ADR-0002 #11). Lanes plug their suites in here.
 # ============================================================================
-# Run everything: firmware logic (native C) + the host Python tests + the DX tool suite.
-test: test-native test-host test-dx
+# Run everything: firmware logic (native C) + the host Python tests + the DX + analytics suites.
+test: test-native test-host test-dx test-analytics
 
 # Host Python tests (the control-plane seam test today; pytest is the harness for new suites).
 test-host:
@@ -198,6 +198,12 @@ identifier-guard *ARGS:
 # DX tool tests (pytest — identifier-guard suite; new DX suites land here too).
 test-dx:
     {{py}} -m pytest tools/dx/ -q
+
+# Analytics / dashboard tests (pytest — parse, serve, dashboard correctness; 465 tests). Wired into
+# `just check` per #853: was ungated (`test` skipped it; CI runs test-host only, the #740 lean posture).
+# ~70s — the real cost of the compensating control actually running.
+test-analytics:
+    {{py}} -m pytest tools/analytics/ -q
 
 # ============================================================================
 #  LANES: register your recipes in your section above. Pattern:
