@@ -28,7 +28,7 @@ consumed from `sprout-tokens.css`, never redefined elsewhere.
 | [`voice-strings.json`](voice-strings.json) | First-person line pool keyed by mood and by surface (fault, empty, onboarding, README, social). | Data, GitHub surface (Phase 3) |
 | [`sprout-motion.css`](sprout-motion.css) | Sway / breathe / droop / bob keyframes for **hand-rolled** marks (surfaces not using the component). | anyone animating a bespoke mark |
 | [`sprout-mark-demo.html`](sprout-mark-demo.html) | Standalone page running the real component in all seven band states. | reviewers, devs |
-| [`Sprout v3 Personality Layer.dc.html`](Sprout%20v3%20Personality%20Layer.dc.html) | The living visual record: additive before/after, the deltas, the seven states, the refined soil mode. Open with `support.js`. | reviewers |
+| [`Sprout v3 Personality Layer.dc.html`](https://orangepeachpink.github.io/sprout/design/components/Sprout%20v3%20Personality%20Layer.dc.html) | The living visual record: additive before/after, the deltas, the seven states, the refined soil mode. Open with `support.js`. | reviewers |
 
 > **The soil-mode refinement is not a separate file** — the approved cool green-charcoal dark neutrals are
 > folded into [`../tokens/sprout-tokens.css`](../tokens/sprout-tokens.css)'s `[data-theme="dark"]` block (one tokens file).

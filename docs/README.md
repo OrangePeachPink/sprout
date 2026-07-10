@@ -95,7 +95,7 @@ maintainer, and a curious community member each find their own path from one pag
 
 Everything **visual** — brand, voice, the living mark, motion, tokens, components — lives in the
 [**Sprout Design Library**](design/README.md) (its clickable index is
-[`Sprout Design Library.dc.html`](design/Sprout%20Design%20Library.dc.html)). Per
+[`Sprout Design Library.dc.html`](https://orangepeachpink.github.io/sprout/design/Sprout%20Design%20Library.dc.html)). Per
 [ADR-0010](adr/0010-design-library-front-door.md): *if an asset is live, it's in the Library; if it
 isn't, it's archived.* These two front doors link to each other — start at either, reach both.
 

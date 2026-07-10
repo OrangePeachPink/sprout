@@ -2,7 +2,7 @@
 
 The usable rules for Sprout's brand: identity, voice, the living mark, the mood system, color & type, and
 the one boundary that keeps character and instrument from fighting. This is the **canonical written
-reference**; its living visual companion is [`Sprout Brand Guidelines.dc.html`](Sprout%20Brand%20Guidelines.dc.html)
+reference**; its living visual companion is [`Sprout Brand Guidelines.dc.html`](https://orangepeachpink.github.io/sprout/design/brand/Sprout%20Brand%20Guidelines.dc.html)
 (open with `support.js` in the design tool to see the mark animate). The decision behind it is
 [ADR-0007](../../adr/0007-brand-guidelines.md); the token foundation it builds on is
 [ADR-0004](../../adr/0004-design-system.md).
