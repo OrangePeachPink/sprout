@@ -10,7 +10,7 @@ one path now. **Tend well.**
 | You have… | Put it in… |
 |---|---|
 | a question, a loose idea, a "should we…?" | [**Discussions**](https://github.com/OrangePeachPink/sprout/discussions) — the idea inbox |
-| a written requirement for a larger feature | a **PRD** in [`docs/prd/`](docs/prd/) |
+| a written requirement for a larger feature | a **PRD** in [`docs/prd/`](https://github.com/OrangePeachPink/sprout/tree/main/docs/prd/) |
 | a concrete, shippable piece of work | a [**GitHub Issue**](https://github.com/OrangePeachPink/sprout/issues) (use the forms) |
 | a change that implements an issue | a **Pull Request** |
 
