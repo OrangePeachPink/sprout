@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --leaf:#34A853; --sprout:#8BD24F; --ink:#1E2A18; --muted:#6F7E62; --border:#E3E9D8;
+    --surface:#FFFFFF; --surface-2:#F7FAF2; --bg:#EEF4E6;
+    --st-watering:#17B6C4; --st-dry:#F5A623; --st-due:#E8703A; --st-fault:#E0483D; --st-predicted:#7C5CFF;
+    --font-display:"Baloo 2",sans-serif; --font-ui:"Hanken Grotesk",sans-serif; --font-data:"JetBrains Mono",monospace;
+    --space-xs:4px; --space-sm:8px; --space-md:16px; --space-lg:24px; --space-xl:40px;
+    --r-control:8px; --r-tile:14px; --r-card:20px; --r-pill:999px;
+    --e1:0 1px 2px rgba(30,42,24,.06); --e2:0 6px 18px rgba(30,42,24,.08);
+  }
+  body{ margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-ui); }
+  .page{ max-width:980px; margin:0 auto; padding:40px 24px 80px; }
+  h1{ font-family:var(--font-display); font-size:30px; margin:0 0 6px; }
+  h2{ font-family:var(--font-display); font-size:20px; margin:44px 0 4px; }
+  .cap{ color:var(--muted); font-size:13px; margin:0 0 14px; }
+  .sketchtag{ display:inline-block; font-family:var(--font-data); font-size:11px; letter-spacing:.08em;
+    text-transform:uppercase; color:#fff; background:var(--st-predicted); border-radius:var(--r-pill);
+    padding:3px 12px; margin-bottom:14px; }
+  .note{ background:var(--surface-2); border:1px dashed var(--border); border-radius:var(--r-tile);
+    padding:10px 14px; font-size:13px; color:var(--muted); margin:12px 0 0; }
+  .row{ display:flex; gap:16px; flex-wrap:wrap; align-items:stretch; }
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card);
+    box-shadow:var(--e1); padding:16px 18px; flex:1 1 300px; min-width:280px; position:relative; }
+  .card .plant{ font-family:var(--font-display); font-weight:700; font-size:17px; }
+  .card .idm{ color:var(--muted); font-family:var(--font-data); font-size:11px; }
+  .pill{ display:inline-block; color:#fff; border-radius:var(--r-pill); font-size:12px; font-weight:600;
+    padding:2px 10px; margin:8px 0 4px; }
+  .mono{ font-family:var(--font-data); }
+  .voice{ font-size:14px; line-height:1.55; background:var(--surface-2); border-left:3px solid var(--leaf);
+    border-radius:0 var(--r-tile) var(--r-tile) 0; padding:10px 14px; margin:10px 0 0; }
+  .chip{ display:inline-block; font-family:var(--font-data); font-size:11px; color:var(--muted);
+    border:1px solid var(--border); border-radius:var(--r-pill); padding:2px 9px; margin-right:6px; }
+  .btn{ display:inline-block; font-family:var(--font-ui); font-weight:600; font-size:13px; border-radius:var(--r-pill);
+    padding:7px 18px; margin-right:8px; border:1px solid var(--border); background:var(--surface); }
+  .btn.primary{ background:var(--leaf); border-color:var(--leaf); color:#fff; }
+  .tank{ height:14px; border-radius:var(--r-pill); background:var(--surface-2); border:1px solid var(--border);
+    overflow:hidden; margin:8px 0 4px; }
+  .tank > i{ display:block; height:100%; }
+  .alertcard{ border-color:var(--st-fault); box-shadow:0 0 0 2px rgba(224,72,61,.12); }
+</style>
+</helmet>
+
+<div class="page">
+  <span class="sketchtag">concept sketch · v0.9.0 ahead-of-need · iterate at grooming · #597</span>
+  <h1>Sprout v0.9.0 — watering, tank &amp; optionality concepts</h1>
+  <p class="cap">Sketches, not specs. Direction for the pumps wave so it opens with visual intent instead of a blank
+  page. Decisions honored throughout: ADR-0016 (single authority / arm-gate), ADR-0022 (alert-first; the silent
+  under-watering failure gets the loudest treatment), ADR-0028 (the minimum Sprout is complete), ADR-0008
+  (character on notification/approval surfaces, instrument grammar in histories), the doctrine's four-question
+  test and out-of-box fence, and the house rule: <strong>a derived number never dresses as a measurement.</strong></p>
+
+  <h2>1 · The watering loop on the plant card</h2>
+  <p class="cap">Pump presence enriches the existing plant-first card without restructuring it — one status line +
+  a dose history in instrument grammar. No mood, no prose inside the dense readout.</p>
+  <div class="row">
+    <div class="card">
+      <div class="plant">Pothos (XXL)</div>
+      <div class="idm">s2 · classic (left) · pump P2</div>
+      <span class="pill" style="background:var(--st-due)">Dry · parched</span>
+      <div class="mono" style="font-size:13px; margin-top:6px;">💧 last dose 120 ml · yesterday 18:04 · 14 doses total</div>
+      <div class="mono" style="font-size:12px; color:var(--muted); margin-top:4px;">dose history → sparkrow of ticks (one per dose, height = ml), instrument-grammar, taps into the Workbench log</div>
+    </div>
+    <div class="card alertcard">
+      <div class="plant">Pothos (XXL)</div>
+      <div class="idm">s2 · classic (left) · pump P2</div>
+      <span class="pill" style="background:var(--st-fault)">needs attention</span>
+      <div class="voice">I asked for water twice, but nothing arrived — please check my pump and tube. I'll keep
+      watching the soil and won't try again until you've had a look.</div>
+      <div class="mono" style="font-size:11px; color:var(--muted); margin-top:8px;">the ADR-0022 case: a gate that never opens kills silently → this alert state outranks every other card state, never auto-clears</div>
+    </div>
+  </div>
+  <p class="note"><strong>Why:</strong> the noisy failure (an extra dose) is recoverable; the silent one (no dose,
+  ever) is not. The alert card is therefore the <em>most</em> designed state in the loop — alert-first, calm voice,
+  no guilt, explicit next action.</p>
+
+  <h2>2 · The one-human-touch approval moment</h2>
+  <p class="cap">Sprout never waters silently (ADR-0016: a forced dose is an explicit human decision). The ask is a
+  character surface (ADR-0008 allows notification/approval); the facts in it are instrument-sourced, never invented.</p>
+  <div class="card" style="max-width:520px;">
+    <div class="voice">Pothos (XXL) has been properly thirsty since this morning — may I give it a drink?
+    One dose is about 120&nbsp;ml.</div>
+    <div class="mono" style="font-size:11px; color:var(--muted); margin:8px 0;">Dry · parched · raw 2,941 · dose size from your pump setup — never a made-up number</div>
+    <span class="btn primary">Yes, water it</span><span class="btn">Not now</span>
+    <div class="mono" style="font-size:11px; color:var(--muted); margin-top:10px;">"Not now" is a first-class answer: no re-ask for this thirst episode, no countdown, no nag. Approval history lands in the Workbench log.</div>
+  </div>
+
+  <h2>3 · Tank awareness — modeled vs. measured</h2>
+  <p class="cap">Predict-first (#19): a modeled level from dose history ships before any tank sensor exists. The two
+  must never look alike — provenance is the design, not a footnote.</p>
+  <div class="row">
+    <div class="card">
+      <div class="plant" style="font-size:15px;">Tank · modeled</div>
+      <div class="tank"><i style="width:41%; background:repeating-linear-gradient(45deg,var(--st-predicted),var(--st-predicted) 6px,transparent 6px,transparent 10px);"></i></div>
+      <div class="mono" style="font-size:13px;">≈ 41% · <span style="color:var(--st-predicted)">modeled</span> from 14 doses since refill</div>
+      <div class="mono" style="font-size:12px; color:var(--muted); margin-top:4px;">runway ≈ 9 days at the current pace</div>
+      <div class="mono" style="font-size:11px; color:var(--muted); margin-top:6px;">≈ everywhere · hatched fill · predicted-purple · "modeled" written out — it can never pass for a reading</div>
+    </div>
+    <div class="card">
+      <div class="plant" style="font-size:15px;">Tank · measured</div>
+      <div class="tank"><i style="width:38%; background:var(--st-watering);"></i></div>
+      <div class="mono" style="font-size:13px;">38% · measured · float sensor</div>
+      <div class="mono" style="font-size:12px; color:var(--muted); margin-top:4px;">runway ≈ 8 days at the current pace</div>
+      <div class="mono" style="font-size:11px; color:var(--muted); margin-top:6px;">solid fill, plain number — and the runway stays ≈, because a forecast is modeled even when the level isn't</div>
+    </div>
+  </div>
+  <p class="note"><strong>Grammar:</strong> modeled = ≈ + hatch + <span class="mono" style="color:var(--st-predicted)">--st-predicted</span> + the word "modeled". Measured = solid + sensor named. A sensor upgrade swaps the card's provenance, not its layout — presence enriches, never restructures.</p>
+
+  <h2>4 · The refill notification — ahead of need, never a nag</h2>
+  <p class="cap">#479's bar: "I'm glad it told me," not "make it stop." One notification, sent early, actionable,
+  calm. Explicitly above the robot-mop-yells-empty floor.</p>
+  <div class="card" style="max-width:520px;">
+    <div class="voice">My tank's getting light — about two days of watering left. A top-up whenever you're
+    passing would be perfect. No rush.</div>
+    <div class="mono" style="font-size:11px; color:var(--muted); margin-top:8px;">fires ONCE at the runway threshold (ahead-of-need, never on-empty) · never repeats for the same tank cycle · never mid-crisis · dismiss = done</div>
+  </div>
+  <p class="note"><strong>Voice rules applied:</strong> first person, fact-then-feeling, one line of ask, no guilt,
+  no invented precision ("about two days", from the runway model — ≈-honest). Proposed lines graduate into
+  <span class="mono">voice-strings.json → bySurface</span> at build time; this sketch is not the canonical pool.</p>
+
+  <h2>5 · Optionality made visible — the minimum rig is complete</h2>
+  <p class="cap">ADR-0028 + the out-of-box fence, rendered: one MCU + one sensor is a whole product. Absence is
+  <em>nothing</em> — no ghost slots, no grayed "add a pump" upsell, no "degraded" badge.</p>
+  <div class="row">
+    <div class="card">
+      <div class="plant">Monstera</div>
+      <div class="idm">s1 · myboard</div>
+      <span class="pill" style="background:var(--leaf)">Moist · thriving</span>
+      <div class="mono" style="font-size:12px; color:var(--muted); margin-top:6px;">minimum rig: no pump line, no tank card, no approval asks — the card simply ends here, complete</div>
+    </div>
+    <div class="card">
+      <div class="plant">Pothos (XXL)</div>
+      <div class="idm">s2 · classic (left) · pump P2</div>
+      <span class="pill" style="background:var(--st-due)">Dry · parched</span>
+      <div class="mono" style="font-size:13px; margin-top:6px;">💧 last dose 120 ml · yesterday 18:04</div>
+      <div class="mono" style="font-size:12px; color:var(--muted); margin-top:4px;">pump-equipped: the same card + one line. Same layout, same hierarchy — presence enriched, nothing restructured</div>
+    </div>
+  </div>
+  <p class="note"><strong>The test for every v0.9.0 surface:</strong> render it with the peripheral absent. If the
+  absence leaves a hole, a gray slot, or an apology — the design is wrong. If it leaves nothing, it's right.</p>
+
+  <p class="cap" style="margin-top:48px;">Inputs: ADR-0016 · ADR-0022 · ADR-0028 · ADR-0008 · doctrine §1–§3 ·
+  #19 · #478/#479 · #597. Sketch fidelity — iterate at v0.9.0 grooming. — Design-QA 🔍</p>
+</div>
+</x-dc>
+</body>
+</html>
