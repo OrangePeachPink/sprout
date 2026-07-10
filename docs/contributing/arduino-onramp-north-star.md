@@ -219,6 +219,10 @@ doc.*
 - **DX (owns the North Star + the experience):** this direction, the [user-facing copy](arduino-starter.md),
   the exact-clicks setup, the calibration walkthrough, the three band lines in Sprout's voice, and the
   graduation beat. The words and the felt arc are mine.
+- **The [DX review lens](dx-review-lens.md)** — DX applies the out-of-box check to any hardware or setup
+  recommendation *before* its technical merits: *can the North-Star user do this out of the box?* It's the
+  operational half of the design doctrine's [out-of-box fence](../design/foundations/design-doctrine.md)
+  (#566 the precedent).
 - **Firmware + Sage (build + verify the sketch, #446):** the actual `.ino` for the **Arduino Uno R4 WiFi** —
   `analogRead(A0)` + `SAMPLES` averaging, the three-band compare, the optional `LED_BUILTIN` blink (WiFi left
   unused, Serial only). Sage measures the real dry/wet anchors on an R4 + probe so the out-of-box defaults are
