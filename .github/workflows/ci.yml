@@ -1,20 +1,21 @@
 name: CI
 
-# ── SPRINT POSTURE (#740, maintainer directive 2026-07-05): velocity-first, private phase. ──
-# Actions minutes hit 90% on day 5; a blocked merge is worse than a slipped nit. Per-PR CI is
-# the FAST lane only (lint + hygiene + host tests, ~1 min); the heavy firmware compile + the
-# experimental-board matrix moved to the WEEKLY full battery (weekly-battery.yml) + manual
-# dispatch. Per-commit firmware safety comes from the documented local gate (`just check`);
-# lanes post local build/test evidence on firmware-touching PRs and the verification gate
-# checks it. This deliberately relaxes the "nothing skipped, every PR" stance of #466/#472
-# for the sprint — the revert checklist lives on #740 and MUST be executed before the repo
-# goes public (restore per-PR firmware + experimental jobs + push:main coverage).
-#
-# Also dropped: the redundant `push: main` run — a squash-merged PR already validated that
-# exact content on its pull_request run.
+# The pre-merge gate (#89, parallelized #472; restored for the public repo #905): the SAME
+# checks you run locally (`just check`), so CI and your machine never drift — split into
+# concurrent jobs so wall-clock is max(job), not sum(steps). NOTHING is skipped or
+# path-filtered on the required path — every check runs on every PR (#466: a skipped
+# required check reading as green is the exact onboarding-safety surprise this repo
+# closed on purpose, ADR-0002 #12). The #740 slim sprint posture (private phase,
+# minutes-constrained) was reverted here: the repo is public, GitHub-hosted minutes are
+# free for public repos, and a contributor must never find CI isn't actually running
+# (maintainer directive, 2026-07-10). weekly-battery.yml stays as the scheduled backstop.
+# Right-sized per ADR-0002 #12 — deliberately NOT here: coverage gates, mypy, SBOM,
+# security scanners, multi-OS matrices. Add one only when a real need shows up.
 
 on:
   pull_request:
+  push:
+    branches: [main]
 
 # One run per ref; a newer push cancels the in-flight run (no wasted minutes).
 concurrency:
@@ -82,6 +83,15 @@ jobs:
       - name: Tests — host Python
         run: just test-host
 
+      # The full host-side suite (no PlatformIO needed): DX tooling + analytics were
+      # local-gate-only under the #740 posture (justfile: "CI runs test-host only") —
+      # public posture runs everything a contributor's PR can break (#905, #884).
+      - name: Tests — DX tooling
+        run: just test-dx
+
+      - name: Tests — analytics
+        run: just test-analytics
+
       # Warn-only release-notes hygiene (#730): PR titles become release-notes lines,
       # grouped by `type:` label (ADR-0009 §6) — a missing type: label or placeholder
       # title silently makes bad notes. Rides this job (zero extra runner spend);
@@ -100,18 +110,129 @@ jobs:
             echo "::warning title=Title is release-notes copy::'$PR_TITLE' will appear verbatim in the auto-generated release notes - consider a fuller, self-explanatory title."
           fi
 
-  # The single required status check (the ruleset requires "gate"). During the sprint
-  # posture it aggregates the fast lane only; the weekly battery (weekly-battery.yml)
-  # is the firmware/board backstop. Revert via #740's checklist before going public.
+  # PlatformIO: native-C firmware-logic tests + the ESP32 compile-verify. Isolated in
+  # its own job so its toolchain install/cache never blocks (or is blocked by) lint.
+  firmware:
+    name: firmware (native tests + compile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up uv (+ the locked Python)
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          version: "0.11.14"   # pin uv (#254) — kills cross-version uv.lock re-serialization
+
+      - name: Set up just
+        uses: extractions/setup-just@v4
+
+      - name: Sync the locked environment
+        run: uv sync --locked   # assert uv.lock is current; fail loud, never rewrite it (#254)
+
+      # PlatformIO — needed for native unit tests (pio test -e native) and the
+      # ESP32 compile-verify (pio run -e esp32dev). Cached by platformio.ini hash
+      # so re-installs only when the toolchain config changes.
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+          restore-keys: pio-${{ runner.os }}-
+
+      - name: Tests — native C firmware logic
+        run: just test-native
+
+      # Compile the ESP32 firmware so regressions in src/ are caught before flash. (#260)
+      - name: Compile firmware (ESP32 — catch src/ regressions)
+        run: just build
+
+  # Experimental board compile-checks (#436 S3, #442 C5) — deliberately NOT in `gate`'s
+  # needs, so a toolchain break here (community fork, unproven pins) can NEVER red the
+  # required check (ADR-0024: "an experimental toolchain break stays contained").
+  # Visible on every PR, blocking nothing — the dry-run Firmware asked for on #442 so
+  # this class of break surfaces before hardware instead of only at someone's next
+  # local `just build-s3`/`build-c5`.
+  #
+  # continue-on-error is on the COMPILE STEP, not the job (#504): job-level
+  # continue-on-error still reports this job's own check-run conclusion as `failure`
+  # (a real red X in the PR checks list / PR list, verified against #499's actual
+  # first-commit check-run data — GitHub Actions docs confirm this is documented
+  # behavior, not a bug: "the job will get a red failure badge... but the job status
+  # will be considered success" for downstream/workflow-conclusion purposes only).
+  # Step-level continue-on-error makes the JOB ITSELF report success — a genuinely
+  # green check, matching what "non-blocking" is supposed to look like at a glance,
+  # not just what it structurally does. The trailing step below still surfaces a
+  # failure as a `::warning::` annotation (visible in the PR's Checks/Files-changed
+  # UI) so a real break isn't silently swallowed — de-escalated from "red X block",
+  # not hidden.
+  experimental-boards:
+    name: experimental board (${{ matrix.env }}) — non-blocking
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [esp32s3, esp32c5]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up uv (+ the locked Python)
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          version: "0.11.14"   # pin uv (#254) — kills cross-version uv.lock re-serialization
+
+      - name: Set up just
+        uses: extractions/setup-just@v4
+
+      - name: Sync the locked environment
+        run: uv sync --locked   # assert uv.lock is current; fail loud, never rewrite it (#254)
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.platformio
+          key: pio-experimental-${{ matrix.env }}-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+          restore-keys: pio-experimental-${{ matrix.env }}-${{ runner.os }}-
+
+      # Same underlying command as `just build-s3` / `just build-c5` locally (just
+      # wraps `pio run -d firmware -e <env>`) — called directly here so the matrix
+      # env name maps straight through without a fragile string transform in YAML.
+      # continue-on-error here (step-level, #504) is what makes the JOB's own
+      # check-run report success even when this fails — see the job comment above.
+      - name: Compile-check (${{ matrix.env }})
+        id: compile
+        continue-on-error: true
+        run: pio run -d firmware -e ${{ matrix.env }}
+
+      - name: Surface a non-blocking failure
+        if: steps.compile.outcome == 'failure'
+        run: |
+          echo "::warning title=Experimental board compile failed (non-blocking)::${{ matrix.env }} failed to compile on the pinned toolchain. This never blocks merge (ADR-0024) - see the Compile-check step's log above for the real error, then fix or file it."
+
+  # The single required status check (#472/#466): passes only if BOTH upstream jobs
+  # succeeded. Splitting into two jobs changes their names, so branch protection is
+  # re-pointed at this one job — "gate" always exists and never silently reads as green
+  # from a skip (there is no path-filtering anywhere in this workflow to skip).
+  # experimental-boards is intentionally OUTSIDE this gate's `needs` — see its own
+  # comment above.
   gate:
     name: gate
-    needs: [lint]
+    needs: [lint, firmware]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: All required jobs passed
         run: |
-          if [ "${{ needs.lint.result }}" != "success" ]; then
-            echo "lint=${{ needs.lint.result }}"
+          if [ "${{ needs.lint.result }}" != "success" ] || [ "${{ needs.firmware.result }}" != "success" ]; then
+            echo "lint=${{ needs.lint.result }}  firmware=${{ needs.firmware.result }}"
             exit 1
           fi

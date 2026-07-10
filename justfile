@@ -200,7 +200,7 @@ test-dx:
     {{py}} -m pytest tools/dx/ -q
 
 # Analytics / dashboard tests (pytest — parse, serve, dashboard correctness; 465 tests). Wired into
-# `just check` per #853: was ungated (`test` skipped it; CI runs test-host only, the #740 lean posture).
+# `just check` per #853: was ungated (`test` skipped it); now also CI-gated per-PR (#905 public posture).
 # ~70s — the real cost of the compensating control actually running.
 test-analytics:
     {{py}} -m pytest tools/analytics/ -q
