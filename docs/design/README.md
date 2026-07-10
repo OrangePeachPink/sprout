@@ -3,7 +3,7 @@
 The front door to every active design asset is the **Sprout Design Library** — a clickable index of the
 whole system. Start there:
 
-**→ [Sprout Design Library](Sprout%20Design%20Library.dc.html)**
+**→ [Sprout Design Library](https://orangepeachpink.github.io/sprout/design/Sprout%20Design%20Library.dc.html)**
 
 *Looking for the **written** docs — user guides, contributing, ADRs, process? That's the other front
 door: **[Sprout docs](../README.md)**. Either door reaches both.*

@@ -88,7 +88,7 @@ mood system in motion across a day. It's a concept, not a screenshot, and not bu
 a UI/UX contributor to jump in ([#867](https://github.com/OrangePeachPink/sprout/issues/867)).
 
 <p align="center">
-  <a href="docs/design/motion/Sprout%20Welcome.dc.html">
+  <a href="https://orangepeachpink.github.io/sprout/design/motion/Sprout%20Welcome.dc.html">
     <img src="docs/design/motion/welcome-loop.gif"
          alt="Brand concept — Sprout's calibrated mood system in motion across one day (design, not a screenshot)"
          width="100%">
@@ -107,7 +107,7 @@ guide:
 - **[Brand guide](docs/design/brand/BRAND.md)** — voice, the living mark + motion, the mood↔band system, the
   character↔instrument boundary.
 - **[Design system](docs/design/)** — tokens (`sprout-tokens.css`), instrument components, and the
-  [v3 personality layer](docs/design/voice/Sprout%20v3%20Personality%20Layer.dc.html).
+  [v3 personality layer](https://orangepeachpink.github.io/sprout/design/voice/Sprout%20v3%20Personality%20Layer.dc.html).
 - Decisions of record: **[ADR-0007 (brand &amp; voice)](docs/adr/0007-brand-guidelines.md)** ·
   **[ADR-0008 (personality layer)](docs/adr/0008-design-system-v3-personality-layer.md)**.
 
