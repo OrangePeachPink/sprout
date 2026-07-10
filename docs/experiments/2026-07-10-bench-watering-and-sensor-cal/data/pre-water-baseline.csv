@@ -1,0 +1,10 @@
+# PRE-WATERING baseline. captured_utc=2026-07-10T15:27:13.582Z
+plant_id,plant,board_octet,channel,raw,band
+p10,Pothos (office),85,s1,2366,dry
+p02,Pothos (XXL),87,s2,2270,dry
+p07,Bromeliad,85,s2,2163,dry
+p03,Pothos (XL),85,s4,2069,needs water
+p04,Dracaena cane,87,s4,1930,needs water
+p11,Corn-plant (mini),87,s1,1771,OK
+p06,Anthurium (unwatered*),87,s3,1747,OK
+p01,Pothos small (unwatered*),85,s3,1680,OK

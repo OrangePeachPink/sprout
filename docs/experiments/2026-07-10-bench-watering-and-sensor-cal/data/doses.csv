@@ -1,0 +1,11 @@
+plant_id,plant,dose,baseline_raw,poured_ts_board_utc,notes
+p10,Pothos (office),0.75cup,2366,2026-07-10T15:33:13.582Z,tray filled - good amount/level for this plant
+p02,Pothos (XXL),1.5cup,2270,~2026-07-10T15:32Z,started ~10:32 CDT; big slow pot
+p03,Pothos (XL),1.25cup,2153,2026-07-10T15:41:43.586Z,lifted baseline(env); probe-seating watch
+p07,Bromeliad,0.33cup,2164,2026-07-10T15:53:13.586Z,into central rosette not soil; ~0.5tsp in gap (genuinely dry NOT standing-water trap); s2 may lag
+p09,Succulent (aloe-like),<0.125cup,n/a-sensorless,2026-07-10T16:01:43.586Z,sip; no probe (2in pot); hand-watered
+p08,Cactus,<0.125cup,n/a-sensorless,2026-07-10T16:01:43.586Z,sip; no probe (2in pot); hand-watered
+p05,Braided Dracaena,0-redistribution,n/a-sensorless,2026-07-10,NO NEW WATER: poured existing inter-pot water out + re-poured over rootball top for broader coverage; likely reflowed to inter-pot reservoir; sensorless
+p02,Pothos (XXL) 2nd dose,0.5cup,2079,2026-07-10T16:08:47.803Z,cumulative ~2c; deep pot slow percolation
+# CORRECTION p02 2nd dose: fast -88 is POUR-LOCATION (poured near probe via countertop view), NOT priming; normal XXL pours are BLIND over the tall pot on the high sill -> uncontrolled location (#381/#829)
+p04,Dracaena cane,1cup,1932,2026-07-10T16:16:47.803Z,shallower pot - visible pour (controlled location); sensored

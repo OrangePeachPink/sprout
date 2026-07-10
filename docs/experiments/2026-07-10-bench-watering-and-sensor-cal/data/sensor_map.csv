@@ -1,0 +1,9 @@
+mcu,board_octet,channel_s,gpio,plant_id,plant,physical_sensor,air_dry_raw,water_cup_raw,prev_dry_0628,prev_wet_0628,ts
+mcu1,87,s2,GPIO35,p02,Pothos XXL,#2,2898,988,3120,900,2026-07-10
+mcu1,87,s3,GPIO36,p06,Anthurium Hearts,#3,3084,1042,3123,969,2026-07-10
+mcu1,87,s1,GPIO34,p11,Corn-plant mini,#1,3221,1086,3086,958,2026-07-10
+mcu1,87,s4,GPIO39,p04,Dracaena cane,#4,3190,1061,3096,970,2026-07-10
+mcu2,85,s3,GPIO1,p01,Pothos small,s05,2767,996,3083,938,2026-07-10 C5 prev=CLASSIC0704
+mcu2,85,s2,GPIO6,p07,Bromeliad,s06,2792,1020,3112,977,2026-07-10 C5 prev=CLASSIC0704
+mcu2,85,s1,GPIO5,p10,Pothos office,s08,2661,934,3077,890,2026-07-10 C5 prev=CLASSIC0704 (air ~60 low vs 0704 C5 2724 early-start)
+mcu2,85,s4,GPIO4,p03,Pothos XL,s07,2742,968,3069,871,2026-07-10 C5 prev=CLASSIC0704
