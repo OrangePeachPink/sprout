@@ -256,7 +256,9 @@
     "penv",
     "pyvenv",
     "USERPROFILE",
-    "milestoned"
+    "milestoned",
+    // #810 epic-hygiene lint: the un-hyphenated filename token (lint_epic_subissues.py).
+    "subissues"
   ],
   "flagWords": []
 }
