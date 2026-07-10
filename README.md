@@ -8,8 +8,9 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-ESP32-17B6C4" alt="ESP32">
-  <img src="https://img.shields.io/github/v/release/OrangePeachPink/sprout?label=release&amp;color=8BD24F"
-    alt="latest release version">
+  <a href="https://github.com/OrangePeachPink/sprout/releases"><img
+    src="https://img.shields.io/github/v/release/OrangePeachPink/sprout?label=release&amp;color=8BD24F"
+    alt="latest release"></a>
   <img src="https://img.shields.io/badge/soil-honest-E8703A" alt="honest by default">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-007EC6" alt="MIT license"></a>
   <a href="https://github.com/OrangePeachPink/sprout/actions/workflows/ci.yml"><img
@@ -188,6 +189,7 @@ firmware C formatter (clang-format) runs in the gate on changed lines, pinned in
 | Design system &amp; brand | [`docs/design/`](docs/design/) |
 | Decisions of record (ADRs) | [`docs/adr/`](docs/adr/) |
 | Wiring · telemetry · calibration | [`docs/`](docs/) |
+| What shipped, when | [Releases](https://github.com/OrangePeachPink/sprout/releases) · [`CHANGELOG.md`](CHANGELOG.md) |
 
 ## Status
 
