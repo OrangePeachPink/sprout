@@ -87,11 +87,11 @@
         <div style="width:132px; display:flex; flex-direction:column; align-items:center; gap:9px;">
           <div style="position:relative; width:128px; height:128px; border-radius:{{ it.radius }}; background:{{ it.bg }}; border:5px solid #fff; box-shadow:0 6px 16px rgba(30,42,24,0.16); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;">
             <svg width="56" height="65" viewBox="0 0 24 28" fill="none" stroke="{{ it.stem }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="{{ it.dropD }}" fill="#17b6c4" stroke="{{ it.stem }}"></path>
-              <path d="{{ it.stemD }}"></path>
-              <path d="{{ it.lD }}" fill="{{ it.sprout }}"></path>
-              <path d="{{ it.rD }}" fill="{{ it.leaf }}"></path>
-              <path d="{{ it.tipD }}" fill="{{ it.tipFill }}"></path>
+              <path sc-camel-d="{{ it.dropD }}" fill="#17b6c4" stroke="{{ it.stem }}"></path>
+              <path sc-camel-d="{{ it.stemD }}"></path>
+              <path sc-camel-d="{{ it.lD }}" fill="{{ it.sprout }}"></path>
+              <path sc-camel-d="{{ it.rD }}" fill="{{ it.leaf }}"></path>
+              <path sc-camel-d="{{ it.tipD }}" fill="{{ it.tipFill }}"></path>
             </svg>
             <span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:11.5px; color:{{ it.labelColor }};">{{ it.label }}</span>
             <div style="position:absolute; inset:0; border-radius:{{ it.radius }}; background:linear-gradient(135deg, rgba(255,255,255,0.5), transparent 44%); pointer-events:none;"></div>
@@ -207,11 +207,11 @@
         <div style="width:120px; display:flex; flex-direction:column; align-items:center; gap:9px;">
           <div style="position:relative; width:92px; height:114px; border-radius:13px; background:{{ it.bg }}; box-shadow:0 4px 0 #c7d0bb, 0 11px 16px rgba(30,42,24,0.2); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;">
             <svg width="40" height="47" viewBox="0 0 24 28" fill="none" stroke="{{ it.stem }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-              <path d="{{ it.dropD }}" fill="#17b6c4" stroke="{{ it.stem }}"></path>
-              <path d="{{ it.stemD }}"></path>
-              <path d="{{ it.lD }}" fill="{{ it.sprout }}"></path>
-              <path d="{{ it.rD }}" fill="{{ it.leaf }}"></path>
-              <path d="{{ it.tipD }}" fill="{{ it.tipFill }}"></path>
+              <path sc-camel-d="{{ it.dropD }}" fill="#17b6c4" stroke="{{ it.stem }}"></path>
+              <path sc-camel-d="{{ it.stemD }}"></path>
+              <path sc-camel-d="{{ it.lD }}" fill="{{ it.sprout }}"></path>
+              <path sc-camel-d="{{ it.rD }}" fill="{{ it.leaf }}"></path>
+              <path sc-camel-d="{{ it.tipD }}" fill="{{ it.tipFill }}"></path>
             </svg>
             <span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:10px; color:{{ it.labelColor }};">{{ it.label }}</span>
           </div>
