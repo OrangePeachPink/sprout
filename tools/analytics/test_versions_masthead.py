@@ -21,8 +21,8 @@ from dashboard import (
 )
 
 
-def _dev(name: str, fw: str | None) -> dict:
-    return {"device_id": name, "name": name, "fw": fw}
+def _dev(name: str, fw: str | None, retired: bool = False) -> dict:
+    return {"device_id": name, "name": name, "fw": fw, "retired": retired}
 
 
 # --------------------------------------------------------------------------- #
@@ -75,6 +75,33 @@ def test_mixed_firmware_is_surfaced_not_averaged() -> None:
 def test_no_firmware_reported_gives_none_not_a_guess() -> None:
     v = _versions_block([_dev("A", None)], {"version": "0.7.0"})
     assert _fw_masthead(v) is None
+
+
+# --------------------------------------------------------------------------- #
+# #856: retired devices are excluded from the fw set — the ghost 0.8.0 fix
+# --------------------------------------------------------------------------- #
+def test_retired_device_fw_excluded_from_the_cue() -> None:
+    # the retired S3 rig's historical 0.8.0 (immutable raw, never ages out) must not
+    # leak into the live fw-mixed cue — same exclusion the #683 fleet count applies.
+    v = _versions_block(
+        [_dev("live", "0.7.0"), _dev("s3-rig", "0.8.0", retired=True)],
+        {"version": "0.7.0"},
+    )
+    assert v["firmware"]["value"] == "0.7.0"  # single LIVE value, not a mix
+    assert v["firmware"]["mixed"] is False
+    assert "0.8.0" not in v["firmware"]["all"]  # the ghost is gone
+    assert _fw_masthead(v) == "0.7.0"  # not "mixed (0.7.0, 0.8.0)"
+
+
+def test_retired_device_does_not_trigger_behind(monkeypatch) -> None:
+    # a retired board below latest must not raise the restart cue — it's not live fw
+    monkeypatch.setattr(dashboard, "_declared_fw_version", lambda: "0.7.1")
+    v = _versions_block(
+        [_dev("live", "0.7.1"), _dev("old-rig", "0.6.0", retired=True)],
+        {"version": "0.7.1"},
+    )
+    assert v["firmware"]["behind"] == []
+    assert v["restart_needed"] is False
 
 
 # --------------------------------------------------------------------------- #

@@ -308,10 +308,15 @@ def _versions_block(device_groups: list, server: dict) -> dict:
     mix), the one app==server product version, and a 'behind latest / restart
     needed' cue - so the operator never has to ask which build is running.
     """
+    # #856: exclude RETIRED devices from the firmware set — a retired rig's
+    # historical fw (immutable raw, correctly never ages out) must not leak into the
+    # live fw-mixed cue, exactly as the #683 fleet count already excludes it. Groups
+    # without a `retired` key (a bare caller / a test) read as live, so this is
+    # back-compatible.
     fw_by_dev = [
         (g.get("name") or g.get("device_id"), g.get("fw"))
         for g in device_groups
-        if g.get("fw")
+        if g.get("fw") and not g.get("retired")
     ]
     distinct = sorted({fw for _n, fw in fw_by_dev}, key=_ver_tuple)
     fw_value = distinct[0] if len(distinct) == 1 else None
@@ -1325,19 +1330,14 @@ def build_context(
         "devices_stale": stale_devices,
         "stale_after_s": STALE_AFTER_S,
     }
-    # #719: resolve the three versions for the masthead - fleet firmware (value or
-    # the honest mix), the one app==server product version, and a behind/restart
-    # cue. `meta["fw"]` becomes the resolved fleet firmware so the masthead never
-    # shows a bare "fw ?" (it was the latest SEGMENT's fw, which can be blank).
-    versions = _versions_block(device_groups, provenance_block["server"])
-    meta["fw"] = _fw_masthead(versions) or meta["fw"]
-
     # #683: device lifecycle. A board is RETIRED - demoted to a slim row, dropped
     # from the active fleet count - when the registry marks it `retired`, OR when
     # it has been silent for > RETIRE_AFTER_H relative to the freshest reading in
     # the whole fleet (the live edge; deterministic, no wall-clock, so a dead
     # pre-launch test rig auto-demotes without a registry edit). Reversible +
     # honest: raw data is untouched; only the glance view de-emphasizes it.
+    # #856: computed BEFORE the version cue below so the fw-mixed set can exclude
+    # retired boards, exactly as the fleet count does (the ghost 0.8.0 fix).
     _fleet_edge = soil[-1].timestamp_utc
     _retire_cut = _fleet_edge - timedelta(hours=RETIRE_AFTER_H)
     for g in device_groups:
@@ -1357,6 +1357,15 @@ def build_context(
         g["retired_reason"] = (
             "archived" if _reg_retired else ("offline" if _auto else None)
         )
+
+    # #719: resolve the three versions for the masthead - fleet firmware (value or
+    # the honest mix), the one app==server product version, and a behind/restart
+    # cue. `meta["fw"]` becomes the resolved fleet firmware so the masthead never
+    # shows a bare "fw ?" (it was the latest SEGMENT's fw, which can be blank).
+    # #856: the fw set is drawn from LIVE (non-retired) devices only, so a retired
+    # rig's historical firmware (the S3's ghost 0.8.0) never leaks into the cue.
+    versions = _versions_block(device_groups, provenance_block["server"])
+    meta["fw"] = _fw_masthead(versions) or meta["fw"]
 
     # #683: the fleet summary counts only ACTIVE (non-retired) devices + their
     # channels, so a demoted test rig never inflates "N devices · N channels".
