@@ -91,14 +91,14 @@
               <circle cx="120" cy="182" r="5" fill="#ff9e7a" opacity="{{ cheekOpacity }}" style="transition:opacity 1.2s ease;"></circle>
               <g transform="translate(100 172)">
                 <g class="stg-blink" style="transform-origin:89px 172px;">
-                  <circle cx="{{ eyeShiftL }}" cy="0" r="2.8" fill="#243018" opacity="{{ pupilOpacity }}"></circle>
-                  <path d="{{ lidD }}" transform="translate(-11 0)" fill="none" stroke="#243018" stroke-width="2" stroke-linecap="round" opacity="{{ lidOpacity }}"></path>
+                  <circle sc-camel-cx="{{ eyeShiftL }}" cy="0" r="2.8" fill="#243018" opacity="{{ pupilOpacity }}"></circle>
+                  <path sc-camel-d="{{ lidD }}" transform="translate(-11 0)" fill="none" stroke="#243018" stroke-width="2" stroke-linecap="round" opacity="{{ lidOpacity }}"></path>
                 </g>
                 <g class="stg-blink" style="transform-origin:111px 172px;">
-                  <circle cx="{{ eyeShiftR }}" cy="0" r="2.8" fill="#243018" opacity="{{ pupilOpacity }}"></circle>
-                  <path d="{{ lidD }}" transform="translate(11 0)" fill="none" stroke="#243018" stroke-width="2" stroke-linecap="round" opacity="{{ lidOpacity }}"></path>
+                  <circle sc-camel-cx="{{ eyeShiftR }}" cy="0" r="2.8" fill="#243018" opacity="{{ pupilOpacity }}"></circle>
+                  <path sc-camel-d="{{ lidD }}" transform="translate(11 0)" fill="none" stroke="#243018" stroke-width="2" stroke-linecap="round" opacity="{{ lidOpacity }}"></path>
                 </g>
-                <path d="{{ mouthD }}" transform="translate(0 11)" fill="none" stroke="#243018" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="{{ mouthLineOpacity }}"></path>
+                <path sc-camel-d="{{ mouthD }}" transform="translate(0 11)" fill="none" stroke="#243018" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="{{ mouthLineOpacity }}"></path>
                 <ellipse cx="0" cy="12" rx="2.6" ry="3.4" fill="#243018" opacity="{{ mouthOOpacity }}"></ellipse>
               </g>
             </g>

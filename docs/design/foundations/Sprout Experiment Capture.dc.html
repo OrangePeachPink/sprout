@@ -356,11 +356,11 @@
         <sc-if value="{{ noSamples }}" hint-placeholder-val="{{ false }}"><text x="408" y="150" font-family="JetBrains Mono, monospace" font-size="13" fill="var(--muted)" text-anchor="middle">waiting for {{ port }} …</text></sc-if>
         <!-- series -->
         <sc-if value="{{ hasSamples }}" hint-placeholder-val="{{ false }}">
-          <polygon points="{{ areaPoints }}" fill="url(#capFill)"></polygon>
+          <polygon sc-camel-points="{{ areaPoints }}" fill="url(#capFill)"></polygon>
           <sc-for list="{{ series }}" as="s" hint-placeholder-count="4">
-            <polyline points="{{ s.points }}" fill="none" stroke="{{ s.color }}" stroke-width="{{ s.width }}" stroke-opacity="{{ s.opacity }}" stroke-linejoin="round" stroke-linecap="round"></polyline>
+            <polyline sc-camel-points="{{ s.points }}" fill="none" stroke="{{ s.color }}" stroke-width="{{ s.width }}" stroke-opacity="{{ s.opacity }}" stroke-linejoin="round" stroke-linecap="round"></polyline>
           </sc-for>
-          <circle cx="{{ curX }}" cy="{{ curY }}" r="4" fill="var(--st-predicted)"></circle>
+          <circle sc-camel-cx="{{ curX }}" sc-camel-cy="{{ curY }}" r="4" fill="var(--st-predicted)"></circle>
         </sc-if>
       </svg>
       <div style="display:flex; gap:8px 16px; flex-wrap:wrap; margin-top:9px; font-family:var(--font-data); font-size:10.5px; color:var(--muted);">

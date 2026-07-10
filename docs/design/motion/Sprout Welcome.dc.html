@@ -200,8 +200,12 @@
         <div style="display:flex; flex-direction:column; gap:3px;">
           <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:0.05em; color:{{ cardMuted }};">ONE DAY · SOIL SIGNAL</span>
           <svg width="100%" height="34" viewBox="0 0 304 42" preserveAspectRatio="none" style="display:block;">
-            <path d="{{ sparkPath }}" fill="none" stroke="{{ cardMuted }}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"></path>
-            <circle cx="{{ sparkX }}" cy="{{ sparkY }}" r="3.6" fill="{{ bandColor }}"></circle>
+            <!-- #886: geometry attrs carry the binding via the runtime's sc-camel- prefix, so the browser's
+                 SVG parser never sees a moustache in d/cx/cy (it validates those at parse time, BEFORE the
+                 first render substitutes — one console error per attr on every load). Paint attrs
+                 (fill/stroke) are ignored-if-invalid, so they stay plain. Same propGetter key, same render. -->
+            <path sc-camel-d="{{ sparkPath }}" fill="none" stroke="{{ cardMuted }}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"></path>
+            <circle sc-camel-cx="{{ sparkX }}" sc-camel-cy="{{ sparkY }}" r="3.6" fill="{{ bandColor }}"></circle>
           </svg>
         </div>
       </div>
