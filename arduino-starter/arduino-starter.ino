@@ -22,7 +22,12 @@ const long READ_EVERY_MS = 1000;  // how often I check the soil (try 200 — wat
 const int SAMPLES = 8;            // readings I average each check (smooths the jitter)
 
 // --- Calibrate these two to YOUR probe (the fun part — go measure!) ---
-// Example values for a 10-bit Uno R4 read (0-1023); yours WILL differ - that's the whole point.
+// ILLUSTRATIVE 10-bit Uno R4 numbers (0-1023) — yours WILL differ, that's the whole
+// point: MEASURE + replace them. (Sprout Full's real, bench-measured per-board anchors
+// now live in firmware/include/cal_class_defaults.h (#952) — but those are 12-bit ESP32
+// values at a different ADC reference, so they do NOT transfer to the R4 as-is; your R4
+// numbers are yours to measure. When you graduate to Sprout Full, that file is where a
+// board's honest dry/wet anchors are sourced.)
 const int DRY_READING = 600;  // what you saw with the probe in dry AIR
 const int WET_READING = 260;  // what you saw with the probe in a CUP OF WATER
 
