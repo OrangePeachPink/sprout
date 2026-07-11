@@ -76,7 +76,11 @@ OTA path*" is the network-era extension of that rule. **The maker door is delibe
 can always USB-reflash any image (their board, their project) — the signature check gates the *remote* path, not
 the cable. **Open (Firmware):** signing-key custody — where the private key lives, how the embedded public key is
 stored and survives a factory reset — is Firmware's mechanics call; this ADR mandates *that* software signing
-happens, not the key ceremony.
+happens, not the key ceremony. **Concretized (2026-07-11, maintainer-approved, #989):** the scheme is
+**ed25519** — small, modern, software-verifiable on the ESP32 with no eFuse; the boring default. The private
+key lives only in the `SPROUT_SIGNING_KEY` GitHub Actions secret (CI is the sole signer, never a personal
+machine); the public key is committed (`firmware/keys/`) so the running firmware + web-flasher verify against
+a repo-shipped key. Ceremony + rotation: `docs/process/signing-key-ceremony.md`.
 
 ### 3. A/B partitions + confirmed-boot rollback — no brick on a bad update
 
