@@ -26,7 +26,7 @@ maintainer, and a curious community member each find their own path from one pag
 | [Trust your sensor](user/trust-your-sensor.md) | Why the readings are honest, and when to doubt one. |
 | [Friendly troubleshooting](user/friendly-troubleshooting.md) | It's acting up — plain-language fixes. |
 | [Operating collection](operating-collection.md) | Start/stop/reclaim collection headlessly, without the dashboard. |
-| [Wiring](WIRING.md) · [Sensor calibration](SENSOR_CALIBRATION.md) · [Sensor QA](../SENSOR_QA.md) | The hardware specifics. |
+| [Wiring](WIRING.md) · [Sensor calibration](SENSOR_CALIBRATION.md) · [Sensor QA](SENSOR_QA.md) | The hardware specifics. |
 | [Glossary](GLOSSARY.md) | Every Sprout term in one place (shared with contributors). |
 
 ---
@@ -57,7 +57,7 @@ maintainer, and a curious community member each find their own path from one pag
 | [Discussions](community/discussions.md) | Where questions and "should we…?" ideas go. |
 | [Release-notes voice](community/release-notes-voice.md) | How Sprout talks about what shipped. |
 | [Changelog](../CHANGELOG.md) | What actually shipped, per release. |
-| [Code of Conduct](../CODE_OF_CONDUCT.md) · [Security policy](../SECURITY.md) | The ground rules and how to report a concern. |
+| [Code of Conduct](../.github/CODE_OF_CONDUCT.md) · [Security policy](../.github/SECURITY.md) | The ground rules and how to report a concern. |
 
 ---
 

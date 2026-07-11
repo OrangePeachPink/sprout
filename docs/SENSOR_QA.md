@@ -38,7 +38,7 @@ for **AOUT** (analog out); cosmetic only.
 ## Known defects checked
 
 Source: Flaura project (Martin Uhlmann), "82% of capacitive soil moisture sensors are faulty."
-Full detail and citations in [`docs/RESEARCH_capacitive_soil_moisture_sensors.md`](docs/RESEARCH_capacitive_soil_moisture_sensors.md).
+Full detail and citations in [`RESEARCH_capacitive_soil_moisture_sensors.md`](RESEARCH_capacitive_soil_moisture_sensors.md).
 
 1. **Missing 3.0 V voltage regulator** - some boards omit the `662K` regulator and bridge the pads, so
    output drifts with supply voltage (bad on battery).
