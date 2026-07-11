@@ -1,13 +1,11 @@
 # ADR-0030 — Version identity, build provenance & display contract
 
-**Status:** Proposed — *drafted by Trellis (2026-07-07) from #831 during the v0.8.0 bench gap. **Accepted —
-maintainer-ratified 2026-07-10 (v0.7.2 ADR batch)**: packaging fork ruled **A (standalone)** on concern-separation
-grounds (number policy vs identity/display; ADR-0000 §4 permits editing 0009 — that was not the deciding leg).
-Ratified **with one added AC**: every surface answers "what exactly am I running" to **build-instance granularity,
-firmware AND the served dashboard** (Diagnostics shows the server's running git hash) — the intra-release "did the
-flash take / is the feature in my loaded build" case is in scope, not just cut releases.* This ADR lays out the
-options so
-planning is a short decision, not a discovery.
+**Status:** Accepted — maintainer-ratified 2026-07-10 (v0.7.2 ADR batch, #915). Packaging fork ruled **A
+(standalone)** on concern-separation grounds (number policy vs identity/display; ADR-0000 §4 permits editing 0009 —
+that was not the deciding leg). Ratified **with one added AC**: every surface answers "what exactly am I running" to
+**build-instance granularity, firmware AND the served dashboard** (Diagnostics shows the server's running git hash)
+— the intra-release "did the flash take / is the feature in my loaded build" case is in scope, not just cut
+releases. *Drafted by Trellis (2026-07-07) from #831 during the v0.8.0 bench gap.*
 **Date:** 2026-07-07
 **Owner:** Trellis (architecture) — the identity/display scheme; cross-lane build below
 **Lane:** architecture (cross-lane: Firmware · Design · Workflow)
