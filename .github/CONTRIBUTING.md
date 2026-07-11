@@ -91,10 +91,10 @@ maintainer confirms `area:` / `layer:` at triage.
 5. **Open a PR** and fill in the template. Link the issue with **`Refs #N`** or **`Part of #N`** —
    **not** `Closes #N` (see the gate below). Include how you verified the change.
 6. PRs are **squash-merged** — one clean commit per change; the branch auto-deletes after merge.
-7. **Who merges:** the maintainer — except that for some pre-scoped internal work items the maintainer
-   delegates the merge to the verification process under audited guardrails (`velocity:v2` label; see
-   AGENTS.md § Velocity modes). **Community contributions always get direct maintainer review and merge** —
-   the delegation never applies to external PRs.
+7. **It gets reviewed, then merged.** Someone other than the author checks your PR against the issue's
+   acceptance criteria; once it passes, it's merged. **Community contributions always get direct maintainer
+   review** — no exceptions. *(How the maintainer's internal review runs — including a faster path used only
+   for pre-scoped internal work — is in [AGENTS.md](../AGENTS.md); you don't need it to contribute.)*
 
 > **`just check` needs one more tool than `just start` does.** `uv sync` + `just` alone are enough to run the
 > dashboard and the *lint/format* hooks — but `just check` also runs `just test`, which **unconditionally**
@@ -175,10 +175,18 @@ and gives a safe clean-reset runbook.
 > ([#387](https://github.com/OrangePeachPink/sprout/issues/387)) — it hands back the tunable constants and
 > shared terms, then graduates you to this VS Code / Codespaces project.
 
-## The lifecycle & the verification gate (Workflow certifies, then the maintainer merges)
+## How a change gets reviewed and merged
 
-A PR is never merged until **Workflow** has *independently* certified it — not just rubber-stamped the lane's
-own report. The full pipeline, with who owns each stage and what's expected:
+**In one line:** you open a PR; someone *other than the author* checks it against the issue's acceptance
+criteria; once it passes, it's merged. That independent check is the whole point — nothing merges on the
+author's say-so alone.
+
+**You don't need the rest of this section to contribute.** What follows is how that review runs *internally* —
+written for the maintainer and the AI workstreams (we call them "lanes") that do the day-to-day building. Read
+it if you're curious how the sausage is made; skip it if you just want to open a good PR.
+
+A PR is never merged until it's been *independently* verified — not rubber-stamped by whoever built it. The
+full pipeline, with who owns each stage:
 
 **Backlog → In Progress → Needs Verification → Ready to Merge → Done** · *Won't Do*
 
