@@ -27,7 +27,7 @@ becomes load-bearing, confirm it against the cited primary source.
 
 The "82% faulty" and "53% missing-resistor" figures are **one researcher's sample statistics**
 (Martin Uhlmann, 38 boards), corroborated by other teardowns - widespread, but not a guarantee
-about any individual board. (Our own four units passed; see [`../SENSOR_QA.md`](../SENSOR_QA.md).)
+about any individual board. (Our own four units passed; see [`SENSOR_QA.md`](SENSOR_QA.md).)
 
 ---
 
@@ -109,7 +109,7 @@ value**. That quietly ruins any "take 5 readings and average / reject outliers" 
 **Multimeter:**
 
 - *Issue 3, unpowered:* resistance from **AOUT to GND** should be a stable **~1 Mohm**; open / "OL"
-  in both directions = the defect. (This is the test used in [`../SENSOR_QA.md`](../SENSOR_QA.md).)
+  in both directions = the defect. (This is the test used in [`SENSOR_QA.md`](SENSOR_QA.md).)
 - *Functional, powered:* in dry air the output reads high (~3.0 V) and should **drop promptly
   (~1 s)** to ~1.2-1.7 V when the probe is dunked in water. A defective (ungrounded-R4) board pegs
   high and barely moves, or moves over many seconds. A missing-R4 board can read ~95% of supply in

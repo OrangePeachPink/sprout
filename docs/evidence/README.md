@@ -18,7 +18,7 @@
 > without the list itself ever being committed.
 
 Visual evidence captured during bring-up of the **plants** ESP32 auto-watering controller, organized by
-subject. Cross-referenced from [`../../SENSOR_QA.md`](../../SENSOR_QA.md), [`../WIRING.md`](../WIRING.md),
+subject. Cross-referenced from [`../SENSOR_QA.md`](../SENSOR_QA.md), [`../WIRING.md`](../WIRING.md),
 and [`../BRINGUP.md`](../BRINGUP.md).
 
 > The short `.mov` clips that iOS auto-attached to some stills have been removed; only the JPEG/PNG
