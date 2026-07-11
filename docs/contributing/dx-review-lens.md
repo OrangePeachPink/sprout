@@ -27,4 +27,24 @@ This is the operational half of the **out-of-box fence** in the
 [design doctrine §3](../design/foundations/design-doctrine.md) — it fences required **skills, tools, and
 physical modifications** (ADR-0028 fences required *parts*).
 
+---
+
+## 2. One bug is a class (prove the class is empty)
+
+**A single-instance defect report is never a one-off — it's the first sighting of a class, and the fix
+isn't done until the class is swept.** When a bug is filed, the DX reviewer asks *what's the general shape
+of this, and where else does it live?* — then sweeps the tree for siblings and either fixes them or files
+them, so the closing evidence reads "the class is empty," not just "this instance is fixed."
+(#895 house standard.)
+
+**Precedent — [#908](https://github.com/OrangePeachPink/sprout/issues/908).** One reported broken
+contributor link (`/blob/HEAD/`) was the visible tip of a link-integrity class; the DX audit swept every
+tracked doc, which surfaced the internal sweep (#911) and the broken-image page (#912) that the single
+report never mentioned. The maintainer shouldn't have to ask "did you check the rest?" — the sweep is the
+default, and the answer ships with the fix.
+
+The automated form of this rule for the link class is the **link-check gate**
+([#913](https://github.com/OrangePeachPink/sprout/issues/913), `tools/dx/link_check.py`): once a class can
+be mechanically swept, the gate keeps it empty so no one re-sweeps by hand.
+
 *— DX 🌱*

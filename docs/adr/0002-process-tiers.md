@@ -66,6 +66,17 @@ architecture → assurance.
 > because v1 reformatted whole changed files. History: changed-*files* v1 (#343) → changed-*lines* v2 (#352,
 > landed).
 
+<!-- -->
+
+> **Note on #10 — custom internal gates run uv-native, not on a new toolchain (#259/#524; #913 ruling):**
+> a lane-specific check (identifier-guard #558, link-check #913) is a `uv run python tools/dx/*.py`
+> pre-commit hook, **never a new ambient binary** (Rust/Docker/etc.). Rationale: the gate must run
+> **identically local and in CI** (`pre-commit run --all-files` — the local==CI parity #524 bled for), and
+> the repo keeps **no ambient toolchain** (#259, "no ambient compiler"). A standard external tool still
+> earns its place where it uniquely shines *and* its cadence fits — `lychee` runs the **external**-link
+> check in `weekly-battery.yml` (network-bound, weekly), while the **internal / offline** per-PR link gate
+> is the uv-native hook. Custom-here is justified by that **named toolchain gap**, not preference.
+
 ## Consequences
 
 - The project gains a recorded, right-sized process baseline instead of an implicit one.
