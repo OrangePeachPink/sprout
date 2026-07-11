@@ -111,6 +111,16 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
   display: inline-flex; align-items: center; gap: 7px; margin-left: auto; }
 .capstatus::before { content: ""; width: 8px; height: 8px; border-radius: var(--r-pill);
   background: currentColor; }
+/* #979: the recording-honesty banner — calm/info register, NEVER the fault alarm. A
+   muted card with a small dot; "not recording" is a state to know, not an error. */
+.recbanner { margin-top: 7px; padding: 7px 11px; border-radius: var(--r-pill, 8px);
+  font-size: 13px; color: var(--ink);
+  background: color-mix(in srgb, var(--muted) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--muted) 30%, transparent);
+  display: inline-flex; align-items: center; gap: 6px; }
+.recbanner::before { content: ""; width: 8px; height: 8px; border-radius: var(--r-pill);
+  background: var(--muted); flex: none; }
+.recbanner .recnote { color: var(--muted); font-family: var(--font-data); }
 .caphint { font-family: var(--font-data); font-size: 10px; color: var(--muted); text-transform: none; min-height: 12px; }
 .capstatus.run { color: var(--leaf); font-weight: 600; }
 .capstatus.run::before { box-shadow: 0 0 8px currentColor;
@@ -355,6 +365,9 @@ footer.prov code { font-family: var(--font-data); }
       <h1>🌱 Sprout — soil moisture</h1>
       <div class="orient" id="orient" style="color:var(--ink);font-size:13px;margin-top:5px;max-width:64ch"></div>
       <div class="sub" id="subline"></div>
+      <!-- #979: the "am I recording?" answer, where her eye already is. Shown ONLY when
+           collection is stopped AND live rows are rendering — calm/info, never a fault. -->
+      <div class="recbanner" id="recBanner" hidden></div>
     </div>
     <div class="controls">
       <div class="chansel" id="chansel"></div>
@@ -404,8 +417,9 @@ footer.prov code { font-family: var(--font-data); }
          stated reason. The serial-only baseline control moved to Diagnostics (the #872
          collapse) — the operator shouldn't have to know serial vs WiFi to start. -->
     <div class="capctl">
-      <button class="btn primary" id="collStart" type="button">▶ Start logging</button>
-      <button class="btn" id="collStop" type="button" disabled>■ Stop logging</button>
+      <!-- #980: ONE dual-state button — its face IS the state (Start when stopped, Stop
+           when running). No more two-buttons-with-disabled-styling. -->
+      <button class="btn primary" id="collToggle" type="button">▶ Start logging</button>
       <span class="capstatus" id="collStatus">—</span>
     </div>
     <div id="serialOwner" class="serialowner" hidden></div>
@@ -623,6 +637,7 @@ function renderHeader(){
     `${devCount} device${devCount === 1 ? '' : 's'} · ${chCount} channels${retiredBit} · ` +
     `fw <span class="mono">${m.fw||'?'}</span>${appBit} · ${fmt(DASH.integrity.total)} readings · ` +
     `${m.total_hours}h since ${m.start_display || m.start_local}${cue}`;
+  renderRecordingBanner();  // #979: re-evaluate on each data render (rows may have changed)
   const tc = document.getElementById('trajCount');
   // #718: plant-first, and name the window so it reads as history over a range.
   // #807: count the LIVE plotted channels (trajectory.plant_count), not every
@@ -2030,36 +2045,84 @@ function collDescribe(st){
     .map(s => s.give_up_reason || (s.state === 'skipped' ? s.reason : '')).filter(Boolean)[0];
   return why ? ('stopped — ' + why) : 'not logging';
 }
+// #979: the ONE collection truth, shared across the three cluster surfaces so the button
+// face, the status line, and the recording banner can never disagree. null until the
+// first /collection/status poll resolves (unknown, not "stopped").
+let __collecting = null;
 function collRender(st){
-  const start = document.getElementById('collStart'), stop = document.getElementById('collStop');
   const on = !!st.collecting;
-  start.disabled = on; stop.disabled = !on;
+  __collecting = on;
+  // #980: the button's face IS the state. Start (primary) when stopped; Stop (neutral,
+  // NOT danger-red — stopping logging isn't destructive) when running. The transitional
+  // "starting…/stopping…" faces are set by collStart/collStop; a fresh status flips back.
+  const btn = document.getElementById('collToggle');
+  if(btn){
+    btn.textContent = on ? '■ Stop logging' : '▶ Start logging';
+    btn.className = 'btn' + (on ? '' : ' primary');
+    btn.disabled = false;
+    btn.dataset.on = on ? '1' : '';
+  }
   const box = document.getElementById('collStatus');
   const text = collDescribe(st);
   box.textContent = text;
   // #974: a loud give-up ("stopped — …") reads as a fault, not a calm resting state.
   const err = !on && text.indexOf('stopped — ') === 0;
   box.className = 'capstatus' + (on ? ' run' : (err ? ' err' : ''));
+  renderRecordingBanner();  // #979: keep the banner in lockstep with the button + line
+}
+// #979: the recording-honesty banner. A stopped logger + live board ring-buffers render
+// IDENTICALLY to recording (the boards sample autonomously; the dashboard fetches their
+// ring-buffer every build), so "816 readings" read as a recording when nothing was being
+// saved. When collection is STOPPED but rows are on screen, say so plainly — calm, never a
+// fault (#977 law). One source (__collecting), agreeing with #980's button + #974's line.
+function renderRecordingBanner(){
+  const el = document.getElementById('recBanner');
+  if(!el) return;
+  const rows = (typeof DASH !== 'undefined' && DASH.integrity) ? (DASH.integrity.total || 0) : 0;
+  // only the STOPPED-but-live state carries the honesty burden; running (recording) is the
+  // normal case and needs no banner; 'unknown' (pre-first-poll, __collecting===null) never accuses.
+  const show = __collecting === false && rows > 0;
+  el.hidden = !show;
+  if(!show){ el.innerHTML = ''; return; }
+  el.innerHTML =
+    '<strong>Viewing live sensors — not recording.</strong> '
+    + '<a href="#" id="recStart">Start logging to save.</a>'
+    + `<span class="recnote">· ${fmt(rows)} live · unsaved</span>`;
+  const a = document.getElementById('recStart');
+  if(a) a.onclick = (e) => { e.preventDefault(); collStart(); };
 }
 async function collPoll(){
   try{ collRender((await apiJson('/collection/status', {cache:'no-store'})).data); }
   catch(e){ /* transient or old server without the route — keep last state */ }
 }
+// #980: one click, the right direction — start if stopped, stop if running.
+async function collToggle(){
+  const btn = document.getElementById('collToggle');
+  if(btn && btn.dataset.on === '1'){ await collStop(); } else { await collStart(); }
+}
+function _collTransition(face){  // #980: transitional face — disabled, muted (no state flip yet)
+  const btn = document.getElementById('collToggle');
+  if(btn){ btn.textContent = face; btn.disabled = true; }
+}
 async function collStart(){
   const box = document.getElementById('collStatus'); box.textContent = 'starting…';
+  _collTransition('▶ starting…');
   const port = document.getElementById('monPort').value.trim();
   try{
     const { ok, status, data } = await apiJson('/collection/start', {
       method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({port: port || null}),
     });
-    if(!ok){ box.textContent = 'refused: ' + (data.error || ('HTTP ' + status)); box.className = 'capstatus err'; monPoll(); return; }
+    // #980: a refusal shows in the STATUS LINE, never on the button (the face stays a
+    // clean state readout); collRender flips the face back to Start on the fresh status.
+    if(!ok){ box.textContent = 'refused: ' + (data.error || ('HTTP ' + status)); box.className = 'capstatus err'; collPoll(); monPoll(); return; }
     collRender(data); monPoll();  // the serial half also shows on the Monitor row
-  }catch(e){ box.textContent = 'start failed: ' + e; box.className = 'capstatus err'; }
+  }catch(e){ box.textContent = 'start failed: ' + e; box.className = 'capstatus err'; collPoll(); }
 }
 async function collStop(){
   const box = document.getElementById('collStatus'); box.textContent = 'stopping…';
+  _collTransition('■ stopping…');
   try{ collRender((await apiJson('/collection/stop', {method:'POST'})).data); monPoll(); }
-  catch(e){ box.textContent = 'stop failed: ' + e; box.className = 'capstatus err'; }
+  catch(e){ box.textContent = 'stop failed: ' + e; box.className = 'capstatus err'; collPoll(); }
 }
 let quitArmed = false;
 async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's not a 1-click kill
@@ -2147,8 +2210,7 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
     if(capDraftBtn){ capDraftBtn.addEventListener('click', capDraftLoad); capLoadDraftList(); }
     monStartBtn.addEventListener('click', monStart);
     monStopBtn.addEventListener('click', monStop);
-    document.getElementById('collStart').addEventListener('click', collStart);   // #588
-    document.getElementById('collStop').addEventListener('click', collStop);
+    document.getElementById('collToggle').addEventListener('click', collToggle);  // #980
     monPoll();  // reflect the logger's current state on load
     collPoll(); // ...and the combined collection plane (#588)
     monPollTimer = setInterval(() => { monPoll(); collPoll(); }, 5000);  // keep it live (handoff #129) + stoppable on API-down (#130)
@@ -2161,8 +2223,7 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
   } else {
     capStartBtn.disabled = true; capStopBtn.disabled = true;
     monStartBtn.disabled = true; monStopBtn.disabled = true;
-    document.getElementById('collStart').disabled = true;   // #588: snapshot = no control plane
-    document.getElementById('collStop').disabled = true;
+    document.getElementById('collToggle').disabled = true;  // #588/#980: snapshot = no control plane
     capSetStatus('serve via serve.py for capture control');
     monSetStatus('serve via serve.py for monitor control');
   }
