@@ -28,7 +28,6 @@ brand tokens; this is the honest functional render.
 
 from __future__ import annotations
 
-import csv
 import re
 import sys
 from pathlib import Path
@@ -49,22 +48,15 @@ from bench_arc_view import (  # noqa: E402
     _y_for,
 )
 
-_ML_PER_CUP = 236.588  # US legal cup — the measure the doses were poured with
-_HEADER_KV = re.compile(r"(\w+)=(.*?)(?=\s+\w+=|$)")
-# The maintainer-flagged fault window (packet README, 2026-07-08): p02/s2 dose 3.
-_SUSPECT = frozenset({("p02", 3)})
-
-
-def _int(s: object) -> int | None:
-    try:
-        return int(str(s).strip())
-    except (TypeError, ValueError):
-        return None
-
-
-def _dose_n(name: str) -> int:
-    m = re.search(r"-d(\d+)\.csv$", name)
-    return int(m.group(1)) if m else 1
+# #909: share the capture parser + its dose helpers with watering_events — one parse of
+# the dose-capture header/rows, not a second inline copy (both views read one source).
+from watering_events import (  # noqa: E402
+    _ML_PER_CUP,
+    _SUSPECT_DOSES,
+    _dose_n,
+    _int,
+    parse_capture,
+)
 
 
 def build_arcs(captures_dir: str | Path | None = None) -> list[dict]:
@@ -75,38 +67,16 @@ def build_arcs(captures_dir: str | Path | None = None) -> list[dict]:
     for p in sorted(root.glob("p*.csv")):
         if not re.match(r"p\d", p.name) or _dose_n(p.name) != 1:
             continue  # base dose only; snapshots (22h-/24h-) don't match p\d
-        header: dict[str, str] = {}
-        cols: list[str] = []
-        raws: list[int] = []
-        for raw_line in p.read_text(encoding="utf-8").splitlines():
-            line = raw_line.strip()
-            if not line:
-                continue
-            if line.startswith("#"):
-                header.update(
-                    {k: v.strip() for k, v in _HEADER_KV.findall(line.lstrip("#"))}
-                )
-                continue
-            fields = next(csv.reader([line]))
-            if not cols:
-                cols = fields
-                continue
-            r = _int(dict(zip(cols, fields, strict=False)).get("raw"))
-            if r is not None:
-                raws.append(r)
+        cap = parse_capture(p)  # #909: the shared header+rows parser
+        raws = [v for v in (_int(r.get("raw")) for r in cap["rows"]) if v is not None]
         if not raws:
             continue  # honest gap: nothing to plot
-        pid, _, pname = header.get("plant", "").partition(" ")
-        pname = re.sub(r"\s+d\d+$", "", pname).strip()
-        try:
-            dose_ml = float(header["dose_ml"]) if header.get("dose_ml") else None
-        except ValueError:
-            dose_ml = None
+        dose_ml = cap["dose_ml"]
         arcs.append(
             {
-                "plant_id": pid or p.stem,
-                "plant": pname or None,
-                "probe": header.get("sensor"),
+                "plant_id": cap["plant_id"] or p.stem,
+                "plant": cap["plant"],
+                "probe": cap["sensor"],
                 "dose_cups": round(dose_ml / _ML_PER_CUP, 2)
                 if dose_ml is not None
                 else None,
@@ -114,7 +84,7 @@ def build_arcs(captures_dir: str | Path | None = None) -> list[dict]:
                 "wettest": min(raws),
                 "settle": raws[-1],
                 "n": len(raws),
-                "suspect": (pid, _dose_n(p.name)) in _SUSPECT,
+                "suspect": (cap["plant_id"], cap["dose_n"]) in _SUSPECT_DOSES,
             }
         )
     return arcs
