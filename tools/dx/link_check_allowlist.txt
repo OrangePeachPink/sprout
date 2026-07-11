@@ -6,12 +6,8 @@
 # (its ticket closes); the gate then enforces that it stays fixed. Nothing here is "ignore
 # forever" — every line owes a ticket.
 
-# --- #912 — 5 broken images on the served "Trust Your Sensor" design page (Design owns) ---
-docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor_photos/IMG_0529.JPEG
-docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor_photos/IMG_0527.JPEG
-docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor_photos/IMG_0526.JPEG
-docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor_photos/IMG_0537.JPEG
-docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor_photos/IMG_0528.JPEG
+# --- #912 — Trust-Your-Sensor images: ALL FIVE FIXED (PR #937, recovered originals,
+#     EXIF-verified zero) — this section is empty by design; the gate now enforces them. ---
 
 # --- #911 — internal-doc link sweep: ALL SIX findings FIXED (4 direct, 5 via the
 #     bench-procedures repoint, 6/7 via #960, 8b via #955) — this section is empty
