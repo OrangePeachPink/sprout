@@ -177,6 +177,13 @@ _EID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")  # no traversal from a sta
 # catch-all from writing a 500 down the now-dead socket (the cascaded double traceback).
 _CLIENT_GONE = (ConnectionAbortedError, BrokenPipeError, ConnectionResetError)
 
+# #972: Stop-server must preempt the request pile, never hang. When /quit fires we set
+# this event so every NEW request is refused fast (a cheap 503, no expensive build)
+# while in-flight handlers drain; a bounded grace then hard-exits (os._exit) so the
+# off-switch is always prompt even under a slow-build pileup - no terminal Ctrl-C dance.
+_STOPPING = threading.Event()
+_STOP_GRACE_S = 2.5
+
 
 class NoDataYet(Exception):
     """Discovery found zero readings (#543) - not a parse error. ``had_any_logged``
@@ -613,6 +620,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
         self._send_raw(raw, docs_content_type(target.name))
 
     def do_GET(self) -> None:  # http.server dispatch name
+        if _STOPPING.is_set():  # #972: refuse new work the instant Stop is pressed
+            self._send_json({"stopping": True}, status=503)
+            return
         parsed = urlparse(self.path)
         q = parse_qs(parsed.query)
         # #918: default to the bounded window the client opens with (not all-history),
@@ -620,6 +630,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
         rng = q.get("range", [_DEFAULT_RANGE])[0]  # the label, for the #953 perf log
         hours = RANGE_HOURS.get(rng)  # "all" -> None
         channels = [c for c in q.get("channels", [""])[0].split(",") if c] or None
+        # #972 test hook: a deliberately-slow handler to prove Stop preempts an
+        # in-flight build. Gated behind SPROUT_TEST_SLOW; absent in a real run.
+        if parsed.path == "/debug/slow" and os.environ.get("SPROUT_TEST_SLOW"):
+            time.sleep(float(q.get("s", ["5"])[0]))
+            self._send_json({"slept": True})
+            return
         try:
             if parsed.path in ("/", "/index.html"):
                 ctx = _context(self.inputs, hours, channels)
@@ -703,6 +719,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send(f"error: {exc}", "text/plain; charset=utf-8", status=500)
 
     def do_POST(self) -> None:  # http.server dispatch name (the control plane)
+        if _STOPPING.is_set():  # #972: already stopping — refuse further control posts
+            self._send_json({"stopping": True}, status=503)
+            return
         parsed = urlparse(self.path)
         try:
             if parsed.path == "/capture/start":
@@ -788,14 +807,27 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
                 def _shutdown() -> None:
                     time.sleep(0.25)  # let the {stopped:true} ack flush to the browser
+                    # #972: refuse new work NOW, so a live-view poll can't replenish the
+                    # in-flight pile and starve the stop. The console entry is loud -
+                    # the maintainer saw *nothing* logged before (the switch felt dead).
+                    _STOPPING.set()
+                    sys.stderr.write("Sprout server: Stop pressed - shutting down.\n")
+                    sys.stderr.flush()
                     # One-action quit (#151 AC3): tear down any child the server
-                    # started - the capture/logger process - so "Stop server" closes
-                    # the WHOLE stack, not just the web server. Best-effort: a child
-                    # that's already gone or slow to stop must not block shutdown.
+                    # started - the capture/logger process - so "Stop server" closes the
+                    # WHOLE stack. Best-effort: a slow/gone child must not block us.
                     for controller in (_CAPTURE, _MONITOR, _FLEET):
                         with contextlib.suppress(Exception):
                             controller.stop()
-                    self.server.shutdown()
+                    with contextlib.suppress(Exception):
+                        self.server.shutdown()  # stop accepting; unblock serve_forever
+                    # #972: give in-flight handlers a bounded grace to drain, then HARD
+                    # exit - never wait forever on a slow build (server_close would join
+                    # the 14-24s build threads and hang, the exact reported failure).
+                    time.sleep(_STOP_GRACE_S)
+                    sys.stderr.write("Sprout server: stopped.\n")
+                    sys.stderr.flush()
+                    os._exit(0)
 
                 threading.Thread(target=_shutdown, daemon=True).start()
             else:
@@ -932,6 +964,9 @@ def main(argv: list[str] | None = None) -> int:
     DashboardHandler.inputs = args.inputs or None
     try:
         httpd = ThreadingHTTPServer((args.host, args.port), DashboardHandler)
+        # #972: handler threads are daemons, so a slow in-flight build never blocks
+        # process exit (server_close won't join them) - the stop path stays prompt.
+        httpd.daemon_threads = True
     except OSError as exc:  # lost the race between the probe and the bind
         if getattr(exc, "errno", None) == errno.EADDRINUSE:
             # Someone bound between our probe and here. Single-instance still holds:
