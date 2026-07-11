@@ -10,18 +10,37 @@ REM  Public-clean: every path is relative to this script - no user path, no port
 REM  literal. Stop Sprout from the dashboard's "Stop server" button; you can just
 REM  close this window too.
 REM ============================================================================
-setlocal
+setlocal enabledelayedexpansion
 title Sprout
 REM repo root = two levels up from tools\launch\ (works no matter where you launch from)
 cd /d "%~dp0..\.."
 
 REM Self-update so the icon never serves stale code (#127). Non-fatal: offline / a
-REM non-fast-forward tree just launches what's on disk. GIT_TERMINAL_PROMPT=0 means a
-REM credential prompt FAILS FAST instead of hanging - a launcher must never block entry
-REM (Firmware review catch, #132).
+REM non-fast-forward tree / a detached root just launches what's on disk. But it says
+REM so, with the running sha, instead of implying success (#975 - a silent skip served
+REM stale code 3x). GIT_TERMINAL_PROMPT=0 means a credential prompt FAILS FAST instead of
+REM hanging - a launcher must never block entry (Firmware review catch, #132).
 echo [sprout] checking for updates...
 set GIT_TERMINAL_PROMPT=0
-git pull --ff-only 2>nul
+set "OLD=unknown"
+for /f "delims=" %%i in ('git rev-parse --short HEAD 2^>nul') do set "OLD=%%i"
+git pull --ff-only >nul 2>nul
+set "PULL_RC=%errorlevel%"
+set "SHA=%OLD%"
+for /f "delims=" %%i in ('git rev-parse --short HEAD 2^>nul') do set "SHA=%%i"
+if "%PULL_RC%"=="0" (
+  if "!OLD!"=="!SHA!" (
+    echo [sprout] up to date - running !SHA!
+  ) else (
+    echo [sprout] updated to !SHA!
+  )
+) else (
+  REM Say WHY the pull couldn't happen. A detached root - the agent-parked case that
+  REM served stale code - is the common culprit; offline / non-ff share the generic line.
+  set "WHY=offline, or a non-fast-forward tree"
+  git symbolic-ref -q HEAD >nul 2>nul || set "WHY=detached HEAD - the repo root isn't on a branch"
+  echo [sprout] update skipped ^(!WHY!^) - running !SHA!
+)
 
 where just >nul 2>nul
 if %errorlevel%==0 (
