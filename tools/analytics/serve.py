@@ -28,6 +28,7 @@ import argparse
 import contextlib
 import errno
 import json
+import os
 import re
 import socket
 import sys
@@ -438,6 +439,58 @@ def _window_inputs(inputs: list[str], hours: float | None, now: datetime) -> lis
     return [str(p) for p in (undated + keep)]
 
 
+# #953: first-load / range-switch decomposition. The maintainer's lived report - first
+# paint 15-18 s, a range switch ~10 s - needs to be *attributable* (the parse? the
+# cache-merge? the row filter? build_context?) before we optimize the right phase. So a
+# full build (`/` or `/data.json`) that crosses a slowness threshold logs a one-line
+# phase breakdown to the server console she already watches - no profiling CLI to run
+# "on her machine". Fast cached polls (the live view's timer) stay silent: only a build
+# at/over SPROUT_PERF_MIN_MS logs, so the log captures the slow events, not the noise.
+_PERF_MIN_MS = int(os.environ.get("SPROUT_PERF_MIN_MS", "1500"))
+
+
+class _PhaseTimer:
+    """Cumulative per-phase wall-clock. ``mark(name)`` records the delta since the last
+    mark (or construction); ``snapshot`` returns integer-millisecond phases plus the
+    counts (readings, files) passed in, for ``ctx['meta']['perf']``."""
+
+    __slots__ = ("_phases", "_t0")
+
+    def __init__(self) -> None:
+        self._t0 = time.perf_counter()
+        self._phases: dict[str, float] = {}
+
+    def mark(self, name: str) -> None:
+        now = time.perf_counter()
+        self._phases[name] = self._phases.get(name, 0.0) + (now - self._t0)
+        self._t0 = now
+
+    def snapshot(self, **counts: int) -> dict:
+        return {
+            "phases": {k: round(v * 1000) for k, v in self._phases.items()},
+            **counts,
+        }
+
+
+def _perf_log(ctx: dict, final_name: str, final_s: float, rng: str) -> None:
+    """Emit the #953 one-line decomposition to stderr, but only for a slow build
+    (``total >= SPROUT_PERF_MIN_MS``) so the live view's fast polls stay quiet.
+    ``final_name`` is the post-``_context`` phase (render/serialize)."""
+    perf = ctx.get("meta", {}).get("perf")
+    if not perf:
+        return
+    phases = dict(perf["phases"])
+    phases[final_name] = round(final_s * 1000)
+    total = sum(phases.values())
+    if total < _PERF_MIN_MS:
+        return
+    parts = " ".join(f"{k}={v}ms" for k, v in phases.items())
+    sys.stderr.write(
+        f"[perf] range={rng} {parts} total={total}ms "
+        f"({perf.get('readings', '?')} readings, {perf.get('files', '?')} files)\n"
+    )
+
+
 def _context(
     inputs: list[str] | None = None,
     hours: float | None = None,
@@ -447,16 +500,19 @@ def _context(
     # Re-discover files on every request (fix #39): a list frozen at startup
     # misses log files created later (a UTC-midnight rotation, a reconnect), so
     # a long-running server would silently go stale. None => auto-discover.
+    perf = _PhaseTimer()  # #953: phase decomposition (see _perf_log)
     resolved = inputs or gather_inputs()
     # #918: window the file set to the requested range BEFORE parsing, so a 7d view
     # never parses the whole corpus (the headline dashboard-load cost).
     now = datetime.now(timezone.utc)
     windowed = _window_inputs(resolved, hours, now)
+    perf.mark("select")
     # #602: one registry load per request, shared by the fleet adapter, the
     # channel filter's identity coalesce, and build_context's grouping.
     reg = registry if registry is not None else load_registry()
     # #277/#486: reads through the source-adapter seam - see source_adapter.py.
     data = _fleet_adapter(reg).load(windowed)
+    perf.mark("load")
     all_ch = sorted(
         {r.sensor_id for r in data.readings if r.record_type.startswith("plants.soil")}
     )
@@ -464,10 +520,17 @@ def _context(
     data = filter_since(
         filter_channels(data, channels, canonical=reg.canonical_for), hours
     )
+    perf.mark("filter")
     if not data.readings:
         raise NoDataYet(resolved, had_any_logged=had_any_logged)  # #543
     ctx = build_context(data, registry=reg)
+    perf.mark("build")
     ctx["meta"]["all_channels"] = all_ch  # full set, so the toggles can re-enable
+    # #953: attach the phase breakdown so the caller (do_GET) can log it alongside the
+    # render/serialize phase it owns. Additive meta only — no behavior change.
+    ctx["meta"]["perf"] = perf.snapshot(
+        readings=len(data.readings), files=len(windowed)
+    )
     return ctx
 
 
@@ -521,20 +584,21 @@ class DashboardHandler(BaseHTTPRequestHandler):
         q = parse_qs(parsed.query)
         # #918: default to the bounded window the client opens with (not all-history),
         # so the initial root render + a bare data.json don't parse the whole corpus.
-        hours = RANGE_HOURS.get(q.get("range", [_DEFAULT_RANGE])[0])  # "all" -> None
+        rng = q.get("range", [_DEFAULT_RANGE])[0]  # the label, for the #953 perf log
+        hours = RANGE_HOURS.get(rng)  # "all" -> None
         channels = [c for c in q.get("channels", [""])[0].split(",") if c] or None
         try:
             if parsed.path in ("/", "/index.html"):
-                self._send(
-                    render(_context(self.inputs, hours, channels)),
-                    "text/html; charset=utf-8",
-                )
+                ctx = _context(self.inputs, hours, channels)
+                _t = time.perf_counter()
+                html = render(ctx)
+                _perf_log(ctx, "render", time.perf_counter() - _t, rng)  # #953
+                self._send(html, "text/html; charset=utf-8")
             elif parsed.path == "/data.json":
-                blob = json.dumps(
-                    _context(self.inputs, hours, channels),
-                    separators=(",", ":"),
-                    ensure_ascii=False,
-                )
+                ctx = _context(self.inputs, hours, channels)
+                _t = time.perf_counter()
+                blob = json.dumps(ctx, separators=(",", ":"), ensure_ascii=False)
+                _perf_log(ctx, "serialize", time.perf_counter() - _t, rng)  # #953
                 self._send(blob, "application/json; charset=utf-8")
             elif parsed.path == "/capture/status":
                 st = _CAPTURE.status()
