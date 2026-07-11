@@ -693,9 +693,19 @@ function renderCards(){
       h.appendChild(chip);
       h.appendChild(el('span','devid mono',
         d.time_source ? ('time · ' + d.time_source.replace('_',' ')) : 'time · host-stamped'));
-      const cal = el('span','calchip', d.cal_provisional ? 'cal · provisional' : 'cal · bench-verified');
-      cal.style.color = d.cal_provisional ? 'var(--st-dry)' : 'var(--leaf)';
-      h.appendChild(cal);
+      // #951: three-tier cal honesty. channel-cal (a per-channel bench cal) is the TOP
+      // state and wears NO chip — the absence of a caveat is the signal. board-cal (a
+      // measured board envelope, distinct from factory defaults) earns a neutral chip,
+      // not the "provisional" caveat it wore for merely lacking per-channel cal. Only
+      // uncalibrated keeps the caveat. Falls back to the legacy boolean for a pre-#951 payload.
+      const _tier = d.cal_tier || (d.cal_provisional ? 'uncalibrated' : 'channel-cal');
+      if(_tier === 'board-cal'){
+        const cal = el('span','calchip','cal · board-level'); cal.style.color = 'var(--muted)';
+        h.appendChild(cal);
+      } else if(_tier === 'uncalibrated'){
+        const cal = el('span','calchip','cal · uncalibrated'); cal.style.color = 'var(--st-dry)';
+        h.appendChild(cal);
+      } // channel-cal → no chip (the top state is unlabeled)
       group.appendChild(h);
       if(d.also_reported_as && d.also_reported_as.length){
         // #688: the coalesce stays discoverable (honesty preserved, #602) but off the glance line —
@@ -736,12 +746,13 @@ function renderCards(){
     grp.appendChild(cw);
     wrap.appendChild(grp);
   }
-  // #687: one fleet-level provisional note instead of a full orange banner repeated on every group. The
-  // compact per-device "cal · provisional" chip still marks which boards; this drops the repeated banners.
-  const provDevs = devices.filter(x => x.cal_provisional);
+  // #687: one fleet-level note instead of a full orange banner repeated on every group. The compact
+  // per-device chip still marks which boards. #951: only *uncalibrated* boards earn the note — a board-cal
+  // board (a measured envelope) is honest, not provisional, so it no longer drags the fleet into the caveat.
+  const provDevs = devices.filter(x => (x.cal_tier || (x.cal_provisional ? 'uncalibrated' : 'channel-cal')) === 'uncalibrated');
   if(provDevs.length){
     const msg = (provDevs.length === devices.length ? 'All boards are' : `${provDevs.length} of ${devices.length} boards are`) +
-      ' calibration-provisional — bands render provisional until per-channel calibration (#170).';
+      ' uncalibrated — bands render provisional until a board-level or per-channel calibration (#170).';
     wrap.insertBefore(el('div','calbanner', msg), wrap.firstChild);
   }
 }
