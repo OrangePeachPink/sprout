@@ -47,6 +47,15 @@ flasher is an onboarding-others tool, not the maintainer's path; (2) `factory_bi
 (`BOARDS.md`) is today preserved **by omission** — `factory_bin` only builds the bench-verified classic image, so
 there is no unverified S3/C5 image to offer.
 
+**Phase-0 has since shipped (2026-07, #824 / #825 / #838):** a LAN-only OTA path — `just ota` runs **espota, which
+*pushes* the image to the board's ArduinoOTA receiver** (mDNS-advertised, password-gated; `docs/OTA_FLASH.md`) —
+plus A/B confirmed-boot rollback with a watchdog-feed, C5 recovery/OTA envs, and a board-aware `just ota`. It
+realizes Decision 3 (A/B rollback), but as a bench mechanism it is **push to an inbound receiver — not yet the
+pull-only, no-inbound model of Decision 1** — with a **placeholder password** and **no signature check**. So
+**pull-only (Decision 1)**, the signed-only fence (Decision 2), and software anti-rollback (Decision 4) are all
+hardening still to layer on before OTA is exposed beyond the trusted bench LAN. Phase-0 proved the *transport*
+(image write + rollback); the pull + signing + anti-rollback fence is what makes it shippable.
+
 ## Decision
 
 ### 1. OTA is pull-only — this preserves ADR-0020's no-inbound invariant
@@ -58,12 +67,16 @@ endpoint.** A push model (an open update port, remote management) is rejected �
 
 ### 2. Only signed firmware runs — this preserves ADR-0016's actuation authority
 
-Images are **signed**, and the device **verifies the signature before applying** (ESP-IDF Secure Boot v2 / signed
-app image). An update that fails verification is refused, not applied. Rationale: the firmware is the actuation
-authority (ADR-0016); "only maintainer-signed code runs" is the network-era extension of that rule. **Open
-(Firmware):** signing-key custody — where the private key lives, how the public key is fused/stored, how it
-survives a factory reset — is Firmware's mechanics call. This ADR mandates *that* signing happens, not the key
-ceremony.
+Images are **signed**, and the device **verifies the signature before applying** — a **software** signature check
+(the maintainer's public key is embedded in the running firmware and verifies the update image), **not** hardware
+Secure Boot v2. Per the maker-first scaling ruling (Status), **no eFuses are ever burned on kit boards**: no fused
+public key, no hardware Secure-Boot enrollment. An update that fails verification is refused, not applied. This
+still preserves ADR-0016: the firmware is the actuation authority, and "only maintainer-signed code runs *over the
+OTA path*" is the network-era extension of that rule. **The maker door is deliberate:** a physically-present owner
+can always USB-reflash any image (their board, their project) — the signature check gates the *remote* path, not
+the cable. **Open (Firmware):** signing-key custody — where the private key lives, how the embedded public key is
+stored and survives a factory reset — is Firmware's mechanics call; this ADR mandates *that* software signing
+happens, not the key ceremony.
 
 ### 3. A/B partitions + confirmed-boot rollback — no brick on a bad update
 
@@ -73,10 +86,12 @@ is met by the platform mechanism, not a hand-rolled one.
 
 ### 4. Anti-rollback (downgrade protection) — required for OTA
 
-A monotonic version counter prevents re-flashing a **signed-but-known-vulnerable** older image (ESP-IDF
-anti-rollback). **Open (Firmware / maintainer):** whether this lands in the first OTA slice or a fast-follow — it
-is cheap with Secure Boot v2 but burns a one-way counter. Flagging the *sequencing*, not deferring the
-requirement.
+A monotonic version check prevents the **remote** OTA path from applying a **signed-but-known-vulnerable** older
+image — a **software** counter (persisted in NVS / the app, per the maker-first ruling), **never a fused one-way
+eFuse counter.** The no-burn consequence: a *physically-present* owner can still USB-flash any version (the maker
+door), so this is best-effort downgrade protection on the *remote* path, not an absolute hardware lock — which
+matches the home-hobby threat model (the LAN attacker is fenced; the owner is trusted). **Open (Firmware /
+maintainer):** whether the software check lands in the first OTA slice or a fast-follow.
 
 ### 5. An update preserves identity + secrets, and never leaks them
 
@@ -110,7 +125,10 @@ ADR-0020 §4's setup AP is local-link, short-lived, **config-only.** It never be
 - The web-flasher stays **low-risk by construction** (desktop-USB, user gesture, provenance-before-install,
   classic-only-by-omission) — the ADR keeps its requirements light (provenance + HTTPS + verified-marker) rather
   than over-engineering a USB path.
-- **No brick, no silent downgrade:** A/B rollback + anti-rollback make a failed or hostile update fail safe.
+- **No brick, no silent downgrade:** A/B rollback + software anti-rollback make a failed or hostile update fail safe.
+- **The maker door stays open by design:** no eFuse is ever burned, so a board is always USB-reflashable for any
+  other project — the software signature check fences the *remote* OTA path, not the owner's cable. A feature of the
+  threat model (LAN attacker fenced, physically-present owner trusted), not a hole.
 - The do-not-flash safety rule becomes **enforceable** (the verified-marker gate) instead of documentation.
 - **Named residual risks (not solved here):** signing-key custody + anti-rollback sequencing (Firmware);
   encryption-at-rest for NVS credentials remains #59's (ADR-0020 already flagged it); a compromised release
