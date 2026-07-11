@@ -10,3 +10,7 @@
 # lowercased hash here. Deny only genuinely-sensitive machine names — NOT names that are
 # legitimately public in the docs (e.g. a documented CI fleet). One hex digest per line;
 # `#` comments allowed. Empty today: the hostname class is inert until seeded.
+59189f581b341afe21993f5f5c992ea076ee9ab260091ad2d00f111d8c4527e1
+18132d5c032a114c34a2366223c642a0ea46ac047faef0d908f33e39ef824847
+e4cf347ba0441e6dc671b4b795b75ed9b5e1a0ea07161b194c5961b48fbe4a5f
+82378570ca1ccf1fffb6ce7a1bf0025b4be8dbf0f3ad5eba95b2f41f3317b29e

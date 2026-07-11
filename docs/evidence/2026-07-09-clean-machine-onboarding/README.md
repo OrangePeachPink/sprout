@@ -1,6 +1,6 @@
 # Clean-machine onboarding — Sprout on a fresh Windows 11 box (2026-07-09)
 
-Point-in-time evidence, **not current instructions.** Captured on **valley-of-steel**
+Point-in-time evidence, **not current instructions.** Captured on **the second test machine**
 (a bare Windows 11 install) while standing Sprout up from scratch and reflashing the
 deployed fleet in place. That box has no push path to this repo, so the raw log was
 shuttled in by hand and is preserved verbatim in
@@ -28,9 +28,9 @@ not repo prose).
 
 ## Provenance
 
-- Machine: **valley-of-steel** (fresh Windows 11, admin account)
+- Machine: **the second test machine** (fresh Windows 11, admin account)
 - Session: firmware bench thread `98a32080`, 2026-07-09
-- Delivered via the maintainer's dev box (valley-of-steel has no repo push path)
+- Delivered via the maintainer's dev box (the test machine has no repo push path)
 - The log's "RESUME HERE" / "BLOCKERS" sections are **historical** — every blocker is
   resolved (both boards flashed, dashboard live). Kept verbatim as a record, not a to-do.
 
