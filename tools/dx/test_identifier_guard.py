@@ -136,7 +136,7 @@ def test_empty_hostname_denylist_flags_nothing():
 
 
 def test_non_denied_token_not_flagged():
-    assert _host_scan("esp32dev sprout bonobo", {_hash_host("synthhost")}) == []
+    assert _host_scan("esp32dev sprout gazebo", {_hash_host("synthhost")}) == []
 
 
 # --- JPEG --------------------------------------------------------------------
