@@ -7,7 +7,8 @@ launch: **"why is PlatformIO reinstalling on every restart?"** — plus the safe
 it genuinely misbehaves.
 
 TL;DR: a **one-time** re-provision after an update is normal. An **every-restart loop** is not.
-The `penv.stale-*` breadcrumbs tell you which one you have.
+The `penv.stale-*` breadcrumbs tell you which one you have. **First `pio run` on a clean machine
+failed at the penv step? Re-run the same command once** (§5) — the retry usually finishes it.
 
 ---
 
@@ -155,6 +156,29 @@ pio pkg list          # NOT: pio platform list
 
 `pio pkg list` reports your installed platforms/packages without the crash. If you only ever saw the
 error from `platform list`, your install is fine.
+
+---
+
+## 5. First `pio run` on a clean machine failed at the penv bootstrap — re-run it once
+
+On a genuinely clean machine, the **first** `pio run -e esp32dev -t upload` installs the platform and
+the `esp_install` tool, then can fail right at the Python-deps bootstrap:
+
+```text
+Tool Manager: tool-esp_install@5.3.4 has been installed!
+Error: Failed to install Python dependencies (exit code: 2)
+Error: Failed to install Python dependencies into penv
+```
+
+(If a stray CLI `pio` on a newer Python ran against the penv first, the same step can instead say
+*"Python version mismatch… Recreating penv… uv installation via pip failed with exit code 106"* — that
+is the dual-Python trigger in §2, not this one.)
+
+**Fix: re-run the exact same command once.** The retry completes the penv deps, the Arduino framework,
+and the Xtensa/RISC-V toolchains, and builds/flashes cleanly — a partial first-provision that finishes
+on the second pass. Verified on a clean Windows 11 install (2026-07-09): both fleet boards flashed on
+the second attempt. If a *second* re-run still fails at the same step it isn't this — check §2
+(dual-Python) and the clean-reset runbook in §3. (#890)
 
 ---
 
