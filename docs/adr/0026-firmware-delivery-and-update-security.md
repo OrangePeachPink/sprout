@@ -1,9 +1,12 @@
 # ADR-0026 — Firmware delivery & update security (web-flasher + OTA)
 
-**Status:** Proposed — *drafted by Trellis (2026-07-03) from the reserved skeleton (#302 comment), developed
-against DX's #271 scoping spike so it cites real constraints, not hypotheticals. Both surfaces are Wave 2. The
-fence is designed here **before** the W2 build so it is not retrofitted; signing-key custody and anti-rollback
-sequencing are the Firmware-owned open items.*
+**Status:** Accepted — *maintainer-ratified 2026-07-10 (v0.7.2 ADR batch), **with the maker-first scaling ruling**:
+the fence is pull-only + software-verified signatures + A/B confirmed-boot rollback — and **no permanent eFuse burns,
+ever, on kit boards** (no hardware Secure Boot, no fused anti-rollback counters; downgrade protection is a software
+check). Boards must always remain USB-reflashable for any other project — the maker door is a feature of the threat
+model, not a hole. Trellis edits this scaling + the Phase-0 acknowledgment into the body (living-document policy,
+ADR-0000 §4).*
+
 **Date:** 2026-07-03
 **Owner:** Trellis (architecture) — Firmware owns OTA / secure-boot mechanics, DX owns the flasher page
 **Lane:** architecture (cross-lane: Firmware · DX)
