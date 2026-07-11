@@ -19,6 +19,3 @@ docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor
 docs/community/release-notes-voice.md -> ../../discussions
 docs/design/components/README.md -> ../sprout-v2/README.md
 docs/process/BENCH_PREFLIGHT.md -> ../experiments/bench-preflight-checklist.md
-tools/analytics/README.md -> ../../BACKLOG.md
-tools/analytics/dashboard_template.html -> docs/README.md
-tools/analytics/dashboard_template.html -> docs/design/Sprout%20Design%20Library.dc.html
