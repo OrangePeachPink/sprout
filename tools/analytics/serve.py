@@ -191,7 +191,7 @@ def _empty_state_html(had_any_logged: bool) -> str:
     it gets its own honest, on-tone response rather than the 500 error path.
 
     On a genuinely fresh checkout it is also the operator's **launchpad** (#644):
-    the ``Start all collection`` control lives on the full dashboard shell, which
+    the ``Start logging`` control lives on the full dashboard shell, which
     only renders once data exists - so at zero data the "one Start" moment had no
     button to press (chicken-and-egg). This page carries a working Start control
     so install day is never a dead-end. It posts the same ``/collection/start``
@@ -212,14 +212,15 @@ def _empty_state_html(had_any_logged: bool) -> str:
     else:
         message = (
             "<p>No readings yet - this is a fresh checkout with nothing logged.</p>"
-            "<p>Press <strong>Start all collection</strong> below to begin polling "
+            "<p>Press <strong>Start logging</strong> below to begin polling "
             "every registered device. This page opens the live dashboard the moment "
             "the first reading lands.</p>"
         )
         launchpad = (
             '<div class="launch">'
+            # #923: one collection action, consistent vocab with the Monitor card
             '<button class="btn primary" id="collStart" type="button">'
-            "▶ Start all collection</button>"
+            "▶ Start logging</button>"
             '<p class="status" id="collStatus" role="status" aria-live="polite"></p>'
             "</div>"
         )

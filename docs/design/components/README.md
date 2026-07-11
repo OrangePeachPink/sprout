@@ -4,7 +4,7 @@
 > approved. Ratified as [ADR-0008](../../adr/0008-design-system-v3-personality-layer.md). These files are
 > live; the refined dark-mode neutrals are folded into [`../tokens/sprout-tokens.css`](../tokens/sprout-tokens.css).
 
-Additive over [v1](../README.md) and [v2](../sprout-v2/README.md): it **adds a layer**, with one approved
+Additive over [v1](../README.md) and [v2](../../adr/0010-design-library-front-door.md): it **adds a layer**, with one approved
 refinement to v1's dark-mode neutrals. The decision it executes is
 [ADR-0007](../../adr/0007-brand-guidelines.md) (brand & voice); the token foundation is
 [ADR-0004](../../adr/0004-design-system.md), whose **token-consumption contract holds** — color/type are
