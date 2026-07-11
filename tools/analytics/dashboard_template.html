@@ -747,7 +747,7 @@ function renderCards(){
 }
 
 function cardFor(s){
-  const c = el('div','scard'); c.title = `Open the ${s.plant_name || s.plant_id || s.probe || s.id} single-plant view`;
+  const c = el('div','scard'); c.title = `Open the ${plantLabel(s)} single-plant view`;
   c.addEventListener('click', () => showDetail(s.id));
   c.appendChild(el('div','accent')).style.background = s.no_signal ? 'var(--q-nosignal)' : s.color;
   c.appendChild(el('div','drill', 'details →'));
@@ -760,7 +760,7 @@ function cardFor(s){
   // The full technical name ("… (ESP32-D0WD - env + soil)") stays behind the detail's Wiring details.
   const boardShort = s.device_name ? s.device_name.split(' (')[0].trim() : null;
   const board = boardShort ? (s.device_side ? `${boardShort} (${s.device_side})` : boardShort) : null;
-  const lead = s.plant_name || s.plant_id || probe || s.id;
+  const lead = plantLabel(s);
   // drop any part that already IS the lead (an unassigned card leads with the probe itself)
   const idbits = [[s.plant_type, s.pot_size].filter(Boolean).join(' · '), probe, board].filter(Boolean).filter(x => x !== lead).join(' · ');
   c.appendChild(el('div', null, `<span class="sid">${lead}</span>${idbits ? ` <span class="idmeta">${idbits}</span>` : ''}`));
@@ -870,7 +870,7 @@ function renderLadder(){
     row.appendChild(el('div','rg', `${fmt(b.lo)} – ${fmt(b.hi)}`));
     const here = el('div','here');
     DASH.sensors.filter(s => s.raw_last>=b.lo && s.raw_last<b.hi && !_retired.has(s.device_id)).forEach(s => {
-      const chip = el('span','chip', `${plantLabel(s)} ${fmt(s.raw_last)}`); chip.style.background = s.color;
+      const chip = el('span','chip', `${plantLabel(s, {side:true})} ${fmt(s.raw_last)}`); chip.style.background = s.color;
       here.appendChild(chip);
     });
     row.appendChild(here);
@@ -1072,7 +1072,7 @@ function renderTraj(){
   const lg = document.getElementById('trajLegend'); lg.innerHTML = '';
   DASH.sensors.forEach(s=>{
     const it=el('div','it'); const d=el('span','dot'); d.style.background=s.color; it.appendChild(d);
-    it.appendChild(el('span',null, s.plant_name || s.plant_id || s.probe || s.id)); lg.appendChild(it);  // #713/#714: plant-first, no GPIO (chart title/time = #718)
+    it.appendChild(el('span',null, plantLabel(s))); lg.appendChild(it);  // #713/#714/#925: plant-first, no GPIO (chart title/time = #718)
   });
 }
 
@@ -1315,10 +1315,13 @@ function etaLine(eta, label, caveat){
 }
 
 // #725: a plant-first label for the detail nav (prev/next tooltips + picker).
-function plantLabel(x){
-  const name = x.plant_name || x.plant_id || x.probe || x.id;
-  const side = x.device_side ? ` · ${x.device_side}` : '';
-  return `${name}${side}`;
+// #925: the ONE place the plant-first identity fallback chain lives — every surface routes here so the
+// s2@device machine-id leak class (#803/#804/#805) can't return via a copy-pasted `|| s.id`. The
+// identity-label-guard (tools/dx) fails a commit if the raw chain appears anywhere but this line.
+// Side (left/right) is opt-in via {side:true} for the surfaces that want the physical locator.
+function plantLabel(x, {side = false} = {}){
+  const name = x.plant_name || x.plant_id || x.probe || x.id;  // identity-label chain — sole home (#925)
+  return side && x.device_side ? `${name} · ${x.device_side}` : name;
 }
 // #725: the detail-view navigator — a clear Back to the wall, Prev/Next between
 // plants, and a jump-to-any-plant picker, so moving among 11+ plants no longer
@@ -1336,13 +1339,13 @@ function buildPlantNav(sid){
   if(list.length < 2 || idx < 0){ prev.disabled = true; next.disabled = true; }
   else {
     const p = list[(idx-1+list.length)%list.length], n = list[(idx+1)%list.length];
-    prev.title = 'Previous: ' + plantLabel(p);
-    next.title = 'Next: ' + plantLabel(n);
+    prev.title = 'Previous: ' + plantLabel(p, {side:true});
+    next.title = 'Next: ' + plantLabel(n, {side:true});
     prev.addEventListener('click', ()=> showDetail(p.id));
     next.addEventListener('click', ()=> showDetail(n.id));
   }
   const pick = el('select','plantpick'); pick.setAttribute('aria-label','Jump to plant');
-  list.forEach(x=>{ const o=document.createElement('option'); o.value=x.id; o.textContent=plantLabel(x); if(x.id===sid) o.selected=true; pick.appendChild(o); });
+  list.forEach(x=>{ const o=document.createElement('option'); o.value=x.id; o.textContent=plantLabel(x, {side:true}); if(x.id===sid) o.selected=true; pick.appendChild(o); });
   pick.addEventListener('change', ()=> showDetail(pick.value));
   const pos = el('span','small muted detailpos', idx>=0 ? `${idx+1} of ${list.length}` : '');
   nav.append(back, prev, pick, next, pos);
@@ -1362,7 +1365,7 @@ function renderDetail(sid){
   /* header */
   const head = el('section','card');
   const hr = el('div','panel-h');
-  hr.appendChild(el('h2', null, `${s.plant_name || s.plant_id || s.probe || s.id} <span class="muted" style="font-weight:400">single-plant view</span> <span class="proposed" title="endpoints ratified; interior boundaries pending A2">interior bands proposed</span>`));
+  hr.appendChild(el('h2', null, `${plantLabel(s)} <span class="muted" style="font-weight:400">single-plant view</span> <span class="proposed" title="endpoints ratified; interior boundaries pending A2">interior bands proposed</span>`));
   head.appendChild(hr);
   const dh = el('div','dhead');
   dh.style.borderLeft = `5px solid ${s.color}`; dh.style.paddingLeft = '14px';
@@ -1643,7 +1646,7 @@ function renderChannelChips(){
   wrap.innerHTML = '';
   const byId = {}; (DASH.sensors||[]).forEach(s=>byId[s.id]=s);
   ids.forEach(id=>{
-    const s = byId[id]; const label = s ? plantLabel(s) : id;
+    const s = byId[id]; const label = s ? plantLabel(s, {side:true}) : id;
     const on = activeChannels.has(id);
     const chip = el('button', 'chanchip' + (on?'':' off'), label); chip.type = 'button';
     if(on && s) chip.style.background = s.color;
