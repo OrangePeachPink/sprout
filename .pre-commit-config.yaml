@@ -129,6 +129,15 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      # identity-label-guard (#925) — the plant-first fallback chain (plant_name || … || id) lives ONLY
+      # in plantLabel(). A copy-pasted `|| s.id` is exactly how the s2@device machine-id leak class
+      # (#803/#804/#805) kept returning. Blocking: keep the class extinct.
+      - id: identity-label-guard
+        name: identity-label-guard (#925 — raw plant-first chain outside plantLabel)
+        entry: uv run python tools/dx/identity_label_guard.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
 
   # adr-register-status (#928) — every ADR file's `**Status:**` must match its register row,
   # and no ADR may appear twice. BLOCKING: Trellis caught this drift by hand twice (0025; then

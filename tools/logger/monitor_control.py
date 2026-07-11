@@ -32,6 +32,10 @@ if str(_CAPTURE_DIR) not in sys.path:
     sys.path.insert(0, str(_CAPTURE_DIR))
 import serial_lock  # noqa: E402  (sibling leaf)
 
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+from plants_logger import GIVE_UP_EXIT  # noqa: E402  (#813 absent-port give-up code)
+
 
 class MonitorError(RuntimeError):
     """A rejected monitor request (already running, or the port is held)."""
@@ -107,7 +111,18 @@ class MonitorController:
 
     def _status_locked(self) -> dict:
         running = self._proc is not None and self._proc.poll() is None
-        return {
+        out = {
             "state": "running" if running else "stopped",
             "port": self._port if running else None,
         }
+        # #813 loud-give-up: the monitor exits GIVE_UP_EXIT when a port stays absent
+        # past the bounded retry window. That give-up line went to a DEVNULL'd child
+        # stdout, so the operator saw only "stopped" — surface the REASON from the exit
+        # code so the served status / `just status` can say WHY, not just that it did.
+        rc = self._proc.poll() if self._proc is not None else None
+        if not running and rc == GIVE_UP_EXIT:
+            out["give_up_reason"] = (
+                f"{self._port} absent — monitor stopped; restart collection "
+                "when the board is back"
+            )
+        return out
