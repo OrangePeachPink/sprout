@@ -1,10 +1,10 @@
 # ADR-0029 — Plant / pot / site profile registry: the inference dimension
 
-**Status:** Proposed — *drafted by Trellis 2026-07-06 from #675 (#762); **revised 2026-07-07** to harden the field
-model against the maintainer's five schema-implications on #675 and the 2026-07-06 #834 dose→response evidence.
-Accepted — maintainer-ratified 2026-07-10 (v0.7.2 ADR batch); dimensions are extend-as-needed by design (absent-safe
-fields), no exhaustiveness claim; the loader, analysis-tier join, and seed back-fill are
-Data's half (v0.8.0). (Per ADR-0000 §4 this is an in-place edit; git carries the v1→v2 diff.)*
+**Status:** Accepted — maintainer-ratified 2026-07-10 (v0.7.2 ADR batch, #915); dimensions are extend-as-needed by
+design (absent-safe fields), no exhaustiveness claim. *Drafted by Trellis 2026-07-06 from #675 (#762); revised
+2026-07-07 to harden the field model against the five schema-implications on #675 and the #834 dose→response
+evidence (2026-07-06). The loader, analysis-tier join, and seed back-fill are Data's half (v0.8.0). Per ADR-0000
+§4 this is an in-place edit; git carries the diff.*
 **Date:** 2026-07-06 (revised 2026-07-07)
 **Owner:** Trellis (architecture) — the profile schema + storage/join model; Data owns the loader (v0.8.0)
 **Lane:** architecture (cross-lane: Data)

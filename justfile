@@ -156,6 +156,13 @@ format-fw base="origin/main":
 lint-epics *ARGS:
     {{py}} tools/dx/lint_epic_subissues.py {{ARGS}}
 
+# ADR register hygiene (#928): every ADR file's `**Status:**` must match its row in the
+# register (0000), and no ADR may appear twice. Trellis caught this drift by hand twice
+# (0025; then a merge-ordering collision left two 0029 rows at different statuses). File-based
+# + deterministic — same check runs here, in pre-commit, and in CI (red on mismatch).
+lint-adr:
+    {{py}} tools/dx/lint_adr_register_status.py
+
 # Run every pre-commit hook across the repo — the single definition of lint/format/hygiene.
 pre-commit:
     uv run --frozen pre-commit run --all-files
