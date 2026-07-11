@@ -1250,6 +1250,7 @@ def build_context(
         "git": getattr(last_seg, "git", None),
         "run": getattr(last_seg, "run", None),
         "schema_version": getattr(last_seg, "schema_version", None),
+        "config_id": getattr(last_seg, "config_id", None),  # #831/ADR-0030 row 5
         "tz_offset": getattr(last_seg, "tz_offset", None),
         # device-reported cadence + its source (nvs|temp|default) from the banner (#322)
         "cadence_ms": getattr(last_seg, "cadence_ms", None),
@@ -1306,6 +1307,7 @@ def build_context(
             "fw": meta["fw"],
             "fw_git": meta["git"],
             "schema_version": meta["schema_version"],
+            "config_id": meta["config_id"],  # #831/ADR-0030 row 5
             "logger_version": getattr(last_seg, "logger_version", None),
             "tz_offset": meta["tz_offset"],
             # #496: honest even in the edge case where NO real (host-timestamped)
