@@ -747,7 +747,7 @@ function renderCards(){
 }
 
 function cardFor(s){
-  const c = el('div','scard'); c.title = `Open the ${s.plant_name || s.plant_id || s.probe || s.id} single-plant view`;
+  const c = el('div','scard'); c.title = `Open the ${plantName(s)} single-plant view`;
   c.addEventListener('click', () => showDetail(s.id));
   c.appendChild(el('div','accent')).style.background = s.no_signal ? 'var(--q-nosignal)' : s.color;
   c.appendChild(el('div','drill', 'details →'));
@@ -760,7 +760,7 @@ function cardFor(s){
   // The full technical name ("… (ESP32-D0WD - env + soil)") stays behind the detail's Wiring details.
   const boardShort = s.device_name ? s.device_name.split(' (')[0].trim() : null;
   const board = boardShort ? (s.device_side ? `${boardShort} (${s.device_side})` : boardShort) : null;
-  const lead = s.plant_name || s.plant_id || probe || s.id;
+  const lead = plantName(s);  // #925: the one identity resolution (no s2@device leak)
   // drop any part that already IS the lead (an unassigned card leads with the probe itself)
   const idbits = [[s.plant_type, s.pot_size].filter(Boolean).join(' · '), probe, board].filter(Boolean).filter(x => x !== lead).join(' · ');
   c.appendChild(el('div', null, `<span class="sid">${lead}</span>${idbits ? ` <span class="idmeta">${idbits}</span>` : ''}`));
@@ -831,7 +831,7 @@ function cardFor(s){
 function sensorlessCard(p){
   const c = el('div','scard sensorless');
   c.appendChild(el('div','accent')).style.background = 'var(--st-predicted, #8a6fd6)';
-  const lead = p.plant_name || p.plant_id;
+  const lead = plantName(p);  // #925
   const meta = [p.plant_type, p.pot_size].filter(Boolean).join(' · ');
   c.appendChild(el('div', null, `<span class="sid">${lead}</span>${meta ? ` <span class="idmeta">${meta}</span>` : ''}`));
   c.appendChild(el('div','raw muted', '<span class="rawu">not probed</span>'));
@@ -1069,7 +1069,7 @@ function renderTraj(){
   const lg = document.getElementById('trajLegend'); lg.innerHTML = '';
   DASH.sensors.forEach(s=>{
     const it=el('div','it'); const d=el('span','dot'); d.style.background=s.color; it.appendChild(d);
-    it.appendChild(el('span',null, s.plant_name || s.plant_id || s.probe || s.id)); lg.appendChild(it);  // #713/#714: plant-first, no GPIO (chart title/time = #718)
+    it.appendChild(el('span',null, plantName(s))); lg.appendChild(it);  // #713/#714/#925: plant-first, no GPIO
   });
 }
 
@@ -1312,10 +1312,16 @@ function etaLine(eta, label, caveat){
 }
 
 // #725: a plant-first label for the detail nav (prev/next tooltips + picker).
+// #925: the ONE plant-identity resolution. Plant-first (name -> id -> her probe sticker
+// -> the scoped id), so a rendered label NEVER leads with the s2@device machine key
+// (#803/#804/#805 were all this class). Every render site routes through here; a gate
+// tripwire (test_plantlabel_tripwire) keeps the raw fallback chain from being re-pasted.
+function plantName(x){
+  return x.plant_name || x.plant_id || x.probe || x.id;
+}
 function plantLabel(x){
-  const name = x.plant_name || x.plant_id || x.probe || x.id;
   const side = x.device_side ? ` · ${x.device_side}` : '';
-  return `${name}${side}`;
+  return `${plantName(x)}${side}`;
 }
 // #725: the detail-view navigator — a clear Back to the wall, Prev/Next between
 // plants, and a jump-to-any-plant picker, so moving among 11+ plants no longer
@@ -1359,7 +1365,7 @@ function renderDetail(sid){
   /* header */
   const head = el('section','card');
   const hr = el('div','panel-h');
-  hr.appendChild(el('h2', null, `${s.plant_name || s.plant_id || s.probe || s.id} <span class="muted" style="font-weight:400">single-plant view</span> <span class="proposed" title="endpoints ratified; interior boundaries pending A2">interior bands proposed</span>`));
+  hr.appendChild(el('h2', null, `${plantName(s)} <span class="muted" style="font-weight:400">single-plant view</span> <span class="proposed" title="endpoints ratified; interior boundaries pending A2">interior bands proposed</span>`));
   head.appendChild(hr);
   const dh = el('div','dhead');
   dh.style.borderLeft = `5px solid ${s.color}`; dh.style.paddingLeft = '14px';
