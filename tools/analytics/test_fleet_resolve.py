@@ -37,15 +37,38 @@ def _line_with_crc(body: str) -> str:
 # --------------------------------------------------------------------------- #
 # candidate resolution — hostname first, IP fallback
 # --------------------------------------------------------------------------- #
-def test_hostname_is_tried_before_the_ip() -> None:
+def test_last_good_ip_is_tried_before_the_hostname() -> None:
+    # #953: IP-first so an online board answers in <100ms instead of burning a ~2s
+    # mDNS `.local` timeout on every poll; the hostname is the rediscovery fallback.
     d = Device(
         device_id="y9d41p", board="esp32", label=None, base_url="http://192.168.1.9"
     )
     assert candidate_base_urls(d) == [
-        "http://sprout-y9d41p.local",  # stable identity, tried first
-        "http://192.168.1.9",  # configured IP, fallback only
+        "http://192.168.1.9",  # last-good IP, tried FIRST (fast common case)
+        "http://sprout-y9d41p.local",  # stable identity, rediscovery fallback
     ]
     assert mdns_host("y9d41p") == "sprout-y9d41p.local"
+
+
+def test_online_board_answers_on_ip_without_an_mdns_attempt() -> None:
+    # #953 the whole point: an online board at its last-good IP answers on candidate 1,
+    # so the slow `.local` lookup is never even attempted — no ~2s stall per poll.
+    d = Device(
+        device_id="y9d41p", board="esp32", label=None, base_url="http://192.168.1.9"
+    )
+    tried = []
+
+    def fetch(url):
+        tried.append(url)
+        return _line_with_crc(_TELEM)
+
+    a = DeviceAdapter(
+        "http://192.168.1.9", candidates=candidate_base_urls(d), fetch=fetch
+    )
+    data = a.load()
+    assert [r.raw_value for r in data.readings] == [2400]
+    assert tried == ["http://192.168.1.9/telemetry"]  # IP answered; mDNS never tried
+    assert not any(".local" in u for u in tried)
 
 
 def test_candidates_dedupe_and_absent_safe() -> None:
@@ -93,8 +116,9 @@ def test_adapter_falls_through_to_the_first_reachable_address() -> None:
 
 
 def test_adapter_reaches_a_rebooted_board_by_hostname_when_ip_is_stale() -> None:
-    # the board grabbed a new DHCP IP; the configured IP is dead, but the mDNS
-    # hostname resolves to the new one and answers — reached with no hand-edit.
+    # #953 IP-first order: the board grabbed a new DHCP IP, so the last-good IP (tried
+    # FIRST now) is dead — but the mDNS hostname fallback resolves to the new one and
+    # answers, so #676's DHCP-robustness is preserved even with IP-first.
     def fetch(url):
         if url.startswith("http://sprout-y9d41p.local"):
             return _line_with_crc(_TELEM)
@@ -102,12 +126,12 @@ def test_adapter_reaches_a_rebooted_board_by_hostname_when_ip_is_stale() -> None
 
     a = DeviceAdapter(
         "http://192.168.1.9",
-        candidates=["http://sprout-y9d41p.local", "http://192.168.1.9"],
+        candidates=["http://192.168.1.9", "http://sprout-y9d41p.local"],  # IP-first
         fetch=fetch,
     )
     data = a.load()
     assert [r.raw_value for r in data.readings] == [2400]
-    assert data.sources == ["http://sprout-y9d41p.local"]  # reached by NAME
+    assert data.sources == ["http://sprout-y9d41p.local"]  # reached by NAME fallback
 
 
 def test_all_candidates_unreachable_is_honest_empty() -> None:
