@@ -38,6 +38,8 @@
 #include "board_capability.h" /* per-board capability descriptor + gate seam (#273) */
 #include "device_uid.h" /* #601 stable-id base32 mint (ADR-0027 §1b) */
 #include "calibration.h" /* SENSOR_CAL_BOUNDARY[ch] — per-channel raw->band (#170) */
+#include "cal_resolver.h" /* #952 per-board-type cal resolution chain */
+#include "cal_class_defaults.h" /* #952 Layer-2 class defaults (classic + C5) */
 
 /* The calibration table and the firmware must agree on the channel count. */
 static_assert(SENSOR_CAL_CHANNELS == NUM_SENSORS,
@@ -1000,22 +1002,21 @@ void setup()
     /* Build the supervisor's per-channel config and bring up the engine. irrig_init
      * seeds every classifier from one burst with all pumps OFF — it replaces the
      * old standalone seed loop. */
+    /* #952: install the per-board-type cal class-default table before resolving. */
+    cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
     for (int ch = 0; ch < NUM_SENSORS; ch++) {
         g_mcfg[ch] =
             cfg; /* shared acquisition / hysteresis / persistence / health */
         /* C1/#170: diverge ONLY the raw->band boundaries per channel (sensor
          * personality removed); the band->action policy (g_chan_cfg) stays shared.
-         * #899 seam: the per-channel table (calibration.h) is CLASSIC bench data;
-         * imposing it on an unverified board mis-bands it (the C5's compressed ADC,
-         * #443/#898). A cal-verified board uses its per-channel table; an unverified
-         * board falls back to its own per-BOARD cal_boundary (board_capability.h). */
-        if (BOARD_CAP.cal_verified) {
-            memcpy(g_mcfg[ch].boundary, SENSOR_CAL_BOUNDARY[ch],
-                   sizeof(g_mcfg[ch].boundary));
-        } else {
-            memcpy(g_mcfg[ch].boundary, BOARD_CAP.cal_boundary,
-                   sizeof(g_mcfg[ch].boundary));
-        }
+         * #952: resolve this board-type's cal down the chain (instance override ->
+         * class default -> factory fallback). Generalizes the #899 boolean seam so
+         * ANY board-type graduates to its own cal, never inheriting the classic's
+         * numbers. Byte-preserved: classic -> per-channel record, C5 -> board
+         * envelope, unknown -> factory placeholder (== the historic board cal). */
+        const cal_record_t *cal =
+            cal_resolve(BOARD_CAP.name, SENSOR_CLASS_CAPACITIVE_V2, ch);
+        memcpy(g_mcfg[ch].boundary, cal->anchors, sizeof(g_mcfg[ch].boundary));
         g_chan_cfg[ch].dose_ms = IRRIG_DOSE_MS;
         g_chan_cfg[ch].soak_ms = IRRIG_SOAK_MS;
         g_chan_cfg[ch].water_at_or_below = MOIST_NEEDS_WATER;

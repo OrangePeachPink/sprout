@@ -28,6 +28,8 @@
 #include "calibration.h" /* SENSOR_CAL_BOUNDARY — per-channel raw->band (#170) */
 #include "wifi_net.h" /* #21 connect-scaffold state machine */
 #include "device_uid.h" /* #601 stable-id base32 mint (ADR-0027 §1b) */
+#include "cal_resolver.h" /* #952 per-board-type cal resolution chain */
+#include "cal_class_defaults.h" /* #952 Layer-2 class defaults */
 
 /* -------------------------------------------------------------------------- */
 /* synthetic rig: ADC source + pump observer + event sink                     */
@@ -1534,6 +1536,66 @@ void t_device_hostname(void)
 /* runner                                                                     */
 /* -------------------------------------------------------------------------- */
 
+/* --- #952 cal_resolver: the resolution chain + byte-preservation ---------- */
+
+void t_cal_resolver_chain_order(void)
+{
+    cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
+    /* Layer 1 (instance) is empty today - the stub always reports "not set", so
+     * resolve falls through to the class default (write-path is #963). */
+    TEST_ASSERT_NULL_MESSAGE(
+        cal_instance_lookup("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 0),
+        "instance override must be empty until #963");
+    /* Unknown board -> no class default -> factory fallback (never NULL). */
+    const cal_record_t *fb =
+        cal_resolve("no-such-board", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_NOT_NULL(fb);
+    TEST_ASSERT_EQUAL_INT(CAL_TIER_FACTORY, fb->tier);
+    /* No table installed -> still the factory fallback (the safe floor). */
+    cal_resolver_init(NULL, 0);
+    TEST_ASSERT_EQUAL_INT(
+        CAL_TIER_FACTORY,
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 0)->tier);
+    cal_resolver_init(CAL_CLASS_DEFAULTS,
+                      CAL_CLASS_DEFAULTS_COUNT); /* restore */
+}
+
+void t_cal_resolver_classic_byte_preserved(void)
+{
+    /* Classic resolves to its PER-CHANNEL record, byte-identical to the legacy
+     * calibration.h SENSOR_CAL_BOUNDARY (the #899 AC pattern). */
+    cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
+    for (int ch = 0; ch < SENSOR_CAL_CHANNELS; ch++) {
+        const cal_record_t *r =
+            cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, ch);
+        TEST_ASSERT_NOT_NULL(r);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(CAL_TIER_CHANNEL, r->tier,
+                                      "classic is per-channel");
+        TEST_ASSERT_EQUAL_UINT16_ARRAY_MESSAGE(
+            SENSOR_CAL_BOUNDARY[ch], r->anchors, MOISTURE_BOUNDARY_COUNT,
+            "classic anchors must byte-match SENSOR_CAL_BOUNDARY[ch]");
+    }
+}
+
+void t_cal_resolver_c5_board_envelope(void)
+{
+    /* C5 resolves to its PER-BOARD envelope - the SAME record for every channel,
+     * tier BOARD, byte-matching the #898/#899 measured values. */
+    cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
+    static const uint16_t c5[MOISTURE_BOUNDARY_COUNT] = {2740, 1939, 1666,
+                                                         1394, 1068, 980};
+    for (int ch = 0; ch < 4; ch++) {
+        const cal_record_t *r =
+            cal_resolve("esp32-c5", SENSOR_CLASS_CAPACITIVE_V2, ch);
+        TEST_ASSERT_NOT_NULL(r);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(CAL_TIER_BOARD, r->tier,
+                                      "C5 is board-cal");
+        TEST_ASSERT_EQUAL_UINT16_ARRAY_MESSAGE(
+            c5, r->anchors, MOISTURE_BOUNDARY_COUNT,
+            "C5 anchors must byte-match the #898 envelope on every channel");
+    }
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -1564,5 +1626,8 @@ int main(void)
     RUN_TEST(t_wifi_net_state_machine);
     RUN_TEST(t_device_uid_encode);
     RUN_TEST(t_device_hostname);
+    RUN_TEST(t_cal_resolver_chain_order);
+    RUN_TEST(t_cal_resolver_classic_byte_preserved);
+    RUN_TEST(t_cal_resolver_c5_board_envelope);
     return UNITY_END();
 }
