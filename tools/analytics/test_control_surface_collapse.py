@@ -63,18 +63,18 @@ def test_adr_0014_records_the_collapse() -> None:
     assert "#923" in adr and "advanced affordance in Diagnostics" in adr
 
 
-def test_status_line_speaks_sensor_counts_not_transports() -> None:
+def test_status_line_speaks_board_counts_not_transports() -> None:
     # #974: the last unswept surface. The served status line aggregates BOTH
-    # collection paths into one honest sensor count; the transport-split
-    # "serial: ... fleet: ..." render is gone. "serial"/"fleet" survive only as
-    # code-level payload keys (st.monitor / st.fleet).
+    # collection paths into one honest board count (taxonomy board=MCU, #921); the
+    # transport-split "serial: ... fleet: ..." render is gone. "serial"/"fleet"
+    # survive only as code-level payload keys (st.monitor / st.fleet).
     coll = _H[_H.index("function collDescribe(") : _H.index("function collRender(")]
     assert (
         "bit('serial'" not in coll and "bit('fleet'" not in coll
     )  # the retired split render
     assert "' · '" not in coll  # the transport join is gone
     # the settled #923 vocabulary is what renders now
-    assert "logging ${configured} sensor" in coll
+    assert "logging ${configured} board" in coll
     assert "not answering" in coll
     assert "not logging" in coll
     # #941's loud give-up reason is preserved, not dropped

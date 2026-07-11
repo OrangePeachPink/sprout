@@ -2017,8 +2017,8 @@ async function monStop(){
 function collDescribe(st){
   // #974: ONE honest count across both collection paths — never transport-split. The words
   // "serial"/"fleet" stay in code + endpoints only (#923 vocabulary contract). We sum the
-  // sensors we mean to collect vs the ones answering (#812 counts), and keep #941's loud
-  // give-up reason attached to the tally.
+  // boards we mean to collect vs the ones answering (#812 counts; taxonomy board=MCU, #921),
+  // and keep #941's loud give-up reason attached to the tally.
   const running = s => !!(s && s.state === 'running');
   const count = s => {  // a running path's [configured, answering]; a single tethered board is 1
     if(!running(s)) return [0, 0];
@@ -2029,15 +2029,15 @@ function collDescribe(st){
   const [mc, ma] = count(st.monitor);
   const [fc, fa] = count(st.fleet);
   let configured = mc + fc, answering = ma + fa, stall = '';
-  // #941: a tethered board that gave up is still a sensor we mean to collect but isn't
+  // #941: a tethered board that gave up is still a board we mean to collect but isn't
   // answering — count it as one-not-answering so both the tally and the reason stay honest.
   if(st.collecting && st.monitor && !running(st.monitor) && st.monitor.give_up_reason){
     configured += 1; stall = st.monitor.give_up_reason;
   }
   if(configured > 0){
-    if(answering >= configured) return `logging ${configured} sensor${configured === 1 ? '' : 's'}`;
+    if(answering >= configured) return `logging ${configured} board${configured === 1 ? '' : 's'}`;
     const why = stall ? stall.split(/\s+[—-]\s+|;/)[0].trim() : '';
-    return `logging ${answering} of ${configured} sensors — ${configured - answering} not answering`
+    return `logging ${answering} of ${configured} boards — ${configured - answering} not answering`
       + (why ? ` (${why})` : '');
   }
   // nothing running — surface a give-up reason if a path stopped loudly (#941), else plain.
