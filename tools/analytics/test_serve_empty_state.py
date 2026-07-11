@@ -133,8 +133,16 @@ def _free_port() -> int:
 
 def test_fresh_checkout_serves_200_not_500(tmp_path: Path) -> None:
     port = _free_port()
+    # --no-autostart (#872): keep the e2e hermetic — don't probe serial/fleet on launch
     proc = subprocess.Popen(
-        [sys.executable, str(_SERVE), str(tmp_path), "--port", str(port)],
+        [
+            sys.executable,
+            str(_SERVE),
+            str(tmp_path),
+            "--port",
+            str(port),
+            "--no-autostart",
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
