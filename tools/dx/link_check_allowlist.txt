@@ -13,9 +13,8 @@ docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor
 docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor_photos/IMG_0537.JPEG
 docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor_photos/IMG_0528.JPEG
 
-# --- #911 — internal-doc link sweep (Workflow lane-splits). NOTE: the ../../discussions
-#     link below is finding #4, which was dropped from #911's written body — the gate caught
-#     it; flag to add it to #911's scope. ---
-docs/community/release-notes-voice.md -> ../../discussions
+# --- #911 — internal-doc link sweep (Workflow lane-splits). Finding 4
+#     (release-notes-voice.md -> ../../discussions) is FIXED — absolute Discussions URL;
+#     the remaining five are routed to their owning lanes. ---
 docs/design/components/README.md -> ../sprout-v2/README.md
 docs/process/BENCH_PREFLIGHT.md -> ../experiments/bench-preflight-checklist.md

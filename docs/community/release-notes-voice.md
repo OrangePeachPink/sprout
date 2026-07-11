@@ -17,7 +17,7 @@ Hi, it's Sprout. Here's what changed this time — short version: {one honest se
 <!-- GitHub's generated, type:-categorized notes go here -->
 
 —
-**Tend well.** Full detail in the commits; questions in [Discussions](../../discussions).
+**Tend well.** Full detail in the commits; questions in [Discussions](https://github.com/OrangePeachPink/sprout/discussions).
 ```
 
 ## Tone
