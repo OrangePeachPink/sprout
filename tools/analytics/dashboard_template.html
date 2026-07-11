@@ -716,6 +716,16 @@ function renderCards(){
         const cal = el('span','calchip','cal · uncalibrated'); cal.style.color = 'var(--st-dry)';
         h.appendChild(cal);
       } // channel-cal → no chip (the top state is unlabeled)
+      // #814: current WiFi signal — the real dBm + its labeled band, never a fabricated
+      // quality %. Honest-absent (ADR-0028): a serial/tethered device has no rssi, so no
+      // chip renders (absence as absence), never a stale or 0 dBm value. The weak band
+      // wears the caution colour as the placement / dropout cue.
+      if(d.rssi != null){
+        const sig = el('span','calchip', d.rssi + ' dBm · ' + (d.rssi_band||''));
+        sig.style.color = d.rssi_band === 'weak' ? 'var(--st-dry)' : 'var(--muted)';
+        sig.title = 'WiFi signal strength (RSSI) from the latest poll';
+        h.appendChild(sig);
+      }
       group.appendChild(h);
       if(d.also_reported_as && d.also_reported_as.length){
         // #688: the coalesce stays discoverable (honesty preserved, #602) but off the glance line —
