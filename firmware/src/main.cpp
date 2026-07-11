@@ -802,6 +802,64 @@ static void handleTelemetry()
     g_http.send(200, "text/plain", resp);
 }
 
+/* GET|POST /cmd?c=<name[,args]> (#826) - WiFi command parity, config/read half
+ * (serial == wifi). Reuses serial_cmd_dispatch; the caller sends a plain body
+ * (no '!' / '*HH' - TCP already guards integrity, so the UART noise-checksum is
+ * recomputed here). Only the non-actuation surface is exposed - actuation
+ * (water/stop/auto), credentials (wifi), and the wedge test stay serial-only
+ * (physical presence = actuation authority, ADR-0016/0020; the two-halves
+ * doctrine defers wifi++ actuation to #215-era). No auth: LAN-local, config-only,
+ * the home-hobby threat model. */
+static const char *const HTTP_CMD_ALLOW[] = {"cad",  "ping",  "ver", "cfg",
+                                             "name", "label", "pos"};
+
+static bool httpCmdAllowed(const char *body)
+{
+    size_t nlen = strcspn(body, ","); /* command name = the token before ',' */
+    for (size_t i = 0; i < sizeof(HTTP_CMD_ALLOW) / sizeof(HTTP_CMD_ALLOW[0]);
+         i++)
+        if (strlen(HTTP_CMD_ALLOW[i]) == nlen &&
+            strncmp(HTTP_CMD_ALLOW[i], body, nlen) == 0)
+            return true;
+    return false;
+}
+
+static void handleCommand()
+{
+    String raw = g_http.hasArg("c") ? g_http.arg("c") : g_http.arg("plain");
+    raw.trim();
+    const char *p = raw.c_str();
+    if (*p == '!') p++; /* accept the serial '!' prefix, or its absence */
+    char body[40];
+    size_t bl = 0;
+    for (; p[bl] && p[bl] != '*' && bl < sizeof(body) - 1; bl++)
+        body[bl] = p[bl];
+    body[bl] = '\0';
+    if (bl == 0) {
+        g_http.send(400, "text/plain",
+                    "# nak err=empty (use /cmd?c=cad,5000)\n");
+        return;
+    }
+    if (!httpCmdAllowed(body)) {
+        g_http.send(
+            403, "text/plain",
+            "# nak err=forbidden (config/read only over wifi; actuation "
+            "is serial-only - #826, ADR-0016)\n");
+        return;
+    }
+    /* rebuild the canonical !<body>*HH line so serial_cmd_dispatch accepts it */
+    uint8_t ck = 0;
+    for (size_t i = 0; i < bl; i++)
+        ck ^= (uint8_t)body[i];
+    char line[52];
+    snprintf(line, sizeof(line), "!%s*%02X", body, ck);
+    char reply[96];
+    serial_cmd_result_t rc = serial_cmd_dispatch(line, reply, sizeof(reply));
+    char out[112];
+    snprintf(out, sizeof(out), "%s\n", reply);
+    g_http.send(rc == SERIAL_CMD_OK ? 200 : 400, "text/plain", out);
+}
+
 /* ---- Captive portal (#275) ----------------------------------------------- */
 
 /* GET /setup - minimal functional onboarding form. Deliberately plain HTML:
@@ -1023,6 +1081,7 @@ void setup()
         g_http.on("/", handleRoot);
         g_http.on("/telemetry",
                   handleTelemetry); /* schema-shaped rows (#276) */
+        g_http.on("/cmd", handleCommand); /* #826 config-command parity */
         g_http.on("/setup", HTTP_GET, handleSetupForm); /* portal (#275) */
         g_http.on("/setup", HTTP_POST, handleSetupSave);
         g_http.onNotFound(handleNotFound); /* captive-detection redirect */

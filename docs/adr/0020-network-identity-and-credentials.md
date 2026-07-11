@@ -40,7 +40,10 @@ inbound beyond the LAN.** Concretely:
 3. **No inbound exposure beyond the LAN.** The on-device server binds to the local network only: **no open ports
    to the internet, no remote management, no inbound control of actuation** (the single-authority rule, ADR-0016,
    must absorb any future remote path — there is none now). Local-network and fully-local only (PRD-0005
-   non-goal: no cloud).
+   non-goal: no cloud). **Refinement (#826, v0.7.2):** a LAN-local `/cmd` endpoint adds the
+   **config/read** command surface (`cad/ping/ver/cfg/name/label/pos`) over HTTP for `serial == wifi`
+   parity — **actuation (`water/stop/auto`) + credentials stay serial-only**, so "no inbound control of
+   actuation" holds unchanged; the actuation half waits for physical bring-up (#215).
 4. **The captive portal is right-sized for the home-hobby threat model.** The setup AP exists **only while not
    yet configured, or on repeated WiFi failure**, serves only the config page, accepts credentials over the
    **local AP link** → NVS → and tears down once joined; it never reflects stored credentials back. **Stated
