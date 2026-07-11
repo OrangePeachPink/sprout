@@ -1,0 +1,103 @@
+name: pages (design library + web-flasher)
+
+# Actions-deployed GitHub Pages (ADR-0032, amended #271). Deploys the docs/ design library
+# BYTE-IDENTICALLY plus the ESP Web Tools web-flasher (the page + a board-aware manifest +
+# the CI-built factory bins) as ONE same-origin Pages artifact.
+#
+# WHY Actions, not the legacy `main`//docs branch deploy: the flasher must fetch the ~1.2 MB
+# factory .bin SAME-ORIGIN — GitHub's release-asset CDN sends no `access-control-allow-origin`
+# so a browser fetch from the Pages origin is blocked — and the bins can't live in git either
+# (over the repo's 1024 KB large-file guard; Pages doesn't serve git-LFS). CI builds them into
+# the deploy artifact; they are NEVER committed. Full rationale: ADR-0032 Amendment (#271).
+#
+# ONE-TIME maintainer step after this merges: Settings → Pages → Source → "GitHub Actions".
+# Until that flip, the build job succeeds (bins + artifact) but the deploy step reports the
+# site isn't configured for Actions — dispatch this workflow once to prove the build, flip the
+# setting, then re-dispatch (or push) to publish. The legacy branch deploy keeps serving until
+# the flip, so there is no serving gap.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "firmware/**"
+      - "tools/pages/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+# Least privilege: read the repo, write the Pages deployment (OIDC token for deploy-pages).
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time. A newer main push supersedes a queued run, but never cancels an
+# in-flight deploy — a half-published Pages site is worse than a slightly stale one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build site (design library + flasher + factory bins)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # factory_bin.py stamps the short git rev into the manifest provenance
+
+      - name: Set up uv (+ the locked Python)
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          version: "0.11.14" # pin uv (#254), matching the firmware CI job
+
+      - name: Set up just
+        uses: extractions/setup-just@v4
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+          restore-keys: pio-${{ runner.os }}-
+
+      - name: Build the board-aware factory bins (classic + C5)
+        run: |
+          just build     # esp32dev -> sprout-esp32-factory.bin  + manifest-esp32.json
+          just build-c5  # esp32c5  -> sprout-esp32c5-factory.bin + manifest-esp32c5.json
+
+      - name: Assemble the Pages site (docs/ + flasher bins + combined manifest)
+        run: |
+          site="_site"
+          mkdir -p "$site"
+          cp -r docs/. "$site/"   # the design library (+ .nojekyll) serves byte-identically
+          # the CI-built factory bins ride next to the flasher page (never committed to git)
+          cp firmware/.pio/build/esp32dev/sprout-esp32-factory.bin   "$site/flash/"
+          cp firmware/.pio/build/esp32c5/sprout-esp32c5-factory.bin  "$site/flash/"
+          # classic is --primary: its provenance is the page's pre-connect panel; C5 rides builds[]
+          python3 tools/pages/build_flash_manifest.py \
+            --primary firmware/.pio/build/esp32dev/manifest-esp32.json \
+            firmware/.pio/build/esp32c5/manifest-esp32c5.json \
+            --out "$site/flash/manifest.json"
+          echo "== flasher payload ==" && ls -l "$site/flash/"
+
+      - name: Upload the Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: deploy to Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
