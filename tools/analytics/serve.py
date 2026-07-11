@@ -35,6 +35,7 @@ import threading
 import time
 import urllib.request
 import webbrowser
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import ClassVar
@@ -381,6 +382,62 @@ def _fleet_adapter(registry=None):
     )
 
 
+# #918: the default view is a bounded window, not all-history. A request with no
+# `range` param (the initial root render + a bare data.json) used to parse + build
+# the WHOLE multi-week corpus (measured 17-22 s), then filter. Defaulting to the same
+# 7d the client opens with means the first paint only touches recent data; `range=all`
+# still serves the full corpus on demand (no fidelity loss).
+_DEFAULT_RANGE = "7d"
+# A per-device fleet/monitor log file: `<device_id>_<YYYYMMDD>_<HHMMSS>.csv[.gz]`. The
+# start timestamp lets a windowed read skip files entirely outside the range.
+_LOGDATE_RE = re.compile(r"_(\d{8})_(\d{6})\.csv(?:\.gz)?$")
+
+
+def _window_inputs(inputs: list[str], hours: float | None, now: datetime) -> list[str]:
+    """Range-aware file selection (#918 / the #901 RSS window-cap): for a bounded
+    window keep only the log files whose rows can fall inside ``[now - hours, now]`` —
+    the cold read no longer scans the whole corpus for a 7d view, and the parse cache
+    only holds the recent window resident. ``hours=None`` (all) returns ``inputs``
+    unchanged. Files with no parseable date, and the newest pre-window file per device
+    (the straddler holding the window's earliest rows), are always kept — a windowed
+    read never drops a row that is actually inside the window. The exact row-level trim
+    still happens in ``filter_since`` afterward."""
+    if hours is None:
+        return inputs
+    try:
+        from parse_v1 import _resolve
+    except Exception:
+        return inputs
+    files = _resolve(inputs)
+    window_start = now - timedelta(hours=hours)
+    undated: list = []
+    by_dev: dict[str, list] = {}
+    for f in files:
+        m = _LOGDATE_RE.search(f.name)
+        if not m:
+            undated.append(f)  # can't window safely -> always parse it
+            continue
+        try:
+            dt = datetime.strptime(m.group(1) + m.group(2), "%Y%m%d%H%M%S").replace(
+                tzinfo=timezone.utc
+            )
+        except ValueError:
+            undated.append(f)
+            continue
+        by_dev.setdefault(f.name[: m.start()], []).append((dt, f))
+    keep: list = []
+    for lst in by_dev.values():
+        lst.sort(key=lambda t: t[0])
+        # the straddler: newest file starting at/before window_start (holds the early
+        # part of the window); everything from it onward is in range.
+        start = 0
+        for i, (dt, _f) in enumerate(lst):
+            if dt <= window_start:
+                start = i
+        keep.extend(f for _dt, f in lst[start:])
+    return [str(p) for p in (undated + keep)]
+
+
 def _context(
     inputs: list[str] | None = None,
     hours: float | None = None,
@@ -391,11 +448,15 @@ def _context(
     # misses log files created later (a UTC-midnight rotation, a reconnect), so
     # a long-running server would silently go stale. None => auto-discover.
     resolved = inputs or gather_inputs()
+    # #918: window the file set to the requested range BEFORE parsing, so a 7d view
+    # never parses the whole corpus (the headline dashboard-load cost).
+    now = datetime.now(timezone.utc)
+    windowed = _window_inputs(resolved, hours, now)
     # #602: one registry load per request, shared by the fleet adapter, the
     # channel filter's identity coalesce, and build_context's grouping.
     reg = registry if registry is not None else load_registry()
     # #277/#486: reads through the source-adapter seam - see source_adapter.py.
-    data = _fleet_adapter(reg).load(resolved)
+    data = _fleet_adapter(reg).load(windowed)
     all_ch = sorted(
         {r.sensor_id for r in data.readings if r.record_type.startswith("plants.soil")}
     )
@@ -458,7 +519,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # http.server dispatch name
         parsed = urlparse(self.path)
         q = parse_qs(parsed.query)
-        hours = RANGE_HOURS.get(q.get("range", ["all"])[0])  # unknown/"all" -> None
+        # #918: default to the bounded window the client opens with (not all-history),
+        # so the initial root render + a bare data.json don't parse the whole corpus.
+        hours = RANGE_HOURS.get(q.get("range", [_DEFAULT_RANGE])[0])  # "all" -> None
         channels = [c for c in q.get("channels", [""])[0].split(",") if c] or None
         try:
             if parsed.path in ("/", "/index.html"):
