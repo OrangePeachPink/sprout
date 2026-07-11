@@ -200,6 +200,27 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
   border: 1px solid; border-radius: 999px; padding: 2px 10px; }
 .calchip { font-family: var(--font-data); font-size: 11px; font-weight: 600;
   margin-left: auto; }
+/* #921 slice 2: the Plants & Sensors registry tab */
+.regsec { margin-bottom: var(--space-md); }
+.reggrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.regcard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-tile); padding: 12px 14px; }
+.regcard-h { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.regname { font-family: var(--font-display); font-weight: 700; font-size: 16px; }
+.regtype { font-size: 12px; }
+.regmap { margin-top: 6px; font-size: 13px; }
+.regmap.unmapped { color: var(--muted); font-style: italic; }
+.regmeta, .regmeta { margin-top: 6px; font-size: 11px; }
+.reglist { display: flex; flex-direction: column; }
+.regrow { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.regrow:last-child { border-bottom: 0; }
+.regcode { font-family: var(--font-data); font-size: 12px; font-weight: 600; }
+.regto { margin-left: auto; font-size: 12px; }
+.pausedchip { font-family: var(--font-data); font-size: 11px; font-weight: 600; color: var(--muted);
+  border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
+.regwelcome { max-width: 640px; }
+.regintro { line-height: 1.6; }
+.regsteps { line-height: 2; padding-left: 20px; }
+.regsoon { margin-top: 8px; font-size: 12px; }
 .calbanner { font-size: 12px; color: var(--st-dry); background: var(--surface);
   border: 1px dashed var(--st-dry); border-radius: var(--r-tile); padding: 8px 12px; }
 .devribbon { font-size: 11px; color: var(--muted); padding: 0 2px; }
@@ -404,6 +425,7 @@ footer.prov code { font-family: var(--font-data); }
     <button class="tab active" type="button" data-tab="monitor" role="tab" aria-selected="true">Monitor</button>
     <button class="tab" type="button" data-tab="capture" role="tab" aria-selected="false">Capture</button>
     <a class="tab" href="/lab" role="tab">Lab</a>
+    <button class="tab" type="button" data-tab="plants" role="tab" aria-selected="false">Plants &amp; Sensors</button>
     <button class="tab" type="button" data-tab="diagnostics" role="tab" aria-selected="false">Diagnostics &amp; Logs</button>
   </nav>
 
@@ -567,6 +589,10 @@ footer.prov code { font-family: var(--font-data); }
   </div>
 
   <div id="detail" style="display:none"></div>
+
+  <!-- #921 slice 2: Plants & Sensors — read-only registry view + first-run setup landing (Q9),
+       filled by renderRegistry() off the /registry seam. -->
+  <div id="plants" style="display:none"></div>
 </div>
 
 <script>
@@ -1577,10 +1603,125 @@ function backToOverview(){ currentDetail=null; if(charts.detail){ charts.detail.
 /* ---- #614: top-level tabs (Monitor / Capture / Lab). Client-side, deep-linked
    via #capture / #monitor. Monitor leads with results; Capture is off the flow;
    Lab is its own /lab route. The single-plant detail lives inside Monitor. ---- */
+/* ---- #921 slice 2: the Plants & Sensors registry tab (read-only + first-run landing) ---- */
+let __registry = null;
+// naming per the #921 ruling: pet name / type leads (plant-first); spell in prose, code in grids.
+function regPlantName(p){
+  return (p && (p.pet_name || p.plant_type)) || ('Plant ' + String((p && p.plant_id) || '').replace(/^p/i, ''));
+}
+function regSpell(id, word){   // "s03" -> "Sensor 03" (prose form); empty -> em-dash
+  const n = String(id || '').replace(/^[a-z]+/i, '');
+  return n ? (word + ' ' + n) : (id || '—');
+}
+function regDeviceName(d){ return (d && (d.friendly_name || d.device_id)) || '—'; }
+function regCalChip(profile){   // reuse the #951/#957 three-tier honesty (channel-cal is unlabeled)
+  if(!profile) return null;
+  const tier = profile.tier || 'uncalibrated';
+  if(tier === 'board-cal'){ const c = el('span', 'calchip', 'cal · board-level'); c.style.color = 'var(--muted)'; return c; }
+  if(tier === 'uncalibrated'){ const c = el('span', 'calchip', 'cal · uncalibrated'); c.style.color = 'var(--st-dry)'; return c; }
+  return null;   // channel-cal -> the top state wears no chip
+}
+function regPaused(lc){ return lc === 'paused' ? el('span', 'pausedchip', 'Paused') : null; }
+function regWelcome(){
+  const w = el('div', 'regwelcome card');
+  w.innerHTML =
+    '<div class="panel-h"><h2>Let’s set up your plants</h2></div>'
+    + '<p class="regintro">Nothing here yet. This is where you tell Sprout what it’s watching — add your '
+    + 'boards, your sensors, and your plants, then map which sensor watches which plant. Once they’re mapped, '
+    + 'Sprout starts logging on its own.</p>'
+    + '<ol class="regsteps">'
+    + '<li><strong>Add a board</strong> — your ESP32</li>'
+    + '<li><strong>Add a sensor</strong> — your soil probe</li>'
+    + '<li><strong>Add a plant</strong> — a number, and a name if you like</li>'
+    + '<li><strong>Map them</strong> — which sensor watches which plant</li>'
+    + '</ol>'
+    + '<p class="muted regsoon">Adding lands next; for now this tab shows what’s configured.</p>';
+  return w;
+}
+function regSection(title, cap){
+  const s = el('section', 'card regsec');
+  s.appendChild(el('div', 'panel-h', '<h2>' + title + '</h2>' + (cap ? '<span class="cap">' + cap + '</span>' : '')));
+  return s;
+}
+function renderRegistry(reg){
+  __registry = reg;
+  const host = document.getElementById('plants'); if(!host) return;
+  host.innerHTML = '';
+  if(!reg || reg.first_run){ host.appendChild(regWelcome()); return; }
+  const sById = {}; (reg.sensors || []).forEach(s => sById[s.sensor_id] = s);
+  const dById = {}; (reg.devices || []).forEach(d => dById[d.device_id] = d);
+  const pById = {}; (reg.plants || []).forEach(p => pById[p.plant_id] = p);
+  const pfById = {}; (reg.profiles || []).forEach(p => pfById[p.profile_id] = p);
+  const mapByPlant = {}, mapBySensor = {};
+  (reg.current_mappings || []).forEach(m => { mapByPlant[m.plant_id] = m; mapBySensor[m.sensor_id] = m; });
+
+  // ---- Plants: the spine, lead with the plant (four-question doctrine) ----
+  const psec = regSection('Plants', 'what Sprout is watching');
+  const pgrid = el('div', 'reggrid');
+  (reg.plants || []).forEach(p => {
+    const card = el('div', 'regcard');
+    const h = el('div', 'regcard-h');
+    h.appendChild(el('span', 'regname', esc(regPlantName(p))));
+    if(p.pet_name && p.plant_type) h.appendChild(el('span', 'muted regtype', esc(p.plant_type)));
+    const paused = regPaused(p.lifecycle); if(paused) h.appendChild(paused);
+    card.appendChild(h);
+    const m = mapByPlant[p.plant_id];
+    if(m){
+      card.appendChild(el('div', 'regmap',
+        'watched by <strong>' + esc(regSpell(m.sensor_id, 'Sensor')) + '</strong> on '
+        + esc(regDeviceName(dById[m.device_id])) + ' <span class="muted">(' + esc(m.channel) + ')</span>'));
+      const cal = regCalChip(pfById[m.profile_id]); if(cal) card.appendChild(cal);
+    } else {
+      card.appendChild(el('div', 'regmap unmapped', 'no sensor yet'));
+    }
+    const meta = [p.location, p.pot_description].filter(Boolean).map(esc).join(' · ');
+    if(meta) card.appendChild(el('div', 'regmeta muted', meta));
+    pgrid.appendChild(card);
+  });
+  if(!(reg.plants || []).length) pgrid.appendChild(el('div', 'muted', 'No plants yet.'));
+  psec.appendChild(pgrid); host.appendChild(psec);
+
+  // ---- Sensors: the probes (code form in the grid) ----
+  const ssec = regSection('Sensors', 'your probes — the number is printed on the hardware');
+  const slist = el('div', 'reglist');
+  (reg.sensors || []).forEach(s => {
+    const row = el('div', 'regrow');
+    row.appendChild(el('span', 'regcode', esc(s.sensor_id)));
+    if(s.friendly_name) row.appendChild(el('span', '', esc(s.friendly_name)));
+    const paused = regPaused(s.lifecycle); if(paused) row.appendChild(paused);
+    const m = mapBySensor[s.sensor_id];
+    const to = m
+      ? ('→ ' + esc(regPlantName(pById[m.plant_id] || {plant_id: m.plant_id}))
+         + ' <span class="muted">on ' + esc(regDeviceName(dById[m.device_id])) + '</span>')
+      : '<span class="muted">unassigned</span>';
+    row.appendChild(el('span', 'regto', to));
+    slist.appendChild(row);
+  });
+  if(!(reg.sensors || []).length) slist.appendChild(el('div', 'muted', 'No sensors yet.'));
+  ssec.appendChild(slist); host.appendChild(ssec);
+
+  // ---- Boards: the MCUs (taxonomy board=MCU, #921) ----
+  const bsec = regSection('Boards', 'the ESP32s — each with up to four sensor channels');
+  const blist = el('div', 'reglist');
+  (reg.devices || []).forEach(d => {
+    const row = el('div', 'regrow');
+    row.appendChild(el('span', 'regname', esc(regDeviceName(d))));
+    if(d.friendly_name && d.device_id) row.appendChild(el('span', 'muted regcode', esc(d.device_id)));
+    const paused = regPaused(d.lifecycle); if(paused) row.appendChild(paused);
+    blist.appendChild(row);
+  });
+  if(!(reg.devices || []).length) blist.appendChild(el('div', 'muted', 'No boards yet.'));
+  bsec.appendChild(blist); host.appendChild(bsec);
+}
+async function registryPoll(){
+  try{ renderRegistry((await apiJson('/registry', {cache:'no-store'})).data); }
+  catch(e){ /* old server without the route, or transient — leave last state */ }
+}
 function showTab(name, rerender){
-  const tabs = ['monitor', 'capture', 'diagnostics'];   // Lab is its own /lab route
+  const tabs = ['monitor', 'plants', 'capture', 'diagnostics'];   // Lab is its own /lab route
   if(!tabs.includes(name)) name = 'monitor';
   const isMon = name === 'monitor', isCap = name === 'capture', isDiag = name === 'diagnostics';
+  const isPlants = name === 'plants';   // #921: the Plants & Sensors registry tab
   // Monitor = the collection strip + the glanceable plant view (or an open detail).
   document.getElementById('monitorCard').style.display = isMon ? '' : 'none';
   document.getElementById('overview').style.display = (isMon && !currentDetail) ? 'block' : 'none';
@@ -1588,11 +1729,13 @@ function showTab(name, rerender){
   document.getElementById('captureCard').style.display = isCap ? '' : 'none';
   // Diagnostics & Logs = the long, always-growing surfaces, off Monitor (amendment).
   document.getElementById('diagnostics').style.display = isDiag ? 'block' : 'none';
+  const plantsEl = document.getElementById('plants');
+  if(plantsEl){ plantsEl.style.display = isPlants ? 'block' : 'none'; if(isPlants) registryPoll(); }
   // #708: Monitor-only view controls don't ride on tabs where they do nothing (they read as dead controls).
   // Channel toggles filter only Monitor's cards/trajectory -> Monitor only. The range windows every chart
   // (Monitor + Diagnostics) -> hidden on Capture only. Refresh / auto / theme / Stop-server stay global.
   const chansel = document.getElementById('chansel'); if(chansel) chansel.style.display = isMon ? '' : 'none';
-  const rangesel = document.getElementById('rangesel'); if(rangesel) rangesel.style.display = isCap ? 'none' : '';
+  const rangesel = document.getElementById('rangesel'); if(rangesel) rangesel.style.display = (isCap || isPlants) ? 'none' : '';
   document.querySelectorAll('.tabnav .tab[data-tab]').forEach(t=>{
     const on = t.dataset.tab === name;
     t.classList.toggle('active', on); t.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -2232,6 +2375,8 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
   applyTheme();
   initTabs();
   renderAll();
+  // #921: a fresh install has an empty registry — land on the setup tab (retires the launchpad, Q9).
+  registryPoll().then(()=>{ if(__registry && __registry.first_run && !location.hash) showTab('plants', false); });
   setRange(curRange);
   // Tick the freshness line even with no new data, so a frozen logger or a dead
   // viewer shows growing age / a disconnect notice instead of a stale "just now".
