@@ -14,7 +14,7 @@ docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor
 docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor_photos/IMG_0528.JPEG
 
 # --- #911 — internal-doc link sweep (Workflow lane-splits). Finding 4
-#     (release-notes-voice.md -> ../../discussions) is FIXED — absolute Discussions URL;
-#     the remaining five are routed to their owning lanes. ---
+#     (release-notes-voice.md -> ../../discussions) FIXED; finding 5 (BENCH_PREFLIGHT)
+#     FIXED — its two links now resolve to docs/bench-procedures/bench-preflight-checklist.md,
+#     so this stale ../experiments/ entry is cleared. Remaining findings routed to owning lanes. ---
 docs/design/components/README.md -> ../sprout-v2/README.md
-docs/process/BENCH_PREFLIGHT.md -> ../experiments/bench-preflight-checklist.md
