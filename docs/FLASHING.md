@@ -41,9 +41,11 @@ The flow has a couple of browser prompts that surprise first-timers. In order:
 4. **Installing…** progress → **"installation complete"** → the board reboots running Sprout (you'll
    see telemetry on a serial monitor at 19200 baud).
 
-**Driver note:** the USB-serial chip may need a driver — macOS/Linux usually have it built in, Windows
-10/11 usually auto-installs, but **CH340** boards sometimes need the WCH driver. If **no port appears**
-in step 1, that's the cause.
+**Driver note:** the USB-serial chip needs a driver for the port to appear. macOS/Linux carry these
+built in; **Windows often does not** — and Windows Update won't fetch them (the classic ESP32's CP2102
+is the common miss, not just CH340). If **no port appears** in step 1, that's almost always it — see
+[Windows: install the USB-serial driver first](#windows-install-the-usb-serial-driver-first-if-no-port-appears)
+below.
 
 ### Which serial port, per board (#436)
 
@@ -65,6 +67,28 @@ web-flasher page is **classic-ESP32-only in practice**, even though `esp32s3`/`e
 non-blocking CI dry-run). Making the manifest board-aware (a `chipFamily` per target, e.g. `ESP32-S3` /
 `ESP32-C5`) is a real follow-on, not yet built — don't assume this page can web-flash an S3/C5 board
 today. Source: [`docs/hardware/BOARDS.md`](hardware/BOARDS.md) (Firmware's per-board reference).
+
+## Windows: install the USB-serial driver first (if no port appears)
+
+macOS and Linux carry these drivers built in — plug in and the port shows up. **Windows often does
+not**, and Windows Update won't fetch them, so on a clean Windows 11 box the board never enumerates a
+port until you install the driver by hand. Symptom (classic ESP32 / CP2102): Device Manager shows
+*"CP2102 USB to UART Bridge Controller"* under **Other devices** with a ⚠️, the port chooser (or
+`pio device list`) is empty, and *Update driver → Search automatically* reports *"could not find
+drivers."*
+
+| Board / port | USB bridge | Driver you need |
+|---|---|---|
+| **classic ESP32** | CP2102 | **Silicon Labs CP210x Universal Windows Driver** — [silabs.com CP210x VCP](https://www.silabs.com/developer-tools/usb-to-uart-bridge-vcp-drivers) |
+| **ESP32-C5 — UART port** | CH340 | **WCH CH340 driver** — the vendor's CH340/CH341SER download at wch-ic.com |
+| **ESP32-C5 — native "USB" port** | none (VID `303A`) | **driverless** — see the tip below |
+
+**Install it once (manual):** download → extract → Device Manager → right-click the ⚠️ device →
+**Update driver** → **Browse my computer** → point at the extracted folder. It then enumerates as
+*"Silicon Labs CP210x (COMx)"* (or *"USB-SERIAL CH340 (COMx)"*) and flashing proceeds normally.
+
+**Tip — the C5 skips the driver entirely.** The ESP32-C5's **native USB port** (VID `303A`) is
+driverless: plug into *that* port and Windows needs no driver at all. Confirmed on the official C5.
 
 ## The firmware artifacts (how the image is built)
 
