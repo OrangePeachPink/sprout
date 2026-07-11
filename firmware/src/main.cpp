@@ -946,9 +946,18 @@ void setup()
         g_mcfg[ch] =
             cfg; /* shared acquisition / hysteresis / persistence / health */
         /* C1/#170: diverge ONLY the raw->band boundaries per channel (sensor
-         * personality removed); the band->action policy (g_chan_cfg) stays shared. */
-        memcpy(g_mcfg[ch].boundary, SENSOR_CAL_BOUNDARY[ch],
-               sizeof(g_mcfg[ch].boundary));
+         * personality removed); the band->action policy (g_chan_cfg) stays shared.
+         * #899 seam: the per-channel table (calibration.h) is CLASSIC bench data;
+         * imposing it on an unverified board mis-bands it (the C5's compressed ADC,
+         * #443/#898). A cal-verified board uses its per-channel table; an unverified
+         * board falls back to its own per-BOARD cal_boundary (board_capability.h). */
+        if (BOARD_CAP.cal_verified) {
+            memcpy(g_mcfg[ch].boundary, SENSOR_CAL_BOUNDARY[ch],
+                   sizeof(g_mcfg[ch].boundary));
+        } else {
+            memcpy(g_mcfg[ch].boundary, BOARD_CAP.cal_boundary,
+                   sizeof(g_mcfg[ch].boundary));
+        }
         g_chan_cfg[ch].dose_ms = IRRIG_DOSE_MS;
         g_chan_cfg[ch].soak_ms = IRRIG_SOAK_MS;
         g_chan_cfg[ch].water_at_or_below = MOIST_NEEDS_WATER;
