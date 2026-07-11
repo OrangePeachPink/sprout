@@ -810,6 +810,9 @@ function cardFor(s){
   add('range', `${fmt(s.raw_min)}–${fmt(s.raw_max)}`);
   add('median', fmt(s.raw_median));
   add('slope', s.slope_per_hr!=null? `${s.slope_per_hr>=0?'+':''}${s.slope_per_hr}/h` : '—');
+  // #919: fault/sub-rail/OOB rows are kept on the plot (raw = truth) but excluded from
+  // the trend + forecast fits; surface the count so the exclusion is never silent.
+  if(s.fit_excluded>0) add('excluded from fit', `${s.fit_excluded}`);
   if(s.ambient){ // #562: interior-ambient context — value never shown without its source tag
     const parts = [];
     if(s.ambient.temp_c!=null) parts.push(`${s.ambient.temp_c}°C`);
