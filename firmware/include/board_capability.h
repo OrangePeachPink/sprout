@@ -116,9 +116,13 @@ typedef struct {
  * {36,39,34,35}/{25,26,27,32} which DO NOT EXIST on the C5 - at the first bench
  * flash (2026-07-03, official C5) those nonexistent pins flooded continuous
  * `Pin 36 is not ADC pin!` / `IO 32 is not set as GPIO` errors that starved the
- * loop before WiFi could come up. Valid pins fix that. Continuity NOT yet
- * meter-verified (B1) and the ADC is NOT calibrated -> cal_verified=false; the
- * do-not-flash-for-SENSORS caution stands until the wired round.
+ * loop before WiFi could come up. Valid pins fix that. Continuity + GPIO map
+ * are bench-verified now (deployed 2026-07-09, 8gtt1h). cal_boundary below is
+ * the #898-measured C5 envelope (air ~2740 / wet ~980, interior linear-scaled;
+ * Data signs the values). cal_verified stays FALSE because this is a per-BOARD
+ * cal, not the per-channel #170 bench table the classic carries - the #899 seam
+ * routes unverified boards to cal_boundary, so false is what makes the C5 use
+ * its OWN scale (flipping true wrongly re-applies the classic per-channel table).
  *   soil : the ONLY four non-strapping ADC1 pins. ADC1 = GPIO1-6; strapping
  *          MTMS(2)/MTDI(3) removed -> {1,4,5,6} is forced, not chosen.
  *   relay: the only four free non-strapping output pins {0,8,9,10} (GPIO0 is a
@@ -136,7 +140,7 @@ typedef struct {
      BOARD_LED_NONE,                                                           \
      23,                                                                       \
      24,                                                                       \
-     {3050, 2140, 1830, 1520, 1150, 1050},                                     \
+     {2740, 1939, 1666, 1394, 1068, 980},                                      \
      false,                                                                    \
      900}
 #else
