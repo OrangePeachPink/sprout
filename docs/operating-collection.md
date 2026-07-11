@@ -14,7 +14,7 @@ you're scripting.
 | Command | Does |
 | --- | --- |
 | `just collection status` | List every live **logical** collector — grouped by launch tree (#811), **role + tree pids** (monitor / fleet / capture). Same view as `just processes`. |
-| `just collection start` | Start all collection — parity with the dashboard's **▶ Start all collection** (ADR-0014). Needs a running server (`just start` first). |
+| `just collection start` | Start logging — the same all-paths action as the dashboard's **▶ Start logging** (ADR-0014). Needs a running server (`just start` first). |
 | `just collection stop` | Stop **every** live collector — graceful first, hard-kill any that don't exit. No dashboard needed. |
 | `just stop-collection` | Shortcut for `just collection stop`. |
 
