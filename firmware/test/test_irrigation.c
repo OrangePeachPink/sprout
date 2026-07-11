@@ -1459,6 +1459,8 @@ void t_soil_row_v4(void)
         -57 /*rssi_dbm*/,
         3600 /*uptime_s*/,
         214112 /*heap*/,
+        "board-cal" /*cal_tier*/,
+        "board_envelope_20260710" /*cal_src*/,
     };
     /* connected: config_id + rssi + uptime_s + heap all present, no fault. */
     TEST_ASSERT_TRUE_MESSAGE(telemetry_format_soil_row(buf, sizeof(buf), &row) >
@@ -1472,6 +1474,11 @@ void t_soil_row_v4(void)
                                  "#669 uptime_s in payload");
     TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, ";heap=214112"),
                                  "#669 heap in payload");
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, ";cal_tier=board-cal"),
+                                 "#997 cal_tier rides the WiFi row");
+    TEST_ASSERT_NOT_NULL_MESSAGE(
+        strstr(buf, ";cal_src=board_envelope_20260710"),
+        "#997 cal_src provenance rides the WiFi row");
     TEST_ASSERT_NULL_MESSAGE(strstr(buf, "SENSOR_FAULT"),
                              "healthy row is not SENSOR_FAULT");
     TEST_ASSERT_NULL_MESSAGE(strstr(buf, ";fault="),
@@ -1485,6 +1492,11 @@ void t_soil_row_v4(void)
     TEST_ASSERT_NULL_MESSAGE(
         strstr(buf, "rssi="),
         "#669/ADR-0028 rssi OMITTED off WiFi (never a fake 0)");
+    TEST_ASSERT_NULL_MESSAGE(
+        strstr(buf, "cal_tier="),
+        "#997 cal_tier OMITTED off WiFi (header derivation governs tethered)");
+    TEST_ASSERT_NULL_MESSAGE(strstr(buf, "cal_src="),
+                             "#997 cal_src OMITTED off WiFi");
     TEST_ASSERT_NOT_NULL_MESSAGE(strstr(buf, ";uptime_s=3600"),
                                  "uptime_s still rides every row off WiFi");
 
@@ -1596,6 +1608,16 @@ void t_cal_resolver_c5_board_envelope(void)
     }
 }
 
+void t_cal_tier_label(void)
+{
+    /* #997: the resolver tier maps to the EXACT parser-validated wire token
+     * (tools/analytics/test_cal_tier_wire.py). Any drift here silently breaks the
+     * dashboard's cal-tier chip on the live WiFi fleet. */
+    TEST_ASSERT_EQUAL_STRING("channel-cal", cal_tier_label(CAL_TIER_CHANNEL));
+    TEST_ASSERT_EQUAL_STRING("board-cal", cal_tier_label(CAL_TIER_BOARD));
+    TEST_ASSERT_EQUAL_STRING("uncalibrated", cal_tier_label(CAL_TIER_FACTORY));
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -1629,5 +1651,6 @@ int main(void)
     RUN_TEST(t_cal_resolver_chain_order);
     RUN_TEST(t_cal_resolver_classic_byte_preserved);
     RUN_TEST(t_cal_resolver_c5_board_envelope);
+    RUN_TEST(t_cal_tier_label);
     return UNITY_END();
 }

@@ -61,3 +61,16 @@ const cal_record_t *cal_resolve(const char *board_class,
     if (r) return r;
     return &k_factory_fallback; /* Layer 3 */
 }
+
+const char *cal_tier_label(cal_tier_t tier)
+{
+    switch (tier) {
+    case CAL_TIER_CHANNEL:
+        return "channel-cal";
+    case CAL_TIER_BOARD:
+        return "board-cal";
+    case CAL_TIER_FACTORY:
+    default:
+        return "uncalibrated"; /* the factory floor is never bench-measured */
+    }
+}

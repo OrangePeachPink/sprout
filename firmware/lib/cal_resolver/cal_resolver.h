@@ -90,6 +90,13 @@ const cal_record_t *cal_instance_lookup(const char *board_class,
                                         sensor_class_t sensor_class,
                                         int channel);
 
+/* Map a resolved tier to its telemetry wire token (#957/#997) - the label the
+ * dashboard's cal-tier chip reads off the WiFi soil rows. Stable, parser-validated
+ * tokens (an unknown value is rejected host-side, never passed through):
+ * CHANNEL -> "channel-cal", BOARD -> "board-cal", FACTORY -> "uncalibrated".
+ * Never NULL. */
+const char *cal_tier_label(cal_tier_t tier);
+
 #ifdef __cplusplus
 }
 #endif

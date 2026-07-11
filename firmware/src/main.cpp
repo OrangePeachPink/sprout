@@ -174,7 +174,9 @@ static WebServer g_http(WIFI_HTTP_PORT);
  * ADR-0016). Same bytes as the serial wire ("one schema, every transport",
  * ADR-0018 §4), so the future device-served reader adapter parses it with the
  * same parse path as the serial stream. Empty = no row emitted yet. */
-static char g_last_row[NUM_SENSORS][320];
+static char g_last_row[NUM_SENSORS][512]; /* #997: holds the full worst-case row
+                                             (+cal_tier/cal_src) so the WiFi-served
+                                             bytes are never truncated */
 
 /* Served-telemetry env cache (#598): the plants.env rows (die-temp on every build;
  * SHT45/AS7263 on the env build) from the latest emit cycle, cached the same way as
@@ -232,6 +234,11 @@ static moisture_cfg_t g_mcfg
     [NUM_SENSORS]; /* per-channel: shared cfg + per-channel boundary (#170) */
 static irrig_chan_cfg_t
     g_chan_cfg[NUM_SENSORS]; /* per-channel dose policy (provisional) */
+/* #952/#997: the resolved cal record per channel (static-storage pointers from
+ * cal_resolve - the class-default table / factory fallback, program-lifetime), stashed
+ * at setup so the emit loop reads tier + provenance for the WiFi cal_tier=/cal_src=
+ * wire token without re-resolving. */
+static const cal_record_t *g_cal[NUM_SENSORS];
 static uint16_t
     g_scratch[SAMPLES_PER_READ]; /* FSM burst buffer (>= sample_count) */
 
@@ -1017,6 +1024,8 @@ void setup()
         const cal_record_t *cal =
             cal_resolve(BOARD_CAP.name, SENSOR_CLASS_CAPACITIVE_V2, ch);
         memcpy(g_mcfg[ch].boundary, cal->anchors, sizeof(g_mcfg[ch].boundary));
+        g_cal[ch] =
+            cal; /* #997: stash for the WiFi cal_tier=/cal_src= emission */
         g_chan_cfg[ch].dose_ms = IRRIG_DOSE_MS;
         g_chan_cfg[ch].soak_ms = IRRIG_SOAK_MS;
         g_chan_cfg[ch].water_at_or_below = MOIST_NEEDS_WATER;
@@ -1318,7 +1327,7 @@ void loop()
         for (int ch = 0; ch < NUM_SENSORS; ch++) {
             /* Format the CSV row via lib/telemetry; values come from FSM state. */
             char line
-                [384]; /* #739 v4: payload grew (config_id/fault/diag keys) */
+                [512]; /* #739 v4 payload + #952/#997 cal_tier/cal_src keys */
             telemetry_soil_row_t row = {
                 RECORD_TYPE_SOIL,
                 g_session_id,
@@ -1343,6 +1352,13 @@ void loop()
                 rssi_now, /* #669 rssi_dbm (ignored when !wifi_up) */
                 uptime_s_now, /* #669 uptime_s */
                 heap_now, /* #669 heap= */
+                /* #952/#997: tier + provenance from the resolved record; the formatter
+                 * emits these only on WiFi rows (rssi_present gate), honest-absent on
+                 * tethered rows so the header derivation governs. g_cal[ch] is set for
+                 * every channel at setup; the guard is defensive. */
+                g_cal[ch] ? cal_tier_label(g_cal[ch]->tier)
+                          : NULL, /* cal_tier= */
+                g_cal[ch] ? g_cal[ch]->provenance : NULL, /* cal_src= */
             };
             if (telemetry_format_soil_row(line, sizeof(line), &row) >= 0) {
                 char crc[6];

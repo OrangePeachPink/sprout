@@ -73,6 +73,15 @@ typedef struct {
     int rssi_dbm; /* WiFi.RSSI() dBm (negative); ignored when !rssi_present */
     uint32_t uptime_s; /* seconds since boot (up_ms / 1000)             */
     uint32_t heap_free; /* esp_get_free_heap_size() bytes                */
+    /* #952/#957/#997 cal provenance - rides the WiFi soil rows ONLY (gated on
+     * rssi_present in the formatter, the additive rssi= pattern). The header cal
+     * signals (cal_bounds_source/cal_ch) reach only the tethered boot header, so
+     * this wire token supplements them on the WiFi-served path; a tethered row omits
+     * it so the richer header derivation governs (Data #997 fallback). cal_tier:
+     * "channel-cal"|"board-cal"|"uncalibrated" (cal_tier_label, #964 chain); cal_src:
+     * the provenance string. Both omitted (not empty keys) when NULL/"". */
+    const char *cal_tier;
+    const char *cal_src;
 } telemetry_soil_row_t;
 
 /*
