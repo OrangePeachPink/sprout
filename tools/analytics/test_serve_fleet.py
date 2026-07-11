@@ -135,7 +135,16 @@ def test_collection_routes_are_live(tmp_path: Path) -> None:
     port = s.getsockname()[1]
     s.close()
     proc = subprocess.Popen(
-        [_sys.executable, str(serve_py), str(tmp_path), "--port", str(port)],
+        # --no-autostart (#872): this test drives the collection routes from a known
+        # STOPPED start; auto-start would begin collecting and break that premise.
+        [
+            _sys.executable,
+            str(serve_py),
+            str(tmp_path),
+            "--port",
+            str(port),
+            "--no-autostart",
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,

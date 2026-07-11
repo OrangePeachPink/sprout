@@ -77,7 +77,8 @@ def _status(url: str) -> int:
 def test_docs_route_serves_and_guards_live() -> None:
     port = _free_port()
     proc = subprocess.Popen(
-        [sys.executable, str(_SERVE), "--port", str(port)],
+        # --no-autostart (#872): docs-route test — don't probe serial/fleet on launch
+        [sys.executable, str(_SERVE), "--port", str(port), "--no-autostart"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
