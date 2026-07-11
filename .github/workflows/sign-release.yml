@@ -28,7 +28,7 @@ jobs:
     name: build + sign factory bins
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Detect signing key
         id: sk
@@ -48,6 +48,13 @@ jobs:
           pio run -e esp32c5
 
       - name: Collect artifacts
+        # The .bin is the signed trust anchor (its .sig verifies against the committed
+        # public key). The manifest-*.json ride along as release-provenance pointers,
+        # attached UNSIGNED by design: the web-flasher's AUTHORITATIVE manifest is the
+        # Pages-served combined one (#271 / ADR-0032), not a release asset - so manifest
+        # signing belongs to the Pages half, out of scope here. A consumer that reads a
+        # release manifest still cross-checks the bin's sha256 + .sig, so an unsigned
+        # pointer can't smuggle a bad image past the signature gate.
         run: |
           mkdir -p dist
           cp firmware/.pio/build/esp32dev/sprout-esp32-factory.bin dist/
