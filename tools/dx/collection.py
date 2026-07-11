@@ -19,7 +19,7 @@ headless way to *see, stop, or reclaim* it - a reboot was the only recourse (#49
   ``KeyboardInterrupt`` clean-exit on POSIX; ``taskkill /PID`` on Windows), hard-kill
   (SIGKILL / ``taskkill /F``) only for survivors.
 
-* ``start`` - parity with the dashboard's one-action "Start all collection" (ADR-0014):
+* ``start`` - parity with the dashboard's one-action "Start logging" (ADR-0014):
   POST ``/collection/start`` to the running server (needs ``just start`` up first). The
   lifecycle *surface* is DX's, but the start policy lives in Data's
   ``collection_control`` - reached over the same HTTP the dashboard button uses.
