@@ -472,14 +472,42 @@ def console_line(row):
     )
 
 
+# #900: archival is the bounded-growth mechanism (closed segments gzip OUT of logs/). A
+# failure or unavailability must SURFACE, never be silently swallowed, or logs/ grows
+# uncompressed while the operator sees nothing. Health goes to STDERR - the channel that
+# survives the background worker's capped log (#968); stdout is DEVNULL on the worker,
+# so the old print() was effectively silent. Root-causing the specific stall + backlog
+# catch-up need a bench window; making the signal loud does not.
+_archive_fail_count = 0  # consecutive archive failures; a success clears the streak
+_archive_unavailable_warned = False  # the "unavailable" notice fires once, not per step
+
+
 def _archive_step(logdir, exclude=None, include_all=False):
-    """Best-effort B8 archive of closed segments; never disrupts logging."""
+    """Best-effort B8 archive of closed segments; never disrupts logging. #900: a
+    failure is LOUD (stderr) and COUNTED, and unavailability is stated once - segments
+    never accumulate in logs/ silently."""
+    global _archive_fail_count, _archive_unavailable_warned
     if archive_logs is None:
+        if not _archive_unavailable_warned:
+            _archive_unavailable_warned = True
+            print(
+                "[logger] archival UNAVAILABLE: archive_logs not importable — closed "
+                "segments will accumulate in logs/ until it's restored (B8 skipped)",
+                file=sys.stderr,
+                flush=True,
+            )
         return
     try:
         archive_logs.archive(logs_dir=logdir, exclude=exclude, include_all=include_all)
+        _archive_fail_count = 0  # a clean run clears the failure streak
     except Exception as e:
-        print(f"[logger] archive step failed (non-fatal): {e}")
+        _archive_fail_count += 1
+        print(
+            f"[logger] archive step FAILED (non-fatal, {_archive_fail_count}x): {e} — "
+            "closed segments accumulate in logs/ until this clears",
+            file=sys.stderr,
+            flush=True,
+        )
 
 
 def _lock_claim(port):

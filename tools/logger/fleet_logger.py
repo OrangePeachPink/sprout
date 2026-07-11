@@ -194,6 +194,10 @@ class FleetLogger:
         # earlier, within the freshness window.
         self._fillers: dict[str, ContextFiller] = {}
         self.appended = 0
+        # #900: archival health - a failure/unavailability must surface, never silently
+        # swallowed while logs/ grows uncompressed. Counted; notice fires once.
+        self._archive_fails = 0
+        self._archive_unavailable_warned = False
         self.polls = 0
 
     def _adapter(self, base_url: str):
@@ -271,15 +275,34 @@ class FleetLogger:
         return appended
 
     def _archive(self, exclude=None, include_all=False) -> None:
-        """Best-effort B8 archive of closed segments; never disrupts polling."""
+        """Best-effort B8 archive of closed segments; never disrupts polling. #900: a
+        failure is LOUD (stderr — the channel that survives the worker's capped log,
+        #968; `self._log` defaults to stdout, which is DEVNULL on the background worker)
+        and COUNTED, and unavailability is stated once — segments never accumulate in
+        logs/ silently."""
         if archive_logs is None:
+            if not self._archive_unavailable_warned:
+                self._archive_unavailable_warned = True
+                print(
+                    "[fleet] archival UNAVAILABLE: archive_logs not importable; "
+                    "closed segments accumulate in logs/ until restored (B8 skipped)",
+                    file=sys.stderr,
+                    flush=True,
+                )
             return
         try:
             archive_logs.archive(
                 logs_dir=self.logdir, exclude=exclude, include_all=include_all
             )
+            self._archive_fails = 0  # a clean run clears the failure streak
         except Exception as e:
-            self._log(f"[fleet] archive step failed (non-fatal): {e}")
+            self._archive_fails += 1
+            print(
+                f"[fleet] archive step FAILED (non-fatal, {self._archive_fails}x): {e} "
+                "— closed segments accumulate in logs/ until this clears",
+                file=sys.stderr,
+                flush=True,
+            )
 
     def run(self, *, max_polls: int | None = None, lock: object | None = None) -> bool:
         """The steady loop: take the cross-process singleton, seed the
