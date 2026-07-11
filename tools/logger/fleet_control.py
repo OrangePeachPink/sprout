@@ -45,27 +45,33 @@ _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 _FLEET_FILE_RE = re.compile(r"^(.+)_\d{8}_\d{6}\.csv$")
 
 
-def _served_device_count() -> int:
-    """How many registered devices have a base_url - the fleet path's existence
-    check. 0 = nothing to poll (an honest skip at the collection layer, a clear
-    refusal here). Import-guarded: a broken registry reads as an empty fleet."""
+def _active_served() -> list:
+    """The registered WiFi devices we should actually poll: served (has a base_url)
+    AND **active** (#1007) — a retired/paused board is off *by choice* and must never
+    be polled or counted as 'not answering' (grill Q2: off-by-choice is not a fault).
+    Import-guarded: a broken registry reads as an empty fleet."""
     try:
         from device_registry import load_registry
 
-        return len(load_registry().served_devices())
+        return [
+            d
+            for d in load_registry().served_devices()
+            if not getattr(d, "retired", False)
+        ]
     except Exception:
-        return 0
+        return []
+
+
+def _served_device_count() -> int:
+    """How many ACTIVE served devices exist - the fleet path's existence check and the
+    honest ``configured`` total (#1007: excludes retired). 0 = nothing to poll."""
+    return len(_active_served())
 
 
 def _served_map() -> dict:
-    """{served canonical device_id: previous_ids} for the WiFi fleet — the answering
-    matcher (#812). Import-guarded: a broken registry reads as an empty fleet."""
-    try:
-        from device_registry import load_registry
-
-        return {d.device_id: d.previous_ids for d in load_registry().served_devices()}
-    except Exception:
-        return {}
+    """{active served canonical device_id: previous_ids} — the answering matcher (#812),
+    active-only (#1007) so a retired board is never counted as not-answering."""
+    return {d.device_id: d.previous_ids for d in _active_served()}
 
 
 def count_answering(
@@ -108,8 +114,21 @@ class FleetError(RuntimeError):
     """A rejected fleet request (already running, or no registered devices)."""
 
 
+# #968: the poller's stderr goes to a CAPPED file, never DEVNULL — a crash leaves its
+# last words behind. Truncated to the tail when it bloats.
+_WORKER_LOG = "fleet_worker.log"
+_LOG_CAP_BYTES = 256 * 1024
+
+
 class FleetController:
-    """Start / stop / status for the fleet logger, single-flight."""
+    """Start / stop / status for the fleet logger, single-flight, **supervised**.
+
+    #1004's law (the maintainer's, verbatim: "be a damn logger and never stop"): once
+    collection is asserted ON, a worker that exits for ANY reason is restarted
+    automatically (bounded backoff, loud log, honest status during the gap) — a give-up
+    of one collection half never stops the other. Only an explicit Stop, or repeated
+    crashes inside the backoff window, ends it — and then it says WHY (#968 parity with
+    #941). A double-start on a healthy worker is idempotent: it never restarts it."""
 
     def __init__(
         self,
@@ -120,6 +139,10 @@ class FleetController:
         cadence_s: float | None = None,
         served_count=_served_device_count,
         answering_fn=None,
+        max_restarts: int = 5,
+        restart_window_s: float = 60.0,
+        supervise_interval_s: float = 1.0,
+        backoff_s: float = 1.5,
     ) -> None:
         self._python = python or sys.executable
         self._fleet_py = Path(fleet_py) if fleet_py else _FLEET_PY
@@ -128,42 +151,130 @@ class FleetController:
         self._served_count = served_count  # injectable for tests
         # #812: how many configured devices are actually answering; injectable.
         self._answering_fn = answering_fn or self._default_answering
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._proc: subprocess.Popen | None = None
         self._devices = 0
+        # #1004 guard 3 supervision state
+        self._want_running = False
+        self._supervisor: threading.Thread | None = None
+        self._give_up_reason: str | None = None
+        self._restarts: list[float] = []
+        self._log_fh = None
+        self._max_restarts = max_restarts
+        self._restart_window_s = restart_window_s
+        self._supervise_interval_s = supervise_interval_s
+        self._backoff_s = backoff_s
 
+    # ------------------------------- spawn + log ------------------------------ #
+    def _open_log(self):
+        p = Path(self._logdir or _DEFAULT_LOGDIR) / _WORKER_LOG
+        with contextlib.suppress(Exception):
+            p.parent.mkdir(parents=True, exist_ok=True)
+            if p.exists() and p.stat().st_size > _LOG_CAP_BYTES:
+                tail = p.read_bytes()[-(_LOG_CAP_BYTES // 2) :]
+                p.write_bytes(b"...[fleet_worker.log truncated]...\n" + tail)
+        try:
+            return open(p, "ab", buffering=0)
+        except OSError:
+            return subprocess.DEVNULL
+
+    def _spawn_locked(self) -> None:
+        argv = [self._python, str(self._fleet_py)]
+        if self._logdir:
+            argv += ["--logdir", str(self._logdir)]
+        if self._cadence_s:
+            argv += ["--cadence-s", str(self._cadence_s)]
+        self._log_fh = self._open_log()
+        self._proc = subprocess.Popen(
+            argv,
+            stdout=subprocess.DEVNULL,
+            stderr=self._log_fh,  # #968: last words survive
+            creationflags=_NO_WINDOW,
+        )
+
+    # --------------------------------- control -------------------------------- #
     def start(self) -> dict:
         with self._lock:
             if self._proc is not None and self._proc.poll() is None:
-                raise FleetError("fleet logger is already running")
+                # #1004 guard 1: idempotent — a start on a HEALTHY worker never restarts
+                # it (that collision is exactly what killed the worker the maintainer
+                # watched). Re-assert intent and return the running status, no-op.
+                self._want_running = True
+                return self._status_locked()
             n = self._served_count()
             if n == 0:
                 raise FleetError(
                     "no registered fleet devices (no base_url in the device "
                     "registry) - nothing to poll"
                 )
-            argv = [self._python, str(self._fleet_py)]
-            if self._logdir:
-                argv += ["--logdir", str(self._logdir)]
-            if self._cadence_s:
-                argv += ["--cadence-s", str(self._cadence_s)]
-            self._proc = subprocess.Popen(
-                argv,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                creationflags=_NO_WINDOW,
-            )
+            self._want_running = True
+            self._give_up_reason = None
+            self._restarts.clear()
+            self._spawn_locked()
             self._devices = n
+            self._ensure_supervisor_locked()
             return self._status_locked()
+
+    def _ensure_supervisor_locked(self) -> None:
+        if self._supervisor is not None and self._supervisor.is_alive():
+            return
+        self._supervisor = threading.Thread(
+            target=self._supervise, name="fleet-supervisor", daemon=True
+        )
+        self._supervisor.start()
+
+    def _supervise(self) -> None:
+        """The watchdog (#1004 guard 3). Sleeps OUTSIDE the lock; acquires it only to
+        check + respawn, so it never blocks start/stop/status."""
+        while True:
+            time.sleep(self._supervise_interval_s)
+            respawn = False
+            with self._lock:
+                if not self._want_running:
+                    return
+                if self._proc is not None and self._proc.poll() is None:
+                    continue  # healthy — keep watching
+                now = time.monotonic()
+                self._restarts = [
+                    t for t in self._restarts if now - t <= self._restart_window_s
+                ]
+                if len(self._restarts) >= self._max_restarts:
+                    self._give_up_reason = (
+                        f"fleet worker crashed {len(self._restarts)}x in "
+                        f"{int(self._restart_window_s)}s — see logs/{_WORKER_LOG}"
+                    )
+                    _loud(f"fleet supervision: giving up — {self._give_up_reason}")
+                    self._want_running = False
+                    self._proc = None
+                    return
+                self._restarts.append(now)
+                _loud(
+                    f"fleet supervision: worker exited — restarting "
+                    f"(#{len(self._restarts)}, be a damn logger)"
+                )
+                respawn = True
+            if respawn:
+                time.sleep(self._backoff_s)  # bounded backoff, off the lock
+                with self._lock:
+                    if not self._want_running:
+                        return
+                    if self._proc is None or self._proc.poll() is not None:
+                        with contextlib.suppress(Exception):
+                            self._spawn_locked()
 
     def stop(self) -> dict:
         with self._lock:
+            self._want_running = False  # tell the supervisor to stand down
             if self._proc is not None and self._proc.poll() is None:
                 self._proc.terminate()
                 with contextlib.suppress(Exception):
                     self._proc.wait(timeout=5)
             self._proc = None
             self._devices = 0
+            self._give_up_reason = None
+            if self._log_fh not in (None, subprocess.DEVNULL):
+                with contextlib.suppress(Exception):
+                    self._log_fh.close()
             return self._status_locked()
 
     def status(self) -> dict:
@@ -182,9 +293,20 @@ class FleetController:
         # #812: report configured vs ANSWERING honestly — a non-responding
         # configured device (unplugged) is visible, never absorbed into the total.
         answering = min(self._answering_fn(), configured) if running else 0
-        return {
+        out = {
             "state": "running" if running else "stopped",
             "configured": configured,
             "answering": answering,
             "devices": configured,  # back-compat alias (was the configured count)
         }
+        # #968: a self-stop surfaces WHY (parity with #941's serial give-up), never a
+        # bare "stopped" — the fleet half was previously silent on death.
+        if not running and self._give_up_reason:
+            out["give_up_reason"] = self._give_up_reason
+        return out
+
+
+def _loud(msg: str) -> None:
+    with contextlib.suppress(Exception):
+        sys.stderr.write(msg + "\n")
+        sys.stderr.flush()
