@@ -57,18 +57,21 @@ def test_start_stop_status_lifecycle(tmp_path: Path) -> None:
         assert fc.stop() == _STOPPED
 
 
-def test_single_flight_refuses_a_second_start(tmp_path: Path) -> None:
+def test_second_start_on_a_healthy_worker_is_idempotent(tmp_path: Path) -> None:
+    # #1004 guard 1: a start on a running worker NEVER restarts it (that collision is
+    # what killed the worker the maintainer watched). It's a no-op returning the running
+    # status — same process, zero deaths.
     fc = FleetController(
         fleet_py=_sleeper(tmp_path), served_count=lambda: 1, answering_fn=lambda: 1
     )
     fc.start()
     try:
-        raised = False
-        try:
-            fc.start()
-        except FleetError as e:
-            raised = "already running" in str(e)
-        assert raised
+        pid_before = fc._proc.pid
+        st = fc.start()  # must NOT raise, must NOT respawn
+        assert st["state"] == "running"
+        assert (
+            fc._proc.pid == pid_before
+        )  # the very same worker, never killed/restarted
     finally:
         fc.stop()
 
@@ -89,18 +92,119 @@ def test_stop_when_already_stopped_is_a_noop(tmp_path: Path) -> None:
     assert fc.stop() == _STOPPED
 
 
-def test_crashed_child_reads_stopped(tmp_path: Path) -> None:
+def _fast(fleet_py: Path, **kw):
+    # fast supervision so the watchdog tests run in ~1s, not ~12s
+    return FleetController(
+        fleet_py=fleet_py,
+        served_count=lambda: 1,
+        answering_fn=lambda: 1,
+        max_restarts=kw.pop("max_restarts", 2),
+        restart_window_s=kw.pop("restart_window_s", 30.0),
+        supervise_interval_s=0.05,
+        backoff_s=0.05,
+        **kw,
+    )
+
+
+def test_a_worker_that_keeps_crashing_gives_up_loudly(tmp_path: Path) -> None:
+    # #1004 guard 3 + #968: the supervisor restarts a crashing worker, but a worker that
+    # crashes past the bounded limit gives up — and says WHY (never a bare "stopped").
     crasher = tmp_path / "crash.py"
     crasher.write_text("raise SystemExit(1)\n", encoding="utf-8")
-    fc = FleetController(
-        fleet_py=crasher, served_count=lambda: 1, answering_fn=lambda: 1
-    )
+    fc = _fast(crasher, max_restarts=2)
     fc.start()
-    for _ in range(50):  # the child exits almost immediately
-        if fc.status()["state"] == "stopped":
-            break
-        time.sleep(0.1)
-    assert fc.status()["state"] == "stopped"  # honest: not "running" forever
+    try:
+        gave_up = None
+        for _ in range(100):  # bounded: ~2 restarts * (0.05 + 0.05)s + slack
+            st = fc.status()
+            if st["state"] == "stopped" and st.get("give_up_reason"):
+                gave_up = st["give_up_reason"]
+                break
+            time.sleep(0.05)
+        assert gave_up is not None, (
+            "a repeatedly-crashing worker must give up with a reason"
+        )
+        assert "crashed" in gave_up and "fleet_worker.log" in gave_up  # #968 reason
+    finally:
+        fc.stop()
+
+
+def test_supervision_restarts_a_worker_that_dies_once(tmp_path: Path) -> None:
+    # #1004 guard 3, the one-job invariant: a worker that dies is restarted, logging
+    # resumes, no operator action. The probe dies on run #1, sleeps on run #2.
+    counter = tmp_path / "runs.txt"
+    probe = tmp_path / "flaky.py"
+    probe.write_text(
+        "import pathlib, time\n"
+        f"c = pathlib.Path(r'{counter}')\n"
+        "n = (int(c.read_text()) if c.exists() else 0) + 1\n"
+        "c.write_text(str(n))\n"
+        "if n <= 1:\n    raise SystemExit(1)\n"
+        "time.sleep(60)\n",
+        encoding="utf-8",
+    )
+
+    def _runs() -> int:
+        try:
+            return int(counter.read_text())
+        except (OSError, ValueError):
+            return 0
+
+    fc = _fast(probe, max_restarts=5)
+    fc.start()
+    try:
+        back_up = False
+        for _ in range(100):
+            if fc.status()["state"] == "running" and _runs() >= 2:
+                back_up = True
+                break
+            time.sleep(0.05)
+        assert back_up, "the supervisor must restart a dead worker and resume running"
+        assert _runs() >= 2  # it really respawned (run #2 is alive)
+    finally:
+        fc.stop()
+
+
+def test_worker_stderr_goes_to_a_capped_log_not_devnull(tmp_path: Path) -> None:
+    # #968: the poller's last words survive a crash — stderr lands in a capped log file.
+    talker = tmp_path / "talk.py"
+    talker.write_text(
+        "import sys, time\nsys.stderr.write('worker last words\\n')\n"
+        "sys.stderr.flush()\ntime.sleep(60)\n",
+        encoding="utf-8",
+    )
+    fc = _fast(talker, logdir=tmp_path)
+    fc.start()
+    try:
+        log = tmp_path / "fleet_worker.log"
+        seen = False
+        for _ in range(60):
+            if log.exists() and "worker last words" in log.read_text(
+                encoding="utf-8", errors="replace"
+            ):
+                seen = True
+                break
+            time.sleep(0.05)
+        assert seen, "the worker's stderr must reach fleet_worker.log (never DEVNULL)"
+    finally:
+        fc.stop()
+
+
+def test_active_served_excludes_retired_devices(monkeypatch) -> None:
+    # #1007: a retired board is off BY CHOICE — never polled, never in `configured`,
+    # never counted as 'not answering' (grill Q2).
+    import fleet_control
+    from device_registry import Device, Registry
+
+    reg = Registry(
+        devices=[
+            Device("active1", "esp32", None, base_url="http://a"),
+            Device("retired1", "esp32", None, base_url="http://b", retired=True),
+        ]
+    )
+    monkeypatch.setattr("device_registry.load_registry", lambda *a, **k: reg)
+    assert fleet_control._served_device_count() == 1  # only the active board
+    assert set(fleet_control._served_map()) == {"active1"}  # retired is not polled
 
 
 # --------------------------------------------------------------------------- #
