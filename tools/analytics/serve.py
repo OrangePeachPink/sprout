@@ -172,6 +172,11 @@ DEFAULT_PORT = 8765
 
 _EID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")  # no traversal from a status id
 
+# #969: a client that gives up mid-response (tab close / refresh / back) aborts the
+# socket. That is NOT a server error - swallowing it in the send path is what stops the
+# catch-all from writing a 500 down the now-dead socket (the cascaded double traceback).
+_CLIENT_GONE = (ConnectionAbortedError, BrokenPipeError, ConnectionResetError)
+
 
 class NoDataYet(Exception):
     """Discovery found zero readings (#543) - not a parse error. ``had_any_logged``
@@ -551,14 +556,25 @@ def _context(
 class DashboardHandler(BaseHTTPRequestHandler):
     inputs: ClassVar[list[str] | None] = None  # None => auto-discover per request
 
+    def _client_gone(self) -> None:
+        """#969: one quiet line for a mid-response client abort - not a traceback."""
+        with contextlib.suppress(Exception):
+            sys.stderr.write(
+                f"client disconnected mid-response ({self.command} {self.path})\n"
+            )
+            sys.stderr.flush()
+
     def _send(self, body: str, ctype: str, status: int = 200) -> None:
         raw = body.encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", ctype)
-        self.send_header("Content-Length", str(len(raw)))
-        self.send_header("Cache-Control", "no-store")
-        self.end_headers()
-        self.wfile.write(raw)
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(raw)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(raw)
+        except _CLIENT_GONE:  # #969: dead client -> one line, never a cascaded 500
+            self._client_gone()
 
     def _send_json(self, obj: object, status: int = 200) -> None:
         self._send(json.dumps(obj), "application/json; charset=utf-8", status=status)
@@ -566,12 +582,15 @@ class DashboardHandler(BaseHTTPRequestHandler):
     def _send_raw(self, raw: bytes, ctype: str, status: int = 200) -> None:
         """Send already-encoded bytes (for #808 docs static files, incl. images/JS
         the ``str``-only ``_send`` can't carry)."""
-        self.send_response(status)
-        self.send_header("Content-Type", ctype)
-        self.send_header("Content-Length", str(len(raw)))
-        self.send_header("Cache-Control", "no-store")
-        self.end_headers()
-        self.wfile.write(raw)
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(raw)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(raw)
+        except _CLIENT_GONE:  # #969: dead client -> one line, never a cascaded 500
+            self._client_gone()
 
     def _serve_docs(self, rel: str) -> None:
         """#808: serve a read-only file from the repo ``docs/`` tree, traversal-
