@@ -885,6 +885,50 @@ def _stop_existing(url: str, host: str, port: int) -> bool:
     return False
 
 
+def _auto_start_collection(
+    monitor=None, fleet=None, *, port_present=None, log=None
+) -> None:
+    """#872: the honest promise of Monitor - the app logs the moment it launches, no
+    operator click. **verify-then-assert**: start collection, then CONFIRM it really is
+    running (``status_all``, not the start return alone), and announce the result loudly
+    either way - never the silent ``DEVNULL`` death that lost the maintainer ~19h.
+
+    A deliberate operator Stop is honored until the next launch (resume-last-state
+    persistence is the #872 follow-on). ``monitor`` / ``fleet`` / ``port_present`` /
+    ``log`` are
+    injectable for tests; production uses the module controllers + real port probe."""
+    monitor = monitor if monitor is not None else _MONITOR
+    fleet = fleet if fleet is not None else _FLEET
+
+    def _console(msg: str) -> None:
+        sys.stderr.write(msg + "\n")
+        sys.stderr.flush()
+
+    emit = log if log is not None else _console
+    kw = {"port_present": port_present} if port_present is not None else {}
+    try:
+        start_all(monitor, fleet, **kw)
+    except CollectionError as exc:
+        # honest empty, never a fake success (the #872 anti-pattern that masked it)
+        emit(f"auto-start: nothing to log yet - {exc}")
+        return
+    except Exception as exc:
+        emit(f"auto-start failed - {exc}")
+        return
+    # verify-then-assert: trust STATUS, not the start return, that we're really logging
+    st = status_all(monitor, fleet)
+    if st.get("collecting"):
+        paths = [
+            k for k in ("monitor", "fleet") if st.get(k, {}).get("state") == "running"
+        ]
+        emit(f"collection auto-started - logging ({', '.join(paths) or 'active'}).")
+    else:
+        emit(
+            "auto-start: start reported ok but collection is NOT running -"
+            " check the port/fleet."
+        )
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Serve the live plants dashboard.")
     ap.add_argument(
@@ -926,6 +970,11 @@ def main(argv: list[str] | None = None) -> int:
         "--print-url",
         action="store_true",
         help="print the dashboard URL and exit (for `just start` / the launcher)",
+    )
+    ap.add_argument(
+        "--no-autostart",
+        action="store_true",
+        help="do NOT auto-start collection on launch (#872); serve read-only",
     )
     args = ap.parse_args(argv)
 
@@ -984,6 +1033,11 @@ def main(argv: list[str] | None = None) -> int:
     print('stop from the dashboard ("Stop server") or with Ctrl-C')
     if args.open:  # the socket is bound + listening; the browser waits in the backlog
         webbrowser.open(url)
+    if not args.no_autostart:
+        # #872: begin logging on launch (verify-then-assert), off the startup path (a
+        # daemon thread) so the dashboard is reachable immediately even while collection
+        # spins up. The off state becomes a deliberate Stop, not a silent default.
+        threading.Thread(target=_auto_start_collection, daemon=True).start()
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
