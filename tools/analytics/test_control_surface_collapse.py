@@ -74,7 +74,7 @@ def test_status_line_speaks_sensor_counts_not_transports() -> None:
     )  # the retired split render
     assert "' · '" not in coll  # the transport join is gone
     # the settled #923 vocabulary is what renders now
-    assert "logging ${configured} sensor" in coll
+    assert "logging ${configured} board" in coll
     assert "not answering" in coll
     assert "not logging" in coll
     # #941's loud give-up reason is preserved, not dropped
