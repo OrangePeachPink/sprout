@@ -1974,6 +1974,8 @@ function collDescribe(st){
         : ` (${conf} device${conf===1?'':'s'})`);
     }
     if(s.state === 'skipped') return name + ': skipped — ' + (s.reason || '');
+    // #813 loud-give-up: a monitor that gave up on an absent port says WHY, not just "stopped".
+    if(s.give_up_reason) return name + ': stopped — ' + s.give_up_reason;
     return name + ': ' + s.state;
   };
   return bit('serial', st.monitor) + ' · ' + bit('fleet', st.fleet);

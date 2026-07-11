@@ -10,6 +10,7 @@ from __future__ import annotations
 import shutil
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
@@ -110,11 +111,51 @@ def test_stop_preserves_experiment_marker() -> None:
         shutil.rmtree(lockdir, ignore_errors=True)
 
 
+def _run_to_stop(giveup_code: int) -> dict:
+    """Start a monitor whose fake logger exits `giveup_code` immediately, wait for it
+    to stop, and return the final status (#813 loud-give-up)."""
+    tmp = Path(tempfile.mkdtemp(prefix="mongu_"))
+    lockdir = Path(tempfile.mkdtemp(prefix="mongulk_"))
+    try:
+        fake = tmp / "exiter.py"
+        fake.write_text(f"import sys\nsys.exit({giveup_code})\n", encoding="utf-8")
+        c = mc.MonitorController(logger_py=fake, lock_dir=lockdir)
+        c.start(port="COM6")
+        s = c.status()
+        for _ in range(50):  # the child exits almost immediately
+            s = c.status()
+            if s["state"] == "stopped":
+                break
+            time.sleep(0.1)
+        return s
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+        shutil.rmtree(lockdir, ignore_errors=True)
+
+
+def test_give_up_reason_surfaced_from_exit_code() -> None:
+    print("monitor: absent-port give-up (GIVE_UP_EXIT) surfaces WHY, not just stopped:")
+    s = _run_to_stop(mc.GIVE_UP_EXIT)
+    assert s["state"] == "stopped", s
+    assert "COM6 absent" in s.get("give_up_reason", ""), s
+    check(True, "give-up reason surfaced from the exit code")
+
+
+def test_normal_exit_has_no_give_up_reason() -> None:
+    print("monitor: a clean exit is a normal stop, not a give-up:")
+    s = _run_to_stop(0)
+    assert s["state"] == "stopped", s
+    assert "give_up_reason" not in s, s
+    check(True, "no give-up reason on a clean exit")
+
+
 if __name__ == "__main__":
     test_start_stop()
     test_mutex()
     test_stop_clears_monitor_marker()
     test_stop_preserves_experiment_marker()
+    test_give_up_reason_surfaced_from_exit_code()
+    test_normal_exit_has_no_give_up_reason()
     print()
     if _FAILS:
         print(f"FAILED ({len(_FAILS)}): " + "; ".join(_FAILS))
