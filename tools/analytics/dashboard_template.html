@@ -2020,9 +2020,10 @@ function collDescribe(st){
     configured += 1; stall = st.monitor.give_up_reason;
   }
   if(configured > 0){
-    if(answering >= configured) return `logging ${configured} sensor${configured === 1 ? '' : 's'}`;
+    // #921 taxonomy: board = MCU, count is board-granular (#812 counts DEVICES). "boards".
+    if(answering >= configured) return `logging ${configured} board${configured === 1 ? '' : 's'}`;
     const why = stall ? stall.split(/\s+[—-]\s+|;/)[0].trim() : '';
-    return `logging ${answering} of ${configured} sensors — ${configured - answering} not answering`
+    return `logging ${answering} of ${configured} boards — ${configured - answering} not answering`
       + (why ? ` (${why})` : '');
   }
   // nothing running — surface a give-up reason if a path stopped loudly (#941), else plain.
