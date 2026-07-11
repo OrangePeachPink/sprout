@@ -171,8 +171,9 @@ raises wiring/power changes to the maintainer. Route bench-adjacent work `for:fi
 - **Issues are the ledger.** Every unit of work is an issue (open via the forms). IDs are `#N`.
 - **The [board][board]** is the working view. Native fields: **Status** (Backlog → In Progress →
   Needs Verification → **Ready to Merge** → Done / Won't Do) · **Priority** (P0–P3, execution order) ·
-  **Size** (XS–XL) · **Milestone** (target version — see below) · **Verification** (Pending / Approved /
-  Conditional / Changes requested) · native **Sub-issues progress**. *(The old custom "Wave" field is
+  **Size** (XS–XL) · **Milestone** (target version — see below) · native **Sub-issues progress**.
+  *(The former **Verification** field is retired — the Status column is the one verification
+  signal, #729.)* *(The old custom "Wave" field is
   retired — milestones are the roadmap spine.)* **Priority & Size meanings are the standard** — set them
   on the board, never in comments; definitions in
   [CONTRIBUTING](.github/CONTRIBUTING.md#priority--size--the-standard).
@@ -200,6 +201,32 @@ raises wiring/power changes to the maintainer. Route bench-adjacent work `for:fi
   the PRs merged since the last tag, categorized by `.github/release.yml` (`type:` labels), then curated.
   A release isn't done until its notes **and** a [`CHANGELOG.md`](CHANGELOG.md) entry exist (ADR-0009 §6).
   So a PR's title + `type:` label *are* release-notes copy — write them accordingly.
+
+## Velocity modes — V1 / V2 (piloting in v0.7.2)
+
+Every scoped item carries a velocity mode, **tagged at scope time by the maintainer** (labels
+`velocity:v1` / `velocity:v2`; untagged = V1):
+
+- **V1 — standard velocity (the default).** The two-stage gate above, exactly as written: Workflow
+  certifies to **Ready to Merge**, **the maintainer merges.**
+- **V2 — accelerated.** For pre-scoped, low-risk items only: the lane builds and posts AC-by-AC
+  evidence exactly as in V1 — nothing changes for the implementer — but **Workflow verifies AND
+  merges/closes**, without the maintainer in the loop.
+
+**The V2 fence (all of it, always):**
+
+- **Builder ≠ certifier survives inside V2.** Workflow never merges its own builds — those route to an
+  independent lane verifier, or to the maintainer if no lane fits.
+- **Every V2 merge lands one line in the release's accel-merge digest issue** (PR, item, evidence link).
+  The maintainer skims it anytime and holds an **instant no-questions revert lever** — comment
+  `revert #N` and Workflow reverts, no debate.
+- **Standing exclusions — always V1 regardless of tags:** anything firmware-flash-affecting, ADR/doctrine
+  changes, public-voice/brand surfaces, and repo/process configuration.
+- **External contributions are always V1.** A community PR never rides V2, no matter what label the
+  issue carries — V2 is internal-lane delegation only; outside contributors always get maintainer review.
+
+V2 is a **pilot** scoped to v0.7.2; the release retro decides whether it graduates to standing policy.
+(Future rungs V3/V4 — more autonomous building, self-certification — are named but deliberately not now.)
 
 ## GitHub-native by default — don't reinvent the wheel
 
