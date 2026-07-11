@@ -1,0 +1,21 @@
+# lychee — the WEEKLY external-link check (weekly-battery.yml, #913).
+#
+# Division of labor (Workflow ruling on #913): INTERNAL / relative / self links are the per-PR
+# gate's job (tools/dx/link_check.py — offline, uv-native, blocking). This config drives the
+# WEEKLY, online, non-blocking pass that catches EXTERNAL links rotting on the internet's
+# schedule — never per-PR, where third-party rate limits make it flaky.
+
+# Frozen provenance and the served-dashboard templates (runtime routes + `<!--__EID__-->`
+# placeholders) aren't real external links — don't scan them.
+exclude_path = ["docs/design/_archive", "tools/analytics"]
+
+# RFC1918 / loopback are evidence-safe (ADR-0015) and unreachable from CI — never dial them.
+exclude_all_private = true
+exclude_loopback = true
+
+exclude = ['^mailto:', '^tel:']
+
+# Be gentle with hosts that rate-limit or auth-wall; treat those as alive, not dead.
+max_retries = 2
+retry_wait_time = 2
+accept = [200, 206, 401, 403, 429]

@@ -133,3 +133,27 @@ jobs:
         if: steps.compile.outcome == 'failure'
         run: |
           echo "::warning title=Experimental board compile failed (non-blocking)::${{ matrix.env }} failed to compile on the pinned toolchain. Non-blocking (ADR-0024) - see the Compile-check log, then fix or file it."
+
+  # External-link check (#913) — the ONE link job that goes online. Internal/relative links are
+  # the per-PR gate (tools/dx/link_check.py, a uv-native pre-commit hook); EXTERNAL links rot on
+  # the internet's schedule, so lychee checks them here, weekly — never per-PR, where rate limits
+  # make them flaky (Workflow ruling on #913). Non-blocking, like the rest of this battery (#740):
+  # a dead external link becomes a follow-up patch, never a red gate. Config: lychee.toml.
+  external-links:
+    name: external links (lychee) — non-blocking
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check external links (lychee — config in lychee.toml)
+        id: lychee
+        continue-on-error: true
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: "--config lychee.toml --no-progress ./**/*.md ./**/*.html"
+          fail: true
+
+      - name: Surface a non-blocking failure
+        if: steps.lychee.outcome == 'failure'
+        run: |
+          echo "::warning title=External link(s) unreachable (non-blocking)::lychee found dead external links. Non-blocking (weekly battery, #740) - see the lychee report in the step summary, then fix or file follow-ups."
