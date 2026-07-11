@@ -151,3 +151,13 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      # svg-geometry-guard (#926) — keep the #886/#895 class extinct: a raw {{ }} in an
+      # SVG geometry attr (d/cx/cy/points ...) parse-errors on every load, because the
+      # browser validates geometry BEFORE the x-dc runtime substitutes. Fix = the
+      # sc-camel- prefix. BLOCKING: a console error on a public design page is public polish.
+      - id: svg-geometry-guard
+        name: svg-geometry-guard (#886 class — raw {{ }} in SVG d/cx/cy/points)
+        entry: uv run python tools/dx/svg_geometry_guard.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
