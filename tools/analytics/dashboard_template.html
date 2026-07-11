@@ -1205,6 +1205,11 @@ function renderIntegrity(){
     ['active file(s)', L.active_count? `<code>${(L.active_files||[]).join('</code>, <code>')}</code>` : '—'],
     ['archive', `<code>${L.archive_dir||'—'}</code>${L.archive_count? ' · '+fmt(L.archive_count)+' segment(s)' : ''}`],
   ];
+  // #965: fleet-poll endpoints are their own kind of source — a labeled line, never
+  // mangled into a file path. Only shown when the capture actually has WiFi sources.
+  if(L.fleet_sources && L.fleet_sources.length){
+    locRows.push(['fleet source(s)', `<code>${L.fleet_sources.join('</code>, <code>')}</code>`]);
+  }
   locRows.forEach(([l,v])=>{ const tr=el('tr'); tr.appendChild(el('td',null,l)); const td=el('td','small'); td.innerHTML=v; tr.appendChild(td); lt.appendChild(tr); });
   wrap.appendChild(lt);
 

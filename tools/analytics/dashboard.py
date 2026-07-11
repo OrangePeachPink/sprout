@@ -1622,9 +1622,19 @@ def _locator(sources: list[str]) -> dict:
 
     active: list[str] = []
     archived: list[str] = []
+    fleet: list[str] = []
     for s in sources:
         s2 = str(s).replace("\\", "/")
-        (archived if s2.startswith(arch) else active).append(s2)
+        # #965: a fleet-poll source is an HTTP endpoint, not a file. Splitting it as a
+        # path minted a meaningless `http:/` log dir and listed the `.local` host as an
+        # "active file". Give it its own labeled line: host[:port], with scheme + any
+        # /telemetry path stripped, so the "hand these to an agent" promise holds.
+        if s2.startswith(("http://", "https://")):
+            fleet.append(s2.split("://", 1)[1].split("/", 1)[0])
+        elif s2.startswith(arch):
+            archived.append(s2)
+        else:
+            active.append(s2)
     log_dirs = sorted({"/".join(a.split("/")[:-1]) for a in active})
     return {
         "log_dirs": [rel(d) for d in log_dirs] or [rel(str(LOGS_DIR))],
@@ -1632,6 +1642,7 @@ def _locator(sources: list[str]) -> dict:
         "active_count": len(active),
         "archive_dir": rel(str(ARCHIVE_DIR)),
         "archive_count": len(archived),
+        "fleet_sources": sorted(set(fleet)),  # #965: labeled, never file cosplay
     }
 
 
