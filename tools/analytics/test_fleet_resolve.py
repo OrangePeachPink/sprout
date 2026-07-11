@@ -85,6 +85,29 @@ def test_resolve_ip_never_raises() -> None:
     assert resolve_ip("ok.local", resolver=lambda h: "10.0.0.5") == "10.0.0.5"
 
 
+def test_resolve_ip_uses_getaddrinfo_by_default(monkeypatch) -> None:
+    # #953: the default resolver is getaddrinfo (resolves a .local mDNS name on Windows
+    # where gethostbyname fails), so the healer can finally persist the numeric IP.
+    import socket as _socket
+
+    monkeypatch.setattr(
+        _socket,
+        "getaddrinfo",
+        lambda *a, **k: [(2, 1, 6, "", ("192.168.1.42", 0))],
+    )
+    assert resolve_ip("sprout-y9d41p.local") == "192.168.1.42"
+
+
+def test_resolve_ip_getaddrinfo_failure_is_none(monkeypatch) -> None:
+    import socket as _socket
+
+    def _boom(*a, **k):
+        raise OSError("unresolvable")
+
+    monkeypatch.setattr(_socket, "getaddrinfo", _boom)
+    assert resolve_ip("nope.local") is None  # honest offline, never a raise
+
+
 # --------------------------------------------------------------------------- #
 # the adapter tries candidates in order and uses the first that answers
 # --------------------------------------------------------------------------- #

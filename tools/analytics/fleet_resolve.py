@@ -72,13 +72,27 @@ def candidate_base_urls(device) -> list[str]:
 
 
 def resolve_ip(host: str, *, resolver=None) -> str | None:
-    """The current IP for a hostname via the OS resolver (mDNS for ``.local``), or
-    ``None`` if it can't be resolved. Never raises — an absent mDNS responder is a
-    normal offline state, not an error. ``resolver`` is injectable for tests."""
-    resolver = resolver or socket.gethostbyname
+    """The current IPv4 for a hostname, or ``None`` if unresolvable. Never raises — an
+    absent mDNS responder is a normal offline state, not an error.
+
+    #953: uses ``getaddrinfo``, NOT ``gethostbyname``. On Windows ``gethostbyname``
+    often FAILS for a ``.local`` mDNS name even when the HTTP fetch to that name
+    succeeds (``create_connection`` resolves via ``getaddrinfo``). That mismatch is why
+    the healer could never turn a ``.local`` ``base_url`` into a numeric IP - so
+    "IP-first" (#981) stayed stuck on the slow name and the ~4.7s fetch tax never moved.
+    Matching the fetch's resolver here lets the heal fire, persist the IP, and kill the
+    tax next poll. ``resolver`` stays injectable for tests."""
+    if resolver is not None:
+        try:
+            return resolver(host)
+        except OSError:
+            return None
     try:
-        return resolver(host)
-    except OSError:
+        infos = socket.getaddrinfo(
+            host, None, family=socket.AF_INET, type=socket.SOCK_STREAM
+        )
+        return infos[0][4][0] if infos else None
+    except (OSError, IndexError):
         return None
 
 

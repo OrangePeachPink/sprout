@@ -22,7 +22,12 @@ _DIAG = _H[_H.index('id="diagnostics"') :]
 
 
 def test_monitor_presents_one_collection_action() -> None:
-    assert "▶ Start logging<" in _MON  # the single primary action
+    # #1004 guard 1: the single action starts DISABLED as an unknown-state gate
+    # ("checking…"); its "Start logging" primary face is set by collRender once the
+    # first status lands, so Start is never offered before the state is known.
+    assert 'id="collToggle" type="button" disabled' in _MON  # the gated single action
+    assert "⋯ checking…<" in _MON  # the initial unknown-state face
+    assert "▶ Start logging" in _H  # the primary Start face, carried by collRender
     # #980 superseded #923's two-button pair with ONE dual-state toggle (Start when
     # stopped, Stop when running) — the button's face IS the state.
     assert 'id="collToggle"' in _MON

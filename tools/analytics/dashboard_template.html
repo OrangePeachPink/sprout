@@ -440,8 +440,12 @@ footer.prov code { font-family: var(--font-data); }
          collapse) — the operator shouldn't have to know serial vs WiFi to start. -->
     <div class="capctl">
       <!-- #980: ONE dual-state button — its face IS the state (Start when stopped, Stop
-           when running). No more two-buttons-with-disabled-styling. -->
-      <button class="btn primary" id="collToggle" type="button">▶ Start logging</button>
+           when running). No more two-buttons-with-disabled-styling.
+           #1004 guard 1: starts DISABLED as "checking…". Until the first /collection/status
+           poll answers, the state is UNKNOWN — offering "Start" in that window is exactly how
+           a double-start races the worker it just launched. collRender flips it to the real
+           face (and enables it) on the first status. Snapshot mode leaves it disabled. -->
+      <button class="btn" id="collToggle" type="button" disabled>⋯ checking…</button>
       <span class="capstatus" id="collStatus">—</span>
     </div>
     <div id="serialOwner" class="serialowner" hidden></div>
@@ -2251,10 +2255,14 @@ function _collTransition(face){  // #980: transitional face — disabled, muted 
 async function collStart(){
   const box = document.getElementById('collStatus'); box.textContent = 'starting…';
   _collTransition('▶ starting…');
-  const port = document.getElementById('monPort').value.trim();
+  // #1004 guard 2: the one-button start AUTO-DETECTS the serial transport (finds a real
+  // tethered board if one is present, silently skips serial if none) — it never forces a
+  // port. A WiFi-only fleet has no COM board, so no serial is attempted and no COM-port
+  // vocabulary ever reaches the operator. An explicit port lives on the advanced serial
+  // card (monStart), for the operator who deliberately names one.
   try{
     const { ok, status, data } = await apiJson('/collection/start', {
-      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({port: port || null}),
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({port: null}),
     });
     // #980: a refusal shows in the STATUS LINE, never on the button (the face stays a
     // clean state readout); collRender flips the face back to Start on the fresh status.
@@ -2367,7 +2375,10 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
   } else {
     capStartBtn.disabled = true; capStopBtn.disabled = true;
     monStartBtn.disabled = true; monStopBtn.disabled = true;
-    document.getElementById('collToggle').disabled = true;  // #588/#980: snapshot = no control plane
+    const collBtnSnap = document.getElementById('collToggle');  // #588/#980: snapshot = no control plane
+    collBtnSnap.disabled = true;
+    collBtnSnap.textContent = '▶ Start logging';  // #1004: a static face, not a stuck "checking…"
+    document.getElementById('collStatus').textContent = 'serve via serve.py for logging control';
     capSetStatus('serve via serve.py for capture control');
     monSetStatus('serve via serve.py for monitor control');
   }
