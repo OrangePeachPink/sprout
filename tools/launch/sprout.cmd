@@ -1,25 +1,25 @@
 @echo off
 REM ============================================================================
-REM  Sprout launcher - double-click to start Sprout with zero terminal commands.
-REM  Self-updates (git pull --ff-only), then runs `just start` (-> serve.py
-REM  --serve-or-focus --open): single-instance (#151) - a second double-click just
-REM  opens the existing tab, never a second server or window. Falls back to the
-REM  Python entrypoint if `just` isn't installed.
+REM  Sprout launcher STUB (#1005) - double-click to start Sprout, zero terminal.
 REM
-REM  Public-clean: every path is relative to this script - no user path, no port
-REM  literal. Stop Sprout from the dashboard's "Stop server" button; you can just
-REM  close this window too.
+REM  *** THIS FILE MUST STAY MINIMAL AND BYTE-STABLE - DO NOT ADD LAUNCHER LOGIC. ***
+REM  cmd.exe reads a RUNNING .cmd by byte offset. The `git pull` below updates
+REM  files in place - and if it rewrote THIS running file, execution would resume
+REM  at a shifted offset and run garbage (the #1005 bug the maintainer hit:
+REM  "'launcher' is not recognized", a literal !SHA!, a double update pass). So
+REM  this stub does ONLY the self-update, then hands off (call) to sprout-run.cmd,
+REM  which the pull is free to change because it isn't running yet. Put every
+REM  launcher change in sprout-run.cmd - editing THIS file re-opens the
+REM  self-overwrite bug on the one launch that pulls the change.
 REM ============================================================================
 setlocal enabledelayedexpansion
 title Sprout
 REM repo root = two levels up from tools\launch\ (works no matter where you launch from)
 cd /d "%~dp0..\.."
 
-REM Self-update so the icon never serves stale code (#127). Non-fatal: offline / a
-REM non-fast-forward tree / a detached root just launches what's on disk. But it says
-REM so, with the running sha, instead of implying success (#975 - a silent skip served
-REM stale code 3x). GIT_TERMINAL_PROMPT=0 means a credential prompt FAILS FAST instead of
-REM hanging - a launcher must never block entry (Firmware review catch, #132).
+REM Self-update (#127) + report the running sha / skip reason (#975). Non-fatal:
+REM offline / non-ff / a detached root just launches what's on disk, and says so.
+REM GIT_TERMINAL_PROMPT=0 -> a credential prompt fails fast, never hangs (#132).
 echo [sprout] checking for updates...
 set GIT_TERMINAL_PROMPT=0
 set "OLD=unknown"
@@ -42,15 +42,7 @@ if "%PULL_RC%"=="0" (
   echo [sprout] update skipped ^(!WHY!^) - running !SHA!
 )
 
-where just >nul 2>nul
-if %errorlevel%==0 (
-  just start
-) else (
-  echo [sprout] 'just' is not on your PATH - using the Python entrypoint directly.
-  echo [sprout] For the full runner library, install just:  winget install --id Casey.Just -e
-  echo.
-  python tools\analytics\serve.py --serve-or-focus --open
-)
-
-REM If we reach here the server stopped (the in-UI Stop button, or Ctrl-C).
+REM Hand off to the real launcher - freshly updated by the pull above, and NOT the
+REM file we're running, so it's safe to have just changed (#1005). CWD = repo root.
+call "%~dp0sprout-run.cmd"
 endlocal
