@@ -82,3 +82,40 @@ def test_legacy_only_view_flags_itself_honestly(tmp_path: Path) -> None:
     dev = ctx["provenance"]["device"]
     assert dev["device_id"] == "plants_esp32_f4e9d4"  # true fact about that capture
     assert dev["legacy_converted"] is True  # but honestly labelled as not-live
+
+
+def _v4_header(fw: str, git: str, device_id: str, config_id: str, start: str) -> str:
+    # schema_version=4 carries the header-authoritative config_id (#576/ADR-0025).
+    return (
+        f"# log_start_utc={start}  tz_offset=-05:00\n"
+        f"# fw={fw}  git={git}  run=liverun  device_id={device_id}  "
+        f"schema_version=4  config_id={config_id}\n"
+        "# cal bounds(dry>wet): 3050 2140 1830 1520 1150 1050  [moist% 900..3400]\n"
+    )
+
+
+def test_config_id_surfaces_on_the_device_block(tmp_path: Path) -> None:
+    # #831 / ADR-0030 row 5: config_id must reach the Diagnostics device block.
+    log = tmp_path / "v4.csv"
+    log.write_text(
+        _v4_header("0.7.2", "abc1234", "y9d41p", "cfg_9f3a", "2026-07-11T10:00:00.000Z")
+        + _COLS
+        + _row("2026-07-11T10:05:00.000Z", "s1", 1500, "live1"),
+        encoding="utf-8",
+    )
+    dev = build_context(parse_files([str(log)]))["provenance"]["device"]
+    assert dev["config_id"] == "cfg_9f3a"
+    assert dev["schema_version"] == 4
+
+
+def test_config_id_is_none_on_a_pre_v4_view(tmp_path: Path) -> None:
+    # honest-empty (ADR-0028): a schema_version=1 segment emits no config_id.
+    log = tmp_path / "v1.csv"
+    log.write_text(
+        _live_header("0.7.0", "156ca68", "y9d41p", "2026-07-11T10:00:00.000Z")
+        + _COLS
+        + _row("2026-07-11T10:05:00.000Z", "s1", 1500, "live1"),
+        encoding="utf-8",
+    )
+    dev = build_context(parse_files([str(log)]))["provenance"]["device"]
+    assert dev["config_id"] is None

@@ -1304,7 +1304,7 @@ function renderProvenance(){  // #324 bench-evidence panel
     : ['running', 'current', 'ok'];
   const deviceRows = [
     ['device id', d.device_id], ['firmware', d.fw], ['fw git', d.fw_git],
-    ['schema', d.schema_version], ['logger', d.logger_version], ['tz offset', d.tz_offset],
+    ['schema', d.schema_version], ['config id', d.config_id], ['logger', d.logger_version], ['tz offset', d.tz_offset],
   ];
   // #496: this view's latest segment is a legacy-converted capture, not a live
   // session — say so plainly rather than let old fw/device_id read as current.
