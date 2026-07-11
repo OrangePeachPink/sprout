@@ -20,7 +20,7 @@ the 2026-06-28 bench session, where every one of these seams showed up for real.
 > **Companion doc — the two #332 checklists work as a pair:** this is the **process reference** — *why* each
 > seam matters, grounded in real sessions. For the **quick at-the-bench run-table and the evidence-note
 > template**, see Sage's bench checklist:
-> [`docs/experiments/bench-preflight-checklist.md`](../experiments/bench-preflight-checklist.md). This one
+> [`docs/bench-procedures/bench-preflight-checklist.md`](../bench-procedures/bench-preflight-checklist.md). This one
 > *explains*; that one *runs*. Keep them in sync.
 
 ---
@@ -176,7 +176,7 @@ exactly this: non-empty `value/unit` + only 3 sweeps). Refs
 ---
 
 *Bench preflight checklist ([#332](https://github.com/OrangePeachPink/sprout/issues/332)) — the **process**
-half of the pair; Sage's [bench checklist](../experiments/bench-preflight-checklist.md) is the **run** half.
+half of the pair; Sage's [bench checklist](../bench-procedures/bench-preflight-checklist.md) is the **run** half.
 DX-drafted from the 2026-06-28 bench session; **Sage owns the bench-accuracy review** — physical/port/cadence/
 banner facts are Sage's to confirm or correct. Pairs with the dry-safety preflight (#191/#93/#215/#2) for the
 future actuation sessions this list intentionally does not cover.*
