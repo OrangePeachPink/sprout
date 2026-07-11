@@ -7,7 +7,7 @@ fleet poller (#582) — the expectation recorded at ratification is that the WiF
 Monitor lifecycle (one Start/Stop governs both collection paths, serial and fleet), not a third lifecycle,
 and #582's process-home decision binds to this. §5's `operator_plane` extraction trigger (#243 device-served
 UI sharing controller state) has not fired and stays dormant. Living edit (#923, control-surface collapse):
-the operator surface presents **one** collection action on Monitor (`Start collection` = both paths); the
+the operator surface presents **one** collection action on Monitor (`Start logging` = both paths); the
 serial-only baseline control is an **advanced affordance in Diagnostics**, so a user never has to know serial
 vs fleet to start — the one-Start-governs-both plane is unchanged, only its surfacing is.*
 **Date:** 2026-06-26

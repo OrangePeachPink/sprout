@@ -22,11 +22,14 @@ _DIAG = _H[_H.index('id="diagnostics"') :]
 
 
 def test_monitor_presents_one_collection_action() -> None:
-    assert "▶ Start collection<" in _MON  # the single primary action
+    assert "▶ Start logging<" in _MON  # the single primary action
     assert 'id="collStart"' in _MON and 'id="collStop"' in _MON
     # the old two-transport labels are gone from Monitor's surface
     assert "Start all collection" not in _MON
-    assert "Start logging" not in _MON  # the serial-only button is not on Monitor
+    assert "Start collection" not in _MON  # the killed verb is gone from Monitor
+    assert (
+        "Start tethered board only" not in _MON
+    )  # the serial-only control is not on Monitor
 
 
 def test_serial_baseline_lives_in_diagnostics() -> None:
@@ -40,8 +43,11 @@ def test_serial_baseline_lives_in_diagnostics() -> None:
 def test_first_run_launchpad_uses_the_same_vocab() -> None:
     # the NoData first-run launchpad (serve.py) says the same one thing
     serve = (Path(__file__).resolve().parent / "serve.py").read_text(encoding="utf-8")
-    assert "Start collection</button>" in serve
+    assert "Start logging</button>" in serve
     assert "Start all collection" not in serve
+    assert (
+        "Start collection" not in serve
+    )  # the killed verb is gone from the launchpad too
 
 
 def test_adr_0014_records_the_collapse() -> None:
