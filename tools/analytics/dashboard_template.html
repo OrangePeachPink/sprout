@@ -221,6 +221,28 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .regintro { line-height: 1.6; }
 .regsteps { line-height: 2; padding-left: 20px; }
 .regsoon { margin-top: 8px; font-size: 12px; }
+/* #921 slice 3: edit + map */
+.regcard.staged, .regrow.staged { border-color: var(--leaf); box-shadow: inset 3px 0 0 var(--leaf); }
+.stagedtag { font-family: var(--font-data); font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  color: var(--leaf); text-transform: uppercase; }
+.reglink { background: none; border: 0; color: var(--leaf); font: 600 12px var(--font-ui); cursor: pointer; padding: 2px 0; }
+.reglink:hover { text-decoration: underline; }
+.regpicker { margin-top: 8px; border: 1px solid var(--border); border-radius: var(--r-tile); background: var(--surface-2); padding: 6px; }
+.regpickrow { display: flex; align-items: baseline; gap: 8px; width: 100%; text-align: left; background: none;
+  border: 0; border-radius: 8px; padding: 6px 8px; cursor: pointer; font: 13px var(--font-ui); color: var(--ink); }
+.regpickrow:hover { background: var(--surface); }
+.regpickrow .muted { margin-left: auto; }
+.regform { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 8px; }
+.regform label { display: flex; flex-direction: column; gap: 3px; font: 11px var(--font-data); color: var(--muted); }
+.regform input { font: 13px var(--font-ui); padding: 5px 7px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--ink); }
+.regformact { display: flex; gap: 8px; margin-top: 8px; }
+.regerr { color: var(--st-dry); font-size: 12px; margin-top: 4px; }
+.dirtybar { position: sticky; bottom: 0; z-index: 5; display: flex; align-items: center; gap: 12px;
+  margin-top: 14px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--leaf);
+  border-radius: var(--r-tile); box-shadow: var(--e2); }
+.dirtybar .dcount { font-weight: 700; }
+.dirtybar .spacer { margin-left: auto; }
 .calbanner { font-size: 12px; color: var(--st-dry); background: var(--surface);
   border: 1px dashed var(--st-dry); border-radius: var(--r-tile); padding: 8px 12px; }
 .devribbon { font-size: 11px; color: var(--muted); padding: 0 2px; }
@@ -1657,29 +1679,52 @@ function regSection(title, cap){
   s.appendChild(el('div', 'panel-h', '<h2>' + title + '</h2>' + (cap ? '<span class="cap">' + cap + '</span>' : '')));
   return s;
 }
+// ===== #921 slice 3a: add + save — classic review-then-save (Q10) =====
+let __pending = null;
+function regPendNew(){ return {plants:{add:[],edit:[]},sensors:{add:[],edit:[]},devices:{edit:[]},mappings:{assign:[],close:[]},lifecycle:[]}; }
+function regPend(){ if(!__pending) __pending = regPendNew(); return __pending; }
+function regDirtyCount(){ const b = __pending; if(!b) return 0;
+  return b.plants.add.length + b.plants.edit.length + b.sensors.add.length + b.sensors.edit.length
+       + b.devices.edit.length + b.mappings.assign.length + b.mappings.close.length + b.lifecycle.length; }
+let __regAdding = null;   // 'plant' | 'sensor' | null — which inline add-form is open
+let __regErrs = [];       // structured 400 errors from the last Save attempt
+
+// merged display: server registry + staged pending adds (the server resolves truth on Save)
+function regView(){
+  const reg = __registry || {};
+  const pend = __pending || regPendNew();
+  const plants = (reg.plants || []).map(p => ({...p}));
+  pend.plants.add.forEach(a => plants.push({...a, _staged: true}));
+  const sensors = (reg.sensors || []).map(s => ({...s}));
+  pend.sensors.add.forEach(a => sensors.push({...a, _staged: true}));
+  const byPlant = {}, bySensor = {};
+  (reg.current_mappings || []).forEach(m => { byPlant[m.plant_id] = m; bySensor[m.sensor_id] = m; });
+  return {plants, sensors, devices: (reg.devices || []), profiles: (reg.profiles || []), byPlant, bySensor};
+}
+
 function renderRegistry(reg){
-  __registry = reg;
+  if(reg) __registry = reg;
   const host = document.getElementById('plants'); if(!host) return;
   host.innerHTML = '';
-  if(!reg || reg.first_run){ host.appendChild(regWelcome()); return; }
-  const sById = {}; (reg.sensors || []).forEach(s => sById[s.sensor_id] = s);
-  const dById = {}; (reg.devices || []).forEach(d => dById[d.device_id] = d);
-  const pById = {}; (reg.plants || []).forEach(p => pById[p.plant_id] = p);
-  const pfById = {}; (reg.profiles || []).forEach(p => pfById[p.profile_id] = p);
-  const mapByPlant = {}, mapBySensor = {};
-  (reg.current_mappings || []).forEach(m => { mapByPlant[m.plant_id] = m; mapBySensor[m.sensor_id] = m; });
+  const V = regView();
+  const empty = !V.plants.length && !V.sensors.length && !V.devices.length;
+  if(empty && !regDirtyCount()) host.appendChild(regWelcome());
+  const dById = {}; V.devices.forEach(d => dById[d.device_id] = d);
+  const pById = {}; V.plants.forEach(p => pById[p.plant_id] = p);
+  const pfById = {}; V.profiles.forEach(p => pfById[p.profile_id] = p);
 
   // ---- Plants: the spine, lead with the plant (four-question doctrine) ----
   const psec = regSection('Plants', 'what Sprout is watching');
   const pgrid = el('div', 'reggrid');
-  (reg.plants || []).forEach(p => {
-    const card = el('div', 'regcard');
+  V.plants.forEach(p => {
+    const card = el('div', 'regcard' + (p._staged ? ' staged' : ''));
     const h = el('div', 'regcard-h');
     h.appendChild(el('span', 'regname', esc(regPlantName(p))));
     if(p.pet_name && p.plant_type) h.appendChild(el('span', 'muted regtype', esc(p.plant_type)));
     const paused = regPaused(p.lifecycle); if(paused) h.appendChild(paused);
+    if(p._staged) h.appendChild(el('span', 'stagedtag', 'unsaved'));
     card.appendChild(h);
-    const m = mapByPlant[p.plant_id];
+    const m = V.byPlant[p.plant_id];
     if(m){
       card.appendChild(el('div', 'regmap',
         'watched by <strong>' + esc(regSpell(m.sensor_id, 'Sensor')) + '</strong> on '
@@ -1692,18 +1737,20 @@ function renderRegistry(reg){
     if(meta) card.appendChild(el('div', 'regmeta muted', meta));
     pgrid.appendChild(card);
   });
-  if(!(reg.plants || []).length) pgrid.appendChild(el('div', 'muted', 'No plants yet.'));
-  psec.appendChild(pgrid); host.appendChild(psec);
+  psec.appendChild(pgrid);
+  psec.appendChild(regAddControl('plant'));
+  host.appendChild(psec);
 
   // ---- Sensors: the probes (code form in the grid) ----
   const ssec = regSection('Sensors', 'your probes — the number is printed on the hardware');
   const slist = el('div', 'reglist');
-  (reg.sensors || []).forEach(s => {
-    const row = el('div', 'regrow');
+  V.sensors.forEach(s => {
+    const row = el('div', 'regrow' + (s._staged ? ' staged' : ''));
     row.appendChild(el('span', 'regcode', esc(s.sensor_id)));
     if(s.friendly_name) row.appendChild(el('span', '', esc(s.friendly_name)));
     const paused = regPaused(s.lifecycle); if(paused) row.appendChild(paused);
-    const m = mapBySensor[s.sensor_id];
+    if(s._staged) row.appendChild(el('span', 'stagedtag', 'unsaved'));
+    const m = V.bySensor[s.sensor_id];
     const to = m
       ? ('→ ' + esc(regPlantName(pById[m.plant_id] || {plant_id: m.plant_id}))
          + ' <span class="muted">on ' + esc(regDeviceName(dById[m.device_id])) + '</span>')
@@ -1711,22 +1758,96 @@ function renderRegistry(reg){
     row.appendChild(el('span', 'regto', to));
     slist.appendChild(row);
   });
-  if(!(reg.sensors || []).length) slist.appendChild(el('div', 'muted', 'No sensors yet.'));
-  ssec.appendChild(slist); host.appendChild(ssec);
+  ssec.appendChild(slist);
+  ssec.appendChild(regAddControl('sensor'));
+  host.appendChild(ssec);
 
   // ---- Boards: the MCUs (taxonomy board=MCU, #921) ----
-  const bsec = regSection('Boards', 'the ESP32s — each with up to four sensor channels');
+  const bsec = regSection('Boards', 'the ESP32s — plug one in and it appears here');
   const blist = el('div', 'reglist');
-  (reg.devices || []).forEach(d => {
+  V.devices.forEach(d => {
     const row = el('div', 'regrow');
     row.appendChild(el('span', 'regname', esc(regDeviceName(d))));
     if(d.friendly_name && d.device_id) row.appendChild(el('span', 'muted regcode', esc(d.device_id)));
     const paused = regPaused(d.lifecycle); if(paused) row.appendChild(paused);
     blist.appendChild(row);
   });
-  if(!(reg.devices || []).length) blist.appendChild(el('div', 'muted', 'No boards yet.'));
+  if(!V.devices.length) blist.appendChild(el('div', 'muted', 'No boards yet — flash one with the web flasher and it shows up here.'));
   bsec.appendChild(blist); host.appendChild(bsec);
+
+  // ---- structured errors (from a failed Save) + the dirty bar (Q10) ----
+  __regErrs.forEach(e => host.appendChild(el('div', 'regerr', esc((e.op ? e.op + ' — ' : '') + e.message))));
+  if(regDirtyCount() > 0) host.appendChild(regDirtyBar());
 }
+
+// inline add-form / add-button for plant|sensor (server owns the next-id prefill)
+function regAddControl(kind){
+  if(__regAdding !== kind){
+    const b = el('button', 'reglink', kind === 'plant' ? '+ Add a plant' : '+ Add a sensor');
+    b.onclick = () => { __regAdding = kind; renderRegistry(); };
+    return b;
+  }
+  const nid = (__registry && __registry.next_ids)
+    ? (kind === 'plant' ? __registry.next_ids.plant : __registry.next_ids.sensor) : '';
+  const form = el('div', 'regform');
+  const mk = (label, key, val) => {
+    const l = el('label', null, esc(label)); const i = el('input');
+    i.value = val || ''; i.dataset.k = key; l.appendChild(i); return l;
+  };
+  if(kind === 'plant'){
+    form.appendChild(mk('number (e.g. ' + nid + ')', 'plant_id', nid));
+    form.appendChild(mk('type (optional)', 'plant_type', ''));
+    form.appendChild(mk('pet name (optional)', 'pet_name', ''));
+    form.appendChild(mk('pot (optional)', 'pot_description', ''));
+    form.appendChild(mk('location (optional)', 'location', ''));
+  } else {
+    form.appendChild(mk('number — required (e.g. ' + nid + ')', 'sensor_id', nid));
+    form.appendChild(mk('friendly name (optional)', 'friendly_name', ''));
+  }
+  const wrap = el('div');
+  wrap.appendChild(form);
+  const act = el('div', 'regformact');
+  const add = el('button', 'reglink', 'Add'); add.onclick = () => regStageAdd(kind, form);
+  const cancel = el('button', 'reglink muted', 'Cancel'); cancel.onclick = () => { __regAdding = null; renderRegistry(); };
+  act.appendChild(add); act.appendChild(cancel);
+  wrap.appendChild(act);
+  return wrap;
+}
+function regStageAdd(kind, form){
+  const rec = {};
+  form.querySelectorAll('input').forEach(i => { const v = i.value.trim(); if(v) rec[i.dataset.k] = v; });
+  if(kind === 'sensor' && !rec.sensor_id){ __regErrs = [{message: 'A sensor number is required.'}]; renderRegistry(); return; }
+  regPend()[kind === 'plant' ? 'plants' : 'sensors'].add.push(rec);
+  __regAdding = null; __regErrs = [];
+  renderRegistry();
+}
+function regDirtyBar(){
+  const bar = el('div', 'dirtybar');
+  const n = regDirtyCount();
+  bar.appendChild(el('span', 'dcount', n + ' unsaved change' + (n === 1 ? '' : 's')));
+  bar.appendChild(el('span', 'spacer'));
+  const disc = el('button', 'btn', 'Discard');
+  disc.onclick = () => { __pending = null; __regErrs = []; __regAdding = null; renderRegistry(); };
+  const save = el('button', 'btn primary', 'Save'); save.onclick = regSave;
+  bar.appendChild(disc); bar.appendChild(save);
+  return bar;
+}
+async function regSave(){
+  const batch = __pending; if(!batch) return;
+  __regErrs = [];
+  try{
+    const { ok, status, data } = await apiJson('/registry/apply', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(batch),
+    });
+    if(!ok){
+      __regErrs = (data && data.errors) || [{message: 'Save failed (HTTP ' + status + ')'}];
+      renderRegistry(); return;
+    }
+    __pending = null;   // committed — the server returns fresh state, no 2nd GET
+    if(data && data.registry) renderRegistry(data.registry); else registryPoll();
+  }catch(e){ __regErrs = [{message: 'Save failed: ' + e}]; renderRegistry(); }
+}
+function regDirty(){ return regDirtyCount() > 0; }   // guard predicate (don't-browse-away)
 async function registryPoll(){
   try{ renderRegistry((await apiJson('/registry', {cache:'no-store'})).data); }
   catch(e){ /* old server without the route, or transient — leave last state */ }
@@ -1734,6 +1855,9 @@ async function registryPoll(){
 function showTab(name, rerender){
   const tabs = ['monitor', 'plants', 'capture', 'diagnostics'];   // Lab is its own /lab route
   if(!tabs.includes(name)) name = 'monitor';
+  // #921 Q10: don't browse away from unsaved registry edits without a heads-up.
+  if(name !== 'plants' && typeof regDirty === 'function' && regDirty()
+     && !confirm('You have unsaved changes in Plants & Sensors. Leave without saving?')) return;
   const isMon = name === 'monitor', isCap = name === 'capture', isDiag = name === 'diagnostics';
   const isPlants = name === 'plants';   // #921: the Plants & Sensors registry tab
   // Monitor = the collection strip + the glanceable plant view (or an open detail).
@@ -2407,6 +2531,8 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
   }
 
   applyTheme();
+  // #921 Q10: the browser-level guard for unsaved registry edits (close/reload/navigate away).
+  window.addEventListener('beforeunload', e => { if(typeof regDirty === 'function' && regDirty()){ e.preventDefault(); e.returnValue = ''; } });
   initTabs();
   renderAll();
   // #921: a fresh install has an empty registry — land on the setup tab (retires the launchpad, Q9).

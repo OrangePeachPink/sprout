@@ -54,3 +54,46 @@ def test_reuses_three_tier_cal_and_the_paused_word() -> None:
 def test_devices_section_uses_the_board_taxonomy() -> None:
     # #921 taxonomy board=MCU: the devices section is titled "Boards".
     assert "regSection('Boards'" in _H
+
+
+# --------------------------------------------------------------------------- #
+# slice 3a — add + classic review-then-save (Q10)
+# --------------------------------------------------------------------------- #
+
+
+def test_pending_batch_matches_the_apply_seam_shape() -> None:
+    # the client's pending batch must be exactly what /registry/apply accepts, so a Save
+    # never round-trips a shape the server rejects (the #1021 contract).
+    pend = _H[_H.index("function regPendNew(") : _H.index("function regPend(")]
+    for key in (
+        "plants:{add:[],edit:[]}",
+        "sensors:{add:[],edit:[]}",
+        "devices:{edit:[]}",
+        "mappings:{assign:[],close:[]}",
+        "lifecycle:[]",
+    ):
+        assert key in pend
+
+
+def test_add_controls_and_server_next_id_prefill() -> None:
+    assert "function regAddControl(" in _H
+    assert "+ Add a plant" in _H and "+ Add a sensor" in _H
+    # server owns id allocation — the form prefills from /registry's next_ids (Q1/Q2).
+    assert "__registry.next_ids" in _H
+    # a sensor number is required at add (Q1/Q11); a plant number is server-allocated.
+    assert "A sensor number is required." in _H
+
+
+def test_classic_save_posts_the_batch_and_handles_structured_errors() -> None:
+    save = _H[_H.index("async function regSave(") : _H.index("function regDirty(")]
+    assert "'/registry/apply'" in save and "method: 'POST'" in save
+    assert "data.errors" in save  # structured 400 errors rendered inline (Q3)
+    assert "data.registry" in save  # re-renders from the fresh state, no 2nd GET
+
+
+def test_dirty_state_bar_and_dont_browse_away_guards() -> None:
+    # unmistakable dirty state (Q10) + both leave-guards.
+    assert "function regDirtyBar(" in _H
+    assert "unsaved change" in _H
+    assert "beforeunload" in _H  # browser-level guard
+    assert "Leave without saving?" in _H  # in-app tab-switch guard (showTab)
