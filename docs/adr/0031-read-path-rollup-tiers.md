@@ -1,12 +1,11 @@
 # ADR-0031 — Read-path rollup tiers: materialized aggregates over immutable raw
 
-**Status:** Proposed — *drafted by Trellis (2026-07-07) from #828 during the v0.8.0 bench gap. **Accepted —
-maintainer-ratified 2026-07-10 (v0.7.2 ADR batch)**: fork 1 ruled **DuckDB/parquet** (the ADR-0006 §3-sanctioned tier;
-a deliberate new runtime dependency); forks 2–4 accepted at the Trellis leans (granularity map as starting proposal,
-incremental-at-rotation + full-rebuild-available, `config_id` carried on the bucket and never blended).* This ADR
-**realizes ADR-0006 §3's already-planned
-Derived analysis tier** and its §115 revisit trigger — it does not re-fence the raw, it stands up the tier ADR-0006
-sanctioned.
+**Status:** Accepted — maintainer-ratified 2026-07-10 (v0.7.2 ADR batch, #915): fork 1 ruled **DuckDB/parquet** (the
+ADR-0006 §3-sanctioned tier; a deliberate new runtime dependency); forks 2–4 accepted at the Trellis leans
+(granularity map as a starting proposal, incremental-at-rotation + full-rebuild-available, `config_id` carried on the
+bucket and never blended). *Drafted by Trellis (2026-07-07) from #828 during the v0.8.0 bench gap.* This ADR
+**realizes ADR-0006 §3's already-planned Derived analysis tier** and its §115 revisit trigger — it does not re-fence
+the raw, it stands up the tier ADR-0006 sanctioned.
 **Date:** 2026-07-07
 **Owner:** Trellis (architecture) — the tier / envelope / event contracts; Data builds the materializer (v0.8.0)
 **Lane:** architecture (cross-lane: Data)

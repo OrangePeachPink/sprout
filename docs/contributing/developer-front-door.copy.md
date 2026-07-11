@@ -79,7 +79,7 @@ Links that exist today:
 
 - [README](../../README.md) — the project overview and quickstart.
 - [Architecture decisions](../adr/0000-record-architecture-decisions.md) — why things are the way they are.
-- [SECURITY.md](../../SECURITY.md) — how to report a vulnerability.
+- [SECURITY.md](../../.github/SECURITY.md) — how to report a vulnerability.
 - [Project status](../STATUS.md) — where things stand right now.
 - [Your first contribution](your-first-pr.md) — the first-PR walkthrough.
 - [Contributors Welcome](../CONTRIBUTORS_WELCOME.md) — where outside help is especially wanted, and how to start.

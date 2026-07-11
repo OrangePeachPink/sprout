@@ -129,3 +129,35 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      # identity-label-guard (#925) — the plant-first fallback chain (plant_name || … || id) lives ONLY
+      # in plantLabel(). A copy-pasted `|| s.id` is exactly how the s2@device machine-id leak class
+      # (#803/#804/#805) kept returning. Blocking: keep the class extinct.
+      - id: identity-label-guard
+        name: identity-label-guard (#925 — raw plant-first chain outside plantLabel)
+        entry: uv run python tools/dx/identity_label_guard.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  # adr-register-status (#928) — every ADR file's `**Status:**` must match its register row,
+  # and no ADR may appear twice. BLOCKING: Trellis caught this drift by hand twice (0025; then
+  # a ratification batch collided with a revision PR, leaving two 0029 rows at different
+  # statuses). File-based + deterministic, so pre-commit == `just check` == CI.
+  - repo: local
+    hooks:
+      - id: adr-register-status
+        name: adr-register-status (ADR Status vs register row)
+        entry: uv run python tools/dx/lint_adr_register_status.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
+      # svg-geometry-guard (#926) — keep the #886/#895 class extinct: a raw {{ }} in an
+      # SVG geometry attr (d/cx/cy/points ...) parse-errors on every load, because the
+      # browser validates geometry BEFORE the x-dc runtime substitutes. Fix = the
+      # sc-camel- prefix. BLOCKING: a console error on a public design page is public polish.
+      - id: svg-geometry-guard
+        name: svg-geometry-guard (#886 class — raw {{ }} in SVG d/cx/cy/points)
+        entry: uv run python tools/dx/svg_geometry_guard.py --check
+        language: system
+        pass_filenames: false
+        always_run: true

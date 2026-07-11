@@ -39,7 +39,7 @@ Flaura teardown they're often the exact same product from one of ~five factories
 (regulator + timer + the meter test), never by its printed version.
 
 > Sprout's own four sensors carry the `662K` regulator **and** a genuine `TLC555` — the well-made variant. We
-> checked all four; see [`SENSOR_QA.md`](../../SENSOR_QA.md).
+> checked all four; see [`SENSOR_QA.md`](../SENSOR_QA.md).
 
 ## Step 2 — Meter the hidden flaw (multimeter, about 90 seconds)
 
@@ -123,7 +123,7 @@ and why so many are faulty.
 
 ## Where this comes from
 
-- [`SENSOR_QA.md`](../../SENSOR_QA.md) — Sprout's own bench checks on its four sensors, the authoritative source
+- [`SENSOR_QA.md`](../SENSOR_QA.md) — Sprout's own bench checks on its four sensors, the authoritative source
   for every claim above.
 - [`docs/RESEARCH_capacitive_soil_moisture_sensors.md`](../RESEARCH_capacitive_soil_moisture_sensors.md) — the
   longer research foundation: defects, diagnosis, fixes, and buying guidance, with citations.

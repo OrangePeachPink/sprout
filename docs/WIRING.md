@@ -8,7 +8,7 @@
 trigger polarity are *candidates to confirm at the bench* (see "Open items" at the end).
 
 Captures the electrical plan for the 4-sensor / 4-pump auto-watering build: classic ESP32
-(`ESP-32D`), 4x UMLIFE capacitive sensors (TLC555, QA-passed - see `../SENSOR_QA.md`), 4x submersible
+(`ESP-32D`), 4x UMLIFE capacitive sensors (TLC555, QA-passed - see `SENSOR_QA.md`), 4x submersible
 DC pumps, a `CW-022` 4-channel opto-isolated relay board, and a 1.3" **SH1106** 128x64 I2C OLED
 status display (Hosyond 5-pack, parts inventory).
 

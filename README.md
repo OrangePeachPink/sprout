@@ -125,7 +125,7 @@ A few principles the whole system is built to, so the data can always be trusted
 
 | Part | Qty | Notes |
 | --- | --- | --- |
-| Capacitive soil moisture sensor | 4 | Board `HW-390`, silk "Capacitive Soil Moisture Sensor V2.0.0". 3.3-5.5 V in, **0-3.0 V analog out**, 3-pin PH2.0. QA passed - see [`SENSOR_QA.md`](SENSOR_QA.md). |
+| Capacitive soil moisture sensor | 4 | Board `HW-390`, silk "Capacitive Soil Moisture Sensor V2.0.0". 3.3-5.5 V in, **0-3.0 V analog out**, 3-pin PH2.0. QA passed - see [`SENSOR_QA.md`](docs/SENSOR_QA.md). |
 | Mini submersible DC water pump | 4 | DC 2.5-6 V (rated ~3 / 4.5 V), ~0.18 A, ~100 L/h, submersible. **DC only - never mains.** |
 | 4-channel relay module | 1 | 5 V module. Active-high vs active-low and 3.3 V-drive compatibility **to be bench-verified.** |
 | PVC vinyl tubing | ~4 m | ID ~5.54 mm / OD ~8.20 mm. |
@@ -134,7 +134,7 @@ A few principles the whole system is built to, so the data can always be trusted
 
 (Kit provenance is recorded in the local `parts` inventory: UMLIFE watering kit. The SunFounder ESP32 kit
 also bundled a 5th capacitive sensor — an `NE555`-based `v1.2` variant — which is **not used** for this
-project; see [`SENSOR_QA.md`](SENSOR_QA.md).)
+project; see [`SENSOR_QA.md`](docs/SENSOR_QA.md).)
 
 ## Firmware (PlatformIO)
 

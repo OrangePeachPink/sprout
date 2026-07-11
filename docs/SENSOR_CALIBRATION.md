@@ -13,7 +13,7 @@ samples. Everything below predates it.
 
 ## Setup (read this before trusting cross-sensor comparisons)
 
-- **Sensors:** 4x UMLIFE capacitive soil-moisture, **V2.0.0 / TLC555**, QA-passed (see `../SENSOR_QA.md`).
+- **Sensors:** 4x UMLIFE capacitive soil-moisture, **V2.0.0 / TLC555**, QA-passed (see `SENSOR_QA.md`).
 - **One channel only:** every reading below was taken on **GPIO36 (ADC1_CH0)**, one sensor at a time.
   **Pin-to-pin ADC variation is therefore UNMEASURED** — any cross-sensor spread here is *probe + placement*,
   not pin. (This is exactly why the final system calibrates each probe in place; see backlog C1.)
