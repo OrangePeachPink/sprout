@@ -1544,7 +1544,20 @@ def _device_groups(
             and list(seg.cal_bounds) != list(DEFAULT_CAL_BOUNDS)
             for seg in segments
         )
-        if cal_verified:
+        # #952/Firmware wire emission: a WiFi soil row carries `cal_tier=` directly from
+        # the resolver (the additive rssi= pattern), so the tier is AUTHORITATIVE on the
+        # live fleet - the header signals above are tethered-only, which is exactly why
+        # the C5 wore the wrong chip over WiFi. Aggregate the device's per-channel wire
+        # tiers to the group's best (channel-cal > board-cal > uncalibrated, matching
+        # the any()-precedence above); read it if present, else fall to the derivation.
+        _wire = {r.cal_tier for r in rows if r.cal_tier}
+        wire_tier = next(
+            (t for t in ("channel-cal", "board-cal", "uncalibrated") if t in _wire),
+            None,
+        )
+        if wire_tier is not None:
+            cal_tier = wire_tier
+        elif cal_verified:
             cal_tier = "channel-cal"
         elif has_board_cal and not has_placeholder:
             cal_tier = "board-cal"

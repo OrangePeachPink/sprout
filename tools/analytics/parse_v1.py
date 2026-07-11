@@ -380,6 +380,25 @@ class Reading:
         return _int(self.payload.get("rssi"))
 
     @property
+    def cal_tier(self) -> str | None:
+        """The calibration tier this row was resolved at (#952/#957, an additive wire
+        token, the ``rssi=`` pattern): channel-cal | board-cal | uncalibrated,
+        per soil row, direct from the firmware resolver. Authoritative on the LIVE WiFi
+        fleet, where the header-derived signals (cal_bounds_source / cal_ch) don't reach
+        - so #951's tier chip is finally true off-tether. An unknown/absent
+        value is None (honest-absent, ADR-0028): a serial row that never emits it, or a
+        garbled token, falls back to the header derivation rather than passing junk."""
+        v = self.payload.get("cal_tier")
+        return v if v in ("channel-cal", "board-cal", "uncalibrated") else None
+
+    @property
+    def cal_src(self) -> str | None:
+        """The resolver's cal-source provenance string (#952, optional companion to
+        ``cal_tier``) - e.g. ``board_envelope_20260710`` - for #921's cal-record display
+        + a tooltip. None when absent; never invented."""
+        return self.payload.get("cal_src") or None
+
+    @property
     def uptime_s(self) -> int | None:
         """Seconds since board boot (#669, schema v4) - a transport-independent
         board diagnostic. None on a pre-v4 row."""
