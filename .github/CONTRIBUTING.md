@@ -5,6 +5,9 @@ guide walks it in about five minutes. However you've arrived — fixing a typo, 
 there's a place for you. We keep it calm, plain, and kind: the watering's honest, the board's clean, and there's
 one path now. **Tend well.**
 
+Sprout is built with AI assistance, and AI-assisted contributions are as welcome as hand-written ones — use
+whatever tools fit how you work, or none. The bar is the same either way.
+
 ## Where things go
 
 | You have… | Put it in… |
