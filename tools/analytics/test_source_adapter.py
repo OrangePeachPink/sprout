@@ -12,6 +12,7 @@ from __future__ import annotations
 import http.server
 import sys
 import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -330,6 +331,91 @@ def test_fleet_inputs_reach_only_the_first_adapter() -> None:
 
     FleetAdapter([_Probe("first"), _Probe("second")]).load(["a.csv"])
     assert seen == {"first": ["a.csv"], "second": None}
+
+
+# --------------------------------------------------------------------------- #
+# FleetAdapter parallel device-fetch (#953): the ~14s the maintainer's [perf]
+# lines exposed was N served devices' HTTP timeouts paid IN SERIES on the load
+# path. The device fetches now run concurrently — one unreachable board no longer
+# stalls the whole dashboard — while the tethered source + ingest order (dedupe)
+# stay exactly as the serial loop had them.
+# --------------------------------------------------------------------------- #
+
+
+def _slow_fetch(seconds: float, text: str):
+    def _f(url: str) -> str:
+        time.sleep(seconds)
+        return text
+
+    return _f
+
+
+def test_fleet_fetches_devices_concurrently_not_serially() -> None:
+    # three devices that each block 0.3s: serial would be ~0.9s, parallel ~0.3s.
+    text = _telemetry_response([_device_line()])  # no device_seq -> all kept
+    fleet = FleetAdapter(
+        [
+            TetheredAdapter(),  # adapter 0: instant (no inputs/discover) — the CSV slot
+            DeviceAdapter("http://a", fetch=_slow_fetch(0.3, text)),
+            DeviceAdapter("http://b", fetch=_slow_fetch(0.3, text)),
+            DeviceAdapter("http://c", fetch=_slow_fetch(0.3, text)),
+        ]
+    )
+    data = fleet.load()
+    assert len(data.readings) == 3  # every device contributed
+    # the whole point: the parallel block is ~one device's wait, not three summed
+    assert fleet.last_fetch_s < 0.6, f"fetch not parallel: {fleet.last_fetch_s:.2f}s"
+    assert fleet.last_fetch_s > 0.0  # it did run
+
+
+def test_fleet_one_slow_device_does_not_stall_the_others() -> None:
+    # a single hung board is the real-world case (an unplugged unit). With a serial
+    # loop its timeout blocked everything; concurrent, the others return immediately.
+    fast = _telemetry_response([_device_line(device="fast", raw=1500)])
+    slow = _telemetry_response([_device_line(device="slow", raw=1900)])
+    fleet = FleetAdapter(
+        [
+            DeviceAdapter("http://fast1", fetch=lambda url: fast),
+            DeviceAdapter("http://slow", fetch=_slow_fetch(0.4, slow)),
+        ]
+    )
+    data = fleet.load()
+    # adapter 0 (fast1) is the sequential "first" slot; the one pooled device is slow.
+    assert {r.raw_value for r in data.readings} == {1500, 1900}
+
+
+def test_fleet_parallel_preserves_ingest_order_and_dedupe() -> None:
+    # order is deterministic (tethered, then devices in registry order) even though
+    # the fetches race — ex.map returns in input order, ingest stays sequential.
+    a = _telemetry_response([_device_line(device="a", raw=1100)])
+    b = _telemetry_response([_device_line(device="b", raw=1200)])
+    c = _telemetry_response([_device_line(device="c", raw=1300)])
+    fleet = FleetAdapter(
+        [
+            DeviceAdapter("http://a", fetch=_slow_fetch(0.15, a)),  # first (sequential)
+            DeviceAdapter("http://b", fetch=_slow_fetch(0.20, b)),  # pooled
+            DeviceAdapter("http://c", fetch=_slow_fetch(0.05, c)),  # pooled, ends first
+        ]
+    )
+    data = fleet.load()
+    # c's fetch completes first, but the merge order follows adapter order, not
+    # completion order — so the sequence is a, b, c regardless of the race.
+    assert [r.raw_value for r in data.readings] == [1100, 1200, 1300]
+
+
+def test_fleet_tethered_only_has_zero_fetch_time(tmp_path: Path) -> None:
+    # no device adapters -> no parallel block -> last_fetch_s stays 0.0 (a tethered-
+    # only install sees no fetch cost, and the [perf] split shows fetch=0).
+    csv = _write(tmp_path)
+    fleet = FleetAdapter([TetheredAdapter()])
+    data = fleet.load([str(csv)])
+    assert len(data.readings) == 1
+    assert fleet.last_fetch_s == 0.0
+
+
+def test_fleet_no_adapters_is_empty_not_raise() -> None:
+    data = FleetAdapter([]).load()
+    assert data.readings == [] and data.segments == [] and data.sources == []
 
 
 # --------------------------------------------------------------------------- #

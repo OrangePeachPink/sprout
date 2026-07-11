@@ -485,7 +485,14 @@ def _perf_log(ctx: dict, final_name: str, final_s: float, rng: str) -> None:
     total = sum(phases.values())
     if total < _PERF_MIN_MS:
         return
-    parts = " ".join(f"{k}={v}ms" for k, v in phases.items())
+    # #953: annotate the load phase with its device-fetch portion (a sub-component of
+    # load, so it is NOT summed into total) — the signal that separates a parse-bound
+    # slowness from a fetch-bound one.
+    fetch_ms = perf.get("fetch_ms")
+    parts = " ".join(
+        f"{k}={v}ms(fetch {fetch_ms}ms)" if k == "load" and fetch_ms else f"{k}={v}ms"
+        for k, v in phases.items()
+    )
     sys.stderr.write(
         f"[perf] range={rng} {parts} total={total}ms "
         f"({perf.get('readings', '?')} readings, {perf.get('files', '?')} files)\n"
@@ -512,8 +519,14 @@ def _context(
     # channel filter's identity coalesce, and build_context's grouping.
     reg = registry if registry is not None else load_registry()
     # #277/#486: reads through the source-adapter seam - see source_adapter.py.
-    data = _fleet_adapter(reg).load(windowed)
+    adapter = _fleet_adapter(reg)
+    data = adapter.load(windowed)
     perf.mark("load")
+    # #953: split the `load` phase into CSV-parse vs device-fetch. A FleetAdapter with
+    # served WiFi devices spends its load time on synchronous per-device HTTP fetches;
+    # surfacing that portion is what distinguishes a parse-bound slowness (→ cache) from
+    # a fetch-bound one (the parallel-fetch + timeout fix). 0.0 for a tethered-only rig.
+    fetch_ms = round(getattr(adapter, "last_fetch_s", 0.0) * 1000)
     all_ch = sorted(
         {r.sensor_id for r in data.readings if r.record_type.startswith("plants.soil")}
     )
@@ -530,7 +543,7 @@ def _context(
     # #953: attach the phase breakdown so the caller (do_GET) can log it alongside the
     # render/serialize phase it owns. Additive meta only — no behavior change.
     ctx["meta"]["perf"] = perf.snapshot(
-        readings=len(data.readings), files=len(windowed)
+        readings=len(data.readings), files=len(windowed), fetch_ms=fetch_ms
     )
     return ctx
 

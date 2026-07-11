@@ -35,8 +35,10 @@ construct it.
 from __future__ import annotations
 
 import sys
+import time
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Protocol
@@ -55,9 +57,13 @@ from plants_logger import parse_device_line, stamp_row  # noqa: E402
 # provenance. Bump the trailing version if this adapter's stamping logic changes.
 DEVICE_ADAPTER_VERSION = "device_adapter_v1"
 
-# #276's handleTelemetry() default timeout budget for one poll; generous for a
-# LAN device but short enough that an unreachable board doesn't hang the dashboard.
-_FETCH_TIMEOUT_S = 5.0
+# #276's handleTelemetry() default timeout budget for one poll. A live LAN board
+# answers in well under a second; #953 cut this from 5s to 2s because it is paid
+# **synchronously on the dashboard's load path** for every served device — an
+# unreachable board (an unplugged unit, a stale address) must not hang the view. The
+# 2s ceiling pairs with FleetAdapter's now-parallel fetch: worst case is one device's
+# two candidates in series (~4s), not the whole fleet's timeouts summed (was ~14s).
+_FETCH_TIMEOUT_S = 2.0
 
 
 class SourceAdapter(Protocol):
@@ -235,12 +241,39 @@ class FleetAdapter:
 
     def __init__(self, adapters: list) -> None:
         self._adapters = list(adapters)
+        # #953: the wall-clock spent on the parallel device-fetch block of the last
+        # load(), in seconds. serve.py reads it to split the `load` perf phase into
+        # CSV-parse vs device-fetch — the measurement that proved the ~14s was
+        # timeouts, not re-parse. 0.0 until a load with >1 adapter runs.
+        self.last_fetch_s = 0.0
 
     def load(self, inputs: list[str] | None = None) -> LogData:
         store = Store()
         readings, segments, sources = [], [], []
-        for i, adapter in enumerate(self._adapters):
-            data = adapter.load(inputs if i == 0 else None)
+        if not self._adapters:
+            return LogData()
+        # Adapter 0 is the tethered/file source (the CSV corpus, read through the parse
+        # cache) — sequential, and the only one `inputs` is meaningful for. The rest are
+        # independent per-device HTTP fetches (#953): a serial loop paid **every**
+        # device's timeout in series, so one unreachable board stalled the whole
+        # dashboard for ~2 candidates x the timeout, and the fleet's costs summed. Fetch
+        # them concurrently so the wall-clock is the slowest single device, not the sum.
+        # The tethered source stays out of the pool (it touches the module-global parse
+        # cache; keeping it single-threaded avoids any concurrent-mutation question).
+        first = self._adapters[0].load(inputs)
+        rest = self._adapters[1:]
+        others: list = []
+        if rest:
+            t0 = time.perf_counter()
+            with ThreadPoolExecutor(max_workers=len(rest)) as ex:
+                others = list(ex.map(lambda a: a.load(None), rest))
+            self.last_fetch_s = time.perf_counter() - t0
+        else:
+            self.last_fetch_s = 0.0
+        # Ingest in the original adapter order (tethered first, then devices in registry
+        # order) so dedupe stays deterministic — only the network wait was parallelized,
+        # the merge/dedupe semantics are byte-identical to the old serial loop.
+        for data in (first, *others):
             readings.extend(r for r in data.readings if store.ingest(r))
             segments.extend(data.segments)
             sources.extend(data.sources)
