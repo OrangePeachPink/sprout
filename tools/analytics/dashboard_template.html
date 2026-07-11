@@ -375,6 +375,9 @@ footer.prov code { font-family: var(--font-data); }
 .provgrp .pv { font-family: var(--font-data); overflow-wrap: anywhere; text-align: right; }
 .provgrp .pv.warn { color: var(--st-fault); font-weight: 600; }
 .provgrp .pv.ok { color: var(--leaf); }
+/* #977: the legacy-era contract note — muted/secondary, the calm register of the "not
+   plotted" footer it echoes. History stated as fact, never an alarm. */
+.provgrp .pv.muted { color: var(--muted); }
 .note { background: color-mix(in srgb, var(--st-dry) 9%, transparent); border-left: 3px solid var(--st-dry);
   padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-top: var(--space-sm); }
 </style>
@@ -1354,13 +1357,20 @@ function renderProvenance(){  // #324 bench-evidence panel
   // #496: this view's latest segment is a legacy-converted capture, not a live
   // session — say so plainly rather than let old fw/device_id read as current.
   if(d.legacy_converted) deviceRows.push(['note', 'LEGACY-CONVERTED — not the live device', 'warn']);
+  // #977 era-aware contract tone. clean → NO chip (silence is the healthy signal, the #951
+  // law: a trusted state wears the ABSENCE of a caveat — no green "OK" either); legacy →
+  // muted factual note (history, never a fault); violation → earned red, only when a CURRENT
+  // row is off-contract. Falls back to the old raw_only flag if an old payload lacks state.
+  const contractTone = c.state
+    ? (c.state === 'violation' ? 'warn' : (c.state === 'legacy' ? 'muted' : ''))
+    : (c.raw_only ? '' : 'warn');
   wrap.innerHTML =
     grp('server / app', [
       ['app git', sha], ['branch', s.branch], ['started', fmtLocal(s.start_utc)], staleRow,
     ]) +
     grp('device / firmware', deviceRows) +
     grp('contract / calibration', [
-      ['value/unit', c.label, c.raw_only ? 'ok' : 'warn'],
+      ['value/unit', c.label, contractTone],
       ['calibration', p.calibration],
     ]);
 }

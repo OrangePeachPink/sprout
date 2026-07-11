@@ -69,6 +69,12 @@ CDN_CHARTJS = "https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js
 # B8 gzip archive of closed segments (read for deep history once they leave logs/).
 ARCHIVE_DIR = _REPO / ".data-worktree" / "data" / "archive"
 LOGS_DIR = _REPO / "logs"
+# #977: schema_version at/above which the raw-only value/unit contract (ADR-0030)
+# holds. Below it (or version-less) a row predates the contract and may legitimately
+# carry the legacy moist% `value` column (B2/C2, not plotted). v2 (experiment_capture)
+# and v3 (ADR-0027 firmware) are raw-only; legacy moist% is v1 / version-less. An
+# off-contract row at >= this epoch is a real violation; below it, it's history.
+_CONTRACT_EPOCH_SCHEMA = 2
 # Chart series are capped for responsiveness over long ranges; the stat / rate /
 # forecast panels always use the full windowed data, only the plotted points thin.
 MAX_TRAJ_POINTS = 2000
@@ -1297,9 +1303,38 @@ def build_context(
     }
 
     # #324 provenance panel: server/app + device/log + the honest-data contract state.
-    # raw_only is computed from the data itself — if any row carried a value/unit, the
-    # contract is violated and we say so (surface gaps, never smooth them).
-    raw_only_ok = all(r.value is None and (r.unit or "") == "" for r in soil)
+    # #977 era-aware contract. Maintainer's law: don't cry VIOLATION in red at
+    # someone who isn't in violation of anything - a maker collecting dirt data.
+    # The raw-only value/unit contract (ADR-0030) holds at schema_version >= the
+    # epoch. Rows below it (version-less too) predate it and may carry the legacy
+    # moist% `value` column (B2/C2, not plotted) - HISTORY, calm, never an alarm.
+    # Alarm bar = "currently true": only a CURRENT-era off-contract row earns red.
+    def _off_contract(r) -> bool:
+        return r.value is not None or (r.unit or "") != ""
+
+    live_off = any(
+        _off_contract(r) and (r.schema_version or 0) >= _CONTRACT_EPOCH_SCHEMA
+        for r in soil
+    )
+    legacy_off = any(
+        _off_contract(r) and (r.schema_version or 0) < _CONTRACT_EPOCH_SCHEMA
+        for r in soil
+    )
+    # back-compat flag: True only when fully clean (no legacy, no live off-contract row)
+    raw_only_ok = not live_off and not legacy_off
+    if live_off:
+        contract_state = "violation"
+        contract_label = (
+            "off-contract: a current row populates value/unit against the contract"
+        )
+    elif legacy_off:
+        contract_state = "legacy"
+        contract_label = (
+            "includes legacy pre-contract rows — moist% populated, not plotted"
+        )
+    else:
+        contract_state = "clean"
+        contract_label = "raw counts + band only (value/unit empty)"
     provenance_block = {
         "server": provenance.server_provenance(),
         "device": {
@@ -1318,12 +1353,9 @@ def build_context(
             == "legacy-convert",
         },
         "contract": {
-            "raw_only": raw_only_ok,
-            "label": (
-                "raw counts + band only (value/unit empty)"
-                if raw_only_ok
-                else "CONTRACT VIOLATION — a value/unit is populated"
-            ),
+            "raw_only": raw_only_ok,  # back-compat flag: True only when fully clean
+            "state": contract_state,  # #977: clean | legacy | violation (era-aware)
+            "label": contract_label,
         },
         # Always uncalibrated today: raw + band are the truth; per-channel cal is #170.
         "calibration": "uncalibrated (raw + band only; per-channel cal #170)",
