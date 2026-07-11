@@ -1,0 +1,12 @@
+# Committed hostname denylist — SHA-256 of each denied machine hostname, lowercased (#865).
+#
+# Why hashes, not plaintext: the gitignored config/identifiers.local.txt is absent in CI, so
+# CI couldn't enforce hostnames — the blind spot that let a real machine name reach ~7 evidence
+# docs (#861/#862/#864). A SHA-256 is safe to commit (it doesn't reveal the plaintext), so
+# committing the digests lets CI catch a denied hostname without the hostname ever entering the
+# tree. A hostname match reports its location only, never the token.
+#
+# SEED at go-public (operator): `just identifier-guard --deny-host <hostname>` appends the
+# lowercased hash here. Deny only genuinely-sensitive machine names — NOT names that are
+# legitimately public in the docs (e.g. a documented CI fleet). One hex digest per line;
+# `#` comments allowed. Empty today: the hostname class is inert until seeded.

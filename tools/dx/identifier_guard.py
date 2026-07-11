@@ -24,7 +24,12 @@ identifiers that tie the repo to the maintainer's hardware and home network:
   tree - e.g. internal or companion-project codenames not yet announced.
   One term per line (``re:`` prefix = regex). Absent file => the class is
   skipped with a note (that's the CI case; CI still enforces the regex
-  classes).
+  classes). For CI to enforce HOSTNAMES too (the gitignored file is absent
+  there), a COMMITTED companion holds the SHA-256 of each denied hostname,
+  lowercased (``config/identifiers.denylist.sha256``): hashes are safe to
+  commit, so the guard token-matches them without the hostname ever entering
+  the tree, and a hostname finding reports its location only - never the token
+  (#865). Seed with ``--deny-host <name>``.
 
 Findings print MASKED by default (first/last fragment only) so a CI log never
 re-leaks what it caught; ``--reveal`` unmasks for local triage.
@@ -52,6 +57,7 @@ certification, which this makes mechanical.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import re
 import struct
 import subprocess
@@ -60,6 +66,16 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 ALLOWLIST_PATH = REPO / "tools" / "dx" / "identifier_guard_allowlist.txt"
 DENYLIST_PATH = REPO / "config" / "identifiers.local.txt"
+# Committed hostname denylist: SHA-256 (of the lowercased hostname) per line.
+# Unlike DENYLIST_PATH (gitignored plaintext, absent in CI), the hashes are safe
+# to commit — they don't reveal the plaintext — so CI enforces the class without
+# the hostname ever entering the tree. Seed via `--deny-host` (#865).
+HOSTNAME_HASHES_PATH = REPO / "config" / "identifiers.denylist.sha256"
+# A hostname-shaped word token: alnum start, then alnum / hyphen / underscore.
+HOST_TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{1,62}")
+# A hostname-denylist finding NEVER carries the matched token (it would re-leak
+# in a CI log) — only this fixed marker. The operator sees path:line and looks.
+HOST_REDACTED = "<redacted — matched the committed hostname denylist>"
 
 # Consistent separator via backreference: 6-8 hex pairs, all-colon or
 # all-hyphen. 6 = classic MAC; 8 = EUI-64 (esptool's ff:fe form is a subset).
@@ -102,6 +118,10 @@ class Finding:
         self.path, self.line, self.cls, self.text = path, line, cls, text
 
     def masked(self, reveal: bool) -> str:
+        if self.cls == "hostname-denylist":
+            # Never echo the matched token, even with --reveal (#865): a CI log
+            # must not re-leak the hostname it caught. Report location only.
+            return f"{self.path}:{self.line}: [{self.cls}] {HOST_REDACTED}"
         t = self.text
         if not reveal and len(t) > 8:
             # ASCII mask (Windows consoles mangle a unicode ellipsis)
@@ -142,11 +162,31 @@ def load_denylist() -> list[re.Pattern] | None:
     return pats
 
 
+def _hash_host(name: str) -> str:
+    """SHA-256 of a hostname, lowercased first (#865 spec: lowercase-before-hash)."""
+    return hashlib.sha256(name.strip().lower().encode("utf-8")).hexdigest()
+
+
+def load_hostname_hashes() -> set[str]:
+    """Committed hostname SHA-256 digests (empty set if the file is absent/empty)."""
+    if not HOSTNAME_HASHES_PATH.exists():
+        return set()
+    out: set[str] = set()
+    for ln in HOSTNAME_HASHES_PATH.read_text(encoding="utf-8").splitlines():
+        ln = ln.strip()
+        if ln and not ln.startswith("#"):
+            out.add(ln.lower())
+    return out
+
+
 # --- text scanning ----------------------------------------------------------
 
 
 def scan_text(
-    path: str, data: bytes, denylist: list[re.Pattern] | None
+    path: str,
+    data: bytes,
+    denylist: list[re.Pattern] | None,
+    host_hashes: set[str] | None = None,
 ) -> list[Finding]:
     findings: list[Finding] = []
     try:
@@ -166,6 +206,15 @@ def scan_text(
             for rx in denylist:
                 for m in rx.finditer(line):
                     findings.append(Finding(path, lineno, "denylist", m.group(0)))
+        if host_hashes:
+            # Whole-word tokens, lowercased + hashed, checked against the committed
+            # digests. A match reports HOST_REDACTED, never the token (#865).
+            # Skipped entirely when the denylist is empty (zero overhead).
+            for m in HOST_TOKEN_RE.finditer(line):
+                if _hash_host(m.group(0)) in host_hashes:
+                    findings.append(
+                        Finding(path, lineno, "hostname-denylist", HOST_REDACTED)
+                    )
     return findings
 
 
@@ -252,7 +301,9 @@ def scan_image(path: str, data: bytes) -> list[Finding]:
 # --- modes -------------------------------------------------------------------
 
 
-def scan_tree(denylist: list[re.Pattern] | None) -> list[Finding]:
+def scan_tree(
+    denylist: list[re.Pattern] | None, host_hashes: set[str] | None = None
+) -> list[Finding]:
     findings: list[Finding] = []
     allow = load_allowlist()
     rel_allowlist = ALLOWLIST_PATH.relative_to(REPO).as_posix()
@@ -267,11 +318,13 @@ def scan_tree(denylist: list[re.Pattern] | None) -> list[Finding]:
         if ext in IMAGE_EXTS:
             findings.extend(scan_image(path, data))
         elif ext not in SKIP_TEXT_EXTS and b"\0" not in data[:8192]:
-            findings.extend(scan_text(path, data, denylist))
+            findings.extend(scan_text(path, data, denylist, host_hashes))
     return [f for f in findings if f"{f.path}:{f.text}" not in allow]
 
 
-def scan_history(denylist: list[re.Pattern] | None) -> list[Finding]:
+def scan_history(
+    denylist: list[re.Pattern] | None, host_hashes: set[str] | None = None
+) -> list[Finding]:
     """Every unique blob ever committed, via one cat-file --batch stream."""
     seen: dict[str, str] = {}  # sha -> example path
     for line in _git("rev-list", "--objects", "--all").decode().splitlines():
@@ -326,7 +379,7 @@ def scan_history(denylist: list[re.Pattern] | None) -> list[Finding]:
         if ext in IMAGE_EXTS:
             findings.extend(scan_image(label, data))
         elif ext not in SKIP_TEXT_EXTS and b"\0" not in data[:8192]:
-            findings.extend(scan_text(label, data, denylist))
+            findings.extend(scan_text(label, data, denylist, host_hashes))
     proc.stdin.close()
     proc.wait()
     allow = load_allowlist()
@@ -356,6 +409,22 @@ def strip_files(paths: list[str]) -> int:
     return rc
 
 
+def deny_host(name: str) -> int:
+    """Append a hostname's SHA-256 to the committed denylist. Idempotent; never
+    echoes the name back (#865)."""
+    digest = _hash_host(name)
+    if digest in load_hostname_hashes():
+        print("identifier-guard: already denied (no change).")
+        return 0
+    with HOSTNAME_HASHES_PATH.open("a", encoding="utf-8") as fh:
+        fh.write(digest + "\n")
+    print(
+        "identifier-guard: added 1 hostname hash to "
+        "config/identifiers.denylist.sha256 - commit it."
+    )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument(
@@ -370,19 +439,36 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--reveal", action="store_true", help="print full matches, not masked"
     )
+    ap.add_argument(
+        "--deny-host",
+        metavar="HOSTNAME",
+        help="append this hostname's SHA-256 to the committed denylist (#865)",
+    )
     args = ap.parse_args(argv)
 
     if args.strip:
         return strip_files(args.strip)
+    if args.deny_host:
+        return deny_host(args.deny_host)
 
     denylist = load_denylist()
+    host_hashes = load_hostname_hashes()
     where = "history" if args.history else "tree"
-    findings = scan_history(denylist) if args.history else scan_tree(denylist)
+    findings = (
+        scan_history(denylist, host_hashes)
+        if args.history
+        else scan_tree(denylist, host_hashes)
+    )
 
     if denylist is None:
         print(
             "note: config/identifiers.local.txt absent - SSID/hostname denylist "
             "class skipped (regex classes still enforced)."
+        )
+    if not host_hashes:
+        print(
+            "note: config/identifiers.denylist.sha256 has no entries - hostname "
+            "class inert (seed with --deny-host at go-public)."
         )
     if not findings:
         print(
