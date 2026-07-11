@@ -1527,6 +1527,27 @@ def _device_groups(
             for seg in segments
         )
         cal_provisional = has_placeholder or (transport == "wifi" and not cal_verified)
+        # #951: three-tier cal honesty (the display half; Firmware's #952 owns the
+        # substrate). channel-cal - a per-channel bench cal (cal_verified) - is the TOP
+        # state and wears NO label: the absence of a caveat IS the signal. board-cal - a
+        # measured board envelope in the header, distinct from the shared factory
+        # default (the C5 after #899) - earns a neutral chip, not the "provisional"
+        # scarlet letter it wore for merely lacking per-channel cal. uncalibrated -
+        # factory defaults, or a stated PLACEHOLDER banner - keeps the caveat. Derived
+        # here from the cal signals already on the wire; when #952 lands a formal
+        # cal_source the derivation reads it; the tier->label map is unchanged.
+        has_board_cal = any(
+            reg.canonical_for(seg.device_id) == did
+            and seg.cal_bounds_source == "header"
+            and list(seg.cal_bounds) != list(DEFAULT_CAL_BOUNDS)
+            for seg in segments
+        )
+        if cal_verified:
+            cal_tier = "channel-cal"
+        elif has_board_cal and not has_placeholder:
+            cal_tier = "board-cal"
+        else:
+            cal_tier = "uncalibrated"
         groups.append(
             {
                 "device_id": did,
@@ -1552,6 +1573,8 @@ def _device_groups(
                     else None
                 ),
                 "cal_provisional": cal_provisional,
+                # #951 three-tier: channel-cal | board-cal | uncalibrated
+                "cal_tier": cal_tier,
                 "also_reported_as": also_reported_as,  # honest coalesce (#602)
                 # #699: this board's own continuity (coverage/longest/last gap),
                 # so a WiFi dropout is visible per device - never fleet-averaged.
