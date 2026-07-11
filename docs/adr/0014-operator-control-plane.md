@@ -6,7 +6,10 @@ note for the untethered era (the Wave-1 finish line on #448): §1's "Monitor mod
 fleet poller (#582) — the expectation recorded at ratification is that the WiFi poll→persist loop rides the
 Monitor lifecycle (one Start/Stop governs both collection paths, serial and fleet), not a third lifecycle,
 and #582's process-home decision binds to this. §5's `operator_plane` extraction trigger (#243 device-served
-UI sharing controller state) has not fired and stays dormant.*
+UI sharing controller state) has not fired and stays dormant. Living edit (#923, control-surface collapse):
+the operator surface presents **one** collection action on Monitor (`Start collection` = both paths); the
+serial-only baseline control is an **advanced affordance in Diagnostics**, so a user never has to know serial
+vs fleet to start — the one-Start-governs-both plane is unchanged, only its surfacing is.*
 **Date:** 2026-06-26
 **Owner:** Data lane
 **Lane:** data/analytics (the operator control surface)

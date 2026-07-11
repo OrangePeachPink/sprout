@@ -94,7 +94,7 @@ def test_fresh_checkout_carries_a_working_start_control() -> None:
     # before #644: the shell's button only rendered once data existed).
     html = _empty_state_html(had_any_logged=False)
     assert 'id="collStart"' in html
-    assert "Start all collection" in html
+    assert "Start collection" in html  # #923: one collection action, consistent vocab
     # and it wires to ADR-0014's one action, not a dead button
     assert "/collection/start" in html
 

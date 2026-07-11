@@ -396,20 +396,16 @@ footer.prov code { font-family: var(--font-data); }
 
   <section class="card compact" id="monitorCard">
     <div class="panel-h">
-      <h2>Monitor <span class="proposed" title="the always-on baseline logger, appended to logs/">logging mode</span></h2>
-      <span class="cap">the always-on logger — appends to <span class="mono">logs/</span>; start/stop it here, no terminal</span>
+      <h2>Monitor</h2>
+      <span class="cap">collect from every connected sensor — one button, no terminal; appends to <span class="mono">logs/</span></span>
     </div>
+    <!-- #923 / #588 (ADR-0014): ONE operator action starts ALL collection (the WiFi
+         fleet + a tethered serial board if one is present); an absent path skips with a
+         stated reason. The serial-only baseline control moved to Diagnostics (the #872
+         collapse) — the operator shouldn't have to know serial vs WiFi to start. -->
     <div class="capctl">
-      <label class="capf">port<input id="monPort" type="text" value="COM6" maxlength="20" spellcheck="false"></label>
-      <button class="btn primary" id="monStart" type="button">▶ Start logging</button>
-      <button class="btn" id="monStop" type="button" disabled>■ Stop logging</button>
-      <span class="capstatus" id="monStatus">—</span>
-    </div>
-    <!-- #588 (ADR-0014): one operator action = ALL collection running (serial
-         monitor + WiFi fleet); an absent path skips with a stated reason. -->
-    <div class="capctl">
-      <button class="btn primary" id="collStart" type="button">▶ Start all collection</button>
-      <button class="btn" id="collStop" type="button" disabled>■ Stop all</button>
+      <button class="btn primary" id="collStart" type="button">▶ Start collection</button>
+      <button class="btn" id="collStop" type="button" disabled>■ Stop</button>
       <span class="capstatus" id="collStatus">—</span>
     </div>
     <div id="serialOwner" class="serialowner" hidden></div>
@@ -496,6 +492,20 @@ footer.prov code { font-family: var(--font-data); }
        here; quality timeline, data integrity, bench provenance, segment listing →
        here; fleet groups + cards + ladder + trajectory stay on Monitor. -->
   <div id="diagnostics" style="display:none">
+    <!-- #923: the serial baseline (a single USB-tethered board) lives here now, off the
+         daily Monitor view — an advanced / occasional path. Monitor's one "Start
+         collection" already includes a tethered board when present; this drives ONLY the
+         serial monitor directly. Same controls, relocated — the ids are unchanged so the
+         collection wiring binds identically. -->
+    <section class="card">
+      <div class="panel-h"><h2>Serial baseline <span class="proposed" title="a single USB-tethered board; the WiFi fleet is the default path">advanced</span></h2><span class="cap">drive the tethered serial logger directly — normally unnecessary; Monitor's "Start collection" already covers a tethered board</span></div>
+      <div class="capctl">
+        <label class="capf">port<input id="monPort" type="text" value="COM6" maxlength="20" spellcheck="false"></label>
+        <button class="btn primary" id="monStart" type="button">▶ Start logging</button>
+        <button class="btn" id="monStop" type="button" disabled>■ Stop logging</button>
+        <span class="capstatus" id="monStatus">—</span>
+      </div>
+    </section>
     <!-- #758: the project's two front doors, reachable from inside the running app. Reference material
          lives in Diagnostics & Logs, off the daily Monitor view (doctrine two-jobs split, #716). -->
     <section class="card">
