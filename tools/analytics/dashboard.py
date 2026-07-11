@@ -1575,6 +1575,11 @@ def _device_groups(
                 "cal_provisional": cal_provisional,
                 # #951 three-tier: channel-cal | board-cal | uncalibrated
                 "cal_tier": cal_tier,
+                # #814: current WiFi signal from this device's latest polled row.
+                # Honest-absent (ADR-0028): a serial/tethered row omits rssi -> None,
+                # so no chip, never a fabricated 0 dBm. Real dBm + a band, not a %.
+                "rssi": last.rssi,
+                "rssi_band": _rssi_band(last.rssi),
                 "also_reported_as": also_reported_as,  # honest coalesce (#602)
                 # #699: this board's own continuity (coverage/longest/last gap),
                 # so a WiFi dropout is visible per device - never fleet-averaged.
@@ -1633,6 +1638,22 @@ def _locator(sources: list[str]) -> dict:
         "archive_dir": rel(str(ARCHIVE_DIR)),
         "archive_count": len(archived),
     }
+
+
+def _rssi_band(dbm: int | None) -> str | None:
+    """A labeled WiFi-signal band for a dBm reading (#814). ``None`` -> ``None``: a
+    serial/tethered row carries no ``rssi=`` (ADR-0028 honest-absent), so there is no
+    band to invent - the surface shows absence as absence, never a fabricated 0 dBm.
+    The band is the real dBm's honest bucket, NOT a quality percentage (dashboard
+    honesty, B2/C2): ``strong`` >= -67, ``fair`` -67..-75, ``weak`` < -75 (the weak
+    cue is the operator's placement/dropout signal)."""
+    if dbm is None:
+        return None
+    if dbm >= -67:
+        return "strong"
+    if dbm >= -75:
+        return "fair"
+    return "weak"
 
 
 def _round_opt(v: float | None, n: int) -> float | None:
