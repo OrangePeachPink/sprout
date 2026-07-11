@@ -970,6 +970,16 @@ def build_context(
         spairs = [
             (_hours_since(r.timestamp_utc, start), r.raw_value) for r in settled
         ] or pairs
+        # #919: the trend + forecast FITS use CLEAN readings only. A fault / sub-rail /
+        # OOB row (excluded by the #670/#697 gate) must never pull the least-squares fit
+        # — that is the all-window "wetting on a drying plant" inversion. Raw stays on
+        # the plot (truth, #575); only the fits drop these rows, and the count is
+        # surfaced (`fit_excluded`) so nothing is silently dropped.
+        plot_settled = _settled_readings(plot_rs)
+        fit_pairs = [
+            (_hours_since(r.timestamp_utc, start), r.raw_value) for r in plot_settled
+        ]
+        fit_excluded = len(plot_rs) - len(plot_settled)
         locals_ = [
             r.timestamp_local.strftime("%m-%d %H:%M:%S") if r.timestamp_local else ""
             for r in plot_rs
@@ -1103,16 +1113,19 @@ def build_context(
                 "spread_last": last.spread,
                 "quality_last": last.quality_flag,
                 "slope_per_hr": _round_opt(_slope_per_hour(spairs), 2),
-                "forecast": forecast_payload(sid, rs, bounds),
+                "forecast": forecast_payload(sid, settled, bounds),
+                # #919: rows the #670/#697 gate kept off the trend/forecast fits
+                # (still plotted as raw) - surfaced so exclusion is never silent.
+                "fit_excluded": fit_excluded,
             }
         )
         # #839 Fix B: fit the dashed trend over the recent-run plot, not the full
         # window - a trend that spanned the stale pre-gap pocket (0..180 h) was the
         # one line that still drew across the empty window in the bug report.
-        _fit = fit_line(plot_pairs)
+        _fit = fit_line(fit_pairs)
         trend = None
-        if _fit and len(plot_pairs) >= 3:
-            x0, x1 = plot_pairs[0][0], plot_pairs[-1][0]
+        if _fit and len(fit_pairs) >= 3:
+            x0, x1 = fit_pairs[0][0], fit_pairs[-1][0]
             trend = {
                 "x0": round(x0, 4),
                 "y0": round(_fit.intercept + _fit.slope * x0, 1),
