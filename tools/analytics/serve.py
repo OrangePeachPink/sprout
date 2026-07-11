@@ -660,6 +660,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json(_FLEET.status())
             elif parsed.path == "/collection/status":  # both paths, one view (#588)
                 self._send_json(status_all(_MONITOR, _FLEET))
+            elif parsed.path == "/registry":  # #921 the Plants & Sensors tab seam
+                from registry_model import load_registry_model, registry_payload
+
+                self._send_json(registry_payload(load_registry_model()))
             elif parsed.path == "/serial/owner":  # who holds the port (#330)
                 self._send_json(serial_lock.owner_status())
             elif parsed.path.startswith("/docs/"):  # #808: front-door docs, guarded

@@ -357,6 +357,44 @@ def load_model(path: str | Path) -> RegistryModel:
     return RegistryModel.from_dict(doc)
 
 
+_REPO = Path(__file__).resolve().parents[1]
+_LOCAL = _REPO / "config" / "devices.local.json"
+_EXAMPLE = _REPO / "config" / "devices.example.json"
+
+
+def load_registry_model(path: str | Path | None = None) -> RegistryModel:
+    """Load the registry model with the SAME config discovery as ``device_registry``
+    (#921 slice 2): the gitignored local config, else the committed example, else an
+    empty model (the first-run signal). A static (v1) config migrates on read."""
+    if path is not None:
+        return load_model(path)
+    for p in (_LOCAL, _EXAMPLE):
+        if p.exists():
+            return load_model(p)
+    return RegistryModel()
+
+
+def registry_payload(model: RegistryModel) -> dict:
+    """The /registry GET seam for the Plants & Sensors tab (#921 slice 2). The model as
+    JSON, plus two derived conveniences the surface needs: the **current mapping** (the
+    open assignments, resolved) and a **first_run** flag (an empty registry means this
+    tab is the fresh-install setup landing, Q9). DesignQA builds the tab on this."""
+    doc = model.to_dict()
+    doc["current_mappings"] = [
+        {
+            "plant_id": a.plant_id,
+            "sensor_id": a.sensor_id,
+            "device_id": a.device_id,
+            "channel": a.channel,
+            "profile_id": a.profile_id,
+            "start_ts": a.start_ts,
+        }
+        for a in model.open_assignments()
+    ]
+    doc["first_run"] = not (model.plants or model.sensors or model.devices)
+    return doc
+
+
 def save_model(model: RegistryModel, path: str | Path) -> None:
     """Persist the model as pretty JSON (classic batch commit, Q10). Writes the whole
     document atomically-ish via a temp file swap so a crash mid-write can't truncate the
