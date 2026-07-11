@@ -55,14 +55,31 @@ def _git_rev():
         return "nogit"
 
 
+# mcu (BoardConfig build.mcu) -> (esptool --chip, ESP Web Tools chipFamily).
+CHIP_MAP = {
+    "esp32": ("esp32", "ESP32"),
+    "esp32c5": ("esp32c5", "ESP32-C5"),
+    "esp32s3": ("esp32s3", "ESP32-S3"),
+}
+
+# ADR-0026 Decision 6: only a BENCH-VERIFIED board is offered on the web flasher.
+# Default-deny - a board absent here builds a factory bin but gets NO manifest, so the
+# doc-only BOARDS.md do-not-flash rule (relay/pump-pin safety) becomes mechanical. The
+# bring-up DoD's "add to web flasher" step = add the mcu here once it is bench-verified.
+WEB_FLASH_VERIFIED = {"esp32", "esp32c5"}  # classic + C5 (#443/#933 bench-verified)
+
+
 def make_factory(source, target, env):
     # Never distribute the watchdog wedge-test build.
     if any("WDT_WEDGE_TEST" in str(f) for f in env.get("BUILD_FLAGS", [])):
         return
 
+    mcu = env.BoardConfig().get("build.mcu", "esp32")
+    chip, chip_family = CHIP_MAP.get(mcu, (mcu, mcu.upper()))
+
     build_dir = env.subst("$BUILD_DIR")
     app_bin = os.path.join(build_dir, env.subst("$PROGNAME") + ".bin")
-    factory = os.path.join(build_dir, "sprout-esp32-factory.bin")
+    factory = os.path.join(build_dir, f"sprout-{mcu}-factory.bin")
 
     # bootloader / partitions / boot_app0, each at its flash offset, then the app.
     parts = []
@@ -80,7 +97,7 @@ def make_factory(source, target, env):
     part_args = " ".join(f'"{p}"' for p in parts)
     env.Execute(
         env.VerboseAction(
-            f'"$PYTHONEXE" "{esptool}" --chip esp32 merge_bin -o "{factory}" '
+            f'"$PYTHONEXE" "{esptool}" --chip {chip} merge_bin -o "{factory}" '
             f"--flash_mode {flash_mode} --flash_size {flash_size} {part_args}",
             f"Building ESP Web Tools factory image -> {os.path.basename(factory)}",
         )
@@ -96,29 +113,42 @@ def make_factory(source, target, env):
     with open(factory + ".sha256", "w", encoding="utf-8") as fh:
         fh.write(f"{digest}  {os.path.basename(factory)}\n")
 
+    # Verified-marker gate (ADR-0026 D6): an unverified board's bin is built (a harmless
+    # artifact) but gets NO web-flasher manifest - it is never offered from a browser.
+    if mcu not in WEB_FLASH_VERIFIED:
+        print(
+            f"[factory] {mcu}: NOT bench-verified -> factory bin built, NO manifest "
+            f"(ADR-0026 D6 verified-marker; do-not-flash held mechanical)"
+        )
+        return
+
     manifest = {
         "name": "Sprout",
         "version": _fw_version(),
         "new_install_prompt_erase": True,
         "builds": [
             {
-                "chipFamily": "ESP32",
-                "parts": [{"path": "sprout-esp32-factory.bin", "offset": 0}],
+                "chipFamily": chip_family,
+                "parts": [{"path": os.path.basename(factory), "offset": 0}],
             }
         ],
         # Extra fields (ESP Web Tools ignores them); the flasher page reads these to
         # show real provenance BEFORE Install (#271, Design ask).
         "provenance": {
             "artifact": os.path.basename(factory),
+            "board": mcu,
             "sha256": digest,
             "bytes": size,
             "git": _git_rev(),
         },
     }
-    manifest_path = os.path.join(build_dir, "manifest.json")
+    manifest_path = os.path.join(build_dir, f"manifest-{mcu}.json")
     with open(manifest_path, "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2)
-    print(f"ESP Web Tools manifest -> {manifest_path}  (sha256 {digest[:12]}...)")
+    print(
+        f"ESP Web Tools manifest ({chip_family}) -> {manifest_path}  "
+        f"(sha256 {digest[:12]}...)"
+    )
 
 
 env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", make_factory)  # noqa: F821
