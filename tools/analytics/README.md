@@ -4,7 +4,9 @@ Host-side data tooling for the plants telemetry: parsing, analysis, and dashboar
 reads the captured logs; it does **not** produce them — the firmware emits the device line and
 `tools/logger/` writes the canonical CSV. Data flows one way: `firmware` → `logger` → `logs/` → here.
 
-Backlog lane (see [`../../BACKLOG.md`](../../BACKLOG.md) section E):
+The analytics build-out lane — the original "E" backlog, now tracked as
+[GitHub Issues](https://github.com/OrangePeachPink/sprout/issues). These items are complete;
+the table is the historical record:
 
 | Item | What | Status |
 | --- | --- | --- |
