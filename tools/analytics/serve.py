@@ -764,6 +764,33 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 )
             elif parsed.path == "/collection/stop":
                 self._send_json(stop_all(_MONITOR, _FLEET))
+            elif (
+                parsed.path == "/registry/apply"
+            ):  # #921 slice 3 — classic-save a batch
+                # Mutates the local registry config; localhost-only (as /quit).
+                if not self._is_local():
+                    self._send_json(
+                        {"error": "registry edits are localhost-only"}, status=403
+                    )
+                    return
+                from registry_model import (
+                    apply_operations,
+                    load_registry_model,
+                    registry_payload,
+                    save_registry_model,
+                )
+
+                model = load_registry_model()
+                result = apply_operations(model, self._body())
+                if not result.get("ok"):
+                    # validation failed - nothing mutated; client renders errors inline
+                    self._send_json(result, status=400)
+                    return
+                save_registry_model(
+                    model
+                )  # classic batch commit (preserves sensorless etc.)
+                result["registry"] = registry_payload(model)  # fresh state, no 2nd GET
+                self._send_json(result)
             elif parsed.path == "/serial/owner/clear":  # clear a STALE marker (#330)
                 self._send_json(serial_lock.clear_if_stale())
             elif parsed.path.startswith("/lab/study/"):  # save a study (#159)
