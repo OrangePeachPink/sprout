@@ -47,6 +47,7 @@ time**:
 | Stage | Meaning | Autonomy |
 |---|---|---|
 | `provisional` | shared / uncalibrated bounds (today) | monitor only — never auto-doses |
+| `board-cal` | a **measured board-type envelope** (#952 cal-source ladder: uncalibrated → **board-cal** → channel-cal; the C5's #898 case) — trust above shared/uncalibrated, below per-channel | monitor only — never auto-doses (not yet `calibrated`) |
 | `calibrated` | per-channel bounds locked from controlled characterization (#170) | necessary, **not** sufficient |
 | `corroborated` | a `calibrated` band that, at this decision, is **corroborated** — no microzone-disagreement veto, good contact-quality, no contradicting pot/tray signal | the **only** stage that may drive an autonomous dose |
 
