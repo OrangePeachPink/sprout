@@ -228,6 +228,8 @@ Host-appended keys (additive, never touching device keys): `host_monotonic_ms` (
 | `rssi=<dBm>` | soil, **connected-only** | #669 — WiFi signal strength (a negative int). **Honest-absent** (ADR-0028): a serial/tethered or unassociated row **omits the key entirely** — never a fake `0`. Only the dBm value; **never SSID/BSSID/MAC** (privacy fence). |
 | `uptime_s=<s>` | every soil row | #669 — seconds since boot (board diagnostic; transport-independent). |
 | `heap=<bytes>` | every soil row | #669 — free heap bytes (board diagnostic). |
+| `cal_tier=channel-cal｜board-cal｜uncalibrated` | soil, **WiFi rows only** | #952/#957/#997 — the resolved cal tier (resolver chain, `cal_tier_label`), so the dashboard's tier chip is true off-tether. The header cal signals (`cal_bounds_source`/`cal_ch`) are **tethered-only**, so this is the WiFi supplement; a tethered row **omits it** and the header derivation governs (`parse_v1` falls back). An unknown value is **rejected host-side, never passed through**. |
+| `cal_src=<provenance>` | soil, WiFi rows only (rides with `cal_tier`) | #952/#997 — how the anchors were derived (the resolved record's provenance, e.g. `board_envelope_20260710`). Honest-absent when unknown. |
 
 ---
 

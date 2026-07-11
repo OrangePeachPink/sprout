@@ -57,7 +57,10 @@ int telemetry_format_soil_row(char *buf, size_t buflen,
      * shape. device_timestamp_utc is OMITTED (not an empty key) when NULL/unsynced -
      * absence, not a guessed value, is the honest NULL here. */
     char payload
-        [256]; /* #601 name= + #739 v4 payload keys (config_id/fault/diag) */
+        [384]; /* #601 name= + #739 v4 keys + #952/#997 cal_tier/cal_src on WiFi
+                  rows. Sized for the worst-case field combo (WiFi + SNTP-synced
+                  device_timestamp_utc + a fault reason + cal provenance) so no
+                  additive key is ever silently dropped from a full row. */
     int len =
         snprintf(payload, sizeof(payload),
                  "name=%s;level=%s;role=%s;spread=%u;gpio=%d;device_seq=%lu;"
@@ -96,6 +99,21 @@ int telemetry_format_soil_row(char *buf, size_t buflen,
         len += snprintf(payload + len, sizeof(payload) - (size_t)len,
                         ";uptime_s=%lu;heap=%lu", (unsigned long)r->uptime_s,
                         (unsigned long)r->heap_free);
+    }
+    /* #952/#957/#997: cal provenance rides the WiFi soil rows (same gate as rssi -
+     * rssi_present == WiFi-associated). The header cal signals are tethered-only, so
+     * this wire token is the off-tether supplement; a tethered row omits it and the
+     * header derivation governs (Data #997 fallback). Omitted (not an empty key)
+     * when the value is NULL/"" - honest-absent, never a guessed token. */
+    if (r->rssi_present && r->cal_tier && r->cal_tier[0] != '\0' && len > 0 &&
+        (size_t)len < sizeof(payload)) {
+        len += snprintf(payload + len, sizeof(payload) - (size_t)len,
+                        ";cal_tier=%s", r->cal_tier);
+    }
+    if (r->rssi_present && r->cal_src && r->cal_src[0] != '\0' && len > 0 &&
+        (size_t)len < sizeof(payload)) {
+        len += snprintf(payload + len, sizeof(payload) - (size_t)len,
+                        ";cal_src=%s", r->cal_src);
     }
     (void)len;
 
