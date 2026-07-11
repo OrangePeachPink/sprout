@@ -246,6 +246,44 @@ class RegistryModel:
                     return True
         return False
 
+    def purge(
+        self,
+        *,
+        devices: tuple[str, ...] = (),
+        plants: tuple[str, ...] = (),
+        sensors: tuple[str, ...] = (),
+    ) -> dict:
+        """Permanently REMOVE entities + every assignment that references them from the
+        model (#921 Q3: delete = entity AND history, out of the records - not a
+        lifecycle flag). A purged device also drops from the poll set the moment it
+        leaves ``devices`` (device_registry serves only what's in the file). Returns
+        removal counts. The filesystem scrub of the device's log rows is a separate step
+        (:func:`purge_device_files`, the caller's) - the model stays pure."""
+        dset, pset, sset = set(devices), set(plants), set(sensors)
+        before_a = len(self.assignments)
+        self.assignments = [
+            a
+            for a in self.assignments
+            if a.device_id not in dset
+            and a.plant_id not in pset
+            and a.sensor_id not in sset
+        ]
+        self.location_events = [
+            e for e in self.location_events if e.plant_id not in pset
+        ]
+        n_dev = sum(1 for d in self.devices if d.get("device_id") in dset)
+        n_pl = sum(1 for p in self.plants if p.plant_id in pset)
+        n_se = sum(1 for s in self.sensors if s.sensor_id in sset)
+        self.devices = [d for d in self.devices if d.get("device_id") not in dset]
+        self.plants = [p for p in self.plants if p.plant_id not in pset]
+        self.sensors = [s for s in self.sensors if s.sensor_id not in sset]
+        return {
+            "devices": n_dev,
+            "plants": n_pl,
+            "sensors": n_se,
+            "assignments": before_a - len(self.assignments),
+        }
+
     # --------------------------- serialization ------------------------------ #
     def to_dict(self) -> dict:
         return {
@@ -570,6 +608,18 @@ def apply_operations(
         elif eid not in pool:
             err(tag, f"no such {kind} {eid!r}", "entity_id")
 
+    # ---- validate: purge (Q3 delete). A delete is irreversible, so an unknown target
+    # is an ERROR, never a silent success - a typo'd id must not quietly delete nothing.
+    purge = ops.get("purge") or {}
+    for kind, pool in (
+        ("devices", existing_d),
+        ("plants", existing_p),
+        ("sensors", existing_s),
+    ):
+        for eid in purge.get(kind) or []:
+            if eid not in pool:
+                err(f"purge.{kind}", f"no such {kind[:-1]} {eid!r}", kind)
+
     if errors:  # atomic: validated-whole-or-nothing, nothing mutated yet
         return {"ok": False, "errors": errors}
 
@@ -581,6 +631,7 @@ def apply_operations(
         "mapped": 0,
         "closed": 0,
         "lifecycle": 0,
+        "purged": {"devices": 0, "plants": 0, "sensors": 0, "assignments": 0},
     }
     for rec in plants.get("add") or []:
         pid = (rec.get("plant_id") or "").strip() or next_plant_id(model)
@@ -633,6 +684,12 @@ def apply_operations(
     for lc in lifecycle:
         if model.set_lifecycle(lc["kind"], lc["entity_id"], lc["state"]):
             applied["lifecycle"] += 1
+    if purge:  # Q3 delete — LAST, so a same-batch remap can't reference a purged entity
+        applied["purged"] = model.purge(
+            devices=tuple(purge.get("devices") or []),
+            plants=tuple(purge.get("plants") or []),
+            sensors=tuple(purge.get("sensors") or []),
+        )
 
     return {"ok": True, "applied": applied}
 
@@ -658,3 +715,47 @@ def save_registry_model(model: RegistryModel, path: str | Path | None = None) ->
     )
     tmp.replace(target)
     return target
+
+
+# A per-device segment file: `<device_id>_<YYYYMMDD>_<HHMMSS>.csv[.gz]` (#582). The
+# device_id may contain underscores, so the date/time suffix is matched greedily.
+_SEGMENT_RE = re.compile(r"^(.+)_\d{8}_\d{6}\.csv(?:\.gz)?$")
+
+
+def purge_device_files(
+    device_ids, *, logdir: str | Path, archive_dir: str | Path | None = None
+) -> dict:
+    """The filesystem half of a device delete (#921 Q3: history out of the records).
+
+    DELETES the purged devices' active log segments from ``logdir`` (their
+    ``<device_id>_*.csv`` files) and REPORTS — never touches — any ``.csv.gz`` segments
+    still in the B8 archive. Scrubbing the archive means gz decompress/filter/recompress
+    across the read-only data-branch records store; that's deferred design work (a
+    v0.8.0 #921-s4 follow-on), so the delete is HONEST about what it reached rather than
+    silently leaving archived rows. Irreversible, so scoped tight: only a file whose
+    device-id prefix EXACTLY matches a purged id (canonical segment naming) is
+    removed. Never raises — a missing dir is an empty result. Returns
+    ``{"removed": [paths], "archived_remaining": int}``."""
+    ids = set(device_ids)
+    removed: list[str] = []
+    try:
+        for f in Path(logdir).glob("*.csv"):
+            m = _SEGMENT_RE.match(f.name)
+            if m and m.group(1) in ids:
+                try:
+                    f.unlink()
+                    removed.append(str(f))
+                except OSError:
+                    continue
+    except OSError:
+        pass
+    archived_remaining = 0
+    if archive_dir:
+        try:
+            for f in Path(archive_dir).glob("*.csv.gz"):
+                m = _SEGMENT_RE.match(f.name)
+                if m and m.group(1) in ids:
+                    archived_remaining += 1
+        except OSError:
+            pass
+    return {"removed": removed, "archived_remaining": archived_remaining}

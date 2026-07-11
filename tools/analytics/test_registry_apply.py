@@ -21,6 +21,7 @@ from registry_model import (
     apply_operations,
     next_plant_id,
     next_sensor_id,
+    purge_device_files,
     registry_payload,
     save_registry_model,
 )
@@ -255,6 +256,68 @@ def test_a_batch_with_any_error_mutates_nothing() -> None:
 # --------------------------------------------------------------------------- #
 # save preserves unknown top-level keys (devices.local.json is shared)
 # --------------------------------------------------------------------------- #
+def test_purge_removes_a_device_and_its_assignments(tmp_path: Path) -> None:
+    # #921 s4 / Q3: delete = entity AND history out of the records (the yyvvpd case).
+    m = _model()
+    apply_operations(
+        m,
+        {
+            "mappings": {
+                "assign": [
+                    {
+                        "plant_id": "p01",
+                        "sensor_id": "s01",
+                        "device_id": "y9d41p",
+                        "channel": "s1",
+                    }
+                ]
+            }
+        },
+    )
+    r = apply_operations(m, {"purge": {"devices": ["y9d41p"]}})
+    assert r["ok"]
+    assert r["applied"]["purged"] == {
+        "devices": 1,
+        "plants": 0,
+        "sensors": 0,
+        "assignments": 1,
+    }
+    assert m.devices == []  # gone from the registry -> gone from the poll set
+    assert m.assignments == []  # its history is out of the records too
+
+
+def test_purge_an_unknown_device_is_an_error_never_silent(tmp_path: Path) -> None:
+    # a delete is irreversible — a typo'd id must NOT "succeed" at deleting nothing.
+    m = _model()
+    r = apply_operations(m, {"purge": {"devices": ["nope"]}})
+    assert not r["ok"]
+    assert r["errors"][0]["op"] == "purge.devices"
+    assert m.devices  # untouched
+
+
+def test_purge_device_files_deletes_segments_and_reports_archive(
+    tmp_path: Path,
+) -> None:
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    (logs / "yyvvpd_20260711_120000.csv").write_text("x", encoding="utf-8")
+    (logs / "y9d41p_20260711_120000.csv").write_text(
+        "keep", encoding="utf-8"
+    )  # other dev
+    (logs / "notes.txt").write_text("keep", encoding="utf-8")  # not a segment
+    archive = tmp_path / "archive"
+    archive.mkdir()
+    (archive / "yyvvpd_20260701_120000.csv.gz").write_bytes(b"gz")  # deep history
+    out = purge_device_files(["yyvvpd"], logdir=logs, archive_dir=archive)
+    assert len(out["removed"]) == 1  # only yyvvpd's active segment
+    assert not (logs / "yyvvpd_20260711_120000.csv").exists()
+    assert (logs / "y9d41p_20260711_120000.csv").exists()  # other device untouched
+    assert (logs / "notes.txt").exists()  # non-segment untouched
+    # the archive is REPORTED, never scrubbed (deferred work) - honest, not silent
+    assert out["archived_remaining"] == 1
+    assert (archive / "yyvvpd_20260701_120000.csv.gz").exists()
+
+
 def test_save_preserves_unowned_top_level_keys(tmp_path: Path) -> None:
     cfg = tmp_path / "devices.local.json"
     cfg.write_text(

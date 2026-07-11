@@ -48,7 +48,9 @@ if str(_HERE) not in sys.path:
 
 from bench_packages import render_bench_detail  # noqa: E402  (bench detail #444)
 from dashboard import (  # noqa: E402  (sibling import)
+    ARCHIVE_DIR,
     FONTS_CSS,
+    LOGS_DIR,
     RANGE_HOURS,
     TOKENS_CSS,
     build_context,
@@ -776,19 +778,26 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 from registry_model import (
                     apply_operations,
                     load_registry_model,
+                    purge_device_files,
                     registry_payload,
                     save_registry_model,
                 )
 
+                body = self._body()
                 model = load_registry_model()
-                result = apply_operations(model, self._body())
+                result = apply_operations(model, body)
                 if not result.get("ok"):
                     # validation failed - nothing mutated; client renders errors inline
                     self._send_json(result, status=400)
                     return
-                save_registry_model(
-                    model
-                )  # classic batch commit (preserves sensorless etc.)
+                save_registry_model(model)  # classic commit (preserves sensorless etc.)
+                # #921 Q3: a purged device also loses its on-disk log segments (history
+                # out of the records); it left the poll set when it left the config.
+                purged_devs = (body.get("purge") or {}).get("devices") or []
+                if purged_devs:
+                    result["files"] = purge_device_files(
+                        purged_devs, logdir=LOGS_DIR, archive_dir=ARCHIVE_DIR
+                    )
                 result["registry"] = registry_payload(model)  # fresh state, no 2nd GET
                 self._send_json(result)
             elif parsed.path == "/serial/owner/clear":  # clear a STALE marker (#330)
