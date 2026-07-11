@@ -375,24 +375,72 @@ def load_registry_model(path: str | Path | None = None) -> RegistryModel:
 
 
 def registry_payload(model: RegistryModel) -> dict:
-    """The /registry GET seam for the Plants & Sensors tab (#921 slice 2). The model as
-    JSON, plus two derived conveniences the surface needs: the **current mapping** (the
-    open assignments, resolved) and a **first_run** flag (an empty registry means this
-    tab is the fresh-install setup landing, Q9). DesignQA builds the tab on this."""
-    doc = model.to_dict()
-    doc["current_mappings"] = [
-        {
+    """The /registry GET seam for the Plants & Sensors tab (#921 slice 2), in DesignQA's
+    blessed contract (posted on #921): a **derived current-state view**, NOT the raw
+    append-log — assignment *history* rendering is 0.8.0 (Q11). ``mappings`` is derived
+    from the open assignments (the current full tuple); ``empty`` is the first-run
+    landing signal; **deleted entities never appear**. Per-entity keys are ``id``. The
+    full temporal log stays in ``to_dict`` / ``save_model`` for the write path (slices
+    3+); it just isn't what the read surface needs."""
+
+    def _plant(p: Plant) -> dict:
+        return {
+            "id": p.plant_id,
+            "type": p.plant_type,
+            "pet_name": p.pet_name,
+            "pot": p.pot_description,
+            "location": p.location,
+            "lifecycle": p.lifecycle,
+        }
+
+    def _sensor(s: Sensor) -> dict:
+        return {
+            "id": s.sensor_id,
+            "friendly_name": s.friendly_name,
+            "lifecycle": s.lifecycle,
+        }
+
+    def _device(d: dict) -> dict:
+        chans = d.get("channels")
+        return {
+            "id": d.get("device_id"),
+            "friendly_name": d.get("name") or d.get("label"),
+            "lifecycle": d.get("lifecycle", "active"),
+            "channels": sorted(chans) if isinstance(chans, dict) else [],
+        }
+
+    def _profile(pr: Profile) -> dict:
+        return {
+            "id": pr.profile_id,
+            "name": pr.name,
+            "sensor_type": pr.sensor_type,
+            "tier": pr.tier,
+            "anchors": pr.anchors,
+            "provenance": pr.provenance,
+        }
+
+    def _mapping(a: Assignment) -> dict:
+        return {
             "plant_id": a.plant_id,
             "sensor_id": a.sensor_id,
             "device_id": a.device_id,
             "channel": a.channel,
             "profile_id": a.profile_id,
-            "start_ts": a.start_ts,
+            "since": a.start_ts,
         }
-        for a in model.open_assignments()
-    ]
-    doc["first_run"] = not (model.plants or model.sensors or model.devices)
-    return doc
+
+    plants = [_plant(p) for p in model.plants if p.lifecycle != "deleted"]
+    sensors = [_sensor(s) for s in model.sensors if s.lifecycle != "deleted"]
+    devices = [_device(d) for d in model.devices if d.get("lifecycle") != "deleted"]
+    return {
+        "empty": not (plants or sensors or devices),
+        "plants": plants,
+        "sensors": sensors,
+        "devices": devices,
+        # DERIVED from open (end_ts=null) assignments — the current full tuple only
+        "mappings": [_mapping(a) for a in model.open_assignments()],
+        "profiles": [_profile(pr) for pr in model.profiles],
+    }
 
 
 def save_model(model: RegistryModel, path: str | Path) -> None:

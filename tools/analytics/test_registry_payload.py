@@ -31,11 +31,17 @@ _SERVE = Path(__file__).resolve().parent / "serve.py"
 # --------------------------------------------------------------------------- #
 
 
-def test_payload_carries_entities_current_mapping_and_first_run() -> None:
+def test_payload_matches_the_blessed_contract_shape() -> None:
+    # Design-QA's #921 contract: derived current-state view, per-entity `id`, `mappings`
+    # (derived) with `since`, `empty` flag — and NO raw append-log on the read surface.
     m = RegistryModel(
-        plants=[Plant(plant_id="p01", pet_name="Bernie")],
+        plants=[
+            Plant(plant_id="p01", pet_name="Bernie", pot_description="the red pot")
+        ],
         sensors=[Sensor(sensor_id="s01")],
-        devices=[{"device_id": "y9d41p", "lifecycle": "active"}],
+        devices=[
+            {"device_id": "y9d41p", "name": "Board A", "channels": {"s1": {}, "s2": {}}}
+        ],
     )
     m.assign(
         plant_id="p01",
@@ -45,21 +51,25 @@ def test_payload_carries_entities_current_mapping_and_first_run() -> None:
         now="2026-07-11T10:00:00Z",
     )
     pay = registry_payload(m)
-    assert pay["first_run"] is False
-    assert pay["plants"][0]["pet_name"] == "Bernie"
-    assert len(pay["current_mappings"]) == 1
-    cm = pay["current_mappings"][0]
-    assert (
-        cm["plant_id"] == "p01" and cm["sensor_id"] == "s01" and cm["channel"] == "s1"
-    )
-    # it serializes to JSON cleanly (the wire contract)
-    assert json.loads(json.dumps(pay))["first_run"] is False
+    assert pay["empty"] is False
+    assert pay["plants"][0]["id"] == "p01" and pay["plants"][0]["pot"] == "the red pot"
+    assert pay["sensors"][0]["id"] == "s01"
+    assert pay["devices"][0]["id"] == "y9d41p"
+    assert pay["devices"][0]["friendly_name"] == "Board A"
+    assert pay["devices"][0]["channels"] == ["s1", "s2"]  # the board's ports
+    assert len(pay["mappings"]) == 1
+    mp = pay["mappings"][0]
+    assert mp["plant_id"] == "p01" and mp["channel"] == "s1"
+    assert mp["since"] == "2026-07-11T10:00:00Z"
+    # the raw append-log is NOT on the read surface (history rendering is 0.8.0, Q11)
+    assert "assignments" not in pay and "current_mappings" not in pay
+    assert json.loads(json.dumps(pay))["empty"] is False  # JSON-clean
 
 
-def test_empty_registry_is_first_run() -> None:
+def test_empty_registry_is_the_first_run_landing() -> None:
     pay = registry_payload(RegistryModel())
-    assert pay["first_run"] is True  # a fresh install lands on the setup tab (Q9)
-    assert pay["plants"] == [] and pay["current_mappings"] == []
+    assert pay["empty"] is True  # a fresh install lands on the setup tab (Q9)
+    assert pay["plants"] == [] and pay["mappings"] == []
 
 
 def test_a_closed_assignment_is_not_in_the_current_mapping() -> None:
@@ -79,13 +89,26 @@ def test_a_closed_assignment_is_not_in_the_current_mapping() -> None:
         now="2026-07-11T11:00:00Z",
     )
     pay = registry_payload(m)
-    assert len(pay["current_mappings"]) == 1  # only the open one
-    assert pay["current_mappings"][0]["plant_id"] == "p02"
+    assert len(pay["mappings"]) == 1  # only the open one
+    assert pay["mappings"][0]["plant_id"] == "p02"
+
+
+def test_deleted_entities_never_appear() -> None:
+    m = RegistryModel(
+        plants=[Plant(plant_id="p01"), Plant(plant_id="p02", lifecycle="deleted")],
+        sensors=[Sensor(sensor_id="s01", lifecycle="deleted")],
+    )
+    pay = registry_payload(m)
+    assert [p["id"] for p in pay["plants"]] == ["p01"]  # the deleted plant is gone
+    assert pay["sensors"] == []  # the deleted sensor is gone
+    # a paused entity DOES still appear (present, just off) — so not first-run
+    m2 = RegistryModel(plants=[Plant(plant_id="p01", lifecycle="paused")])
+    assert registry_payload(m2)["empty"] is False
 
 
 def test_load_missing_config_is_empty_model(tmp_path: Path) -> None:
     m = load_registry_model(tmp_path / "nope.json")
-    assert m.plants == [] and registry_payload(m)["first_run"] is True
+    assert m.plants == [] and registry_payload(m)["empty"] is True
 
 
 # --------------------------------------------------------------------------- #
@@ -135,7 +158,7 @@ def test_registry_route_serves_json_with_the_seam_keys(tmp_path: Path) -> None:
             assert r.status == 200
             doc = json.loads(r.read().decode("utf-8"))
         # the tab's contract: the entity lists + the derived seam keys are all present
-        for key in ("plants", "sensors", "devices", "current_mappings", "first_run"):
+        for key in ("empty", "plants", "sensors", "devices", "mappings", "profiles"):
             assert key in doc, f"/registry payload missing {key}"
     finally:
         if proc.poll() is None:
@@ -160,12 +183,14 @@ def test_status_line_counts_boards_not_sensors() -> None:
 if __name__ == "__main__":
     import tempfile
 
-    test_payload_carries_entities_current_mapping_and_first_run()
+    test_payload_matches_the_blessed_contract_shape()
     print("  PASS  payload shape")
-    test_empty_registry_is_first_run()
-    print("  PASS  first_run")
+    test_empty_registry_is_the_first_run_landing()
+    print("  PASS  empty landing")
     test_a_closed_assignment_is_not_in_the_current_mapping()
     print("  PASS  closed not current")
+    test_deleted_entities_never_appear()
+    print("  PASS  deleted excluded")
     with tempfile.TemporaryDirectory() as d:
         test_load_missing_config_is_empty_model(Path(d))
         test_registry_route_serves_json_with_the_seam_keys(Path(d))
