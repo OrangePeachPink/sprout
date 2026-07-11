@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import SESSIONS_SHOWN, build_context
+from dashboard import SESSIONS_SHOWN, _locator, build_context
 from device_registry import Device, Registry
 from parse_v1 import parse_files
 
@@ -77,6 +77,39 @@ def test_locator_points_at_the_data(tmp_path: Path) -> None:
     assert loc["active_count"] == 2
     assert loc["log_dirs"]  # the directory to hand an agent
     assert "archive" in loc["archive_dir"]  # repo-relative archive pointer
+
+
+# --------------------------------------------------------------------------- #
+# #965: fleet-poll HTTP sources are their own labeled line, never file cosplay.
+# --------------------------------------------------------------------------- #
+
+
+def test_locator_splits_fleet_endpoints_from_files() -> None:
+    loc = _locator(
+        [
+            "C:/Users/x/dev/plants/logs/a.csv",
+            "http://sprout-y9d41p.local",
+            "http://sprout-8gtt1h.local/telemetry",  # a path to strip
+        ]
+    )
+    # the file stays a file; the two endpoints become one labeled, host-only line
+    assert loc["active_files"] == ["a.csv"]
+    assert loc["active_count"] == 1
+    assert loc["fleet_sources"] == ["sprout-8gtt1h.local", "sprout-y9d41p.local"]
+
+
+def test_locator_never_mints_an_http_pseudo_dir() -> None:
+    # the exact #965 artifact: `http://…` split as a path produced a stray `http:/`
+    loc = _locator(["http://sprout-y9d41p.local", "http://sprout-8gtt1h.local"])
+    assert all("http:" not in d for d in loc["log_dirs"])
+    # no endpoint leaks into the file lists
+    assert loc["active_files"] == []
+    assert not any(".local" in f for f in loc["active_files"])
+
+
+def test_locator_files_only_has_no_fleet_line() -> None:
+    loc = _locator(["C:/x/logs/a.csv", "C:/x/logs/b.csv"])
+    assert loc["fleet_sources"] == []  # a tethered-only capture shows no fleet line
 
 
 def test_per_device_row_counts(tmp_path: Path) -> None:
