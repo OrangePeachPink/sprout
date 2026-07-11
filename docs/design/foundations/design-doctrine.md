@@ -115,7 +115,28 @@ recommendation answers the out-of-box question first.)
 
 ---
 
-## 4. Scope
+## 4. Wear only the caveats you've earned
+
+A caveat, badge, or alarm is a claim about the data's trustworthiness **right now**. Show one only when it
+is _currently true_ — never as a reflex, a leftover, or a fear. Two sibling rules, one principle:
+
+- **You don't wear a caveat you've outgrown (#951).** When a board earns a real measured calibration it
+  stops being labelled "provisional" — that caveat described a past state, not the present one. A trusted
+  state wears the _absence_ of a caveat; only a genuinely lesser state carries the mark.
+- **You don't wear an alarm you never earned (#977).** Don't render a red "violation" — or any fault
+  register — at someone who hasn't violated anything. Historical or pre-contract data is _noted_ calmly
+  and factually, never alarmed. The bar for the alarm is **currently true**: a live, present breach by
+  data held to the contract that governs it. A maker collecting readings about literal dirt has broken
+  nothing.
+
+The test: before a surface shows a caveat, badge, or alarm, ask _is this true of the data in front of the
+user, right now?_ If it describes the past, state it as history in the calm register. If it isn't true at
+all, don't show it. **Overcaution is its own dishonesty** — it cries wolf and trains the user to ignore
+the one warning that will matter.
+
+---
+
+## 5. Scope
 
 This doctrine applies to every plant-facing surface: Monitor, the single-plant detail, Lab, the charts,
 and Diagnostics & Logs, plus any surface added later. It is enforced surface-by-surface through the
