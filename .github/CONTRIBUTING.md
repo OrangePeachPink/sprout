@@ -88,6 +88,10 @@ maintainer confirms `area:` / `layer:` at triage.
 5. **Open a PR** and fill in the template. Link the issue with **`Refs #N`** or **`Part of #N`** —
    **not** `Closes #N` (see the gate below). Include how you verified the change.
 6. PRs are **squash-merged** — one clean commit per change; the branch auto-deletes after merge.
+7. **Who merges:** the maintainer — except that for some pre-scoped internal work items the maintainer
+   delegates the merge to the verification process under audited guardrails (`velocity:v2` label; see
+   AGENTS.md § Velocity modes). **Community contributions always get direct maintainer review and merge** —
+   the delegation never applies to external PRs.
 
 > **`just check` needs one more tool than `just start` does.** `uv sync` + `just` alone are enough to run the
 > dashboard and the *lint/format* hooks — but `just check` also runs `just test`, which **unconditionally**
