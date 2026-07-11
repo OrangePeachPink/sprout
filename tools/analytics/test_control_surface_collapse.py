@@ -23,7 +23,10 @@ _DIAG = _H[_H.index('id="diagnostics"') :]
 
 def test_monitor_presents_one_collection_action() -> None:
     assert "▶ Start logging<" in _MON  # the single primary action
-    assert 'id="collStart"' in _MON and 'id="collStop"' in _MON
+    # #980 superseded #923's two-button pair with ONE dual-state toggle (Start when
+    # stopped, Stop when running) — the button's face IS the state.
+    assert 'id="collToggle"' in _MON
+    assert 'id="collStart"' not in _MON and 'id="collStop"' not in _MON
     # the old two-transport labels are gone from Monitor's surface
     assert "Start all collection" not in _MON
     assert "Start collection" not in _MON  # the killed verb is gone from Monitor
