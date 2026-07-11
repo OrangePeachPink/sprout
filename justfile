@@ -202,7 +202,15 @@ validate-onboarding:
 identifier-guard *ARGS:
     {{py}} tools/dx/identifier_guard.py {{ARGS}}
 
-# DX tool tests (pytest — identifier-guard suite; new DX suites land here too).
+# Internal-link gate (#913): every relative / GitHub-self link in md+html resolves to a tracked
+# file, and no self-link carries a broken ref (the /blob/HEAD/ class behind #908). Offline; runs
+# in every commit via pre-commit (blocking). External links are the weekly battery's lychee job.
+# Known debt (each owing a ticket): tools/dx/link_check_allowlist.txt.
+#   just link-check          # report + non-zero on any active finding
+link-check *ARGS:
+    {{py}} tools/dx/link_check.py --check {{ARGS}}
+
+# DX tool tests (pytest — identifier-guard + link-check suites; new DX suites land here too).
 test-dx:
     {{py}} -m pytest tools/dx/ -q
 

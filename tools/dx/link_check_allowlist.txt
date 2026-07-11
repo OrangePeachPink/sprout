@@ -1,0 +1,24 @@
+# link_check allowlist — known-broken internal links, each tracked by an open ticket.
+#
+# One finding key per line, EXACTLY as link_check.py prints it: "<file> -> <target>".
+# The gate skips these so it can go live over pre-existing debt without falsely blocking —
+# while catching any NEW broken link immediately. Remove an entry the moment its fix lands
+# (its ticket closes); the gate then enforces that it stays fixed. Nothing here is "ignore
+# forever" — every line owes a ticket.
+
+# --- #912 — 5 broken images on the served "Trust Your Sensor" design page (Design owns) ---
+docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor_photos/IMG_0529.JPEG
+docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor_photos/IMG_0527.JPEG
+docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor_photos/IMG_0526.JPEG
+docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor_photos/IMG_0537.JPEG
+docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor_photos/IMG_0528.JPEG
+
+# --- #911 — internal-doc link sweep (Workflow lane-splits). NOTE: the ../../discussions
+#     link below is finding #4, which was dropped from #911's written body — the gate caught
+#     it; flag to add it to #911's scope. ---
+docs/community/release-notes-voice.md -> ../../discussions
+docs/design/components/README.md -> ../sprout-v2/README.md
+docs/process/BENCH_PREFLIGHT.md -> ../experiments/bench-preflight-checklist.md
+tools/analytics/README.md -> ../../BACKLOG.md
+tools/analytics/dashboard_template.html -> docs/README.md
+tools/analytics/dashboard_template.html -> docs/design/Sprout%20Design%20Library.dc.html

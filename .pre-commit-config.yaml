@@ -161,3 +161,19 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+  # link-check (#913) — internal-link gate: every relative / GitHub-self link in md+html
+  # resolves to a tracked file, and no self-link carries a broken ref (the /blob/HEAD/ class
+  # that produced #908's error/404 pages). BLOCKING. uv-native (identifier-guard pattern) not
+  # lychee, on purpose: the per-PR check is internal/offline and lychee's a Rust binary — an
+  # ambient toolchain this repo does without (#259); external links are lychee's weekly job in
+  # weekly-battery.yml (see ADR-0002 §10 note + the script docstring). Same `always_run` +
+  # `pass_filenames:false` as identifier-guard so LOCAL scope == CI's `--all-files`. Known
+  # debt lives in tools/dx/link_check_allowlist.txt, each line owing a ticket.
+  - repo: local
+    hooks:
+      - id: link-check
+        name: link-check (internal links resolve — #913)
+        entry: uv run python tools/dx/link_check.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
