@@ -47,11 +47,14 @@ flasher is an onboarding-others tool, not the maintainer's path; (2) `factory_bi
 (`BOARDS.md`) is today preserved **by omission** — `factory_bin` only builds the bench-verified classic image, so
 there is no unverified S3/C5 image to offer.
 
-**Phase-0 has since shipped (2026-07, #824 / #825 / #838):** a LAN-only **pull** OTA receiver on `esp32dev` + C5,
-A/B confirmed-boot rollback with a watchdog-feed, C5 recovery/OTA envs, and a board-aware `just ota`. It realizes
-Decisions 1 (pull-only) and 3 (A/B rollback) — but with a **placeholder password** and **no signature check yet**.
-So the signed-only fence (Decision 2) and the software anti-rollback (Decision 4) are the hardening still to layer
-on before OTA is exposed beyond the bench: Phase-0 is the transport; the security fence is what makes it shippable.
+**Phase-0 has since shipped (2026-07, #824 / #825 / #838):** a LAN-only OTA path — `just ota` runs **espota, which
+*pushes* the image to the board's ArduinoOTA receiver** (mDNS-advertised, password-gated; `docs/OTA_FLASH.md`) —
+plus A/B confirmed-boot rollback with a watchdog-feed, C5 recovery/OTA envs, and a board-aware `just ota`. It
+realizes Decision 3 (A/B rollback), but as a bench mechanism it is **push to an inbound receiver — not yet the
+pull-only, no-inbound model of Decision 1** — with a **placeholder password** and **no signature check**. So
+**pull-only (Decision 1)**, the signed-only fence (Decision 2), and software anti-rollback (Decision 4) are all
+hardening still to layer on before OTA is exposed beyond the trusted bench LAN. Phase-0 proved the *transport*
+(image write + rollback); the pull + signing + anti-rollback fence is what makes it shippable.
 
 ## Decision
 
