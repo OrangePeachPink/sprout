@@ -39,6 +39,10 @@ run live in soil**, reporting over Wi-Fi or serial with each session saved to th
 It's an open-source learning-and-portfolio build, made to be **enjoyable to run and trustworthy to read** — process and
 tooling sized to match, not over-engineered.
 
+Sprout is developed with AI assistance — the maintainer works alongside AI coding tools — and AI-assisted
+contributions are as welcome as hand-written ones. Contribute however you work, with or without AI tools; the
+bar is the same either way: honest, tested, and kind.
+
 ## Quick start
 
 ```text
