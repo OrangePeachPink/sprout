@@ -13,7 +13,6 @@ docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor
 docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor_photos/IMG_0537.JPEG
 docs/design/onboarding/Sprout Trust Your Sensor.dc.html -> ../../evidence/sensor_photos/IMG_0528.JPEG
 
-# --- #911 — internal-doc link sweep (Workflow lane-splits). Finding 4
-#     (release-notes-voice.md -> ../../discussions) is FIXED — absolute Discussions URL;
-#     the remaining five are routed to their owning lanes. ---
-docs/process/BENCH_PREFLIGHT.md -> ../experiments/bench-preflight-checklist.md
+# --- #911 — internal-doc link sweep: ALL SIX findings FIXED (4 direct, 5 via the
+#     bench-procedures repoint, 6/7 via #960, 8b via #955) — this section is empty
+#     by design; the gate now enforces every one of them. ---
