@@ -2000,31 +2000,46 @@ async function monStop(){
 }
 /* ---- #588: the one-action collection plane (serial + fleet, ADR-0014) ---- */
 function collDescribe(st){
-  const bit = (name, s) => {
-    if(!s) return name + ': —';
-    if(s.state === 'running'){
-      // #812: say "N of M answering" when some configured devices aren't responding;
-      // "M devices" only when all M answer (so a dead board is never hidden).
-      const conf = (s.configured != null) ? s.configured : s.devices;
-      if(!conf) return name + ': running';
-      const ans = (s.answering != null) ? s.answering : conf;
-      return name + ': running' + (ans < conf
-        ? ` (${ans} of ${conf} answering)`
-        : ` (${conf} device${conf===1?'':'s'})`);
-    }
-    if(s.state === 'skipped') return name + ': skipped — ' + (s.reason || '');
-    // #813 loud-give-up: a monitor that gave up on an absent port says WHY, not just "stopped".
-    if(s.give_up_reason) return name + ': stopped — ' + s.give_up_reason;
-    return name + ': ' + s.state;
+  // #974: ONE honest count across both collection paths — never transport-split. The words
+  // "serial"/"fleet" stay in code + endpoints only (#923 vocabulary contract). We sum the
+  // sensors we mean to collect vs the ones answering (#812 counts), and keep #941's loud
+  // give-up reason attached to the tally.
+  const running = s => !!(s && s.state === 'running');
+  const count = s => {  // a running path's [configured, answering]; a single tethered board is 1
+    if(!running(s)) return [0, 0];
+    const conf = (s.configured != null) ? s.configured : (s.devices != null ? s.devices : 1);
+    const ans = (s.answering != null) ? s.answering : conf;
+    return [conf, ans];
   };
-  return bit('serial', st.monitor) + ' · ' + bit('fleet', st.fleet);
+  const [mc, ma] = count(st.monitor);
+  const [fc, fa] = count(st.fleet);
+  let configured = mc + fc, answering = ma + fa, stall = '';
+  // #941: a tethered board that gave up is still a sensor we mean to collect but isn't
+  // answering — count it as one-not-answering so both the tally and the reason stay honest.
+  if(st.collecting && st.monitor && !running(st.monitor) && st.monitor.give_up_reason){
+    configured += 1; stall = st.monitor.give_up_reason;
+  }
+  if(configured > 0){
+    if(answering >= configured) return `logging ${configured} sensor${configured === 1 ? '' : 's'}`;
+    const why = stall ? stall.split(/\s+[—-]\s+|;/)[0].trim() : '';
+    return `logging ${answering} of ${configured} sensors — ${configured - answering} not answering`
+      + (why ? ` (${why})` : '');
+  }
+  // nothing running — surface a give-up reason if a path stopped loudly (#941), else plain.
+  const why = [st.monitor, st.fleet].filter(Boolean)
+    .map(s => s.give_up_reason || (s.state === 'skipped' ? s.reason : '')).filter(Boolean)[0];
+  return why ? ('stopped — ' + why) : 'not logging';
 }
 function collRender(st){
   const start = document.getElementById('collStart'), stop = document.getElementById('collStop');
   const on = !!st.collecting;
   start.disabled = on; stop.disabled = !on;
   const box = document.getElementById('collStatus');
-  box.textContent = collDescribe(st); box.className = 'capstatus' + (on ? ' run' : '');
+  const text = collDescribe(st);
+  box.textContent = text;
+  // #974: a loud give-up ("stopped — …") reads as a fault, not a calm resting state.
+  const err = !on && text.indexOf('stopped — ') === 0;
+  box.className = 'capstatus' + (on ? ' run' : (err ? ' err' : ''));
 }
 async function collPoll(){
   try{ collRender((await apiJson('/collection/status', {cache:'no-store'})).data); }
