@@ -97,3 +97,33 @@ def test_dirty_state_bar_and_dont_browse_away_guards() -> None:
     assert "unsaved change" in _H
     assert "beforeunload" in _H  # browser-level guard
     assert "Leave without saving?" in _H  # in-app tab-switch guard (showTab)
+
+
+# --------------------------------------------------------------------------- #
+# slice 3c — lifecycle UI (Pause/Resume + loud Delete), surface for #1022 purge
+# --------------------------------------------------------------------------- #
+
+
+def test_lifecycle_controls_pause_resume_delete() -> None:
+    ctl = _H[_H.index("function regLifeCtl(") : _H.index("function renderRegistry(")]
+    assert "'Pause'" in ctl and "'Resume'" in ctl and "'Delete'" in ctl
+    # applies to all three kinds (plant, sensor, device=board) via regLifecycle.
+    assert "regLifeCtl('plant'" in _H
+    assert "regLifeCtl('sensor'" in _H
+    assert "regLifeCtl('device'" in _H  # the board delete (yyvvpd)
+
+
+def test_delete_is_loud_and_double_confirmed() -> None:
+    # Q3: delete is loud + double-confirmed — a two-step arm, never a one-click purge.
+    assert "__regArmDelete" in _H
+    assert "Permanently delete" in _H and "This can" in _H  # "...can't be undone"
+    assert "Yes, delete" in _H and "Keep it" in _H
+    assert "willdelete" in _H  # the staged-for-deletion marker
+
+
+def test_lifecycle_stages_the_apply_shape() -> None:
+    # regStageLifecycle emits {kind, entity_id, state} into pending.lifecycle — the
+    # exact op apply_operations validates against LIFECYCLE_STATES (#1022).
+    fn = _H[_H.index("function regStageLifecycle(") : _H.index("function regLifeCtl(")]
+    assert "entity_id: id" in fn and "state}" in fn
+    assert "p.lifecycle.push" in fn

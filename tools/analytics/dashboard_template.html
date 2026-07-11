@@ -243,6 +243,13 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
   border-radius: var(--r-tile); box-shadow: var(--e2); }
 .dirtybar .dcount { font-weight: 700; }
 .dirtybar .spacer { margin-left: auto; }
+/* #921 slice 3c: lifecycle controls */
+.reglifectl { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin-top: 6px; }
+.regrow .reglifectl { margin-top: 0; margin-left: 14px; }
+.regcard.willdelete, .regrow.willdelete { opacity: .5; }
+.regcard.willdelete .regname, .regrow.willdelete .regname { text-decoration: line-through; }
+.reglink.danger { color: var(--st-dry); }
+.regdelwarn { color: var(--st-dry); font-size: 12px; font-weight: 600; }
 .calbanner { font-size: 12px; color: var(--st-dry); background: var(--surface);
   border: 1px dashed var(--st-dry); border-radius: var(--r-tile); padding: 8px 12px; }
 .devribbon { font-size: 11px; color: var(--muted); padding: 0 2px; }
@@ -1688,6 +1695,52 @@ function regDirtyCount(){ const b = __pending; if(!b) return 0;
        + b.devices.edit.length + b.mappings.assign.length + b.mappings.close.length + b.lifecycle.length; }
 let __regAdding = null;   // 'plant' | 'sensor' | null — which inline add-form is open
 let __regErrs = [];       // structured 400 errors from the last Save attempt
+let __regArmDelete = null;   // "kind:id" armed for the loud delete-confirm (Q3), or null
+
+// ---- #921 slice 3c: lifecycle (Pause/Resume + loud Delete) — surface for #1022's purge ----
+function regServerLifecycle(kind, id){
+  const reg = __registry || {};
+  const arr = kind === 'plant' ? reg.plants : kind === 'sensor' ? reg.sensors : reg.devices;
+  const key = kind === 'plant' ? 'plant_id' : kind === 'sensor' ? 'sensor_id' : 'device_id';
+  const e = (arr || []).find(x => x[key] === id);
+  return (e && e.lifecycle) || 'active';
+}
+function regLifecycle(kind, id){   // effective state: server value overlaid with a staged change
+  const st = __pending && __pending.lifecycle.find(l => l.kind === kind && l.entity_id === id);
+  return st ? st.state : regServerLifecycle(kind, id);
+}
+function regStageLifecycle(kind, id, state){
+  const p = regPend();
+  p.lifecycle = p.lifecycle.filter(l => !(l.kind === kind && l.entity_id === id));
+  if(state !== regServerLifecycle(kind, id)) p.lifecycle.push({kind, entity_id: id, state});  // matching server = cancel
+  __regArmDelete = null; __regErrs = [];
+  renderRegistry();
+}
+function regLifeCtl(kind, id, name){   // Pause/Resume + Delete (a loud two-step confirm, Q3)
+  const wrap = el('span', 'reglifectl');
+  const eff = regLifecycle(kind, id);
+  if(eff === 'deleted'){
+    const undo = el('button', 'reglink', 'Undo');
+    undo.onclick = () => regStageLifecycle(kind, id, regServerLifecycle(kind, id));
+    wrap.appendChild(undo); return wrap;
+  }
+  if(eff === 'paused'){
+    const r = el('button', 'reglink', 'Resume'); r.onclick = () => regStageLifecycle(kind, id, 'active'); wrap.appendChild(r);
+  } else {
+    const z = el('button', 'reglink', 'Pause'); z.onclick = () => regStageLifecycle(kind, id, 'paused'); wrap.appendChild(z);
+  }
+  const armKey = kind + ':' + id;
+  if(__regArmDelete === armKey){
+    wrap.appendChild(el('span', 'regdelwarn', 'Permanently delete ' + esc(name) + ' and its history? This can’t be undone.'));
+    const yes = el('button', 'reglink danger', 'Yes, delete'); yes.onclick = () => regStageLifecycle(kind, id, 'deleted');
+    const no = el('button', 'reglink muted', 'Keep it'); no.onclick = () => { __regArmDelete = null; renderRegistry(); };
+    wrap.appendChild(yes); wrap.appendChild(no);
+  } else {
+    const del = el('button', 'reglink danger', 'Delete'); del.onclick = () => { __regArmDelete = armKey; renderRegistry(); };
+    wrap.appendChild(del);
+  }
+  return wrap;
+}
 
 // merged display: server registry + staged pending adds (the server resolves truth on Save)
 function regView(){
@@ -1717,12 +1770,14 @@ function renderRegistry(reg){
   const psec = regSection('Plants', 'what Sprout is watching');
   const pgrid = el('div', 'reggrid');
   V.plants.forEach(p => {
-    const card = el('div', 'regcard' + (p._staged ? ' staged' : ''));
+    const lc = regLifecycle('plant', p.plant_id);
+    const card = el('div', 'regcard' + (p._staged ? ' staged' : '') + (lc === 'deleted' ? ' willdelete' : ''));
     const h = el('div', 'regcard-h');
     h.appendChild(el('span', 'regname', esc(regPlantName(p))));
     if(p.pet_name && p.plant_type) h.appendChild(el('span', 'muted regtype', esc(p.plant_type)));
-    const paused = regPaused(p.lifecycle); if(paused) h.appendChild(paused);
-    if(p._staged) h.appendChild(el('span', 'stagedtag', 'unsaved'));
+    const paused = regPaused(lc); if(paused) h.appendChild(paused);
+    if(lc === 'deleted') h.appendChild(el('span', 'stagedtag', 'will delete'));
+    else if(p._staged) h.appendChild(el('span', 'stagedtag', 'unsaved'));
     card.appendChild(h);
     const m = V.byPlant[p.plant_id];
     if(m){
@@ -1735,6 +1790,7 @@ function renderRegistry(reg){
     }
     const meta = [p.location, p.pot_description].filter(Boolean).map(esc).join(' · ');
     if(meta) card.appendChild(el('div', 'regmeta muted', meta));
+    if(!p._staged) card.appendChild(regLifeCtl('plant', p.plant_id, regPlantName(p)));
     pgrid.appendChild(card);
   });
   psec.appendChild(pgrid);
@@ -1745,17 +1801,20 @@ function renderRegistry(reg){
   const ssec = regSection('Sensors', 'your probes — the number is printed on the hardware');
   const slist = el('div', 'reglist');
   V.sensors.forEach(s => {
-    const row = el('div', 'regrow' + (s._staged ? ' staged' : ''));
+    const lc = regLifecycle('sensor', s.sensor_id);
+    const row = el('div', 'regrow' + (s._staged ? ' staged' : '') + (lc === 'deleted' ? ' willdelete' : ''));
     row.appendChild(el('span', 'regcode', esc(s.sensor_id)));
     if(s.friendly_name) row.appendChild(el('span', '', esc(s.friendly_name)));
-    const paused = regPaused(s.lifecycle); if(paused) row.appendChild(paused);
-    if(s._staged) row.appendChild(el('span', 'stagedtag', 'unsaved'));
+    const paused = regPaused(lc); if(paused) row.appendChild(paused);
+    if(lc === 'deleted') row.appendChild(el('span', 'stagedtag', 'will delete'));
+    else if(s._staged) row.appendChild(el('span', 'stagedtag', 'unsaved'));
     const m = V.bySensor[s.sensor_id];
     const to = m
       ? ('→ ' + esc(regPlantName(pById[m.plant_id] || {plant_id: m.plant_id}))
          + ' <span class="muted">on ' + esc(regDeviceName(dById[m.device_id])) + '</span>')
       : '<span class="muted">unassigned</span>';
     row.appendChild(el('span', 'regto', to));
+    if(!s._staged) row.appendChild(regLifeCtl('sensor', s.sensor_id, regSpell(s.sensor_id, 'Sensor')));
     slist.appendChild(row);
   });
   ssec.appendChild(slist);
@@ -1766,10 +1825,13 @@ function renderRegistry(reg){
   const bsec = regSection('Boards', 'the ESP32s — plug one in and it appears here');
   const blist = el('div', 'reglist');
   V.devices.forEach(d => {
-    const row = el('div', 'regrow');
+    const lc = regLifecycle('device', d.device_id);
+    const row = el('div', 'regrow' + (lc === 'deleted' ? ' willdelete' : ''));
     row.appendChild(el('span', 'regname', esc(regDeviceName(d))));
     if(d.friendly_name && d.device_id) row.appendChild(el('span', 'muted regcode', esc(d.device_id)));
-    const paused = regPaused(d.lifecycle); if(paused) row.appendChild(paused);
+    const paused = regPaused(lc); if(paused) row.appendChild(paused);
+    if(lc === 'deleted') row.appendChild(el('span', 'stagedtag', 'will delete'));
+    row.appendChild(regLifeCtl('device', d.device_id, regDeviceName(d)));
     blist.appendChild(row);
   });
   if(!V.devices.length) blist.appendChild(el('div', 'muted', 'No boards yet — flash one with the web flasher and it shows up here.'));
