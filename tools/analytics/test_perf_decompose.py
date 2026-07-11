@@ -45,6 +45,9 @@ def test_context_attaches_phase_breakdown(tmp_path: Path) -> None:
     # the counts that make a slow number interpretable
     assert perf["readings"] == 30
     assert perf["files"] == 1
+    # #953 slice 2: the load phase carries its device-fetch portion; a tethered-only
+    # corpus (no served devices) has none, so the split is honestly zero here.
+    assert perf["fetch_ms"] == 0
 
 
 def test_perf_log_stays_silent_below_threshold(tmp_path: Path, monkeypatch) -> None:
@@ -71,6 +74,30 @@ def test_perf_log_fires_for_a_slow_build(tmp_path: Path, monkeypatch) -> None:
     for phase in ("select=", "load=", "filter=", "build=", "serialize=", "total="):
         assert phase in out
     assert "30 readings" in out and "1 files" in out
+
+
+def test_perf_log_annotates_load_with_device_fetch(monkeypatch) -> None:
+    # #953 slice 2: when a served fleet makes load fetch-bound, the [perf] line marks
+    # the fetch portion ON the load phase (a sub-component, NOT summed into total) — the
+    # signal that separated the real ~14s cause (device timeouts) from re-parse.
+    ctx = {
+        "meta": {
+            "perf": {
+                "phases": {"select": 3, "load": 14000, "filter": 20, "build": 250},
+                "readings": 10000,
+                "files": 13,
+                "fetch_ms": 13800,
+            }
+        }
+    }
+    buf = io.StringIO()
+    monkeypatch.setattr(sys, "stderr", buf)
+    monkeypatch.setattr(serve, "_PERF_MIN_MS", 0)
+    _perf_log(ctx, "serialize", 0.005, "12h")
+    out = buf.getvalue()
+    assert "load=14000ms(fetch 13800ms)" in out  # annotation on the load phase
+    # the fetch is NOT double-counted into total (14000+... not +13800)
+    assert "total=14278ms" in out
 
 
 def test_perf_log_no_perf_meta_is_a_noop(monkeypatch) -> None:
