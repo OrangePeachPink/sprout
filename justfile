@@ -199,6 +199,7 @@ validate-onboarding:
 # text greps over the tracked tree. Runs in every commit via pre-commit (blocking).
 #   just identifier-guard --history     # one-time audit of every blob ever committed
 #   just identifier-guard --strip F...  # remove metadata from image files, byte-level
+#   just identifier-guard --deny-host H # add hostname H to the committed hash denylist (#865)
 identifier-guard *ARGS:
     {{py}} tools/dx/identifier_guard.py {{ARGS}}
 

@@ -13,9 +13,11 @@ from pathlib import Path
 
 import identifier_guard
 from identifier_guard import (
+    HOST_REDACTED,
     MAC_RE,
     USB_INSTANCE_RE,
     VID_PID_RE,
+    _hash_host,
     jpeg_meta_segments,
     jpeg_strip,
     png_meta_chunks,
@@ -98,6 +100,43 @@ def test_denylist_literal_and_regex():
     deny = [_re.compile(_re.escape("MyHomeNet"), _re.IGNORECASE)]
     found = scan_text("x.md", b"joined ssid myhomenet quickly", deny)
     assert [(f.cls) for f in found] == ["denylist"]
+
+
+# --- hostname hash denylist (#865) — synthetic hostnames only ----------------
+# "synthhost" is a made-up name, never a real machine (spec: synthetic fixtures
+# only), and the committed denylist is empty, so this file never self-flags.
+
+
+def _host_scan(text: str, hashes):
+    return scan_text("x.md", text.encode(), None, hashes)
+
+
+def test_hash_host_lowercases_before_hashing():
+    assert _hash_host("SynthHost") == _hash_host("synthhost")
+
+
+def test_hostname_hash_match_is_flagged():
+    found = _host_scan("the box synthhost logged in", {_hash_host("synthhost")})
+    assert [f.cls for f in found] == ["hostname-denylist"]
+
+
+def test_hostname_match_is_case_insensitive():
+    assert len(_host_scan("SYNTHHOST rebooted", {_hash_host("synthhost")})) == 1
+
+
+def test_hostname_finding_never_echoes_the_token():
+    f = _host_scan("synthhost here", {_hash_host("synthhost")})[0]
+    assert "synthhost" not in f.masked(reveal=True).lower()
+    assert f.text == HOST_REDACTED
+
+
+def test_empty_hostname_denylist_flags_nothing():
+    assert _host_scan("synthhost esp32dev whatever", set()) == []
+    assert _host_scan("synthhost", None) == []
+
+
+def test_non_denied_token_not_flagged():
+    assert _host_scan("esp32dev sprout bonobo", {_hash_host("synthhost")}) == []
 
 
 # --- JPEG --------------------------------------------------------------------
