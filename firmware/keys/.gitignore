@@ -1,0 +1,9 @@
+# Signing keys (#302 / ADR-0026). Belt-and-suspenders: ignore EVERYTHING in this dir,
+# then re-include ONLY the files that are safe to commit. A private key dropped here
+# (signing.key, *.key, a private *.pem) can never be accidentally tracked — the public
+# key is the sole committed key material, and it is verify-only. This override also beats
+# the global *.pem ignore, which otherwise hides the public key too.
+*
+!.gitignore
+!README.md
+!sprout-signing-ed25519.pub.pem
