@@ -1,0 +1,88 @@
+name: sign release firmware (#302)
+
+# On a published release (vX.Y.Z), build the board-aware factory bins (classic + C5,
+# firmware/scripts/factory_bin.py) and SIGN each with the release signing key (ed25519,
+# ADR-0026 Decision 2), then attach <bin> + <bin>.sig to the release. A future pull-OTA
+# (#302) + the web-flasher verify against the committed public key (firmware/keys/).
+#
+# GATED on the SPROUT_SIGNING_KEY secret: until the key ceremony runs
+# (docs/process/signing-key-ceremony.md) the sign step SKIPS with a warning - the workflow
+# does NOT fail, so releases still cut (unsigned) in the interim. Once the secret is set,
+# every release is signed.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build + sign (e.g. v0.7.2)"
+        required: true
+        type: string
+
+permissions:
+  contents: write # attach release assets
+
+jobs:
+  sign:
+    name: build + sign factory bins
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect signing key
+        id: sk
+        run: echo "present=${{ secrets.SPROUT_SIGNING_KEY != '' }}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PlatformIO
+        run: pip install --quiet platformio
+
+      - name: Build board-aware factory bins (classic + C5)
+        working-directory: firmware
+        run: |
+          pio run -e esp32dev
+          pio run -e esp32c5
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p dist
+          cp firmware/.pio/build/esp32dev/sprout-esp32-factory.bin dist/
+          cp firmware/.pio/build/esp32c5/sprout-esp32c5-factory.bin dist/
+          cp firmware/.pio/build/esp32dev/manifest-esp32.json dist/ 2>/dev/null || true
+          cp firmware/.pio/build/esp32c5/manifest-esp32c5.json dist/ 2>/dev/null || true
+          ls -l dist
+
+      - name: Sign factory bins (ed25519) + verify against the committed public key
+        if: steps.sk.outputs.present == 'true'
+        env:
+          SIGNING_KEY: ${{ secrets.SPROUT_SIGNING_KEY }}
+        run: |
+          umask 077
+          printf '%s' "$SIGNING_KEY" > signing.key
+          for bin in dist/*.bin; do
+            openssl pkeyutl -sign -inkey signing.key -rawin -in "$bin" -out "$bin.sig"
+            openssl pkeyutl -verify -pubin \
+              -inkey firmware/keys/sprout-signing-ed25519.pub.pem \
+              -rawin -in "$bin" -sigfile "$bin.sig"
+            echo "signed + verified $(basename "$bin")"
+          done
+          shred -u signing.key 2>/dev/null || rm -f signing.key
+
+      - name: Warn if unsigned
+        if: steps.sk.outputs.present != 'true'
+        run: |
+          echo "::warning title=Release UNSIGNED::SPROUT_SIGNING_KEY not set - run the key ceremony (docs/process/signing-key-ceremony.md) to enable #302 signing. Artifacts built but not signed."
+
+      - name: Resolve tag
+        id: tag
+        run: echo "tag=${{ github.event.release.tag_name || inputs.tag }}" >> "$GITHUB_OUTPUT"
+
+      - name: Attach artifacts to the release
+        if: steps.tag.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ steps.tag.outputs.tag }}" dist/* --clobber
