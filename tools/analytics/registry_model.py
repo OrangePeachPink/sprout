@@ -23,6 +23,7 @@ unified ``active | paused | deleted`` (Design-QA renders "Paused"/"Delete").
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -392,6 +393,9 @@ def registry_payload(model: RegistryModel) -> dict:
         for a in model.open_assignments()
     ]
     doc["first_run"] = not (model.plants or model.sensors or model.devices)
+    # #921 slice 3 Q2: the server owns id allocation - the client prefills the next
+    # number from here instead of computing it (one source of truth, no add-race).
+    doc["next_ids"] = {"plant": next_plant_id(model), "sensor": next_sensor_id(model)}
     return doc
 
 
@@ -406,3 +410,251 @@ def save_model(model: RegistryModel, path: str | Path) -> None:
         encoding="utf-8",
     )
     tmp.replace(p)
+
+
+# --------------------------------------------------------------------------- #
+# #921 slice 3 — the /registry/apply write path (classic-save a batch of ops)
+# --------------------------------------------------------------------------- #
+# The top-level keys the temporal model OWNS. A save preserves every other top-level key
+# (e.g. `sensorless`, ADR-0028) so committing the registry never silently drops another
+# subsystem's data — devices.local.json is shared with device_registry.
+_MODEL_KEYS = {
+    "schema_version",
+    "plants",
+    "sensors",
+    "devices",
+    "profiles",
+    "assignments",
+    "location_events",
+}
+_PLANT_ID_RE = re.compile(r"p\d{2,}")
+_SENSOR_ID_RE = re.compile(r"s\d{2,}")
+# what a plant edit may change - never `plant_id` (canonical, immutable post-save)
+_PLANT_FIELDS = ("plant_type", "pet_name", "pot_description", "pot_size", "location")
+
+
+def _next_numbered(existing: set[str], prefix: str) -> str:
+    n = 0
+    for x in existing:
+        m = re.fullmatch(rf"{prefix}(\d+)", x or "")
+        if m:
+            n = max(n, int(m.group(1)))
+    return f"{prefix}{n + 1:02d}"
+
+
+def next_plant_id(model: RegistryModel) -> str:
+    """The next free ``p0N`` = max existing + 1. Counts paused/deleted too, so a retired
+    number is never reused (an id is stable identity). Server owns allocation."""
+    return _next_numbered({p.plant_id for p in model.plants}, "p")
+
+
+def next_sensor_id(model: RegistryModel) -> str:
+    """The next free ``s0N`` (never reuses a retired number)."""
+    return _next_numbered({s.sensor_id for s in model.sensors}, "s")
+
+
+def apply_operations(
+    model: RegistryModel, ops: dict, *, now: str | None = None
+) -> dict:
+    """Apply a classic-save BATCH (Q10) to the temporal model - the slice-3 seam.
+
+    Shape (all sections optional)::
+
+        {"plants":  {"add": [...], "edit": [...]},
+         "sensors": {"add": [...], "edit": [...]},
+         "devices": {"edit": [...]},
+         "mappings":{"assign": [{plant_id, sensor_id, device_id, channel, profile_id?}],
+                     "close":  [{device_id, channel}]},
+         "lifecycle":[{kind, entity_id, state}]}
+
+    ATOMIC + validate-first: the whole batch is checked against the current model before
+    anything mutates; on any error nothing changes and structured ``errors`` come back
+    for the client to render inline (Q3 - the server is the one validator). ``assign``
+    runs the temporal close-old-open-new boundary, so never-stitch stays server-side
+    (Q8); a channel already held is not an error (that IS a remap). Returns
+    ``{"ok": True, "applied": {...counts}}`` or ``{"ok": False, "errors": [...]}``."""
+    ops = ops or {}
+    now = now or _utc_now()
+    errors: list[dict] = []
+
+    def err(op: str, message: str, field: str | None = None) -> None:
+        errors.append({"op": op, "field": field, "message": message})
+
+    plants = ops.get("plants") or {}
+    sensors = ops.get("sensors") or {}
+    devices = ops.get("devices") or {}
+    mappings = ops.get("mappings") or {}
+    lifecycle = ops.get("lifecycle") or []
+
+    existing_p = {p.plant_id for p in model.plants}
+    existing_s = {s.sensor_id for s in model.sensors}
+    existing_d = {d.get("device_id") for d in model.devices}
+    staged_p: set[str] = (
+        set()
+    )  # explicit ids added in THIS batch (intra-batch dup guard)
+    staged_s: set[str] = set()
+
+    # ---- validate: adds (explicit id must be well-formed + free; else auto-allocated)
+    for i, rec in enumerate(plants.get("add") or []):
+        tag = f"plants.add[{i}]"
+        pid = (rec.get("plant_id") or "").strip()
+        if not pid:
+            continue  # server allocates at apply-time — cannot collide
+        if not _PLANT_ID_RE.fullmatch(pid):
+            err(tag, f"plant id must look like p01, got {pid!r}", "plant_id")
+        elif pid in existing_p or pid in staged_p:
+            err(tag, f"plant {pid} already exists", "plant_id")
+        else:
+            staged_p.add(pid)
+    for i, rec in enumerate(sensors.get("add") or []):
+        tag = f"sensors.add[{i}]"
+        sid = (rec.get("sensor_id") or "").strip()  # fixed at add (Q1/Q11), required
+        if not sid:
+            err(tag, "sensor number is required at add", "sensor_id")
+        elif not _SENSOR_ID_RE.fullmatch(sid):
+            err(tag, f"sensor id must look like s01, got {sid!r}", "sensor_id")
+        elif sid in existing_s or sid in staged_s:
+            err(tag, f"sensor {sid} already exists", "sensor_id")
+        else:
+            staged_s.add(sid)
+
+    known_p = existing_p | staged_p
+    known_s = existing_s | staged_s
+
+    # ---- validate: edits target an existing entity (id is immutable — no rename) ----
+    for i, rec in enumerate(plants.get("edit") or []):
+        if (rec.get("plant_id") or "") not in existing_p:
+            err(
+                f"plants.edit[{i}]",
+                f"no such plant {rec.get('plant_id')!r}",
+                "plant_id",
+            )
+    for i, rec in enumerate(sensors.get("edit") or []):
+        if (rec.get("sensor_id") or "") not in existing_s:
+            err(
+                f"sensors.edit[{i}]",
+                f"no such sensor {rec.get('sensor_id')!r}",
+                "sensor_id",
+            )
+    for i, rec in enumerate(devices.get("edit") or []):
+        if (rec.get("device_id") or "") not in existing_d:
+            err(
+                f"devices.edit[{i}]",
+                f"no such device {rec.get('device_id')!r}",
+                "device_id",
+            )
+
+    # ---- validate: assign refs resolve (a channel already held is a remap, not error)
+    for i, mp in enumerate(mappings.get("assign") or []):
+        tag = f"mappings.assign[{i}]"
+        if (mp.get("plant_id") or "") not in known_p:
+            err(tag, f"no such plant {mp.get('plant_id')!r}", "plant_id")
+        if (mp.get("sensor_id") or "") not in known_s:
+            err(tag, f"no such sensor {mp.get('sensor_id')!r}", "sensor_id")
+        if (mp.get("device_id") or "") not in existing_d:
+            err(tag, f"no such device {mp.get('device_id')!r}", "device_id")
+        if not (mp.get("channel") or "").strip():
+            err(tag, "a channel (board port) is required", "channel")
+
+    # ---- validate: lifecycle ----
+    for i, lc in enumerate(lifecycle):
+        tag = f"lifecycle[{i}]"
+        kind, eid, state = lc.get("kind"), lc.get("entity_id"), lc.get("state")
+        if state not in LIFECYCLE_STATES:
+            err(tag, f"state must be one of {LIFECYCLE_STATES}, got {state!r}", "state")
+        pool = {"plant": existing_p, "sensor": existing_s, "device": existing_d}.get(
+            kind
+        )
+        if pool is None:
+            err(tag, f"kind must be plant|sensor|device, got {kind!r}", "kind")
+        elif eid not in pool:
+            err(tag, f"no such {kind} {eid!r}", "entity_id")
+
+    if errors:  # atomic: validated-whole-or-nothing, nothing mutated yet
+        return {"ok": False, "errors": errors}
+
+    # ---- apply (all validated) — order: entities, then mappings, then lifecycle ----
+    applied = {
+        "plants_added": 0,
+        "sensors_added": 0,
+        "edited": 0,
+        "mapped": 0,
+        "closed": 0,
+        "lifecycle": 0,
+    }
+    for rec in plants.get("add") or []:
+        pid = (rec.get("plant_id") or "").strip() or next_plant_id(model)
+        model.plants.append(
+            Plant(
+                plant_id=pid,
+                **{k: rec[k] for k in _PLANT_FIELDS if rec.get(k) is not None},
+            )
+        )
+        applied["plants_added"] += 1
+    for rec in sensors.get("add") or []:
+        model.sensors.append(
+            Sensor(
+                sensor_id=(rec.get("sensor_id") or "").strip(),
+                friendly_name=rec.get("friendly_name"),
+            )
+        )
+        applied["sensors_added"] += 1
+    for rec in plants.get("edit") or []:
+        p = next(x for x in model.plants if x.plant_id == rec.get("plant_id"))
+        for k in _PLANT_FIELDS:
+            if k in rec:
+                setattr(p, k, rec[k])
+        applied["edited"] += 1
+    for rec in sensors.get("edit") or []:
+        s = next(x for x in model.sensors if x.sensor_id == rec.get("sensor_id"))
+        if "friendly_name" in rec:
+            s.friendly_name = rec["friendly_name"]
+        applied["edited"] += 1
+    for rec in devices.get("edit") or []:
+        d = next(x for x in model.devices if x.get("device_id") == rec.get("device_id"))
+        if "friendly_name" in rec:
+            d["name"] = rec[
+                "friendly_name"
+            ]  # `name` is the device's mutable label (#583)
+        applied["edited"] += 1
+    for mp in mappings.get("assign") or []:
+        model.assign(
+            plant_id=mp["plant_id"],
+            sensor_id=mp["sensor_id"],
+            device_id=mp["device_id"],
+            channel=mp["channel"],
+            profile_id=mp.get("profile_id"),
+            now=now,
+        )
+        applied["mapped"] += 1
+    for c in mappings.get("close") or []:
+        if model.close_channel(c.get("device_id"), c.get("channel"), now=now):
+            applied["closed"] += 1
+    for lc in lifecycle:
+        if model.set_lifecycle(lc["kind"], lc["entity_id"], lc["state"]):
+            applied["lifecycle"] += 1
+
+    return {"ok": True, "applied": applied}
+
+
+def save_registry_model(model: RegistryModel, path: str | Path | None = None) -> Path:
+    """Commit the model to the LOCAL config (never the committed example), preserving
+    every top-level key the temporal model doesn't own (``sensorless``, etc.) so a save
+    can't silently drop another subsystem's data. Atomic temp-swap. Returns the path."""
+    target = Path(path) if path is not None else _LOCAL
+    extra: dict = {}
+    if target.exists():
+        try:
+            raw = json.loads(target.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                extra = {k: v for k, v in raw.items() if k not in _MODEL_KEYS}
+        except (OSError, json.JSONDecodeError):
+            extra = {}
+    doc = {**extra, **model.to_dict()}
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target.with_suffix(target.suffix + ".tmp")
+    tmp.write_text(
+        json.dumps(doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    tmp.replace(target)
+    return target
