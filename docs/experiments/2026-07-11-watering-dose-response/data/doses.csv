@@ -1,0 +1,4 @@
+plant_id,plant,dose,baseline_raw,immediate_raw,settled_raw,delta_raw,poured_ts_board_utc,notes
+p11,Corn-plant (mini),~1cup,2225,1784,1672,-553,~2026-07-12T01:00Z,classic s1; landed cleanly in OK band; ~2.3 raw/mL; predictable
+p06,Anthurium (Hearts),~0.5cup,2221,1405,1485,-736,~2026-07-12T01:05Z,classic s3; OVERSHOT to well-watered - 0.5cup too much for 5in pot; drained up slightly on settle; ~6.1 raw/mL; next time ~0.25cup
+p01,Pothos (small),~0.75cup (0.5+slow0.25),2097,1957,1827,-270,~2026-07-12T01:15Z,c5off1 s3; HUGE reaction lag - immediate 0.5cup response was only -78; kept wicking 10+ min to settled -270 (~3.5x the immediate); ~1.5 raw/mL; hydrophobic-dry channeling on the fast pour
