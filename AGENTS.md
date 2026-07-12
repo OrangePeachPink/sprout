@@ -202,31 +202,52 @@ raises wiring/power changes to the maintainer. Route bench-adjacent work `for:fi
   A release isn't done until its notes **and** a [`CHANGELOG.md`](CHANGELOG.md) entry exist (ADR-0009 §6).
   So a PR's title + `type:` label *are* release-notes copy — write them accordingly.
 
-## Velocity modes — V1 / V2 (piloting in v0.7.2)
+## Velocity modes — V1 / V2 (standing policy as of v0.7.3)
 
-Every scoped item carries a velocity mode, **tagged at scope time by the maintainer** (labels
-`velocity:v1` / `velocity:v2`; untagged = V1):
+**The v0.7.2 pilot graduated on its results — 45 accelerated merges, zero reverts, zero red mains, two
+real defects caught at the gate pre-merge — and the maintainer's retro directive: expand it.** Target:
+**~80% of merges ride V2**, so maintainer review time concentrates where only the maintainer adds value:
+grill rulings, first renders of new user surfaces, ADRs, and hardware.
 
-- **V1 — standard velocity (the default).** The two-stage gate above, exactly as written: Workflow
-  certifies to **Ready to Merge**, **the maintainer merges.**
-- **V2 — accelerated.** For pre-scoped, low-risk items only: the lane builds and posts AC-by-AC
-  evidence exactly as in V1 — nothing changes for the implementer — but **Workflow verifies AND
-  merges/closes**, without the maintainer in the loop.
+- **V2 — accelerated (the default for internal-lane work).** The lane builds and posts AC-by-AC
+  evidence exactly as always — nothing changes for the implementer — but **Workflow verifies AND
+  merges/closes**, without the maintainer in the loop. Untagged internal work is V2 unless it falls
+  in a standing V1 class below or the maintainer tags `velocity:v1` at scope time.
+- **V1 — maintainer-merged.** The two-stage gate with the maintainer's click: Workflow certifies to
+  **Ready to Merge** (label `needs:maintainer`), **the maintainer merges.**
 
-**The V2 fence (all of it, always):**
+**Standing V1 classes (always V1, regardless of tags):**
+
+- **Firmware delivery-channel** — anything flash-affecting: released bins, manifests, signing, OTA,
+  `WEB_FLASH_VERIFIED`. (Firmware *host-side / native-tested library code* with no delivery-channel
+  effect is V2-eligible.)
+- **ADR / doctrine** — including this section.
+- **New public-voice surfaces** — the *first render* of a new user-facing surface, new voice copy
+  outside a grill-locked contract, README/release-notes voice. **Iterations within a grill-locked
+  contract and the design library are V2** — this is what the grill buys: rulings become contracts,
+  contracts make design work verifiable at the gate.
+- **Repo/process configuration and NEW enforcement** — CI workflows, guards, branch protection.
+  (Allowlist/suppression *clears* with fix-landed evidence are V2 — the #1013 precedent.)
+- **External contributions** — a community PR never rides V2; outside contributors always get
+  maintainer review.
+- **Hardware/bench actions and the maintainer's local config** — her hands, her files.
+- **PII/identifier-adjacent work** — evidence packets carrying captured output, images, or logs;
+  identifier-guard/denylist changes; and any issue/PR **text** naming machines, networks, or people.
+  The v0.7.2 lesson: issue titles and bodies carried real identifiers, and the leak-tracking issue WAS
+  the leak (#865). The maintainer's eyes on anything an identifier could ride.
+
+**The V2 fence (unchanged, all of it, always):**
 
 - **Builder ≠ certifier survives inside V2.** Workflow never merges its own builds — those route to an
   independent lane verifier, or to the maintainer if no lane fits.
 - **Every V2 merge lands one line in the release's accel-merge digest issue** (PR, item, evidence link).
   The maintainer skims it anytime and holds an **instant no-questions revert lever** — comment
-  `revert #N` and Workflow reverts, no debate.
-- **Standing exclusions — always V1 regardless of tags:** anything firmware-flash-affecting, ADR/doctrine
-  changes, public-voice/brand surfaces, and repo/process configuration.
-- **External contributions are always V1.** A community PR never rides V2, no matter what label the
-  issue carries — V2 is internal-lane delegation only; outside contributors always get maintainer review.
+  `revert #N` and Workflow reverts, no debate. The lever itself is drill-tested each release (#1040).
+- **Docs-only changes** (no captured output, no images, no identifiers) ride V2; **bench-evidence
+  packets are V1 under the PII class above** — the gate still pre-verifies them per the landing
+  convention, but the maintainer clicks the merge.
 
-V2 is a **pilot** scoped to v0.7.2; the release retro decides whether it graduates to standing policy.
-(Future rungs V3/V4 — more autonomous building, self-certification — are named but deliberately not now.)
+(Future rungs V3/V4 — more autonomous building, self-certification — remain named and deliberately not now.)
 
 ## GitHub-native by default — don't reinvent the wheel
 
