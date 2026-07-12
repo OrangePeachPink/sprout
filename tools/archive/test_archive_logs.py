@@ -136,6 +136,72 @@ def test_gzip_is_byte_exact_and_deterministic() -> None:
         shutil.rmtree(d, ignore_errors=True)
 
 
+# --------------------------------------------------------------------------- #
+# #1035 — eviction: bounded-growth half. Evict archived + old segments from logs/,
+# never an unbacked one, never the open one, loud on failure.
+# --------------------------------------------------------------------------- #
+def _archived_gz(wt: Path, csv_name: str) -> None:
+    arch = wt / "data" / "archive"
+    arch.mkdir(parents=True, exist_ok=True)
+    (arch / (csv_name + ".gz")).write_bytes(b"gz")
+
+
+def test_evict_removes_archived_and_old_only() -> None:
+    logs = Path(tempfile.mkdtemp())
+    wt = Path(tempfile.mkdtemp())
+    try:
+        now = 2_000_000_000
+        for name, age_days in [
+            ("old.csv", 30),  # archived + old  -> EVICT
+            ("recent.csv", 1),  # archived + recent -> keep (hot path)
+            ("unbacked.csv", 30),  # old but NOT archived -> keep (never lose)
+            ("open.csv", 0),  # newest = open -> keep
+        ]:
+            p = logs / name
+            p.write_text(f"raw,{name}\n", encoding="utf-8")
+            os.utime(p, (now - age_days * 86400, now - age_days * 86400))
+        _archived_gz(wt, "old.csv")
+        _archived_gz(wt, "recent.csv")  # unbacked.csv intentionally has NO .gz
+        evicted = archive_logs.evict_archived(
+            str(logs), str(wt), retention_days=14, now=now, log=lambda *_: None
+        )
+        assert evicted == ["old.csv"], evicted
+        assert not (logs / "old.csv").exists()  # archived + old -> gone
+        assert (logs / "recent.csv").exists()  # within retention window
+        assert (logs / "unbacked.csv").exists()  # NEVER evict an unbacked segment
+        assert (logs / "open.csv").exists()  # never the open one
+    finally:
+        shutil.rmtree(logs, ignore_errors=True)
+        shutil.rmtree(wt, ignore_errors=True)
+
+
+def test_evict_is_loud_on_failure(monkeypatch, capsys) -> None:
+    logs = Path(tempfile.mkdtemp())
+    wt = Path(tempfile.mkdtemp())
+    try:
+        now = 2_000_000_000
+        for name in ("old.csv", "open.csv"):  # old is evictable; open is newest
+            p = logs / name
+            p.write_text("x", encoding="utf-8")
+        os.utime(logs / "old.csv", (now - 30 * 86400, now - 30 * 86400))
+        os.utime(logs / "open.csv", (now, now))
+        _archived_gz(wt, "old.csv")
+        monkeypatch.setattr(
+            archive_logs.os,
+            "remove",
+            lambda *_: (_ for _ in ()).throw(OSError("locked")),
+        )
+        evicted = archive_logs.evict_archived(
+            str(logs), str(wt), retention_days=14, now=now, log=lambda *_: None
+        )
+        assert evicted == []  # nothing removed
+        err = capsys.readouterr().err
+        assert "EVICTION FAILED" in err and "old.csv" in err  # loud on stderr (#1019)
+    finally:
+        shutil.rmtree(logs, ignore_errors=True)
+        shutil.rmtree(wt, ignore_errors=True)
+
+
 if __name__ == "__main__":
     for fn in (
         test_closed_segments_excludes_newest,
@@ -144,6 +210,7 @@ if __name__ == "__main__":
         test_archive_reconciles_and_is_idempotent,
         test_archive_catches_up_a_late_segment,
         test_gzip_is_byte_exact_and_deterministic,
+        test_evict_removes_archived_and_old_only,
     ):
         fn()
         print(f"  PASS  {fn.__name__}")
