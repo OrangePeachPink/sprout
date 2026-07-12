@@ -161,6 +161,57 @@ class FetchBreaker:
 # DeviceAdapter builds in serve.py. Tests inject a fresh breaker + a fake `mono`.
 _DEFAULT_BREAKER = FetchBreaker()
 
+# #1026: a mismatch is "active" until a matching poll clears it OR it goes this stale
+# (a board that went offline mid-mismatch shouldn't alarm forever).
+_MISMATCH_TTL_S = 120.0
+
+
+class IdentityMismatchLog:
+    """#1026: a board answering at a REGISTERED ``base_url`` with a ``device_id`` the
+    registry has NEVER heard of (not the expected canonical id, not one of its
+    ``previous_ids``) is the "currently true" alarm class - a re-flashed board on a
+    neighbor's DHCP lease, self-signing an unadopted identity. It must surface loudly,
+    not accumulate rows under a ghost. This shared log records the latest mismatch per
+    mismatch per base_url; a matching poll CLEARS it, and ``active()`` also drops stale
+    entries. Thread-safe (the fleet polls concurrently)."""
+
+    def __init__(self, ttl_s: float = _MISMATCH_TTL_S) -> None:
+        self._ttl_s = ttl_s
+        self._m: dict[str, dict] = {}
+        self._lock = threading.Lock()
+
+    def record(self, base_url: str, *, expected: str, got: str, now: float) -> None:
+        with self._lock:
+            self._m[base_url] = {
+                "base_url": base_url,
+                "expected": expected,
+                "got": got,
+                "at": now,
+            }
+
+    def clear(self, base_url: str) -> None:
+        with self._lock:
+            self._m.pop(base_url, None)
+
+    def active(self, now: float) -> list[dict]:
+        """Current mismatches (freshest data), stale ones dropped."""
+        with self._lock:
+            fresh = [
+                {k: v for k, v in m.items() if k != "at"}
+                for m in self._m.values()
+                if now - m["at"] <= self._ttl_s
+            ]
+        return fresh
+
+
+_DEFAULT_MISMATCHES = IdentityMismatchLog()
+
+
+def active_mismatches(now: float | None = None) -> list[dict]:
+    """#1026: the fleet's currently-active identity mismatches (serve.py's surfaces read
+    this for the dashboard notice + the /fleet/status count)."""
+    return _DEFAULT_MISMATCHES.active(now if now is not None else time.time())
+
 
 class DeviceAdapter:
     """The WiFi-served transport (#276/#277): a device's own ``GET /telemetry``,
@@ -198,6 +249,9 @@ class DeviceAdapter:
         on_resolved=None,
         breaker=None,
         mono=None,
+        expected_id=None,
+        previous_ids=None,
+        mismatch_log=None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         # #676: ordered addresses to try — the mDNS hostname first (stable across
@@ -215,6 +269,14 @@ class DeviceAdapter:
         self._breaker = breaker if breaker is not None else _DEFAULT_BREAKER
         self._mono = mono if mono is not None else time.monotonic
         self._breaker_key = self._candidates[0] if self._candidates else None
+        # #1026: the identity the registry expects here + its accepted aliases
+        # (previous_ids model legitimate renames, #602). An id outside that set is a
+        # ghost — logged loudly, never silently filed.
+        self._expected_id = expected_id
+        self._previous_ids = set(previous_ids or ())
+        self._mismatch_log = (
+            mismatch_log if mismatch_log is not None else _DEFAULT_MISMATCHES
+        )
 
     @staticmethod
     def _utc_now() -> datetime:
@@ -284,6 +346,22 @@ class DeviceAdapter:
         if not readings:
             return LogData()
         seg.device_id = readings[0].device_id
+        # #1026: compare the self-reported id to what the registry expects here.
+        # An id the registry never heard of (not expected, not a previous_id) answering
+        # at a registered base_url is the loud alarm class - record it (the surface
+        # renders a notice + counts it); a match clears it. Only when serve.py passes
+        # the expectation; a bare/test DeviceAdapter (no expected_id) never alarms.
+        if self._expected_id is not None:
+            got = seg.device_id
+            if got and got != self._expected_id and got not in self._previous_ids:
+                self._mismatch_log.record(
+                    self._base_url,
+                    expected=self._expected_id,
+                    got=got,
+                    now=time.time(),
+                )
+            else:
+                self._mismatch_log.clear(self._base_url)
         # #676: the board answered at `working` - let the caller self-heal the
         # registry if that's a fresh address (best-effort; never affects the poll).
         if self._on_resolved is not None:
