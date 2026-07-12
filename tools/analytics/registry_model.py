@@ -396,7 +396,11 @@ def load_model(path: str | Path) -> RegistryModel:
     return RegistryModel.from_dict(doc)
 
 
-_REPO = Path(__file__).resolve().parents[1]
+# #1029: this file is tools/analytics/registry_model.py, so the repo root is parents[2]
+# (parents[1] is tools/ - an off-by-one that pointed _LOCAL at a nonexistent
+# tools/config/devices.local.json, so the loader honest-emptied over a fully-mapped
+# fleet and a Save would have shadowed it). Matches dashboard.py's _HERE.parents[1].
+_REPO = Path(__file__).resolve().parents[2]
 _LOCAL = _REPO / "config" / "devices.local.json"
 _EXAMPLE = _REPO / "config" / "devices.example.json"
 

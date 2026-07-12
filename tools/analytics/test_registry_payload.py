@@ -89,6 +89,22 @@ def test_load_missing_config_is_empty_model(tmp_path: Path) -> None:
     assert m.plants == [] and registry_payload(m)["first_run"] is True
 
 
+def test_config_discovery_matches_device_registry_exactly() -> None:
+    # #1029: registry_model._REPO was parents[1] (= tools/), so _LOCAL pointed at a
+    # nonexistent tools/config/devices.local.json -> the loader honest-emptied over a
+    # fully-mapped fleet ("No boards yet" over 3 logging boards) and a Save would have
+    # written a shadow config. Pin the docstring's promise ("SAME discovery as
+    # device_registry") mechanically so the path can never drift off the repo root.
+    import device_registry as dr
+    import registry_model as rm
+
+    assert rm._LOCAL == dr._LOCAL
+    assert rm._EXAMPLE == dr._EXAMPLE
+    assert rm._LOCAL == rm._REPO / "config" / "devices.local.json"
+    # _REPO really is the repo root (the committed example config lives there)
+    assert (rm._REPO / "config" / "devices.example.json").exists()
+
+
 # --------------------------------------------------------------------------- #
 # /registry route serves the seam
 # --------------------------------------------------------------------------- #
