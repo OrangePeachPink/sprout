@@ -123,6 +123,13 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .recbanner::before { content: ""; width: 8px; height: 8px; border-radius: var(--r-pill);
   background: var(--muted); flex: none; }
 .recbanner .recnote { color: var(--muted); font-family: var(--font-data); }
+/* #1026: the ghost-identity notice — earned alarm (warning-toned, unmissable), not horror. */
+.mismatchbanner { margin-top: 7px; padding: 8px 12px; border-radius: 8px; font-size: 13px;
+  color: var(--ink); display: block;
+  background: color-mix(in srgb, var(--st-fault) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--st-fault) 45%, transparent); }
+.mismatchbanner strong { color: var(--st-fault); }
+.mismatchbanner code { font-family: var(--font-data); }
 .caphint { font-family: var(--font-data); font-size: 10px; color: var(--muted); text-transform: none; min-height: 12px; }
 .capstatus.run { color: var(--leaf); font-weight: 600; }
 .capstatus.run::before { box-shadow: 0 0 8px currentColor;
@@ -431,6 +438,9 @@ footer.prov code { font-family: var(--font-data); }
       <!-- #979: the "am I recording?" answer, where her eye already is. Shown ONLY when
            collection is stopped AND live rows are rendering — calm/info, never a fault. -->
       <div class="recbanner" id="recBanner" hidden></div>
+      <!-- #1026: a board answering at a registered address with an id the registry never
+           heard of — surfaced loudly (earned alarm, "currently true"), never a silent ghost. -->
+      <div class="mismatchbanner" id="mismatchBanner" hidden></div>
     </div>
     <div class="controls">
       <div class="chansel" id="chansel"></div>
@@ -712,6 +722,7 @@ function renderHeader(){
     `fw <span class="mono">${m.fw||'?'}</span>${appBit} · ${fmt(DASH.integrity.total)} readings · ` +
     `${m.total_hours}h since ${m.start_display || m.start_local}${cue}`;
   renderRecordingBanner();  // #979: re-evaluate on each data render (rows may have changed)
+  renderIdentityMismatches();  // #1026: surface any ghost identity this poll detected
   const tc = document.getElementById('trajCount');
   // #718: plant-first, and name the window so it reads as history over a range.
   // #807: count the LIVE plotted channels (trajectory.plant_count), not every
@@ -2667,6 +2678,21 @@ function renderRecordingBanner(){
     + `<span class="recnote">· ${fmt(rows)} live · unsaved</span>`;
   const a = document.getElementById('recStart');
   if(a) a.onclick = (e) => { e.preventDefault(); collStart(); };
+}
+// #1026: a board answering at a registered address with an id the registry never heard of
+// (a re-flashed board on another's DHCP lease, self-signing an unadopted identity). The
+// "currently true" alarm class — surfaced loudly the moment the fetch sees it, so nobody
+// screenshot-debugs a ghost. Cleared automatically once the address answers as expected.
+function renderIdentityMismatches(){
+  const el = document.getElementById('mismatchBanner');
+  if(!el) return;
+  const ms = (typeof DASH !== 'undefined' && DASH.identity_mismatches) || [];
+  el.hidden = !ms.length;
+  if(!ms.length){ el.innerHTML = ''; return; }
+  el.innerHTML = ms.map(m =>
+    `<strong>Unknown board.</strong> The board at <code>${esc(m.base_url)}</code> answers as `
+    + `<code>${esc(m.got)}</code> — expected <code>${esc(m.expected)}</code>. `
+    + `Register or investigate it.`).join('<br>');
 }
 async function collPoll(){
   try{ collRender((await apiJson('/collection/status', {cache:'no-store'})).data); }
