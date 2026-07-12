@@ -376,6 +376,10 @@ table.grid tr:last-child td { border-bottom: none; }
 .fcard .gate { display: inline-block; font-size: 10px; font-weight: 700; color: var(--muted);
   border: 1px solid var(--border); border-radius: var(--r-pill); padding: 0 7px; }
 
+/* #922: env-overlay toggle on the detail trajectory (opt-in, faint, context-not-cause) */
+.envctl { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.btn.small { font-size: 12px; padding: 4px 10px; }
+.btn.small.active { background: var(--leaf); color: #fff; border-color: var(--leaf); }
 /* rate table + ribbon */
 .ratetbl td, .ratetbl th { padding: 5px 10px; }
 .tag { font-size: 11px; font-weight: 700; border-radius: var(--r-pill); padding: 1px 8px; }
@@ -630,6 +634,7 @@ const LIVE = location.protocol === 'http:' || location.protocol === 'https:';
 const AUTO_MS = 30000;
 let autoTimer = null;
 let currentDetail = null;
+let __envOverlay = false;  // #922: the per-plant env overlay is OFF by default (opt-in, never on the glance)
 let curRange = '7d';  // #30: default to the 7-day window (one-click zoom to 24h)
 let connOk = true;          // did the last /data.json fetch succeed? (live mode)
 let lastOkMs = Date.now();  // when we last had good data, for the disconnect notice
@@ -1511,6 +1516,20 @@ function renderDetail(sid){
   const tj = el('section','card');
   tj.appendChild((()=>{ const h=el('div','panel-h'); h.appendChild(el('h2',null,'Trajectory + trend')); h.appendChild(el('span','cap','this probe only · band shading · dashed = least-squares trend')); return h; })());
   const box = el('div','chartbox tall'); const cv = el('canvas'); cv.id='detailChart'; box.appendChild(cv); tj.appendChild(box);
+  /* #922: opt-in environment overlay — only when this plant HAS context (honest-empty else);
+     default off, a quiet toggle; the label states "context, not cause" so it never reads as a
+     watering input. Design-QA: env is a faint second layer, moisture the hero. */
+  const _tset = (DASH.trajectory.datasets||[]).find(d=>d.id===sid);
+  if(_tset && _tset.has_env){
+    const envctl = el('div','envctl');
+    const eb = el('button', 'btn small' + (__envOverlay?' active':''), __envOverlay ? '✓ Environment' : 'Show environment');
+    eb.type = 'button';
+    eb.onclick = () => { __envOverlay = !__envOverlay; buildDetailChart(s);
+      eb.textContent = __envOverlay ? '✓ Environment' : 'Show environment'; eb.classList.toggle('active', __envOverlay); };
+    envctl.appendChild(eb);
+    envctl.appendChild(el('span','small muted', 'context, not cause — air temp/RH beside the reading, never a claim it drove it'));
+    tj.appendChild(envctl);
+  }
   det.appendChild(tj);
 
   /* rates + ribbon + stats */
@@ -1605,6 +1624,10 @@ function statsCard(s, f, st){
 }
 
 function buildDetailChart(s){
+  // #922: destroy any existing detail chart first so this is safe to call repeatedly
+  // (the env-overlay toggle rebuilds in place — without this, Chart.js throws "Canvas
+  // already in use" and the toggle silently no-ops).
+  if(charts.detail){ charts.detail.destroy(); delete charts.detail; }
   const dset = DASH.trajectory.datasets.find(d=>d.id===s.id);
   const lo = s.raw_min, hi = s.raw_max, pad = Math.max(40,(hi-lo)*0.7);
   const gb = withGapBreaks(dset.points, dset.local);
@@ -1616,16 +1639,33 @@ function buildDetailChart(s){
     datasets.push({ label:'trend', data:[{x:dset.trend.x0,y:dset.trend.y0},{x:dset.trend.x1,y:dset.trend.y1}],
       parsing:false, borderColor:css('--ink'), borderDash:[7,5], borderWidth:1.4, pointRadius:0, _trend:true });
   }
+  // #922: opt-in environment overlay. Moisture stays the HERO (left axis, full weight); env
+  // renders as faint, thin, muted lines on a SEPARATE right axis, time-aligned so a dip and a
+  // hot dry hour line up VISUALLY — the eye finds the correlation, the chart never asserts it.
+  // Context, not cause (#977 honesty): env sits beside the reading, never claims it drove it.
+  const envOn = __envOverlay && dset.has_env;
+  if(envOn){
+    const ep = dset.env_points || [];
+    const tempPts = ep.filter(p=>p.temp_c!=null).map(p=>({x:p.x, y:p.temp_c}));
+    const rhPts = ep.filter(p=>p.rh_pct!=null).map(p=>({x:p.x, y:p.rh_pct}));
+    if(tempPts.length) datasets.push({ label:'air temp °C', data:tempPts, parsing:false, yAxisID:'env',
+      borderColor:hexA('#d98a3a',.55), backgroundColor:'transparent', borderWidth:1, pointRadius:0, tension:0.3, spanGaps:true, _env:'°C' });
+    if(rhPts.length) datasets.push({ label:'air RH %', data:rhPts, parsing:false, yAxisID:'env',
+      borderColor:hexA('#3a7fd9',.45), backgroundColor:'transparent', borderWidth:1, borderDash:[3,3], pointRadius:0, tension:0.3, spanGaps:true, _env:'%' });
+  }
   charts.detail = new Chart(document.getElementById('detailChart'), {
     type:'line', data:{ datasets },
     options:{ responsive:true, maintainAspectRatio:false, animation:false,
       interaction:{ mode:'nearest', intersect:false },
       scales:{ x: hoursAgoX(datasets, 'hours ago  (0 = now, at right)'),  // #841: now=0 at right
-        y:{ ...baseScales('','raw ADC (higher = drier)').y, suggestedMin: Math.max(0, lo-pad), suggestedMax: hi+pad, min: Math.max(0, lo-pad) } },  // #797: floor at 0 (raw ADC can't be negative)
+        y:{ ...baseScales('','raw ADC (higher = drier)').y, suggestedMin: Math.max(0, lo-pad), suggestedMax: hi+pad, min: Math.max(0, lo-pad) },  // #797: floor at 0 (raw ADC can't be negative)
+        ...(envOn ? { env:{ position:'right', grid:{display:false},
+          ticks:{ color:css('--muted'), font:{size:10} },
+          title:{ display:true, text:'air temp °C · RH %  (context)', color:css('--muted'), font:{size:10} } } } : {}) },
       plugins:{ legend:{display:false}, bandShade:{ bands: DASH.cal.bands }, gapShade:{ gaps: DASH.gaps },
         tooltip:{ callbacks:{
-          title:(items)=>{ const it=items[0]; if(it.dataset._trend) return 'trend'; const loc=it.dataset._local[it.dataIndex]; return loc; },
-          label:(it)=>it.dataset._trend? `trend ${fmt(Math.round(it.parsed.y))}` : `raw ${fmt(it.parsed.y)}` } } } },
+          title:(items)=>{ const it=items[0]; if(it.dataset._trend) return 'trend'; if(it.dataset._env) return it.dataset.label; const loc=it.dataset._local[it.dataIndex]; return loc; },
+          label:(it)=>it.dataset._trend? `trend ${fmt(Math.round(it.parsed.y))}` : (it.dataset._env? `${fmt(Math.round(it.parsed.y*10)/10)}${it.dataset._env} · context` : `raw ${fmt(it.parsed.y)}`) } } } },
     plugins:[bandShade, gapShade]
   });
 }
