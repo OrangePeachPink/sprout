@@ -81,6 +81,8 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .chanchip { font-family: var(--font-data); font-size: 11px; font-weight: 600; cursor: pointer; color: #fff;
   border-radius: var(--r-pill); padding: 3px 9px; border: 1px solid transparent; user-select: none; }
 .chanchip.off { background: var(--surface) !important; color: var(--muted); border-color: var(--border); text-decoration: line-through; }
+.chanchip.chanall { background: var(--surface); color: var(--muted); border-style: dashed; text-decoration: none; }
+.chanchip.chanall:hover { color: var(--ink); border-color: var(--muted); }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card);
   box-shadow: var(--e1); padding: var(--space-lg); margin-bottom: var(--space-lg); }
@@ -650,6 +652,7 @@ let curRange = '7d';  // #30: default to the 7-day window (one-click zoom to 24h
 let connOk = true;          // did the last /data.json fetch succeed? (live mode)
 let lastOkMs = Date.now();  // when we last had good data, for the disconnect notice
 let activeChannels = null;  // Set of active sensor ids; null = all (E10)
+let __chanClickT = null;    // #993: debounce a single click so a double-click (solo) can pre-empt it
 const RANGE_H = { '1h': 1, '3h': 3, '12h': 12, '24h': 24, '48h': 48, '7d': 168, '30d': 720, all: null };  // #821: 48h between 1d and 7d
 const SENSOR_COLORS = ['#17B6C4','#34A853','#8BD24F','#F5A623'];  // band-ramp series, one palette (#203)
 function chanColor(sid){ const d=(sid.match(/\d+/)||['1'])[0]; return SENSOR_COLORS[(parseInt(d)-1) % SENSOR_COLORS.length]; }
@@ -1700,7 +1703,7 @@ function regSpell(id, word){   // "s03" -> "Sensor 03" (prose form); empty -> em
   const n = String(id || '').replace(/^[a-z]+/i, '');
   return n ? (word + ' ' + n) : (id || '—');
 }
-function regDeviceName(d){ return (d && (d.friendly_name || d.device_id)) || '—'; }
+function regDeviceName(d){ return (d && (d.name || d.friendly_name || d.device_id)) || '—'; }  // #1038: `name` is the mutable label
 function regCalChip(profile){   // reuse the #951/#957 three-tier honesty (channel-cal is unlabeled)
   if(!profile) return null;
   const tier = profile.tier || 'uncalibrated';
@@ -1738,6 +1741,7 @@ function regDirtyCount(){ const b = __pending; if(!b) return 0;
   return b.plants.add.length + b.plants.edit.length + b.sensors.add.length + b.sensors.edit.length
        + b.devices.edit.length + b.mappings.assign.length + b.mappings.close.length + b.lifecycle.length; }
 let __regAdding = null;   // 'plant' | 'sensor' | null — which inline add-form is open
+let __regEditing = null;  // #1038: "kind:id" whose inline rename form is open, or null
 let __regErrs = [];       // structured 400 errors from the last Save attempt
 let __regReceipt = null;  // #1024: the last purge's receipt {removed:[…], archived_remaining} or null
 let __regArmDelete = null;   // "kind:id" armed for the loud delete-confirm (Q3), or null
@@ -1809,7 +1813,14 @@ function regView(){
     const prevS = bySensor[a.sensor_id]; if(prevS) delete byPlant[prevS.plant_id];   // that sensor leaves its old plant
     const m = {...a, _staged: true}; byPlant[a.plant_id] = m; bySensor[a.sensor_id] = m;
   });
-  return {plants, sensors, devices: (reg.devices || []), profiles: (reg.profiles || []), byPlant, bySensor};
+  // #1038: overlay staged field-edits — merge the edited fields, mark _staged. A device edit
+  // stages `friendly_name`; mirror it to `name` too (the server's mutable label key) so the
+  // optimistic render matches the post-Save payload.
+  const editOf = (edits, idKey, id) => edits.find(e => e[idKey] === id);
+  const plantsE = plants.map(p => { const e = editOf(pend.plants.edit, 'plant_id', p.plant_id); return e ? {...p, ...e, _staged: true} : p; });
+  const sensorsE = sensors.map(s => { const e = editOf(pend.sensors.edit, 'sensor_id', s.sensor_id); return e ? {...s, ...e, _staged: true} : s; });
+  const devicesE = (reg.devices || []).map(d => { const e = editOf(pend.devices.edit, 'device_id', d.device_id); return e ? {...d, ...e, name: e.friendly_name, _staged: true} : d; });
+  return {plants: plantsE, sensors: sensorsE, devices: devicesE, profiles: (reg.profiles || []), byPlant, bySensor};
 }
 
 // #921 slice 3b: the mapping picker (the anxiety) — plant-first, no hand-typed channels.
@@ -1907,6 +1918,8 @@ function renderRegistry(reg){
     act.onclick = () => { __regPicking = (__regPicking === p.plant_id ? null : p.plant_id); __regPickPort = null; renderRegistry(); };
     card.appendChild(act);
     if(__regPicking === p.plant_id) card.appendChild(regSensorPicker(p, V, dById));
+    // #1038: the rename affordance (pet name / type / pot) — pencil, or the inline form when open.
+    if(!p._staged) card.appendChild(__regEditing === 'plant:' + p.plant_id ? regEditForm('plant', p) : regEditPencil('plant', p.plant_id));
     // #921 3c: lifecycle rides the same card — mapping action first, destructive controls last.
     if(!p._staged) card.appendChild(regLifeCtl('plant', p.plant_id, regPlantName(p)));
     pgrid.appendChild(card);
@@ -1932,8 +1945,10 @@ function renderRegistry(reg){
          + ' <span class="muted">on ' + esc(regDeviceName(dById[m.device_id])) + '</span>')
       : '<span class="muted">unassigned</span>';
     row.appendChild(el('span', 'regto', to));
+    if(!s._staged) row.appendChild(regEditPencil('sensor', s.sensor_id));   // #1038: rename the label
     if(!s._staged) row.appendChild(regLifeCtl('sensor', s.sensor_id, regSpell(s.sensor_id, 'Sensor')));
     slist.appendChild(row);
+    if(__regEditing === 'sensor:' + s.sensor_id) slist.appendChild(regEditForm('sensor', s));
   });
   ssec.appendChild(slist);
   ssec.appendChild(regAddControl('sensor'));
@@ -1949,8 +1964,10 @@ function renderRegistry(reg){
     if(d.friendly_name && d.device_id) row.appendChild(el('span', 'muted regcode', esc(d.device_id)));
     const paused = regPaused(lc); if(paused) row.appendChild(paused);
     if(lc === 'deleted') row.appendChild(el('span', 'stagedtag', 'will delete'));
+    row.appendChild(regEditPencil('device', d.device_id));   // #1038: rename the board (#600 UI half)
     row.appendChild(regLifeCtl('device', d.device_id, regDeviceName(d)));
     blist.appendChild(row);
+    if(__regEditing === 'device:' + d.device_id) blist.appendChild(regEditForm('device', d));
   });
   if(!V.devices.length) blist.appendChild(el('div', 'muted', 'No boards yet — flash one with the web flasher and it shows up here.'));
   bsec.appendChild(blist); host.appendChild(bsec);
@@ -2005,6 +2022,50 @@ function regStageAdd(kind, form){
   if(kind === 'sensor' && !rec.sensor_id){ __regErrs = [{message: 'A sensor number is required.'}]; renderRegistry(); return; }
   regPend()[kind === 'plant' ? 'plants' : 'sensors'].add.push(rec);
   __regAdding = null; __regErrs = []; __regReceipt = null;
+  renderRegistry();
+}
+// #1038: inline field-edit — pencil → prefilled form → stage into *:{edit} → Save (the 3a convention,
+// same batch, same structured 400s). IDs are immutable (edit-not-identity, #1021) — never in the form.
+function regEditPencil(kind, id){
+  const b = el('button', 'reglink', '✎ Rename');
+  b.onclick = () => { __regEditing = kind + ':' + id; __regAdding = null; __regPicking = null; renderRegistry(); };
+  return b;
+}
+function regEditForm(kind, entity){
+  const idKey = {plant: 'plant_id', sensor: 'sensor_id', device: 'device_id'}[kind];
+  const id = entity[idKey];
+  const form = el('div', 'regform');
+  const mk = (label, k, val) => {
+    const l = el('label', null, esc(label)); const i = el('input');
+    i.value = (val == null ? '' : val); i.dataset.k = k; l.appendChild(i); return l;
+  };
+  if(kind === 'plant'){
+    form.appendChild(mk('pet name', 'pet_name', entity.pet_name));
+    form.appendChild(mk('type', 'plant_type', entity.plant_type));
+    form.appendChild(mk('pot', 'pot_description', entity.pot_description));
+  } else if(kind === 'sensor'){
+    form.appendChild(mk('label', 'friendly_name', entity.friendly_name));
+  } else {   // board — friendly_name is the client key; the server stores it as `name` (#583)
+    form.appendChild(mk('board name', 'friendly_name', entity.name || entity.friendly_name));
+  }
+  const wrap = el('div', 'regeditwrap');
+  wrap.appendChild(form);
+  const act = el('div', 'regformact');
+  const save = el('button', 'reglink', 'Save name'); save.onclick = () => regStageEdit(kind, id, form);
+  const cancel = el('button', 'reglink muted', 'Cancel'); cancel.onclick = () => { __regEditing = null; renderRegistry(); };
+  act.appendChild(save); act.appendChild(cancel);
+  wrap.appendChild(act);
+  return wrap;
+}
+function regStageEdit(kind, id, form){
+  const sec = {plant: 'plants', sensor: 'sensors', device: 'devices'}[kind];
+  const idKey = {plant: 'plant_id', sensor: 'sensor_id', device: 'device_id'}[kind];
+  const rec = {[idKey]: id};
+  form.querySelectorAll('input').forEach(i => { rec[i.dataset.k] = i.value.trim(); });   // '' clears a field
+  const p = regPend();
+  p[sec].edit = p[sec].edit.filter(e => e[idKey] !== id);   // one staged edit per entity
+  p[sec].edit.push(rec);
+  __regEditing = null; __regErrs = []; __regReceipt = null;
   renderRegistry();
 }
 function regDirtyBar(){
@@ -2193,10 +2254,33 @@ function renderChannelChips(){
     const on = activeChannels.has(id);
     const chip = el('button', 'chanchip' + (on?'':' off'), label); chip.type = 'button';
     if(on && s) chip.style.background = s.color;
-    chip.title = (on ? 'hide ' : 'show ') + label;
-    chip.addEventListener('click', ()=> toggleChannel(id));
+    chip.title = (on ? 'hide ' : 'show ') + label + ' · double-click to focus on it alone';
+    // #993: single click toggles (debounced, so a double-click can pre-empt it); double click
+    // SOLOS the channel (hide the rest) — the fast "hone in on a pair": focus one, click to add.
+    chip.addEventListener('click', ()=>{
+      if(__chanClickT) return;
+      __chanClickT = setTimeout(()=>{ __chanClickT = null; toggleChannel(id); }, 220);
+    });
+    chip.addEventListener('dblclick', (e)=>{ e.preventDefault(); clearTimeout(__chanClickT); __chanClickT = null; soloChannel(id); });
     wrap.appendChild(chip);
   });
+  // #993: the escape from a filtered lens — reset to every channel (shown only when filtered).
+  if(activeChannels.size < ids.length){
+    const all = el('button', 'chanchip chanall', 'Show all'); all.type = 'button';
+    all.title = 'show every channel again';
+    all.addEventListener('click', showAllChannels);
+    wrap.appendChild(all);
+  }
+}
+function soloChannel(sid){   // #993: hone in on one channel — the rest hide (double-click)
+  activeChannels = new Set([sid]);
+  renderChannelChips();
+  if(LIVE) refresh(); else applyStaticChannels();
+}
+function showAllChannels(){   // #993: reset the lens to every live channel
+  activeChannels = new Set(liveChannelIds());
+  renderChannelChips();
+  if(LIVE) refresh(); else applyStaticChannels();
 }
 function toggleChannel(sid){
   if(activeChannels === null) activeChannels = new Set(liveChannelIds());

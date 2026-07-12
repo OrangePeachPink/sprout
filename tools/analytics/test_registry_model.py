@@ -153,6 +153,22 @@ def test_migrate_static_derives_open_assignments_with_unknown_start() -> None:
     )  # probe sticker becomes the sensor id
 
 
+def test_migrate_static_honors_retired_as_paused() -> None:
+    # #1036: a `retired: true` raw device (the fleet excludes it via _active_served)
+    # must migrate to a NON-active lifecycle, so the tab's truth matches the fleet's and
+    # renders the calm Paused chip - not a normal active board with Pause/Delete (Q2).
+    static = {
+        "devices": [
+            {"device_id": "y9d41p"},  # normal board
+            {"device_id": "yyvvpd", "retired": True},  # the unplugged yellow C5
+        ]
+    }
+    m = RegistryModel.from_dict(static)
+    by_id = {d["device_id"]: d["lifecycle"] for d in m.devices}
+    assert by_id["y9d41p"] == "active"
+    assert by_id["yyvvpd"] == "paused"  # off-by-choice, reversible, calm - not active
+
+
 # --------------------------------------------------------------------------- #
 # serialization round-trip
 # --------------------------------------------------------------------------- #

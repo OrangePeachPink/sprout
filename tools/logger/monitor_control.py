@@ -121,8 +121,11 @@ class MonitorController:
         # code so the served status / `just status` can say WHY, not just that it did.
         rc = self._proc.poll() if self._proc is not None else None
         if not running and rc == GIVE_UP_EXIT:
+            # #1032: the port is often None at give-up (autodetect, no explicit port),
+            # so name the thing, not a raw Python None ("None absent"). Voice hygiene.
+            who = self._port if self._port else "the tethered board"
             out["give_up_reason"] = (
-                f"{self._port} absent — monitor stopped; restart collection "
+                f"{who} absent — monitor stopped; restart collection "
                 "when the board is back"
             )
         return out

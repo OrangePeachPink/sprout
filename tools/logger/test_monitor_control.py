@@ -111,16 +111,17 @@ def test_stop_preserves_experiment_marker() -> None:
         shutil.rmtree(lockdir, ignore_errors=True)
 
 
-def _run_to_stop(giveup_code: int) -> dict:
+def _run_to_stop(giveup_code: int, *, port: str | None = "COM6") -> dict:
     """Start a monitor whose fake logger exits `giveup_code` immediately, wait for it
-    to stop, and return the final status (#813 loud-give-up)."""
+    to stop, and return the final status (#813 loud-give-up). ``port`` defaults to an
+    explicit COM name; pass None for the autodetect case (#1032)."""
     tmp = Path(tempfile.mkdtemp(prefix="mongu_"))
     lockdir = Path(tempfile.mkdtemp(prefix="mongulk_"))
     try:
         fake = tmp / "exiter.py"
         fake.write_text(f"import sys\nsys.exit({giveup_code})\n", encoding="utf-8")
         c = mc.MonitorController(logger_py=fake, lock_dir=lockdir)
-        c.start(port="COM6")
+        c.start(port=port)
         s = c.status()
         for _ in range(50):  # the child exits almost immediately
             s = c.status()
@@ -147,6 +148,17 @@ def test_normal_exit_has_no_give_up_reason() -> None:
     assert s["state"] == "stopped", s
     assert "give_up_reason" not in s, s
     check(True, "no give-up reason on a clean exit")
+
+
+def test_give_up_reason_names_the_board_when_port_is_none() -> None:
+    # #1032: an autodetected monitor has port=None at give-up, so the reason must say
+    # "the tethered board", never leak a raw Python None ("None absent").
+    print("monitor: absent-port give-up with no port names the board, not None:")
+    s = _run_to_stop(mc.GIVE_UP_EXIT, port=None)
+    reason = s.get("give_up_reason", "")
+    assert "the tethered board absent" in reason, s
+    assert "None" not in reason, s  # never a leaked Python None
+    check(True, "None-port give-up names the tethered board")
 
 
 if __name__ == "__main__":
