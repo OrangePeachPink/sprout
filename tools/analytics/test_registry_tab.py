@@ -100,6 +100,47 @@ def test_dirty_state_bar_and_dont_browse_away_guards() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# slice 3c — lifecycle UI (Pause/Resume + loud Delete), surface for #1022 purge
+# --------------------------------------------------------------------------- #
+
+
+def test_lifecycle_controls_pause_resume_delete() -> None:
+    ctl = _H[_H.index("function regLifeCtl(") : _H.index("function renderRegistry(")]
+    assert "'Pause'" in ctl and "'Resume'" in ctl and "'Delete'" in ctl
+    # applies to all three kinds (plant, sensor, device=board) via regLifecycle.
+    assert "regLifeCtl('plant'" in _H
+    assert "regLifeCtl('sensor'" in _H
+    assert "regLifeCtl('device'" in _H  # the board delete (yyvvpd)
+
+
+def test_delete_is_loud_and_double_confirmed() -> None:
+    # Q3: delete is loud + double-confirmed — a two-step arm, never a one-click purge.
+    assert "__regArmDelete" in _H
+    assert "Permanently delete" in _H and "This can" in _H  # "...can't be undone"
+    assert "Yes, delete" in _H and "Keep it" in _H
+    assert "willdelete" in _H  # the staged-for-deletion marker
+
+
+def test_lifecycle_stages_the_apply_shape() -> None:
+    # regStageLifecycle emits {kind, entity_id, state} into pending.lifecycle — the
+    # exact op apply_operations validates against LIFECYCLE_STATES (#1022).
+    fn = _H[_H.index("function regStageLifecycle(") : _H.index("function regLifeCtl(")]
+    assert "entity_id: id" in fn and "state}" in fn
+    assert "p.lifecycle.push" in fn
+
+
+def test_delete_wires_to_purge_not_a_lifecycle_flag() -> None:
+    # #1024 gate fix: a staged 'deleted' emits #1022's real purge:{...}, NOT
+    # lifecycle:state=deleted (a flag-flip leaving the entity in devices[] + the
+    # poll set — Delete would promise "and its history" and remove nothing).
+    save = _H[_H.index("async function regSave(") : _H.index("function regDirty(")]
+    assert "purge" in save
+    assert "l.state === 'deleted'" in save and "purge[sec].push" in save
+    assert "else lifecycle.push(l)" in save  # pause/resume still ride lifecycle
+    # the purge receipt (files.removed) is the honest surface for what delete reached.
+    assert "data.files" in save and "regreceipt" in _H
+
+
 # slice 3b — the mapping picker (plant-first, no hand-typed channels)
 # --------------------------------------------------------------------------- #
 
