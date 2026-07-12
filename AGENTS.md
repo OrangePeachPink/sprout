@@ -33,7 +33,8 @@ Operating rules for any agent (or human) working in this repository.
 ## Reading order
 
 1. **This file** — operating rules.
-2. **[CONTRIBUTING.md](.github/CONTRIBUTING.md)** — the canonical work loop + the verification gate.
+2. **[CONTRIBUTING.md](.github/CONTRIBUTING.md)** — the contributor work loop (the plain path from idea to
+   merge). The internal verification pipeline + lane self-sync live in this file (below).
 3. **[docs/process/ADOPTION.md](docs/process/ADOPTION.md)** — per-lane onboarding (which
    board filter, which issues, which ADRs you own). *Current specifics live here, not above.*
 4. **[docs/adr/](docs/adr/)** — decisions of record. Start at
@@ -102,31 +103,66 @@ review your own recent work — **especially before a status brief** — do **CI
 
 ## Lane self-sync — check before you start, check before you stop
 
-Lanes run **concurrently**; the board and your PRs change *while you're heads-down*. **Don't wait for the
-maintainer to assemble a status round and relay it — the maintainer is not your messenger, and the issue is
-the message bus.** Self-sync at **three moments: when you start, just before you stop, and when you post a
-status brief / share-out (requested or proactive).**
+Lanes run **concurrently**, so the board and your PRs change *while you're heads-down*. Don't wait for the
+maintainer to assemble a status round and relay it — **the maintainer is not your messenger, and the issue is
+the message bus.** Keep the system moving by syncing yourself.
 
-Each sync, sweep your slice: **PRs you own** (moved? merged?), **issues newly `for:<your-lane>`**,
-**questions / RFCs aimed at you**, and **what just merged that unblocks your gated work** — but **skip
-`needs:hardware`** (the maintainer's hardware/bench queue; filter `for:<your-lane> -label:needs:hardware`).
-**A status/priority change alone triggers no GitHub notification** — only a comment/label/assignee does. Don't
-rely on notifications to catch new work; **re-pull the live board each sync.**
+**Self-sync at three moments:**
 
-**Which item? No ambiguity:** your queue = `for:<your-lane> -label:needs:hardware -label:needs:maintainer`
-**sorted by Priority**; your next task = the **top-priority *sliced* item** (P0/P1 → P2 → P3). Every P1/P2 is
-triaged to be owned, sliced, actionable — start it without asking. **Epics are parents, not tasks** — work
-their sliced children, never the epic card. Escalate (`for:workflow`) only a top item that truly isn't
-actionable; that should be rare. Then **act**:
+1. **At the start** of a session — before you pick up work.
+2. **Just before you stop** — catch what landed while you were heads-down.
+3. **When you post a status brief / share-out** — whether someone requested it or you're posting proactively.
 
-- Your PR merged → reconcile it and **chase what it unblocks**. A dependency landed → **pick up the unblocked
-  work this session.** A new `for:<lane>` issue or an RFC for you → triage / answer / act.
-- **You have a question for another lane → post it on the issue and route it `for:<lane>` right then.** Don't
-  hold it for the maintainer to carry.
-- **Default to action over questions.** If it's unblocked and in your lane, do it. Escalate to the maintainer
-  only for genuinely maintainer-only calls (merges, hardware approvals, product direction).
+**The sweep — check your slice of the board:**
 
-Full protocol + the sweep checklist: [CONTRIBUTING.md](.github/CONTRIBUTING.md).
+- **Your open PRs** — did any **move** (review, conformance, certification) or **merge** while you were away?
+- **Issues newly labeled `for:<your-lane>`** — work routed to you.
+- **Comments / questions / RFCs** aimed at your lane on issues and PRs.
+- **What recently merged that unblocks you** — a dependency landed, or a base PR merged so your stacked PR
+  can rebase.
+- **Backlog *and* In Progress** items in your area that are now actionable — an item doesn't have to be sitting
+  in Backlog to be untouched. Workflow (or another lane) can move a card's *status* without anyone touching
+  *your* item yet — check for a PR or a comment from your own lane, not just the column it's in. But **skip
+  anything labelled `needs:hardware`**: those are the maintainer's hardware/bench queue (wiring, pump/relay
+  setup, hardware you don't have yet), not lane-advanceable. Filter your board view to
+  `for:<your-lane> -label:needs:hardware`, across both columns.
+- **A board *status* or *priority* change generates no GitHub notification** — only a comment, label, or
+  assignee change does. So don't rely on your notifications/mentions alone to catch new work: **re-pull the
+  live board (Project #2) each sync**, per the instructions above. If you only ever check "what's new in my
+  notifications," a silent status flip is invisible to you.
+
+**Which item do you pick? No ambiguity — the board answers it:**
+
+- **Your queue** = the board filtered to `for:<your-lane> -label:needs:hardware -label:needs:maintainer`,
+  **sorted by Priority**.
+- **Your next task** = the **top-priority *sliced* item** in that queue — P0/P1 before P2 before P3. Every
+  P1/P2 is triaged to be **owned, sliced, and actionable**; you don't need permission to start it.
+- **Epics are not tasks.** An item labelled `epic` is a *parent* — work its **sliced children**, never the epic
+  card itself. If an epic has no open sliced children, *that* is the thing to flag (`for:workflow`).
+- **`needs:hardware` / `needs:maintainer` are out of your queue** — the maintainer's bench and decision queues.
+  The filter above already excludes them; don't pull from them.
+- The **only** thing you escalate is a top item that genuinely isn't actionable (missing slice, unclear AC) —
+  and that should be rare, because the backlog is kept triaged. Route it `for:workflow` and take the next item
+  meanwhile.
+
+**Then act — don't wait, don't ask when you can do:**
+
+- **Your PR merged** → reconcile it (confirm what it satisfies) and **chase what it unblocks downstream.**
+- **A dependency landed** → pick up the now-unblocked work and **advance it this session.**
+- **A new `for:<your-lane>` issue, or an RFC for you** → triage, answer, or act.
+- **You have a question for another lane** → **post it on the issue and route it `for:<lane>` right then.**
+  Do *not* hold it for the maintainer to relay.
+- **Default to action over questions.** If something is unblocked and in your lane, do it. Reserve escalation
+  to the maintainer for genuinely maintainer-only calls (merges, hardware approvals, product direction).
+
+**The anti-patterns this kills:**
+
+- Discovering unblocked work only when the maintainer's next status round happens to surface it.
+- Answering a status request with questions you could have **answered or routed** yourself.
+- Making the maintainer relay a message between two lanes that the **issue thread** could carry directly.
+
+A lane that self-syncs keeps the whole system advancing between the maintainer's check-ins — instead of
+stalling until the next relay.
 
 ## Lane routing
 
@@ -188,8 +224,9 @@ raises wiring/power changes to the maintainer. Route bench-adjacent work `for:fi
   posts a **Ready to Merge certification** (who approved the design + what was verified + merge-order) and
   moves it to **Ready to Merge** — **the maintainer merges only from there, relying on that whole chain plus
   Workflow's review.** Partials spin a new linked issue for the tail before the original closes. PRs use
-  **`Refs #N`** / `Part of #N`, **never `Closes #N`**; merged PRs do not auto-close issues. Full lifecycle +
-  per-stage expectations: [CONTRIBUTING.md](.github/CONTRIBUTING.md).
+  **`Refs #N`** / `Part of #N`, **never `Closes #N`**; merged PRs do not auto-close issues. The full
+  per-stage detail + the tombstone-banner conventions are in **§ The verification pipeline**, below (moved
+  here from CONTRIBUTING per #998 — the contributor doc keeps only the plain path).
 - **`main` is protected:** PR required, squash-merge, no direct pushes, no force-push/deletion.
 - **Gate labels** `blocks:pumps` / `blocks:public-release` / `blocks:data-integrity` mark
   milestone gates, independent of Priority.
@@ -201,6 +238,81 @@ raises wiring/power changes to the maintainer. Route bench-adjacent work `for:fi
   the PRs merged since the last tag, categorized by `.github/release.yml` (`type:` labels), then curated.
   A release isn't done until its notes **and** a [`CHANGELOG.md`](CHANGELOG.md) entry exist (ADR-0009 §6).
   So a PR's title + `type:` label *are* release-notes copy — write them accordingly.
+
+## The verification pipeline
+
+The per-stage detail behind the two-stage gate above — the flow the maintainer and the lanes run to.
+(Contributors don't need this; CONTRIBUTING keeps the plain path and points here.)
+
+**Backlog → In Progress → Needs Verification → Ready to Merge → Done** · *Won't Do*
+
+**Backlog — triaged ideas.** An item here has a clear, done-definable goal and carries **acceptance
+criteria**: a short, testable list of what "done" means. Shape the requirement *here* (comments, an ADR,
+outside opinions) — far cheaper than reworking it after it's built.
+
+**In Progress — the lane builds.** Before moving on, the implementer: confirms / sharpens the acceptance
+criteria on the issue; implements the work; tests it (the relevant `pytest` / native harness); runs lint +
+format + commit hooks and confirms **local == CI green**; opens a PR with **`Refs #N`** (never `Closes`).
+
+**→ Needs Verification — post evidence, then stop (Workflow's inbox).** Gated on a
+**requirement-by-requirement evidence map**: for each acceptance criterion, show *how* it's met with a
+concrete artifact — PR # + commit SHA, file/function (`path:line`), the test that covers it *and that it
+passes*, CI status, plus any manual / bench check. Not "defaults fixed ✓" — instead `AC #1 (serial default)
+→ dashboard_template.html:265 + test_control.py::test_serial_default passing, PR #338 @d4315ef`. The
+implementer does **not** self-merge or move further. **Needs Verification is Workflow's review inbox, not
+the maintainer's.**
+
+**Workflow review (at Needs Verification).** Workflow **independently validates** — beyond the lane's
+self-report — against: the source docs (PRD / ADR / issue) and the requirement's goals; the AC-by-AC evidence
+map; commit history and issue / PR comments; **CI green — local hooks *and* remote CI — and mergeable** (no
+conflicts, no stacked-PR traps) — plus its own judgment that the work is **fully implemented** (not a slice
+that happened to move the card), **substantially meets the *entirety* of the requirement's goals**, and is
+**quality** (correct, no regressions, in-lane, honest-data-compliant where it applies). On pass, Workflow
+posts a **Ready to Merge certification** (what was verified + which lanes approved the design + any
+**merge-order** notes) and moves the card. A weak map, a missed goal, or a dependency snag **bounces back**
+with specifics.
+
+**→ Ready to Merge — merged.** The card carries the full evidence chain **plus Workflow's independent
+certification**. Who merges depends on velocity mode (§ below): **V1 → the maintainer merges** from here,
+relying on the whole chain plus Workflow's review; **V2 → Workflow merges/closes** under the V2 fence. PRs
+squash-merge.
+
+**Done — and Won't Do.** On merge the issue closes (auto-Done moves the card; because PRs use `Refs`, the
+close is explicit). **Won't Do** is the terminal for "decided against": close as **"not planned"** (not
+"completed") with a one-line reason. **Partials:** if a merged PR met an issue's *core* requirement but a
+clean, separable follow-on fell out, spin a **new issue** for the remainder (linked both ways) and close the
+original — a tail never gets swept into the merge dustbin. A PR that misses the issue's *main point* is not
+closed — it's flagged back.
+
+### Closing a duplicate, superseded, or rejected issue — tombstone banners (#635)
+
+The close-reason ("not planned") and board column say *what* but never *why*, and an explanatory comment sits
+at the **bottom** of the thread — so a developer onboarded later lands at the top of the body with zero
+context. When you close as a duplicate / superseded / declined, **prepend** the matching banner to the
+original body (never replace it — the original text is history), and optionally prefix the title
+`[DUPE → #NNN]`:
+
+```markdown
+> [!IMPORTANT]
+> **DUPLICATE — closed, not on the roadmap.** Superseded by **#NNN** (reason — e.g. *first-filed wins, parallel-cut collision*). Anything of value here was folded into #NNN. Nothing in this thread is planned work. *(Banner per the duplicate-context convention, #635.)*
+```
+
+Use **SUPERSEDED** when the work was overtaken by shipped functionality rather than a single newer issue.
+**Look before you label:** banner only genuinely dead threads — verify the issue wasn't *reopened and merged*
+as the real implementation before tombstoning it.
+
+Use **DECIDED AGAINST** when the issue was *considered and declined* — the **highest-value** variant: a
+rejection's lost context is expensive (a contributor burns a day re-proposing a ruled-out idea; a good idea
+with a **revisit trigger** stays buried because nobody can see the trigger). Two rules keep it honest:
+**cite, never reconstruct** (quote or link the recorded decision *verbatim*; if no rationale is findable,
+flag it for a fresh maintainer ruling rather than inventing one), and **closed work only** (parked-but-alive
+keeps its `parked` label; delivered work gets nothing). Preserve any **revisit trigger** — the narrow
+condition that would reopen it:
+
+```markdown
+> [!IMPORTANT]
+> **DECIDED AGAINST — closed, not on the roadmap.** \<one-line rationale, quoting the recorded decision + who decided>. **Revisit trigger:** \<the narrow condition that would reopen it, or "none recorded">. Nothing here is planned work. *(Banner per the decided-against convention, #635.)*
+```
 
 ## Velocity modes — V1 / V2 (standing policy as of v0.7.3)
 
