@@ -139,3 +139,38 @@ def test_delete_wires_to_purge_not_a_lifecycle_flag() -> None:
     assert "else lifecycle.push(l)" in save  # pause/resume still ride lifecycle
     # the purge receipt (files.removed) is the honest surface for what delete reached.
     assert "data.files" in save and "regreceipt" in _H
+
+
+# slice 3b — the mapping picker (plant-first, no hand-typed channels)
+# --------------------------------------------------------------------------- #
+
+
+def test_map_affordance_is_plant_first_not_dropdown_soup() -> None:
+    assert "function regSensorPicker(" in _H
+    assert "Assign a sensor" in _H and "Change sensor" in _H
+    # the picker reads the merged #1025 channel occupancy, never a hand-typed channel.
+    assert "d.channels" in _H or "(d.channels" in _H
+    assert "Which sensor watches" in _H  # plant-first header
+
+
+def test_picker_uses_channel_occupancy_free_and_remap() -> None:
+    # a free port (sensor_id null, #1025) places a sensor; an occupied port remaps.
+    assert "free — place a sensor" in _H
+    assert "ch.sensor_id" in _H  # occupied vs free comes from the channel view
+
+
+def test_assign_stages_the_full_tuple_no_hand_typing() -> None:
+    fn = _H[
+        _H.index("function regStageAssign(") : _H.index("function regSensorPicker(")
+    ]
+    assert "mappings.assign.push" in fn
+    # device_id + channel come from the chosen port, never typed (Data's answer).
+    for k in ("plant_id:", "sensor_id:", "device_id:", "channel:"):
+        assert k in fn
+
+
+def test_regview_overlays_staged_mappings() -> None:
+    # a staged assign shows on the card before Save (server resolves truth on Save).
+    view = _H[_H.index("function regView(") : _H.index("function regStageAssign(")]
+    assert "pend.mappings.assign" in view and "pend.mappings.close" in view
+    assert "_staged: true" in view

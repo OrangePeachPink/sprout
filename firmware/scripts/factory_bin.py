@@ -66,7 +66,13 @@ CHIP_MAP = {
 # Default-deny - a board absent here builds a factory bin but gets NO manifest, so the
 # doc-only BOARDS.md do-not-flash rule (relay/pump-pin safety) becomes mechanical. The
 # bring-up DoD's "add to web flasher" step = add the mcu here once it is bench-verified.
-WEB_FLASH_VERIFIED = {"esp32", "esp32c5"}  # classic + C5 (#443/#933 bench-verified)
+#
+# C5 PULLED (#271 bench, 2026-07-11): ESP Web Tools 10.0.0 can't drive the ESP32-C5's
+# native-USB flash - "Failed to initialize" at the sync step even with BOOT physically
+# held, while esptool/pio flashes the SAME board fine on the same cable + host. So the
+# C5 web-flash is NOT verified. Re-add "esp32c5" once EWT is bumped to a C5-supporting
+# version and re-verified on the bench; the C5 keeps its documented pio-flash path.
+WEB_FLASH_VERIFIED = {"esp32"}  # classic only (C5 pulled - see above)
 
 
 def make_factory(source, target, env):

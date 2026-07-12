@@ -231,7 +231,9 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .regpickrow { display: flex; align-items: baseline; gap: 8px; width: 100%; text-align: left; background: none;
   border: 0; border-radius: 8px; padding: 6px 8px; cursor: pointer; font: 13px var(--font-ui); color: var(--ink); }
 .regpickrow:hover { background: var(--surface); }
+.regpickrow[disabled] { opacity: .5; cursor: default; }
 .regpickrow .muted { margin-left: auto; }
+.regpickhdr { font: 600 12px var(--font-ui); color: var(--muted); padding: 4px 8px 6px; }
 .regform { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 8px; }
 .regform label { display: flex; flex-direction: column; gap: 3px; font: 11px var(--font-data); color: var(--muted); }
 .regform input { font: 13px var(--font-ui); padding: 5px 7px; border: 1px solid var(--border); border-radius: 8px;
@@ -385,6 +387,10 @@ table.grid tr:last-child td { border-bottom: none; }
 .fcard .gate { display: inline-block; font-size: 10px; font-weight: 700; color: var(--muted);
   border: 1px solid var(--border); border-radius: var(--r-pill); padding: 0 7px; }
 
+/* #922: env-overlay toggle on the detail trajectory (opt-in, faint, context-not-cause) */
+.envctl { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.btn.small { font-size: 12px; padding: 4px 10px; }
+.btn.small.active { background: var(--leaf); color: #fff; border-color: var(--leaf); }
 /* rate table + ribbon */
 .ratetbl td, .ratetbl th { padding: 5px 10px; }
 .tag { font-size: 11px; font-weight: 700; border-radius: var(--r-pill); padding: 1px 8px; }
@@ -639,6 +645,7 @@ const LIVE = location.protocol === 'http:' || location.protocol === 'https:';
 const AUTO_MS = 30000;
 let autoTimer = null;
 let currentDetail = null;
+let __envOverlay = false;  // #922: the per-plant env overlay is OFF by default (opt-in, never on the glance)
 let curRange = '7d';  // #30: default to the 7-day window (one-click zoom to 24h)
 let connOk = true;          // did the last /data.json fetch succeed? (live mode)
 let lastOkMs = Date.now();  // when we last had good data, for the disconnect notice
@@ -1520,6 +1527,20 @@ function renderDetail(sid){
   const tj = el('section','card');
   tj.appendChild((()=>{ const h=el('div','panel-h'); h.appendChild(el('h2',null,'Trajectory + trend')); h.appendChild(el('span','cap','this probe only · band shading · dashed = least-squares trend')); return h; })());
   const box = el('div','chartbox tall'); const cv = el('canvas'); cv.id='detailChart'; box.appendChild(cv); tj.appendChild(box);
+  /* #922: opt-in environment overlay — only when this plant HAS context (honest-empty else);
+     default off, a quiet toggle; the label states "context, not cause" so it never reads as a
+     watering input. Design-QA: env is a faint second layer, moisture the hero. */
+  const _tset = (DASH.trajectory.datasets||[]).find(d=>d.id===sid);
+  if(_tset && _tset.has_env){
+    const envctl = el('div','envctl');
+    const eb = el('button', 'btn small' + (__envOverlay?' active':''), __envOverlay ? '✓ Environment' : 'Show environment');
+    eb.type = 'button';
+    eb.onclick = () => { __envOverlay = !__envOverlay; buildDetailChart(s);
+      eb.textContent = __envOverlay ? '✓ Environment' : 'Show environment'; eb.classList.toggle('active', __envOverlay); };
+    envctl.appendChild(eb);
+    envctl.appendChild(el('span','small muted', 'context, not cause — air temp/RH beside the reading, never a claim it drove it'));
+    tj.appendChild(envctl);
+  }
   det.appendChild(tj);
 
   /* rates + ribbon + stats */
@@ -1614,6 +1635,10 @@ function statsCard(s, f, st){
 }
 
 function buildDetailChart(s){
+  // #922: destroy any existing detail chart first so this is safe to call repeatedly
+  // (the env-overlay toggle rebuilds in place — without this, Chart.js throws "Canvas
+  // already in use" and the toggle silently no-ops).
+  if(charts.detail){ charts.detail.destroy(); delete charts.detail; }
   const dset = DASH.trajectory.datasets.find(d=>d.id===s.id);
   const lo = s.raw_min, hi = s.raw_max, pad = Math.max(40,(hi-lo)*0.7);
   const gb = withGapBreaks(dset.points, dset.local);
@@ -1625,16 +1650,33 @@ function buildDetailChart(s){
     datasets.push({ label:'trend', data:[{x:dset.trend.x0,y:dset.trend.y0},{x:dset.trend.x1,y:dset.trend.y1}],
       parsing:false, borderColor:css('--ink'), borderDash:[7,5], borderWidth:1.4, pointRadius:0, _trend:true });
   }
+  // #922: opt-in environment overlay. Moisture stays the HERO (left axis, full weight); env
+  // renders as faint, thin, muted lines on a SEPARATE right axis, time-aligned so a dip and a
+  // hot dry hour line up VISUALLY — the eye finds the correlation, the chart never asserts it.
+  // Context, not cause (#977 honesty): env sits beside the reading, never claims it drove it.
+  const envOn = __envOverlay && dset.has_env;
+  if(envOn){
+    const ep = dset.env_points || [];
+    const tempPts = ep.filter(p=>p.temp_c!=null).map(p=>({x:p.x, y:p.temp_c}));
+    const rhPts = ep.filter(p=>p.rh_pct!=null).map(p=>({x:p.x, y:p.rh_pct}));
+    if(tempPts.length) datasets.push({ label:'air temp °C', data:tempPts, parsing:false, yAxisID:'env',
+      borderColor:hexA('#d98a3a',.55), backgroundColor:'transparent', borderWidth:1, pointRadius:0, tension:0.3, spanGaps:true, _env:'°C' });
+    if(rhPts.length) datasets.push({ label:'air RH %', data:rhPts, parsing:false, yAxisID:'env',
+      borderColor:hexA('#3a7fd9',.45), backgroundColor:'transparent', borderWidth:1, borderDash:[3,3], pointRadius:0, tension:0.3, spanGaps:true, _env:'%' });
+  }
   charts.detail = new Chart(document.getElementById('detailChart'), {
     type:'line', data:{ datasets },
     options:{ responsive:true, maintainAspectRatio:false, animation:false,
       interaction:{ mode:'nearest', intersect:false },
       scales:{ x: hoursAgoX(datasets, 'hours ago  (0 = now, at right)'),  // #841: now=0 at right
-        y:{ ...baseScales('','raw ADC (higher = drier)').y, suggestedMin: Math.max(0, lo-pad), suggestedMax: hi+pad, min: Math.max(0, lo-pad) } },  // #797: floor at 0 (raw ADC can't be negative)
+        y:{ ...baseScales('','raw ADC (higher = drier)').y, suggestedMin: Math.max(0, lo-pad), suggestedMax: hi+pad, min: Math.max(0, lo-pad) },  // #797: floor at 0 (raw ADC can't be negative)
+        ...(envOn ? { env:{ position:'right', grid:{display:false},
+          ticks:{ color:css('--muted'), font:{size:10} },
+          title:{ display:true, text:'air temp °C · RH %  (context)', color:css('--muted'), font:{size:10} } } } : {}) },
       plugins:{ legend:{display:false}, bandShade:{ bands: DASH.cal.bands }, gapShade:{ gaps: DASH.gaps },
         tooltip:{ callbacks:{
-          title:(items)=>{ const it=items[0]; if(it.dataset._trend) return 'trend'; const loc=it.dataset._local[it.dataIndex]; return loc; },
-          label:(it)=>it.dataset._trend? `trend ${fmt(Math.round(it.parsed.y))}` : `raw ${fmt(it.parsed.y)}` } } } },
+          title:(items)=>{ const it=items[0]; if(it.dataset._trend) return 'trend'; if(it.dataset._env) return it.dataset.label; const loc=it.dataset._local[it.dataIndex]; return loc; },
+          label:(it)=>it.dataset._trend? `trend ${fmt(Math.round(it.parsed.y))}` : (it.dataset._env? `${fmt(Math.round(it.parsed.y*10)/10)}${it.dataset._env} · context` : `raw ${fmt(it.parsed.y)}`) } } } },
     plugins:[bandShade, gapShade]
   });
 }
@@ -1755,7 +1797,73 @@ function regView(){
   pend.sensors.add.forEach(a => sensors.push({...a, _staged: true}));
   const byPlant = {}, bySensor = {};
   (reg.current_mappings || []).forEach(m => { byPlant[m.plant_id] = m; bySensor[m.sensor_id] = m; });
+  // #921 3b: overlay staged assign/close so a card shows the pending map (server resolves truth on Save)
+  pend.mappings.close.forEach(c => {
+    for(const pid in byPlant){
+      const m = byPlant[pid];
+      if(m.device_id === c.device_id && m.channel === c.channel){ delete byPlant[pid]; delete bySensor[m.sensor_id]; }
+    }
+  });
+  pend.mappings.assign.forEach(a => {
+    const prevP = byPlant[a.plant_id]; if(prevP) delete bySensor[prevP.sensor_id];   // this plant drops its old sensor
+    const prevS = bySensor[a.sensor_id]; if(prevS) delete byPlant[prevS.plant_id];   // that sensor leaves its old plant
+    const m = {...a, _staged: true}; byPlant[a.plant_id] = m; bySensor[a.sensor_id] = m;
+  });
   return {plants, sensors, devices: (reg.devices || []), profiles: (reg.profiles || []), byPlant, bySensor};
+}
+
+// #921 slice 3b: the mapping picker (the anxiety) — plant-first, no hand-typed channels.
+let __regPicking = null;    // plant_id whose sensor-picker is open
+let __regPickPort = null;   // a chosen FREE port {device_id, channel} awaiting a sensor
+function regStageAssign(plantId, port){
+  regPend().mappings.assign.push({plant_id: plantId, sensor_id: port.sensor_id, device_id: port.device_id, channel: port.channel});
+  __regPicking = null; __regPickPort = null; __regErrs = [];
+  renderRegistry();
+}
+function regSensorPicker(plant, V, dById){
+  const wrap = el('div', 'regpicker');
+  const plantName = regPlantName(plant);
+  if(__regPickPort){   // a free port was chosen — place which unplaced sensor here (Q1 two-part pick)
+    const port = __regPickPort;
+    wrap.appendChild(el('div', 'regpickhdr', 'Which sensor is on ' + esc(regDeviceName(dById[port.device_id])) + ' · ' + esc(port.channel) + '?'));
+    const unplaced = V.sensors.filter(s => !V.bySensor[s.sensor_id] && s.lifecycle !== 'deleted');
+    if(!unplaced.length) wrap.appendChild(el('div', 'muted', 'No unplaced sensors — add one first.'));
+    unplaced.forEach(s => {
+      const b = el('button', 'regpickrow',
+        '<strong>' + esc(regSpell(s.sensor_id, 'Sensor')) + '</strong>' + (s.friendly_name ? ' <span class="muted">' + esc(s.friendly_name) + '</span>' : ''));
+      b.onclick = () => regStageAssign(plant.plant_id, {sensor_id: s.sensor_id, device_id: port.device_id, channel: port.channel});
+      wrap.appendChild(b);
+    });
+    const back = el('button', 'reglink muted', '← back to ports'); back.onclick = () => { __regPickPort = null; renderRegistry(); };
+    wrap.appendChild(back);
+    return wrap;
+  }
+  wrap.appendChild(el('div', 'regpickhdr', 'Which sensor watches ' + esc(plantName) + '?'));
+  let anyPort = false;
+  V.devices.forEach(d => {
+    (d.channels || []).forEach(ch => {
+      anyPort = true;
+      const where = regDeviceName(d) + ' · ' + ch.channel;
+      if(ch.sensor_id){   // occupied port — reassigning this sensor to the plant (device+channel come from here)
+        const onM = V.bySensor[ch.sensor_id];
+        const status = !onM ? 'free' : (onM.plant_id === plant.plant_id ? 'current'
+          : 'on ' + regPlantName((V.plants.find(p => p.plant_id === onM.plant_id)) || {plant_id: onM.plant_id}));
+        const b = el('button', 'regpickrow',
+          '<strong>' + esc(regSpell(ch.sensor_id, 'Sensor')) + '</strong> <span class="muted">' + esc(where) + ' · ' + esc(status) + '</span>');
+        if(onM && onM.plant_id === plant.plant_id) b.disabled = true;   // already this plant
+        else b.onclick = () => regStageAssign(plant.plant_id, {sensor_id: ch.sensor_id, device_id: d.device_id, channel: ch.channel});
+        wrap.appendChild(b);
+      } else {   // free port — place an unmapped sensor here
+        const b = el('button', 'regpickrow', '<span class="muted">' + esc(where) + ' · free — place a sensor</span>');
+        b.onclick = () => { __regPickPort = {device_id: d.device_id, channel: ch.channel}; renderRegistry(); };
+        wrap.appendChild(b);
+      }
+    });
+  });
+  if(!anyPort) wrap.appendChild(el('div', 'muted', 'No boards yet — flash one first.'));
+  const cancel = el('button', 'reglink muted', 'Cancel'); cancel.onclick = () => { __regPicking = null; __regPickPort = null; renderRegistry(); };
+  wrap.appendChild(cancel);
+  return wrap;
 }
 
 function renderRegistry(reg){
@@ -1784,15 +1892,22 @@ function renderRegistry(reg){
     card.appendChild(h);
     const m = V.byPlant[p.plant_id];
     if(m){
-      card.appendChild(el('div', 'regmap',
+      card.appendChild(el('div', 'regmap' + (m._staged ? ' staged' : ''),
         'watched by <strong>' + esc(regSpell(m.sensor_id, 'Sensor')) + '</strong> on '
-        + esc(regDeviceName(dById[m.device_id])) + ' <span class="muted">(' + esc(m.channel) + ')</span>'));
+        + esc(regDeviceName(dById[m.device_id])) + ' <span class="muted">(' + esc(m.channel) + ')</span>'
+        + (m._staged ? ' <span class="stagedtag">unsaved</span>' : '')));
       const cal = regCalChip(pfById[m.profile_id]); if(cal) card.appendChild(cal);
     } else {
       card.appendChild(el('div', 'regmap unmapped', 'no sensor yet'));
     }
     const meta = [p.location, p.pot_description].filter(Boolean).map(esc).join(' · ');
     if(meta) card.appendChild(el('div', 'regmeta muted', meta));
+    // #921 3b: the map affordance (the anxiety) — a plant-first picker, never dropdown soup.
+    const act = el('button', 'reglink', m ? 'Change sensor' : 'Assign a sensor');
+    act.onclick = () => { __regPicking = (__regPicking === p.plant_id ? null : p.plant_id); __regPickPort = null; renderRegistry(); };
+    card.appendChild(act);
+    if(__regPicking === p.plant_id) card.appendChild(regSensorPicker(p, V, dById));
+    // #921 3c: lifecycle rides the same card — mapping action first, destructive controls last.
     if(!p._staged) card.appendChild(regLifeCtl('plant', p.plant_id, regPlantName(p)));
     pgrid.appendChild(card);
   });

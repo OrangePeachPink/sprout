@@ -17,6 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from registry_model import (
     Plant,
+    Profile,
     RegistryModel,
     Sensor,
     load_registry_model,
@@ -88,6 +89,22 @@ def test_load_missing_config_is_empty_model(tmp_path: Path) -> None:
     assert m.plants == [] and registry_payload(m)["first_run"] is True
 
 
+def test_config_discovery_matches_device_registry_exactly() -> None:
+    # #1029: registry_model._REPO was parents[1] (= tools/), so _LOCAL pointed at a
+    # nonexistent tools/config/devices.local.json -> the loader honest-emptied over a
+    # fully-mapped fleet ("No boards yet" over 3 logging boards) and a Save would have
+    # written a shadow config. Pin the docstring's promise ("SAME discovery as
+    # device_registry") mechanically so the path can never drift off the repo root.
+    import device_registry as dr
+    import registry_model as rm
+
+    assert rm._LOCAL == dr._LOCAL
+    assert rm._EXAMPLE == dr._EXAMPLE
+    assert rm._LOCAL == rm._REPO / "config" / "devices.local.json"
+    # _REPO really is the repo root (the committed example config lives there)
+    assert (rm._REPO / "config" / "devices.example.json").exists()
+
+
 # --------------------------------------------------------------------------- #
 # /registry route serves the seam
 # --------------------------------------------------------------------------- #
@@ -155,6 +172,61 @@ def test_status_line_counts_boards_not_sensors() -> None:
     coll = tpl[tpl.index("function collDescribe(") : tpl.index("function collRender(")]
     assert "board${configured" in coll and "of ${configured} boards" in coll
     assert "sensors —" not in coll  # the old noun is gone from the count
+
+
+# --------------------------------------------------------------------------- #
+# #921 slice 5 — per-channel view (cal chip + the 3b free-port picker)
+# --------------------------------------------------------------------------- #
+def _cal_model() -> RegistryModel:
+    m = RegistryModel(
+        plants=[Plant("p01"), Plant("p02")],
+        sensors=[Sensor("s01"), Sensor("s02")],
+        devices=[{"device_id": "y9d41p", "channels": {"s1": {}, "s2": {}, "s3": {}}}],
+        profiles=[
+            Profile(
+                "pf1", name="cap-cal", tier="channel-cal", provenance={"who": "vkh"}
+            )
+        ],
+    )
+    # s01 mapped to s1 with a cal profile; s2 mapped uncalibrated; s3 left FREE
+    m.assign(
+        plant_id="p01",
+        sensor_id="s01",
+        device_id="y9d41p",
+        channel="s1",
+        profile_id="pf1",
+        now="2026-07-11T00:00:00Z",
+    )
+    m.assign(
+        plant_id="p02",
+        sensor_id="s02",
+        device_id="y9d41p",
+        channel="s2",
+        now="2026-07-11T00:00:00Z",
+    )
+    return m
+
+
+def test_channel_view_carries_occupancy_and_cal() -> None:
+    dev = registry_payload(_cal_model())["devices"][0]
+    by_ch = {c["channel"]: c for c in dev["channels"]}
+    # s1: mapped + calibrated (cal chip reads channel-cal + provenance)
+    assert by_ch["s1"]["sensor_id"] == "s01"
+    assert by_ch["s1"]["cal_tier"] == "channel-cal"
+    assert by_ch["s1"]["provenance"] == {"who": "vkh"}
+    # s2: mapped but uncalibrated (no profile referenced)
+    assert by_ch["s2"]["sensor_id"] == "s02"
+    assert by_ch["s2"]["cal_tier"] == "uncalibrated"
+    # s3: a FREE port — the 3b picker's candidate (sensor_id null)
+    assert by_ch["s3"]["sensor_id"] is None
+    assert by_ch["s3"]["cal_tier"] == "uncalibrated"
+
+
+def test_a_deleted_sensors_port_reads_free() -> None:
+    m = _cal_model()
+    m.set_lifecycle("sensor", "s01", "deleted")
+    by_ch = {c["channel"]: c for c in registry_payload(m)["devices"][0]["channels"]}
+    assert by_ch["s1"]["sensor_id"] is None  # deleted -> its port is free again
 
 
 if __name__ == "__main__":

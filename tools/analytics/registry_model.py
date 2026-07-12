@@ -396,7 +396,11 @@ def load_model(path: str | Path) -> RegistryModel:
     return RegistryModel.from_dict(doc)
 
 
-_REPO = Path(__file__).resolve().parents[1]
+# #1029: this file is tools/analytics/registry_model.py, so the repo root is parents[2]
+# (parents[1] is tools/ - an off-by-one that pointed _LOCAL at a nonexistent
+# tools/config/devices.local.json, so the loader honest-emptied over a fully-mapped
+# fleet and a Save would have shadowed it). Matches dashboard.py's _HERE.parents[1].
+_REPO = Path(__file__).resolve().parents[2]
 _LOCAL = _REPO / "config" / "devices.local.json"
 _EXAMPLE = _REPO / "config" / "devices.example.json"
 
@@ -434,7 +438,45 @@ def registry_payload(model: RegistryModel) -> dict:
     # #921 slice 3 Q2: the server owns id allocation - the client prefills the next
     # number from here instead of computing it (one source of truth, no add-race).
     doc["next_ids"] = {"plant": next_plant_id(model), "sensor": next_sensor_id(model)}
+    # #921 slice 5: per-CHANNEL view on each device - the port's occupancy (which sensor
+    # is mapped, null = FREE) + its cal tier/provenance. Serves BOTH the s5 cal chip AND
+    # the 3b free-port picker (an unmapped sensor's port is chosen from the free ports),
+    # one shape. Replaces the raw static `channels` dict with this derived array.
+    doc["devices"] = [
+        {**d, "channels": _channel_view(model, d)} for d in doc["devices"]
+    ]
     return doc
+
+
+def _channel_view(model: RegistryModel, device: dict) -> list[dict]:
+    """Each of a device's ports as ``{channel, sensor_id, cal_tier, provenance}``. Ports
+    come from the device's static ``channels{}`` keys (its config port inventory) plus
+    any channel that carries an assignment. ``sensor_id`` is the currently-mapped sensor
+    or ``None`` (a FREE port - the 3b picker's candidate); cal tier/provenance come from
+    the open assignment's referenced profile, else uncalibrated. A deleted entity drops
+    out via :meth:`open_assignments`, so its port reads free."""
+    dev_id = device.get("device_id")
+    static = device.get("channels")
+    ports = list(static.keys()) if isinstance(static, dict) else []
+    for a in model.assignments:
+        if a.device_id == dev_id and a.channel not in ports:
+            ports.append(a.channel)
+    profiles = {p.profile_id: p for p in model.profiles}
+    view: list[dict] = []
+    for ch in sorted(ports):
+        a = model.current_for_channel(dev_id, ch)
+        prof = profiles.get(a.profile_id) if (a and a.profile_id) else None
+        view.append(
+            {
+                "channel": ch,
+                "sensor_id": a.sensor_id
+                if a
+                else None,  # None = free port (3b candidate)
+                "cal_tier": prof.tier if prof else "uncalibrated",
+                "provenance": prof.provenance if prof else None,
+            }
+        )
+    return view
 
 
 def save_model(model: RegistryModel, path: str | Path) -> None:

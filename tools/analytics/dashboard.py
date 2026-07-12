@@ -969,6 +969,17 @@ def build_context(
             (_hours_since(r.timestamp_utc, start), r.raw_value) for r in plot_rs
         ]
         points = [{"x": round(h, 4), "y": v} for h, v in plot_pairs]
+        # #922: per-plant interior-ambient context, time-aligned to the same x as the
+        # moisture points (parallel + same length, so one decimation index thins both).
+        # The opt-in "context, not cause" overlay's data - the plant's own temp/RH from
+        # the ADR-0023 fill; None per point where no context was filled (honest gap).
+        env_points = [
+            {"x": round(h, 4), "temp_c": r.temp_context_c, "rh_pct": r.rh_context_pct}
+            for (h, _v), r in zip(plot_pairs, plot_rs)
+        ]
+        has_env = any(
+            p["temp_c"] is not None or p["rh_pct"] is not None for p in env_points
+        )
         # #697: the SUMMARY stats use the settled+valid window (fault zeros + the
         # insertion warmup excluded); the trajectory above keeps the recent-run plot.
         settled = _settled_readings(rs)
@@ -1156,6 +1167,8 @@ def build_context(
                 "points": points,
                 "local": locals_,
                 "trend": trend,
+                "env_points": env_points,  # #922 opt-in context overlay (temp/RH)
+                "has_env": has_env,  # #922: offer the toggle only when context exists
             }
         )
 
@@ -1229,6 +1242,7 @@ def build_context(
         idx = _dec_idx(len(ts["points"]), MAX_TRAJ_POINTS)
         ts["points"] = [ts["points"][i] for i in idx]
         ts["local"] = [ts["local"][i] for i in idx]
+        ts["env_points"] = [ts["env_points"][i] for i in idx]  # #922 same thinning
         # #699: break the line across a real dropout (post-decimation) so the
         # chart never interpolates a straight segment over a WiFi hole.
         ts["points"], ts["local"] = _insert_breaks(ts["points"], ts["local"])
