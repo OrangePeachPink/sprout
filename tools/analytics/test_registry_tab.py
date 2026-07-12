@@ -174,3 +174,41 @@ def test_regview_overlays_staged_mappings() -> None:
     view = _H[_H.index("function regView(") : _H.index("function regStageAssign(")]
     assert "pend.mappings.assign" in view and "pend.mappings.close" in view
     assert "_staged: true" in view
+
+
+# --------------------------------------------------------------------------- #
+# #1038 — inline field-edit (rename plants / sensors / boards); completes #600 UI
+# --------------------------------------------------------------------------- #
+
+
+def test_inline_edit_pencil_and_form_exist() -> None:
+    assert "function regEditPencil(" in _H and "function regEditForm(" in _H
+    assert "✎ Rename" in _H  # the pencil affordance on every entity
+    assert "regEditPencil('plant'" in _H
+    assert "regEditPencil('sensor'" in _H
+    assert "regEditPencil('device'" in _H  # the board rename — #600's UI half
+
+
+def test_edit_form_offers_editable_fields_only() -> None:
+    fn = _H[_H.index("function regEditForm(") : _H.index("function regStageEdit(")]
+    # plant: the mutable description fields; sensor + board: the label.
+    for field in ("'pet_name'", "'plant_type'", "'pot_description'", "'friendly_name'"):
+        assert field in fn
+    # the form's inputs (mk calls) are the editable fields only — the id is never a
+    # form input (#1021 edit-not-identity is enforced server-side; the id rides as the
+    # target key in regStageEdit, not an editable field).
+    assert "mk('pet name', 'pet_name'" in fn
+    assert "mk('board name', 'friendly_name'" in fn
+
+
+def test_edit_stages_into_the_edit_section_not_add() -> None:
+    fn = _H[_H.index("function regStageEdit(") : _H.index("function regDirtyBar(")]
+    assert "p[sec].edit" in fn and ".push(rec)" in fn
+    assert "one staged edit per entity" in fn  # replace-not-append per id
+
+
+def test_regview_overlays_edits_and_devicename_reads_name() -> None:
+    view = _H[_H.index("function regView(") : _H.index("regStageAssign")]
+    assert "pend.plants.edit" in view and "pend.devices.edit" in view
+    # a board rename writes `name` server-side (#583); the label render must read it.
+    assert "d.name || d.friendly_name" in _H
