@@ -42,6 +42,12 @@ def combine(primary: str, extra: list[str]) -> dict:
     }
     seen: set[str] = set()
     for path in [primary, *extra]:
+        # A board absent from WEB_FLASH_VERIFIED (factory_bin.py) emits NO manifest -
+        # skip it: the flasher won't offer that board, and the deploy won't break.
+        # (The primary is loaded above and must exist - the close-criterion board.)
+        if not Path(path).is_file():
+            print(f"skip: no manifest at {path} (board not web-flash-verified)")
+            continue
         m = _load(path)
         prov = m.get("provenance", {})
         for build in m.get("builds", []):
