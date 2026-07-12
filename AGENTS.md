@@ -231,6 +231,10 @@ grill rulings, first renders of new user surfaces, ADRs, and hardware.
 - **External contributions** — a community PR never rides V2; outside contributors always get
   maintainer review.
 - **Hardware/bench actions and the maintainer's local config** — her hands, her files.
+- **PII/identifier-adjacent work** — evidence packets carrying captured output, images, or logs;
+  identifier-guard/denylist changes; and any issue/PR **text** naming machines, networks, or people.
+  The v0.7.2 lesson: issue titles and bodies carried real identifiers, and the leak-tracking issue WAS
+  the leak (#865). The maintainer's eyes on anything an identifier could ride.
 
 **The V2 fence (unchanged, all of it, always):**
 
@@ -239,8 +243,9 @@ grill rulings, first renders of new user surfaces, ADRs, and hardware.
 - **Every V2 merge lands one line in the release's accel-merge digest issue** (PR, item, evidence link).
   The maintainer skims it anytime and holds an **instant no-questions revert lever** — comment
   `revert #N` and Workflow reverts, no debate. The lever itself is drill-tested each release (#1040).
-- **Docs/evidence packets** ride V2 when verified per the bench-evidence landing convention
-  (the #1037 precedent).
+- **Docs-only changes** (no captured output, no images, no identifiers) ride V2; **bench-evidence
+  packets are V1 under the PII class above** — the gate still pre-verifies them per the landing
+  convention, but the maintainer clicks the merge.
 
 (Future rungs V3/V4 — more autonomous building, self-certification — remain named and deliberately not now.)
 
