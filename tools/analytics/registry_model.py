@@ -346,7 +346,11 @@ class RegistryModel:
             if not isinstance(raw, dict) or not raw.get("device_id"):
                 continue
             did = raw["device_id"]
-            m.devices.append({**raw, "lifecycle": "active"})
+            # #1036: honor the raw off-by-choice flag - a `retired: true` device (the
+            # fleet excludes it via _active_served) migrates to `paused`, not `active`,
+            # so the tab's truth matches the fleet's and it renders a calm Paused chip.
+            lifecycle = "paused" if raw.get("retired") else "active"
+            m.devices.append({**raw, "lifecycle": lifecycle})
             channels = (
                 raw.get("channels") if isinstance(raw.get("channels"), dict) else {}
             )
