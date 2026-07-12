@@ -82,6 +82,7 @@ from source_adapter import (  # noqa: E402  (the source-adapter seam, #277/#486)
     DeviceAdapter,
     FleetAdapter,
     TetheredAdapter,
+    active_mismatches,
 )
 
 _REPO = _HERE.parents[1]
@@ -391,6 +392,8 @@ def _fleet_adapter(registry=None):
                     candidates=candidate_base_urls(d),
                     on_resolved=make_healer(d),
                     pressure_source=_pressure,
+                    expected_id=d.device_id,  # #1026: loud on a ghost identity
+                    previous_ids=getattr(d, "previous_ids", ()),
                 )
                 for d in served
             ),
@@ -553,6 +556,10 @@ def _context(
         raise NoDataYet(resolved, had_any_logged=had_any_logged)  # #543
     ctx = build_context(data, registry=reg)
     perf.mark("build")
+    # #1026: surface any ghost identity the fleet fetch above just detected — a board
+    # answering at a registered address with an id the registry never heard of. A
+    # calm-but-unmissable notice, never a silent unadopted group.
+    ctx["identity_mismatches"] = active_mismatches()
     ctx["meta"]["all_channels"] = all_ch  # full set, so the toggles can re-enable
     # #953: attach the phase breakdown so the caller (do_GET) can log it alongside the
     # render/serialize phase it owns. Additive meta only — no behavior change.
@@ -659,7 +666,16 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif parsed.path == "/monitor/status":
                 self._send_json(_MONITOR.status())
             elif parsed.path == "/fleet/status":  # the fleet poller (#588)
-                self._send_json(_FLEET.status())
+                # #1026: count ghost identities alongside the poller status so the
+                # mismatch is visible without a screenshot.
+                mism = active_mismatches()
+                self._send_json(
+                    {
+                        **_FLEET.status(),
+                        "identity_mismatches": mism,
+                        "mismatch_count": len(mism),
+                    }
+                )
             elif parsed.path == "/collection/status":  # both paths, one view (#588)
                 self._send_json(status_all(_MONITOR, _FLEET))
             elif parsed.path == "/registry":  # #921 the Plants & Sensors tab seam
