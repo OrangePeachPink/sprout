@@ -250,6 +250,8 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .regcard.willdelete .regname, .regrow.willdelete .regname { text-decoration: line-through; }
 .reglink.danger { color: var(--st-dry); }
 .regdelwarn { color: var(--st-dry); font-size: 12px; font-weight: 600; }
+.regreceipt { color: var(--muted); font-size: 12px; margin: 6px 0; padding: 6px 10px;
+  border-left: 2px solid var(--border); }
 .calbanner { font-size: 12px; color: var(--st-dry); background: var(--surface);
   border: 1px dashed var(--st-dry); border-radius: var(--r-tile); padding: 8px 12px; }
 .devribbon { font-size: 11px; color: var(--muted); padding: 0 2px; }
@@ -1695,6 +1697,7 @@ function regDirtyCount(){ const b = __pending; if(!b) return 0;
        + b.devices.edit.length + b.mappings.assign.length + b.mappings.close.length + b.lifecycle.length; }
 let __regAdding = null;   // 'plant' | 'sensor' | null — which inline add-form is open
 let __regErrs = [];       // structured 400 errors from the last Save attempt
+let __regReceipt = null;  // #1024: the last purge's receipt {removed:[…], archived_remaining} or null
 let __regArmDelete = null;   // "kind:id" armed for the loud delete-confirm (Q3), or null
 
 // ---- #921 slice 3c: lifecycle (Pause/Resume + loud Delete) — surface for #1022's purge ----
@@ -1713,7 +1716,7 @@ function regStageLifecycle(kind, id, state){
   const p = regPend();
   p.lifecycle = p.lifecycle.filter(l => !(l.kind === kind && l.entity_id === id));
   if(state !== regServerLifecycle(kind, id)) p.lifecycle.push({kind, entity_id: id, state});  // matching server = cancel
-  __regArmDelete = null; __regErrs = [];
+  __regArmDelete = null; __regErrs = []; __regReceipt = null;
   renderRegistry();
 }
 function regLifeCtl(kind, id, name){   // Pause/Resume + Delete (a loud two-step confirm, Q3)
@@ -1839,6 +1842,12 @@ function renderRegistry(reg){
 
   // ---- structured errors (from a failed Save) + the dirty bar (Q10) ----
   __regErrs.forEach(e => host.appendChild(el('div', 'regerr', esc((e.op ? e.op + ' — ' : '') + e.message))));
+  if(__regReceipt){   // #1024: the honest purge receipt — exactly what the delete reached on disk
+    const r = __regReceipt, n = (r.removed || []).length;
+    host.appendChild(el('div', 'regreceipt',
+      'Deleted — removed ' + n + ' log file' + (n === 1 ? '' : 's') + ' from disk'
+      + (r.archived_remaining ? '; ' + r.archived_remaining + ' archived segment' + (r.archived_remaining === 1 ? '' : 's') + ' remain' : '') + '.'));
+  }
   if(regDirtyCount() > 0) host.appendChild(regDirtyBar());
 }
 
@@ -1880,7 +1889,7 @@ function regStageAdd(kind, form){
   form.querySelectorAll('input').forEach(i => { const v = i.value.trim(); if(v) rec[i.dataset.k] = v; });
   if(kind === 'sensor' && !rec.sensor_id){ __regErrs = [{message: 'A sensor number is required.'}]; renderRegistry(); return; }
   regPend()[kind === 'plant' ? 'plants' : 'sensors'].add.push(rec);
-  __regAdding = null; __regErrs = [];
+  __regAdding = null; __regErrs = []; __regReceipt = null;
   renderRegistry();
 }
 function regDirtyBar(){
@@ -1897,15 +1906,27 @@ function regDirtyBar(){
 async function regSave(){
   const batch = __pending; if(!batch) return;
   __regErrs = [];
+  // #1024 fix: a staged `deleted` is a real PURGE (#1022's `purge:{plants,sensors,devices}`),
+  // NOT a lifecycle flag-flip. `lifecycle: state='deleted'` only flags the entity — it stays in
+  // devices[], in the poll set (#953's tax), trash rows stay. Delete promises "and its history",
+  // so it must emit purge. Split at the wire: state==='deleted' → purge by kind; the rest stays.
+  const purge = {plants: [], sensors: [], devices: []};
+  const lifecycle = [];
+  (batch.lifecycle || []).forEach(l => {
+    const sec = {plant: 'plants', sensor: 'sensors', device: 'devices'}[l.kind];
+    if(l.state === 'deleted' && sec) purge[sec].push(l.entity_id); else lifecycle.push(l);
+  });
+  const wire = {...batch, lifecycle, purge};
   try{
     const { ok, status, data } = await apiJson('/registry/apply', {
-      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(batch),
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(wire),
     });
     if(!ok){
       __regErrs = (data && data.errors) || [{message: 'Save failed (HTTP ' + status + ')'}];
       renderRegistry(); return;
     }
     __pending = null;   // committed — the server returns fresh state, no 2nd GET
+    __regReceipt = (data && data.files) ? data.files : null;   // #1024: the purge receipt (honest surface for what delete reached)
     if(data && data.registry) renderRegistry(data.registry); else registryPoll();
   }catch(e){ __regErrs = [{message: 'Save failed: ' + e}]; renderRegistry(); }
 }

@@ -127,3 +127,15 @@ def test_lifecycle_stages_the_apply_shape() -> None:
     fn = _H[_H.index("function regStageLifecycle(") : _H.index("function regLifeCtl(")]
     assert "entity_id: id" in fn and "state}" in fn
     assert "p.lifecycle.push" in fn
+
+
+def test_delete_wires_to_purge_not_a_lifecycle_flag() -> None:
+    # #1024 gate fix: a staged 'deleted' emits #1022's real purge:{...}, NOT
+    # lifecycle:state=deleted (a flag-flip leaving the entity in devices[] + the
+    # poll set — Delete would promise "and its history" and remove nothing).
+    save = _H[_H.index("async function regSave(") : _H.index("function regDirty(")]
+    assert "purge" in save
+    assert "l.state === 'deleted'" in save and "purge[sec].push" in save
+    assert "else lifecycle.push(l)" in save  # pause/resume still ride lifecycle
+    # the purge receipt (files.removed) is the honest surface for what delete reached.
+    assert "data.files" in save and "regreceipt" in _H
