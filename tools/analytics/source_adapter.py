@@ -35,6 +35,7 @@ construct it.
 from __future__ import annotations
 
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -109,6 +110,58 @@ def _http_get(url: str, timeout: float = _FETCH_TIMEOUT_S) -> str:
         return resp.read().decode("utf-8", errors="replace")
 
 
+# #1020: trip after this many consecutive failed fetches, then SKIP for the cooldown.
+# One transient blip never trips; a board dead for a few polls stops burning its ~4s
+# timeout on every /data.json request.
+_BREAKER_TRIP_AFTER = 3
+_BREAKER_COOLDOWN_S = 30.0
+
+
+class FetchBreaker:
+    """A per-device negative cache / circuit breaker for the fleet fetch path (#1020).
+
+    #953's durable half: an offline board burned its full ``_FETCH_TIMEOUT_S`` on
+    **every** request, and the pool is parallel, so one dead board set the dashboard's
+    wall-clock. After ``trip_after`` consecutive failures a device is SKIPPED for
+    ``cooldown_s`` (the timeout is never paid in the outage); a skip returns nothing,
+    exactly like a real miss, so it surfaces as "not answering" (ADR-0028), never "no
+    data by design". After the cooldown one real retry runs (half-open): success closes
+    it, a failure re-opens it. State is keyed by device + shared across per-request
+    adapters, so it lives at module scope. Thread-safe (parallel fetch)."""
+
+    def __init__(
+        self,
+        trip_after: int = _BREAKER_TRIP_AFTER,
+        cooldown_s: float = _BREAKER_COOLDOWN_S,
+    ) -> None:
+        self._trip_after = trip_after
+        self._cooldown_s = cooldown_s
+        self._state: dict[str, tuple[int, float]] = {}  # key -> (fails, open_until)
+        self._lock = threading.Lock()
+
+    def should_skip(self, key: str, now: float) -> bool:
+        """True while the breaker is OPEN for ``key`` - tripped AND cooling down."""
+        with self._lock:
+            st = self._state.get(key)
+            return st is not None and st[0] >= self._trip_after and now < st[1]
+
+    def record(self, key: str, *, ok: bool, now: float) -> None:
+        """A success closes the breaker; a failure increments and (past the threshold)
+        opens it for the cooldown window."""
+        with self._lock:
+            if ok:
+                self._state.pop(key, None)
+                return
+            fails = self._state.get(key, (0, 0.0))[0] + 1
+            open_until = now + self._cooldown_s if fails >= self._trip_after else 0.0
+            self._state[key] = (fails, open_until)
+
+
+# Module-scoped so breaker state survives across the per-request FleetAdapter /
+# DeviceAdapter builds in serve.py. Tests inject a fresh breaker + a fake `mono`.
+_DEFAULT_BREAKER = FetchBreaker()
+
+
 class DeviceAdapter:
     """The WiFi-served transport (#276/#277): a device's own ``GET /telemetry``,
     the same wire bytes as serial. ``base_url`` is the device's root, e.g.
@@ -143,6 +196,8 @@ class DeviceAdapter:
         pressure_source=None,
         candidates=None,
         on_resolved=None,
+        breaker=None,
+        mono=None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         # #676: ordered addresses to try — the mDNS hostname first (stable across
@@ -155,6 +210,11 @@ class DeviceAdapter:
         self._clock = clock if clock is not None else self._utc_now
         self._pressure_source = pressure_source
         self._next_sample_id = 0
+        # #1020: the shared negative cache. Keyed by the device's first candidate (its
+        # stable base_url) so state persists across per-request adapter builds.
+        self._breaker = breaker if breaker is not None else _DEFAULT_BREAKER
+        self._mono = mono if mono is not None else time.monotonic
+        self._breaker_key = self._candidates[0] if self._candidates else None
 
     @staticmethod
     def _utc_now() -> datetime:
@@ -165,6 +225,14 @@ class DeviceAdapter:
         # adapter always reads its own discovered address, matching the seam's
         # contract (a caller never needs to know which transport it's reading
         # from, or pass transport-specific args through a generic call site).
+        # #1020: if the breaker is OPEN for this device (it failed its last N fetches
+        # and is within the cooldown), SKIP the fetch - don't burn the timeout. An
+        # empty return is identical to a real miss, so it surfaces as "not answering",
+        # never "no data by design". After the cooldown one real retry runs (half-open).
+        if self._breaker_key is not None and self._breaker.should_skip(
+            self._breaker_key, self._mono()
+        ):
+            return LogData()
         # #676: try each candidate in order (mDNS hostname first, IP fallback) and
         # use the first that ANSWERS - so a board that rebooted to a new DHCP IP is
         # still reached by name, no registry hand-edit.
@@ -177,6 +245,10 @@ class DeviceAdapter:
                 break
             except (urllib.error.URLError, OSError, TimeoutError):
                 continue  # this address is unreachable - try the next candidate
+        if self._breaker_key is not None:  # #1020: success closes, a miss trips open
+            self._breaker.record(
+                self._breaker_key, ok=text is not None, now=self._mono()
+            )
         if text is None:
             return LogData()  # no candidate reachable - honest empty, not a crash
 
