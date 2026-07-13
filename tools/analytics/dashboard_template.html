@@ -588,6 +588,27 @@ footer.prov code { font-family: var(--font-data); }
        here; quality timeline, data integrity, bench provenance, segment listing →
        here; fleet groups + cards + ladder + trajectory stay on Monitor. -->
   <div id="diagnostics" style="display:none">
+    <!-- #995: the per-physical-sensor health/QA readout (grill Q8) — extends the bench
+         SENSOR_QA discipline into the running rig. NOT a plant life-story; a probe QA
+         detail: out-of-envelope, stuck/stale reads, drift, dropouts, inspect-for-corrosion. -->
+    <style>
+      .healthgrid{display:flex;flex-direction:column;gap:10px}
+      .hrow{border:1px solid var(--line,#2a2a2a);border-radius:10px;padding:10px 12px;font-family:var(--font-ui)}
+      .hrow-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+      .hsid{font-weight:600}
+      .hstat{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:999px;border:1px solid currentColor}
+      .hstat.ok{color:var(--leaf,#4caf7d)}
+      .hstat.watch{color:#c9a227}
+      .hstat.inspect{color:#d2603a}
+      .hmetrics{color:var(--muted,#8a8a8a);font-size:.82rem;margin-top:4px}
+      .hmetrics b{color:var(--ink,#ddd);font-weight:600}
+      .hreasons{margin:6px 0 0;padding-left:18px;font-size:.82rem;color:var(--ink,#ccc)}
+      .hreasons li{margin:2px 0}
+    </style>
+    <section class="card" id="healthCard">
+      <div class="panel-h"><h2>Sensor health</h2><span class="cap">per physical probe — out-of-envelope reads, stuck/stale runs, baseline drift, dropouts, and honest inspect-for-corrosion prompts (the bench SENSOR_QA discipline, on the running rig · #995)</span></div>
+      <div id="sensorHealth" class="healthgrid"><span class="muted">Loading sensor health…</span></div>
+    </section>
     <!-- #923: the serial baseline (a single USB-tethered board) lives here now, off the
          daily Monitor view — an advanced / occasional path. Monitor's one "Start
          collection" already includes a tethered board when present; this drives ONLY the
@@ -2145,6 +2166,40 @@ async function registryPoll(){
   try{ renderRegistry((await apiJson('/registry', {cache:'no-store'})).data); }
   catch(e){ /* old server without the route, or transient — leave last state */ }
 }
+// #995: the per-physical-sensor health/QA readout. Lazy-loaded when Diagnostics opens
+// (it reads the full history for drift + dropouts, so it's not on the hot boot path).
+function _hesc(s){ return String(s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function _healthMetrics(h){
+  const bits = [`<b>${h.readings}</b> reads`];
+  if(h.span_hours != null) bits.push(`${h.span_hours}h span`);
+  bits.push(h.out_of_envelope_rate == null
+    ? 'envelope: <b>uncalibrated</b>'
+    : `<b>${(h.out_of_envelope_rate*100).toFixed(1)}%</b> out-of-envelope`);
+  if(h.longest_stuck_run >= 2) bits.push(`stuck run <b>${h.longest_stuck_run}</b>`);
+  if(h.drift_raw != null) bits.push(`drift <b>${h.drift_raw>0?'+':''}${h.drift_raw}</b> raw`);
+  if(h.dropouts) bits.push(`<b>${h.dropouts}</b> dropout${h.dropouts===1?'':'s'}`);
+  if(h.faults) bits.push(`<b>${h.faults}</b> fault${h.faults===1?'':'s'}`);
+  return bits.join(' · ');
+}
+function renderHealthRow(h){
+  const reasons = (h.reasons||[]).length
+    ? `<ul class="hreasons">${h.reasons.map(r=>`<li>${_hesc(r)}</li>`).join('')}</ul>` : '';
+  const corr = h.inspect_for_corrosion ? ' 🔧 inspect for corrosion' : '';
+  return `<div class="hrow">
+    <div class="hrow-h"><span class="hsid">${_hesc(h.sensor_id||'—')}</span>`
+    + `<span class="hstat ${h.status}">${h.status}${corr}</span></div>`
+    + `<div class="hmetrics">${_healthMetrics(h)}</div>${reasons}</div>`;
+}
+async function healthPoll(){
+  const box = document.getElementById('sensorHealth'); if(!box) return;
+  try{
+    const j = await apiJson('/sensor/health', {cache:'no-store'});
+    const sensors = ((j && j.data) || j).sensors || [];  // apiJson wraps payload in .data
+    box.innerHTML = sensors.length
+      ? sensors.map(renderHealthRow).join('')
+      : '<span class="muted">No sensor readings yet — health fills in as data arrives.</span>';
+  }catch(e){ box.innerHTML = '<span class="muted">Sensor health unavailable (older server or no data).</span>'; }
+}
 function showTab(name, rerender){
   const tabs = ['monitor', 'plants', 'capture', 'diagnostics'];   // Lab is its own /lab route
   if(!tabs.includes(name)) name = 'monitor';
@@ -2162,6 +2217,7 @@ function showTab(name, rerender){
   document.getElementById('diagnostics').style.display = isDiag ? 'block' : 'none';
   const plantsEl = document.getElementById('plants');
   if(plantsEl){ plantsEl.style.display = isPlants ? 'block' : 'none'; if(isPlants) registryPoll(); }
+  if(isDiag) healthPoll();  // #995: refresh the sensor-health readout each time Diagnostics opens
   // #708: Monitor-only view controls don't ride on tabs where they do nothing (they read as dead controls).
   // Channel toggles filter only Monitor's cards/trajectory -> Monitor only. The range windows every chart
   // (Monitor + Diagnostics) -> hidden on Capture only. Refresh / auto / theme / Stop-server stay global.
