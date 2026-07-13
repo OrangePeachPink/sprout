@@ -2186,15 +2186,18 @@ function initTabs(){
 /* ---- render everything (re-runnable for live refresh) ---- */
 function renderShellState(){
   // #1018: the page is served as a fast SHELL (no analytics pipeline). Until /data.json
-  // hydrates DASH, the Monitor overview has nothing real to draw — show a light state, not
-  // a crash on missing fields. refresh() replaces this the moment data lands. The Capture /
-  // Plants tabs are pure display toggles and are already interactive; this only fills Monitor.
-  const ov = document.getElementById('overview');
-  if(!ov) return;
-  const msg = (DASH && DASH.empty)
-    ? 'No readings yet — plug in a probe and start logging; this fills in as data arrives.'
-    : 'Loading sensors…';
-  ov.innerHTML = `<section class="card"><div class="muted" style="padding:22px">${msg}</div></section>`;
+  // hydrates DASH, the Monitor overview has nothing real to draw — show a light state in the
+  // CARDS slot only (the one element renderCards repopulates on hydrate). Must NOT wipe
+  // #overview: its other children (#cards, the chart canvases) are STATIC and the render
+  // functions populate them by id — replacing #overview.innerHTML would delete them and make
+  // the first real render throw. Capture/Plants tabs are display toggles, already interactive.
+  const cards = document.getElementById('cards');
+  if(cards){
+    const msg = (DASH && DASH.empty)
+      ? 'No readings yet — plug in a probe and start logging; this fills in as data arrives.'
+      : 'Loading sensors…';
+    cards.innerHTML = `<div class="muted" style="padding:18px">${msg}</div>`;
+  }
 }
 function renderAll(){
   // #1018: a fast-shell page (or a truly-empty install) has no Monitor data to draw yet.
