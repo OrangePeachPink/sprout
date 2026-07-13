@@ -51,6 +51,44 @@ def load_location(path: str | Path | None = None) -> dict | None:
     return doc
 
 
+def location_status(path: str | Path | None = None) -> dict:
+    """#966: whether a rig location is configured - NAME ONLY, not the coordinates. The
+    privacy fence (ADR-0013 §3 / PRD-0002 R6): coords never cross onto a screenshottable
+    surface, so the status endpoint that feeds the UI cannot leak them."""
+    loc = load_location(path)
+    return {"configured": loc is not None, "name": (loc or {}).get("name")}
+
+
+def save_location(doc: dict, path: str | Path | None = None) -> dict:
+    """#966: write the rig location to the GITIGNORED local config (never a tracked
+    file). Validates lat/long are present, numeric, in range. Returns NAME-ONLY
+    status (never echoes coordinates). NEVER logs the coordinates (ADR-0013 §3). Atomic
+    temp-swap so a crash mid-write can't truncate the config."""
+    try:
+        lat = float(doc.get("latitude"))
+        lon = float(doc.get("longitude"))
+    except (TypeError, ValueError):
+        raise ValueError("latitude and longitude are required numbers") from None
+    if not (-90.0 <= lat <= 90.0) or not (-180.0 <= lon <= 180.0):
+        raise ValueError("latitude must be -90..90 and longitude -180..180")
+    try:
+        tz = float(doc.get("tz_offset_hours") or 0)
+    except (TypeError, ValueError):
+        raise ValueError("tz_offset_hours must be a number") from None
+    out = {
+        "name": (str(doc.get("name")).strip() if doc.get("name") else "my rig"),
+        "latitude": lat,
+        "longitude": lon,
+        "tz_offset_hours": tz,
+    }
+    target = Path(path) if path else _LOCATION
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target.with_suffix(target.suffix + ".tmp")
+    tmp.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
+    tmp.replace(target)
+    return {"configured": True, "name": out["name"]}  # name only, never coords
+
+
 def _to_julian(when_utc: datetime) -> float:
     if when_utc.tzinfo is None:
         when_utc = when_utc.replace(tzinfo=timezone.utc)
