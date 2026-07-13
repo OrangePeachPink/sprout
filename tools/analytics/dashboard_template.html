@@ -2161,7 +2161,21 @@ function initTabs(){
 }
 
 /* ---- render everything (re-runnable for live refresh) ---- */
+function renderShellState(){
+  // #1018: the page is served as a fast SHELL (no analytics pipeline). Until /data.json
+  // hydrates DASH, the Monitor overview has nothing real to draw — show a light state, not
+  // a crash on missing fields. refresh() replaces this the moment data lands. The Capture /
+  // Plants tabs are pure display toggles and are already interactive; this only fills Monitor.
+  const ov = document.getElementById('overview');
+  if(!ov) return;
+  const msg = (DASH && DASH.empty)
+    ? 'No readings yet — plug in a probe and start logging; this fills in as data arrives.'
+    : 'Loading sensors…';
+  ov.innerHTML = `<section class="card"><div class="muted" style="padding:22px">${msg}</div></section>`;
+}
 function renderAll(){
+  // #1018: a fast-shell page (or a truly-empty install) has no Monitor data to draw yet.
+  if(DASH && (DASH.shell || DASH.empty)){ renderShellState(); return; }
   if(currentDetail) renderDetail(currentDetail);  // detail mode: no hidden overview charts
   else renderOverview();
 }
@@ -2218,6 +2232,12 @@ async function refresh(){
     const payload = await r.json();
     if(gen !== __reqGen) return;           // superseded during the parse — drop, don't paint
     DASH = payload;
+    // #1018 instrument: real data has landed — the shell → hydrated boundary. Marked here
+    // (not after renderAll) so it's the honest "data received" moment regardless of render.
+    if(typeof window !== 'undefined' && window.__boot && window.__boot.hydratedMs === null && !DASH.shell && !DASH.empty){
+      window.__boot.hydratedMs = performance.now();
+      console.info(`[boot] hydrated ${Math.round(window.__boot.hydratedMs)}ms — first /data.json paint (shell → data)`);
+    }
     connOk = true; lastOkMs = Date.now();  // recovered / still healthy (latest request only)
     renderAll();
   }catch(e){
@@ -2838,10 +2858,16 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
     monSetStatus('serve via serve.py for monitor control');
   }
 
+  // #1018 instrument: boot phase marks so this load path is never un-instrumented again
+  // (the maintainer's explicit complaint). nav-origin -> shell-interactive -> hydrated;
+  // logged to the console + parked on window.__boot for a live probe.
+  window.__boot = { originMs: (window.performance && performance.timeOrigin) || 0, hydratedMs: null };
   applyTheme();
   // #921 Q10: the browser-level guard for unsaved registry edits (close/reload/navigate away).
   window.addEventListener('beforeunload', e => { if(typeof regDirty === 'function' && regDirty()){ e.preventDefault(); e.returnValue = ''; } });
   initTabs();
+  window.__boot.shellInteractiveMs = performance.now();
+  console.info(`[boot] shell interactive ${Math.round(window.__boot.shellInteractiveMs)}ms — tabs wired, form usable (pipeline not on this path, #1018)`);
   renderAll();
   // #921: a fresh install has an empty registry — land on the setup tab (retires the launchpad, Q9).
   registryPoll().then(()=>{ if(__registry && __registry.first_run && !location.hash) showTab('plants', false); });

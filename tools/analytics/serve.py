@@ -516,6 +516,21 @@ def _perf_log(ctx: dict, final_name: str, final_s: float, rng: str) -> None:
     )
 
 
+def _has_segments(inputs) -> bool:
+    """#1018: cheap (parse-free) check that there IS data to hydrate, so the fast-shell
+    page route keeps a genuinely-fresh checkout on its empty-state page. Expands dirs to
+    segment files; explicit CLI inputs and the real ``gather_inputs()`` both work."""
+    for p in inputs or gather_inputs():
+        pp = Path(p)
+        if pp.is_file() and pp.name.endswith((".csv", ".csv.gz")):
+            return True
+        if pp.is_dir() and (
+            next(pp.glob("*.csv"), None) or next(pp.glob("*.csv.gz"), None)
+        ):
+            return True
+    return False
+
+
 def _context(
     inputs: list[str] | None = None,
     hours: float | None = None,
@@ -647,11 +662,26 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
         try:
             if parsed.path in ("/", "/index.html"):
-                ctx = _context(self.inputs, hours, channels)
-                _t = time.perf_counter()
-                html = render(ctx)
-                _perf_log(ctx, "render", time.perf_counter() - _t, rng)  # #953
-                self._send(html, "text/html; charset=utf-8")
+                # #1018: serve the SHELL fast - do NOT run the analytics pipeline (fetch
+                # + build, ~10 s) just to hand back the HTML. A landing tab (#capture /
+                # #plants) reads none of it, and Monitor re-fetches /data.json on boot
+                # (setRange -> refresh), so the server-side build was redundant tax.
+                # Discovering files is cheap; a genuinely-fresh checkout (no segments)
+                # keeps its empty-state page, otherwise serve the shell and let the
+                # client hydrate Monitor from /data.json (the form paints in ~ms).
+                if not _has_segments(self.inputs):
+                    self._send(_empty_state_html(False), "text/html; charset=utf-8")
+                else:
+                    _t = time.perf_counter()
+                    html = render({"shell": True})
+                    with contextlib.suppress(Exception):  # #1018: render-only cost
+                        sys.stderr.write(
+                            "[perf] route=/ shell render="
+                            f"{round((time.perf_counter() - _t) * 1000)}ms"
+                            " (pipeline skipped, #1018)\n"
+                        )
+                        sys.stderr.flush()
+                    self._send(html, "text/html; charset=utf-8")
             elif parsed.path == "/data.json":
                 ctx = _context(self.inputs, hours, channels)
                 _t = time.perf_counter()
