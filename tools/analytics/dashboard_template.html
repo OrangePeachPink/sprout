@@ -123,6 +123,10 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .recbanner::before { content: ""; width: 8px; height: 8px; border-radius: var(--r-pill);
   background: var(--muted); flex: none; }
 .recbanner .recnote { color: var(--muted); font-family: var(--font-data); }
+/* #966: rig-location setup form (Diagnostics) */
+.locgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.locgrid .capf { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.locgrid .capf input { font-family: var(--font-data); }
 /* #1026: the ghost-identity notice — earned alarm (warning-toned, unmissable), not horror. */
 .mismatchbanner { margin-top: 7px; padding: 8px 12px; border-radius: 8px; font-size: 13px;
   color: var(--ink); display: block;
@@ -597,6 +601,25 @@ footer.prov code { font-family: var(--font-data); }
         <button class="btn" id="monStop" type="button" disabled>■ Stop</button>
         <span class="capstatus" id="monStatus">—</span>
       </div>
+    </section>
+    <!-- #966: rig-location setup — the last hand-edited JSON a new user would hit. Enables
+         day/night shading, solar position + weather. Privacy fence (ADR-0013 §3): coordinates
+         are written ONLY to the gitignored local config and NEVER echoed back to this screen
+         (the status shows the name, not the numbers). Serve-only (localhost write). -->
+    <section class="card" id="locCard">
+      <div class="panel-h"><h2>Rig location</h2><span class="cap">turns on day/night shading, solar position + weather — coordinates stay on this machine, never committed or shown back</span></div>
+      <div id="locStatus" class="small muted" style="margin-bottom:10px">—</div>
+      <div class="locgrid">
+        <label class="capf">name<input id="locName" type="text" maxlength="40" placeholder="my windowsill" spellcheck="false"></label>
+        <label class="capf">latitude<input id="locLat" type="number" step="any" placeholder="e.g. 51.48"></label>
+        <label class="capf">longitude<input id="locLon" type="number" step="any" placeholder="e.g. 0.00"></label>
+        <label class="capf">tz offset (hrs)<input id="locTz" type="number" step="any" placeholder="e.g. 0"></label>
+      </div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button class="btn primary" id="locSave" type="button">Save location</button>
+        <span class="capstatus" id="locSaveStatus"></span>
+      </div>
+      <div class="small muted" style="margin-top:8px">When set, the trajectory shows real day/night shading (computed solar geometry) and pulls local weather. Coordinates are written only to the gitignored <code>config/location.local.json</code> — never committed, never logged, never shown back here.</div>
     </section>
     <!-- #758: the project's two front doors, reachable from inside the running app. Reference material
          lives in Diagnostics & Logs, off the daily Monitor view (doctrine two-jobs split, #716). -->
@@ -1361,7 +1384,7 @@ function envConditionsLine(){
   // #198: measured conditions for the visible window - honest, never fabricated.
   // No location configured -> say exactly why the shading is absent (R9, not a bug).
   const env = DASH.env;
-  if(!env || !env.available) return 'Day/night shading is off — no rig location configured (see config/location.example.json).';
+  if(!env || !env.available) return 'Day/night shading is off — no rig location set. <a href="#diagnostics" style="color:var(--leaf)">Set it in Diagnostics → Rig location</a> to turn on shading, solar + weather (#966).';
   const hourly = env.weather_hourly || [];
   if(!hourly.length) return 'Day/night shading is real (computed solar geometry) — no weather layer cached for this window yet.';
   const covers = hourly.map(h=>h.cloud_cover).filter(v=>v!=null);
@@ -2602,6 +2625,36 @@ async function monPoll(){
   catch(e){ if(e.apiDown){ monApiDown(); } /* else transient — keep last state */ }
   ownerPoll();  // refresh the port-owner surface alongside monitor status
 }
+// #966: rig-location setup. The status is NAME-ONLY (the privacy fence: coordinates never
+// come back to a screenshottable surface). Saving writes the gitignored local config.
+async function locPoll(){
+  const el = document.getElementById('locStatus'); if(!el) return;
+  try{
+    const { data } = await apiJson('/location/status', {cache:'no-store'});
+    el.innerHTML = data.configured
+      ? `✓ Configured as <strong>${esc(data.name || 'my rig')}</strong> — day/night shading + weather are on. Coordinates stay on this machine; re-enter below to change them.`
+      : 'Not set — day/night shading, solar position, and weather are off until you add a location.';
+  }catch(e){ /* serve-only; leave the placeholder */ }
+}
+async function locSave(){
+  const st = document.getElementById('locSaveStatus');
+  const body = {
+    name: (document.getElementById('locName').value || '').trim(),
+    latitude: document.getElementById('locLat').value,
+    longitude: document.getElementById('locLon').value,
+    tz_offset_hours: document.getElementById('locTz').value || 0,
+  };
+  st.textContent = 'saving…'; st.className = 'capstatus';
+  try{
+    const { ok, data } = await apiJson('/location', { method:'POST',
+      headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    if(!ok){ st.textContent = data.error || 'save failed'; st.className = 'capstatus err'; return; }
+    st.textContent = 'saved — reload to see shading + weather'; st.className = 'capstatus run';
+    // clear the coordinate fields after save (privacy: don't leave them on screen)
+    document.getElementById('locLat').value = ''; document.getElementById('locLon').value = '';
+    locPoll();
+  }catch(e){ st.textContent = 'save failed: ' + e; st.className = 'capstatus err'; }
+}
 async function monStart(){
   if(!monApiOk){ monApiDown(); return; }
   monSetStatus('starting…');
@@ -2838,6 +2891,8 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
     monStartBtn.addEventListener('click', monStart);
     monStopBtn.addEventListener('click', monStop);
     document.getElementById('collToggle').addEventListener('click', collToggle);  // #980
+    const locSaveBtn = document.getElementById('locSave');  // #966 rig-location setup
+    if(locSaveBtn){ locSaveBtn.addEventListener('click', locSave); locPoll(); }
     monPoll();  // reflect the logger's current state on load
     collPoll(); // ...and the combined collection plane (#588)
     monPollTimer = setInterval(() => { monPoll(); collPoll(); }, 5000);  // keep it live (handoff #129) + stoppable on API-down (#130)

@@ -708,6 +708,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 )
             elif parsed.path == "/collection/status":  # both paths, one view (#588)
                 self._send_json(status_all(_MONITOR, _FLEET))
+            elif parsed.path == "/location/status":  # #966: name-only, never coords
+                import env_solar
+
+                self._send_json(env_solar.location_status())
             elif parsed.path == "/registry":  # #921 the Plants & Sensors tab seam
                 from registry_model import load_registry_model, registry_payload
 
@@ -812,6 +816,20 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 )
             elif parsed.path == "/collection/stop":
                 self._send_json(stop_all(_MONITOR, _FLEET))
+            elif parsed.path == "/location":  # #966: write the gitignored rig location
+                # Writes local config + involves coordinates; localhost-only (as /quit).
+                if not self._is_local():
+                    self._send_json(
+                        {"error": "location setup is localhost-only"}, status=403
+                    )
+                    return
+                import env_solar
+
+                try:
+                    # returns NAME-ONLY status; save_location never logs the coordinates
+                    self._send_json(env_solar.save_location(self._body()))
+                except ValueError as exc:
+                    self._send_json({"error": str(exc)}, status=400)
             elif (
                 parsed.path == "/registry/apply"
             ):  # #921 slice 3 — classic-save a batch
