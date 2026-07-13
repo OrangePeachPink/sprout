@@ -169,6 +169,38 @@ def test_migrate_static_honors_retired_as_paused() -> None:
     assert by_id["yyvvpd"] == "paused"  # off-by-choice, reversible, calm - not active
 
 
+def test_migrate_static_brings_sensorless_plants_into_the_model() -> None:
+    # #1027: the ADR-0028 `sensorless` roster (plants present by design, not probed)
+    # must become first-class, lifecycle-manageable Plant entities — not a Monitor-only
+    # block the registry tab can't see. No open assignment => "alive · not probed".
+    static = {
+        "devices": [{"device_id": "y9d41p", "channels": {"s1": {"plant_id": "p01"}}}],
+        "sensorless": [
+            {"plant_id": "p05", "plant_name": "Pothos cutting", "pot_size": "4in"},
+            {"plant_id": "p08"},
+        ],
+    }
+    m = RegistryModel.from_dict(static)
+    assert {p.plant_id for p in m.plants} == {"p01", "p05", "p08"}
+    p05 = next(p for p in m.plants if p.plant_id == "p05")
+    assert p05.pet_name == "Pothos cutting"  # plant_name -> pet_name
+    assert p05.pot_size == "4in"
+    assert p05.lifecycle == "active"  # present + alive, just unprobed
+    # unprobed == no open assignment; only the probed p01 has a current mapping
+    assert {a.plant_id for a in m.open_assignments()} == {"p01"}
+
+
+def test_migrate_static_a_probed_plant_is_not_duplicated_by_sensorless() -> None:
+    # a plant can't be both probed and sensorless — a live reading wins, no dup Plant.
+    static = {
+        "devices": [{"device_id": "y9d41p", "channels": {"s1": {"plant_id": "p01"}}}],
+        "sensorless": [{"plant_id": "p01", "plant_name": "should not overwrite"}],
+    }
+    m = RegistryModel.from_dict(static)
+    assert [p.plant_id for p in m.plants] == ["p01"]  # exactly one
+    assert next(a for a in m.open_assignments()).plant_id == "p01"  # still probed
+
+
 # --------------------------------------------------------------------------- #
 # serialization round-trip
 # --------------------------------------------------------------------------- #

@@ -101,6 +101,74 @@ def test_device_friendly_label_writes_the_name_key() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# device adopt (#1027) — register an answering-but-unknown board in-UI, no JSON edit
+# --------------------------------------------------------------------------- #
+def test_adopt_registers_an_answering_board() -> None:
+    m = _model()
+    r = apply_operations(
+        m,
+        {
+            "devices": {
+                "add": [
+                    {
+                        "device_id": "n3jhsp",
+                        "base_url": "http://192.168.1.89",
+                        "name": "c5yellow2",
+                    }
+                ]
+            }
+        },
+    )
+    assert r["ok"] and r["applied"]["devices_added"] == 1
+    new = next(d for d in m.devices if d["device_id"] == "n3jhsp")
+    assert new["base_url"] == "http://192.168.1.89"
+    assert new["name"] == "c5yellow2"  # the label the operator gave it
+    assert new["lifecycle"] == "active"  # a freshly adopted board polls immediately
+
+
+def test_adopt_requires_a_base_url() -> None:
+    m = _model()
+    r = apply_operations(m, {"devices": {"add": [{"device_id": "n3jhsp"}]}})
+    assert not r["ok"]  # no address to poll — rejected whole, nothing added
+    assert r["errors"][0]["field"] == "base_url"
+    assert len(m.devices) == 1
+
+
+def test_adopting_an_already_registered_id_is_an_error_not_a_dup() -> None:
+    m = _model()  # y9d41p already registered
+    r = apply_operations(
+        m, {"devices": {"add": [{"device_id": "y9d41p", "base_url": "http://x"}]}}
+    )
+    assert not r["ok"]  # edit the label instead — never a silent duplicate device row
+    assert r["errors"][0]["field"] == "device_id"
+    assert len(m.devices) == 1
+
+
+def test_adopt_then_map_in_one_batch_resolves() -> None:
+    # the real adopt flow: register the board AND wire a plant to it atomically.
+    m = _model()
+    r = apply_operations(
+        m,
+        {
+            "devices": {"add": [{"device_id": "8gtt1h", "base_url": "http://y"}]},
+            "mappings": {
+                "assign": [
+                    {
+                        "plant_id": "p01",
+                        "sensor_id": "s01",
+                        "device_id": "8gtt1h",  # the just-added board
+                        "channel": "s1",
+                    }
+                ]
+            },
+        },
+    )
+    assert r["ok"]
+    assert r["applied"]["devices_added"] == 1 and r["applied"]["mapped"] == 1
+    assert m.current_for_channel("8gtt1h", "s1").plant_id == "p01"
+
+
+# --------------------------------------------------------------------------- #
 # mapping — assign is the temporal close-old-open-new boundary (Q8)
 # --------------------------------------------------------------------------- #
 def test_assign_opens_a_mapping_and_a_remap_closes_the_old() -> None:

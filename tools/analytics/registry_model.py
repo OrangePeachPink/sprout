@@ -378,6 +378,24 @@ class RegistryModel:
                         start_ts=None,  # grandfathered — unknown origin, never invented
                     )
                 )
+        # #1027: the top-level `sensorless` roster (ADR-0028) — plants present by design
+        # but not probed — migrate to first-class Plant entities too, so they're
+        # lifecycle-manageable in the registry ("alive · not probed") rather than a
+        # Monitor-only block the tab can't see. A plant that is ALSO probed on some
+        # channel is already a Plant (a live reading wins) — skip the dup. No assignment
+        # is opened: having no open mapping is exactly what "not probed" means.
+        for raw in doc.get("sensorless", []):
+            if not isinstance(raw, dict):
+                continue
+            pid = raw.get("plant_id")
+            if not pid or pid in plants_seen:
+                continue
+            plants_seen[pid] = Plant(
+                plant_id=pid,
+                plant_type=raw.get("plant_type"),
+                pet_name=raw.get("plant_name"),
+                pot_size=raw.get("pot_size"),
+            )
         m.plants = list(plants_seen.values())
         m.sensors = list(sensors_seen.values())
         return m
@@ -546,7 +564,7 @@ def apply_operations(
 
         {"plants":  {"add": [...], "edit": [...]},
          "sensors": {"add": [...], "edit": [...]},
-         "devices": {"edit": [...]},
+         "devices": {"add": [{device_id, base_url, name?}], "edit": [...]},
          "mappings":{"assign": [{plant_id, sensor_id, device_id, channel, profile_id?}],
                      "close":  [{device_id, channel}]},
          "lifecycle":[{kind, entity_id, state}]}
@@ -602,8 +620,27 @@ def apply_operations(
         else:
             staged_s.add(sid)
 
+    # ---- validate: device adds (#1027 adopt) — a board answering at an address with an
+    # id the registry never registered. Needs its self-reported id (free) + a base_url
+    # to poll. The id comes FROM the board (#1026 mismatch / discovery), so it's taken
+    # as-is, only checked non-empty + not-already-registered; adopting a known id is an
+    # error (edit the label instead), not a silent duplicate device row.
+    staged_d: set[str] = set()
+    for i, rec in enumerate(devices.get("add") or []):
+        tag = f"devices.add[{i}]"
+        did = (rec.get("device_id") or "").strip()
+        if not did:
+            err(tag, "a device id is required to adopt a board", "device_id")
+        elif did in existing_d or did in staged_d:
+            err(tag, f"device {did} is already registered", "device_id")
+        elif not (rec.get("base_url") or "").strip():
+            err(tag, "a base_url (the board's address) is required", "base_url")
+        else:
+            staged_d.add(did)
+
     known_p = existing_p | staged_p
     known_s = existing_s | staged_s
+    known_d = existing_d | staged_d  # adopt-then-map in one batch resolves
 
     # ---- validate: edits target an existing entity (id is immutable — no rename) ----
     for i, rec in enumerate(plants.get("edit") or []):
@@ -635,7 +672,7 @@ def apply_operations(
             err(tag, f"no such plant {mp.get('plant_id')!r}", "plant_id")
         if (mp.get("sensor_id") or "") not in known_s:
             err(tag, f"no such sensor {mp.get('sensor_id')!r}", "sensor_id")
-        if (mp.get("device_id") or "") not in existing_d:
+        if (mp.get("device_id") or "") not in known_d:
             err(tag, f"no such device {mp.get('device_id')!r}", "device_id")
         if not (mp.get("channel") or "").strip():
             err(tag, "a channel (board port) is required", "channel")
@@ -673,12 +710,23 @@ def apply_operations(
     applied = {
         "plants_added": 0,
         "sensors_added": 0,
+        "devices_added": 0,
         "edited": 0,
         "mapped": 0,
         "closed": 0,
         "lifecycle": 0,
         "purged": {"devices": 0, "plants": 0, "sensors": 0, "assignments": 0},
     }
+    for rec in devices.get("add") or []:  # #1027 adopt — register the answering board
+        entry = {
+            "device_id": (rec.get("device_id") or "").strip(),
+            "base_url": (rec.get("base_url") or "").strip(),
+            "lifecycle": "active",
+        }
+        if rec.get("name"):
+            entry["name"] = rec["name"]  # the mutable human label (#583), optional
+        model.devices.append(entry)
+        applied["devices_added"] += 1
     for rec in plants.get("add") or []:
         pid = (rec.get("plant_id") or "").strip() or next_plant_id(model)
         model.plants.append(
