@@ -584,6 +584,20 @@ def _context(
     return ctx
 
 
+def _anchors_by_sensor(model) -> dict:
+    """#995: map each currently-mapped sensor_id to its cal envelope ``{air, water}``,
+    pulled from the profile its open assignment references (#952/#963 cal chain). A
+    sensor with no profile (or a profile without anchors) is simply absent — the health
+    readout then reports its envelope checks as None (honest: uncalibrated)."""
+    profiles = {p.profile_id: p for p in model.profiles}
+    out: dict = {}
+    for a in model.open_assignments():
+        prof = profiles.get(a.profile_id)
+        if prof and prof.anchors:
+            out[a.sensor_id] = prof.anchors
+    return out
+
+
 class DashboardHandler(BaseHTTPRequestHandler):
     inputs: ClassVar[list[str] | None] = None  # None => auto-discover per request
 
@@ -716,6 +730,25 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 from registry_model import load_registry_model, registry_payload
 
                 self._send_json(registry_payload(load_registry_model()))
+            elif parsed.path == "/sensor/health":  # #995 per-sensor QA/health readout
+                from registry_model import load_registry_model
+                from sensor_health import fleet_health
+
+                # Health reads over ALL available history — drift, dropouts, and the
+                # corrosion signals need the long record, and the Monitor range selector
+                # is not a health concept — so it deliberately ignores ?range.
+                model = load_registry_model()
+                anchors = _anchors_by_sensor(model)
+                resolved = self.inputs or gather_inputs()
+                windowed = _window_inputs(resolved, None, datetime.now(timezone.utc))
+                data = _fleet_adapter(load_registry()).load(windowed)
+                fleet = fleet_health(data.readings, anchors_by_sensor=anchors)
+                self._send_json(
+                    {
+                        "sensors": [h.to_dict() for h in fleet],
+                        "any_calibrated": bool(anchors),
+                    }
+                )
             elif parsed.path == "/serial/owner":  # who holds the port (#330)
                 self._send_json(serial_lock.owner_status())
             elif parsed.path.startswith("/docs/"):  # #808: front-door docs, guarded
