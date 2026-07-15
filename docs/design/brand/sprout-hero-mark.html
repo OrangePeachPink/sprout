@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sprout hero mark — reference &amp; consume</title>
+<style>
+  :root {
+    --ink: #1E2A18; --muted: #6F7E62; --border: #E3E9D8; --surface: #FFFFFF; --surface-2: #F7FAF2;
+    --bg: #EEF4E6; --leaf: #34A853; --soil: #0C1311;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.55; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 40px 24px 72px; }
+  h1 { font-size: 28px; margin: 0 0 6px; }
+  h2 { font-size: 18px; margin: 34px 0 10px; }
+  p { color: #3c4735; max-width: 62ch; }
+  .lede { color: var(--muted); font-size: 15px; margin-top: 0; }
+  .stage { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 22px 0 8px; }
+  .panel { border: 1px solid var(--border); border-radius: 16px; padding: 34px; display: flex;
+    flex-direction: column; align-items: center; gap: 14px; }
+  .panel.light { background: var(--surface-2); }
+  .panel.soil { background: var(--soil); border-color: #29372F; }
+  .panel .cap { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+  .panel.light .cap { color: var(--muted); }
+  .panel.soil .cap { color: #8B9B90; }
+  .mark { width: 148px; height: 173px; }
+  .mark.small { width: 44px; height: 51px; }
+  .row { display: flex; align-items: center; gap: 20px; }
+  code { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  pre { background: #0d1117; color: #c9d1d9; border-radius: 12px; padding: 18px 20px; overflow-x: auto;
+    font-size: 12.5px; line-height: 1.6; }
+  pre code { color: inherit; }
+  ul { max-width: 62ch; color: #3c4735; }
+  .note { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--leaf);
+    border-radius: 10px; padding: 14px 18px; font-size: 14px; margin: 14px 0; }
+  a { color: #247a3a; }
+  .foot { margin-top: 40px; font-size: 12.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Sprout hero mark</h1>
+  <p class="lede">The living mark for the FD-1 front-door hero — a design input to
+  <a href="https://github.com/OrangePeachPink/sprout/issues/1071">#1071</a>. DesignQA authors it; DX consumes
+  it verbatim; it also becomes FD-7's teaser export source.</p>
+
+  <p>Canonical <em>thriving</em> geometry from
+  <code>components/sprout-mark.js</code>; motion mirrors <code>components/sprout-motion.css</code>
+  (<code>sway</code>, 6.5&nbsp;s). It's a single self-contained <code>.svg</code> — the CSS animates in the
+  browser with <strong>no script and no external runtime</strong>, whether inlined into the hub or used as an
+  <code>&lt;img&gt;</code> — so it satisfies FD-1's zero-external-runtime rule. It honors
+  <code>prefers-reduced-motion</code>, and its greens read on both light and soil grounds.</p>
+
+  <h2>On both grounds</h2>
+  <div class="stage">
+    <div class="panel light">
+      <img class="mark" src="sprout-hero-mark.svg" alt="Sprout mark on a light ground, gently swaying">
+      <span class="cap">Light</span>
+    </div>
+    <div class="panel soil">
+      <img class="mark" src="sprout-hero-mark.svg" alt="Sprout mark on a soil-dark ground, gently swaying">
+      <span class="cap">Soil / dark</span>
+    </div>
+  </div>
+  <div class="panel light" style="align-items:flex-start;">
+    <div class="row">
+      <img class="mark small" src="sprout-hero-mark.svg" alt="Sprout mark at favicon size">
+      <span class="cap">Reads down to ~40&nbsp;px</span>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Reduced motion:</strong> with the OS "reduce motion" setting on, the mark renders static — the
+    seedling still reads, it just stops swaying. No separate asset needed.
+  </div>
+
+  <h2>How DX consumes it (FD-1 hero)</h2>
+  <p>Two equivalent paths — both zero-external-runtime:</p>
+  <ul>
+    <li><strong>Inline, self-contained (recommended):</strong> paste the whole
+    <code>sprout-hero-mark.svg</code> markup into the hero. Its scoped <code>&lt;style&gt;</code> carries the
+    motion, so nothing else is needed. Size it with CSS on the <code>&lt;svg&gt;</code> (e.g.
+    <code>width: 148px</code>).</li>
+    <li><strong>Canonical-motion variant:</strong> if the hub already links
+    <code>design/components/sprout-motion.css</code> (a local file — still zero <em>external</em> runtime),
+    drop the inline <code>&lt;style&gt;</code> and add <code>class="sprout-sway"</code> to the foliage
+    <code>&lt;g&gt;</code> instead. Same result, single motion source.</li>
+  </ul>
+
+  <pre><code>&lt;!-- FD-1 hero: inline, self-contained. Swap sway→breathe or bob per the moment. --&gt;
+&lt;svg id="sprout-hero-mark" viewBox="0 0 24 28" fill="none" stroke="#2F7D3F"
+     stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+     role="img" aria-label="Sprout"&gt;
+  &lt;style&gt;
+    #sprout-hero-mark .foliage { transform-box: fill-box; transform-origin: 50% 100%;
+      animation: shm-sway 6.5s ease-in-out infinite; }
+    @keyframes shm-sway { 0%,100% { transform: rotate(-2.6deg); } 50% { transform: rotate(2.6deg); } }
+    @media (prefers-reduced-motion: reduce) { #sprout-hero-mark .foliage { animation: none; } }
+  &lt;/style&gt;
+  &lt;g class="foliage"&gt;
+    &lt;path d="M12 26 V12"/&gt;
+    &lt;path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8BD24F"/&gt;
+    &lt;path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34A853"/&gt;
+    &lt;path d="M12 11 C9 6 11 3 12 1 C14 4 14 8 12 11 Z" fill="#A9DA6E"/&gt;
+  &lt;/g&gt;
+&lt;/svg&gt;</code></pre>
+
+  <div class="note">
+    <strong>Motion vocabulary</strong> (per <code>sprout-motion.css</code> / BRAND.md §3): <code>sway</code>
+    = calm idle (the hero default) · <code>breathe</code> = alive &amp; well · <code>bob</code> =
+    speaking/greeting · <code>droop</code> = thirsty. The hero ships <code>sway</code>; any state is a
+    one-class swap.
+  </div>
+
+  <h2>Why sway, for the hero</h2>
+  <p>A persistent hero element wants presence without fidget: <code>sway</code> is the brand's calm-idle
+  default — alive, never busy. <code>bob</code> (greeting) and <code>breathe</code> (thriving) are on hand if
+  a moment calls for them, but the ambient first impression is a seedling that simply, quietly lives.</p>
+
+  <p class="foot">Source of truth: geometry ← <code>components/sprout-mark.js</code> ·
+  motion ← <code>components/sprout-motion.css</code> · colors ← the <code>thriving</code> row of
+  <code>components/mood-band-map.json</code> / <code>tokens/sprout-tokens.css</code>. Derived from the merged
+  brand marks (#1066). If the canonical geometry or motion changes, re-sync this file.</p>
+</div>
+</body>
+</html>
