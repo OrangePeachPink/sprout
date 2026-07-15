@@ -84,8 +84,8 @@
 
   /* hero */
   .hero { border-top: none; text-align: center; padding-top: var(--space-lg); }
-  .hero-mark { width: 180px; height: 180px; margin: 0 auto var(--space-md); display: flex; align-items: center; justify-content: center; }
-  .hero-mark img { width: 100%; height: 100%; }
+  .hero-mark { margin: 0 auto var(--space-md); display: flex; justify-content: center; }
+  .hero-mark svg { width: 150px; height: auto; }
   .hero h1 { font-family: var(--font-display); font-size: clamp(2.2rem, 6vw, 3.4rem); line-height: 1.05; margin: 0 0 var(--space-md); color: var(--ink); }
   .hero .lede { font-size: clamp(1.05rem, 2.4vw, 1.3rem); max-width: 40rem; margin: 0 auto var(--space-lg); color: var(--ink); }
   .hero .actions { justify-content: center; }
@@ -131,11 +131,33 @@
 
     <!-- 1 · Hero (Sprout, first person) -->
     <section class="hero" id="top" aria-labelledby="hero-h">
-      <div class="hero-mark" role="img" aria-label="Sprout — a friendly sprout character">
-        <!-- FD-1 HERO-MARK SLOT (DesignQA V2, #1071 seam ruling): replace this static avatar with the
-             drop-in living-mark component — inline SVG + CSS @keyframes (sway/breathe),
-             prefers-reduced-motion-aware, both themes. Static avatar is the placeholder until it lands. -->
-        <img src="design/brand/sprout-avatar.svg" alt="">
+      <div class="hero-mark">
+        <!-- FD-1 hero mark: DesignQA's drop-in living-mark (#1081), consumed verbatim via the recommended
+             inline path (docs/design/brand/sprout-hero-mark.html). The scoped <style> carries the sway +
+             prefers-reduced-motion; self-contained, zero external runtime. aria-label corrected two-leaf ->
+             three-leaf to match the geometry (DesignQA's flagged nit, fixed here at the render copy pass). -->
+        <svg id="sprout-hero-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 28" fill="none" stroke="#2F7D3F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Sprout — a three-leaf seedling, gently swaying">
+          <style>
+            #sprout-hero-mark .foliage {
+              transform-box: fill-box;
+              transform-origin: 50% 100%;
+              animation: shm-sway 6.5s ease-in-out infinite;
+            }
+            @keyframes shm-sway {
+              0%, 100% { transform: rotate(-2.6deg); }
+              50%      { transform: rotate(2.6deg); }
+            }
+            @media (prefers-reduced-motion: reduce) {
+              #sprout-hero-mark .foliage { animation: none; }
+            }
+          </style>
+          <g class="foliage">
+            <path d="M12 26 V12"/>
+            <path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8BD24F"/>
+            <path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34A853"/>
+            <path d="M12 11 C9 6 11 3 12 1 C14 4 14 8 12 11 Z" fill="#A9DA6E"/>
+          </g>
+        </svg>
       </div>
       <h1 id="hero-h">Hi — I'm Sprout.</h1>
       <p class="lede">I look after four plants and tell you how each one's really doing — in my own words.
