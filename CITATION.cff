@@ -13,7 +13,7 @@ authors:
     alias: "OrangePeachPink"
 repository-code: "https://github.com/OrangePeachPink/sprout"
 url: "https://github.com/OrangePeachPink/sprout"
-version: "0.7.1"
+version: "0.7.2"
 keywords:
   - soil-moisture
   - esp32
