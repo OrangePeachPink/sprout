@@ -1,4 +1,4 @@
-<svg id="sprout-hero-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 28" fill="none" stroke="#2F7D3F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Sprout — a two-leaf seedling, gently swaying">
+<svg id="sprout-hero-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 28" fill="none" stroke="#2F7D3F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Sprout — a three-leaf seedling, gently swaying">
   <!--
     Sprout hero mark — FD-1 front-door hero (input to #1071).
     Geometry: the CANONICAL 'thriving' variant from docs/design/components/sprout-mark.js (same paths + colors).
