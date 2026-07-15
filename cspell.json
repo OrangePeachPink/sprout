@@ -258,7 +258,17 @@
     "USERPROFILE",
     "milestoned",
     // #810 epic-hygiene lint: the un-hyphenated filename token (lint_epic_subissues.py).
-    "subissues"
+    "subissues",
+    // PRD-0008 front-door / GTM epic — maker-site + web-presence terms (source/brand names).
+    "crawlable",
+    "crosslink",
+    "crosslinks",
+    "greenlight",
+    "Hackaday",
+    "llms",
+    "orangepeachpink",
+    "ORCID",
+    "vkhogue"
   ],
   "flagWords": []
 }
