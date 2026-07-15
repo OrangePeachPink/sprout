@@ -15,8 +15,12 @@ bottom for every `vX.Y.Z`.
       trigger it manually from Actions before cutting, since per-PR CI skips firmware).
 - [ ] No open PR is targeted at this version (check the milestone's linked PRs).
 
-## 1. Sync the version constant
+## 1. Sync the version constants
 
+- [ ] `pyproject.toml` → `version` = the release version. This is the **single product version line**
+      (ADR-0009 §1) — everything else syncs to it (§3). *(Missed at the v0.7.2 cut — #1080; hence this
+      list now names every target explicitly.)*
+- [ ] `CITATION.cff` → `version` matches `pyproject.toml`.
 - [ ] `firmware/include/config.h` → `PLANTS_FW_VERSION` matches the release version (ADR-0009 §3).
       If firmware didn't change this release, the constant still bumps at the next firmware release —
       note per-component reality in the notes instead.
