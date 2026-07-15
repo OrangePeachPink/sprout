@@ -1,0 +1,31 @@
+<svg id="sprout-hero-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 28" fill="none" stroke="#2F7D3F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Sprout — a two-leaf seedling, gently swaying">
+  <!--
+    Sprout hero mark — FD-1 front-door hero (input to #1071).
+    Geometry: the CANONICAL 'thriving' variant from docs/design/components/sprout-mark.js (same paths + colors).
+    Motion: mirrors docs/design/components/sprout-motion.css (.sprout-sway, 6.5s) — keep in sync if that changes.
+    Self-contained + zero external runtime: the CSS animates in-browser with no script, whether this file is
+    inlined into the hub or used as <img>. Honors prefers-reduced-motion. The foliage <g> sways from its
+    rooted base (transform-origin 50% 100%); the stem stays anchored.
+    Scoped to #sprout-hero-mark so inlining into the page never leaks styles.
+  -->
+  <style>
+    #sprout-hero-mark .foliage {
+      transform-box: fill-box;
+      transform-origin: 50% 100%;
+      animation: shm-sway 6.5s ease-in-out infinite;
+    }
+    @keyframes shm-sway {
+      0%, 100% { transform: rotate(-2.6deg); }
+      50%      { transform: rotate(2.6deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #sprout-hero-mark .foliage { animation: none; }
+    }
+  </style>
+  <g class="foliage">
+    <path d="M12 26 V12"/>
+    <path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8BD24F"/>
+    <path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34A853"/>
+    <path d="M12 11 C9 6 11 3 12 1 C14 4 14 8 12 11 Z" fill="#A9DA6E"/>
+  </g>
+</svg>
