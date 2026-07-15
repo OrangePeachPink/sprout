@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" role="img" aria-label="Sprout asleep for the night, shown alongside its labeled night color palette — a work-in-progress design sheet">
+  <!-- Sprout asleep (night) — WIP design-sheet card, 1280x640. Workflow variant, 2026-07-15.
+       The palette swatches + labels are deliberately visible: a building-in-progress cue —
+       the craft on display, the product still growing. Export: sprout-asleep-night-card-wip.png. -->
+  <g id="sprout-asleep-wip">
+    <rect x="0" y="0" width="1280" height="640" fill="#0C1311"/>
+    <circle cx="170" cy="110" r="34" fill="#DCE9DF" opacity="0.9"/>
+    <circle cx="157" cy="100" r="31" fill="#0C1311"/>
+    <circle cx="320" cy="80" r="2.2" fill="#8FA697"/><circle cx="430" cy="140" r="1.8" fill="#8FA697"/>
+    <circle cx="560" cy="70" r="2.4" fill="#8FA697"/><circle cx="680" cy="120" r="1.8" fill="#8FA697"/>
+    <circle cx="260" cy="220" r="1.8" fill="#8FA697"/><circle cx="740" cy="230" r="1.9" fill="#8FA697"/>
+    <circle cx="90" cy="300" r="1.8" fill="#8FA697"/>
+    <g transform="translate(310,130) scale(6.6)">
+      <g fill="none" stroke="#3E5C48" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 25 C12 20 12 17 12 14"/>
+        <path d="M12 15 C9.5 14 8 11.5 8.6 9.2 C11.2 10 12 12.6 12 15 Z" fill="#2E4A38" stroke="#3E5C48"/>
+        <path d="M12 16.5 C14.5 15.5 16 13 15.4 10.7 C12.8 11.5 12 14.1 12 16.5 Z" fill="#3E5C48" stroke="#4C6B54"/>
+        <path d="M12 14 C11 11.5 11.3 9 12.6 7.4 C13.8 9.3 13.3 11.9 12 14 Z" fill="#557A5E" stroke="#557A5E"/>
+      </g>
+      <path d="M4 25.6 C7 24.4 17 24.4 20 25.6" fill="none" stroke="#1C2A22" stroke-width="2.2" stroke-linecap="round"/>
+    </g>
+    <g fill="#8FA697" font-family="'Baloo 2','Segoe UI',system-ui,sans-serif">
+      <text x="500" y="230" font-size="24" opacity="0.5">z</text>
+      <text x="520" y="204" font-size="30" opacity="0.65">z</text>
+      <text x="546" y="174" font-size="37" opacity="0.8">Z</text>
+    </g>
+    <text x="440" y="530" text-anchor="middle" font-family="'Baloo 2','Segoe UI',system-ui,sans-serif" font-size="30" fill="#DCE9DF">asleep &#183; watering can wait until morning</text>
+    <text x="440" y="570" text-anchor="middle" font-family="'Baloo 2','Segoe UI',system-ui,sans-serif" font-size="19" fill="#8FA697">Sprout &#183; plants with a pulse</text>
+    <g font-family="'Baloo 2','Segoe UI',system-ui,sans-serif">
+      <line x1="850" y1="70" x2="850" y2="570" stroke="#1C2A22" stroke-width="1.5"/>
+      <text x="892" y="92" font-size="19" fill="#DCE9DF">night palette &#183; still growing</text>
+      <g>
+        <rect x="892" y="118" width="64" height="34" rx="6" fill="#0C1311" stroke="#3E5C48" stroke-width="0.75"/>
+        <text x="972" y="134" font-size="18" fill="#DCE9DF">midnight loam</text>
+        <text x="972" y="154" font-size="14" fill="#8FA697" font-family="Consolas,ui-monospace,monospace">#0C1311 &#183; ground</text>
+      </g>
+      <g>
+        <rect x="892" y="180" width="64" height="34" rx="6" fill="#1C2A22"/>
+        <text x="972" y="196" font-size="18" fill="#DCE9DF">soil shadow</text>
+        <text x="972" y="216" font-size="14" fill="#8FA697" font-family="Consolas,ui-monospace,monospace">#1C2A22 &#183; resting earth</text>
+      </g>
+      <g>
+        <rect x="892" y="242" width="64" height="34" rx="6" fill="#2E4A38"/>
+        <text x="972" y="258" font-size="18" fill="#DCE9DF">dreaming leaf</text>
+        <text x="972" y="278" font-size="14" fill="#8FA697" font-family="Consolas,ui-monospace,monospace">#2E4A38 &#183; foliage, dimmed</text>
+      </g>
+      <g>
+        <rect x="892" y="304" width="64" height="34" rx="6" fill="#3E5C48"/>
+        <text x="972" y="320" font-size="18" fill="#DCE9DF">dimmed stem</text>
+        <text x="972" y="340" font-size="14" fill="#8FA697" font-family="Consolas,ui-monospace,monospace">#3E5C48 &#183; holding steady</text>
+      </g>
+      <g>
+        <rect x="892" y="366" width="64" height="34" rx="6" fill="#557A5E"/>
+        <text x="972" y="382" font-size="18" fill="#DCE9DF">moonlit sage</text>
+        <text x="972" y="402" font-size="14" fill="#8FA697" font-family="Consolas,ui-monospace,monospace">#557A5E &#183; night accent</text>
+      </g>
+      <g>
+        <rect x="892" y="428" width="64" height="34" rx="6" fill="#8FA697"/>
+        <text x="972" y="444" font-size="18" fill="#DCE9DF">starlight</text>
+        <text x="972" y="464" font-size="14" fill="#8FA697" font-family="Consolas,ui-monospace,monospace">#8FA697 &#183; muted ink</text>
+      </g>
+      <g>
+        <rect x="892" y="490" width="64" height="34" rx="6" fill="#DCE9DF"/>
+        <text x="972" y="506" font-size="18" fill="#DCE9DF">moon</text>
+        <text x="972" y="526" font-size="14" fill="#8FA697" font-family="Consolas,ui-monospace,monospace">#DCE9DF &#183; bright ink</text>
+      </g>
+    </g>
+  </g>
+</svg>
