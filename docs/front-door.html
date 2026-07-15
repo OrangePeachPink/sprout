@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- STAGING GUARD (remove at the flip — FD-1 beat 2): while staged this hub lives at the
+     non-canonical /front-door.html; noindex keeps crawlers from seeding that URL before it
+     becomes the root and FD-2 adds the canonical/OG block. Per Workflow's #1071 staging ruling. -->
+<meta name="robots" content="noindex">
+<title>Sprout — the plant that talks back</title>
+<meta name="description" content="Sprout is the plant that talks back. Four plants, four moods, one voice — local-first plant care on an ESP32. It tells you how it's doing in its own words.">
+<link rel="canonical" href="https://orangepeachpink.github.io/sprout/">
+
+<!-- FD-2 SLOT (do not fill here): OpenGraph + Twitter share cards and the JSON-LD
+     SoftwareSourceCode block with author -> Person -> sameAs. Resume/Portfolio lane owns the
+     sameAs node list; DesignQA supplies the OG "pulse" headline + og:image (cover header).
+     Spec: PRD-0008 Tier 3 / issue FD-2. Leave the slot empty until FD-2. -->
+
+<link rel="icon" href="design/brand/sprout-avatar.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Fonts are the ONLY sanctioned external request (brief §7); the token stacks fall back to
+     system fonts so the page is fully legible if Google Fonts fails. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono&display=swap">
+<!-- Design tokens are consumed, never redefined (brief §8 / ADR-0004). Same-origin, not a runtime dep. -->
+<link rel="stylesheet" href="design/tokens/sprout-tokens.css">
+
+<script>
+  // Minimal inline theme init (no external runtime): honour the OS preference immediately to
+  // avoid a flash, and remember a manual toggle. The tokens are attribute-driven ([data-theme]),
+  // so dark mode is a progressive enhancement; without JS the page is fully usable in light.
+  (function () {
+    var root = document.documentElement, stored = null;
+    try { stored = localStorage.getItem('sprout-theme'); } catch (e) {}
+    var dark = stored ? stored === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    if (dark) root.setAttribute('data-theme', 'dark');
+  })();
+</script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .skip-link {
+    position: absolute; left: var(--space-sm); top: -3rem;
+    background: var(--surface); color: var(--ink);
+    padding: var(--space-sm) var(--space-md); border-radius: var(--r-control);
+    box-shadow: var(--e2); z-index: 10; transition: top .15s ease;
+  }
+  .skip-link:focus { top: var(--space-sm); }
+
+  a { color: var(--leaf); }
+  :focus-visible { outline: 3px solid var(--st-watering); outline-offset: 2px; border-radius: var(--r-control); }
+
+  .wrap { width: 100%; max-width: 62rem; margin: 0 auto; padding: 0 var(--space-lg); }
+
+  /* top chrome */
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); padding: var(--space-md) 0; }
+  .brandmark { display: inline-flex; align-items: center; gap: var(--space-sm); font-family: var(--font-display); font-weight: 700; color: var(--ink); text-decoration: none; }
+  .brandmark img { width: 28px; height: 28px; }
+  .topbar nav { display: flex; align-items: center; gap: var(--space-md); }
+  .topbar nav a { color: var(--muted); text-decoration: none; font-weight: 500; }
+  .topbar nav a:hover { color: var(--ink); }
+  .theme-toggle { background: var(--surface); border: 1px solid var(--border); color: var(--ink); border-radius: var(--r-pill); padding: var(--space-xs) var(--space-md); font: inherit; font-size: .9rem; cursor: pointer; }
+
+  /* buttons */
+  .btn { display: inline-flex; align-items: center; gap: var(--space-sm); font-family: var(--font-ui); font-weight: 600; font-size: 1rem; text-decoration: none; padding: var(--space-sm) var(--space-lg); border-radius: var(--r-pill); border: 2px solid transparent; cursor: pointer; }
+  .btn-primary { background: var(--leaf); color: #06210F; }
+  .btn-primary:hover { background: var(--sprout); }
+  .btn-secondary { background: transparent; color: var(--ink); border-color: var(--border); }
+  .btn-secondary:hover { border-color: var(--leaf); color: var(--leaf); }
+
+  /* sections */
+  main section { padding: var(--space-xl) 0; border-top: 1px solid var(--border); }
+  section h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2rem); margin: 0 0 var(--space-sm); color: var(--ink); }
+  section p { max-width: 44rem; color: var(--ink); margin: 0 0 var(--space-lg); }
+  .actions { display: flex; flex-wrap: wrap; gap: var(--space-md); }
+
+  /* hero */
+  .hero { border-top: none; text-align: center; padding-top: var(--space-lg); }
+  .hero-mark { margin: 0 auto var(--space-md); display: flex; justify-content: center; }
+  .hero-mark svg { width: 150px; height: auto; }
+  .hero h1 { font-family: var(--font-display); font-size: clamp(2.2rem, 6vw, 3.4rem); line-height: 1.05; margin: 0 0 var(--space-md); color: var(--ink); }
+  .hero .lede { font-size: clamp(1.05rem, 2.4vw, 1.3rem); max-width: 40rem; margin: 0 auto var(--space-lg); color: var(--ink); }
+  .hero .actions { justify-content: center; }
+
+  /* mood chips (section 2 — mood shown as character, not a scoreboard) */
+  .moods { display: flex; flex-wrap: wrap; gap: var(--space-sm); list-style: none; padding: 0; margin: var(--space-md) 0 0; }
+  .mood { display: inline-flex; align-items: center; gap: var(--space-sm); font-family: var(--font-ui); font-weight: 600; font-size: .95rem; padding: var(--space-sm) var(--space-md); border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--border); }
+  .mood .dot { width: 12px; height: 12px; border-radius: var(--r-pill); }
+
+  /* chrome rows */
+  .follow { display: flex; flex-wrap: wrap; gap: var(--space-md); align-items: center; }
+  .follow a { color: var(--ink); font-weight: 600; text-decoration: none; }
+  .follow a:hover { color: var(--leaf); }
+  .chrome h2 { font-size: 1.25rem; }
+  .about p { color: var(--muted); }
+  .about strong { color: var(--ink); }
+
+  footer { border-top: 1px solid var(--border); padding: var(--space-xl) 0; color: var(--muted); font-size: .9rem; text-align: center; }
+  footer .tag { font-family: var(--font-display); color: var(--ink); }
+
+  @media (max-width: 40rem) {
+    .topbar nav .nav-hide { display: none; }
+    main section { padding: var(--space-lg) 0; }
+  }
+</style>
+</head>
+
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<div class="wrap">
+  <header class="topbar">
+    <a class="brandmark" href="#top"><img src="design/brand/sprout-avatar.svg" alt=""> Sprout</a>
+    <nav>
+      <a class="nav-hide" href="https://github.com/OrangePeachPink/sprout">View the code</a>
+      <button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false">Theme</button>
+    </nav>
+  </header>
+</div>
+
+<main id="main">
+  <div class="wrap">
+
+    <!-- 1 · Hero (Sprout, first person) -->
+    <section class="hero" id="top" aria-labelledby="hero-h">
+      <div class="hero-mark">
+        <!-- FD-1 hero mark: DesignQA's drop-in living-mark (#1081), consumed verbatim via the recommended
+             inline path (docs/design/brand/sprout-hero-mark.html). The scoped <style> carries the sway +
+             prefers-reduced-motion; self-contained, zero external runtime. aria-label corrected two-leaf ->
+             three-leaf to match the geometry (DesignQA's flagged nit, fixed here at the render copy pass). -->
+        <svg id="sprout-hero-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 28" fill="none" stroke="#2F7D3F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Sprout — a three-leaf seedling, gently swaying">
+          <style>
+            #sprout-hero-mark .foliage {
+              transform-box: fill-box;
+              transform-origin: 50% 100%;
+              animation: shm-sway 6.5s ease-in-out infinite;
+            }
+            @keyframes shm-sway {
+              0%, 100% { transform: rotate(-2.6deg); }
+              50%      { transform: rotate(2.6deg); }
+            }
+            @media (prefers-reduced-motion: reduce) {
+              #sprout-hero-mark .foliage { animation: none; }
+            }
+          </style>
+          <g class="foliage">
+            <path d="M12 26 V12"/>
+            <path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="#8BD24F"/>
+            <path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="#34A853"/>
+            <path d="M12 11 C9 6 11 3 12 1 C14 4 14 8 12 11 Z" fill="#A9DA6E"/>
+          </g>
+        </svg>
+      </div>
+      <h1 id="hero-h">Hi — I'm Sprout.</h1>
+      <p class="lede">I look after four plants and tell you how each one's really doing — in my own words.
+        When I'm thriving, I'll say so. When I can't feel my sensor, I'll say that too.</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="flash/">Flash me onto an ESP32</a>
+        <a class="btn btn-secondary" href="#what-i-do">See how I work</a>
+      </div>
+    </section>
+
+    <!-- 2 · What I do -->
+    <section id="what-i-do" aria-labelledby="what-h">
+      <h2 id="what-h">Every plant, its own mood.</h2>
+      <p>I read the soil in four pots and give each one a <em>feeling</em>, not just a figure — thriving,
+        content, thirsty. Watch me shift: teal when I've just had a drink, amber when I'm ready for the next one.</p>
+      <ul class="moods" aria-label="Some of my moods">
+        <li class="mood"><span class="dot" style="background: var(--band-wet)"></span> Just watered</li>
+        <li class="mood"><span class="dot" style="background: var(--band-ideal)"></span> Thriving</li>
+        <li class="mood"><span class="dot" style="background: var(--band-drying)"></span> Getting thirsty</li>
+        <li class="mood"><span class="dot" style="background: var(--q-nosignal)"></span> Can't feel my sensor</li>
+      </ul>
+    </section>
+
+    <!-- 3 · Try me -->
+    <section id="try" aria-labelledby="try-h">
+      <h2 id="try-h">Plug me in and I'll start watching.</h2>
+      <p>Got an ESP32 and a soil sensor? Flash me straight from your browser — one click, no toolchain,
+        about a minute. Then I'll introduce myself to your plants.</p>
+      <div class="actions"><a class="btn btn-primary" href="flash/">Flash me now</a></div>
+    </section>
+
+    <!-- 4 · Build with me -->
+    <section id="build" aria-labelledby="build-h">
+      <h2 id="build-h">Want to help me grow?</h2>
+      <p>I'm the friendliest repo you'll contribute to today. Clone me, run <code>just</code>, and my
+        dashboard's up in about five minutes. There's a good-first-issue with your name on it.</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="https://github.com/OrangePeachPink/sprout#quick-start">Start in five minutes</a>
+        <a class="btn btn-secondary" href="https://github.com/OrangePeachPink/sprout/contribute">Good first issues</a>
+      </div>
+    </section>
+
+    <!-- 5 · How I read the soil (trust deep-dive teaser) -->
+    <section id="trust" aria-labelledby="trust-h">
+      <h2 id="trust-h">How do I know what I'm feeling?</h2>
+      <p>The same soil can read differently depending on where the probe sits — so I've learned to trust the
+        position, not the label. Want to see how I check myself? I wrote it down.</p>
+      <div class="actions">
+        <a class="btn btn-secondary" href="design/onboarding/Sprout%20Trust%20Your%20Sensor.dc.html">Read: can you trust your sensor?</a>
+      </div>
+    </section>
+
+    <!-- 6 · Where I'm growing (roadmap, in character) -->
+    <section id="roadmap" aria-labelledby="road-h">
+      <h2 id="road-h">What I can do today — and what's next.</h2>
+      <p>Right now I can watch your plants and tell you how each one feels, live. I can't water them myself
+        yet — that part's still growing in, and I won't pretend otherwise. Follow along and watch me get there.</p>
+      <div class="actions"><a class="btn btn-secondary" href="https://github.com/OrangePeachPink/sprout/milestones">See the roadmap</a></div>
+    </section>
+
+    <!-- 7 · Follow along (chrome, third person) -->
+    <section class="chrome" id="follow" aria-labelledby="follow-h">
+      <h2 id="follow-h">Follow the build.</h2>
+      <div class="follow">
+        <a href="https://hackaday.io/OrangePeachPink">Hackaday</a>
+        <span aria-hidden="true">·</span>
+        <a href="https://www.hackster.io/OrangePeachPink">Hackster</a>
+        <span aria-hidden="true">·</span>
+        <a href="https://vkhogue.com">vkhogue.com</a>
+      </div>
+    </section>
+
+    <!-- 8 · Design & brand (chrome) -->
+    <section class="chrome" id="design" aria-labelledby="design-h">
+      <h2 id="design-h">Peek behind the leaves.</h2>
+      <p>The whole design system — my voice, my moods, my colors — is open too.</p>
+      <div class="actions"><a class="btn btn-secondary" href="design/Sprout%20Design%20Library.dc.html">Open the design library</a></div>
+    </section>
+
+    <!-- 9 · About & credit (chrome) -->
+    <section class="chrome about" id="about" aria-labelledby="about-h">
+      <h2 id="about-h">About &amp; credit</h2>
+      <p>Sprout is an open-source project by <strong><a href="https://vkhogue.com">Veronica Hogue</a></strong>,
+        MIT-licensed.</p>
+      <div class="actions">
+        <a class="btn btn-secondary" href="https://github.com/OrangePeachPink/sprout/blob/main/CITATION.cff">Cite this project</a>
+        <a class="btn btn-secondary" href="https://github.com/OrangePeachPink/sprout">View the code</a>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <div class="wrap"><span class="tag">Sprout · plants with a pulse · tend well.</span></div>
+</footer>
+
+<script>
+  // Theme toggle (progressive enhancement; see the head init).
+  document.getElementById('theme-toggle').addEventListener('click', function () {
+    var root = document.documentElement, isDark = root.getAttribute('data-theme') === 'dark';
+    if (isDark) { root.removeAttribute('data-theme'); } else { root.setAttribute('data-theme', 'dark'); }
+    this.setAttribute('aria-pressed', String(!isDark));
+    try { localStorage.setItem('sprout-theme', isDark ? 'light' : 'dark'); } catch (e) {}
+  });
+</script>
+</body>
+</html>
