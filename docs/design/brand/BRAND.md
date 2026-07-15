@@ -66,6 +66,26 @@ must be, alive whenever it can be.* All motion honors `prefers-reduced-motion`.
 | **Bob** | speaking / greeting |
 | **Droop** | thirsty / needs water |
 
+### Avatar / profile mark
+
+For square-but-circular surfaces (Google / GitHub profile, social avatar), use
+[`sprout-avatar.svg`](sprout-avatar.svg) — the editable master — or [`sprout-avatar.png`](sprout-avatar.png)
+(1024², exported). The mark is composed **circle-safe**: the seedling sits inside the inscribed circle, so a
+circular crop only ever loses the corner ground. Brand greens over the soil-mode radial ground; reads down to
+~40px. Export a PNG at whatever size the surface needs from the SVG.
+
+### Profile header / cover mark
+
+For wide cover surfaces (Hackaday.io, and cover-photo bands generally), use
+[`sprout-hackaday-header.svg`](sprout-hackaday-header.svg) — the editable master — or
+[`sprout-hackaday-header.png`](sprout-hackaday-header.png) (1400×500, exported). The canvas is **1400×500**
+(2.8∶1) — the size these surfaces store — but they re-crop it with `background-size: cover`, centered, into a
+*wider-shorter* band (~4.6∶1 on desktop, wider on big monitors). So it's composed **center-safe two ways**:
+every signature element (the edge seedlings, the full-width moisture trace, the seven-band hairline) lives in
+the vertical-center safe band that survives the crop, and the horizontal center is kept **dark** so an
+overlaid name + summary stay legible. It shares the seedling and soil-mode ground with the avatar, so a
+profile reads as one system. Re-export the PNG from the SVG at the surface's store size.
+
 ## 4. The mood system (band-derived)
 
 **Invariant:** Sprout's mood is a **1:1 function of the calibrated moisture band** — one of seven — and
