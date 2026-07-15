@@ -243,7 +243,8 @@ improving it"* is as close to zero as open source allows. Take it and grow somet
 ---
 
 <p align="center"><sub>Built in the open by
-<a href="https://github.com/OrangePeachPink">V. K. Hogue</a> · source under
+<a href="https://vkhogue.com">Veronica Hogue</a>
+(<a href="https://github.com/OrangePeachPink">@OrangePeachPink</a>) · source under
 <a href="LICENSE">MIT</a>.</sub></p>
 
 <p align="center"><sub>Sprout · plants with a pulse · <b>tend well.</b></sub></p>

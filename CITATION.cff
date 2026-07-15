@@ -6,13 +6,14 @@ abstract: >-
   ESP32 firmware plus host tooling, designed evidence-first (raw + band is truth,
   a percentage is only a labelled index) with a zero-friction contributor setup.
 type: software
-# GitHub handle for now; swap to your real name (given-names / family-names) to
-# claim portfolio credit when the repo goes public.
 authors:
-  - name: "OrangePeachPink"
+  - given-names: "Veronica"
+    family-names: "Hogue"
+    website: "https://vkhogue.com"
+    alias: "OrangePeachPink"
 repository-code: "https://github.com/OrangePeachPink/sprout"
 url: "https://github.com/OrangePeachPink/sprout"
-version: "0.7.0"
+version: "0.7.1"
 keywords:
   - soil-moisture
   - esp32

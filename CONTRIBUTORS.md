@@ -6,9 +6,9 @@ Sprout is open-source under the [MIT License](LICENSE), and its copyright line r
 
 ## Maintainer & initial developer
 
-- **Veronica K. Hogue** ([@OrangePeachPink](https://github.com/OrangePeachPink)) — lead
-  maintainer and initial developer: firmware, host tooling and analytics, the design system,
-  and the engineering process.
+- **Veronica Hogue** ([@OrangePeachPink](https://github.com/OrangePeachPink) ·
+  [vkhogue.com](https://vkhogue.com)) — lead maintainer and initial developer: firmware,
+  host tooling and analytics, the design system, and the engineering process.
 
 ## Adding your name
 
