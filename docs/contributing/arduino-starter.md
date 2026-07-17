@@ -73,8 +73,8 @@ built:
 > *One honest heads-up:* most of these (and most tutorials everywhere) finish by turning the reading into a
 > **moisture percentage** with `map()`. That's a fine way to *start* — but here, and in Sprout, we deliberately
 > stick to **bands** ("dry / ideal / wet") instead, because a single percentage pretends to a precision the
-> sensor doesn't actually have. Both approaches will get you reading soil today; we just think bands tell the
-> truth more honestly. Learn from everyone, then decide for yourself.
+> sensor doesn't actually have. Both approaches will get you reading soil today; we just think bands are a
+> more faithful picture of what the sensor can tell you. Learn from everyone, then decide for yourself.
 
 [adafruit]: https://learn.adafruit.com/adafruit-stemma-soil-sensor-i2c-capacitive-moisture-sensor/overview
 [sparkfun]: https://learn.sparkfun.com/tutorials/soil-moisture-sensor-hookup-guide/all
