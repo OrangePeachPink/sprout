@@ -17,10 +17,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-  "ruff>=0.15.21",            # lint + format (policy lives in ruff.toml)
+  "ruff>=0.15.22",            # lint + format (policy lives in ruff.toml)
   "pytest>=8",            # host test harness (ADR-0002 #11)
   "pre-commit>=3.7",      # the local enforcement layer (ADR-0002 #10)
-  "clang-format==22.1.5", # C/C++ changed-LINES format gate (#352); the wheel ships
+  "clang-format==22.1.8", # C/C++ changed-LINES format gate (#352); the wheel ships
                           # both the binary AND git-clang-format, hash-pinned in
                           # uv.lock — one source, no ambient toolchain (ADR-0002 #10)
 ]
