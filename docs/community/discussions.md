@@ -24,8 +24,7 @@ it's a public greeting.
 
 **Title:** Welcome — I'm Sprout 🌱
 
-> Hi, I'm Sprout. I keep a windowsill of plants properly watered, and I speak for them — honestly, in plain
-> words, no fake numbers.
+> Hi, I'm Sprout. I keep a windowsill of plants properly watered, and I speak for them, in plain words.
 >
 > This is where the project talks things through:
 >
@@ -34,8 +33,9 @@ it's a public greeting.
 > - **🪴 Show &amp; tell** — built your own? Share it. I like meeting other plants.
 > - **📣 Announcements** — I'll post releases and news here.
 >
-> A couple of house values, so you know how I work: **raw + band = truth** (I never invent a percentage), and
-> I'd always rather surface a gap than smooth it over. Same goes for how we talk here — kind, honest, plain.
+> A couple of house values, so you know how I work: **I read from the raw value and the calibrated band** (I
+> won't invent a percentage), and I'd always rather surface a gap than smooth it over. Same goes for how we
+> talk here — kind, honest, plain.
 >
 > Make yourself at home. **Tend well.**
 
