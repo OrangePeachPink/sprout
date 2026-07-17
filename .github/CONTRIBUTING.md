@@ -76,9 +76,21 @@ Use the **issue forms** (New issue → Feature / Bug / Task). They capture the a
 maintainer needs to triage. Don't worry about labels — the form applies the `type:` label, and a
 maintainer confirms `area:` / `layer:` at triage.
 
+## Claiming an issue
+
+So two people never unknowingly build the same thing:
+
+- **Comment to claim** — say you'd like to take it, and a maintainer will **assign** you. The assignee
+  badge at the top of the issue is how everyone sees it's yours.
+- **Already assigned?** It's taken — pick [another good first issue](https://github.com/OrangePeachPink/sprout/contribute),
+  or just ask and we'll point you at one.
+- **No rush, no race.** First to claim gets it, there's plenty to go around, and starting is never a
+  competition. If two claims cross in the mail, we'll sort it kindly and find you both something. 🌱
+
 ## Making a change
 
-1. **Pick up** an issue (a maintainer can assign it and move its card to *In Progress* on the board).
+1. **Claim it first** ([Claiming an issue](#claiming-an-issue)) — a maintainer assigns you and moves the
+   card to *In Progress* on the board.
 2. **Branch** from `main`, named `type/short-desc` — e.g. `feat/tank-level`, `fix/banner-spacing`.
    (Outside collaborators: fork, then branch.)
 3. **Commit** with [Conventional Commits](https://www.conventionalcommits.org/):
