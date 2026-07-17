@@ -41,7 +41,7 @@ tooling sized to match, not over-engineered.
 
 Sprout is developed with AI assistance — the maintainer works alongside AI coding tools — and AI-assisted
 contributions are as welcome as hand-written ones. Contribute however you work, with or without AI tools; the
-bar is the same either way: honest, tested, and kind.
+bar is the same either way: clear, tested, and kind.
 
 ## Quick start
 
@@ -59,7 +59,7 @@ tests that CI does.
 
 Once the dashboard is up, click **▶ Start logging** — that single action begins logging every connected
 sensor at once, whether it's plugged in over USB or reporting over Wi-Fi. On a brand-new install with no data yet,
-the honest empty-state hands you the same Start button, so day one is never a dead-end.
+the empty-state hands you the same Start button, so day one is never a dead-end.
 
 ## How it works
 
@@ -79,7 +79,7 @@ index.
 
 **Today — the live dashboard.** One command (`just start`) serves this: a functional **Monitor · Capture ·
 Lab** view — raw ADC and the calibrated band for every probe, plus the calibration ladder. Plain and
-unpolished on purpose, and honest about what it reads: probes in dry air show **Parched**, probes sitting
+unpolished on purpose, and it shows exactly what it reads: probes in dry air show **Parched**, probes sitting
 in water show **Drowning**, because the dashboard shows what the capture actually contains.
 
 <p align="center">
@@ -106,7 +106,7 @@ a UI/UX contributor to jump in ([#867](https://github.com/OrangePeachPink/sprout
 ## The brand
 
 Sprout isn't a readout — it's a **character**. The plant speaks for itself, in the first person, calm and
-honest. The full identity, voice rules, the living mark, and the seven-band mood system are in the brand
+plain-spoken. The full identity, voice rules, the living mark, and the seven-band mood system are in the brand
 guide:
 
 - **[Brand guide](docs/design/brand/BRAND.md)** — voice, the living mark + motion, the mood↔band system, the
@@ -234,7 +234,7 @@ paperwork.** Opening a PR just means your contribution ships under the same MIT 
 Sprout free for the next person. It's also why the copyright reads *"Veronica K. Hogue and Sprout
 contributors"*: the moment you contribute, that **"and contributors" is you.**
 
-**No warranty** — it's provided as-is. (We read the soil honestly; we don't promise your monstera survives
+**No warranty** — it's provided as-is. (We read the soil as best we can; we don't promise your monstera survives
 your vacation.)
 
 We picked the friendliest license we could so the distance between *"I found this repo"* and *"I'm using and

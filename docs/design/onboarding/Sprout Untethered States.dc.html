@@ -331,7 +331,7 @@ class Component extends DCLogic {
 
     // ---- honesty & seams ----
     const seamNotes = [
-      { tag:'DROPPED', color:'var(--st-fault)', text:'The exploration\u2019s “INDEX 58” donut. GET / serves level + raw + quality — no calibrated index exists, so none is drawn. Raw + band = truth.' },
+      { tag:'DROPPED', color:'var(--st-fault)', text:'The exploration\u2019s “INDEX 58” donut. GET / serves level + raw + quality — no calibrated index exists, so none is drawn. Raw + band are the reading.' },
       { tag:'DROPPED', color:'var(--st-fault)', text:'Plant names on the device surface. The payload has no names — the glance is channel-first (ch0…ch3); friendly names join host-side where plants.env lives (#377).' },
       { tag:'HONEST', color:'var(--leaf)', text:'“Last heard” is the viewer\u2019s clock. The device owns only uptime_ms today (time: uptime · #21); the time-source chip is drawn for ntp / rtc / uptime so NTP lands with no redesign (schema v2 §11.1).' },
       { tag:'HONEST', color:'var(--leaf)', text:'Sync progress is the store\u2019s claim, not the device\u2019s — GET / reports now, not history. The bar and “held n” arrive with store-and-forward (#276/#277/#278); the slot is designed, transport-agnostic.' },

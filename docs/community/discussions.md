@@ -35,7 +35,7 @@ it's a public greeting.
 >
 > A couple of house values, so you know how I work: **I read from the raw value and the calibrated band** (I
 > won't invent a percentage), and I'd always rather surface a gap than smooth it over. Same goes for how we
-> talk here — kind, honest, plain.
+> talk here — kind, clear, plain.
 >
 > Make yourself at home. **Tend well.**
 

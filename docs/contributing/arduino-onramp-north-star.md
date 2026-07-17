@@ -190,8 +190,8 @@ The on-ramp deliberately leaves them wanting — each ceiling is a Full headline
 - They watched a Serial Plotter → Full **logs every reading** and lets them explore the history.
 - The LED lit up → Full drives a **real pump**, safely, with an arm-gate.
 
-Crucially, the **values** carry over intact: The on-ramp taught them that a percentage is a lie and bands are the
-truth. Full is just that lesson, all the way up. They don't graduate to a *different* philosophy — they
+Crucially, the **values** carry over intact: the on-ramp taught them to read in bands and stay close to the
+raw signal. Full is just that lesson, all the way up. They don't graduate to a *different* philosophy — they
 graduate to *more* of the one they already fell in love with.
 
 ---
