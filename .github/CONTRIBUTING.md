@@ -101,7 +101,9 @@ So two people never unknowingly build the same thing:
    commit. (First-time setup: `uv sync`, or open the repo in **Codespaces** — see the
    [README quick start](../README.md#quick-start).)
 5. **Open a PR** and fill in the template. Link the issue with **`Refs #N`** or **`Part of #N`** —
-   **not** `Closes #N` (see the gate below). Include how you verified the change.
+   **not** `Closes #N` (see the gate below). Include how you verified the change. **And add your name to
+   [`CONTRIBUTORS.md`](../CONTRIBUTORS.md) in the same PR** — write yourself into the project; the
+   *"and contributors"* in Sprout's copyright line becomes, literally, you. 🌱
 6. PRs are **squash-merged** — one clean commit per change; the branch auto-deletes after merge.
 7. **It gets reviewed, then merged.** Someone other than the author checks your PR against the issue's
    acceptance criteria; once it passes, it's merged. **Community contributions always get direct maintainer
