@@ -749,6 +749,37 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         "any_calibrated": bool(anchors),
                     }
                 )
+            elif parsed.path == "/cards.json":  # #875 the Home plant-card payloads
+                from card_payload import (
+                    cards_from_context,
+                    load_mood_map,
+                    load_voice_pool,
+                )
+                from registry_model import load_registry_model
+
+                # The Home reads the SAME served context as the Workbench (one truth,
+                # ADR-0008): live band/mood/forecast from build_context, rich identity
+                # (name/pot/location/photo) bridged from the temporal registry.
+                model = load_registry_model()
+                plants_by_id = {p.plant_id: p for p in model.plants}
+                try:
+                    ctx = _context(self.inputs, hours, channels)
+                except NoDataYet as exc:  # first-run: the Home's honest empty state
+                    self._send_json(
+                        {
+                            "cards": [],
+                            "empty": True,
+                            "had_any_logged": exc.had_any_logged,
+                        }
+                    )
+                    return
+                cards = cards_from_context(
+                    ctx,
+                    plants_by_id=plants_by_id,
+                    mood_map=load_mood_map(),
+                    voice_pool=load_voice_pool(),
+                )
+                self._send_json({"cards": cards, "count": len(cards)})
             elif parsed.path == "/serial/owner":  # who holds the port (#330)
                 self._send_json(serial_lock.owner_status())
             elif parsed.path.startswith("/docs/"):  # #808: front-door docs, guarded
