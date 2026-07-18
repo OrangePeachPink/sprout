@@ -27,7 +27,7 @@ deliverable — which is exactly why your PR matters.
    names its seam, so you know exactly where you're plugging in.
 3. **Build it in your PR.** Add support for the thing you love; the maintainer reviews it (and validates on real
    hardware where she has it).
-4. **It ships when it's proven** — no gate-keeping beyond "does it work, and is it honest about what it does?"
+4. **It ships when it's proven** — no gate-keeping beyond "does it work, and does it do what it says?"
 
 ## Where you can help
 
