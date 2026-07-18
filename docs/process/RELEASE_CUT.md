@@ -60,6 +60,9 @@ Then: add a 2–4 line human lede above the generated list (what this release *m
 ## 6. Open the next cycle
 
 - [ ] Create the next milestone(s) per the version roadmap (ADR-0009 §5); triage carry-overs into them.
+- [ ] **Replenish the good-first shelf** — keep **6–8 open `good first issue`s** for newcomers (#1088).
+      This cut's closed ones become learning-path examples (trace issue → PR → release); top up the open
+      stock with small, additive, non-ship-blocking tasks so a contributor never lands on an empty shelf.
 - [ ] Post the release link where the team coordinates; the retro (per-release, DesignQA chunk-a) keys
       off the shipped version.
 
