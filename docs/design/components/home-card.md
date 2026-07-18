@@ -64,6 +64,40 @@ colour can only mean state, so the plants that need water announce themselves. T
 travels by colour) buying rule 1 (state owns the saturation): because colour means *only* state, it stays
 legible across two dozen plants at once.
 
+## Identity & differentiation — telling 24 cards apart
+
+The identity block (rule 3) has to make every card distinct at a glance without borrowing the state channel's
+colour. It does that through **form**, in a strict priority:
+
+1. **A real photo of your plant** — the best differentiator, and the warmest, most personal thing on the card.
+   It differentiates by *content*, so it carries no colour tension. (Local-only registry field; EXIF-stripped
+   on export.)
+2. **A chosen plant icon** — for when there's no photo yet. A set of ~20 silhouettes covering the most common
+   houseplants (see the asset task), so a shelf of cards doesn't all show the same glyph.
+3. **A generic fallback** — the neutral seedling, only when nothing is set.
+
+Two more identity dimensions, both **form-first, colour-muted** (charter rule 3, the two-register guardrail):
+
+- **Pot shape** — a small set (~6): tapered classic, straight-wall tall, kettle/round, low bowl, footed,
+  cylinder. Shape helps you find the *physical* pot on the shelf (rule 4), and it's colour-free.
+- **Pot / foliage colour** — optional, drawn only from the **muted materials** register (terracotta, stone,
+  ceramic, sage-glaze, clay, charcoal). Capped in saturation, confined to the thumbnail; it never touches the
+  frame. A dusty-blue ceramic pot and a grey-stone kettle read as different plants without competing with the
+  state frame.
+
+### The thumbnail slot
+
+**One slot, best-available content** — a photo *replaces* the icon; they never both show. Sizing follows the
+card's scale (full portrait at n=1 -> a small silhouette in the grid); even tiny, the silhouette still
+differentiates. The **state frame always wins the visual hierarchy** — the thumbnail is secondary.
+
+**No dedicated zoom control.** The responsive grid (fewer columns -> bigger cards -> more thumbnail detail)
+plus the existing `details ->` / Workbench reveal already *is* the progressive-disclosure ladder (ADR-0033).
+
+**Caution — photos at scale.** A wall of two dozen photos can start to compete with the state frames. Keep the
+photo in a bounded, slightly-recessed thumbnail, let the frame stay the loudest element, and consider a touch
+of desaturation on thumbnails at the highest densities. Worth an exhibit before it ships.
+
 ## What the card consumes (it invents nothing)
 
 - **Band → mood:** [`mood-band-map.json`](mood-band-map.json) is the single source. The card never derives a
