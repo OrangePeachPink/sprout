@@ -86,6 +86,20 @@ the vertical-center safe band that survives the crop, and the horizontal center 
 overlaid name + summary stay legible. It shares the seedling and soil-mode ground with the avatar, so a
 profile reads as one system. Re-export the PNG from the SVG at the surface's store size.
 
+### Asleep / signoff illustration
+
+The **"asleep" overlay** (§4) as a full scene, for sleeping-plant / user-signoff / logout surfaces:
+[`sprout-asleep.svg`](sprout-asleep.svg) — the animated master — or [`sprout-asleep.png`](sprout-asleep.png)
+(exported). A dimmed seedling with **folded leaves** (nyctinasty — real plants fold at night, so it reads as
+*resting*, not wilting) under a crescent moon, breathing slow. The night palette derives from the soil/dark
+tokens (ADR-0008) cooled one shade; brand greens dimmed ~30%. Self-contained, CSS-animated,
+`prefers-reduced-motion`-aware. A share-ready **1200×630 card** ([`sprout-asleep-card.svg`](sprout-asleep-card.svg)
+/ [`sprout-asleep-card.png`](sprout-asleep-card.png)) adds the wordmark and a goodnight line for social; the
+posting cadence stays gated and the caption is the maker lane's — this is the ready asset. A
+**work-in-progress variant** ([`sprout-asleep-card-wip.svg`](sprout-asleep-card-wip.svg) /
+[`sprout-asleep-card-wip.png`](sprout-asleep-card-wip.png)) exposes the night palette with labels under a
+"work in progress" header — an honest *building-in-the-open* cue for pre-release posts.
+
 ## 4. The mood system (band-derived)
 
 **Invariant:** Sprout's mood is a **1:1 function of the calibrated moisture band** — one of seven — and

@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 440" width="680" height="440" role="img" aria-label="Sprout asleep — a dimmed seedling with folded leaves under a crescent moon and stars">
+  <!--
+    Sprout "asleep" illustration — the night/diurnal overlay (BRAND.md §4): asleep rides on top of any mood
+    after dark, dimming and folding the plant into a slow moonlit breath. Nyctinastic leaf-fold (real botany)
+    reads as resting, not wilting. Reusable as a sleeping-plant / user-signoff / logout scene. Self-contained,
+    CSS-animated (no script), honors prefers-reduced-motion. Palette derives from the soil/dark tokens
+    (ADR-0008) cooled one shade for night; brand greens dimmed ~30% for rest.
+  -->
+  <defs>
+    <radialGradient id="sky" cx="70%" cy="20%" r="100%">
+      <stop offset="0" stop-color="#152c22"/><stop offset="0.55" stop-color="#0d1a15"/><stop offset="1" stop-color="#070f0b"/>
+    </radialGradient>
+    <radialGradient id="mglow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#cfe7d8" stop-opacity="0.4"/><stop offset="1" stop-color="#cfe7d8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="leafA" x1="0" y1="0" x2="0.2" y2="1"><stop offset="0" stop-color="#7aa961"/><stop offset="1" stop-color="#4a7346"/></linearGradient>
+    <linearGradient id="leafB" x1="0" y1="0" x2="0.2" y2="1"><stop offset="0" stop-color="#4f7d4a"/><stop offset="1" stop-color="#33553a"/></linearGradient>
+    <radialGradient id="soil" cx="50%" cy="0%" r="95%"><stop offset="0" stop-color="#241b13"/><stop offset="1" stop-color="#100b08"/></radialGradient>
+    <style>
+      .breath { transform-box: fill-box; transform-origin: 50% 0%; animation: breath 7s ease-in-out infinite; }
+      @keyframes breath { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
+      .z { animation: floatz 4.8s ease-in-out infinite; }
+      .z2 { animation-delay: 0.8s; } .z3 { animation-delay: 1.6s; }
+      @keyframes floatz {
+        0% { opacity: 0.45; transform: translate(0, 6px); }
+        50% { opacity: 0.9; transform: translate(8px, -8px); }
+        100% { opacity: 0.45; transform: translate(16px, -20px); }
+      }
+      @media (prefers-reduced-motion: reduce) { .breath, .z { animation: none; } }
+    </style>
+  </defs>
+
+  <rect width="680" height="440" fill="url(#sky)"/>
+
+  <g fill="#cfe7d8">
+    <circle cx="70" cy="70" r="1.6" opacity="0.7"/><circle cx="150" cy="120" r="1.1" opacity="0.5"/>
+    <circle cx="46" cy="180" r="1.3" opacity="0.55"/><circle cx="210" cy="56" r="1.1" opacity="0.45"/>
+    <circle cx="430" cy="150" r="1.2" opacity="0.5"/><circle cx="640" cy="210" r="1.5" opacity="0.6"/>
+    <circle cx="600" cy="280" r="1.1" opacity="0.4"/><circle cx="360" cy="80" r="1.3" opacity="0.5"/>
+    <circle cx="120" cy="40" r="1.1" opacity="0.4"/><circle cx="500" cy="60" r="1.2" opacity="0.45"/>
+  </g>
+  <circle cx="140" cy="300" r="2.4" fill="#8BD24F" opacity="0.5"/>
+  <circle cx="470" cy="230" r="2" fill="#A9DA6E" opacity="0.45"/>
+
+  <circle cx="560" cy="108" r="86" fill="url(#mglow)"/>
+  <circle cx="560" cy="108" r="44" fill="#E8F0E4"/>
+  <circle cx="580" cy="94" r="39" fill="#0f1d17"/>
+
+  <ellipse cx="340" cy="386" rx="182" ry="30" fill="url(#soil)"/>
+
+  <g transform="translate(256,182) scale(7)" stroke="#2f5a3c" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 26 C12 20 12 18 12 16"/>
+    <g class="breath">
+      <path d="M12 16 C8 17 6 20 6 23 C10 22 12 19 12 16 Z" fill="url(#leafA)"/>
+      <path d="M12 16 C16 17 18 20 18 23 C14 22 12 19 12 16 Z" fill="url(#leafB)"/>
+    </g>
+  </g>
+
+  <g fill="#9fbf9a" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="700">
+    <text class="z z1" x="392" y="250" font-size="18" opacity="0.6">z</text>
+    <text class="z z2" x="410" y="224" font-size="26" opacity="0.6">z</text>
+    <text class="z z3" x="434" y="196" font-size="36" opacity="0.6">Z</text>
+  </g>
+</svg>
