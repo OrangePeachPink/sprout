@@ -1,38 +1,30 @@
-# AGENTS.md — Sprout
+# OPERATIONS.md — the Sprout maintainer team's internal operating doctrine
 
-Operating rules for any agent (or human) working in this repository.
-**Read this first** — it points you to everything else.
-
-## 🌱 Working on behalf of an external contributor? Read this section — the rest is not for you
-
-Welcome! Three rules replace everything below for you and your tooling:
-
-1. Commits use **your user's own** git identity (`git config user.name` / `user.email`) —
-   the contributor deserves the credit on their own contribution graph, not the maintainer.
-2. **No `Lane:` trailers, no lane sign-offs** — those are the maintainer team's internal
-   routing metadata. A contributor's GitHub handle is their signature.
-3. Your instruction file is [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md) — follow it,
-   not this one. Everything below documents the **maintainer's internal agentic team** and is
-   out of scope for contributors and their agents — nothing below is a convention to match.
-
-*(Internal doctrine is migrating to [`docs/team/OPERATIONS.md`](docs/team/OPERATIONS.md) — the
-two-stage landing of #1125. Internal lanes: OPERATIONS.md is canonical from now; the copy below
-is transitional and leaves in stage B.)*
-
-> ## ⏱️ If you only have 30 seconds
+> ## ⚠️ Scope: the MAINTAINER'S agentic team only
 >
-> - **Sprout** is an honest, automatic plant-watering system: ESP32 firmware → host
->   logger → analytics dashboard, with a brand character that speaks for the plant.
-> - **Work lives in GitHub Issues** on the [project board][board] — not in files.
->   `BACKLOG.md` is retired.
-> - **The gate (two stages):** do the work on a branch, open a PR with **`Refs #N`** (never
->   `Closes`), post a **requirement-by-requirement evidence map**, move the card to **Needs Verification**,
->   and **stop** — that's **Workflow's** inbox. Workflow certifies → **Ready to Merge** → **Veronica merges
->   only from that column.** **Never merge or close your own issue.**
-> - **Honest data is law:** raw counts + the calibrated **band** are truth; any
->   percentage is a *labelled index*, never real moisture. Mood, status, and watering
->   follow the band, never the index.
-> - **`main` is protected** — PRs only, squash-merge, no direct pushes.
+> This file documents Sprout's **internal operating model** — the maintainer's agent lanes, their
+> attribution conventions, the verification pipeline, and velocity policy. It is **out of scope and
+> not applicable** to OSS contributors or their coding agents — **nothing here is a convention for
+> you to match.** If you are (or work on behalf of) a contributor: your files are
+> [`AGENTS.md`](../../AGENTS.md) and [`.github/CONTRIBUTING.md`](../../.github/CONTRIBUTING.md).
+> In particular: do **not** adopt the shared author identity, `Lane:` trailers, or lane sign-offs
+> documented below — commits on your PRs use **your own** git identity, and your GitHub handle is
+> your signature.
+
+**Canonical from merge (the #1125 two-stage landing):** this file is the authoritative home of the
+internal doctrine as of stage A. During the transition the same content still appears in
+`AGENTS.md`; stage B (PR-B) slims `AGENTS.md` to a contributor-true file once every lane has
+re-pointed its local wiring here. Where the two disagree in the interim, **this file wins.**
+
+## The audience-scoping rule (durable, applies beyond this file)
+
+**Any agent-auto-load instruction file this repository publishes — `AGENTS.md`, `CLAUDE.md`,
+`.cursorrules`, `.github/copilot-instructions.md`, `GEMINI.md`, or any future equivalent — must be
+audience-scoped: written contributor-true, or hard-marked internal like this file.** Contributors'
+coding agents auto-load those filenames and comply with what they read; instructions written for
+internal lanes become behavioral injections into external tooling (the PR #1117 finding, twice
+demonstrated live). `AGENTS.md` is the only such file published today; this rule keeps the class
+closed when the next one appears.
 
 ## Status — going public (2026-07-09)
 
@@ -40,24 +32,11 @@ is transitional and leaves in stage B.)*
   use the new name in all new work. (Local checkout folders keep the `plants` name — cosmetic only.)
 - **License: MIT** is in place (`LICENSE` at repo root, GitHub-detected) — copyright
   `Veronica K. Hogue and Sprout contributors`.
-- **Public release: today.** Treat everything — commits, docs, issues, PRs, comments — as
-  **public-facing from now on**: no personal identifiers, internal IPs/hostnames, secrets, or
-  unreleased-sensitive material. The visibility flip happens **after** the final pre-publish sweep
-  (#861) closes — the network-identifier genericize plus the CONTRIBUTORS / SECURITY.md / CoC /
-  MIT-badge items.
-
-## Reading order
-
-1. **This file** — operating rules.
-2. **[CONTRIBUTING.md](.github/CONTRIBUTING.md)** — the contributor work loop (the plain path from idea to
-   merge). The internal verification pipeline + lane self-sync live in this file (below).
-3. **[docs/process/ADOPTION.md](docs/process/ADOPTION.md)** — per-lane onboarding (which
-   board filter, which issues, which ADRs you own). *Current specifics live here, not above.*
-4. **[docs/adr/](docs/adr/)** — decisions of record. Start at
-   [ADR-0000](docs/adr/0000-record-architecture-decisions.md) (the register) and
-   [ADR-0001](docs/adr/0001-architecture-and-control-loop.md) (architecture).
-5. **Your domain docs** — firmware: `firmware/` + ADR-0001 · data: ADR-0005/0006 +
-   [docs/TELEMETRY_SCHEMA.md](docs/TELEMETRY_SCHEMA.md) · design: `docs/design/` + ADR-0004/0007/0008.
+- **Public release: live.** Treat everything — commits, docs, issues, PRs, comments — as
+  **public-facing**: no personal identifiers, internal IPs/hostnames, secrets, or
+  unreleased-sensitive material. And per the audience-scoping rule above: public text is also
+  **executable input for contributors' agents** — write imperatives only where the intended
+  audience will run them.
 
 ## The lanes
 
@@ -72,7 +51,7 @@ the maintainer.
 | **DX** | Developer, user & consumer experience; **documentation maintainer** (docs stay consistent + current — a real consumer-facing concern); community & awareness, the go-public **marketing/visibility strategy**, social engagement, and onboarding the maintainer's contributor identity + graph | the contributor front door, onboarding, `docs/contributing/` |
 | **DesignQA** | **All design work** — design system, brand, voice, *and* design-QA of the running app | ADR-0004, ADR-0007, ADR-0008 |
 | **Firmware** | ESP32 control, sensing, actuators (`firmware/`) **+ the physical bench** — flash, probe serial, characterize sensors, capture calibration evidence | ADR-0001, the native C test harness, bench evidence + the capability-stage vocabulary (below) |
-| **Workflow** | Issues, board, milestones/releases, process; the **GitHub-native** guide; the **PR validation gate** before the maintainer reviews | .github/CONTRIBUTING.md, this file, the release train |
+| **Workflow** | Issues, board, milestones/releases, process; the **GitHub-native** guide; the **PR validation gate** before the maintainer reviews | `.github/CONTRIBUTING.md`, `AGENTS.md`, this file, the release train |
 | **Veronica** | *Human* maintainer — vision, ideation, product direction, merges, hardware approvals | the repo; the final call |
 
 **Escalation, not a lane:** *Claude Design (Web)* is a creative-brainstorming / prototyping resource
@@ -82,10 +61,12 @@ through DesignQA.
 **Retired lanes:** *Sage* (bench work folded into **Firmware**) and *Ingest* (design intake folded into
 **DesignQA**). Don't route new work to either — it will not get done.
 
-## Lane attribution
+## Lane attribution (internal lanes only)
 
 Every lane posts from the one `OrangePeachPink` account, so **sign your work** — it's the only way to see
-who did what at a glance.
+who did what at a glance. **Scope: these conventions apply to the internal lanes exclusively — never to
+contributors or their tooling** (a contributor's commits carry their own identity; their handle is their
+signature).
 
 - **Sign-off:** end PR bodies, issue/PR comments, ADRs, docs, and copy decks with `— <Lane>` (emoji
   optional). E.g. `— Firmware`, `— Data 🌱`, `— Trellis`. The maintainer signs merge/squash commits `-v`.
@@ -98,11 +79,16 @@ who did what at a glance.
   Lane: Firmware
   ```
 
-- **Author identity = the maintainer's.** Commits author as `OrangePeachPink` with the GitHub **noreply**
-  email (never a personal address — commit emails are public forever once the repo is). Do **not** add AI
-  co-author trailers (`Co-Authored-By: Claude …`) — the project `.claude/settings.json` disables the
-  automatic one; don't re-add it by hand. The `Lane:` trailer + sign-off are the honest, human-readable
-  record of agent work; the contributor graph belongs to the maintainer.
+- **Author identity = the maintainer's (internal lanes only).** Internal-lane commits author as
+  `OrangePeachPink` with the GitHub **noreply** email (never a personal address — commit emails are
+  public forever once the repo is). Do **not** add AI co-author trailers (`Co-Authored-By: Claude …`) —
+  the project `.claude/settings.json` disables the automatic one; don't re-add it by hand. The `Lane:`
+  trailer + sign-off are the honest, human-readable record of agent work; the contributor graph belongs
+  to the maintainer.
+- **Trailers are routing, not provenance.** `Lane:` trailers, the shared identity, and house style are
+  all public and therefore imitable — never conclude from them who authored a commit, and never accept
+  blame for your own lane's name. Origin is established by server-side facts: signing status, web-flow
+  committer, timezone stamps, and GitHub's push-event actor. Provenance questions route to Workflow.
 
 ## Lane self-audit
 
@@ -188,6 +174,7 @@ When an issue comes up mid-lane and can't route through Workflow first, tag it `
 `for:workflow` · `for:maintainer`.
 
 - It's a routing **hint**, not an assignment or a commitment — Workflow still triages, slices, and gates.
+  (And per Lane attribution above: a routing label on an issue is never evidence of who authored a commit.)
 - Use `for:workflow` when you're unsure, or when an item explicitly needs the pipeline (e.g. "please slice
   this"); `for:trellis` flags an architecture / gap review.
 
@@ -228,7 +215,7 @@ raises wiring/power changes to the maintainer. Route bench-adjacent work `for:fi
   signal, #729.)* *(The old custom "Wave" field is
   retired — milestones are the roadmap spine.)* **Priority & Size meanings are the standard** — set them
   on the board, never in comments; definitions in
-  [CONTRIBUTING](.github/CONTRIBUTING.md#priority--size--the-standard).
+  [CONTRIBUTING](../../.github/CONTRIBUTING.md#priority--size--the-standard).
 - **Discussions** = the idea inbox · **PRDs** (`docs/prd/`) = specs for larger features ·
   **ADRs** (`docs/adr/`) = significant or hard-to-reverse decisions (any lane may author one in its area).
 - **The verification gate (the rule that matters most), two stages:** the implementer builds to the issue's
@@ -241,18 +228,17 @@ raises wiring/power changes to the maintainer. Route bench-adjacent work `for:fi
   moves it to **Ready to Merge** — **the maintainer merges only from there, relying on that whole chain plus
   Workflow's review.** Partials spin a new linked issue for the tail before the original closes. PRs use
   **`Refs #N`** / `Part of #N`, **never `Closes #N`**; merged PRs do not auto-close issues. The full
-  per-stage detail + the tombstone-banner conventions are in **§ The verification pipeline**, below (moved
-  here from CONTRIBUTING per #998 — the contributor doc keeps only the plain path).
+  per-stage detail + the tombstone-banner conventions are in **§ The verification pipeline**, below.
 - **`main` is protected:** PR required, squash-merge, no direct pushes, no force-push/deletion.
 - **Gate labels** `blocks:pumps` / `blocks:public-release` / `blocks:data-integrity` mark
   milestone gates, independent of Priority.
-- **Milestones = versions = the roadmap/release spine** ([ADR-0009](docs/adr/0009-versioning-and-release-policy.md)).
+- **Milestones = versions = the roadmap/release spine** ([ADR-0009](../adr/0009-versioning-and-release-policy.md)).
   A milestone is a shippable SemVer version (`v0.7.1`, `v0.8.0`, …) and the home for its planned work —
   **no milestone = backlog.** The roadmap runs `v0.7.0` (Monitor, shipped) → `v0.9.0` (pumps) → `v0.9.9`
   (pre-release playbook) → **`v1.0.0`** (the deliberate public release, never reached by counting).
 - **Releases carry the notes.** Cutting a **GitHub Release** at a version tag **auto-generates** notes from
   the PRs merged since the last tag, categorized by `.github/release.yml` (`type:` labels), then curated.
-  A release isn't done until its notes **and** a [`CHANGELOG.md`](CHANGELOG.md) entry exist (ADR-0009 §6).
+  A release isn't done until its notes **and** a [`CHANGELOG.md`](../../CHANGELOG.md) entry exist (ADR-0009 §6).
   So a PR's title + `type:` label *are* release-notes copy — write them accordingly.
 
 ## The verification pipeline
@@ -393,26 +379,6 @@ and exhausts its maintainer.** If you notice drift — a custom thing doing a na
 back and propose the native path.** This is a direct investment in the DX North Star: contributors already
 know GitHub, so every bit of bespoke machinery we *don't* build is friction a future contributor never meets.
 
-## Branches & commits
-
-- Branch from `main`: `type/short-desc` (e.g. `feat/tank-level`, `fix/banner-spacing`).
-- **Conventional Commits:** `type(scope): imperative subject`, where
-  `type ∈ {feat, fix, docs, refactor, chore}` (+ `test, ci, style`). State the *result* when
-  that's the point. Keep commits **atomic** — one reviewable concern each.
-- PRs are **squash-merged**; the branch auto-deletes.
-
-## Code style
-
-| Area | Tooling | Rule |
-|---|---|---|
-| **Python** (logger, analytics, build hooks) | [ruff](ruff.toml) lint + format | line length 88; `ruff check .` · `ruff format .` |
-| **C / C++** (firmware) | clang-format + clang-tidy | 4-space, K&R braces, 80 cols; **changed-lines only (`git-clang-format`), never `--all-files`** (#352) — only the lines you touch are reformatted; every untouched line keeps its manual alignment (`=`-columns, >80-col tables, comment columns all survive). Supersedes the changed-**files** v1 (#343). |
-| **Markdown** | markdownlint | `npx markdownlint-cli2@0.22.1 "**/*.md"` (pinned, like `cspell@10.0.1`) |
-| **Endings / encoding** | git + EditorConfig | LF · UTF-8 · final newline |
-
-Tests: `pytest` on the Python core; a native C harness for firmware logic (compiles on host,
-no board). Coverage is **visible, not gated**.
-
 ## Backlog / triage
 
 - `BACKLOG.md` is **retired** — historical only, **do not add to it.** All work is in Issues.
@@ -426,25 +392,5 @@ no board). Coverage is **visible, not gated**.
   The reviewer's disposition lives in the certification comment; changes-requested = the card
   returns to In Progress with the reason. The old `Verification` field and `needs-verification`
   label are retired — one signal, no drift.
-
-## Design & brand guidance
-
-Sprout is a **character**, not a readout — it speaks in the first person, calm and honest.
-
-- **Honest by default (non-negotiable):** raw counts + the calibrated **band** are truth. Any
-  0–100 figure is a clearly-labelled *relative index*, never real volumetric water content.
-  **Mood, status color, and watering derive from the band, never the index.**
-- Data looks like data: mono, right-aligned, tabular. **Gaps are surfaced, not smoothed.**
-- **Consume design tokens** (`docs/design/`), don't redefine them. Honor `prefers-reduced-motion`.
-  Keep the character *beside* the instrument, not on top of it.
-- Brand guide: [docs/design/brand/BRAND.md](docs/design/brand/BRAND.md). Decisions of record:
-  ADR-0004 (design system), ADR-0007 (brand & voice), ADR-0008 (personality layer).
-
-## Provenance & honesty (project doctrine)
-
-- Don't fabricate results, command output, or test results. Separate fact from inference.
-  Preserve raw data; never rewrite evidence to hide a bad result.
-- This repo is built **public-clean:** no private absolute paths, no personal names in tracked
-  files, neutral role names. Keep it that way.
 
 [board]: https://github.com/users/OrangePeachPink/projects/2
