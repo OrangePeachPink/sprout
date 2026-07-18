@@ -37,29 +37,31 @@ plant that needs you; the identity block confirms which physical plant it is.**
 
 ### n = 1 · one plant, first-run
 
-![Home card at n=1: today's data readout, the proposed voiced card, and the proposed first-run card that is
-complete even with nothing filled in.](exhibit-home-n1.png)
+![Home card at n=1: the shipped card whose identity-colour frame contradicts the plant's state, the proposed
+card whose frame is the state, and the proposed first-run card.](exhibit-home-n1.png)
 
-Left, today: a competent data readout — a big raw number, a band ladder, a labelled index. Middle, proposed:
-the same plant, mood-framed and identity-rich, speaking for itself. Right, first-run: a brand-new plant with
-no photo, pot, location, or watering history yet — still a complete, warm card, not a wall of empty fields.
+Left, today (the shipped card): the frame is an assigned **identity** colour — here teal, which means *wet* —
+on a plant that's **parched**. State is demoted to a small pill under a dense stats block. Middle, proposed:
+the frame **is** the state, the plant speaks, and the stats move to the Workbench. Right, first-run: a
+brand-new plant with nothing filled in yet — still a complete, warm card (ADR-0028).
 
 ### n = 4 · a small windowsill
 
-![Home cards at n=4: the today grid is four numbers to read; the proposed grid has one amber frame that pulls
-the eye straight to the thirsty plant.](exhibit-home-n4.png)
+![Home cards at n=4 from the real windowsill: today's frames are assigned identity colours unrelated to state;
+proposed frames are the state.](exhibit-home-n4.png)
 
-Same four plants, same data. In the proposed grid, the single amber frame pulls your eye straight to the one
-plant that's drying. In the today grid, you read every number to find it.
+Your real windowsill (the classic board). Today, three of the four frames carry an identity colour unrelated
+to state — Anthurium's teal frame on a parched plant is the clearest. Proposed, the frame is the state: the
+content Pothos is the calm green one; the parched pair runs warm.
 
 ### n = 24 · a full windowsill
 
-![Home cards at n=24: the today grid is a wall of 24 numbers; the proposed grid lets the four warm frames
-announce the plants that need water.](exhibit-home-n24.png)
+![Home cards at n=24: today's tiles wear 24 arbitrary identity colours; proposed tiles use colour only for
+state, so the plants needing water pop.](exhibit-home-n24.png)
 
-At scale the charter pays off. The plants that need water announce themselves — the warm frames are the whole
-interface — while the today grid stays a wall of numbers you have to scan. This is rule 3 (identity never
-travels by color) buying rule 1 (state owns the saturation): because color means *only* state, state is
+Illustrative scale. Today, 24 cards wear 24 assigned identity colours — pretty noise you read past. Proposed,
+colour can only mean state, so the plants that need water announce themselves. This is rule 3 (identity never
+travels by colour) buying rule 1 (state owns the saturation): because colour means *only* state, it stays
 legible across two dozen plants at once.
 
 ## What the card consumes (it invents nothing)
