@@ -91,53 +91,97 @@ def test_identity_degrades_gracefully_without_a_name_or_photo() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# the honesty filter — voice can't claim what the instrument can't prove
+# the honesty filter — voice reconciles with the last-watered truth (#875 Q2)
 # --------------------------------------------------------------------------- #
-def test_voice_line_filters_watering_claims_while_last_watered_unknown() -> None:
-    # thriving has two lines; one asserts "my last drink was two days ago" (an event we
-    # can't detect yet), one is event-free. The event one must be filtered.
-    line, gap = pick_voice_line(
-        VOICE, "thriving", plant_id="p01", last_watered_known=False
-    )
-    assert gap is None
-    assert "days ago" not in line
-    assert line == "Feeling great today, thanks for asking."
+def test_an_elapsed_number_line_is_always_filtered_until_templated() -> None:
+    # thriving's "my last drink was two days ago" hard-codes a number — filtered even
+    # WITH a recent re-water (a static pool can't be honest by luck). The safe alt wins.
+    for recent in (False, True):
+        line, gap = pick_voice_line(
+            VOICE, "thriving", plant_id="p01", recent_water=recent
+        )
+        assert gap is None
+        assert "days ago" not in line
+        assert line == "Feeling great today, thanks for asking."
 
 
-def test_a_mood_with_only_event_lines_reports_a_named_gap_not_a_fabrication() -> None:
-    # 'refreshed' has ONE line and it asserts "just had a good drink" — nothing safe
-    # remains. The seam must name the hole, never invent copy.
-    line, gap = pick_voice_line(
-        VOICE, "refreshed", plant_id="p01", last_watered_known=False
-    )
-    assert line is None
-    assert gap and "refreshed" in gap
-    c = _card(band="Wet")  # Wet -> refreshed
+def test_refreshed_is_a_gap_without_a_recent_rewater() -> None:
+    # 'refreshed' has ONE line ("just had a good drink") — a recent-drink claim. With no
+    # recent detected re-water it's a named gap, never fabricated.
+    line, gap = pick_voice_line(VOICE, "refreshed", plant_id="p01", recent_water=False)
+    assert line is None and gap and "refreshed" in gap
+    c = _card(band="Wet")  # Wet -> refreshed, no last_watered
     assert c["voice"] is None and c["voice_gap"] is not None
 
 
-def test_when_last_watered_is_known_the_event_line_is_allowed() -> None:
-    # forward-looking: once the 0.8.0 detector lands, the richer line is honest again.
-    line, gap = pick_voice_line(
-        VOICE, "thriving", plant_id="p01", last_watered_known=True
-    )
+def test_a_recent_detected_rewater_unlocks_the_refreshed_line() -> None:
+    # #875 Q2 (maintainer's call): the detected re-water is real — a recent one makes
+    # "just had a good drink" honest, closing the refreshed gap.
+    line, gap = pick_voice_line(VOICE, "refreshed", plant_id="p01", recent_water=True)
     assert gap is None
-    assert line in VOICE["byMood"]["thriving"]  # either line is now fair game
+    assert line == "Ahh — just had a good drink. All better."
+    fresh = {"known": True, "source": "detected", "recent": True, "ago": "3h ago"}
+    c = _card(band="Wet", last_watered=fresh, recent_water=True)
+    assert c["voice"] == "Ahh — just had a good drink. All better."
 
 
 def test_the_voice_pick_is_stable_per_plant_but_varies_across_plants() -> None:
     # content has two safe lines. Same plant -> same line every render (no flicker);
     # different plant ids can land on different lines.
-    a1, _ = pick_voice_line(VOICE, "content", plant_id="p01", last_watered_known=False)
-    a2, _ = pick_voice_line(VOICE, "content", plant_id="p01", last_watered_known=False)
+    a1, _ = pick_voice_line(VOICE, "content", plant_id="p01", recent_water=False)
+    a2, _ = pick_voice_line(VOICE, "content", plant_id="p01", recent_water=False)
     assert a1 == a2  # stable
     picks = {
-        pick_voice_line(
-            VOICE, "content", plant_id=f"p{i:02d}", last_watered_known=False
-        )[0]
+        pick_voice_line(VOICE, "content", plant_id=f"p{i:02d}", recent_water=False)[0]
         for i in range(12)
     }
     assert len(picks) > 1  # varies across the fleet
+
+
+# --------------------------------------------------------------------------- #
+# #875 Q2 — the detected re-water as the last-watered cue
+# --------------------------------------------------------------------------- #
+def test_last_watered_from_a_detected_rewater_is_labelled_and_glanceable() -> None:
+    from datetime import datetime, timezone
+
+    from card_payload import last_watered_from_rewater
+
+    now = datetime(2026, 7, 18, 12, tzinfo=timezone.utc)
+    lw = last_watered_from_rewater(
+        {"ts": "2026-07-12T12:00:00+00:00", "source": "detected"}, now
+    )
+    assert lw["known"] is True
+    assert lw["source"] == "detected"  # honest: heuristic, never claims a logged event
+    assert lw["ago"] == "6d ago"  # the maintainer's glance cue: "it's been 6 days"
+    assert lw["recent"] is False  # 6 days > 48h — chip shows it, voice stays soil-state
+    assert last_watered_from_rewater(None, now) is None  # absence -> graceful
+
+
+def test_a_stale_rewater_shows_the_chip_but_keeps_the_voice_soil_state() -> None:
+    old = {"known": True, "source": "detected", "recent": False, "ago": "6d ago"}
+    c = _card(band="Wet", last_watered=old, recent_water=False)
+    assert c["last_watered"]["ago"] == "6d ago"  # the cue is shown
+    assert c["voice"] is None  # but "just had a drink" isn't honest 6 days on -> gap
+
+
+# --------------------------------------------------------------------------- #
+# #875 Q3 — the exception lane (air-dry / fault / no-signal off the normal grid)
+# --------------------------------------------------------------------------- #
+def test_air_dry_is_an_exception_off_the_normal_lane() -> None:
+    c = _card(band="Parched")  # air-dry, the mood-band-map diagnostic band
+    assert c["exception"]["is"] is True
+    assert c["exception"]["kind"] == "air_dry"
+    assert "out of soil" in c["exception"]["reason"]
+
+
+def test_a_normal_soil_reading_is_not_an_exception() -> None:
+    for b in ("Moist", "Ideal", "Drying", "Dry", "Wet"):
+        assert _card(band=b)["exception"]["is"] is False
+
+
+def test_fault_and_no_signal_are_exceptions() -> None:
+    assert _card(band="Dry", surface="fault_sensor")["exception"]["kind"] == "fault"
+    assert _card(band=None)["exception"]["kind"] == "no_signal"
 
 
 # --------------------------------------------------------------------------- #
