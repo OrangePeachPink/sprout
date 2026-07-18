@@ -42,6 +42,14 @@ distinguishable colors (11 already blur on today's charts) — and it steals the
 needs. **Identity travels by the identity block:** name (or number-as-identity), a plant photo, the location
 chip, and the pot descriptor.
 
+**Identity may still carry muted colour — in a different register.** A plant photo has colour; so may a pot or
+foliage. That doesn't break rule 1, because state and identity live in **two saturation registers**: state is
+the *vivid* ramp; identity materials (pots, foliage) are *muted* naturals — terracotta, stone, ceramic,
+sage-glaze, clay, charcoal — that can never be mistaken for a state hue. The guardrail: identity colour stays
+**muted, capped in saturation, and confined to the identity thumbnail** — it never touches the frame, chip,
+gauge, or any state surface. Differentiation *at a glance* comes from **form** — the photo, the plant
+silhouette, the pot shape — not from hue.
+
 ### 4. The action flow this buys
 
 > **State color finds the plant that needs you. The identity block tells you which physical plant it is.**
