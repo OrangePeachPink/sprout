@@ -11,7 +11,7 @@
     <circle cx="430" cy="90" r="2.2" fill="#8FA697"/><circle cx="620" cy="140" r="1.8" fill="#8FA697"/>
     <circle cx="790" cy="80" r="2.4" fill="#8FA697"/><circle cx="880" cy="210" r="1.8" fill="#8FA697"/>
     <circle cx="140" cy="260" r="1.9" fill="#8FA697"/><circle cx="1150" cy="300" r="1.8" fill="#8FA697"/>
-    <g transform="translate(464,120) scale(7.4)">
+    <g transform="translate(464,205) scale(7.4)">
       <g fill="none" stroke="#3E5C48" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 25 C12 20 12 17 12 14"/>
         <path d="M12 15 C9.5 14 8 11.5 8.6 9.2 C11.2 10 12 12.6 12 15 Z" fill="#2E4A38" stroke="#3E5C48"/>
@@ -25,7 +25,7 @@
       <text x="702" y="212" font-size="32" opacity="0.65">z</text>
       <text x="730" y="180" font-size="40" opacity="0.8">Z</text>
     </g>
-    <text x="640" y="560" text-anchor="middle" font-family="'Baloo 2','Segoe UI',system-ui,sans-serif" font-size="34" fill="#DCE9DF">asleep &#183; watering can wait until morning</text>
-    <text x="640" y="602" text-anchor="middle" font-family="'Baloo 2','Segoe UI',system-ui,sans-serif" font-size="20" fill="#8FA697">Sprout &#183; plants with a pulse</text>
+    <text x="640" y="516" text-anchor="middle" font-family="'Baloo 2','Segoe UI',system-ui,sans-serif" font-size="34" fill="#DCE9DF">asleep &#183; watering can wait until morning</text>
+    <text x="640" y="558" text-anchor="middle" font-family="'Baloo 2','Segoe UI',system-ui,sans-serif" font-size="20" fill="#8FA697">Sprout &#183; plants with a pulse</text>
   </g>
 </svg>

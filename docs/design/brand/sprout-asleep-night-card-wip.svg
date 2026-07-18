@@ -10,7 +10,7 @@
     <circle cx="560" cy="70" r="2.4" fill="#8FA697"/><circle cx="680" cy="120" r="1.8" fill="#8FA697"/>
     <circle cx="260" cy="220" r="1.8" fill="#8FA697"/><circle cx="740" cy="230" r="1.9" fill="#8FA697"/>
     <circle cx="90" cy="300" r="1.8" fill="#8FA697"/>
-    <g transform="translate(310,130) scale(6.6)">
+    <g transform="translate(310,250) scale(6.6)">
       <g fill="none" stroke="#3E5C48" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 25 C12 20 12 17 12 14"/>
         <path d="M12 15 C9.5 14 8 11.5 8.6 9.2 C11.2 10 12 12.6 12 15 Z" fill="#2E4A38" stroke="#3E5C48"/>
