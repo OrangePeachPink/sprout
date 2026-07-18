@@ -57,7 +57,10 @@ def _svg(datasets: list[dict], interventions: list[dict] | None = None) -> str:
     drier = up. Honest-data law: this is raw ADC + band color, never a moisture %."""
     pts_all = [p for d in datasets for p in d.get("points", [])]
     if not pts_all:
-        return '<p class="empty">no trajectory</p>'
+        return (
+            '<p class="empty">No trajectory yet — this probe hasn\'t '
+            "reported any points.</p>"
+        )
     xs = [p["x"] for p in pts_all]
     ys = [p["y"] for p in pts_all]
     xmin, xmax, ymin, ymax = min(xs), max(xs), min(ys), max(ys)
@@ -181,7 +184,7 @@ def render_detail(
     csv = exp / (m.get("file") or f"{experiment_id}.csv")
     sensors: list[dict] = []
     prov: dict = {}  # #324: server/app + contract/calibration, from build_context
-    svg = '<p class="empty">capture file missing</p>'
+    svg = '<p class="empty">No capture file found for this experiment yet.</p>'
     if csv.exists():
         try:
             ctx = build_context(parse_files([str(csv)]))
@@ -189,7 +192,10 @@ def render_detail(
             prov = ctx.get("provenance") or {}
             svg = _svg(ctx.get("trajectory", {}).get("datasets", []), interventions)
         except Exception:  # a corrupt capture must not 500 the page
-            svg = '<p class="empty">could not parse the capture</p>'
+            svg = (
+                '<p class="empty">This capture couldn\'t be read — it may '
+                "be corrupted or incomplete.</p>"
+            )
 
     t = m.get("transport") or {}
     fw = m.get("firmware") or {}  # #329: firmware version + git rev, shown separately
@@ -228,7 +234,7 @@ def render_detail(
         for k, v in facts
     )
     cards = "".join(_stat_card(s) for s in sensors) or (
-        '<p class="empty">no probe stats</p>'
+        '<p class="empty">No probe stats to show for this capture yet.</p>'
     )
     title = html.escape(str(m.get("title") or m.get("subject") or experiment_id))
 
