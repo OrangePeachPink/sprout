@@ -7,6 +7,8 @@
 > (the band-derived mood layer); consumes values from [`sprout-tokens.css`](../tokens/sprout-tokens.css),
 > never redefines them.
 
+![Swatch sheet: the state ramp (wet to dry), the two off-ramp channels (forecast and no-signal), and the muted chrome family.](color-roles-swatches.png)
+
 ## Why this exists
 
 Color was doing many jobs with no plan: per-plant identity colors that never changed with mood, a mood
@@ -53,6 +55,64 @@ to the right pot on the shelf.
 Mood hues (ADR-0008) and the seven band hues (ADR-0004) **reconcile into a single state language** — one
 consistent set of state colors, not two parallel systems a viewer has to hold in their head. Wherever state
 appears, it's the same hue for the same meaning. (The consolidated value set is part of the V2 token pass.)
+
+## The state ramp — the one state language (proposed values · V2)
+
+State is a single seven-step ramp, wet→dry. The mood colors (ADR-0008), the band ladder (ADR-0004), and the
+status colors are **already the same hues** — this charter just declares them one ramp so nothing drifts.
+Every surface that shows state reads from this ramp and nothing else.
+
+| Step | Band · mood | Hue | Token |
+|---|---|---|---|
+| 1 | Saturated · Soaked | `#0E7A86` | `--band-saturated` |
+| 2 | Wet · Refreshed | `#17B6C4` | `--band-wet` = `--st-watering` |
+| 3 | Moist · Thriving | `#34A853` | `--band-moist` = `--leaf` |
+| 4 | Ideal · Content | `#8BD24F` | `--band-ideal` = `--sprout` |
+| 5 | Drying · Thirsty | `#F5A623` | `--band-drying` = `--st-dry` |
+| 6 | Dry · Parched | `#E8703A` | `--band-dry` = `--st-due` |
+| 7 | Parched · Faint | `#E0483D` | `--band-parched` = `--st-fault` |
+
+Two channels sit **outside** the state ramp on purpose, so they never read as a current mood:
+
+- **Forecast / predicted** — `#7C5CFF` (`--st-predicted`): a distinct violet for *what's coming*, never a
+  current state.
+- **No signal / absence** — `#9A8480` (`--q-nosignal`): the calm-empty grey for a probe that isn't reporting.
+  Absence gets its own quiet color; it is never a fault red.
+
+## The chrome family — muted neutrals (proposed values · V2)
+
+Chrome groups around **sprout-soft · mist · sand · soil** — muted, low-chroma, and never near the state ramp.
+Proposed set (light shown; the soil/dark-mode set mirrors it), consumed from / folded into
+[`sprout-tokens.css`](../tokens/sprout-tokens.css), never redefined:
+
+| Name | Role | Light |
+|---|---|---|
+| sprout-soft | app background | `#EEF4E6` (`--bg`) |
+| mist | raised surface | `#F7FAF2` (`--surface-2`) |
+| sand | card / panel surface | `#FFFFFF` (`--surface`) |
+| soil-line | hairline / border | `#E3E9D8` (`--border`) |
+| soil-muted | secondary text | `#6F7E62` (`--muted`) |
+| soil-ink | primary text | `#1E2A18` (`--ink`) |
+
+They sit close to today's neutrals on purpose — the charter's job isn't to repaint chrome, it's to **name the
+family and forbid saturation in it.** If a neutral ever reads as a mood, it is out.
+
+## Per-component color map
+
+The charter answers every component's color question the same way — *what channel is this?* — so nothing
+invents its own scheme:
+
+| Component | Color channel |
+|---|---|
+| **Card frame** | state ramp (the plant's current mood) |
+| **Mood chip / band word** | state ramp |
+| **Gauge / band ladder** | state ramp (the step, in context) |
+| **Watering-status board** | state ramp only — no colors-on-colors; status *is* the state hue |
+| **Forecast / next-need** | the violet forecast channel, distinct from state |
+| **Empty / no-signal** | the calm-empty grey — absence, not a fault red |
+| **Identity** (name/photo/location/pot) | **no hue** — chrome-neutral; identity never competes for saturation |
+| **Chrome / structure** | the muted neutral family |
+| **Multi-series charts** | own pass (per-plant hue failed) — band-ground + focus interaction, later |
 
 ## Scope
 
