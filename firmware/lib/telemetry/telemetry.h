@@ -67,7 +67,7 @@ typedef struct {
                               rides payload config_id= (never a canonical column);
                               parse_v1 reads it, never re-derives. NULL/"" omits it. */
     /* #669 board diagnostics (payload). rssi is WiFi-only: rssi_present=false on a
-     * serial/tethered row OMITS rssi= entirely - absent, never a fake 0
+     * serial/tethered row OMITS rssi= entirely - absent, never a placeholder 0
      * (ADR-0028). uptime_s/heap ride every row (transport-independent). */
     bool rssi_present; /* true only when associated to WiFi              */
     int rssi_dbm; /* WiFi.RSSI() dBm (negative); ignored when !rssi_present */

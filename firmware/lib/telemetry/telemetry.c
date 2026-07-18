@@ -55,7 +55,7 @@ int telemetry_format_soil_row(char *buf, size_t buflen,
      * label + is the pre-mint degrade identifier. Time-provenance fields (#278,
      * schema §11) ride the payload too - additive, doesn't touch the 14-column CSV
      * shape. device_timestamp_utc is OMITTED (not an empty key) when NULL/unsynced -
-     * absence, not a guessed value, is the honest NULL here. */
+     * absence, not a guessed value, is what NULL means here. */
     char payload
         [384]; /* #601 name= + #739 v4 keys + #952/#997 cal_tier/cal_src on WiFi
                   rows. Sized for the worst-case field combo (WiFi + SNTP-synced
@@ -89,7 +89,7 @@ int telemetry_format_soil_row(char *buf, size_t buflen,
         len += snprintf(payload + len, sizeof(payload) - (size_t)len,
                         ";fault=%s", fault);
     }
-    /* #669: rssi is absent off WiFi (omit, never a fake 0); uptime_s/heap
+    /* #669: rssi is absent off WiFi (omit, never a placeholder 0); uptime_s/heap
      * ride every row (transport-independent board diagnostics). */
     if (r->rssi_present && len > 0 && (size_t)len < sizeof(payload)) {
         len += snprintf(payload + len, sizeof(payload) - (size_t)len,

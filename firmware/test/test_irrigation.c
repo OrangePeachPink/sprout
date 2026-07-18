@@ -4,7 +4,7 @@
  * parser (#63), and the run-metadata !label / !pos handlers (#321).
  *
  * The engine is framework-agnostic C, so we compile it for the host alongside a
- * synthetic ADC+pump rig and drive it with a fake millisecond clock - no ESP32,
+ * synthetic ADC+pump rig and drive it with a mock millisecond clock - no ESP32,
  * no flash. Asserts cover the A1 health veto/latch, the two hard invariants
  * (<=1 pump at a time; never sample while pumping), and the preserved
  * no-improvement and pump-overrun failsafes.
@@ -959,7 +959,7 @@ void t_env_row(void)
 
 /* #278 device-owned time (ADR-0018 / schema v2 §11.1-§11.2): device_seq +
  * time_source ride the soil row's payload; device_timestamp_utc is OMITTED
- * (not printed as an empty key) when unsynced - the honest NULL, never a
+ * (not printed as an empty key) when unsynced - a true NULL, never a
  * guessed value. Pins BOTH states: today's real unsynced case, and the
  * synced case the fields are already ready for once #21 (WiFi/NTP) lands. */
 void t_soil_row_time_provenance(void)
@@ -970,7 +970,7 @@ void t_soil_row_time_provenance(void)
                   1300); /* WELL_WATERED-range raw, any valid state */
     char buf[300];
 
-    /* unsynced (today's honest reality): device_timestamp_utc key absent entirely */
+    /* unsynced (today's actual state): device_timestamp_utc key absent entirely */
     telemetry_soil_row_t unsynced = {
         "plants.soil",
         "3f9a1c",
@@ -1188,7 +1188,7 @@ void t_board_capability(void)
 
     /* #436: per-board calibration. Host/fallback carries the classic endpoint
      * VALUES (the placeholder every unverified board also uses) but, like
-     * has_wifi/storage, is honestly NOT a real board -> cal_verified=false. This
+     * has_wifi/storage, is NOT a real board -> cal_verified=false. This
      * pins the value/flag as two independent facts: the numbers can match
      * classic's without the board being claimed as bench-verified. */
     const uint16_t cal[BOARD_CAL_BOUNDARY_COUNT] = {3050, 2140, 1830,
@@ -1491,7 +1491,7 @@ void t_soil_row_v4(void)
                              "tethered row formatted");
     TEST_ASSERT_NULL_MESSAGE(
         strstr(buf, "rssi="),
-        "#669/ADR-0028 rssi OMITTED off WiFi (never a fake 0)");
+        "#669/ADR-0028 rssi OMITTED off WiFi (never a placeholder 0)");
     TEST_ASSERT_NULL_MESSAGE(
         strstr(buf, "cal_tier="),
         "#997 cal_tier OMITTED off WiFi (header derivation governs tethered)");

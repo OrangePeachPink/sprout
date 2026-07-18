@@ -99,7 +99,7 @@ static bool g_ota_marked_valid = false;
  * 2026-07-01). device_seq: monotonic per emitted telemetry row, survives a
  * store-and-forward reconnect/replay (the dedupe key's device-side half); resets
  * only on reboot, same lifecycle as g_session_id - a fresh `static` already gives
- * this for free. time_source is HONEST about what this firmware can currently
+ * this for free. time_source states plainly what this firmware can currently
  * prove: no NTP/RTC sync path exists yet (WiFi connect itself isn't wired, #21),
  * so every row correctly reports "device_uptime" with device_timestamp_utc
  * omitted (NULL) - never a guessed/fabricated UTC value. Flips to
@@ -534,11 +534,11 @@ static void emitEnvRows(unsigned long long up_ms)
  * I2C/AS7263 knobs on an env build). Same config -> same id; any set-once knob
  * change -> a new id (the cross-session comparability boundary + the no-auto-adjust
  * alarm). FIRMWARE-computed: several inputs (trim, discard, I2C addrs) are firmware
- * constants the host never sees, so only the board can honestly hash them; parse_v1
+ * constants the host never sees, so only the board can hash them; parse_v1
  * reads the emitted id, never re-derives (Decision 3 / Data's #576 confirmation).
  * Called once at boot after cal load, before printHeader. v1 scope: a *runtime* cal
  * or cadence retune does not yet re-roll the id (follow-on) - set-once-held is the
- * doctrine, so this honestly fingerprints the boot config. */
+ * doctrine, so this fingerprints the boot config. */
 static void computeConfigId()
 {
     uint32_t h = TELEMETRY_FNV1A32_INIT;
@@ -624,7 +624,7 @@ static void printHeader()
              BOARD_CAP.storage,
              board_has_wifi() ? "untethered-ready" : "tethered");
     Serial.println(buf);
-    /* Calibration honesty (#436): a non-verified board runs on the CLASSIC
+    /* Calibration provenance (#436): a non-verified board runs on the CLASSIC
      * placeholder endpoints - never silently presented as this board's own
      * calibration (matches the config-provenance principle, #416/ADR-0025). */
     if (!BOARD_CAP.cal_verified) {
@@ -664,7 +664,7 @@ static void printHeader()
     /* Per-channel cal provenance (#404) - one cal_ch line per channel, sourced
      * from the LIVE g_mcfg[ch].boundary (what the classifier actually uses, per
      * the #170 seam), never re-read from calibration.h - so a future runtime
-     * boundary update stays honest in the header. Format locked with Data's
+     * boundary update stays accurate in the header. Format locked with Data's
      * #507 parser; the shared line above remains the fallback tier. */
     for (int ch = 0; ch < NUM_SENSORS; ch++) {
         if (telemetry_format_cal_ch(
@@ -1238,7 +1238,7 @@ void loop()
                 Serial.println("# OTA: update start (rebooting after)");
             });
             /* #302 menu-2: an OTA write blocks the loop for 10-30 s; without feeding
-             * it here the honest 8 s task-WDT (#599) would fire mid-transfer and reset
+             * it here the 8 s task-WDT (#599) would fire mid-transfer and reset
              * the board. onProgress runs per chunk, so resetting the WDT here keeps it
              * fed for the write - the WDT stays a real backstop, OTA still finishes.
              * (Benign either way: an interrupted write only touches the INACTIVE slot.) */
@@ -1307,7 +1307,7 @@ void loop()
             (unsigned long long)esp_timer_get_time() / 1000ULL;
 
         /* Time provenance for this sweep (#278): device_synced + a real UTC
-         * stamp once NTP has answered; honestly device_uptime + NO stamp until
+         * stamp once NTP has answered; device_uptime + NO stamp until
          * then. One read per sweep - all four rows share the moment. */
         char ts[32] = "";
         bool synced = timeIsSynced();
@@ -1315,7 +1315,7 @@ void loop()
 
         /* #669 board diagnostics, read once per sweep (all four rows share them).
          * rssi is absent off WiFi: wifi_up=false -> the row omits rssi=
-         * entirely (never a fake 0, ADR-0028). uptime_s/heap ride every row. Only
+         * entirely (never a placeholder 0, ADR-0028). uptime_s/heap ride every row. Only
          * the RSSI number is emitted - never SSID/BSSID/MAC (privacy fence). */
         bool wifi_up = board_has_wifi() && g_wifi.state == WIFI_NET_CONNECTED;
         int rssi_now = wifi_up ? (int)WiFi.RSSI() : 0;
@@ -1344,7 +1344,7 @@ void loop()
                 &state[ch],
                 g_device_seq++, /* #278: one tick per emitted row, every channel */
                 synced ? TIME_SOURCE_DEVICE_SYNCED : TIME_SOURCE_DEVICE_UPTIME,
-                ts, /* real UTC when synced; "" = honestly NULL (#278) */
+                ts, /* real UTC when synced; "" = NULL until synced (#278) */
                 g_device_name, /* #601: friendly name -> payload name= on every row */
                 BOARD_CAP.wet_rail_raw, /* #670: sub-rail raw -> SENSOR_FAULT */
                 g_config_id, /* #576 / ADR-0025: payload config_id= */
