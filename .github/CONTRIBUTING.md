@@ -121,19 +121,12 @@ version — claiming, review, timing, and our no-guilt timeout.
 > **GitHub Codespaces already has both** (its base image bundles `gcc`, and `pip install platformio` is a
 > quick add) — see the Firmware section below, or just push and let CI run the full gate for you.
 >
-> **Why CI is designed to run everything (the default posture — currently overridden; see the sprint note
-> below):** `just check` is the same full gate as your machine — on purpose. Pre-commit *hooks* are
+> **Why CI is designed to run everything (the default posture):** `just check` is the same full gate as your
+> machine — on purpose. Pre-commit *hooks* are
 > file-type-scoped for speed (e.g. `clang-format` only touches `.c`/`.h` files) — but the *test* step above is
 > not type-scoped, so don't read "hooks are scoped" as "a docs change skips firmware tests." Running
 > everything is what buys predictability and prevents local≠remote drift; path-filtering would re-introduce
 > exactly the class of surprise we deliberately closed.
->
-> ⚠️ **Temporary sprint posture (#740, private phase only):** remote per-PR CI currently runs the *fast lane
-> only* (lint + hygiene + host tests); the firmware compile, native C tests, and experimental boards run in a
-> **weekly full battery** (+ on-demand dispatch) instead — an Actions-minutes decision, velocity over
-> per-commit remote coverage. **`just check` locally is therefore the real full gate during the sprint** —
-> run it before pushing, and post local `just test-native` + `just build` evidence on firmware-touching PRs.
-> This posture is reverted per #740's launch checklist before the repo goes public.
 >
 > **The one exception — clang-format:** it runs on the *lines you changed*, not `--all-files`, because the
 > firmware carries intentional manual column alignment a full-tree reformat would destroy (AGENTS.md
