@@ -63,7 +63,7 @@ motion honors `prefers-reduced-motion`.
 
 Sprout's mood is a **function of the seven calibrated moisture bands, never of the 0–100 relative index.**
 This is what lets personality and data-honesty coexist — the character cannot contradict the instrument
-because both read the same source of truth (ADR-0004). The mapping:
+because both read the same canonical source (ADR-0004). The mapping:
 
 | Band (UI · fw) | Mood |
 |---|---|

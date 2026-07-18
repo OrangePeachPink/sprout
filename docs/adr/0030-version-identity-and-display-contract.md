@@ -65,7 +65,7 @@ clean move Workflow owns. The content below is identical either way.
 The anti-drift rule: each versioned entity has exactly **one** source-of-truth constant and **one** authoritative
 display location. No version value is computed in two places under two names (symptom 3).
 
-| # | Versioned thing | Single owner constant (source of truth) | Bumps when | Authoritative display |
+| # | Versioned thing | Single owner constant (canonical source) | Bumps when | Authoritative display |
 |---|---|---|---|---|
 | 1 | Product / release | the GitHub milestone + release tag `vX.Y.Z` (ADR-0009 §5) | at the release cut (ADR-0009 §6) | masthead: "Sprout vX.Y.Z" |
 | 2 | Firmware semver | `PLANTS_FW_VERSION` (`firmware/include/config.h`) | **before** a coordinated reflash | Diagnostics per-board; masthead live-fleet fw summary |
@@ -114,7 +114,7 @@ behaviour, so the label must lead the reflash.
 - **Diagnostics** = the full table — per-board fw semver + build-instance id + `schema_version` + `config_id` +
   server build. One authoritative place where every version value lives.
 - This mirrors ADR-0028's stance: the served surface is authoritative and the glance is a redundant summary of it,
-  never a second source of truth.
+  never a second canonical source.
 
 ### 5. The coherence test (acceptance, from #831)
 

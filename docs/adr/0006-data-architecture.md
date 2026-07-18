@@ -45,7 +45,7 @@ is interpretation; both are kept.
 
 ### 3. Storage substrate ladder (ADR-0002 #15)
 
-Match the substrate to the data's shape; the raw is always the source of truth:
+Match the substrate to the data's shape; the raw is always the canonical source:
 
 - **Immutable raw CSV** — `logs/*.csv`, gitignored. The capture; never edited.
 - **Durable archive** — closed rotated segments gzipped to a **Git LFS** archive branch,
@@ -55,7 +55,7 @@ Match the substrate to the data's shape; the raw is always the source of truth:
   once CSV re-parse gets slow. Planned; not yet stood up.
 - A single-writer **SQLite** store is an option if a mutable app-state store is ever wanted — not today.
 
-**The DB / parquet is a derived layer, never the source of truth.** If lost, it is regenerated from the
+**The DB / parquet is a derived layer, never the canonical source.** If lost, it is regenerated from the
 raw archive.
 
 ### 4. Data quality — surface, never smooth

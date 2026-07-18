@@ -23,10 +23,10 @@ This ADR records the chosen execution: an **additive layer**, not a restyle.
 ## Decision
 
 Add the brand personality to the system as **design system v3** under `docs/design/` — **additive
-over v1/v2**, with v1 unchanged as the source of truth for the instrument UI. v3 consists of:
+over v1/v2**, with v1 unchanged as the canonical source for the instrument UI. v3 consists of:
 
 1. **A canonical band→mood map** (`mood-band-map.json`) — the 1:1 bridge from the seven calibrated bands to
-   Sprout's moods, motion, and mark colors. The single source of truth for "which mood is this reading in."
+   Sprout's moods, motion, and mark colors. The single source for "which mood is this reading in."
 2. **The mark as a drop-in component** (`sprout-mark.js`) — a framework-agnostic custom element
    (`<sprout-mark band="…">`), reduced-motion aware, fitting the ADR-0004 vanilla host.
 3. **A voice-string pool** (`voice-strings.json`) — first-person lines keyed by mood and by surface.

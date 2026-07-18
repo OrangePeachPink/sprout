@@ -89,7 +89,7 @@ int telemetry_format_soil_row(char *buf, size_t buflen,
         len += snprintf(payload + len, sizeof(payload) - (size_t)len,
                         ";fault=%s", fault);
     }
-    /* #669: rssi is honest-absent off WiFi (omit, never a fake 0); uptime_s/heap
+    /* #669: rssi is absent off WiFi (omit, never a fake 0); uptime_s/heap
      * ride every row (transport-independent board diagnostics). */
     if (r->rssi_present && len > 0 && (size_t)len < sizeof(payload)) {
         len += snprintf(payload + len, sizeof(payload) - (size_t)len,
@@ -104,7 +104,7 @@ int telemetry_format_soil_row(char *buf, size_t buflen,
      * rssi_present == WiFi-associated). The header cal signals are tethered-only, so
      * this wire token is the off-tether supplement; a tethered row omits it and the
      * header derivation governs (Data #997 fallback). Omitted (not an empty key)
-     * when the value is NULL/"" - honest-absent, never a guessed token. */
+     * when the value is NULL/"" - absent, never a guessed token. */
     if (r->rssi_present && r->cal_tier && r->cal_tier[0] != '\0' && len > 0 &&
         (size_t)len < sizeof(payload)) {
         len += snprintf(payload + len, sizeof(payload) - (size_t)len,

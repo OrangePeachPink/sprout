@@ -38,12 +38,12 @@ part is one thing: the rollup contract — so most of this ADR is that contract.
 
 ### 1. Tier model — raw is Tier 0; rollups are derived and disposable
 
-- **Tier 0 — raw** (source of truth, immutable, archived): serves recent/short windows at full fidelity, via
+- **Tier 0 — raw** (canonical source, immutable, archived): serves recent/short windows at full fidelity, via
   #827's in-memory cache.
 - **Tier 1 / 2 / 3 — materialized rollups** in ADR-0006 §3's derived analysis tier: each a coarser time-bucket
   (e.g. 1-min → 15-min → hourly; granularities are the design fork below). Derived, gitignored, never backed up.
 - **Rebuildable by construction:** every tier regenerates from raw alone. A corrupt or suspect rollup ⇒ **delete
-  and rebuild**, never patch — ADR-0006's "the DB/parquet is a derived layer, never the source of truth; if lost,
+  and rebuild**, never patch — ADR-0006's "the DB/parquet is a derived layer, never the canonical source; if lost,
   regenerated from the raw."
 
 ### 2. The envelope contract (the load-bearing decision — Trellis-owned)

@@ -146,7 +146,7 @@ ESP32** — a fresh `session_id` and a return to the default cadence. Two conseq
 **The lock layer (advisory, on top of the OS guarantee).** Whoever opens the port writes an advisory lock —
 `logs/.serial-owner.json` = `{pid, mode, port, opened_utc}`, removed on clean close — so the control plane
 can answer "who holds the port?" **without opening it** (which would reset the device). The OS exclusive
-open stays the source of truth; the lock only avoids a needless *attempt* (and reset). **Stale-lock
+open stays the canonical source; the lock only avoids a needless *attempt* (and reset). **Stale-lock
 recovery:** if the lock names a PID that is no longer alive (a crashed owner — the OS already freed the
 port), the lock is stale and reclaimable; always validate PID liveness before trusting it.
 

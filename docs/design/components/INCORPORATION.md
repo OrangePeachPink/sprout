@@ -15,7 +15,7 @@
 ## Data lane — how to consume
 
 - **Band → mood:** read `mood-band-map.json`. Look up the reading's UI band (or firmware level) to get its
-  `mood`, `motion`, and `markColors`. This is the single source of truth; don't hard-code a second mapping.
+  `mood`, `motion`, and `markColors`. This is the single source; don't hard-code a second mapping.
 - **The mark:** load `sprout-mark.js` and place `<sprout-mark band="moist"></sprout-mark>` (or
   `mood="thriving"`). Attributes: `band` | `mood` | `size` (px height, default 72) | `static` (no motion).
   It's a framework-agnostic custom element — drops straight into the served dashboard (vanilla host, per

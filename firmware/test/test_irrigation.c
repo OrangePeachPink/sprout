@@ -1282,7 +1282,7 @@ void t_per_channel_cal(void)
 
 /* #404: the cal_ch header line - pins the EXACT wire format Data's #507 parser
  * (_parse_cal_channel) reads, byte-for-byte, using ch0's real calibration.h
- * values + the provenance constants. Also pins the honest-NULL date rule:
+ * values + the provenance constants. Also pins the absent date rule:
  * a NULL/empty date omits the key entirely, never emits `date=`. */
 void t_cal_ch_line(void)
 {
@@ -1300,7 +1300,7 @@ void t_cal_ch_line(void)
         "scope=channel",
         buf, "exact wire format the #507 parser reads");
 
-    /* honest-NULL date: key omitted entirely, not printed empty */
+    /* absent date: key omitted entirely, not printed empty */
     n = telemetry_format_cal_ch(buf, sizeof(buf), "s2", SENSOR_CAL_BOUNDARY[3],
                                 MOISTURE_BOUNDARY_COUNT, "manual", NULL,
                                 "provisional", "channel");
@@ -1425,7 +1425,7 @@ void t_sensor_fault(void)
                              "wet_rail=0 -> no fault reason");
 }
 
-/* #739 v4 soil-row emit: config_id + honest-absent rssi + uptime_s/heap in payload,
+/* #739 v4 soil-row emit: config_id + absent rssi + uptime_s/heap in payload,
  * and the #670 fault flag/reason with raw preserved (ADR-0006). */
 void t_soil_row_v4(void)
 {
@@ -1484,7 +1484,7 @@ void t_soil_row_v4(void)
     TEST_ASSERT_NULL_MESSAGE(strstr(buf, ";fault="),
                              "healthy row has no fault key");
 
-    /* honest-absent (ADR-0028): a serial/tethered row OMITS rssi= entirely. */
+    /* absent (ADR-0028): a serial/tethered row OMITS rssi= entirely. */
     row.rssi_present = false;
     TEST_ASSERT_TRUE_MESSAGE(telemetry_format_soil_row(buf, sizeof(buf), &row) >
                                  0,

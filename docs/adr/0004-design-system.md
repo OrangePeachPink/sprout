@@ -28,7 +28,7 @@ interface** — the one place color/type/space/radius/elevation are defined.
 
 ### 1. The design system is ratified as built
 
-- **v1 is the source of truth for the dashboard / instrument UI** — tokens, the seven-band honesty rules, and
+- **v1 is the canonical source for the dashboard / instrument UI** — tokens, the seven-band honesty rules, and
   the five instrument components (dense data grid, analysis chart, calibration range ladder,
   distribution + integrity, engineering tokens). Authoritative source: `docs/design/foundations/Sprout Design System.dc.html`.
 - **Tokens are CSS custom properties** in `docs/design/tokens/sprout-tokens.css`: brand + neutrals, the seven
@@ -54,7 +54,7 @@ preferences:
 
 This is the heart of this ADR and the resolution of the #17 seam.
 
-- **`docs/design/tokens/sprout-tokens.css` is the single source of truth** for color, type, space, radius, and
+- **`docs/design/tokens/sprout-tokens.css` is the single source** for color, type, space, radius, and
   elevation. There is exactly one definition of these values; no lane maintains a parallel set.
 - **Design owns** the token + component *system* and *how tokens are consumed* (this contract). **Data owns**
   the served-app runtime / stack and consumes the tokens; it does not redefine them.
@@ -89,7 +89,7 @@ This is the heart of this ADR and the resolution of the #17 seam.
 
 - The already-built design system gains a ratified, citable decision record instead of living implicitly in
   `docs/design/`.
-- Color/type/space/radius/elevation have exactly one source of truth, with a stated rule for how every
+- Color/type/space/radius/elevation have exactly one canonical source, with a stated rule for how every
   consumer (vanilla today, a framework later) reads it — removing the risk of a drifting second palette.
 - The #17 seam between Design and Data is unambiguous: one lane defines the tokens, the other consumes them.
 - The seven-band honesty rules are recorded as binding system principles, not soft guidance, so future UI
@@ -100,7 +100,7 @@ This is the heart of this ADR and the resolution of the #17 seam.
 ## Revisit triggers
 
 - **The control page adopts a framework (e.g. React + Tailwind)** → Design pins the token-consumption bridge
-  (Tailwind theme ↔ CSS custom properties) as an addendum or successor ADR; one source of truth must hold.
+  (Tailwind theme ↔ CSS custom properties) as an addendum or successor ADR; one canonical source must hold.
 - **Real per-pin calibration lands** → the placeholder raw band boundaries in the source are replaced with
   calibrated values (coordinated with the A2 / 7-band reconciliation in the firmware/data lanes); the band
   *names* and tokens do not change.

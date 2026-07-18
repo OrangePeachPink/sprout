@@ -1,6 +1,6 @@
 # 🌱 Sprout — Vocabulary
 
-**This file is the source of truth for what Sprout's words mean.** Use these exact terms in UI copy, code
+**This file is the canonical source for what Sprout's words mean.** Use these exact terms in UI copy, code
 identifiers (where reasonable), issue / PR / ADR prose, commit messages, and any docs or copy you generate.
 The goal is the same alignment we have on brand and voice — but for *concepts*: one word, one meaning, across
 every lane. If two lanes use the same word for different things, or different words for the same thing, fix it
@@ -199,7 +199,7 @@ every lane. If two lanes use the same word for different things, or different wo
 - **Pump / relay** — the DC actuation path (**code-staged**, never powered on the bench yet). DC only —
   **NEVER** mains.
 - **SHT45** — the factory-calibrated ambient temp/RH sensor (real `value`/`unit`; `plants.env`).
-- **AS7263** — the 6-band NIR spectral sensor (`nir_610…nir_860`; `plants.env`, context, not plant-truth).
+- **AS7263** — the 6-band NIR spectral sensor (`nir_610…nir_860`; `plants.env`, context, not plant data).
 - **OLED** — the 1.3" SH1106 I²C status display.
 
 ## Onboarding & developer experience (DX)

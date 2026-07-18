@@ -77,7 +77,7 @@ fixes still ride a PATCH — while giving the roadmap a predictable version line
 deliberate Wave-4 public declaration (§2), never reached by counting.
 
 **Milestones are the spine.** A GitHub **milestone = a version** (`v0.7.1`, `v0.8.0`, …) — the single
-source of truth for "what ships when" (native progress bar + release-note source). The project board's
+canonical source for "what ships when" (native progress bar + release-note source). The project board's
 **Wave** field is the coarse roadmap lens; the **milestone** is authoritative for a build's contents.
 
 ### 6. Release criteria — a release is not done until its notes exist
