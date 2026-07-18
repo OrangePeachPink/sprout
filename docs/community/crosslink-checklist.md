@@ -107,7 +107,8 @@ canonical vkhogue.com Person, not here.
 
 ## Tier 4 — accessibility + AI-readability · FD-1 / FD-3
 
-- Alt text on every image (hero, cards, badges); a small canonical alt-text register.
+- Alt text on every image (hero, cards, badges); keep the
+  [canonical front-door alt-text register](../design/go-to-market/front-door-alt-text-register.md) current.
 - Semantic landmarks, heading hierarchy, dark-theme contrast, visible focus, `lang`; Lighthouse a11y gate.
 - `llms.txt` at the site root (concise machine description + key URLs).
 - README first-paragraph plain-text-survivability pass — reads as one clean sentence after markup is
