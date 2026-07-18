@@ -194,7 +194,8 @@ author's say-so alone.
 **You don't need more than that to contribute.** How that review runs *internally* — the per-stage pipeline
 (Backlog → In Progress → Needs Verification → Ready to Merge → Done), Workflow's independent certification, the
 velocity modes, and the tombstone-banner conventions for closing issues — lives in
-**[AGENTS.md](../AGENTS.md#the-verification-pipeline)**, the operating manual for the maintainer and the AI
+**[docs/team/OPERATIONS.md](../docs/team/OPERATIONS.md#the-verification-pipeline)**, the operating
+manual for the maintainer and the AI
 workstreams ("lanes") that do the day-to-day building. Open a PR with **`Refs #N`** (never `Closes`) plus a
 note on how you verified it, and it'll be reviewed there.
 
@@ -228,7 +229,7 @@ less custom machinery you have to learn, the faster you can help — that's the 
 - `layer:*` — `firmware` (needs a reflash) vs `host` (build anytime)
 - `for:*` — routing hint to a lane (a best-guess owner, not a commitment — Workflow still triages):
   `for:firmware` (incl. bench) · `for:data` · `for:design` (→ DesignQA) · `for:dx` · `for:trellis` ·
-  `for:workflow` · `for:maintainer`. See the lane roster in [AGENTS.md](../AGENTS.md#the-lanes).
+  `for:workflow` · `for:maintainer`. See the lane roster in [docs/team/OPERATIONS.md](../docs/team/OPERATIONS.md#the-lanes).
 - `blocks:*` — milestone **gates**, independent of Priority: `blocks:pumps`, `blocks:public-release`,
   `blocks:data-integrity`. Filter by these to see what stands between us and pumps / a public release /
   trustworthy data.
