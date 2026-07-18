@@ -87,6 +87,9 @@ So two people never unknowingly build the same thing:
 - **No rush, no race.** First to claim gets it, there's plenty to go around, and starting is never a
   competition. If two claims cross in the mail, we'll sort it kindly and find you both something. 🌱
 
+New to how we work? **[What to expect](../docs/contributing/what-to-expect.md)** is the friendly one-page
+version — claiming, review, timing, and our no-guilt timeout.
+
 ## Making a change
 
 1. **Claim it first** ([Claiming an issue](#claiming-an-issue)) — a maintainer assigns you and moves the
