@@ -39,7 +39,10 @@ def test_svg_helper() -> None:
     )
     assert "<svg" in out and out.count("<polyline") == 2
     assert "#ff0000" in out and "#00ff00" in out
-    assert lab_detail._svg([]) == '<p class="empty">no trajectory</p>'
+    assert lab_detail._svg([]) == (
+        '<p class="empty">No trajectory yet — this probe hasn\'t '
+        "reported any points.</p>"
+    )
 
 
 def test_svg_is_an_instrument() -> None:
