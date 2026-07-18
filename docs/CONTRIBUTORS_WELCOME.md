@@ -57,6 +57,12 @@ seam if you know it, plus a one-line "how to start." This page is meant to *grow
 belong here too. At launch, Workflow converts each into a labeled `help wanted` issue so contributors can grab
 them.
 
+## Wear the badge
+
+Landed a PR — or just cheering us on? There's a little **[contributor card](design/brand/contributor-card.png)**
+you're welcome to post anywhere you like — there's a [square one](design/brand/contributor-card-square.png) for
+Instagram, and light-theme versions too. Zero pressure; it's just here if you're proud of what we're growing. 🌱
+
 *New to contributing? [Your first contribution](contributing/your-first-pr.md) walks the whole flow.*
 
 ---
