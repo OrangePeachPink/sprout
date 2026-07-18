@@ -315,7 +315,7 @@
       </div>
     </div>
 
-    <!-- the honest chart (#325) -->
+    <!-- the raw chart (#325) -->
     <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:16px 18px;">
       <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
         <div style="font-family:var(--font-data); font-size:11.5px; color:var(--muted);">raw ADC · 12-bit (0–4095) · <span style="color:var(--ink);">HIGH = drier</span> · no calibrated %, ever</div>
@@ -625,7 +625,7 @@ class Component extends DCLogic {
     this._planned = planned;
     this.setState({ capState:'recording', stage:'capture', samples:[], stopReason:null, startClock:{ local: local+' CDT', utc } });
     if (this._t) clearInterval(this._t);
-    if (this.props.liveDemo === false) return;     // honest "no synthetic" path: wait for real device
+    if (this.props.liveDemo === false) return;     // the "no synthetic" path: wait for real device
     this._t0 = Date.now();
     const FRAME = 80;
     const perMs = Math.max(8, 7000/planned);       // fill the planned run in ~7s of demo time
