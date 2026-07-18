@@ -48,7 +48,7 @@ v1↔v2 reconciliation this lane owns (executed deliberately, never silently).
 
 ## Consequences
 
-- v1 instrument components are untouched; the dashboards stay exactly as legible and honest as today.
+- v1 instrument components are untouched; the dashboards stay exactly as legible and precise as today.
 - The product can grow Sprout-flavored hero / empty / loading / onboarding / notification surfaces from one
   shared, band-derived source — no per-surface reinvention, no drift from the data.
 - Each lane adopts at its own pace; firmware needs no code change (the map keys off the existing enum).

@@ -12,7 +12,7 @@ area #17 (Frontend stack).
 ## Context
 
 Sprout's design system is not a proposal — it is **already built and in use**. v1 (the dashboard/instrument
-foundation: tokens, the seven-band moisture-honesty rules, and five instrument components) ships as
+foundation: tokens, the seven-band moisture-reading rules, and five instrument components) ships as
 `docs/design/`, with the core tokens lifted into a ready-to-use `docs/design/tokens/sprout-tokens.css`. A broader v2
 brand delivery (brand world, decks, social kit, narrative pieces, an expanded system source) was added
 **additively** under `docs/design/` and does not replace v1.
@@ -28,7 +28,7 @@ interface** — the one place color/type/space/radius/elevation are defined.
 
 ### 1. The design system is ratified as built
 
-- **v1 is the canonical source for the dashboard / instrument UI** — tokens, the seven-band honesty rules, and
+- **v1 is the canonical source for the dashboard / instrument UI** — tokens, the seven-band reading rules, and
   the five instrument components (dense data grid, analysis chart, calibration range ladder,
   distribution + integrity, engineering tokens). Authoritative source: `docs/design/foundations/Sprout Design System.dc.html`.
 - **Tokens are CSS custom properties** in `docs/design/tokens/sprout-tokens.css`: brand + neutrals, the seven
@@ -38,12 +38,12 @@ interface** — the one place color/type/space/radius/elevation are defined.
 - **v2 (brand) is additive.** It extends v1 with brand and presentation material; it does **not** supersede
   v1's engineering guidance.
 
-### 2. The non-negotiable data-honesty principles (carry into every build)
+### 2. The non-negotiable data-integrity principles (carry into every build)
 
 These come from the v1 source and the data-lane integrity review; they are part of the system, not styling
 preferences:
 
-- **Raw counts + calibrated band are the truth; a percentage is not.** Any 0–100 figure is a clearly-labelled
+- **Raw counts + calibrated band are the reading; a percentage is not.** Any 0–100 figure is a clearly-labelled
   *relative index* between wet/dry calibration anchors — never presented as VWC.
 - **Mood / state / status color / automation derive from the calibrated band, never from the index.** A
   reading is one of seven bands; the band drives everything downstream.
@@ -92,8 +92,8 @@ This is the heart of this ADR and the resolution of the #17 seam.
 - Color/type/space/radius/elevation have exactly one canonical source, with a stated rule for how every
   consumer (vanilla today, a framework later) reads it — removing the risk of a drifting second palette.
 - The #17 seam between Design and Data is unambiguous: one lane defines the tokens, the other consumes them.
-- The seven-band honesty rules are recorded as binding system principles, not soft guidance, so future UI
-  cannot quietly reintroduce a fake-VWC percentage.
+- The seven-band reading rules are recorded as binding system principles, not soft guidance, so future UI
+  cannot quietly reintroduce an invented VWC percentage.
 - v2 brand work can proceed without endangering v1's instrument UI, because the reconciliation rule is
   explicit and Design-owned.
 

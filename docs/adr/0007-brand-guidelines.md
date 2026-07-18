@@ -40,7 +40,7 @@ keeping on record so we don't drift back:
 - **Field Journal** — a serif naturalist almanac; beautiful as an artifact but sidelines the live
   character and reads as something to study, not someone to meet.
 - **Beautiful Instrument** — centers the engineering, not the plant (the default we are escaping). Its
-  rigor is **retained as the "honesty thread" inside the winner**, not as the whole identity.
+  rigor is **retained as the "rigor thread" inside the winner**, not as the whole identity.
 - **Retro-Futurism** — a decorative era-skin without a reason; kitsch for its own sake.
 - **Plant Tamagotchi** — a needy pet with streaks/levels contradicts an **ambient, hands-off** system
   that asks nothing of you.
@@ -48,9 +48,9 @@ keeping on record so we don't drift back:
 ### 3. Voice — first person, fact-then-feeling
 
 Every surface speaks **as** Sprout, not **about** it: first-person "I"; **fact, then feeling** (the data
-earns the warmth); **one short, glanceable line**; calm, fond, honest; **calm under fault** (reassure,
+earns the warmth); **one short, glanceable line**; calm, fond, plain; **calm under fault** (reassure,
 explain, pause). Hard nos: **no baby-talk, no emoji, no guilt-tripping, and no invented numbers** (never a
-fabricated % or ETA — consistent with the data-honesty rules).
+invented % or ETA — consistent with the data-integrity rules).
 
 ### 4. The living mark & motion
 
@@ -62,7 +62,7 @@ motion honors `prefers-reduced-motion`.
 ### 5. Mood derives 1:1 from the calibrated band (the invariant)
 
 Sprout's mood is a **function of the seven calibrated moisture bands, never of the 0–100 relative index.**
-This is what lets personality and data-honesty coexist — the character cannot contradict the instrument
+This is what lets personality and data-integrity coexist — the character cannot contradict the instrument
 because both read the same canonical source (ADR-0004). The mapping:
 
 | Band (UI · fw) | Mood |
@@ -75,7 +75,7 @@ because both read the same canonical source (ADR-0004). The mapping:
 | Dry · DRY | Parched |
 | Parched · air-dry | Faint · "check me" |
 
-Two honesty caveats: the **air-dry** band doubles as the diagnostic "probe may not be in soil" band, so its
+Two caveats: the **air-dry** band doubles as the diagnostic "probe may not be in soil" band, so its
 voice names the ambiguity instead of dramatizing death; and **"asleep"** is a **night/diurnal overlay, not a
 band** — it can ride on top of any mood after dark.
 
@@ -87,7 +87,7 @@ restyles it.**
 - **Sprout appears on:** ambient, empty, loading, onboarding, notification, and single-plant-hero surfaces
   — *beside* the gauges, reinforcing them.
 - **Sprout stays out of:** dense numeric readouts, the calibration ladder, and data-integrity tables, where
-  legibility and honesty win and the numbers stay clean, mono, and tabular.
+  legibility and clarity win and the numbers stay clean, mono, and tabular.
 
 ### 7. Where the reference lives
 
@@ -100,7 +100,7 @@ not redefine them.
 
 - The identity and voice are a single citable decision; README, social, issue forms, and the UI
   personality layer can all build to one source.
-- Personality can never break the seven-band honesty rule, because mood is band-derived by definition.
+- Personality can never break the seven-band reading rule, because mood is band-derived by definition.
 - The exclusions are on record, so the brand doesn't quietly slide back into an engineering-first or
   gamified frame.
 - This sets up **Phase 2** (the additive v1 personality layer) as a clean, rules-first proposal under #18 /

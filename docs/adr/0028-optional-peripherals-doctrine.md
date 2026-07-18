@@ -9,7 +9,7 @@
 Data (calm-empty reads)
 **Lane:** architecture
 **Extends:** [ADR-0019](0019-capability-and-sensor-matrix.md) (capability & sensor matrix — the *mechanism*) ·
-[ADR-0006](0006-data-architecture.md) (honest data)
+[ADR-0006](0006-data-architecture.md) (raw-first data)
 **Relates:** #20 (display / HMI — the first W2 gate) · #19 (tank sensing — sensorless-first application) ·
 [ADR-0023](0023-contextual-env-columns.md) (env context already does this) ·
 [ADR-0014](0014-operator-control-plane.md) (the served surface is first-class) ·
@@ -92,8 +92,8 @@ product, not a starter kit with visible missing slots.
   calm-empty). One product philosophy, now named across the three.
 - Design gains a hard rule: an absent-capability surface reads as an **enhancement invitation**, never an
   error, a nag, or an empty-broken state.
-- Honest-data (ADR-0006) is reinforced: absence is recorded honestly (descriptor `has_X=false`) and read
-  calm-empty, never fabricated into a fake value — and never into a fake *requirement*.
+- Raw-first data (ADR-0006) is reinforced: absence is recorded plainly (descriptor `has_X=false`) and read
+  calm-empty, never invented into a value — and never into a fabricated *requirement*.
 
 ## Rejected alternatives
 

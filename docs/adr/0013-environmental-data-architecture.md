@@ -90,7 +90,7 @@ trained model ships by default.
   never pollute the baseline.
 - The home location cannot leak: it is gitignored config by construction, and committed artifacts are
   coarsened — the public-ready posture holds.
-- Weather is honestly classed (derived/model, cached, traceable), so a chart's context can always be traced
+- Weather is plainly classed (derived/model, cached, traceable), so a chart's context can always be traced
   to the exact response behind it.
 - The on-device tier has a clear, dual-purpose justification (calibration *and* context), so it is not
   hardware-for-its-own-sake.

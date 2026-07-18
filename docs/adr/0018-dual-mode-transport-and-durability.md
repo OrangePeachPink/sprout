@@ -2,7 +2,7 @@
 
 **Status:** Accepted — *the maintainer ratified this ADR 2026-07-01, on Trellis's architecture sign-off.
 Drafted by Workflow from Discussion #243 + the Data lane's transport take; Trellis-revised 2026-06-28
-(schema-honesty + store-idempotency + raw-is-truth sharpening, per the #285 review). Schema prerequisite
+(schema-integrity + store-idempotency + raw-is-the-reading sharpening, per the #285 review). Schema prerequisite
 `TELEMETRY_SCHEMA.md` §11 (device-owned time, dedupe, sensor provenance) merged via #492 and is ratified
 alongside this ADR, same basis. (#268)*
 **Date:** 2026-06-27
@@ -59,12 +59,12 @@ own time. One schema across every transport and mode.** Concretely:
    untethered row and a tethered row are identical in shape. §11 is proposed/additive; it does **not**
    retroactively redefine the v1 contract on `main` until §11 itself is ratified and implemented. Transport and
    presentation differ; the data contract does not.
-5. **Storage is capability-honest.** Onboard flash is an **hours-to-a-day buffer**; long standalone history needs
+5. **Storage is capability-clear.** Onboard flash is an **hours-to-a-day buffer**; long standalone history needs
    **a microSD card or sync to a hub**. The "what you need" matrix states the real expectation per board — we
    never claim months of standalone history on bare flash.
-6. **The store preserves ADR-0006's raw-is-truth.** "The store" is **append-only raw ingest + rebuildable derived
-   views** — raw stays the single source (ADR-0006); the store never becomes a second, mutable truth, and
-   every served/derived view can be rebuilt from raw. (Guards the R3 contract boundary #293 and the C2/C3 honesty
+6. **The store preserves ADR-0006's raw-is-the-reading.** "The store" is **append-only raw ingest + rebuildable derived
+   views** — raw stays the single source (ADR-0006); the store never becomes a second, mutable source, and
+   every served/derived view can be rebuilt from raw. (Guards the R3 contract boundary #293 and the C2/C3 integrity
    fixes #294/#295.)
 
 ### Rejected alternatives
@@ -75,7 +75,7 @@ own time. One schema across every transport and mode.** Concretely:
 - **Per-transport schemas / dashboards.** Rejected: the schema is already field-based and transport-agnostic;
   forking it is gratuitous and splits the analytics.
 - **Host keeps owning time; the device emits only uptime.** Rejected: there is no host untethered. The device
-  must self-timestamp, and the quality flag keeps it honest.
+  must self-timestamp, and the quality flag keeps it accurate.
 
 ## Consequences
 

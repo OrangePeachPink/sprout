@@ -13,7 +13,7 @@ co-authored when sub-issues are cut*
 ## Context
 
 [ADR-0006](0006-data-architecture.md) defines the **Monitor-mode** data architecture: the schema-v1
-contract, the storage ladder, immutable raw, honest gap-surfacing, calibration, and the Data↔Firmware
+contract, the storage ladder, immutable raw, gap-surfacing, calibration, and the Data↔Firmware
 handshake. [PRD-0001](../prd/0001-experiment-capture-mode.md) introduces **Experiment mode**, which has a
 *different data lifecycle*: short, operator-driven captures against arbitrary subjects at variable rates,
 whose central constraint is that they must **never be stitchable into the baseline**.

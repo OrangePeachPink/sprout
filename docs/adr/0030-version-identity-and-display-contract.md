@@ -13,7 +13,7 @@ releases. *Drafted by Trellis (2026-07-07) from #831 during the v0.8.0 bench gap
 SemVer line + bump discipline). This ADR adds the layer 0009 does not cover: the *identity, provenance, and
 display* of versions — how a build is uniquely named, and how a human reads the fleet's version state off the UI.
 **Relates:** #831 (this) · #719 (the version-resolution cue that surfaced it) · #812 / #683 (retired-device
-status-honesty family) · #302 (OTA — made a build-identity receipt urgent) ·
+status-accuracy family) · #302 (OTA — made a build-identity receipt urgent) ·
 [ADR-0025](0025-config-provenance.md) (`config_id`) · [ADR-0020](0020-network-identity-and-credentials.md) /
 [ADR-0027](0027-identity-model.md) (no hardware-derived identity)
 

@@ -52,7 +52,7 @@ Everything else is tunable; this is load-bearing, because once consumers (#25 / 
 changing what is *in* a bucket is a re-materialization of the whole corpus. Per bucket, per `(device_id, channel)`:
 
 - `mean`, `min`, `max`, `spread` — the envelope that lets a dry-down slope or a diurnal cycle survive at any age.
-- `n` — sample count in the bucket. **Honesty:** a 2-sample bucket is not a 60-sample bucket, and a slope drawn
+- `n` — sample count in the bucket. **Note:** a 2-sample bucket is not a 60-sample bucket, and a slope drawn
   through thin buckets should say so.
 - a `quality` rollup — whether any `SENSOR_FAULT` / `SUSPECT` fell in the bucket, **carried, never averaged away**.
 
@@ -81,7 +81,7 @@ waterings, `SENSOR_FAULT`s, session boundaries. They are the "*why we decided th
 ### 4. The never-smooth labeling contract (ADR-0006 §4 on the time axis)
 
 A rollup answer is **labeled as a rollup and rendered as an envelope** — a min–max band around the mean line, with
-`n` — **never a fake-smooth line masquerading as raw samples**. Concretely: the data API response carries `tier`,
+`n` — **never a smoothed line masquerading as raw samples**. Concretely: the data API response carries `tier`,
 `bucket_seconds`, and `n` per point, and the dashboard picks its render from that. This is "surface, never smooth"
 applied to the time axis: show the spread the bucket hides, do not hide it.
 
@@ -111,7 +111,7 @@ consumers.
 3. **Rebuild cadence.** Incremental append at rotation boundaries (a closed gzip segment's buckets are final and
    appended) with a **full rebuild always available**. Corrupt/suspect tier ⇒ delete + rebuild.
 4. **`config_id` boundary.** Bucket-within-a-config vs carry `config_id` on the bucket. **I lean: carry `config_id`
-   on the bucket + never blend across a change** — the simplest honest option — but flagging it for the ADR to pin.
+   on the bucket + never blend across a change** — the simplest plain option — but flagging it for the ADR to pin.
 
 ## Consequences
 
