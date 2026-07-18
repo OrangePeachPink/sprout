@@ -87,7 +87,7 @@ The board is the **Arduino Uno R4 WiFi** — a deliberate maintainer decision (#
    **Serial only**, on purpose. No network, no setup portal, nothing to configure. Just the board, the sensor,
    and the Serial Plotter.
 
-**Named honestly — what this trades vs. an ESP32 on-ramp:** the raw numbers a beginner calibrates here won't be
+**Named plainly — what this trades vs. an ESP32 on-ramp:** the raw numbers a beginner calibrates here won't be
 the *same integers* Sprout Full sees (Full runs an **ESP32** on a 3.3 V ADC; the R4 is a different chip at a
 different reference). That's fine — **the *concepts* transfer, which is what a beginner actually keeps:**
 measure your dry, measure your wet, draw the band lines, and read the raw signal instead of a single percentage.
@@ -226,7 +226,7 @@ doc.*
 - **Firmware + Sage (build + verify the sketch, #446):** the actual `.ino` for the **Arduino Uno R4 WiFi** —
   `analogRead(A0)` + `SAMPLES` averaging, the three-band compare, the optional `LED_BUILTIN` blink (WiFi left
   unused, Serial only). Sage measures the real dry/wet anchors on an R4 + probe so the out-of-box defaults are
-  honest (the example values in this doc are placeholders). DX hands them this spec; they own the firmware.
+  real (the example values in this doc are placeholders). DX hands them this spec; they own the firmware.
 - **Design (a later pass, optional):** if the copy ever gets a styled page, Design dresses it — but the on-ramp ships
   in plain Markdown first; no Design dependency to start.
 - **Glossary:** the on-ramp's terms (the three bands, "calibrate by hand") land in the **User-facing 👤**

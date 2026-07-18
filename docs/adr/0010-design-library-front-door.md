@@ -25,7 +25,7 @@ view*: it may index assets in their canonical repo homes (ADRs in `docs/adr/`, c
    pointer to their current counterpart — out of the active path, kept as history.
 3. **Consistency is a gate, not an afterthought.** Anything added or updated passes the brand
    consistency pass: **voice · color/tokens · the living mark · type · soil mode · the honesty rule
-   (raw + band = truth) · the character↔instrument boundary · reduced-motion · the *tend well* sign-off.**
+   (raw + band = the reading) · the character↔instrument boundary · reduced-motion · the *tend well* sign-off.**
    A significant change re-triggers the pass and is logged in the changelog, so the "how" stays teachable.
 4. **The consistency pass is a criterion *inside* the verification gate.** When a design deliverable lands
    as a proxy PR, "passed consistency" is something the reviewer confirms before merge — not a separate,
