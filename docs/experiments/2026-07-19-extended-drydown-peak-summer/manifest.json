@@ -22,7 +22,7 @@
   "caveats": [
     "Times: CSV timestamp_utc is canonical; timestamp_cdt (UTC−5, CDT) matches the dashboard. Watering times in summary.csv are CDT.",
     "Plant↔sensor map confirmed against the current registry config/devices.local.json (classic y9d41p s1/s2/s3/s4 = Corn/XXL/Anthurium/Dracaena; 8gtt1h s1/s2/s3/s4 = office/Bromeliad/small/XL).",
-    "8gtt1h BOARD CLASS UNRESOLVED: payload name=c5off1 + compressed anchors (~2661–2792 air) say C5-class; Workflow's host read called it classic-class/S3. Reconcile before deciding measured-vs-derived C5 brackets.",
+    "8gtt1h = official C5 DevKit (c5off1), RIGHT sill — confirmed 3 ways (logs, registry fleet-note, maintainer's eyes); Workflow's earlier S3 read was corrected. Both board classes are measured densely in-window, so the C5 bracket column is MEASURED here (not derived); the #898 x0.803 map gets validated as a bonus. The S3 is parked/unregistered (#1034); the yellow clone n3jhsp is the empty-channel headroom board (Jul 7/12 only, correctly silent).",
     "Waterings cluster into 3 sessions (07-10 midday, 07-11 ~21:08, 07-13 21:15), each spanning both boards — cut by session, not per-plant scatter.",
     "cal_tier: classic = channel-cal (wipe_airdry_bench_20260628); 8gtt1h = board-cal."
   ],

@@ -47,16 +47,18 @@ share one event. Three sessions here:
 
 Each session spans both boards — consistent with watering across the sill in one pass.
 
-## Both ADC envelopes are measured densely
+## Both ADC envelopes are measured densely — classic AND C5
 
 - **Classic envelope** (`y9d41p`: Corn / Anthurium / XXL / Dracaena) — air anchors ~3,084–3,221.
-- **Compressed envelope** (`8gtt1h`: office / small / XL / Bromeliad) — air anchors ~2,661–2,792
-  (~17 % compressed). **`8gtt1h` self-identifies as `c5off1` on the wire** (`name=c5off1`) with a
-  C5-class compressed envelope — so these four are plausibly **measured C5-class data**, which would
-  let Data *validate* the #898 cross-board map (×0.803) against real readings rather than only derive
-  through it. **Board-class flag:** Workflow's host-record read called `8gtt1h` classic-class/S3;
-  the payload + registry call it `c5off1`. **Reconcile the board class** — it decides whether the C5
-  brackets are measured or derived. Either way both envelopes are covered densely.
+- **C5 envelope** (`8gtt1h` = **`c5off1`**: office / small / XL / Bromeliad) — air anchors ~2,661–2,792
+  (~17 % compressed). **`8gtt1h` is the C5 (`c5off1`)** — confirmed by the maintainer, the wire
+  (`name=c5off1`), and the registry; **Workflow's host read mis-identified it as an S3.** So these four
+  are **measured C5 data, in-window** — Data can **measure the C5 seven-bracket set directly here**
+  *and* validate the #898 ×0.803 cross-map against real readings, not only derive through it.
+
+**Both board classes are covered densely** — the fresh dry-down richly measures the classic envelope
+*and* the C5 envelope, so the #898 cross-map (which the #1153 suite verified to ~0.0003 drift) can be
+checked against real dual-envelope data.
 
 ## Peak-summer-light context
 
@@ -73,8 +75,9 @@ Firmware provides the dense per-plant series + the watering sessions + the senso
 against the current registry `config/devices.local.json`). **Data owns the `boundary[]` derivation**:
 
 1. Cluster cuts by **session** (07-10 / 07-11 / 07-13), not per-plant scatter.
-2. Reconcile the **`8gtt1h` board class** (measured C5 vs classic-class) — it changes whether the C5
-   seven-bracket set is measured here or derived via #898.
+2. **Measure both bracket columns** — classic from `y9d41p`, C5 from `8gtt1h` (the official C5 DevKit)
+   — and use the fresh dual-envelope data to **validate** the #898 ×0.803 cross-map rather than lean
+   on it.
 3. Feed the ratified sets to Firmware — the **#1153** parameterized cal-suite is paste-constants-and-run.
 
 ## Provenance + PII
