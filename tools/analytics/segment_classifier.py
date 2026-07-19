@@ -22,9 +22,10 @@ C0's rules (every constant is a first-pass cut for the C1 contract to refine):
   total fall >= ``CONFIRM_DROP_RAW`` — else those rows stay unclassified (noise). The
   raw-domain rule intentionally catches gentler waterings than the >=2-band jump
   detector (the Bromeliad case: a ~220-count drink inside one band).
-- **rebound** — the ``REBOUND_H`` hours after a confirmed transient ends: water
-  redistributing / a wetted probe re-equilibrating. Time-boxed in C0 (rate-based
-  refinement is C1); rising raw here is NOT drying evidence.
+- **rebound** — post-transient equilibration, RATE-BASED (C1): persists while the
+  forward ``REBOUND_WINDOW_M`` slope >= ``REBOUND_RATE_CH`` (+c/h), hard-capped at
+  ``REBOUND_MAX_H``. Rising raw here is NOT drying evidence. (C0's fixed 3 h box is
+  retired — it truncated slow recoveries and over-held fast settles.)
 - **steady-drying** — everything else: the default state between events.
 
 Precedence per row: flagged > watering-transient > rebound > steady-drying.
@@ -45,7 +46,14 @@ if str(_HERE) not in sys.path:
 ONSET_DROP_RAW = 60  # single-step fall that can start a transient (noise is ~±22)
 CONFIRM_DROP_RAW = 150  # total fall a run needs to be a real watering, not noise
 NOISE_RAW = 25  # a rise this small doesn't end a falling run
-REBOUND_H = 3.0  # post-transient equilibration window (time-boxed in C0)
+# C1 rate-based rebound (the contract's calibrated defaults, Data-tunable):
+REBOUND_RATE_CH = 30.0  # forward slope >= this (+c/h) = still equilibrating
+REBOUND_WINDOW_M = 30.0  # the forward slope window (minutes)
+REBOUND_MAX_H = 6.0  # hard cap — nothing equilibrates longer than this
+# The watering PASS (the #877 retro seam, adopted): fleet-wide gap clustering of
+# watering evidence. 75 min reproduces the maintainer's four session-truths 4/4
+# (a naive 30 min splits her 07-10 dose session) — a calibrated contract parameter.
+PASS_GAP_MIN = 75.0
 
 KINDS = ("watering-transient", "rebound", "steady-drying", "flagged")
 
@@ -104,14 +112,35 @@ def classify(rows) -> list[str]:
     for start, end in _transient_runs(rows):
         for k in range(start, end + 1):
             kinds[k] = "watering-transient"
-        # the rebound window: time-boxed from the transient's last reading
+        # C1 rate-based rebound: extend while the FORWARD slope says the probe is
+        # still equilibrating (>= REBOUND_RATE_CH over REBOUND_WINDOW_M), sticky on a
+        # thin tail (not enough lookahead to claim it settled), hard-capped.
         t_end = rows[end].timestamp_utc
-        horizon = t_end + timedelta(hours=REBOUND_H)
+        cap = t_end + timedelta(hours=REBOUND_MAX_H)
         k = end + 1
-        while k < len(rows) and rows[k].timestamp_utc <= horizon:
-            if kinds[k] == "steady-drying":  # never overwrite a later transient
+        j = end + 1
+        rebounding = True  # the transient just ended — equilibration is the prior
+        while k < len(rows) and rows[k].timestamp_utc <= cap and rebounding:
+            if kinds[k] != "steady-drying":  # never overwrite a later transient
+                break
+            horizon = rows[k].timestamp_utc + timedelta(minutes=REBOUND_WINDOW_M)
+            j = max(j, k)
+            while j + 1 < len(rows) and rows[j + 1].timestamp_utc <= horizon:
+                j += 1
+            span_h = (rows[j].timestamp_utc - rows[k].timestamp_utc) / timedelta(
+                hours=1
+            )
+            if span_h >= (REBOUND_WINDOW_M / 60.0) / 3.0:  # enough lookahead to judge
+                a, b = rows[k].raw_value, rows[j].raw_value
+                rebounding = (
+                    a is not None
+                    and b is not None
+                    and (b - a) / span_h >= REBOUND_RATE_CH
+                )
+            # else: thin tail — sticky (can't claim it settled without a window)
+            if rebounding:
                 kinds[k] = "rebound"
-            k += 1
+                k += 1
     for k, r in enumerate(rows):
         if r.quality_flag != "OK":
             kinds[k] = "flagged"  # highest precedence — the wire flagged the row
@@ -137,3 +166,43 @@ def valid_for_trend(rows) -> list[bool]:
     """The mask the trend fit consumes: True only for steady-drying rows. A fit over
     transient/rebound/flagged rows is fitting a different physical process."""
     return [k == "steady-drying" for k in classify(rows)]
+
+
+@dataclass(frozen=True)
+class Pass:
+    """One watering PASS (contract §3): a fleet-wide, gap-clustered group of watering
+    evidence with its own identity. The operator's unit of work."""
+
+    pass_id: str  # the cluster's ISO start-minute
+    t0: object
+    t1: object
+    events: tuple  # the clustered (ts, source, ref) evidence, time-ordered
+
+    @property
+    def n(self) -> int:
+        return len(self.events)
+
+
+def passes(events, gap_min: float = PASS_GAP_MIN) -> list[Pass]:
+    """Cluster watering evidence — (ts, source, ref) tuples, fleet-wide: classifier
+    transient onsets ("soil") plus manual glugs ("glug") — into PASSES by time gap
+    (contract §3). Derived at read time: the raw tier and the glug journal are never
+    touched. 75 min is the calibrated default (the maintainer's four session-truths)."""
+    evts = sorted(events, key=lambda e: e[0])
+    if not evts:
+        return []
+    out: list[Pass] = []
+    cur = [evts[0]]
+    for e in evts[1:]:
+        if (e[0] - cur[-1][0]) <= timedelta(minutes=gap_min):
+            cur.append(e)
+        else:
+            out.append(_mk_pass(cur))
+            cur = [e]
+    out.append(_mk_pass(cur))
+    return out
+
+
+def _mk_pass(evts: list) -> Pass:
+    t0, t1 = evts[0][0], evts[-1][0]
+    return Pass(t0.strftime("%Y-%m-%dT%H:%M"), t0, t1, tuple(evts))
