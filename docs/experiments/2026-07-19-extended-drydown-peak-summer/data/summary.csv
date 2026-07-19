@@ -1,0 +1,9 @@
+plant_id,plant,board,device,sensor_id,gpio,watered_cdt,dur_hours,dur_days,wet_raw,now_raw,rise_raw,air_dry_raw,water_cup_raw,cadence,n_points_2min
+p10,Pothos office,c5off1,8gtt1h,s1,GPIO5,2026-07-13 21:15,117.7,4.9,1119,2003,884,2661,934,dense_30s,3235
+p01,Pothos small,c5off1,8gtt1h,s3,GPIO1,2026-07-10 12:47,198.2,8.3,998,1972,974,2767,996,dense_30s,5540
+p03,Pothos XL,c5off1,8gtt1h,s4,GPIO4,2026-07-10 13:21,197.6,8.2,969,1880,911,2742,968,dense_30s,5523
+p07,Bromeliad,c5off1,8gtt1h,s2,GPIO6,2026-07-10 12:55,198.0,8.3,1029,1776,747,2792,1020,dense_30s,5536
+p11,Corn-plant mini,classic,y9d41p,s1,GPIO34,2026-07-12 ~19:00,144.0,6.0,1699,2382,683,3221,1086,sparse_~2h,13
+p06,Anthurium Hearts,classic,y9d41p,s3,GPIO36,2026-07-12 ~19:00,144.0,6.0,1657,2237,580,3084,1042,sparse_~2h,13
+p02,Pothos XXL,classic,y9d41p,s2,GPIO35,2026-07-10 ~19:00,192.0,8.0,1462,1684,222,2898,988,sparse_~2h,22
+p04,Dracaena cane,classic,y9d41p,s4,GPIO39,2026-07-14 ~10:55,104.1,4.3,1293,1993,700,3190,1061,sparse_~2h,10

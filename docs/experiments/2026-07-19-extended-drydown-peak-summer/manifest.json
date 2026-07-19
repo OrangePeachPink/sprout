@@ -1,0 +1,30 @@
+{
+  "experiment_id": "2026-07-19-extended-drydown-peak-summer",
+  "title": "Extended in-situ dry-down (peak-summer) — 8 plants, last-watering → now",
+  "subject": "Per-plant extended dry-down for the #995 band ratification",
+  "date_local": "2026-07-19",
+  "lane": "Firmware",
+  "duration": "4.3–8.3 d per plant",
+  "refs": {
+    "ratification_target": "#995",
+    "fresh_drydown_bench": "#1174",
+    "band_model_ruling": "#1039",
+    "sensor_map": "#896",
+    "anchor_envelope": "#898"
+  },
+  "purpose": "The fresh current-fleet dry-down that #995 needs to ratify the 7-in-soil band re-partition — captured ORGANICALLY, not on a bench. Each plant's soil reading from its last watering through to now (2026-07-19), in-situ on the real boards + windowsill spots, untouched, under PEAK July summer light (the fastest-drying / highest-transpiration case of the year — direct southern exposure only declines from here). Data derives the ratified boundary[] from this.",
+  "fast_path_for_data": [
+    "data/summary.csv — per-plant table: watering (CDT), duration, wet→dry endpoints, air/water anchors, cadence",
+    "data/p*.csv — per-plant dry-down series (timestamp_utc + timestamp_cdt, hours_since_water, raw_value, band, pressure_hpa, air/water anchors)"
+  ],
+  "aggregation_boundary": "Firmware provides the extracted per-plant dry-down series (last-watering → now), the watering detection, and the sensor→plant map. Data owns the band-boundary derivation (the #995 seven-bracket sets) and confirms the exact per-plant watering cut against the app's tuned detected-watering signal + the current registry.",
+  "honest_gap_policy": "The 4 CLASSIC plants (Corn / Anthurium / XXL / Dracaena on device y9d41p) are SPARSELY logged this window (~2 h cadence, 10–22 points) — the dry-down SHAPE + endpoints are solid but the watering time is ±hours and interior resolution is coarse; do NOT over-fit interior boundaries to them. The 4 C5 plants (office / small / XL / Bromeliad on 8gtt1h) are DENSE (30 s, downsampled to 2-min median here; full 30 s remains in the archive). Empty pressure fields mean the weather context row was not populated for that reading.",
+  "caveats": [
+    "Times: CSV timestamp_utc is canonical; timestamp_cdt (UTC−5, CDT) matches the dashboard. Watering times in summary.csv are CDT.",
+    "Plant↔sensor map is the #896 sensor_map (2026-07-10); confirm against the current registry (#921 edits) before final band assignment.",
+    "Dense C5 series downsampled to 2-min median bins for file size; full 30 s remains in .data-worktree/data/archive (device 8gtt1h).",
+    "cal_tier: classic = channel-cal (wipe_airdry_bench_20260628); C5 = board-cal (board_envelope_20260710)."
+  ],
+  "source_data": "Read-only from the data branch archive (.data-worktree/data/archive/) — device y9d41p (classic, payload name=classic) + 8gtt1h (c5off1). No files on the data branch were modified.",
+  "pii_posture": "Raw ADC counts, device ids, local timestamps, plant names, and weather pressure only. Private RFC1918 IPs (ADR-0015) are not needed here and are absent. No MAC / USB-instance IDs / hostnames / EXIF."
+}
