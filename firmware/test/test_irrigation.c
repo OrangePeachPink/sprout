@@ -309,8 +309,8 @@ static moisture_level_t band_of(uint16_t raw)
 
 void t_band_anchors(void)
 {
-    /* #995 ratified 7-in-soil ladder (classic default {2293,2086,1879,1673,
-     * 1466,1259}). ALL seven levels are in-soil display bands now (Faint..
+    /* #995 ratified 7-in-soil ladder (classic default {2293,2086,1879,1636,
+     * 1393,1150}). ALL seven levels are in-soil display bands now (Faint..
      * Soaked); the off-ladder air/water exceptions are the #1152 anchor layer.
      * One representative raw per band, driest -> wettest: */
     TEST_ASSERT_TRUE_MESSAGE(band_of(2600) == MOIST_AIR_DRY,
@@ -320,13 +320,13 @@ void t_band_anchors(void)
     TEST_ASSERT_TRUE_MESSAGE(band_of(2000) == MOIST_NEEDS_WATER,
                              "Thirsty ~2000 (1879..2086)");
     TEST_ASSERT_TRUE_MESSAGE(band_of(1780) == MOIST_OK,
-                             "Content ~1780 (1673..1879) healthy");
+                             "Content ~1780 (1636..1879) healthy");
     TEST_ASSERT_TRUE_MESSAGE(band_of(1570) == MOIST_WELL_WATERED,
-                             "Thriving ~1570 (1466..1673)");
+                             "Thriving ~1570 (1393..1636)");
     TEST_ASSERT_TRUE_MESSAGE(band_of(1360) == MOIST_OVERWATERED,
-                             "Refreshed ~1360 (1259..1466)");
+                             "Refreshed ~1360 (1150..1393)");
     TEST_ASSERT_TRUE_MESSAGE(band_of(1100) == MOIST_SUBMERGED,
-                             "Soaked ~1100 (<1259) wettest in-soil");
+                             "Soaked ~1100 (<1150) wettest in-soil");
 
     /* #995: all seven are watering-display bands (Faint + Soaked included). */
     for (int lvl = MOIST_AIR_DRY; lvl <= MOIST_SUBMERGED; lvl++) {
@@ -1187,7 +1187,7 @@ void t_board_capability(void)
      * pins the value/flag as two independent facts: the numbers can match
      * classic's without the board being claimed as bench-verified. */
     const uint16_t cal[BOARD_CAL_BOUNDARY_COUNT] = {2293, 2086, 1879,
-                                                    1673, 1466, 1259};
+                                                    1636, 1393, 1150};
     for (int i = 0; i < BOARD_CAL_BOUNDARY_COUNT; i++) {
         TEST_ASSERT_EQUAL_MESSAGE(cal[i], BOARD_CAP.cal_boundary[i],
                                   "host cal boundary matches the placeholder");
@@ -1288,8 +1288,8 @@ void t_cal_ch_line(void)
         SENSOR_CAL_SCOPE);
     TEST_ASSERT_TRUE_MESSAGE(n > 0, "cal_ch line formatted");
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
-        "# cal_ch s3: bounds=2293,2086,1879,1673,1466,1259 "
-        "src=band_ratified_995 date=2026-07-19 confidence=provisional "
+        "# cal_ch s3: bounds=2293,2086,1879,1636,1393,1150 "
+        "src=wet_rederive_1236 date=2026-07-19 confidence=provisional "
         "scope=channel",
         buf, "exact wire format the #507 parser reads");
 
@@ -1588,7 +1588,7 @@ void t_cal_resolver_c5_board_envelope(void)
      * tier BOARD, byte-matching the #995-ratified measured C5 envelope. */
     cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
     static const uint16_t c5[MOISTURE_BOUNDARY_COUNT] = {2037, 1861, 1685,
-                                                         1510, 1334, 1158};
+                                                         1478, 1272, 1065};
     for (int ch = 0; ch < 4; ch++) {
         const cal_record_t *r =
             cal_resolve("esp32-c5", SENSOR_CLASS_CAPACITIVE_V2, ch);
@@ -1652,16 +1652,16 @@ typedef struct {
 } band_partition_t;
 
 /* RATIFIED #995 (Data's re-derived dual-envelope sets). boundary[] descending
- * wet->dry: classic {2293,2086,1879,1673,1466,1259} · C5 {2037,1861,1685,1510,
- * 1334,1158}. Water-anchor A coincident; Faint-ceiling 2500 (D1). Air anchors
+ * wet->dry: classic {2293,2086,1879,1636,1393,1150} · C5 {2037,1861,1685,1478,
+ * 1272,1065}. Water-anchor A coincident; Faint-ceiling 2500 (D1). Air anchors
  * from the D2 spans (classic 2085 / C5 1772 -> measured factor 0.850). */
 static const band_partition_t BAND_SET_CLASSIC_RATIFIED = {
     "esp32-classic",
     1052, /* Water-anchor A (#995): water rail = Soaked floor (coincident) */
-    {1052, 1259, 1466, 1673, 1879, 2086, 2293, 2500},
+    {1052, 1150, 1393, 1636, 1879, 2086, 2293, 2500},
     3137};
 static const band_partition_t BAND_SET_C5_RATIFIED = {
-    "esp32-c5", 982, {982, 1158, 1334, 1510, 1685, 1861, 2037, 2213}, 2754};
+    "esp32-c5", 982, {982, 1065, 1272, 1478, 1685, 1861, 2037, 2213}, 2754};
 
 static double band_dabs(double x)
 {

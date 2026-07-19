@@ -72,7 +72,7 @@ typedef struct {
 /* the classic baseline. cal_boundary: the #995-ratified 7-in-soil band edges
  * (2026-07-19, both envelopes measured; supersedes the #248 common-cup rails).
  * boundary[] is now FULLY in-soil dividers (Faint floor 2293 .. Soaked ceiling
- * 1259); the air/water RAILS left boundary[] for the off-ladder anchors
+ * 1150); the air/water RAILS left boundary[] for the off-ladder anchors
  * (wet_rail_raw + the #1152 probe-in-air/water exception layer). */
 #define BOARD_CAPABILITY                                                       \
     {"esp32-classic",                                                          \
@@ -85,7 +85,7 @@ typedef struct {
      2,                                                                        \
      21,                                                                       \
      22,                                                                       \
-     {2293, 2086, 1879, 1673, 1466, 1259},                                     \
+     {2293, 2086, 1879, 1636, 1393, 1150},                                     \
      true,                                                                     \
      900}
 #elif defined(CONFIG_IDF_TARGET_ESP32S3)
@@ -110,7 +110,7 @@ typedef struct {
      BOARD_LED_NONE,                                                           \
      8,                                                                        \
      9,                                                                        \
-     {2293, 2086, 1879, 1673, 1466, 1259},                                     \
+     {2293, 2086, 1879, 1636, 1393, 1150},                                     \
      false,                                                                    \
      900}
 #elif defined(CONFIG_IDF_TARGET_ESP32C5)
@@ -145,7 +145,7 @@ typedef struct {
      BOARD_LED_NONE,                                                           \
      23,                                                                       \
      24,                                                                       \
-     {2037, 1861, 1685, 1510, 1334, 1158},                                     \
+     {2037, 1861, 1685, 1478, 1272, 1065},                                     \
      false,                                                                    \
      900}
 #else
@@ -163,7 +163,7 @@ typedef struct {
      2,                                                                        \
      21,                                                                       \
      22,                                                                       \
-     {2293, 2086, 1879, 1673, 1466, 1259},                                     \
+     {2293, 2086, 1879, 1636, 1393, 1150},                                     \
      false,                                                                    \
      900}
 #endif

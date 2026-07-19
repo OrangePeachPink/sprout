@@ -16,7 +16,7 @@ static size_t s_count = 0;
 static const cal_record_t k_factory_fallback = {
     "unknown",
     SENSOR_CLASS_CAPACITIVE_V2,
-    {2293, 2086, 1879, 1673, 1466, 1259},
+    {2293, 2086, 1879, 1636, 1393, 1150},
     "factory_placeholder",
     CAL_TIER_FACTORY,
 };
