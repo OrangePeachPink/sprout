@@ -108,6 +108,16 @@
   .water b { color: var(--ink); font-weight: 600; }
   .water .src { font-size: 10.5px; letter-spacing: .06em; color: var(--muted); }
   .nn-known { color: var(--st-predicted); }  /* forecast = the violet channel, never a mood */
+  /* #1137 the glug button — chrome register (an affordance, not a state): quiet
+     pill at the water row's end; ink on hover; watering-teal droplet only. */
+  .glug { margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11.5px; font-weight: 600; color: var(--muted); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px;
+    cursor: pointer; user-select: none; white-space: nowrap; }
+  .glug svg { width: 9px; height: 11px; color: var(--st-watering); flex: 0 0 auto; }
+  .glug:hover, .glug:focus-visible { color: var(--ink); border-color: var(--muted); }
+  .glug:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .hero .glug { font-size: 12.5px; padding: 5px 13px; }
 
   .quiet { color: var(--muted); font-size: 12.5px; }
 
@@ -271,15 +281,56 @@ function waterHTML(card) {
   var lw = card.last_watered || {}, nn = card.next_need || {};
   var h = "";
   if (lw.known)
-    h += '<span>watered <b>' + esc(lw.ago) + '</b> <span class="src">DETECTED</span></span>';
+    /* the chip wears its honest provenance: MANUAL (logged, #1137) or DETECTED */
+    h += '<span>watered <b>' + esc(lw.ago) + '</b> <span class="src">' +
+      esc(String(lw.source || "detected").toUpperCase()) + "</span></span>";
   else
     h += '<span>watered <b>&mdash;</b> <span class="src">not seen yet</span></span>';
   if (nn.known)
     h += '<span class="nn-known">next water ~' + Math.max(1, Math.round(nn.hours / 24)) + "d</span>";
   else
     h += '<span>next <b>&mdash;</b> <span class="src">learning its rhythm</span></span>';
+  /* #1137 the "glug glug" one-tap: log a manual watering against Data's journal
+     (POST /watering/log). span[role=button] because the card itself is a <button>
+     (nested buttons are invalid); needs a plant_id to post against. */
+  if (card.plant_id)
+    h += '<span class="glug" role="button" tabindex="0" data-pid="' +
+      esc(card.plant_id) + '" aria-label="log a watering for ' +
+      esc((card.identity || {}).name || card.plant_id) + '">' +
+      '<svg viewBox="0 0 10 12" aria-hidden="true"><path d="M5 0.5 C8 4 9.5 6 9.5 8 ' +
+      'a4.5 4.5 0 0 1 -9 0 C0.5 6 2 4 5 0.5 Z" fill="currentColor"/></svg>' +
+      "Glug glug</span>";
   return h;
 }
+
+/* #1137: post the manual watering, calm states all the way — never blocks. */
+function glugPost(el) {
+  if (el.dataset.busy) return;
+  el.dataset.busy = "1";
+  var label = el.lastChild;
+  var was = label.nodeValue;
+  label.nodeValue = "logging…";
+  fetch("/watering/log", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ plant_id: el.dataset.pid })
+  }).then(function (r) { return r.json(); }).then(function (doc) {
+    if (doc && doc.ok) { refresh(); }
+    else { label.nodeValue = "couldn’t save"; delete el.dataset.busy; }
+  }).catch(function () {
+    label.nodeValue = was; delete el.dataset.busy;
+  });
+}
+document.addEventListener("click", function (e) {
+  var g = e.target.closest ? e.target.closest(".glug") : null;
+  if (g) { e.stopPropagation(); e.preventDefault(); glugPost(g); }
+}, true);
+document.addEventListener("keydown", function (e) {
+  if ((e.key === "Enter" || e.key === " ") && e.target.classList &&
+      e.target.classList.contains("glug")) {
+    e.stopPropagation(); e.preventDefault(); glugPost(e.target);
+  }
+}, true);
 
 /* one plant card against the locked contract (frame=state; mark BESIDE thumb) */
 function renderCard(card, opts) {
