@@ -1,5 +1,5 @@
 {
-  "_note": "TEMPLATE (ADR-0029). Copy to config/plant_profiles.local.json (gitignored) and describe YOUR plants. This is the slowly-changing DIMENSION the inference tier (PRD-0008) joins to telemetry facts on the stable plant_id (ADR-0027) — it is NOT telemetry (never on the wire, never per-row). Storage mirrors the device registry: this template ships committed with PLACEHOLDER values; the real instance (pot sizes + home placement = your windowsill) stays local-only per ADR-0015. Every field is ABSENT-SAFE (ADR-0028): a plant is fully monitored with only plant_id + label; everything else sharpens prediction. species_guess carries species_confidence (a guess is labelled a guess, ADR-0006); effective_size_class is an explicit judgement distinct from the measured diameter_in; open_questions is first-class so the model never forces false certainty. Vocabularies are in ADR-0029 §4. Placeholder values below.",
+  "_note": "TEMPLATE (ADR-0029, hardened 2026-07-07 model). Copy to config/plant_profiles.local.json (gitignored) and describe YOUR plants. A slowly-changing DIMENSION keyed by the stable plant_id (ADR-0027) — never telemetry. Every field is ABSENT-SAFE (ADR-0028): a minimal profile is plant_id (+ label). PLACEMENT RULE (ADR-0029 s3): a WIRED plant's device/channel/side resolve through the device registry and are NOT stored here; only a SENSORLESS plant carries placement (sensorless: true + ledge + window). Guesses are labelled (species_guess + species_confidence vs an asserted species); observations are dated (provenance). Vocabularies: ADR-0029 s4.",
   "schema_version": 1,
   "plants": [
     {
@@ -7,14 +7,15 @@
       "label": "p01",
       "species_guess": "pothos",
       "species_confidence": "low",
-      "placement": { "window": "example-window", "ledge": "left", "device": "k7m2rt", "channel": "s1" },
       "pot": {
         "diameter_in": 6,
         "shape": "standard",
         "material": "plastic",
         "has_drip_tray": false,
         "outer_pot_seal": "none",
-        "effective_size_class": "~6in"
+        "effective_size_class": "~6in",
+        "depth_class": "normal",
+        "effective_reduction_factors": []
       },
       "soil_root": {
         "soil_depth_pct": 90,
@@ -26,7 +27,8 @@
         "water_delivery_path": "topsoil",
         "retention_class": "good",
         "drainage_note": "example — normal drainage",
-        "probe_contact_quality": "good"
+        "probe_contact_quality": "good",
+        "probe_reading_caveat": "represents"
       },
       "care": {
         "care_origin": "home",
@@ -34,13 +36,51 @@
         "rejuvenation_routine": "example — quarterly sink soak + leaf spray, 30-min drip-dry",
         "drought_cycled": true
       },
-      "open_questions": ""
+      "open_questions": "",
+      "soil_condition": "well-wicking",
+      "provenance": {
+        "observed_by": "example-observer",
+        "observed_date": "2026-01-01",
+        "method": "example — tape, top edge-to-edge; +/-0.5in class"
+      }
     },
     {
-      "plant_id": "p02",
-      "label": "p02",
-      "placement": { "sensorless": true },
-      "open_questions": "example — a minimal, sensorless profile: plant_id + label is a complete entry; a sensorless plant is monitored nowhere yet but still a first-class record (ADR-0028)."
+      "plant_id": "p05",
+      "label": "p05",
+      "species": "example asserted species (a recorded nursery sticker — provenance has a chain)",
+      "placement": {
+        "sensorless": true,
+        "ledge": "right",
+        "window": "example-window"
+      },
+      "pot": {
+        "diameter_in": 6,
+        "shape": "standard",
+        "depth_class": "normal",
+        "effective_size_class": "smaller than 6in implies",
+        "effective_reduction_factors": [
+          "rootbound"
+        ]
+      },
+      "soil_root": {
+        "root_bound": "hard"
+      },
+      "hydrology": {
+        "water_delivery_path": "inner-outer-gap-sip",
+        "probe_reading_caveat": "may-miss-gap-reservoir",
+        "drainage_note": "example — roots sip from the inner/outer gap"
+      },
+      "soil_condition": "hydrophobic-non-wicking",
+      "care": {
+        "care_origin": "home",
+        "drought_cycled": true
+      },
+      "open_questions": "example — an honest open question stays a question",
+      "provenance": {
+        "observed_by": "example-observer",
+        "observed_date": "2026-01-01",
+        "method": "example — visual"
+      }
     }
   ]
 }
