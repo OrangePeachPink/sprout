@@ -1,7 +1,7 @@
 /*
  * sht45.h - Adafruit SHT45 (Sensirion SHT4x) ambient temp/RH driver (#373).
  *
- * CONTEXTUAL telemetry, not plant-truth: a local air reference next to the ESP32
+ * CONTEXTUAL telemetry, not plant data: a local air reference next to the ESP32
  * for the skylight/solar pass (PRD-0002 env layer, part of #200). I2C addr 0x44,
  * high-precision single-shot measure (cmd 0xFD), 6-byte read with CRC-8 on each
  * 16-bit word, Sensirion's linear conversion. Pure C (fixed-point, no floats) over

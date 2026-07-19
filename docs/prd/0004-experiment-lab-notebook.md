@@ -89,7 +89,7 @@ raw CSV.
   ADR's call.)*
 - **R6 — Scales without re-parsing.** Catalog + cross-experiment views stay responsive as captures accumulate —
   via a derived, rebuildable index/store (folds in #27's DuckDB/parquet tier, #24's per-experiment feature
-  set, and #17's calendar fields). Derived + gitignored + rebuildable from raw; never the source of truth.
+  set, and #17's calendar fields). Derived + gitignored + rebuildable from raw; never the canonical source.
 - **R7 — Token-faithful, Design-owned UI.** The catalog, detail, notes editor, and studies views follow the Sprout
   design system; no net-new UI primitives without Design. The always-on auto-logger archive to `origin/data`
   continues unchanged.

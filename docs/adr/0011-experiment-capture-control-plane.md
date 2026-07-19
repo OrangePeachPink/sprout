@@ -26,8 +26,8 @@ Because a web page would be able to launch and stop host capture, this is a **lo
   the always-on baseline logger or the `logs/` path.
 - **Localhost-only.** Bind to `127.0.0.1`; no remote control surface, no auth-bypass exposure.
 - **Single-flight.** No double-start / orphaned captures; a capture is idempotent and has one owner.
-- **Honest state.** The UI must reflect actual capture state (running / stopped / auto-stopped / errored),
-  consistent with the disconnected-state honesty work (issue #48).
+- **Accurate state.** The UI must reflect actual capture state (running / stopped / auto-stopped / errored),
+  consistent with the disconnected-state accuracy work (issue #48).
 
 ## Decision
 
@@ -47,7 +47,7 @@ Because a web page would be able to launch and stop host capture, this is a **lo
 ### The invariant this ADR encodes — serial-port mutual exclusion
 
 Only one process can own COM6. **An experiment capture must not start while Monitor mode holds the port**,
-and vice-versa. The control API refuses a start with an honest message unless the monitor has released the
+and vice-versa. The control API refuses a start with a clear message unless the monitor has released the
 port. This is *how* the "cannot touch Monitor mode" constraint is enforced — by exclusion, not intention —
 and it is why real experiments naturally wait until after the baseline window and the probes are pulled
 (PRD-0001 R10).
@@ -136,7 +136,7 @@ ESP32** — a fresh `session_id` and a return to the default cadence. Two conseq
    closes the serial handle cleanly, releasing the port.
 2. Before launching a capture, the control plane (`serve.py`) **pre-checks**: (a) no monitor-logger process
    is alive, **and** (b) a quick open-then-close probe of the port succeeds. Either failing → the start is
-   **refused with an honest message** ("monitor still holds the port"); the control plane never kills the
+   **refused with a clear message** ("monitor still holds the port"); the control plane never kills the
    monitor — releasing it is the operator's act.
 3. The capture process opens the port, waits for the banner, sends `!cad,<ms>`, awaits `ack`, then captures
    to its isolated `experiments/<experiment_id>/` file.
@@ -146,7 +146,7 @@ ESP32** — a fresh `session_id` and a return to the default cadence. Two conseq
 **The lock layer (advisory, on top of the OS guarantee).** Whoever opens the port writes an advisory lock —
 `logs/.serial-owner.json` = `{pid, mode, port, opened_utc}`, removed on clean close — so the control plane
 can answer "who holds the port?" **without opening it** (which would reset the device). The OS exclusive
-open stays the source of truth; the lock only avoids a needless *attempt* (and reset). **Stale-lock
+open stays the canonical source; the lock only avoids a needless *attempt* (and reset). **Stale-lock
 recovery:** if the lock names a PID that is no longer alive (a crashed owner — the OS already freed the
 port), the lock is stale and reclaimable; always validate PID liveness before trusting it.
 

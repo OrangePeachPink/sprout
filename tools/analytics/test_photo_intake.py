@@ -13,7 +13,12 @@ import pytest
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from photo_intake import MAX_EDGE, ingest_photo, registry_photo_path
+from photo_intake import (
+    MAX_EDGE,
+    MAX_UPLOAD_BYTES,
+    ingest_photo,
+    registry_photo_path,
+)
 
 
 def _jpeg_with_gps(path: Path, size=(1200, 900)) -> None:
@@ -76,3 +81,25 @@ def test_a_blank_plant_id_is_rejected(tmp_path: Path) -> None:
     Image.new("RGB", (100, 100), (0, 0, 0)).save(src, "JPEG")
     with pytest.raises(ValueError):
         ingest_photo(src, "", photos_dir=tmp_path / "photos")
+
+
+def test_an_oversize_upload_is_rejected_before_decoding(tmp_path: Path) -> None:
+    # #1039 Q4 size cap: over-ceiling bytes are rejected (needn't even decode).
+    with pytest.raises(ValueError, match="too large"):
+        ingest_photo(b"\x00" * (MAX_UPLOAD_BYTES + 1), "p01", photos_dir=tmp_path)
+
+
+def test_a_disallowed_format_is_rejected(tmp_path: Path) -> None:
+    # #1039 Q4 allowlist: a Pillow-openable but non-allowed format (ICO) is refused.
+    buf = io.BytesIO()
+    Image.new("RGB", (32, 32), (0, 120, 0)).save(buf, "ICO")
+    with pytest.raises(ValueError, match="unsupported image format"):
+        ingest_photo(buf.getvalue(), "p01", photos_dir=tmp_path / "photos")
+
+
+def test_the_allowed_raster_formats_pass(tmp_path: Path) -> None:
+    for fmt, ext in (("PNG", "png"), ("WEBP", "webp"), ("BMP", "bmp")):
+        buf = io.BytesIO()
+        Image.new("RGB", (400, 300), (0, 120, 0)).save(buf, fmt)
+        out = ingest_photo(buf.getvalue(), f"p_{ext}", photos_dir=tmp_path / "photos")
+        assert out.is_file() and Image.open(out).format == "JPEG"

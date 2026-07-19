@@ -11,21 +11,21 @@
   <a href="https://github.com/OrangePeachPink/sprout/releases"><img
     src="https://img.shields.io/github/v/release/OrangePeachPink/sprout?label=release&amp;color=8BD24F"
     alt="latest release"></a>
-  <img src="https://img.shields.io/badge/soil-honest-E8703A" alt="honest by default">
+  <img src="https://img.shields.io/badge/soil-calibrated%20bands-8BD24F" alt="calibrated moisture bands">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-007EC6" alt="MIT license"></a>
   <a href="https://github.com/OrangePeachPink/sprout/actions/workflows/ci.yml"><img
     src="https://github.com/OrangePeachPink/sprout/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 </p>
 
 > **Hi, I'm Sprout.** I watch a windowsill of plants and tell you, in plain words, how each one is doing —
-> no guesswork, no fake percentages: I read the soil honestly and speak for the plant. (Watering? On my
-> roadmap — and true to form, I won't claim it until it's calibrated.)
+> no guesswork: I read the soil myself and speak for the plant. (Watering? On my roadmap — and true to
+> form, I won't claim it until it's calibrated.)
 
 ---
 
 ## What Sprout is
 
-Sprout is a small, honest, **automatic plant-care system** for a windowsill: capacitive soil-moisture probes
+Sprout is a small **automatic plant-care system** for a windowsill: capacitive soil-moisture probes
 on one or more **ESP32-class boards** — each reporting **over Wi-Fi (untethered)** or a USB-serial cable —
 with a **Python** logger and analytics behind them and a served **dashboard** out front. It watches the soil,
 classifies it into seven calibrated moisture bands, and (once calibration is in) will water before a plant
@@ -41,7 +41,7 @@ tooling sized to match, not over-engineered.
 
 Sprout is developed with AI assistance — the maintainer works alongside AI coding tools — and AI-assisted
 contributions are as welcome as hand-written ones. Contribute however you work, with or without AI tools; the
-bar is the same either way: honest, tested, and kind.
+bar is the same either way: clear, tested, and kind.
 
 ## Quick start
 
@@ -59,7 +59,7 @@ tests that CI does.
 
 Once the dashboard is up, click **▶ Start logging** — that single action begins logging every connected
 sensor at once, whether it's plugged in over USB or reporting over Wi-Fi. On a brand-new install with no data yet,
-the honest empty-state hands you the same Start button, so day one is never a dead-end.
+the empty-state hands you the same Start button, so day one is never a dead-end.
 
 ## How it works
 
@@ -70,7 +70,7 @@ the honest empty-state hands you the same Start button, so day one is never a de
    soil read      (higher = drier)  bands (calibrated)   and — when ready — a pump
 ```
 
-The chain is deliberately honest: **raw counts and the calibrated band are the truth.** Any 0–100 figure is a
+The chain is built on one rule: **raw counts and the calibrated band are the reading.** Any 0–100 figure is a
 clearly-labelled *relative* index between the wet/dry anchors — never presented as real volumetric water
 content. A plant's mood, its status color, and any watering all derive from the **band**, never from that
 index.
@@ -79,7 +79,7 @@ index.
 
 **Today — the live dashboard.** One command (`just start`) serves this: a functional **Monitor · Capture ·
 Lab** view — raw ADC and the calibrated band for every probe, plus the calibration ladder. Plain and
-unpolished on purpose, and honest about what it reads: probes in dry air show **Parched**, probes sitting
+unpolished on purpose, and it shows exactly what it reads: probes in dry air show **Parched**, probes sitting
 in water show **Drowning**, because the dashboard shows what the capture actually contains.
 
 <p align="center">
@@ -106,7 +106,7 @@ a UI/UX contributor to jump in ([#867](https://github.com/OrangePeachPink/sprout
 ## The brand
 
 Sprout isn't a readout — it's a **character**. The plant speaks for itself, in the first person, calm and
-honest. The full identity, voice rules, the living mark, and the seven-band mood system are in the brand
+plain-spoken. The full identity, voice rules, the living mark, and the seven-band mood system are in the brand
 guide:
 
 - **[Brand guide](docs/design/brand/BRAND.md)** — voice, the living mark + motion, the mood↔band system, the
@@ -116,11 +116,11 @@ guide:
 - Decisions of record: **[ADR-0007 (brand &amp; voice)](docs/adr/0007-brand-guidelines.md)** ·
   **[ADR-0008 (personality layer)](docs/adr/0008-design-system-v3-personality-layer.md)**.
 
-## Honest by default
+## The reading rules
 
 A few principles the whole system is built to, so the data can always be trusted:
 
-- **Raw + band = truth;** a percentage is a labelled relative index, never VWC.
+- **Raw + band are the reading;** a percentage is a labelled relative index, never VWC.
 - **Mood &amp; automation follow the calibrated band,** never the index.
 - **Every number is mono, right-aligned, tabular** — data looks like data.
 - **Gaps are surfaced, not smoothed** — the dashboard shows what the capture actually contains.
@@ -234,7 +234,7 @@ paperwork.** Opening a PR just means your contribution ships under the same MIT 
 Sprout free for the next person. It's also why the copyright reads *"Veronica K. Hogue and Sprout
 contributors"*: the moment you contribute, that **"and contributors" is you.**
 
-**No warranty** — it's provided as-is. (We read the soil honestly; we don't promise your monstera survives
+**No warranty** — it's provided as-is. (We read the soil as best we can; we don't promise your monstera survives
 your vacation.)
 
 We picked the friendliest license we could so the distance between *"I found this repo"* and *"I'm using and

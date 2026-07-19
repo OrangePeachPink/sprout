@@ -20,7 +20,7 @@ centers the *plant*, not the engineering.
 Excluded (kept on record so we don't drift back):
 
 - **Field Journal** — serif naturalist almanac; sidelines the live character.
-- **Beautiful Instrument** — engineering-first; its rigor survives as the *honesty thread* inside the
+- **Beautiful Instrument** — engineering-first; its rigor survives as the *reading-first thread* inside the
   winner, not the whole identity.
 - **Retro-Futurism** — a decorative skin without a reason.
 - **Plant Tamagotchi** — a needy pet contradicts an ambient, hands-off system.
@@ -41,7 +41,7 @@ Write **as** Sprout, never **about** it.
 - No baby-talk or cutesy word-mangling.
 - No emoji — the mark and color carry the feeling.
 - No guilt-tripping — Sprout never nags or shames.
-- No fake numbers — never invent a % or an ETA.
+- No invented numbers — never make up a % or an ETA.
 
 **By surface**
 
@@ -103,7 +103,7 @@ posting cadence stays gated and the caption is the maker lane's — this is the 
 ## 4. The mood system (band-derived)
 
 **Invariant:** Sprout's mood is a **1:1 function of the calibrated moisture band** — one of seven — and
-**never** of the 0–100 relative index. The character reads from the same source of truth as the instrument
+**never** of the 0–100 relative index. The character reads from the same source as the instrument
 (ADR-0004), so it can never contradict it.
 
 | Band (UI · fw) | Mood | Voice |
@@ -116,7 +116,7 @@ posting cadence stays gated and the caption is the maker lane's — this is the 
 | Dry · DRY | **Parched** | "I'm properly thirsty now. A drink soon would be lovely." |
 | Parched · air-dry | **Faint · check me** | "I can barely feel my soil — am I truly bone-dry, or has my sensor slipped?" |
 
-Two honesty notes:
+Two notes:
 
 - **Air-dry** doubles as the diagnostic "probe may not be in soil" band — its voice names the ambiguity
   rather than dramatizing death.
@@ -147,7 +147,7 @@ never restyles it.**
 - **Sprout belongs:** ambient, empty, loading, onboarding, notification, and single-plant-hero surfaces —
   *beside* the gauge, both reading the same band.
 - **Keep Sprout out:** dense numeric readouts, the calibration ladder, and data-integrity tables. No
-  character inside the numbers — legibility and honesty win, and the numbers stay clean, mono, tabular.
+  character inside the numbers — legibility wins, and the numbers stay clean, mono, tabular.
 
 This boundary is the v1↔v2 reconciliation the Design lane owns (#18 / ADR-0004). Phase 2 proposes the
 additive personality layer (mood↔band map, animated mark component, voice strings) — layered on, never a

@@ -4,7 +4,7 @@
  * parser (#63), and the run-metadata !label / !pos handlers (#321).
  *
  * The engine is framework-agnostic C, so we compile it for the host alongside a
- * synthetic ADC+pump rig and drive it with a fake millisecond clock - no ESP32,
+ * synthetic ADC+pump rig and drive it with a mock millisecond clock - no ESP32,
  * no flash. Asserts cover the A1 health veto/latch, the two hard invariants
  * (<=1 pump at a time; never sample while pumping), and the preserved
  * no-improvement and pump-overrun failsafes.
@@ -959,7 +959,7 @@ void t_env_row(void)
 
 /* #278 device-owned time (ADR-0018 / schema v2 §11.1-§11.2): device_seq +
  * time_source ride the soil row's payload; device_timestamp_utc is OMITTED
- * (not printed as an empty key) when unsynced - the honest NULL, never a
+ * (not printed as an empty key) when unsynced - a true NULL, never a
  * guessed value. Pins BOTH states: today's real unsynced case, and the
  * synced case the fields are already ready for once #21 (WiFi/NTP) lands. */
 void t_soil_row_time_provenance(void)
@@ -970,7 +970,7 @@ void t_soil_row_time_provenance(void)
                   1300); /* WELL_WATERED-range raw, any valid state */
     char buf[300];
 
-    /* unsynced (today's honest reality): device_timestamp_utc key absent entirely */
+    /* unsynced (today's actual state): device_timestamp_utc key absent entirely */
     telemetry_soil_row_t unsynced = {
         "plants.soil",
         "3f9a1c",
@@ -1188,7 +1188,7 @@ void t_board_capability(void)
 
     /* #436: per-board calibration. Host/fallback carries the classic endpoint
      * VALUES (the placeholder every unverified board also uses) but, like
-     * has_wifi/storage, is honestly NOT a real board -> cal_verified=false. This
+     * has_wifi/storage, is NOT a real board -> cal_verified=false. This
      * pins the value/flag as two independent facts: the numbers can match
      * classic's without the board being claimed as bench-verified. */
     const uint16_t cal[BOARD_CAL_BOUNDARY_COUNT] = {3050, 2140, 1830,
@@ -1282,7 +1282,7 @@ void t_per_channel_cal(void)
 
 /* #404: the cal_ch header line - pins the EXACT wire format Data's #507 parser
  * (_parse_cal_channel) reads, byte-for-byte, using ch0's real calibration.h
- * values + the provenance constants. Also pins the honest-NULL date rule:
+ * values + the provenance constants. Also pins the absent date rule:
  * a NULL/empty date omits the key entirely, never emits `date=`. */
 void t_cal_ch_line(void)
 {
@@ -1300,7 +1300,7 @@ void t_cal_ch_line(void)
         "scope=channel",
         buf, "exact wire format the #507 parser reads");
 
-    /* honest-NULL date: key omitted entirely, not printed empty */
+    /* absent date: key omitted entirely, not printed empty */
     n = telemetry_format_cal_ch(buf, sizeof(buf), "s2", SENSOR_CAL_BOUNDARY[3],
                                 MOISTURE_BOUNDARY_COUNT, "manual", NULL,
                                 "provisional", "channel");
@@ -1425,7 +1425,7 @@ void t_sensor_fault(void)
                              "wet_rail=0 -> no fault reason");
 }
 
-/* #739 v4 soil-row emit: config_id + honest-absent rssi + uptime_s/heap in payload,
+/* #739 v4 soil-row emit: config_id + absent rssi + uptime_s/heap in payload,
  * and the #670 fault flag/reason with raw preserved (ADR-0006). */
 void t_soil_row_v4(void)
 {
@@ -1484,14 +1484,14 @@ void t_soil_row_v4(void)
     TEST_ASSERT_NULL_MESSAGE(strstr(buf, ";fault="),
                              "healthy row has no fault key");
 
-    /* honest-absent (ADR-0028): a serial/tethered row OMITS rssi= entirely. */
+    /* absent (ADR-0028): a serial/tethered row OMITS rssi= entirely. */
     row.rssi_present = false;
     TEST_ASSERT_TRUE_MESSAGE(telemetry_format_soil_row(buf, sizeof(buf), &row) >
                                  0,
                              "tethered row formatted");
     TEST_ASSERT_NULL_MESSAGE(
         strstr(buf, "rssi="),
-        "#669/ADR-0028 rssi OMITTED off WiFi (never a fake 0)");
+        "#669/ADR-0028 rssi OMITTED off WiFi (never a placeholder 0)");
     TEST_ASSERT_NULL_MESSAGE(
         strstr(buf, "cal_tier="),
         "#997 cal_tier OMITTED off WiFi (header derivation governs tethered)");
@@ -1618,6 +1618,113 @@ void t_cal_tier_label(void)
     TEST_ASSERT_EQUAL_STRING("uncalibrated", cal_tier_label(CAL_TIER_FACTORY));
 }
 
+/* ============================================================================
+ * #1153 - parameterized band re-partition invariant suite
+ * ----------------------------------------------------------------------------
+ * The grill (#1039) locked the ladder = 7 in-soil mood bands (Soaked -> Faint),
+ * both physical anchors OFF-ladder. This suite asserts the grill-locked
+ * invariants against ANY candidate bracket set, so ratification (#995) reduces
+ * to: paste Data's numbers into the fixtures below, run, open the (V1) PR.
+ *
+ * A set is 8 ascending raw edges (7 in-soil brackets) plus the two #898 board
+ * anchors that sit OUTSIDE the ladder:
+ *   edge[0] = Soaked floor (wettest in-soil, lowest raw)
+ *   edge[7] = Faint  top   (driest  in-soil, highest raw)  [grill-locked top:
+ *                                                classic 2800 / C5 2443]
+ *   water_anchor < edge[0]   (cup-water rail, #898)
+ *   air_anchor   > edge[7]   (air-dry   rail, #898)
+ *
+ * The sets below are PLACEHOLDERS - evenly interpolated within the grill ranges
+ * + the #898 anchors, NOT the ratified numbers. They exist so the harness is
+ * green today; Data drafts the real sets on #995 and they replace these.
+ * ==========================================================================*/
+#define BAND_INSOIL_BRACKETS 7
+#define BAND_INSOIL_EDGES (BAND_INSOIL_BRACKETS + 1) /* 8 edges -> 7 brackets */
+_Static_assert(BAND_INSOIL_EDGES - 1 == 7,
+               "the ladder is exactly 7 in-soil partitions");
+
+/* Cross-board fractional tolerance: the same soil-moisture fraction should read
+ * at the same fractional position within each board's [water..air] envelope
+ * (#898 linear scaling). 0.03 allows real per-board dry-down variance while
+ * still catching a set that ignores the board relationship. */
+#define BAND_XBOARD_FRAC_TOL 0.03
+
+typedef struct {
+    const char *board_class;
+    uint16_t water_anchor; /* #898 cup-water rail (below Soaked floor) */
+    uint16_t edge
+        [BAND_INSOIL_EDGES]; /* ascending raw; [0]=Soaked floor..[7]=Faint top */
+    uint16_t air_anchor; /* #898 air-dry rail (above Faint top)     */
+} band_partition_t;
+
+/* PLACEHOLDER - replace with Data's #995 ratified sets (top edge is grill-locked). */
+static const band_partition_t BAND_SET_CLASSIC_PLACEHOLDER = {
+    "esp32-classic",
+    960,
+    {1050, 1300, 1550, 1800, 2050, 2300, 2550, 2800},
+    3170};
+static const band_partition_t BAND_SET_C5_PLACEHOLDER = {
+    "esp32-c5", 980, {1068, 1264, 1461, 1657, 1854, 2050, 2246, 2443}, 2740};
+
+static double band_dabs(double x)
+{
+    return x < 0.0 ? -x : x;
+}
+
+/* fractional position of a raw value within this board's physical envelope. */
+static double band_frac(uint16_t raw, const band_partition_t *s)
+{
+    return (double)((int)raw - (int)s->water_anchor) /
+           (double)((int)s->air_anchor - (int)s->water_anchor);
+}
+
+/* Assert the grill invariants for one candidate set. */
+static void band_assert_invariants(const band_partition_t *s)
+{
+    char msg[96];
+
+    /* monotonic: 8 edges strictly ascending in raw (no zero-width/inverted band) */
+    for (int i = 0; i + 1 < BAND_INSOIL_EDGES; ++i) {
+        snprintf(msg, sizeof(msg),
+                 "%s: edge[%d]=%u must be < edge[%d]=%u (monotonic)",
+                 s->board_class, i, s->edge[i], i + 1, s->edge[i + 1]);
+        TEST_ASSERT_TRUE_MESSAGE(s->edge[i] < s->edge[i + 1], msg);
+    }
+
+    /* both anchors OUTSIDE the ladder */
+    snprintf(msg, sizeof(msg), "%s: water_anchor=%u must be < Soaked floor=%u",
+             s->board_class, s->water_anchor, s->edge[0]);
+    TEST_ASSERT_TRUE_MESSAGE(s->water_anchor < s->edge[0], msg);
+    snprintf(msg, sizeof(msg), "%s: air_anchor=%u must be > Faint top=%u",
+             s->board_class, s->air_anchor, s->edge[BAND_INSOIL_EDGES - 1]);
+    TEST_ASSERT_TRUE_MESSAGE(s->air_anchor > s->edge[BAND_INSOIL_EDGES - 1],
+                             msg);
+}
+
+/* 7 in-soil partitions (compile-time) + monotonic + anchors-outside (runtime). */
+void t_band_partition_invariants(void)
+{
+    band_assert_invariants(&BAND_SET_CLASSIC_PLACEHOLDER);
+    band_assert_invariants(&BAND_SET_C5_PLACEHOLDER);
+}
+
+/* Cross-board: both sets describe the SAME fractional partition within tolerance
+ * (#898 linear anchor-to-anchor scaling round-trips the ladder). */
+void t_band_partition_xboard_roundtrip(void)
+{
+    const band_partition_t *a = &BAND_SET_CLASSIC_PLACEHOLDER;
+    const band_partition_t *b = &BAND_SET_C5_PLACEHOLDER;
+    for (int i = 0; i < BAND_INSOIL_EDGES; ++i) {
+        double drift =
+            band_dabs(band_frac(a->edge[i], a) - band_frac(b->edge[i], b));
+        char msg[96];
+        snprintf(msg, sizeof(msg),
+                 "edge[%d] cross-board fractional drift %.4f exceeds tol %.2f",
+                 i, drift, BAND_XBOARD_FRAC_TOL);
+        TEST_ASSERT_TRUE_MESSAGE(drift <= BAND_XBOARD_FRAC_TOL, msg);
+    }
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -1652,5 +1759,7 @@ int main(void)
     RUN_TEST(t_cal_resolver_classic_byte_preserved);
     RUN_TEST(t_cal_resolver_c5_board_envelope);
     RUN_TEST(t_cal_tier_label);
+    RUN_TEST(t_band_partition_invariants);
+    RUN_TEST(t_band_partition_xboard_roundtrip);
     return UNITY_END();
 }

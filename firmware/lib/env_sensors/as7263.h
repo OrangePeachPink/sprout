@@ -1,7 +1,7 @@
 /*
  * as7263.h - SparkFun AS7263 6-channel NIR spectral sensor driver (#374).
  *
- * LIGHT-CONTEXT telemetry, not plant-truth: marks the skylight transit + direct-
+ * LIGHT-CONTEXT telemetry, not plant data: marks the skylight transit + direct-
  * beam-vs-shaded state for the solar pass (PRD-0002 env layer, part of #200). Six
  * NIR channels: 610 / 680 / 730 / 760 / 810 / 860 nm. Aim it at the beam path, not
  * the plant. RAW counts (uint16) — no floats, no calibration claims.

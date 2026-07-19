@@ -240,7 +240,6 @@ def _frame(**kw) -> dict:
         "token": None,
         "motion": "none",
         "asleep": False,
-        "provisional": False,
         "state": "no_signal",
     }
     base.update(kw)
@@ -256,7 +255,6 @@ def build_card(
     sensorless: bool = False,
     surface: str | None = None,
     asleep: bool = False,
-    provisional: bool = False,
     next_need: dict | None = None,
     last_watered: dict | None = None,
     recent_water: bool = False,
@@ -266,12 +264,15 @@ def build_card(
     ``band`` is the current UI band word or firmware level (case-insensitive), or None
     when the plant has no live signal. ``surface`` routes a non-mood state (e.g.
     ``fault_sensor`` / ``fault_pump``) to the ``bySurface`` voice pool instead of
-    ``byMood`` (the seam-map's rule: a faulted plant has no mood). ``provisional`` marks
-    a band from uncalibrated/provisional cal (the surface says so). ``next_need`` is an
+    ``byMood`` (the seam-map's rule: a faulted plant has no mood). ``next_need`` is an
     already-vetted forecast boundary (inject ONLY where statistically real) or None →
     graceful absence. ``last_watered`` is an already-formatted detected-re-water field
     (#875 Q2) or None → graceful absence; ``recent_water`` says that re-water is recent
     enough to unlock a recent-drink voice line. Raw is never included — Workbench-side.
+
+    NO per-card cal-provisional flag (#1039 grill ruling): cal state is SYSTEM-level
+    (``system_cal_state``), shown once on the Workbench with a path-to-clear, never a
+    per-card chip — completed bench work is honored, not badged on every plant.
     """
     ident = _identity(plant)
     pid = ident["number"]
@@ -310,7 +311,6 @@ def build_card(
             token=entry["token"] if entry else None,
             motion="none" if asleep else (entry["motion"] if entry else "none"),
             asleep=asleep,
-            provisional=provisional,
             state="live" if entry else "no_signal",
         )
 
@@ -366,6 +366,28 @@ def _plant_for(pid, sensor: dict, plants_by_id: dict):
     }
 
 
+def system_cal_state(ctx: dict) -> dict:
+    """#1039 grill ruling: cal-provisional is a SYSTEM-level state, not a per-card chip.
+    The ANCHORS (air/water endpoints) are A2-ratified and never provisional; what's
+    pending is the interior-bracket ratification against a fresh current-fleet dry-down.
+    The Home shows this ONCE on the Workbench with an explicit path-to-clear — never a
+    badge on every plant — and it clears entirely when ratified brackets land. Derived
+    from the served per-device cal state, so it flips to settled the moment the fleet
+    reports a ratified cal (completed bench work is honored, per the maintainer's rule
+    that a status qualifier must have a defined clearing condition)."""
+    provisional = any(d.get("cal_provisional") for d in ctx.get("devices", []))
+    return {
+        "anchors": "ratified",  # air/water endpoints (A2, 2026-06-26) — never a badge
+        "interior_brackets": "provisional" if provisional else "ratified",
+        "provisional": provisional,
+        "clears_when": (
+            "ratified interior brackets land — a fresh current-fleet dry-down (#995)"
+            if provisional
+            else None
+        ),
+    }
+
+
 def cards_from_context(
     ctx: dict,
     *,
@@ -379,10 +401,6 @@ def cards_from_context(
     band/mood/forecast come from ``ctx['sensors']`` (the static-registry card path),
     rich identity from ``plants_by_id`` (the temporal registry). Most-thirsty leads."""
     now = now or datetime.now(timezone.utc)
-    prov = {
-        d.get("device_id"): bool(d.get("cal_provisional"))
-        for d in ctx.get("devices", [])
-    }
     # #875 Q2: the DETECTED re-water per plant (band_movement heuristic), by plant.
     rewater = {
         e.get("plant_id"): e.get("rewater")
@@ -405,7 +423,6 @@ def cards_from_context(
             surface=surface,
             mood_map=mood_map,
             voice_pool=voice_pool,
-            provisional=prov.get(s.get("device_id"), True),
             next_need=next_need_from_forecast(s.get("forecast")),
             last_watered=lw,
             recent_water=bool(lw and lw.get("recent")),

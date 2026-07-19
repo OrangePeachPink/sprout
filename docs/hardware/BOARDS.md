@@ -16,7 +16,7 @@
 | 2b | `c5-yellow-01` — ESP32-C5-KITC-A clone (module can: `ESPC5-32 H4`) | ESP32-C5 | CH340 on the one tested port (COM10); 2nd port unconfirmed | unknown until `flash_id` (possibly 4 MB) | 🟡 builds today; identity resolved, USB split partial |
 | 3 | `s3-n8r2-01` — ESP32-S3-N8R2 dual-USB | ESP32-S3 (Xtensa LX7 ×2) | native USB serial/JTAG (`303A:4001`, COM7) is the **only** working port — the CH343 UART-bridge port is dead (#443); see the serial section | 8 MB + 2 MB PSRAM (`flash_id`-confirmed 2026-07-03) | 🟢 builds + flashes via native USB (esptool-direct) |
 
-> Identity source of truth: the #443 intake evidence packet,
+> Identity canonical source: the #443 intake evidence packet,
 > [`docs/evidence/2026-07-01-esp32-s3-c5-intake/`](../evidence/2026-07-01-esp32-s3-c5-intake/README.md)
 > (photos + Device Manager enumerations, curated by Sage). There are TWO C5 variants in
 > house; which one the fleet standardizes on is an open maintainer decision on #443.

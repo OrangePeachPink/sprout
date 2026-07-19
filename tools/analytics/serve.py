@@ -754,6 +754,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     cards_from_context,
                     load_mood_map,
                     load_voice_pool,
+                    system_cal_state,
                 )
                 from registry_model import load_registry_model
 
@@ -790,6 +791,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         "exceptions": exceptions,
                         "count": len(cards),
                         "exception_count": len(exceptions),
+                        # #1039: cal-provisional is SYSTEM-level (once, on the
+                        # Workbench, with a path-to-clear) — never a per-card chip.
+                        "cal_state": system_cal_state(ctx),
                     }
                 )
             elif parsed.path.startswith("/photo/"):  # #875 Q4: a plant's small avatar
@@ -924,17 +928,27 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         {"error": "photo upload is localhost-only"}, status=403
                     )
                     return
+                from photo_intake import MAX_UPLOAD_BYTES
+
                 pid = parsed.path[len("/photo/") :]
-                raw = self._raw_body()
+                clen = int(self.headers.get("Content-Length", 0) or 0)
                 if not re.fullmatch(r"[A-Za-z0-9]+", pid):
                     self._send_json({"error": "bad photo id"}, status=400)
-                elif not raw:
+                elif clen > MAX_UPLOAD_BYTES:
+                    # #1039 Q4: reject an oversize upload BEFORE reading it into memory
                     self._send_json(
-                        {"error": "empty upload — send the image as the body"},
-                        status=400,
+                        {"error": f"image too large (> {MAX_UPLOAD_BYTES} bytes)"},
+                        status=413,
                     )
                 else:
-                    self._ingest_photo(pid, raw)
+                    raw = self._raw_body()
+                    if not raw:
+                        self._send_json(
+                            {"error": "empty upload — send the image as the body"},
+                            status=400,
+                        )
+                    else:
+                        self._ingest_photo(pid, raw)
             elif (
                 parsed.path == "/registry/apply"
             ):  # #921 slice 3 — classic-save a batch
