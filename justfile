@@ -211,6 +211,13 @@ identifier-guard *ARGS:
 link-check *ARGS:
     {{py}} tools/dx/link_check.py --check {{ARGS}}
 
+# Voice register sweep (#1161): changed-lines guard is a pre-commit hook (advisory); this
+# recipe is the manual/release entry point.
+#   just voice-guard --all                        # full-tree sweep (the RELEASE_CUT §3 backstop)
+#   just voice-guard --diff-range origin/main...HEAD   # a PR's delta
+voice-guard *ARGS:
+    {{py}} tools/dx/voice_guard.py {{ARGS}}
+
 # DX tool tests (pytest — identifier-guard + link-check suites; new DX suites land here too).
 test-dx:
     {{py}} -m pytest tools/dx/ -q

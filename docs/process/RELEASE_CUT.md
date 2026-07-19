@@ -45,6 +45,9 @@ exhaustiveness:
 Then: add a 2–4 line human lede above the generated list (what this release *means*), and state
 **per-component reality** (firmware / host / docs — what actually changed, ADR-0009 §3).
 
+- [ ] **Register sweep** (#1161) — run `just voice-guard --all` and attach the delta (or "clean")
+      to the release evidence; the retired register (PR #1099's wash) never migrates back silently.
+
 ## 4. CHANGELOG
 
 - [ ] Add the version section to [`CHANGELOG.md`](../../CHANGELOG.md) (same content, per-component,
