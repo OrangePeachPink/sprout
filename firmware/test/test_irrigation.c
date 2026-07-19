@@ -1632,7 +1632,7 @@ void t_cal_tier_label(void)
  *   edge[0] = Soaked floor (wettest in-soil, lowest raw)
  *   edge[7] = Faint  top   (driest  in-soil, highest raw)  [grill-locked top:
  *                                                classic 2800 / C5 2443]
- *   water_anchor < edge[0]   (cup-water rail, #898)
+ *   water_anchor <= edge[0]  (cup-water rail, #898; Option A #995: coincident OK)
  *   air_anchor   > edge[7]   (air-dry   rail, #898)
  *
  * The sets below are PLACEHOLDERS - evenly interpolated within the grill ranges
@@ -1652,7 +1652,7 @@ _Static_assert(BAND_INSOIL_EDGES - 1 == 7,
 
 typedef struct {
     const char *board_class;
-    uint16_t water_anchor; /* #898 cup-water rail (below Soaked floor) */
+    uint16_t water_anchor; /* #898 cup-water rail (at or below Soaked floor) */
     uint16_t edge
         [BAND_INSOIL_EDGES]; /* ascending raw; [0]=Soaked floor..[7]=Faint top */
     uint16_t air_anchor; /* #898 air-dry rail (above Faint top)     */
@@ -1661,11 +1661,11 @@ typedef struct {
 /* PLACEHOLDER - replace with Data's #995 ratified sets (top edge is grill-locked). */
 static const band_partition_t BAND_SET_CLASSIC_PLACEHOLDER = {
     "esp32-classic",
-    960,
+    1050, /* Option A (#995): water rail = Soaked floor (coincident) */
     {1050, 1300, 1550, 1800, 2050, 2300, 2550, 2800},
     3170};
 static const band_partition_t BAND_SET_C5_PLACEHOLDER = {
-    "esp32-c5", 980, {1068, 1264, 1461, 1657, 1854, 2050, 2246, 2443}, 2740};
+    "esp32-c5", 1068, {1068, 1264, 1461, 1657, 1854, 2050, 2246, 2443}, 2740};
 
 static double band_dabs(double x)
 {
@@ -1693,9 +1693,12 @@ static void band_assert_invariants(const band_partition_t *s)
     }
 
     /* both anchors OUTSIDE the ladder */
-    snprintf(msg, sizeof(msg), "%s: water_anchor=%u must be < Soaked floor=%u",
+    /* Option A (#995 ruling): the water anchor may EQUAL the Soaked floor -
+     * physically honest, no in-soil reading is wetter than the saturated rail.
+     * It must still not sit ABOVE the floor (inside the ladder). */
+    snprintf(msg, sizeof(msg), "%s: water_anchor=%u must be <= Soaked floor=%u",
              s->board_class, s->water_anchor, s->edge[0]);
-    TEST_ASSERT_TRUE_MESSAGE(s->water_anchor < s->edge[0], msg);
+    TEST_ASSERT_TRUE_MESSAGE(s->water_anchor <= s->edge[0], msg);
     snprintf(msg, sizeof(msg), "%s: air_anchor=%u must be > Faint top=%u",
              s->board_class, s->air_anchor, s->edge[BAND_INSOIL_EDGES - 1]);
     TEST_ASSERT_TRUE_MESSAGE(s->air_anchor > s->edge[BAND_INSOIL_EDGES - 1],
