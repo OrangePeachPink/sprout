@@ -1635,9 +1635,10 @@ void t_cal_tier_label(void)
  *   water_anchor <= edge[0]  (cup-water rail, #898; Option A #995: coincident OK)
  *   air_anchor   > edge[7]   (air-dry   rail, #898)
  *
- * The sets below are PLACEHOLDERS - evenly interpolated within the grill ranges
- * + the #898 anchors, NOT the ratified numbers. They exist so the harness is
- * green today; Data drafts the real sets on #995 and they replace these.
+ * The sets below are the RATIFIED sets (#995, 2026-07-19) - Data's re-derivation
+ * against the fresh dual-envelope in-situ dry-down (both classic + C5 measured,
+ * supersedes the June proposal). Water-anchor A (coincident: water rail = Soaked
+ * floor); Faint-ceiling 2500 (D1, measured wilt-onset).
  * ==========================================================================*/
 #define BAND_INSOIL_BRACKETS 7
 #define BAND_INSOIL_EDGES (BAND_INSOIL_BRACKETS + 1) /* 8 edges -> 7 brackets */
@@ -1658,14 +1659,17 @@ typedef struct {
     uint16_t air_anchor; /* #898 air-dry rail (above Faint top)     */
 } band_partition_t;
 
-/* PLACEHOLDER - replace with Data's #995 ratified sets (top edge is grill-locked). */
-static const band_partition_t BAND_SET_CLASSIC_PLACEHOLDER = {
+/* RATIFIED #995 (Data's re-derived dual-envelope sets). boundary[] descending
+ * wet->dry: classic {2293,2086,1879,1673,1466,1259} · C5 {2037,1861,1685,1510,
+ * 1334,1158}. Water-anchor A coincident; Faint-ceiling 2500 (D1). Air anchors
+ * from the D2 spans (classic 2085 / C5 1772 -> measured factor 0.850). */
+static const band_partition_t BAND_SET_CLASSIC_RATIFIED = {
     "esp32-classic",
-    1050, /* Option A (#995): water rail = Soaked floor (coincident) */
-    {1050, 1300, 1550, 1800, 2050, 2300, 2550, 2800},
-    3170};
-static const band_partition_t BAND_SET_C5_PLACEHOLDER = {
-    "esp32-c5", 1068, {1068, 1264, 1461, 1657, 1854, 2050, 2246, 2443}, 2740};
+    1052, /* Water-anchor A (#995): water rail = Soaked floor (coincident) */
+    {1052, 1259, 1466, 1673, 1879, 2086, 2293, 2500},
+    3137};
+static const band_partition_t BAND_SET_C5_RATIFIED = {
+    "esp32-c5", 982, {982, 1158, 1334, 1510, 1685, 1861, 2037, 2213}, 2754};
 
 static double band_dabs(double x)
 {
@@ -1708,16 +1712,16 @@ static void band_assert_invariants(const band_partition_t *s)
 /* 7 in-soil partitions (compile-time) + monotonic + anchors-outside (runtime). */
 void t_band_partition_invariants(void)
 {
-    band_assert_invariants(&BAND_SET_CLASSIC_PLACEHOLDER);
-    band_assert_invariants(&BAND_SET_C5_PLACEHOLDER);
+    band_assert_invariants(&BAND_SET_CLASSIC_RATIFIED);
+    band_assert_invariants(&BAND_SET_C5_RATIFIED);
 }
 
 /* Cross-board: both sets describe the SAME fractional partition within tolerance
  * (#898 linear anchor-to-anchor scaling round-trips the ladder). */
 void t_band_partition_xboard_roundtrip(void)
 {
-    const band_partition_t *a = &BAND_SET_CLASSIC_PLACEHOLDER;
-    const band_partition_t *b = &BAND_SET_C5_PLACEHOLDER;
+    const band_partition_t *a = &BAND_SET_CLASSIC_RATIFIED;
+    const band_partition_t *b = &BAND_SET_C5_RATIFIED;
     for (int i = 0; i < BAND_INSOIL_EDGES; ++i) {
         double drift =
             band_dabs(band_frac(a->edge[i], a) - band_frac(b->edge[i], b));
