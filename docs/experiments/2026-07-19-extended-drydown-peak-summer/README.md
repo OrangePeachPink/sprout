@@ -50,7 +50,7 @@ saturating soak 07-10 midday; office was topped up 07-13 evening; the classic pa
   fitting fine interior edges.** (Corn/Anthurium at ~2,200–2,400 now = the visible-wilt "Parched"
   pull-point from #995.)
 
-## Two reconciliations worth recording
+## Reconciliations worth recording (data vs recollection/dashboard)
 
 - **Corn was NOT last watered 07-11.** The data shows Corn drying steadily to a peak (~2,227) through
   07-11/12, then a **−528 watering drop by 07-13 00:00 UTC** (07-12 evening CDT), then the 6-day
@@ -59,6 +59,13 @@ saturating soak 07-10 midday; office was topped up 07-13 evening; the classic pa
 - **office "07-13 vs 07-14" was a timezone artifact.** Its single big watering (−954 → 1,098) is
   **07-14 02:15 UTC = 07-13 21:15 CDT**. The dashboard shows local (07-13); the raw UTC shows 07-14.
   Same event. All watering times in `summary.csv` are **CDT** to match the dashboard.
+- **Dracaena is a real data-vs-dashboard discrepancy — for Data to reconcile.** The dashboard's
+  detected-watering shows 07-13 ~21:00, but the **raw archive rules that out**: Dracaena was still
+  **dry (raw 1,932) at 07-14 00:00 UTC** — hours *after* a 07-13 evening pour would have soaked it —
+  then dropped **−639 → 1,293 at 07-14 15:55 UTC (10:55 CDT)**. So the raw data says **07-14 morning**.
+  Either the app's detector mis-flagged this classic (sparse) channel, or the plant↔sensor map drifted
+  (#921 edits vs the 2026-07-10 #896 map). **This is the concrete case for confirming the classic cuts
+  and the map against the registry before deriving edges** — the summary keeps the data-supported 07-14.
 
 ## The peak-summer-light context
 
