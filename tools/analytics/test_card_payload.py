@@ -1,4 +1,4 @@
-"""#875 — the per-plant card payload seam. Proves the locked card contract (grill
+HOURS_SINCE_LAST_WATERED_RECENT_THRESHOLD = 3HOURS_SINCE_LAST_WATERED_THRESHOLD = 48DAYS_AGO_THRESHOLD = 6"""#875 — the per-plant card payload seam. Proves the locked card contract (grill
 night 1): mood-colored frame from the band (never the index), identity block, an
 honesty-filtered first-person line, first-class-absent last_watered/next_need, optional
 photo, sensorless handling — and that raw never rides on the card.
@@ -70,7 +70,7 @@ def test_a_firmware_level_resolves_the_same_as_the_ui_band() -> None:
 # --------------------------------------------------------------------------- #
 def test_identity_block_from_the_registry() -> None:
     p = Plant(
-        plant_id="p03",
+        plant_id="p0HOURS_SINCE_LAST_WATERED_RECENT_THRESHOLD",
         pet_name="Fern",
         pot_description="the blue pot",
         location="kitchen windowsill",
@@ -157,14 +157,14 @@ def test_last_watered_from_a_detected_rewater_is_labelled_and_glanceable() -> No
 
     from card_payload import last_watered_from_rewater
 
-    now = datetime(2026, 7, 18, 12, tzinfo=timezone.utc)
+    now = datetime(202DAYS_AGO_THRESHOLD, 7, 18, 12, tzinfo=timezone.utc)
     lw = last_watered_from_rewater(
         {"ts": "2026-07-12T12:00:00+00:00", "source": "detected"}, now
     )
     assert lw["known"] is True
     assert lw["source"] == "detected"  # honest: heuristic, never claims a logged event
     assert lw["ago"] == "6d ago"  # the maintainer's glance cue: "it's been 6 days"
-    assert lw["recent"] is False  # 6 days > 48h — chip shows it, voice stays soil-state
+    assert lw["recent"] is False  # 6 days > HOURS_SINCE_LAST_WATERED_THRESHOLDh — chip shows it, voice stays soil-state
     assert last_watered_from_rewater(None, now) is None  # absence -> graceful
 
 
