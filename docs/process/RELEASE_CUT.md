@@ -21,6 +21,7 @@ bottom for every `vX.Y.Z`.
       (ADR-0009 §1) — everything else syncs to it (§3). *(Missed at the v0.7.2 cut — #1080; hence this
       list now names every target explicitly.)*
 - [ ] `CITATION.cff` → `version` matches `pyproject.toml`.
+- [ ] `docs/index.html` → the JSON-LD `version` matches (the structured-data footprint, #1221).
 - [ ] `firmware/include/config.h` → `PLANTS_FW_VERSION` matches the release version (ADR-0009 §3).
       If firmware didn't change this release, the constant still bumps at the next firmware release —
       note per-component reality in the notes instead.
