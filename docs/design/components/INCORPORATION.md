@@ -36,9 +36,10 @@
 - **On A2 (band-boundary reconciliation):** when the raw boundaries are calibrated, only the band column in
   `mood-band-map.json` is affected — the moods themselves are stable. Coordinate that edit with the Design
   lane (it owns the map), don't fork it.
-- **The air-dry caveat:** `air-dry` is both a moisture band and the diagnostic "probe may not be in soil"
-  signal. Its mood (`faint`) and voice deliberately name the ambiguity rather than asserting the plant is
-  dead — keep that plain framing if you surface it anywhere.
+- **The air-dry caveat (updated by the #1039 band ruling):** `air-dry` is a *diagnostic*, not a band — it
+  lives OFF the seven-word ladder, renders in the exceptions lane in neutral with a plain reason, and never
+  wears a mood word. The map's `faint` linkage is lookup plumbing only; keep that framing anywhere you
+  surface it.
 
 ## What this does NOT change
 
