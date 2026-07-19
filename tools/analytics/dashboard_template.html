@@ -682,7 +682,7 @@ footer.prov code { font-family: var(--font-data); }
     <!-- #716: the calibration REFERENCE lives here (Diagnostics), split off the Monitor "Watering status"
          live view — band definitions + ratification state, the two-jobs split (live -> Monitor, cal -> here). -->
     <section class="card">
-      <div class="panel-h"><h2>Calibration reference</h2><span class="cap">the band definitions readings are scored against · endpoints ratified · interior boundaries pending A2 · per-channel cal pending (#170)</span></div>
+      <div class="panel-h"><h2>Calibration reference</h2><span class="cap">the band definitions readings are scored against · the ratified seven-in-soil ladder (#1218/#1220, per board class) · per-channel cal pending (#170)</span></div>
       <div class="ladder" id="calref"></div>
     </section>
 
@@ -1621,7 +1621,7 @@ function renderDetail(sid){
   fc.appendChild((()=>{ const h=el('div','panel-h'); h.appendChild(el('h2',null,'Forecasts')); h.appendChild(el('span','cap','extrapolated from the current drying rate — gated until drying is statistically real')); return h; })());
   const grid = el('div','dgrid3');
   grid.appendChild(etaLine(f.next_band, 'enters next drier band', null));
-  grid.appendChild(etaLine(f.thirsty, 'thirsty (needs water)', 'threshold = A2 needs-water edge (un-validated)'));
+  grid.appendChild(etaLine(f.thirsty, 'thirsty (needs water)', 'threshold = the ratified needs-water edge (#1218, per board class)'));
   grid.appendChild(diurnalCard(f.diurnal));
   fc.appendChild(grid); det.appendChild(fc);
 

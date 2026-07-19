@@ -9,9 +9,9 @@ Honesty rules baked in:
 
 * **raw + band are the truth.** The legacy moist% ``value`` column is never
   plotted (B2/C2).
-* **interior bands are proposed, not validated.** The endpoints (saturated +
-  air-dry) are firmware-ratified from the common-cup anchors; the interior
-  boundaries are the un-reconciled A2 spec, and the UI labels them as such.
+* **bands are the ratified seven-in-soil ladder.** Endpoints from the
+  common-cup anchors; interior boundaries measured + ratified per board class
+  (#995 -> #1218/#1220, ADR-0035). Per-channel cal remains the #170 tail.
 * **no fabricated light cycle.** Day/night shading (#198) uses the real,
   computed solar geometry (``env_solar``, #365/#366) - never a guessed
   schedule. Absent entirely with no rig location configured (R9).
