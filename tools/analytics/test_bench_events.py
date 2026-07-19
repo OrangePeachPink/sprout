@@ -83,7 +83,7 @@ def _survey_dir(tmp_path: Path) -> Path:
 def test_band_for_raw_dry_to_wet() -> None:
     assert be.band_for_raw(3274) == "air-dry"  # >= b0, driest
     assert be.band_for_raw(1977) == "needs water"
-    assert be.band_for_raw(1272) == "well watered"  # low raw = wet
+    assert be.band_for_raw(1550) == "well watered"  # low raw = wet (#1218 ladder)
     assert be.band_for_raw(900) == "submerged"  # below every boundary
     assert be.band_for_raw(None) is None
     assert be.band_for_raw("nan") is None

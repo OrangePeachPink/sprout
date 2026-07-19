@@ -30,7 +30,7 @@ _CAL_LINE = (
 )
 # the shared factory default bounds — a header that merely echoes these is NOT board-cal
 _DEFAULT_BOUNDS = (
-    "# cal bounds(dry>wet): 3050 2140 1830 1520 1150 1050  [moist% 900..3400]\n"
+    "# cal bounds(dry>wet): 2293 2086 1879 1673 1466 1259  [moist% 900..3400]\n"
 )
 # the C5's own measured envelope (#899/#933): distinct from the default → board-cal
 _MEASURED_BOUNDS = (

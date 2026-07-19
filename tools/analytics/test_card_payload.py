@@ -211,11 +211,14 @@ def test_a_stale_rewater_shows_the_chip_but_keeps_the_voice_soil_state() -> None
 # --------------------------------------------------------------------------- #
 # #875 Q3 — the exception lane (air-dry / fault / no-signal off the normal grid)
 # --------------------------------------------------------------------------- #
-def test_air_dry_is_an_exception_off_the_normal_lane() -> None:
-    c = _card(band="Parched")  # air-dry, the mood-band-map diagnostic band
-    assert c["exception"]["is"] is True
-    assert c["exception"]["kind"] == "air_dry"
-    assert "out of soil" in c["exception"]["reason"]
+def test_faint_is_an_in_soil_mood_not_an_exception() -> None:
+    # #1218 (the #995/#1174 ratified ladder): Faint (old air-dry) is the driest IN-SOIL
+    # band — it leads the thirst grid like any mood, it does NOT leave the ladder. The
+    # probe-in-air exception (a raw past the off-ladder air anchor) is the #1152 layer.
+    c = _card(band="Parched")  # air-dry -> Faint
+    assert c["exception"]["is"] is False
+    assert c["exception"]["kind"] is None
+    assert c["frame"]["mood"] == "faint"  # a real mood on the ladder
 
 
 def test_a_normal_soil_reading_is_not_an_exception() -> None:
@@ -284,22 +287,18 @@ def test_no_per_card_provisional_chip() -> None:
     assert "provisional" not in _card(band="Dry")["frame"]
 
 
-def test_system_cal_state_is_provisional_until_interior_brackets_ratify() -> None:
+def test_system_cal_state_is_settled_after_the_interior_brackets_ratify() -> None:
     from card_payload import system_cal_state
 
-    # any device reporting provisional cal -> the SYSTEM state is provisional, with a
-    # path-to-clear; the anchors are never labelled provisional.
-    prov = system_cal_state({"devices": [{"device_id": "d", "cal_provisional": True}]})
-    assert prov["provisional"] is True
-    assert prov["anchors"] == "ratified"
-    assert prov["interior_brackets"] == "provisional"
-    assert prov["clears_when"]  # a defined clearing condition (the maintainer's rule)
-    # a fully-ratified fleet clears it entirely
-    settled = system_cal_state(
-        {"devices": [{"device_id": "d", "cal_provisional": False}]}
-    )
-    assert settled["provisional"] is False
-    assert settled["clears_when"] is None
+    # #1039 -> RESOLVED (#995/#1174, #1218): the interior-bracket ratification landed,
+    # so the system cal chip is settled — anchors AND interior brackets ratified, with
+    # nothing left to clear. No longer derived from per-device cal (the #1153 decouple:
+    # a board still lacking verified cal is the cal chain's fact, not this system chip).
+    s = system_cal_state()
+    assert s["provisional"] is False
+    assert s["anchors"] == "ratified"
+    assert s["interior_brackets"] == "ratified"
+    assert s["clears_when"] is None
 
 
 # --------------------------------------------------------------------------- #

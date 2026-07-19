@@ -64,8 +64,9 @@ def csv_without_bounds(tmp_path: Path) -> Path:
 
 
 def test_default_cal_bounds_matches_firmware() -> None:
-    """DEFAULT_CAL_BOUNDS must match the reconciled firmware values."""
-    assert DEFAULT_CAL_BOUNDS == (3050, 2140, 1830, 1520, 1150, 1050)
+    """DEFAULT_CAL_BOUNDS must sibling the firmware classic default — the #995/#1174
+    ratified in-soil ladder (ADR-0035, #1218 host-mirror contract)."""
+    assert DEFAULT_CAL_BOUNDS == (2293, 2086, 1879, 1673, 1466, 1259)
 
 
 # --------------------------------------------------------------------------- #
