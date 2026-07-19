@@ -168,23 +168,22 @@ def resolve_last_watered(
     return logged or detected
 
 
-def _exception(state: str, diagnostic: bool) -> dict:
+def _exception(state: str) -> dict:
     """#875 Q3: is this reading OUTSIDE the normal soil range, so it belongs in the
-    exceptions lane rather than the normal thirst grid? Air-dry (the diagnostic band —
-    the probe may be out of soil) and hard states (fault / no-signal) are exceptions;
-    a normal in-soil reading is not. Keeps the glanceable grid readable — the
-    maintainer's point: extremes shouldn't compress the meaningful middle."""
+    exceptions lane rather than the normal thirst grid? Only the hard states (fault /
+    no-signal) are exceptions now. Under the #995/#1174-ratified ladder (ADR-0035,
+    #1218) **Faint (air-dry) is an in-soil mood** — it leads the thirst grid like any
+    band, it does NOT leave the ladder. The probe-in-air / probe-in-water conditions
+    (a raw past the off-ladder air / water anchor) are the #1152 exception layer, added
+    with both anchor thresholds together — not from the band's diagnostic flag."""
     kind = None
     if state in ("fault_sensor", "fault_pump"):
         kind = "fault"
     elif state == "no_signal":
         kind = "no_signal"
-    elif diagnostic:  # air-dry: the mood-band-map diagnostic band (probe may slip)
-        kind = "air_dry"
     reasons = {
         "fault": "sensor fault — reading can't be trusted",
         "no_signal": "no recent reading — is it plugged in?",
-        "air_dry": "reads air-dry — the probe may be out of soil (check placement)",
     }
     return {"is": kind is not None, "kind": kind, "reason": reasons.get(kind)}
 
@@ -318,7 +317,6 @@ def build_card(
             "detector + a cal'd drying rate"
         )
 
-    diagnostic = False
     if surface:  # a fault / non-mood state — bySurface voice, no mood on the frame
         voice, gap = _surface_line(voice_pool, surface, pid)
         frame = _frame(asleep=asleep, state=surface)
@@ -329,7 +327,6 @@ def build_card(
     else:
         entry = mood_map.get((band or "").strip().lower()) if band else None
         mood = entry["mood"] if entry else None
-        diagnostic = bool(entry and entry.get("diagnostic"))  # air-dry (#875 Q3)
         voice, gap = pick_voice_line(
             voice_pool, mood, plant_id=pid, recent_water=recent_water
         )
@@ -352,7 +349,7 @@ def build_card(
         "band_word": frame["band"],  # the plain band word (raw stays Workbench-side)
         "last_watered": last_watered,  # detected re-water (#875 Q2) or absent
         "next_need": next_need,  # absent, or an injected statistically-real boundary
-        "exception": _exception(frame["state"], diagnostic),  # #875 Q3 lane
+        "exception": _exception(frame["state"]),  # #875 Q3 lane (Faint stays in-soil)
     }
 
 
@@ -394,25 +391,22 @@ def _plant_for(pid, sensor: dict, plants_by_id: dict):
     }
 
 
-def system_cal_state(ctx: dict) -> dict:
-    """#1039 grill ruling: cal-provisional is a SYSTEM-level state, not a per-card chip.
-    The ANCHORS (air/water endpoints) are A2-ratified and never provisional; what's
-    pending is the interior-bracket ratification against a fresh current-fleet dry-down.
-    The Home shows this ONCE on the Workbench with an explicit path-to-clear — never a
-    badge on every plant — and it clears entirely when ratified brackets land. Derived
-    from the served per-device cal state, so it flips to settled the moment the fleet
-    reports a ratified cal (completed bench work is honored, per the maintainer's rule
-    that a status qualifier must have a defined clearing condition)."""
-    provisional = any(d.get("cal_provisional") for d in ctx.get("devices", []))
+def system_cal_state() -> dict:
+    """#1039 grill ruling → RESOLVED (#995/#1174, 2026-07-19). The interior-bracket
+    ratification LANDED: a fresh current-fleet dry-down re-partitioned the seven in-soil
+    bands (ADR-0035, #1218), so the system provisional chip clears entirely — anchors
+    AND interior brackets are ratified, with no path left to clear.
+
+    Per the #1153 axis-decouple (Firmware-endorsed): model-ratification is a DIFFERENT
+    fact than per-device cal-verification. A board still lacking a verified per-channel
+    cal is a per-device state the cal chain owns — NOT this system chip. So this reports
+    only the (now settled) model state; the old derivation from per-device
+    ``cal_provisional`` was conflating the two axes and is retired."""
     return {
-        "anchors": "ratified",  # air/water endpoints (A2, 2026-06-26) — never a badge
-        "interior_brackets": "provisional" if provisional else "ratified",
-        "provisional": provisional,
-        "clears_when": (
-            "ratified interior brackets land — a fresh current-fleet dry-down (#995)"
-            if provisional
-            else None
-        ),
+        "anchors": "ratified",
+        "interior_brackets": "ratified",
+        "provisional": False,
+        "clears_when": None,
     }
 
 

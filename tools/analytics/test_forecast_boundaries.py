@@ -19,26 +19,27 @@ B = list(DEFAULT_CAL_BOUNDS)  # [3050, 2140, 1830, 1520, 1150, 1050]
 
 
 def test_next_drier_boundary_is_the_smallest_edge_above_the_raw() -> None:
-    assert next_drier_boundary(1600, B) == 1830  # smallest bound > 1600
-    assert next_drier_boundary(2000, B) == 2140
-    assert next_drier_boundary(1000, B) == 1050  # below the wettest edge -> that edge
+    # B is descending; the "next drier" edge is the smallest bound strictly above raw.
+    assert next_drier_boundary(B[3] + 5, B) == B[2]  # just above an edge -> the next up
+    assert next_drier_boundary(B[0] - 5, B) == B[0]  # just below the driest -> it
+    assert next_drier_boundary(B[5] - 100, B) == B[5]  # below the wettest edge -> it
 
 
 def test_next_drier_boundary_is_strict_not_inclusive() -> None:
-    # AT an edge, the returned edge is the NEXT one up (strictly above): 1830 -> 2140.
-    assert next_drier_boundary(1830, B) == 2140
-    assert next_drier_boundary(1829, B) == 1830
+    # AT an edge, the returned edge is the NEXT one up (strictly above, not itself).
+    assert next_drier_boundary(B[2], B) == B[1]
+    assert next_drier_boundary(B[2] - 1, B) == B[2]
 
 
 def test_next_drier_boundary_is_none_past_the_driest_edge() -> None:
-    assert next_drier_boundary(3050, B) is None  # nothing strictly above the driest
-    assert next_drier_boundary(3100, B) is None
+    assert next_drier_boundary(B[0], B) is None  # nothing strictly above the driest
+    assert next_drier_boundary(B[0] + 100, B) is None
 
 
 def test_thirsty_boundary_is_the_third_descending_edge() -> None:
     # the needs-water lower edge = the A2 watering-trigger proxy (index 2, descending).
-    assert thirsty_boundary(B) == 1830
-    assert thirsty_boundary(list(reversed(B))) == 1830  # it sorts descending itself
+    assert thirsty_boundary(B) == B[2]
+    assert thirsty_boundary(list(reversed(B))) == B[2]  # it sorts descending itself
 
 
 def test_thirsty_boundary_falls_back_on_a_short_list() -> None:

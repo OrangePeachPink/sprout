@@ -95,9 +95,13 @@ BANDS_DRY_TO_WET = list(reversed(BANDS_WET_TO_DRY))
 # (BAND_UI, the band index, #626) at the single parse boundary (ADR-0021), while
 # the raw `payload['level']` stays byte-for-byte untouched.
 _CANON_BAND = {name.lower(): name for name in BANDS_WET_TO_DRY}
-# Reconciled firmware values (main.cpp:63, #255). Used only when a segment's
-# provenance header lacks a "cal bounds" line; prefer header-derived bounds always.
-DEFAULT_CAL_BOUNDS = (3050, 2140, 1830, 1520, 1150, 1050)
+# The #995/#1174-ratified classic in-soil ladder (2026-07-19, ADR-0035) — the host
+# sibling of firmware's MOISTURE_CFG_DEFAULT.boundary, per the #1153 host-mirror
+# contract (#1218). Descending: the 6 interior edges of the 7 in-soil bands
+# (Soaked..Faint). Faint = raw >= [0] (unbounded up), Soaked = raw < [5] (unbounded
+# down); the off-ladder air/water anchors are #1152, not here. Used only when a
+# segment's provenance header lacks a "cal bounds" line; prefer header bounds always.
+DEFAULT_CAL_BOUNDS = (2293, 2086, 1879, 1673, 1466, 1259)
 
 # A capacitive soil probe cannot read WETTER than fully submerged in water. On the
 # classic's scale the physical wet rail is ~900 raw ("wetter than a cup of water");
