@@ -181,6 +181,19 @@
   .ladder-words span { flex: 1; text-align: center; font-size: 10px;
     color: var(--muted); visibility: hidden; }
   .ladder-words span.cur { visibility: visible; color: var(--ink); font-weight: 600; }
+  /* #1136 the band-journey: start marker + travel arrow drawn ON the ladder, plus
+     one measured sentence. All numbers are counted, never derived. */
+  .ladder { position: relative; }
+  .ladder .jstart { position: absolute; top: 50%; width: 14px; height: 14px;
+    margin: -7px 0 0 -7px; border-radius: 50%; background: var(--surface);
+    border: 3px solid var(--ink); box-sizing: border-box; }
+  .ladder svg.jarrow { position: absolute; inset: 0; width: 100%; height: 100%;
+    overflow: visible; pointer-events: none; }
+  .journey { display: flex; gap: 8px; align-items: baseline; font-size: 13px;
+    color: var(--muted); margin: 2px 0 10px; }
+  .journey b { color: var(--ink); font-weight: 700; }
+  .journey .src { font-size: 10.5px; letter-spacing: .06em; color: var(--muted);
+    font-family: var(--font-data, monospace); }
 
   /* the pulse — Tufte-esque: bare canvas, band-tinted ground, no gridlines/numerals */
   .pulse h4 { font-family: var(--font-display); font-weight: 700; font-size: 14px;
@@ -541,6 +554,7 @@ function openHero(card) {
         (card.voice ? '<p class="line">' + esc(card.voice) + "</p>" : "") + "</div>"
       : "") +
     (frame.mood && !isExc ? ladderHTML(frame.mood) : "") +
+    '<div id="journey"></div>' +
     '<div class="water">' + waterHTML(card) + "</div>" +
     '<div class="pulse" id="pulse"></div>' +
     '<a class="wb-link" href="/classic">raw numbers &amp; history on the Workbench &rarr;</a>';
@@ -555,6 +569,91 @@ document.getElementById("overlay").addEventListener("click", function (e) {
 });
 document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeHero(); });
 
+/* #1136 the band-journey (maintainer-craved): since the last watering — where it
+   started, where it is, which way it's pointed, how fast. Start ring + travel
+   arrow ON the ladder; one sentence of counted facts ("2 bands in 3d") — the
+   band_movement substrate's own numbers, nothing derived here. Present-or-silent
+   when there's no journey to tell (steady, or no band history). */
+var FW_TO_MOOD = { /* mirrors mood-band-map.json (canonical) — lookup only.
+   air-dry -> faint: an in-soil mood per the #1218 ratified ladder. */
+  "submerged": "soaked", "overwatered": "refreshed", "well watered": "thriving",
+  "ok": "content", "needs water": "thirsty", "dry": "parched", "air-dry": "faint" };
+function moodOfFw(fw) { return FW_TO_MOOD[String(fw || "").toLowerCase()] || null; }
+function ladderIdx(mood) {
+  for (var i = 0; i < LADDER.length; i++) if (LADDER[i].mood === mood) return i;
+  return -1;
+}
+function tsMs(ts) {
+  var t = new Date(String(ts || "").replace(" ", "T")).getTime();
+  return isFinite(t) ? t : null;
+}
+function renderJourney(card, ctx) {
+  var box = document.getElementById("journey");
+  if (!box) return;
+  box.innerHTML = "";
+  /* join like the pulse: plant_id when registered, else the card's sensor_id */
+  var bh = null, list = ctx.band_history || [];
+  for (var i = 0; i < list.length; i++) {
+    var b = list[i];
+    if ((b.plant_id && b.plant_id === card.plant_id) ||
+        (card.sensor_id && b.sensor_id === card.sensor_id)) { bh = b; break; }
+  }
+  if (!bh || !bh.current || !(bh.transitions || []).length) return;  /* silent */
+  /* the honest window: since the DETECTED re-water when there is one, else the
+     served range. Start band = the trail step at/before the window's origin. */
+  var trail = bh.transitions, rw = bh.rewater ? tsMs(bh.rewater.ts) : null;
+  var start = trail[0], t0 = tsMs(trail[0].ts);
+  if (rw !== null) {
+    for (var j = 0; j < trail.length; j++) {
+      var tj = tsMs(trail[j].ts);
+      if (tj !== null && tj <= rw) { start = trail[j]; t0 = rw; } else break;
+    }
+  }
+  var startMood = moodOfFw(start.band), nowMood = moodOfFw(bh.current.band);
+  if (!startMood || !nowMood || startMood === nowMood) return;  /* no story — silent */
+  var si = ladderIdx(startMood), ni = ladderIdx(nowMood);
+  if (si < 0 || ni < 0) return;
+  var bands = Math.abs(ni - si);
+  var days = null;
+  if (t0 !== null) {
+    var ms = Date.now() - t0;
+    if (ms > 0) days = ms / 86400000;
+  }
+  var dtxt = days === null ? "" :
+    days < 1 ? " in " + Math.max(1, Math.round(days * 24)) + "h" :
+    " in " + (days < 10 ? (Math.round(days * 10) / 10) : Math.round(days)) + "d";
+  /* the start ring + travel arrow, drawn ON the ladder (wet-left, drier points
+     right — the #1263 horizontal orientation) */
+  var lad = document.querySelector(".hero .ladder");
+  if (lad) {
+    var stale = lad.querySelectorAll(".jstart, svg.jarrow");   /* idempotent redraw */
+    for (var k = 0; k < stale.length; k++) lad.removeChild(stale[k]);
+    var n = LADDER.length;
+    var cs = ((si + 0.5) / n) * 100, cn = ((ni + 0.5) / n) * 100;
+    var ring = document.createElement("span");
+    ring.className = "jstart"; ring.style.left = cs + "%";
+    lad.appendChild(ring);
+    var dirRight = ni > si;
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "jarrow");
+    svg.setAttribute("viewBox", "0 0 100 26");
+    svg.setAttribute("preserveAspectRatio", "none");
+    var pad = 1.6, x1 = cs + (dirRight ? pad : -pad), x2 = cn + (dirRight ? -pad : pad);
+    var jstroke = 'style="stroke:var(--ink,#1E2A18)" stroke-width="2.5"' +
+      ' vector-effect="non-scaling-stroke"';
+    svg.innerHTML =
+      '<line x1="' + x1 + '" y1="13" x2="' + x2 + '" y2="13" ' + jstroke + "/>" +
+      '<path d="M' + x2 + ' 13 l' + (dirRight ? -3 : 3) + ' -4 M' + x2 + ' 13 l' +
+      (dirRight ? -3 : 3) + ' 4" fill="none" ' + jstroke + "/>";
+    lad.appendChild(svg);
+  }
+  var since = rw !== null ? "since watering" : "this window";
+  box.innerHTML =
+    '<div class="journey"><span class="src">' + since.toUpperCase() + "</span>" +
+    "<span><b>" + cap(startMood) + "</b> &rarr; <b>" + cap(nowMood) + "</b></span>" +
+    "<span>" + bands + (bands === 1 ? " band" : " bands") + esc(dtxt) + "</span></div>";
+}
+
 /* The pulse (locked contract): >=1 per-plant chart, HISTOGRAM minimum, Tufte-esque —
    plus a sparkline of the same window. Axis = the in-soil envelope (#372 ingredient),
    labelled in mood words; NO raw numerals anywhere (raw stays Workbench-side). */
@@ -562,6 +661,7 @@ function drawPulse(card) {
   var box = document.getElementById("pulse");
   box.innerHTML = "";
   ctxFetch().then(function (ctx) {
+    renderJourney(card, ctx);  /* #1136 — independent of the chart's own gates */
     /* join on the payload's sensor_id (works registered or not); plant_id is the
        fallback for older payload shapes. present-or-silent when neither binds. */
     var sensors = ctx.sensors || [];
