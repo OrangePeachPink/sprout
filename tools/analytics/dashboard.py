@@ -38,7 +38,7 @@ if str(_HERE) not in sys.path:
 
 import provenance  # noqa: E402  (sibling - server/app provenance for the panel, #324)
 from band_movement import as_dict as _movement_as_dict  # noqa: E402  (#650 substrate)
-from band_movement import band_movements  # noqa: E402  (#650 -> #627/#717 view)
+from band_movement import band_movements, segment_start  # noqa: E402  (#627/#1133)
 from device_registry import Registry, load_registry  # noqa: E402  (#486 attribution)
 from forecast import fit_line, forecast_payload  # noqa: E402
 from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
@@ -1020,6 +1020,27 @@ def build_context(
             (_hours_since(r.timestamp_utc, start), r.raw_value) for r in plot_settled
         ]
         fit_excluded = len(plot_rs) - len(plot_settled)
+        # #1133: bind the dashed trend + the forecast/drying-rate windows to the CURRENT
+        # inter-watering segment (readings at/after the last detected re-water). A
+        # least-squares fit across a watering event averages physically unrelated
+        # dry-down arcs (the "all: -1 c/h · stable across 77k readings" nonsense). The
+        # PLOT keeps every point (the sawtooth is truth); only the FITTED windows clip
+        # to the segment. No re-water in-window => the whole window IS one segment.
+        _seg_start = segment_start(rs)
+        _fc_settled = (
+            ([r for r in settled if r.timestamp_utc >= _seg_start] or settled)
+            if _seg_start
+            else settled
+        )
+        _seg_fit_pairs = (
+            [
+                (h, y)
+                for (h, y), r in zip(fit_pairs, plot_settled)
+                if r.timestamp_utc >= _seg_start
+            ]
+            if _seg_start
+            else fit_pairs
+        )
         locals_ = [
             r.timestamp_local.strftime("%m-%d %H:%M:%S") if r.timestamp_local else ""
             for r in plot_rs
@@ -1153,7 +1174,9 @@ def build_context(
                 "spread_last": last.spread,
                 "quality_last": last.quality_flag,
                 "slope_per_hr": _round_opt(_slope_per_hour(spairs), 2),
-                "forecast": forecast_payload(sid, _fc_window(settled), bounds),
+                # compose #1133 + #1157: segment-bound rows, then the wide-corpus
+                # recent-window cap (protects the no-detected-segment fallback)
+                "forecast": forecast_payload(sid, _fc_window(_fc_settled), bounds),
                 # #919: rows the #670/#697 gate kept off the trend/forecast fits
                 # (still plotted as raw) - surfaced so exclusion is never silent.
                 "fit_excluded": fit_excluded,
@@ -1162,16 +1185,20 @@ def build_context(
         # #839 Fix B: fit the dashed trend over the recent-run plot, not the full
         # window - a trend that spanned the stale pre-gap pocket (0..180 h) was the
         # one line that still drew across the empty window in the bug report.
-        _fit = fit_line(fit_pairs)
+        _fit = fit_line(_seg_fit_pairs)  # #1133: fit the segment, not the window
         trend = None
-        if _fit and len(fit_pairs) >= 3:
-            x0, x1 = fit_pairs[0][0], fit_pairs[-1][0]
+        if _fit and len(_seg_fit_pairs) >= 3:
+            x0, x1 = _seg_fit_pairs[0][0], _seg_fit_pairs[-1][0]
             trend = {
                 "x0": round(x0, 4),
                 "y0": round(_fit.intercept + _fit.slope * x0, 1),
                 "x1": round(x1, 4),
                 "y1": round(_fit.intercept + _fit.slope * x1, 1),
                 "slope": round(_fit.slope, 2),
+                # #1133: does this trend span only the current inter-watering segment?
+                # True once a re-water was detected in-window; the surface can say
+                # "since last watering" instead of implying it spans the whole view.
+                "segment_bound": _seg_start is not None,
             }
         # #718: a plant-first label for the legend + tooltip - never the machine
         # id or GPIO. Falls back to plant_id -> probe -> the raw sid when a channel
