@@ -30,6 +30,7 @@
 #include "device_uid.h" /* #601 stable-id base32 mint (ADR-0027 §1b) */
 #include "cal_resolver.h" /* #952 per-board-type cal resolution chain */
 #include "cal_class_defaults.h" /* #952 Layer-2 class defaults */
+#include "dose_control.h" /* #414 bounded re-wetting + absorbed/ran-through */
 
 /* -------------------------------------------------------------------------- */
 /* synthetic rig: ADC source + pump observer + event sink                     */
@@ -1725,6 +1726,176 @@ void t_band_partition_xboard_roundtrip(void)
     }
 }
 
+/* ============================================================================
+ * #414 - tuning-sim: bounded re-wetting control + absorbed/ran-through
+ * ----------------------------------------------------------------------------
+ * Drives dose_control against a spectrum of synthetic pots (standing in for the
+ * P01-P11 classes) to TUNE + PROVE the control params without hardware:
+ *   - the absorbed / ran-through classification is correct across the spectrum,
+ *   - the 3 decision bands (ACT/WAIT/HOLD) stay separable (#410),
+ *   - every cycle stays bounded (over-water safety, #93/ADR-0022).
+ * The tuned cfg below is what #382 wires to a real pump later.
+ * ==========================================================================*/
+
+/* Band edges sit in the in-soil raw range (Data's #995 proposal): ACT at the
+ * Thirsty/Parched onset, HOLD at Content, WAIT the gap between. */
+static const dose_cfg_t DOSE_CFG_TUNED = {.act_at_raw = 2200,
+                                          .hold_at_raw = 1600,
+                                          .absorbed_drop = 80,
+                                          .max_pulses = 8,
+                                          .pulse_ms = 800,
+                                          .observe_ms = 60000};
+
+/* A synthetic pot. A pulse wets an ABSORBED fraction of the soil (raw drops);
+ * the pass-through fraction fills the tray, and a hydrophobic pot hits runoff
+ * fast while its soil barely moves. */
+typedef struct {
+    int raw; /* current sensor raw (higher = drier)         */
+    int wet_per_pulse; /* raw drop of a fully-absorbed pulse           */
+    int passthrough_pct; /* 0 = absorbs .. 100 = fully hydrophobic       */
+    int runoff_after; /* pulses of pass-through before runoff asserts  */
+    int pulses; /* internal                                     */
+    bool runoff; /* internal                                     */
+} sim_pot_t;
+
+static void sim_pot_pulse(uint32_t ms, void *u)
+{
+    (void)ms;
+    sim_pot_t *p = (sim_pot_t *)u;
+    int absorbed = (p->wet_per_pulse * (100 - p->passthrough_pct)) / 100;
+    p->raw -= absorbed; /* wet-ward */
+    if (p->raw < 0) p->raw = 0;
+    p->pulses++;
+    if (p->passthrough_pct >= 50 && p->pulses >= p->runoff_after)
+        p->runoff = true;
+}
+static uint16_t sim_pot_read(void *u)
+{
+    return (uint16_t)((sim_pot_t *)u)->raw;
+}
+static bool sim_pot_runoff(void *u)
+{
+    return ((sim_pot_t *)u)->runoff;
+}
+
+/* 3 bands reachable + separable, and mis-tunings that collapse them rejected. */
+void t_dose_bands_and_separability(void)
+{
+    const dose_cfg_t *c = &DOSE_CFG_TUNED;
+    TEST_ASSERT_EQUAL(DOSE_ACT, dose_decide(2400, c)); /* dry    */
+    TEST_ASSERT_EQUAL(DOSE_ACT, dose_decide(2200, c)); /* edge   */
+    TEST_ASSERT_EQUAL(DOSE_WAIT, dose_decide(1900, c)); /* center */
+    TEST_ASSERT_EQUAL(DOSE_HOLD, dose_decide(1600, c)); /* edge   */
+    TEST_ASSERT_EQUAL(DOSE_HOLD, dose_decide(1200, c)); /* wet    */
+    TEST_ASSERT_TRUE_MESSAGE(dose_bands_separable(c),
+                             "tuned cfg keeps 3 bands separable");
+
+    /* NEGATIVE: collapsed / inverted / gapless / no-pulse configs rejected. */
+    dose_cfg_t inv = *c;
+    inv.act_at_raw = 1600; /* == hold -> inverted */
+    TEST_ASSERT_FALSE_MESSAGE(dose_bands_separable(&inv),
+                              "inverted bands rejected");
+    dose_cfg_t nogap = *c;
+    nogap.hold_at_raw = 2199;
+    nogap.act_at_raw = 2200; /* gap < 2 -> no WAIT */
+    TEST_ASSERT_FALSE_MESSAGE(dose_bands_separable(&nogap),
+                              "zero WAIT gap rejected");
+    dose_cfg_t nopulse = *c;
+    nopulse.max_pulses = 0;
+    TEST_ASSERT_FALSE_MESSAGE(dose_bands_separable(&nopulse),
+                              "zero max_pulses rejected");
+}
+
+/* The load-bearing signal: absorbed vs ran-through (what Child B #413 branches on). */
+void t_dose_classify_outcomes(void)
+{
+    const dose_cfg_t *c = &DOSE_CFG_TUNED; /* absorbed_drop = 80 */
+    TEST_ASSERT_EQUAL(DOSE_ABSORBED,
+                      dose_classify(2400, 2300, false, c)); /* drop 100      */
+    TEST_ASSERT_EQUAL(DOSE_ABSORBED,
+                      dose_classify(2400, 2300, true, c)); /* absorbs>runoff */
+    TEST_ASSERT_EQUAL(DOSE_RAN_THROUGH,
+                      dose_classify(2400, 2390, true, c)); /* drop 10+runoff */
+    TEST_ASSERT_EQUAL(DOSE_INCONCLUSIVE,
+                      dose_classify(2400, 2390, false, c)); /* drop 10, dry */
+    TEST_ASSERT_EQUAL(DOSE_INCONCLUSIVE,
+                      dose_classify(2400, 2500, false, c)); /* drifted drier */
+}
+
+/* Run the spectrum: each class hits its expected outcome, always bounded, and
+ * the hydrophobic pot is NOT flooded. */
+void t_dose_sim_spectrum(void)
+{
+    const dose_cfg_t *c = &DOSE_CFG_TUNED;
+    struct {
+        const char *name;
+        sim_pot_t pot;
+        dose_cycle_result_t want;
+    } cases[] = {
+        {"normal-thirsty",
+         {.raw = 2400, .wet_per_pulse = 200},
+         DOSE_CYCLE_TARGET},
+        {"slow-absorb",
+         {.raw = 2400, .wet_per_pulse = 90, .passthrough_pct = 10},
+         DOSE_CYCLE_TARGET},
+        {"already-content",
+         {.raw = 1500, .wet_per_pulse = 200},
+         DOSE_CYCLE_TARGET},
+        {"in-wait-band",
+         {.raw = 1900, .wet_per_pulse = 200},
+         DOSE_CYCLE_TARGET},
+        {"hydrophobic",
+         {.raw = 2500,
+          .wet_per_pulse = 200,
+          .passthrough_pct = 80,
+          .runoff_after = 1},
+         DOSE_CYCLE_PASSTHROUGH},
+        {"too-slow-bound",
+         {.raw = 2790, .wet_per_pulse = 60},
+         DOSE_CYCLE_BOUND},
+    };
+    for (unsigned k = 0; k < sizeof(cases) / sizeof(cases[0]); ++k) {
+        sim_pot_t pot = cases[k].pot;
+        dose_io_t io = {sim_pot_read, sim_pot_pulse, sim_pot_runoff, NULL,
+                        &pot};
+        dose_cycle_report_t r = dose_cycle_run(c, &io);
+        char msg[96];
+        snprintf(msg, sizeof(msg), "%s: result %d want %d (pulses %d)",
+                 cases[k].name, r.result, cases[k].want, r.pulses);
+        TEST_ASSERT_EQUAL_MESSAGE(cases[k].want, r.result, msg);
+        snprintf(msg, sizeof(msg), "%s: pulses %d exceeded bound %d",
+                 cases[k].name, r.pulses, c->max_pulses);
+        TEST_ASSERT_TRUE_MESSAGE(r.pulses <= c->max_pulses,
+                                 msg); /* always bounded */
+    }
+
+    /* the hydrophobic pot bails on the FIRST ran-through - it is not flooded. */
+    sim_pot_t hyd = {.raw = 2500,
+                     .wet_per_pulse = 200,
+                     .passthrough_pct = 80,
+                     .runoff_after = 1};
+    dose_io_t io = {sim_pot_read, sim_pot_pulse, sim_pot_runoff, NULL, &hyd};
+    dose_cycle_report_t r = dose_cycle_run(c, &io);
+    TEST_ASSERT_EQUAL_MESSAGE(
+        1, r.ran_through, "hydrophobic: one ran-through then stop (no flood)");
+    TEST_ASSERT_TRUE_MESSAGE(r.pulses <= 2, "hydrophobic: bailed fast");
+
+    /* TEETH: a mis-tuned absorbed_drop too low reads the pass-through pulse as
+     * ABSORBED -> the loop floods the pass-through pot instead of bailing. The
+     * sim surfaces the mis-tuning (contrast with the bail above). */
+    dose_cfg_t mistuned = DOSE_CFG_TUNED;
+    mistuned.absorbed_drop = 30; /* < the 40 raw a hydrophobic pulse moves */
+    sim_pot_t hyd2 = {.raw = 2500,
+                      .wet_per_pulse = 200,
+                      .passthrough_pct = 80,
+                      .runoff_after = 1};
+    dose_io_t io2 = {sim_pot_read, sim_pot_pulse, sim_pot_runoff, NULL, &hyd2};
+    dose_cycle_report_t rm = dose_cycle_run(&mistuned, &io2);
+    TEST_ASSERT_TRUE_MESSAGE(
+        rm.pulses > 1,
+        "mis-tuned absorbed_drop floods the pass-through pot (sim catches it)");
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -1761,5 +1932,8 @@ int main(void)
     RUN_TEST(t_cal_tier_label);
     RUN_TEST(t_band_partition_invariants);
     RUN_TEST(t_band_partition_xboard_roundtrip);
+    RUN_TEST(t_dose_bands_and_separability);
+    RUN_TEST(t_dose_classify_outcomes);
+    RUN_TEST(t_dose_sim_spectrum);
     return UNITY_END();
 }
