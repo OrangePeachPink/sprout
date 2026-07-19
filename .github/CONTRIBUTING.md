@@ -2,11 +2,29 @@
 
 Welcome — glad you're here. Sprout is a small, friendly project with one clean path from idea to merge, and this
 guide walks it in about five minutes. However you've arrived — fixing a typo, wiring up a pump, or just curious —
-there's a place for you. We keep it calm, plain, and kind: the plant speaks plainly, the board's clean, and there's
-one path now. **Tend well.**
+there's a place for you. We keep it calm, plain, and kind: the plant speaks plainly, the board's clean, and
+there's one path now. **Tend well.**
 
 Sprout is built with AI assistance, and AI-assisted contributions are as welcome as hand-written ones — use
 whatever tools fit how you work, or none. The bar is the same either way.
+
+## Using a coding agent?
+
+Welcome — plenty of us do too. If an agent is helping you contribute, three quick checks before you push keep
+your work clearly *yours*:
+
+1. **The commit identity is yours.** Run `git log -1 --format='%an %ae'` — it should show *your* name and
+   email, not ours. Your contribution graph deserves the credit. If it shows someone else, set your
+   `git config user.name` / `user.email` and re-commit.
+2. **Skip our internal conventions.** No `Lane:` trailers, no lane sign-offs — those are the maintainer team's
+   internal routing metadata. Your GitHub handle is your signature.
+3. **This file and [`AGENTS.md`](../AGENTS.md) are both yours — follow them.** They're the whole contract;
+   nothing else is a convention to match. The maintainer team's internal operating doctrine lives in
+   [`docs/team/OPERATIONS.md`](../docs/team/OPERATIONS.md) — it describes *us*, and it's hard-marked out of
+   scope for you and your tools.
+
+**Write in the language you're comfortable in.** Issues, PRs, and questions are welcome in any language — we'll
+meet you where you are.
 
 ## Where things go
 
@@ -111,7 +129,8 @@ version — claiming, review, timing, and our no-guilt timeout.
 7. **It gets reviewed, then merged.** Someone other than the author checks your PR against the issue's
    acceptance criteria; once it passes, it's merged. **Community contributions always get direct maintainer
    review** — no exceptions. *(How the maintainer's internal review runs — including a faster path used only
-   for pre-scoped internal work — is in [AGENTS.md](../AGENTS.md); you don't need it to contribute.)*
+   for pre-scoped internal work — is in [docs/team/OPERATIONS.md](../docs/team/OPERATIONS.md); you don't need
+   it to contribute.)*
 
 > **`just check` needs one more tool than `just start` does.** `uv sync` + `just` alone are enough to run the
 > dashboard and the *lint/format* hooks — but `just check` also runs `just test`, which **unconditionally**
