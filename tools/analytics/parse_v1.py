@@ -103,6 +103,25 @@ _CANON_BAND = {name.lower(): name for name in BANDS_WET_TO_DRY}
 # segment's provenance header lacks a "cal bounds" line; prefer header bounds always.
 DEFAULT_CAL_BOUNDS = (2293, 2086, 1879, 1673, 1466, 1259)
 
+# #1235/#1152 — the per-BOARD-CLASS off-ladder anchors: the measured in-soil envelope
+# rails (#995/#1174 dry-down, medians of the per-channel cal), the host sibling of
+# firmware's board_capability values. ONE definition, two consumers: the pulse envelope
+# spans them (#1235) and the #1152 exception layer keys off the SAME rails (dry past
+# air = probe-in-air; wet past water = probe-in-water) — never two copies. A profiled
+# per-CHANNEL anchor (registry cal chain) beats the class value when present (ADR-0019).
+BOARD_CLASS_ANCHORS = {
+    "classic": {"air": 3137, "water": 1052},
+    "c5": {"air": 2754, "water": 982},
+}
+
+
+def board_class(board: str | None) -> str:
+    """Board string -> anchor class. Anything self-describing as a C5 is ``c5``;
+    everything else (incl. absent) is ``classic`` — the project's primary/default
+    board class, matching DEFAULT_CAL_BOUNDS's own classic-sided default."""
+    return "c5" if board and "c5" in board.lower() else "classic"
+
+
 # A capacitive soil probe cannot read WETTER than fully submerged in water. On the
 # classic's scale the physical wet rail is ~900 raw ("wetter than a cup of water");
 # a reading below it is not moisture - it is a fault (a short, water-contamination,

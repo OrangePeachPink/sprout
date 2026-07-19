@@ -578,13 +578,19 @@ function drawPulse(card) {
       .filter(function (y) { return typeof y === "number"; }) : [];
     if (pts.length < 8) return; /* too few to be a pulse — silent, never a fake shape */
 
-    /* the in-soil envelope, from the served cal boundaries (wet rail .. dry rail) */
+    /* #1235: the envelope spans the profiled ANCHORS (water rail .. air rail) so all
+       7 moods draw — the bounded interior alone clipped Soaked + Faint off the chart
+       by construction. No anchors served for this sensor -> the old interior span
+       (honest degradation: 5 zones, never an invented envelope). */
     var bounds = ((ctx.cal || {}).bounds || []).slice().map(Number)
       .filter(function (b) { return !isNaN(b); }).sort(function (a, b) { return a - b; });
-    var lo = bounds.length ? bounds[0] : Math.min.apply(null, pts);
-    var hi = bounds.length ? bounds[bounds.length - 1] : Math.max.apply(null, pts);
+    var anc = (ctx.anchors || {})[s.id];
+    var haveAnc = anc && typeof anc.water === "number" && typeof anc.air === "number";
+    var lo = haveAnc ? anc.water : (bounds.length ? bounds[0] : Math.min.apply(null, pts));
+    var hi = haveAnc ? anc.air : (bounds.length ? bounds[bounds.length - 1] : Math.max.apply(null, pts));
     if (hi <= lo) return;
-    var inner = bounds.slice(1, -1); /* interior band edges, wet -> dry */
+    /* with anchors ALL 6 cuts are interior (7 zones = the whole mood ladder) */
+    var inner = haveAnc ? bounds.slice() : bounds.slice(1, -1);
 
     box.innerHTML =
       "<h4>The pulse <small>last 7 days &middot; where it lived, wetter &rarr; drier</small></h4>" +

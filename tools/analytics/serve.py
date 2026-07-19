@@ -585,6 +585,52 @@ def _context(
     return ctx
 
 
+def attach_pulse_anchors(ctx: dict, model) -> dict:
+    """#1235: per-dataset cal anchors onto the served context — ``ctx["anchors"] =
+    {<dataset id>: {"air": int, "water": int}}`` so the Home's pulse charts span the
+    FULL in-soil envelope (all 7 moods), not just the bounded interior (which clipped
+    Soaked + Faint off the histogram by construction).
+
+    ONE anchor definition (the #1152 coordination note), resolved per sensor:
+
+    1. a **profiled per-channel anchor** (registry cal chain via the open assignment —
+       the same source the #995 health readout reads) wins when present (ADR-0019);
+    2. else the **per-board-class rails** (``parse_v1.BOARD_CLASS_ANCHORS`` — the host
+       sibling of firmware board_capability, which the #1152 exception layer keys off
+       too). This is what fires on today's fleet, whose profile chain is still empty.
+
+    A sensor resolving to nothing valid is absent; the render falls back to the bounded
+    interior (honest degradation, never an invented envelope). Returns ctx."""
+    from parse_v1 import BOARD_CLASS_ANCHORS, board_class
+
+    profiles = {p.profile_id: p for p in model.profiles}
+    by_dev_port: dict = {}
+    for a in model.open_assignments():
+        prof = profiles.get(a.profile_id)
+        if prof and prof.anchors:
+            by_dev_port[(a.device_id, a.channel)] = prof.anchors
+    board_by_dev = {
+        d.get("device_id"): d.get("board") for d in getattr(model, "devices", [])
+    }
+
+    def _valid(a: dict | None) -> dict | None:
+        air, water = (a or {}).get("air"), (a or {}).get("water")
+        if isinstance(air, int) and isinstance(water, int) and water < air:
+            return {"air": air, "water": water}
+        return None
+
+    anchors: dict = {}
+    for s in ctx.get("sensors", []):
+        dev = s.get("device_id")
+        got = _valid(by_dev_port.get((dev, s.get("sensor_id")))) or _valid(
+            BOARD_CLASS_ANCHORS[board_class(board_by_dev.get(dev))]
+        )
+        if got:  # a malformed profiled cal falls back to the class rails, never junk
+            anchors[s["id"]] = got
+    ctx["anchors"] = anchors
+    return ctx
+
+
 def _anchors_by_sensor(model) -> dict:
     """#995: map each currently-mapped sensor_id to its cal envelope ``{air, water}``,
     pulled from the profile its open assignment references (#952/#963 cal chain). A
@@ -710,6 +756,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self._send(html, "text/html; charset=utf-8")
             elif parsed.path == "/data.json":
                 ctx = _context(self.inputs, hours, channels)
+                # #1235: the pulse envelope spans the profiled anchors (all 7 moods)
+                from registry_model import load_registry_model as _lrm
+
+                attach_pulse_anchors(ctx, _lrm())
                 _t = time.perf_counter()
                 blob = json.dumps(ctx, separators=(",", ":"), ensure_ascii=False)
                 _perf_log(ctx, "serialize", time.perf_counter() - _t, rng)  # #953
