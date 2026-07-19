@@ -204,11 +204,28 @@ BAND_NAMES_DRY_TO_WET = [
     "submerged",
 ]
 
-# series colors - the sanctioned categorical set drawn from the band ramp, so the
-# dashboard reads as one palette (#203 / design review #99 / #156:
-# --band-wet/moist/ideal/drying). Hex, not the CSS vars: the canvas chart's hexA()
-# needs resolved colors, and the band tokens are theme-stable.
-SENSOR_COLORS = ["#17B6C4", "#34A853", "#8BD24F", "#F5A623"]
+# Series colors — the #930 chart-series pass (charter-ruled 2026-07-19): a line is
+# a plant's IDENTITY, so strokes come from the muted MATERIALS register (the
+# two-register principle), never the state ramp. The old set rotated four band
+# hues as identities — the exact charter violation, and 12 channels in 4 colors
+# was the braided-lines bug. Mirrors the --series-1..12 tokens in
+# sprout-tokens.css (canonical; keep in sync — hex here because the canvas
+# chart's hexA() needs resolved colors). Legibility-first order: adjacent
+# channels get maximally-different strokes.
+SENSOR_COLORS = [
+    "#B98F6F",  # --series-1  terracotta
+    "#8FA3B0",  # --series-2  ceramic
+    "#7E9B6B",  # --series-3  moss
+    "#52585A",  # --series-4  charcoal
+    "#CB763E",  # --series-5  persimmon
+    "#6E7B86",  # --series-6  slate
+    "#A9B7A0",  # --series-7  sage-glaze
+    "#7C6A4E",  # --series-8  bark
+    "#C08A6A",  # --series-9  clay
+    "#9AA6A0",  # --series-10 stoneware
+    "#A59E93",  # --series-11 stone
+    "#E3DAC2",  # --series-12 cream (last: too light for a thin line)
+]
 
 QUALITY_COLOR = {
     "OK": "#34A853",
