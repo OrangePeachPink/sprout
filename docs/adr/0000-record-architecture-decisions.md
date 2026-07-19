@@ -74,7 +74,7 @@ prototype's history faithfully. (Execution belongs to the architecture/firmware 
 | [0006](0006-data-architecture.md) | Data architecture (telemetry schema, calibration, quality, analysis tier) | **Accepted** | Data lane |
 | [0007](0007-brand-guidelines.md) | Brand guidelines & voice | **Accepted** | Design lane |
 | [0008](0008-design-system-v3-personality-layer.md) | Design system v3: the personality layer | **Accepted** | Design lane |
-| [0009](0009-versioning-and-release-policy.md) | Versioning & release policy | **Accepted** | Workflow lane |
+| [0009](0009-versioning-and-release-policy.md) | Versioning & release policy (+ Decision 7: release-feed curation = the SBOM remediation, per ADR-0026 amended D4) | **Accepted** — amended 2026-07-19 (#1258) | Workflow lane |
 | [0010](0010-design-library-front-door.md) | The Design Library is the single front door for design assets | **Accepted** | Design lane |
 | [0011](0011-experiment-capture-control-plane.md) | Experiment capture control plane (browser→host) | **Proposed** — direction agreed (Firmware #57); detail at sub-issue cut | Data + Firmware lanes |
 | [0012](0012-experiment-data-architecture.md) | Experiment data architecture (extends ADR-0006) | **Proposed** — schema agreed (Firmware #57); detail at sub-issue cut | Data lane |

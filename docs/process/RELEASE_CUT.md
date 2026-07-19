@@ -79,3 +79,21 @@ Then: add a 2–4 line human lede above the generated list (what this release *m
       off the shipped version.
 
 *Owned by Workflow (ADR-0009: "the Workflow lane cuts releases"). First exercised for v0.7.1.*
+
+## 7. If a shipped release goes bad — feed curation (ADR-0009 §7)
+
+*Not part of the normal cut — the break-glass step when the SBOM / dependency audit (or any
+confirmed report) names a shipped release as carrying a known-vulnerable package. Executes
+ADR-0026's amended Decision 4: remediation at the source, never a device-side counter.*
+
+- [ ] Confirm which shipped release(s) are affected; link the evidence (audit run / advisory).
+- [ ] **With the maintainer's confirm** (public-facing status change): mark the affected release
+      **pre-release** (demotes it from Latest — the record itself is never deleted) and prepend the
+      SECURITY note to its notes: *affected component + versions · the fixed version · evidence link*.
+- [ ] Verify the fixed release exists and is the **Latest** being offered (cut it first if needed —
+      the normal checklist above applies).
+- [ ] *(Activates with the #302 Phase-1 pull feed)*: remove the curated-out version from the served
+      manifest so OTA devices are only ever offered good builds.
+- [ ] Log the curation on the release record + the cycle's digest thread.
+
+*Owned by Workflow; the maintainer confirms the pull.*

@@ -1,6 +1,8 @@
 # ADR-0009 — Versioning & release policy
 
-**Status:** Accepted (2026-06-24)
+**Status:** Accepted (2026-06-24) — **amended 2026-07-19 (#1258):** added Decision 7
+(release-feed curation), executing ADR-0026's amended Decision 4 (the maintainer-ratified
+SBOM-remediation ruling, PR #1256).
 **Date:** 2026-06-24
 **Owner:** Workflow lane
 **Lane:** releases & versioning
@@ -110,6 +112,26 @@ exhaustiveness:
    pre-baseline record.
 5. **Points to the record** — links to docs / issues for the full how-and-why rather than duplicating them.
 
+### 7. Release-feed curation — pulling a known-bad release (the SBOM remediation)
+
+*(Added 2026-07-19, #1258 — executes [ADR-0026](0026-firmware-delivery-and-update-security.md)'s
+amended Decision 4: remediation happens at the **source**, never as a device-side blanket counter.)*
+
+When the SBOM / dependency-audit process (or any confirmed report) establishes that a **shipped
+release** carries a known-vulnerable package, the remediation is feed curation:
+
+1. **The release record is never deleted** — history stays immutable. Its *offering status* changes:
+   the release is marked **pre-release** (demoting it from Latest) and a **SECURITY note** is
+   prepended to its notes (what is affected, the fixed version, the evidence link).
+2. **The fixed release becomes the offering** — cut it if it doesn't exist; verify it is Latest.
+3. **Phase-1 pull feed (#302), once live:** the curated-out version is also removed from the served
+   manifest — the pull model means the maintainer controls what is offered, so every OTA device
+   pulls the fix and the bad build simply stops being available.
+4. Workflow prepares the curation; **the maintainer confirms the pull** (a public-facing status
+   change on her repo). The action is logged on the release record itself and the cycle's digest.
+
+The operational checklist lives in [`RELEASE_CUT.md`](../process/RELEASE_CUT.md) §7.
+
 ## Consequences
 
 - One version line is simple and standard; the CHANGELOG carries the per-component detail the single
@@ -117,6 +139,8 @@ exhaustiveness:
 - The bump discipline keeps the version **accurate and slow** — small fixes don't inflate it, and `1.0`
   stays a deliberate milestone rather than an accident of counting.
 - Every lane bumps the same way; releases read truthfully to an outside contributor.
+- A shipped-then-flagged release is remediated at the feed, not on devices — the record is
+  preserved, the offering is withdrawn (Decision 7).
 
 ## Revisit triggers (the solid revisit)
 
@@ -136,5 +160,5 @@ they adopt it.
 ## Register row (add)
 
 ```text
-| [0009](0009-versioning-and-release-policy.md) | Versioning & release policy | **Accepted** | Workflow lane |
+| [0009](0009-versioning-and-release-policy.md) | Versioning & release policy (+ Decision 7: release-feed curation = the SBOM remediation, per ADR-0026 amended D4) | **Accepted** — amended 2026-07-19 (#1258) | Workflow lane |
 ```
