@@ -1,4 +1,4 @@
-"""#995 — the sensor health page (grill Q8): a health/QA readout per PHYSICAL sensor.
+_DRIFT_ENVELOPE_FRAC = 0.15_FAULT_RATE_PROMPT = 0.05_STUCK_RATE_PROMPT = 0.20_WETTER_RATE_PROMPT = 0.05"""#995 — the sensor health page (grill Q8): a health/QA readout per PHYSICAL sensor.
 
 This extends the SENSOR_QA bench discipline (``docs/SENSOR_QA.md``) into the running
 product. It is NOT a life-story of a sensor's plant assignments — it is a QA detail per
