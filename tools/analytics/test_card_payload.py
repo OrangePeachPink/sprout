@@ -185,6 +185,37 @@ def test_a_logged_manual_watering_outranks_the_detected_guess() -> None:
     assert resolve_last_watered(detected, older_manual, now)["source"] == "detected"
 
 
+def test_a_glug_and_a_detection_in_window_pair_keeping_the_earlier_time() -> None:
+    # #1229 (live-observed): a catch-up glug + a same-watering detection are ONE event.
+    # Keep the human FACT (source=manual) but adopt the detector's EARLIER soil time —
+    # the glug records a button-press that lagged the soil-change by ~18 min.
+    from datetime import datetime, timezone
+
+    from card_payload import resolve_last_watered
+
+    now = datetime(2026, 7, 19, 18, 30, tzinfo=timezone.utc)
+    detected = {"ts": "2026-07-19T18:04:00Z", "source": "detected"}  # soil moved
+    glug = {"plant_id": "p01", "source": "manual", "ts": "2026-07-19T18:22:00Z"}  # +18m
+    lw = resolve_last_watered(detected, glug, now)
+    assert lw["source"] == "manual"  # the human fact is preserved
+    assert lw["ts"] == "2026-07-19T18:04:00Z"  # ...but the earlier soil time is adopted
+
+
+def test_a_glug_far_after_the_last_detection_is_a_new_watering() -> None:
+    # #1229: if the detector's last re-water was days ago (a plant it didn't catch this
+    # time, e.g. the Bromeliad), a glug now is a NEW watering — its own time stands.
+    from datetime import datetime, timezone
+
+    from card_payload import resolve_last_watered
+
+    now = datetime(2026, 7, 19, 18, 30, tzinfo=timezone.utc)
+    old_detected = {"ts": "2026-07-16T18:00:00Z", "source": "detected"}  # 3 days ago
+    glug = {"plant_id": "p07", "source": "manual", "ts": "2026-07-19T18:22:00Z"}  # now
+    lw = resolve_last_watered(old_detected, glug, now)
+    assert lw["source"] == "manual"
+    assert lw["ts"] == "2026-07-19T18:22:00Z"  # the glug's OWN time — a new event
+
+
 def test_manual_or_detected_alone_and_neither_are_all_graceful() -> None:
     from datetime import datetime, timezone
 

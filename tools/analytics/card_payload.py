@@ -45,6 +45,12 @@ _VOICE = _COMPONENTS / "voice-strings.json"
 # ("~6 days ago") — the maintainer's #1 watering cue — but the voice stays soil-state.
 WATERING_RECENT_H = 48.0
 
+# #1229: a glug and a detected re-water this close in time are ONE watering seen two
+# ways (soil-change + button-press), not two competing events. A same-session catch-up
+# glug lands minutes-to-hours after the soil already moved; beyond a same-day window
+# they are genuinely different waterings. A heuristic — the maintainer can tune it.
+SAME_EVENT_WINDOW_H = 12.0
+
 # Two classes of watering claim in a byMood line (both are soil-state-independent, so
 # they must reconcile with the last-watered truth, not just the band):
 #
@@ -157,15 +163,27 @@ def last_watered_from_manual(event: dict | None, now: datetime) -> dict | None:
 def resolve_last_watered(
     rewater: dict | None, manual: dict | None, now: datetime
 ) -> dict | None:
-    """#1137: reconcile the DETECTED re-water (a heuristic guess) with a LOGGED manual
-    watering (operator ground truth). A logged event is authoritative — it wins whenever
-    it is at least as recent as the detection (``<=`` hours-ago, so it also wins a tie).
-    Either may be absent; returns the winner, or None when neither exists."""
+    """#1137/#1229: reconcile the DETECTED re-water (a soil-change — an accurate TIME)
+    with a LOGGED manual watering (the operator's ground-truth FACT).
+
+    - **Same watering, two clocks (#1229):** when both fire within
+      ``SAME_EVENT_WINDOW_H`` they are ONE event — keep the human FACT (``source`` stays
+      ``manual``) but adopt the **earlier** timestamp, the one closest to the physical
+      watering. The detector reads the soil a few minutes after; a catch-up glug records
+      a button-press that can lag. This stops a late glug from stamping a plant "watered
+      now" when the soil shows it was watered 20 minutes ago.
+    - **Different waterings** (far apart — e.g. a glug for a plant the detector never
+      caught): the more-recent event wins, the manual keeping its tie-break authority.
+    - Either absent: return whichever exists, or None."""
     detected = last_watered_from_rewater(rewater, now)
     logged = last_watered_from_manual(manual, now)
-    if logged and detected:
-        return logged if logged["hours_ago"] <= detected["hours_ago"] else detected
-    return logged or detected
+    if not (logged and detected):
+        return logged or detected
+    if abs(logged["hours_ago"] - detected["hours_ago"]) <= SAME_EVENT_WINDOW_H:
+        # one watering — human fact + the earlier (soil-accurate) time
+        earlier = detected if detected["hours_ago"] >= logged["hours_ago"] else logged
+        return {**earlier, "source": "manual"}
+    return logged if logged["hours_ago"] <= detected["hours_ago"] else detected
 
 
 def _exception(state: str) -> dict:
