@@ -148,13 +148,13 @@ RANGE_HOURS: dict[str, float | None] = {
     "all": None,
 }
 
-# firmware band -> (Sprout UI band name, token color). The mood word is NOT
-# authored here - it is read 1:1 from the design system's single source of truth,
-# mood-band-map.json (see MOOD_BY_BAND below), per the card-chip ruling (#638).
-# Binding the chip to the map is what stops the vocabulary drifting toward drama
-# again (the #596 finding: submerged/overwatered/air-dry read Drowning/Soggy/
-# Critical instead of the map's soaked/refreshed/faint).
-BAND_UI: dict[str, tuple[str, str]] = {
+# #1234 (Design-QA ruling, ADR-0035 one-vocabulary): the Workbench leads with the
+# MOOD word — the mood IS the band name, same word/hue/meaning as the Home — and the
+# legacy uiBand ("Saturated"/"Dry"/…) is retired from render. The instrument keeps a
+# clean three-layer story: mood word (human) · fw level (wire) · raw (instrument).
+# The retired words survive ONLY as the stripped-deploy fallback below (a deploy
+# without the design doc still labels its bands rather than crashing).
+_LEGACY_BAND_UI: dict[str, tuple[str, str]] = {
     "submerged": ("Saturated", "#0E7A86"),
     "overwatered": ("Wet", "#17B6C4"),
     "well watered": ("Moist", "#34A853"),
@@ -183,6 +183,17 @@ def _load_mood_map() -> dict[str, str]:
 
 
 MOOD_BY_BAND: dict[str, str] = _load_mood_map()
+
+# The rendered band word = the capitalized mood, DERIVED from the map (never a second
+# authored copy — #638); hues stay the band ramp (the color-roles charter). A fw level
+# missing from the map keeps its legacy word (honest fallback, never invented).
+BAND_UI: dict[str, tuple[str, str]] = {
+    fw: (
+        MOOD_BY_BAND[fw].capitalize() if MOOD_BY_BAND.get(fw) else legacy_word,
+        color,
+    )
+    for fw, (legacy_word, color) in _LEGACY_BAND_UI.items()
+}
 
 
 # #722: header orientation line, from the voice pool (never hard-coded). Load-once,

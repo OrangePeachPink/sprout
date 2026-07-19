@@ -965,7 +965,7 @@ function cardFor(s){
     c.classList.add('stalecard');
     c.appendChild(el('div','stalestamp small muted', `last seen ${fmtAge(s.age_s!=null?s.age_s:0)} — not the live reading`));
   }
-  const pill = el('span','pill', `${s.band_ui}${s.mood ? ` <span style="opacity:.8">· ${s.mood}</span>` : ''}`);
+  const pill = el('span','pill', `${s.band_ui}`);  // #1234: the mood word IS the band word
   pill.style.background = s.band_color;
   const pwrap = el('div'); pwrap.appendChild(pill);
   // #658: on an unassigned card, ride the instrument's own band beside the "No
@@ -1601,7 +1601,7 @@ function renderDetail(sid){
   const dh = el('div','dhead');
   dh.style.borderLeft = `5px solid ${s.color}`; dh.style.paddingLeft = '14px';
   dh.appendChild(el('div', null, `<div class="raw">${fmt(s.raw_last)}<span class="rawu"> raw</span></div>`));
-  const pill = el('span','pill', `${s.band_ui}${s.mood ? ` · ${s.mood}` : ''}`); pill.style.background = s.band_color;
+  const pill = el('span','pill', `${s.band_ui}`); pill.style.background = s.band_color;  // #1234 one vocabulary
   const meta = el('div'); meta.appendChild(pill);
   meta.appendChild(el('div','small muted', `fw band <span class="mono">${s.band_fw}</span> · in band ${fmtHours(f.band_now_hours)} · n=${fmt(s.n)}`));
   dh.appendChild(meta);
