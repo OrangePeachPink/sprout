@@ -31,7 +31,7 @@ and quality posture carry over.
 
 Weather and computed solar geometry are **not** rows in the device CSV. They are a **separate observation
 stream**, stored apart from `logs/`, and **joined** to soil readings at analysis time on **timestamp (UTC)
-and location** — never merged into the raw telemetry. The soil raw stays the immutable source of truth
+and location** — never merged into the raw telemetry. The soil raw stays the immutable canonical source
 (ADR-0006 §1); environmental context is an overlay layer that can be re-derived or re-fetched without
 touching it. Each environmental observation carries the research-doctrine fields: **location + CRS,
 timestamp UTC, source id, raw value, processed value, unit, confidence/quality, lineage, and the
@@ -86,11 +86,11 @@ trained model ships by default.
 
 ## Consequences
 
-- Soil raw stays the immutable source of truth; environmental context is a re-derivable overlay that can
+- Soil raw stays the immutable canonical source; environmental context is a re-derivable overlay that can
   never pollute the baseline.
 - The home location cannot leak: it is gitignored config by construction, and committed artifacts are
   coarsened — the public-ready posture holds.
-- Weather is honestly classed (derived/model, cached, traceable), so a chart's context can always be traced
+- Weather is plainly classed (derived/model, cached, traceable), so a chart's context can always be traced
   to the exact response behind it.
 - The on-device tier has a clear, dual-purpose justification (calibration *and* context), so it is not
   hardware-for-its-own-sake.
@@ -103,6 +103,6 @@ trained model ships by default.
 - The H1/H2 predicted-vs-actual loop shows a weather-conditioned predictor beats the classical baseline →
   a model is earned; record it, its provenance, and its evaluation (ADR-0006 §7).
 - External-context volume outgrows cached-JSON re-parse → fold weather into the DuckDB/parquet derived tier
-  (ADR-0006 storage ladder), still re-derivable and never the source of truth.
+  (ADR-0006 storage ladder), still re-derivable and never the canonical source.
 - A second site/rig is added → the location config generalizes to per-rig, and the join key carries the
   rig/location id.

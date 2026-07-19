@@ -1,8 +1,8 @@
 # Contributing to Sprout
 
-Welcome — glad you're here. Sprout is a small, honest project with one clean path from idea to merge, and this
+Welcome — glad you're here. Sprout is a small, friendly project with one clean path from idea to merge, and this
 guide walks it in about five minutes. However you've arrived — fixing a typo, wiring up a pump, or just curious —
-there's a place for you. We keep it calm, plain, and kind: the watering's honest, the board's clean, and there's
+there's a place for you. We keep it calm, plain, and kind: the plant speaks plainly, the board's clean, and there's
 one path now. **Tend well.**
 
 Sprout is built with AI assistance, and AI-assisted contributions are as welcome as hand-written ones — use

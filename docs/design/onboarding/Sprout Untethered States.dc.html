@@ -167,9 +167,9 @@
     </div>
   </div>
 
-  <!-- ================= HONESTY & SEAMS ================= -->
-  <div data-screen-label="Honesty and seams" style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:18px 20px; display:flex; flex-direction:column; gap:12px;">
-    <div style="display:flex; align-items:baseline; gap:10px;"><span style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">Honesty & seams — build notes</span><span style="font-size:11.5px; color:var(--muted);">what changed vs the exploration, and where each fact comes from</span></div>
+  <!-- ================= STATES & SEAMS ================= -->
+  <div data-screen-label="States and seams" style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--e1); padding:18px 20px; display:flex; flex-direction:column; gap:12px;">
+    <div style="display:flex; align-items:baseline; gap:10px;"><span style="font-family:var(--font-display); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);">States & seams — build notes</span><span style="font-size:11.5px; color:var(--muted);">what changed vs the exploration, and where each fact comes from</span></div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px 22px;">
       <sc-for list="{{ seamNotes }}" as="nt" hint-placeholder-count="6">
         <div style="display:flex; gap:10px; align-items:flex-start; border-bottom:1px dotted var(--border); padding-bottom:9px;">
@@ -329,12 +329,12 @@ class Component extends DCLogic {
       { flag:'SATURATED', color:'var(--st-fault)', when:'ADC railed (≤5 / ≥4090)', treatment:'“railed” in fault red. A pegged pin is a wiring fact, not a moisture reading.' },
     ];
 
-    // ---- honesty & seams ----
+    // ---- states & seams ----
     const seamNotes = [
-      { tag:'DROPPED', color:'var(--st-fault)', text:'The exploration\u2019s “INDEX 58” donut. GET / serves level + raw + quality — no calibrated index exists, so none is drawn. Raw + band = truth.' },
+      { tag:'DROPPED', color:'var(--st-fault)', text:'The exploration\u2019s “INDEX 58” donut. GET / serves level + raw + quality — no calibrated index exists, so none is drawn. Raw + band are the reading.' },
       { tag:'DROPPED', color:'var(--st-fault)', text:'Plant names on the device surface. The payload has no names — the glance is channel-first (ch0…ch3); friendly names join host-side where plants.env lives (#377).' },
-      { tag:'HONEST', color:'var(--leaf)', text:'“Last heard” is the viewer\u2019s clock. The device owns only uptime_ms today (time: uptime · #21); the time-source chip is drawn for ntp / rtc / uptime so NTP lands with no redesign (schema v2 §11.1).' },
-      { tag:'HONEST', color:'var(--leaf)', text:'Sync progress is the store\u2019s claim, not the device\u2019s — GET / reports now, not history. The bar and “held n” arrive with store-and-forward (#276/#277/#278); the slot is designed, transport-agnostic.' },
+      { tag:'STATE', color:'var(--leaf)', text:'“Last heard” is the viewer\u2019s clock. The device owns only uptime_ms today (time: uptime · #21); the time-source chip is drawn for ntp / rtc / uptime so NTP lands with no redesign (schema v2 §11.1).' },
+      { tag:'STATE', color:'var(--leaf)', text:'Sync progress is the store\u2019s claim, not the device\u2019s — GET / reports now, not history. The bar and “held n” arrive with store-and-forward (#276/#277/#278); the slot is designed, transport-agnostic.' },
       { tag:'VERBATIM', color:'var(--st-predicted)', text:'Band words are moisture_level_name() exactly (air-dry … submerged); quality is the S4 enum exactly (OK / SUSPECT / NO_SIGNAL / SATURATED); wifi= is wifi_net_state_name() exactly.' },
       { tag:'READ-ONLY', color:'var(--st-predicted)', text:'#532 is status-only — no auth, LAN-local, nothing actuates over HTTP. So this surface draws zero controls: a glance you can trust, not a lever you can pull.' },
     ];

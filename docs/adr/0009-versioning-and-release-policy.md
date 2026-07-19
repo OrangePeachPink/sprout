@@ -42,7 +42,7 @@ solid, per the failure mode above.)*
 - **Default to PATCH. Don't spin the MINOR. Don't drift toward `1.0`** — the version reflects real
   progress, not activity.
 
-### 3. Per-component honesty
+### 3. Per-component accuracy
 
 Because one number covers all parts, the **release notes / CHANGELOG must state what changed per
 component**, so "v0.8.0" is meaningful even though a component may be unchanged from the prior release.
@@ -77,7 +77,7 @@ fixes still ride a PATCH — while giving the roadmap a predictable version line
 deliberate Wave-4 public declaration (§2), never reached by counting.
 
 **Milestones are the spine.** A GitHub **milestone = a version** (`v0.7.1`, `v0.8.0`, …) — the single
-source of truth for "what ships when" (native progress bar + release-note source). The project board's
+canonical source for "what ships when" (native progress bar + release-note source). The project board's
 **Wave** field is the coarse roadmap lens; the **milestone** is authoritative for a build's contents.
 
 ### 6. Release criteria — a release is not done until its notes exist
@@ -100,7 +100,7 @@ release notes (git history is its record).
 belongs to the README, the docs, and the app). Approving a release's notes means checking these five, not
 exhaustiveness:
 
-1. **Honest** — every claim true; no overstatement (never "complete / validated / compliant" unless
+1. **Accurate** — every claim true; no overstatement (never "complete / validated / compliant" unless
    verified); known limitations disclosed.
 2. **At altitude** — a ~30-second skim conveys *what this version delivers and what it doesn't*, not a
    commit-by-commit history.
@@ -114,7 +114,7 @@ exhaustiveness:
 
 - One version line is simple and standard; the CHANGELOG carries the per-component detail the single
   number can't.
-- The bump discipline keeps the version **honest and slow** — small fixes don't inflate it, and `1.0`
+- The bump discipline keeps the version **accurate and slow** — small fixes don't inflate it, and `1.0`
   stays a deliberate milestone rather than an accident of counting.
 - Every lane bumps the same way; releases read truthfully to an outside contributor.
 

@@ -10,7 +10,7 @@ Proposed 2026-07-01 → Accepted.*
 **Owner:** Architecture (Trellis) — the provenance model; Data owns the `config_id` / header / storage
 implementation, Firmware the emit, Sage the setting *values*.
 **Lane:** architecture (cross-lane: Data · Firmware · Sage)
-**Extends:** [ADR-0006](0006-data-architecture.md) (honest data)
+**Extends:** [ADR-0006](0006-data-architecture.md) (raw-first data)
 **Relates:** #416 (RFC) · #452 (inline AS7263 slice) · #295 (cal bounds in header) · #300 (schema v2
 provenance) · [ADR-0019](0019-capability-and-sensor-matrix.md) (sensor profile) · #345 (env sensors)
 
@@ -26,7 +26,7 @@ mode, read cadences, and the classifier's calibration bounds. A reading is only 
 Sage's 2026-06-30 skylight pass made this concrete: the AS7263 **railed at `gain=64`** (`51201/65535` on
 `nir_680` ×165 rows, `nir_860` ×67) — **silent saturation**, the peak lost with no after-the-fact way to know.
 The tempting fix — auto-range the gain — is **rejected**: it would silently make session A's readings
-non-comparable to session B's, which is the same class of dishonesty as emitting a fake moisture %. #452 already
+non-comparable to session B's, which is the same class of error as emitting an invented moisture %. #452 already
 built the ratified response for the AS7263 (`gain=16`, held fixed, surfaced in the header). This ADR generalizes
 that into a **provenance model + a doctrine** so every reading-shaping knob is handled the same way.
 
@@ -36,8 +36,8 @@ that into a **provenance model + a doctrine** so every reading-shaping knob is h
 
 Every reading-shaping setting is **dialed in once and held fixed**. It changes **only for a deliberate,
 logged data need** — and when it does, the data carries the new setting so comparability stays explicit.
-**No silent auto-adjustment, ever.** This joins ADR-0006's honest-data family ("gaps are surfaced, not
-smoothed"; raw is truth): a setting that quietly moves is a truth-chain break.
+**No silent auto-adjustment, ever.** This joins ADR-0006's raw-first data family ("gaps are surfaced, not
+smoothed"; raw is the reading): a setting that quietly moves is a reading-chain break.
 
 ### 2. Two-surface provenance (the hybrid)
 

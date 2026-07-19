@@ -7,8 +7,13 @@ The tactical, paste-ready detail behind the PRD's crosslink, metadata, and index
 to epic sub-issues. **Tier 1 is the ship-early item** — cheap, approved, independent of the hub design.
 
 **Canonical author name = "Veronica Hogue"** everywhere it's an authorship node. `url: vkhogue.com` is the
-strong identity key; the name string is the assist. Copy pivot note: retire competitive-honesty phrasing
-("never a fake %", "refuses to lie") from OG/description strings; **identity nodes are unaffected.**
+strong identity key; the name string is the assist. Copy pivot note: keep OG/description strings voice-led
+(the plant's character), not virtue claims; **identity nodes are unaffected.**
+
+**Audience anchor for all description / keyword copy:** write to the *plant/data overlap* — "plant people
+who love data, and data people who love plants" (grill ruling #1039; see the PRD's **Audience** note). OG
+descriptions and `keywords` lead with the instrument (readings, the calibrated band, the mood wall) *and*
+the character — never a generic gardening pitch.
 
 ---
 
@@ -72,8 +77,8 @@ support destination (Ko-fi / GitHub Sponsors), then point the Sponsor button at 
 
 ## Tier 3 — Pages head metadata + identity graph · FD-2
 
-Goes in the front-door `<head>` (needs FD-1 to exist). OG strings → DesignQA voice-check; retire the
-honesty-hook phrasing.
+Goes in the front-door `<head>` (needs FD-1 to exist). OG strings → DesignQA voice-check; keep them
+voice-led, not a virtue claim.
 
 **3A. Share cards** — `title` / `description` / `canonical` / `og:*` / `twitter:card`; `og:image` a stable
 1200×630 raster (Social Kit cover); favicon (Social Kit avatar).

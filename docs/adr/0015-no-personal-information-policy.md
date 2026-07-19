@@ -45,7 +45,7 @@ this repository.** Specifically:
 
 ## Consequences
 
-- Public artifacts become safe to share; the honesty / provenance posture extends cleanly to privacy.
+- Public artifacts become safe to share; the integrity / provenance posture extends cleanly to privacy.
 - Small ongoing cost: sample / fixture generation must use synthetic data, and the scrub check runs in CI / pre-commit.
 - Existing leaks are remediated by `#166` (sample), `#168` (BACKLOG), `#169` (names), `#172`
   (archive purge), plus the history scrub in `#173`.
