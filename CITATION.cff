@@ -2,9 +2,10 @@ cff-version: 1.2.0
 message: "If you use or reference Sprout, please cite it."
 title: "Sprout"
 abstract: >-
-  Sprout is a plant that tells you how it's doing, in its own words: a local-first ESP32
-  monitor and small-pump waterer that reads capacitive soil moisture into calibrated bands,
-  paired with host tooling and a zero-friction contributor setup.
+  Sprout is an open-source plant-care assistant that lets each plant tell you how it's
+  doing, in its own words: a local-first ESP32 soil-moisture monitor and small-pump waterer
+  reading capacitive sensors into calibrated bands, paired with host tooling and a
+  zero-friction contributor setup.
 type: software
 authors:
   - given-names: "Veronica"
@@ -12,6 +13,7 @@ authors:
     orcid: "https://orcid.org/0009-0004-2695-6796"
     website: "https://vkhogue.com"
     alias: "OrangePeachPink"
+license: MIT
 repository-code: "https://github.com/OrangePeachPink/sprout"
 url: "https://github.com/OrangePeachPink/sprout"
 version: "0.7.2"
