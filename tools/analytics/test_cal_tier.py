@@ -137,6 +137,18 @@ def test_template_renders_the_three_tiers() -> None:
     assert "cal · bench-verified" not in tpl
 
 
+def test_workbench_never_claims_the_ladder_is_proposed() -> None:
+    # #1233: the "INTERIOR BANDS PROPOSED" badge was a provisional-era artifact. The
+    # brackets ratified (#995 -> #1218/#1220) — the Workbench must not assert a state
+    # that stopped being true at the release.
+    tpl = (Path(__file__).resolve().parent / "dashboard_template.html").read_text(
+        encoding="utf-8"
+    )
+    assert "interior bands proposed" not in tpl.lower()
+    assert "un-reconciled" not in tpl  # the stale caption sentence went with it
+    assert "ratified seven-in-soil ladder" in tpl  # the truthful replacement
+
+
 if __name__ == "__main__":
     import tempfile
 
