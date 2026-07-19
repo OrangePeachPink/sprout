@@ -46,9 +46,24 @@ peripheral for a core workflow.
 ### 2. Absence is a first-class path — never an error or a nag
 
 For every feature that *uses* a peripheral, the **without-it path is first-class**: either a real sensorless
-equivalent, or an calm-empty state (ADR-0006) — never an error, a broken view, a blocking wall, or a
+equivalent, or a calm-empty state (ADR-0006) — never an error, a broken view, a blocking wall, or a
 guilt-tripping "add hardware to continue." An absent capability is *information* ("no display configured";
 "tank level: estimated — add a sensor for measured"), presented as an **enhancement invitation**, not a defect.
+
+**The three absence patterns — the canonical vocabulary (grill-ruled, #1039 docket 2, 2026-07-18).** One family
+— *how Sprout handles legitimate nothing* — with three distinct, **internal-only** pattern names, because they
+fork the builder's decision (omit vs render-empty vs reason-carrying are three different builds):
+
+- **present-or-silent** — an optional line or field renders real information or does not render at all. No
+  placeholders, no `N/A`.
+- **calm-empty** — a surface that *must* exist shows a warm designed empty state ("— not seen yet"; the faint
+  no-photo leaf). **Retires "honest-empty"** (same pattern, pre-canon name; the #1099 wash renamed the term).
+- **first-class-absent** — absence that is *itself* information carries **a reason, not a data-pretending
+  null** (e.g. *"not probed · by design — pot too small for a sensor"*).
+
+The names **never render to users** — user-facing copy stays governed by voice; the names are how the lanes and
+the gates talk. **Gates certify against the three by name.** (The maintainer's own simplification challenge —
+*"why isn't it just 'empty'?"* — is answered by that fork: one word can't say which of the three builds applies.)
 
 ### 3. Where a sensorless equivalent exists, it is the *primary* path; the sensor is the enhancement
 
