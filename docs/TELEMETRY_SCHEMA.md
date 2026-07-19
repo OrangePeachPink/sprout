@@ -147,8 +147,10 @@ shared enum stays small: `fault=stuck_wet` (short / water-contamination) or `fau
 | condition | flag | source |
 | --- | --- | --- |
 | raw **strictly below** the board physical wet rail (impossibly wet: short / contamination / dead ADC) | `SENSOR_FAULT` | **v4 #670** — firmware self-declares from the per-board `wet_rail_raw` (ADR-0019; classic 900); reason in payload `fault=` |
+| raw **strictly above** the board air-dry rail (impossibly dry: open circuit / disconnected lead) | `SENSOR_FAULT` | **#1152** — the symmetric mirror of the sub-wet-rail fault, against the per-board air anchor; reason payload `fault=open_adc` |
 | healthy reading, spread within bound | `OK` | normal |
 | sample spread > `spread_warn_raw` (noisy/contact) | `SUSPECT` | `health_warn` |
+| single-step Δ faster than physically plausible (per the 30 s cadence + smoothing) | `SUSPECT` | **#1152** — kinematics; the reading may be real but the jump is not trustable; reason payload `fault=rate_spike` |
 | floating/disconnected probe (incoherent, ~4095 spread) | `NO_SIGNAL` | classifier health |
 | ADC railed **high** (raw pegged at ~4095, dry rail) | `SATURATED` | raw clamp check |
 | *(reserved, unused by soil)* | `WARMING`, `BASELINE_LEARNING`, `ESTIMATED`, `ERROR` | — |
@@ -224,7 +226,7 @@ Host-appended keys (additive, never touching device keys): `host_monotonic_ms` (
 | key | on | meaning |
 | --- | --- | --- |
 | `config_id=<8hex>` | every row (soil + env) | #576 / ADR-0025 — firmware-computed fingerprint of the active config snapshot (ADC/sampling/cal/cadence). Same id ⇒ rows are directly comparable; a change is a comparability boundary + the no-auto-adjust alarm. Header-authoritative (`# config_id=` line); **`parse_v1` reads it, never re-derives.** |
-| `fault=stuck_wet｜dead_adc` | soil, only when `quality_flag=SENSOR_FAULT` | #670 — the specific fault reason (see §4). |
+| `fault=stuck_wet｜dead_adc｜open_adc｜rate_spike` | soil, on `SENSOR_FAULT` (physics: `stuck_wet`/`dead_adc`/`open_adc`) or `SUSPECT` (kinematics: `rate_spike`) | #670/#1152 — the specific non-OK reason (see §4). Opaque per #739; **additive → no `schema_version` bump** (a new reason token, never a new enum value). **No placement tokens** (`probe_air`/`probe_water`): placement is a band-layer fact (ADR-0035 air-dry/cup-wet), never a `quality_flag` reason (#1152 Placement A). |
 | `rssi=<dBm>` | soil, **connected-only** | #669 — WiFi signal strength (a negative int). **Honest-absent** (ADR-0028): a serial/tethered or unassociated row **omits the key entirely** — never a fake `0`. Only the dBm value; **never SSID/BSSID/MAC** (privacy fence). |
 | `uptime_s=<s>` | every soil row | #669 — seconds since boot (board diagnostic; transport-independent). |
 | `heap=<bytes>` | every soil row | #669 — free heap bytes (board diagnostic). |
@@ -509,12 +511,23 @@ sensor pins, the **live** per-channel cal bounds, and (env build only) the I²C 
 - `uptime_s`, `heap` — seconds since boot and free heap, on **every** soil row (transport-independent).
 - **Cadence:** every row (the implementers' call, #669 mandates none) — cheap vs. the 30 s soil cadence.
 
-### 13.3 `SENSOR_FAULT` + `fault=` — physically-impossible readings (#670)
+### 13.3 `SENSOR_FAULT` + `fault=` — physically-impossible readings (#670, #1152)
 
-A capacitive probe **cannot** read below its physical wet rail; a sub-rail raw is a fault, not moisture.
-See §4 for the enum value + the mapping table. Firmware self-declares from the **per-board `wet_rail_raw`**
-(ADR-0019 descriptor; classic 900, below the #248 saturated anchors; unverified boards carry the classic
-placeholder until #443). The coarse `SENSOR_FAULT` token rides `quality_flag`; the specific reason
-(`stuck_wet` | `dead_adc`) rides `payload` `fault=`. **Raw is preserved (ADR-0006).** Firmware's wire flag =
-the physical-impossibility call; the host-side derived *remediation* gate (what to do about it) is separate,
-lives at the parse boundary, and tunes without a reflash (the #652 two-thresholds-two-homes split).
+A capacitive probe **cannot** read below its physical wet rail, and **cannot** read above its air-dry rail —
+a raw past **either** rail is a fault, not moisture. See §4 for the enum value + the mapping table. Firmware
+self-declares from the **per-board `wet_rail_raw`** (ADR-0019 descriptor; classic 900, below the #248
+saturated anchors; unverified boards carry the classic placeholder until #443) and the per-board air anchor.
+The coarse `SENSOR_FAULT` token rides `quality_flag`; the specific reason (`stuck_wet` | `dead_adc` |
+`open_adc`) rides `payload` `fault=` — `open_adc` (#1152) is the symmetric mirror of the sub-wet-rail fault:
+an impossibly-dry raw above the air anchor, the "can't even read this, the lead is open" class. **Raw is
+preserved (ADR-0006).** Firmware's wire flag = the physical-impossibility call; the host-side derived
+*remediation* gate (what to do about it) is separate, lives at the parse boundary, and tunes without a
+reflash (the #652 two-thresholds-two-homes split).
+
+**The kinematics sibling (#1152).** A `SUSPECT` reading whose single-step Δ is faster than physically
+plausible (per the 30 s cadence + smoothing) carries `fault=rate_spike`. Unlike the physics faults it is **not** a
+claim the value is impossible — only that the *jump* is untrustable — so it rides `SUSPECT`, not
+`SENSOR_FAULT`. The `fault=` key therefore carries the specific non-OK reason for both classes; the enum
+stays frozen (#739). **Placement stays off this layer (#1152 Placement A):** "the probe is in air / in a
+calibration cup" is a *band* fact — the ADR-0035 air-dry / cup-wet diagnostic bands — never a `quality_flag`
+reason, so there is no `probe_air` / `probe_water` token here, by rule.
