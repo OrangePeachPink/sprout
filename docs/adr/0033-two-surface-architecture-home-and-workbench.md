@@ -1,9 +1,10 @@
 # ADR-0033 — Home + Classic Sprout: a converging two-surface architecture (one designed product)
 
-**Status:** Accepted — *amended and ratified by the #1039 grill (Round 1, 2026-07-18); Trellis folded the rulings
-from the Proposed draft (2026-07-12, #1049). V1 — lands via the maintainer; **#1044 closes on this.** Written to
-the 2026-07-18 session canon (#1099): **the plant speaks for itself**; canonical formula `raw + band = the
-reading`.*
+**Status:** Accepted — *amended and ratified by the #1039 grill (2026-07-18); Trellis folded the rulings from the
+Proposed draft (2026-07-12, #1049) — Round 1 (the two surfaces) plus the back-half rulings: the band vocabulary,
+the colour-roles two-register lock, detected-rewater-shown-now, the glanceability doctrine, and the ledger = a
+board view. V1 — lands via the maintainer; **#1044 closes on this.** Written to the 2026-07-18 session canon
+(#1099): **the plant speaks for itself**; canonical formula `raw + band = the reading`.*
 **Date:** 2026-07-12 (grill-amended 2026-07-18)
 **Owner:** Trellis (architecture) — the surface structure + the convergence model. Design-QA builds the surfaces
 (#875); Data provides the seams (no firmware change, #875/INCORPORATION.md).
@@ -13,7 +14,9 @@ reading`.*
 **Relates:** #1044 (this) · #875 (the Voice UI epic) · #1039 (the grill that ratified it) · #1099 (the canon wash)
 · #1018 (shell-first serving) · #1041 (the v0.7.3 plan) · [ADR-0004](0004-design-system.md) /
 [ADR-0006](0006-data-architecture.md) / [ADR-0007](0007-brand-guidelines.md) (the data model + the
-character↔instrument boundary) · [ADR-0028](0028-optional-peripherals-doctrine.md) (absence is first-class)
+character↔instrument boundary) · [ADR-0028](0028-optional-peripherals-doctrine.md) (absence is first-class) ·
+ADR-0035 (the band model + exceptions taxonomy the card's state speaks — companion ADR, filed separately as
+Proposed) · #1109 (the colour-roles charter) · #1133 (inter-watering trend segments)
 
 ---
 
@@ -41,19 +44,35 @@ Sprout's voice throughout.
   - **Identity block (the crucial element)** — plant name (or number-as-identity) plus real-world disambiguators:
     pot type / colour / descriptor, a **location chip** (left/right windowsill; others: kitchen / bedroom /
     office…), and an **optional plant photo.** A card that says *"plant #7 is thirsty"* with no way to find plant
-    #7 on a shelf of 24 fails the product.
+    #7 on a shelf of 24 fails the product. **Identity travels by the identity block, never by colour** (the Q2
+    charter's two-register lock, #1109): state owns the vivid register; identity materials (photo, pot) are a
+    *muted* register — **one thumbnail slot, best-available: photo → chosen icon → generic fallback**, and the
+    responsive grid **sizes** the thumbnail (**scale, not a zoom control** — the tile→card→Classic ladder *is* the
+    progressive disclosure). The action flow: **state colour finds the plant that needs you; the identity block
+    confirms which physical plant it is.**
   - **State** — mood (the mood **colour is the card's key frame**, per the Q2 colour-roles charter — the frame is
-    the plant's *current* state, never a fixed identity colour) + the calibrated **band** word + a **first-person
-    line.**
-  - **Water story** — **last watered** (a **detected** watering event — the raw-cliff signature — not merely a
-    logged one) + **next need** (the forecast-boundary helper).
+    the plant's *current* state, never a fixed identity colour) + the calibrated **band** word (one of the **seven
+    in-soil mood bands**, Soaked → Faint — the *one* state vocabulary across dashboard, charter, and mark;
+    ADR-0035) + a **first-person line.** Instrument conditions
+    (probe-in-air, probe-in-water) are **off-ladder exceptions** (ADR-0035), never a mood and never a thirst
+    state — they surface in an exceptions lane and never lead the thirst sort.
+  - **Water story** — **last watered** (a **detected** watering event — the raw-cliff signature), **shown now
+    labelled `source="detected"`** (grill Q2: the detected re-water is the owner's #1 water cue — ship it; the
+    classifier tunes/validates in 0.8.0), plus a one-tap **manual "I just watered this"** (`source="manual"`) as
+    interim ground truth. **Next need** (the forecast-boundary helper) is **volume-gated** — detector-fed drying
+    rates drive next-need times only after enough confirmed events.
   - Raw numbers stay Classic-Sprout-side (§2).
 - **Absence is first-class** (ADR-0028): missing pieces render as graceful absence — the card ships **thin**
-  rather than waiting for full data. Two pieces are not yet live and render as placeholders now: **last-watered**
-  (the detected-watering-event stream builds in 0.8.0 — the classifier family, reading the same substrate as
-  #822 / #25) and **photo** (a new local-only registry field — EXIF-strip on any future export/share path, since
-  photos carry GPS).
+  rather than waiting for full data. **Photo** is a new local-only registry field (EXIF-strip on any future
+  export/share path, since photos carry GPS) and renders **`calm-empty`** (the generic mark) until set; the
+  **detected-watering classifier** hardens in 0.8.0 (reading the same substrate as #822 / #25) but ships its
+  events *now* per the water story above — not as a placeholder.
 - **v0.7.3 Home tracer scope** (grill 1c): the living mark + a greeting + the ruled card grid.
+- **Glanceability is Home's success metric — the 30-second loop** (grill product doctrine, verbatim intent):
+  *glance → decide what needs water → figure out which one → know how much → go, then come back in a day or two.*
+  Every card / grid / chart decision is judged against it. The single-plant hero ships with **at least one
+  per-plant chart** (a histogram minimum, Tufte-esque) — the tagline promises a pulse, so *where we say "pulse,"
+  show pulse.*
 
 ### 2. Classic Sprout is the transitional instrument — a migration architecture, not a second standing surface
 
@@ -115,13 +134,15 @@ The spine. Home is warm and friendly; that is not license to soften or invent.
 - Shell-first serving resolves #1018 structurally and sets the pattern for every future surface.
 - Nothing in Classic Sprout regresses while it exists; it is preserved until each piece is migrated or retired.
 
-## The migration backlog + one open question for the morning grill
+## The migration backlog (ruled: a board view)
 
-Classic Sprout's contents **are** the migration backlog (§2). **Open question for the morning session:** should
-that ledger — the piece-by-piece list of what still needs migrating — live as a **section in this ADR** or as a
-**standing issue / board view**? *Trellis lean: a standing board view* — the backlog is living and changes as
-pieces retire, which a board tracks better than a static ADR section; this ADR records the *architecture* and the
-*convergence commitment*, and points at the ledger wherever it lands. Flagged for the maintainer to rule.
+Classic Sprout's contents **are** the migration backlog (§2). **Ruled by the grill (docket 13): the ledger is a
+native filtered board view over migration-labelled issues** — live work items that close as they land, never a
+stale list — *not* ADR prose. This ADR records the *architecture* and the *convergence commitment* and points at
+that board view. A **slice-to-issues pass** (Workflow, post-grill) decomposes Classic element-by-element
+(trajectory chart, drying-rate table, band history + stats, forecasts, diagnostics, wiring, the histogram wish)
+and maps each to its voiced destination (Home card / hero / Classic-retire). **Investment rule on the record: no
+new feature work lands in Classic** — design the voiced surfaces instead (the #993 / #372 reframe).
 
 ## Rejected / not-chosen
 
