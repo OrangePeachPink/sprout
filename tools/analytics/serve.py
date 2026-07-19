@@ -754,6 +754,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     cards_from_context,
                     load_mood_map,
                     load_voice_pool,
+                    system_cal_state,
                 )
                 from registry_model import load_registry_model
 
@@ -790,6 +791,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         "exceptions": exceptions,
                         "count": len(cards),
                         "exception_count": len(exceptions),
+                        # #1039: cal-provisional is SYSTEM-level (once, on the
+                        # Workbench, with a path-to-clear) — never a per-card chip.
+                        "cal_state": system_cal_state(ctx),
                     }
                 )
             elif parsed.path.startswith("/photo/"):  # #875 Q4: a plant's small avatar

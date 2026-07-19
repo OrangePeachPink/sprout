@@ -235,8 +235,27 @@ def test_asleep_overlay_stills_motion_and_flags_the_night_state() -> None:
     assert c["frame"]["motion"] == "none"  # night stills the mark
 
 
-def test_provisional_cal_is_flagged_for_the_surface() -> None:
-    assert _card(band="Dry", provisional=True)["frame"]["provisional"] is True
+def test_no_per_card_provisional_chip() -> None:
+    # #1039 ruling: cal-provisional is NOT a per-card flag — it's system-level.
+    assert "provisional" not in _card(band="Dry")["frame"]
+
+
+def test_system_cal_state_is_provisional_until_interior_brackets_ratify() -> None:
+    from card_payload import system_cal_state
+
+    # any device reporting provisional cal -> the SYSTEM state is provisional, with a
+    # path-to-clear; the anchors are never labelled provisional.
+    prov = system_cal_state({"devices": [{"device_id": "d", "cal_provisional": True}]})
+    assert prov["provisional"] is True
+    assert prov["anchors"] == "ratified"
+    assert prov["interior_brackets"] == "provisional"
+    assert prov["clears_when"]  # a defined clearing condition (the maintainer's rule)
+    # a fully-ratified fleet clears it entirely
+    settled = system_cal_state(
+        {"devices": [{"device_id": "d", "cal_provisional": False}]}
+    )
+    assert settled["provisional"] is False
+    assert settled["clears_when"] is None
 
 
 # --------------------------------------------------------------------------- #
@@ -297,7 +316,7 @@ def test_cards_from_context_bridges_identity_and_leads_with_thirst() -> None:
     assert cards[1]["identity"]["location"] == "sill"
     assert cards[0]["frame"]["mood"] == "thirsty"
     assert cards[0]["next_need"]["known"] is True  # reachable forecast surfaced
-    assert cards[0]["frame"]["provisional"] is True  # device cal_provisional bridged
+    assert "provisional" not in cards[0]["frame"]  # #1039: no per-card cal chip
     assert cards[2]["frame"]["state"] == "sensorless"  # not-probed trails, alive
 
 
