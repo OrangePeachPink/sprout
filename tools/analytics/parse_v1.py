@@ -95,13 +95,16 @@ BANDS_DRY_TO_WET = list(reversed(BANDS_WET_TO_DRY))
 # (BAND_UI, the band index, #626) at the single parse boundary (ADR-0021), while
 # the raw `payload['level']` stays byte-for-byte untouched.
 _CANON_BAND = {name.lower(): name for name in BANDS_WET_TO_DRY}
-# The #995/#1174-ratified classic in-soil ladder (2026-07-19, ADR-0035) — the host
-# sibling of firmware's MOISTURE_CFG_DEFAULT.boundary, per the #1153 host-mirror
-# contract (#1218). Descending: the 6 interior edges of the 7 in-soil bands
-# (Soaked..Faint). Faint = raw >= [0] (unbounded up), Soaked = raw < [5] (unbounded
-# down); the off-ladder air/water anchors are #1152, not here. Used only when a
+# The ratified classic in-soil ladder — #995/#1174 (2026-07-19, ADR-0035) with the
+# #1236-RATIFIED wet-end re-derive (route B, maintainer production GO): Saturated is a
+# thin at-the-rail band (ceiling 1150 = rail+98), Wet/Moist/Ideal re-spaced, the dry
+# half unchanged. The host sibling of firmware's MOISTURE_CFG_DEFAULT.boundary, per
+# the #1153 host-mirror contract — PAIR-MERGED with Firmware's boundary PR, one motion.
+# Descending: the 6 interior edges of the 7 in-soil bands (Soaked..Faint). Faint =
+# raw >= [0] (unbounded up), Soaked = raw < [5] (unbounded down); the off-ladder
+# air/water anchors live in BOARD_CLASS_ANCHORS below (#1235/#1152). Used only when a
 # segment's provenance header lacks a "cal bounds" line; prefer header bounds always.
-DEFAULT_CAL_BOUNDS = (2293, 2086, 1879, 1673, 1466, 1259)
+DEFAULT_CAL_BOUNDS = (2293, 2086, 1879, 1636, 1393, 1150)
 
 # #1235/#1152 — the per-BOARD-CLASS off-ladder anchors: the measured in-soil envelope
 # rails (#995/#1174 dry-down, medians of the per-channel cal), the host sibling of
