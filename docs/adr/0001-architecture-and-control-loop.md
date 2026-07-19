@@ -12,7 +12,7 @@
 
 Sprout is a window-ledge plant waterer for hardy, non-fussy plants. The real problem it solves is
 **consistency** — these plants do fine with regular water and suffer mainly from being forgotten.
-Guiding values: boring-first, baseline-first, local-first, and "a small thing that works and is honest
+Guiding values: boring-first, baseline-first, local-first, and "a small thing that works and is clear
 about what it doesn't know."
 
 It began as a single-board prototype (the archived v0 record). It has since grown into a multi-part
@@ -21,7 +21,7 @@ system — built across a few focused lanes. **This ADR records the firmware and
 only.** The host telemetry schema, calibration, and data-quality model are a separate, data-owned
 decision (ADR-0006); this record points at that boundary rather than crossing it.
 
-One honesty note up front, because the v0 record reads differently: v0 described pumps, a relay board,
+One note up front, because the v0 record reads differently: v0 described pumps, a relay board,
 and a status display as Phase-1 decisions. The firmware that actually ships today is **read-only** — it
 senses and reports, and **does not actuate.** This ADR is careful to separate what is **built today**
 from what is **designed but not yet wired**, so a new contributor can trust it.

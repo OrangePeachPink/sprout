@@ -11,9 +11,9 @@
  * go further: VS Code + PlatformIO, or GitHub Codespaces. Come meet Sprout
  * Full: you just hand-built its heart — read, calibrate, band, speak.
  *
- * Honest-data, from minute one: this prints the RAW sensor reading + a
- * plain-word band. No fake percentage — a raw number plus where it falls
- * between two spots YOU measured is more honest than a made-up "62%".
+ * Real numbers, from minute one: this prints the RAW sensor reading + a
+ * plain-word band. A raw number, plus where it falls
+ * between the two spots YOU measured, is all you need.
  */
 
 // ===== TUNE ME — this is the whole control panel =====
@@ -27,7 +27,7 @@ const int SAMPLES = 8;            // readings I average each check (smooths the 
 // now live in firmware/include/cal_class_defaults.h (#952) — but those are 12-bit ESP32
 // values at a different ADC reference, so they do NOT transfer to the R4 as-is; your R4
 // numbers are yours to measure. When you graduate to Sprout Full, that file is where a
-// board's honest dry/wet anchors are sourced.)
+// board's dry/wet anchors are sourced.)
 const int DRY_READING = 600;  // what you saw with the probe in dry AIR
 const int WET_READING = 260;  // what you saw with the probe in a CUP OF WATER
 

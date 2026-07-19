@@ -1,6 +1,6 @@
 # 🌱 Sprout — Vocabulary
 
-**This file is the source of truth for what Sprout's words mean.** Use these exact terms in UI copy, code
+**This file is the canonical source for what Sprout's words mean.** Use these exact terms in UI copy, code
 identifiers (where reasonable), issue / PR / ADR prose, commit messages, and any docs or copy you generate.
 The goal is the same alignment we have on brand and voice — but for *concepts*: one word, one meaning, across
 every lane. If two lanes use the same word for different things, or different words for the same thing, fix it
@@ -64,9 +64,9 @@ every lane. If two lanes use the same word for different things, or different wo
   ownerless. A hint, **not** an assignment or commitment — Workflow still triages and gates.
 - **Agent** — a generic AI lane-driver. **NEVER** a human. The maintainer is the human; agents are the lanes.
 
-## Data & honesty (Data)
+## Data & the reading (Data)
 
-- **Honest-data law** *(non-negotiable)* — raw ADC counts + the calibrated **band** are truth; any 0–100
+- **The reading** *(non-negotiable)* — raw ADC counts + the calibrated **band** are the reading; any 0–100
   figure is a **labelled relative index**, **NEVER** real volumetric moisture or a bare "percentage." Mood,
   status color, and watering derive from the **band**, never the index.
 - **Band** — one of the **7** calibrated firmware moisture classes (`air-dry → DRY → needs water → OK →
@@ -111,7 +111,7 @@ every lane. If two lanes use the same word for different things, or different wo
   disagreement honestly (ADR-0022's *surface, don't average* posture), rather than hiding it in one number.
 - **`probe_included_by_sage` / included probe** — the per-row valid-probe flag (Sage owns validity, Data
   consumes it); excluded probes (stuck / air-reference / no-contact) never enter a plant's read.
-- **`derivation_status`** — Sage's honest-completeness typology for a bench plant's arc (`sample_window` ·
+- **`derivation_status`** — Sage's completeness typology for a bench plant's arc (`sample_window` ·
   `…_no_valid_peak` · `measure_only_no_water` · `single_probe` · `…_missing_pull` · `mixed_summary_and_samples`):
   it says what a plant's arc can and can't claim, so a gap stays a gap.
 - **`context_source`** — the provenance tag naming which feed filled a row's `*_context_*` columns (SHT45 /
@@ -180,7 +180,7 @@ every lane. If two lanes use the same word for different things, or different wo
 
 ## Design, brand & voice (Design) — *DX-drafted from BRAND.md / ADR-0007-0008; Design ratifies*
 
-- **Sprout** — the character, **not** a readout. Speaks first-person, calm and honest. **NEVER** write Sprout
+- **Sprout** — the character, **not** a readout. Speaks first-person, calm and warm. **NEVER** write Sprout
   as a dashboard talking *about* a plant — it *is* the plant's voice.
 - **Character beside the instrument** — the layout law: the character (mood, voice) sits *beside* the data,
   **never on top of it**. Data stays legible; personality never obscures a number.
@@ -199,7 +199,7 @@ every lane. If two lanes use the same word for different things, or different wo
 - **Pump / relay** — the DC actuation path (**code-staged**, never powered on the bench yet). DC only —
   **NEVER** mains.
 - **SHT45** — the factory-calibrated ambient temp/RH sensor (real `value`/`unit`; `plants.env`).
-- **AS7263** — the 6-band NIR spectral sensor (`nir_610…nir_860`; `plants.env`, context, not plant-truth).
+- **AS7263** — the 6-band NIR spectral sensor (`nir_610…nir_860`; `plants.env`, context, not plant data).
 - **OLED** — the 1.3" SH1106 I²C status display.
 
 ## Onboarding & developer experience (DX)

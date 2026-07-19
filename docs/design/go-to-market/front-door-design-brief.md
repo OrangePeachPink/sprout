@@ -26,7 +26,7 @@ narrates the whole page in first person**. It is designed and built **to the aim
 that the current release cycle lands, and sequenced to arrive *with* it — never a stopgap that reflects the
 interim dashboard.
 
-## 2. Locked decisions (source of truth)
+## 2. Locked decisions (canonical source)
 
 These were decided in cross-lane review and govern every downstream slice. Do not re-litigate in-issue.
 

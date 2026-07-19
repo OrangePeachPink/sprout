@@ -69,7 +69,7 @@ constexpr const char *SOIL_CHANNEL     = "soil_moisture";    // the measured qua
 // common-cup anchors (4-probe): WET_RAW 900 stays below the saturated anchors (center 978,
 // min probe 926); DRY_RAW 3400 stays above the air-dry anchors (center 3170, max probe
 // 3191), leaving room for very dry winter air. NOTE: value/unit (the moist%) are emitted
-// NULL (#38) - this linear map is reserved, never analysed; truth is raw_value + band.
+// NULL (#38) - this linear map is reserved, never analysed; raw + band is the reading.
 constexpr int SENSOR_WET_RAW = 900;   // raw at/below this would read 100% (reserved)
 constexpr int SENSOR_DRY_RAW = 3400;  // raw at/above this would read 0% (reserved)
 

@@ -30,12 +30,13 @@ Assistant adoption; not revenue. This page is where that funnel begins, and — 
 identity graph can live. It is simultaneously the marketing front door and the canonical search/entity
 anchor.
 
-**Positioning is voice-led, not honesty-led.** The differentiator is *craft and character* — the
-first-person plant voice, the living animated mark, the per-zone mood system, the brand world — none of it
-copyable by dividing a reading by 100. "Honesty" is table-stakes (every sensor gives honest readings) and
-is retired as a competitive hook; *self-candor* ("I'm not sure — check my sensor") is kept, but strictly as
-Sprout's character, never as a claim about anyone else's work. This is a rhetoric decision, not a
-data-model change — bands-primary / %-as-labeled-index stays a valid engineering choice.
+**Positioning is voice-led.** The differentiator is *craft and character* — the first-person plant voice,
+the living animated mark, the per-zone mood system, the brand world — none of it copyable by dividing a
+reading by 100. Reading a sensor accurately is table-stakes, not a differentiator; the app leads with the
+character, never the calibration. Sprout still says "I'm not sure — check my sensor" — but that's the plant
+speaking for itself, part of the character, framed as voice and never as a claim about anyone else. This is
+a rhetoric decision, not a data-model change — bands-primary / %-as-labeled-index stays a valid engineering
+choice.
 
 **Audience — the plant/data overlap.** In the maintainer's words, the followers this project earns are
 *"plant people that love data, and data people that love plants"* — and that overlap is where an OSS
@@ -65,7 +66,7 @@ audience.
 - **Not** the Home Assistant integration — the biggest distribution multiplier, but a separate parallel
   product track that does not gate the front door.
 - **Not** a change to the data model (bands-primary / %-as-labeled-index is unaffected).
-- **Not** the honesty-rhetoric sweep of *professional* surfaces (vkhogue.com/LinkedIn keep the
+- **Not** the brand-voice sweep of *professional* surfaces (vkhogue.com/LinkedIn keep their
   evidence/provenance doctrine — Portfolio's lane).
 
 ## Requirements
@@ -73,8 +74,8 @@ audience.
 - **R1. Front-door hub replaces the stub.** A designed hub at the Pages root implementing the DesignQA
   brief's IA, with a **first-person voice spine** (Sprout narrates; only chrome — follow-along,
   design/brand, cite/about — speaks third person). Sections: hero, "what I do" (mood-as-character, *not* a
-  fake-%-vs-real "scoreboard"), try-me (flash), build-with-me (dev onboarding), how-I-read-soil
-  (honesty deep-dive, linked), where-I'm-growing (runs-today vs. roadmap), follow-along, design & brand,
+  scoreboard), try-me (flash), build-with-me (dev onboarding), how-I-read-soil (the Trust-Your-Sensor
+  deep-dive, linked), where-I'm-growing (runs-today vs. roadmap), follow-along, design & brand,
   cite/about/license. The **living animated Sprout mark is in the hero** — non-negotiable for a first-class
   asset. Hero copy direction is locked (Sprout, first person; "See how I work" / "Flash me onto an ESP32");
   final strings are owned by the DesignQA brief.
@@ -97,8 +98,8 @@ audience.
 - **R7. Repo crosslinks.** README footer / CONTRIBUTORS / CITATION.cff carry the canonical author name +
   a link to vkhogue.com; README links out to the new front door; the front door links back into the repo's
   dev-onboarding. (Tactical detail: `docs/community/crosslink-checklist.md`.)
-- **R8. Honesty deep-dive surface.** Realize `Sprout Trust Your Sensor` as a linked Pages surface — the
-  hardware-defect candor deep-dive the hub's "how I read soil" section points to.
+- **R8. How-I-read-soil deep-dive.** Realize `Sprout Trust Your Sensor` as a linked Pages surface — the
+  hardware-quirk deep-dive the hub's "how I read soil" section points to.
 - **R9. Maker profiles.** Flesh out the live Hackaday.io and Hackster.io placeholder profiles so they're
   build-log-ready and consistent with the identity graph.
 - **R10. Launch-teaser assets staged.** Motion/social assets (Social Kit, motion pieces) authored and
@@ -120,7 +121,7 @@ audience.
 - [ ] `sitemap.xml`, `robots.txt`, `llms.txt`, and the GSC token are served from the site root and the
       property verifies.
 - [ ] The voice spine holds top-to-bottom: Sprout speaks first person; only chrome is third person; no
-      surface moralizes honesty as a headline.
+      surface preaches or leads with a virtue claim.
 
 ## Open questions
 
@@ -142,7 +143,7 @@ Still open:
 
 - `.github/FUNDING.yml` "Sponsor" button — held until a real support destination exists (not Hackaday/
   Hackster, which are follow/showcase, not funding).
-- LinkedIn post templates and the professional-surface honesty review — Portfolio lane, gated on the build.
+- LinkedIn post templates and the professional-surface voice review — Portfolio lane, gated on the build.
 - Home Assistant / ESPHome / MQTT-discovery integration — separate product track.
 - Release-notes-as-indexed-pages discipline — a 1.0-window process note, not part of this build.
 
@@ -161,7 +162,7 @@ decisions stay Workflow's.
 | **FD-2** | Head metadata + OG + JSON-LD identity graph | R3, R4 | DX (Portfolio confirms `sameAs`) | feature / repo-tooling-docs / host |
 | **FD-3** | Indexing — sitemap / robots / llms.txt / GSC token / alt-text register | R5, R6 | DX (Veronica supplies token) | task·chore / repo-tooling-docs / host |
 | **FD-4** | Repo crosslinks (README / CONTRIBUTORS / CITATION ↔ front door) | R7 | DX (DesignQA voice-check) | task·docs / repo-tooling-docs / N/A |
-| **FD-5** | Realize `Trust Your Sensor` as a linked honesty deep-dive Pages surface | R8 | DesignQA render | task·docs / analytics / N/A |
+| **FD-5** | Realize `Trust Your Sensor` as a linked how-I-read-soil deep-dive Pages surface | R8 | DesignQA render | task·docs / analytics / N/A |
 | **FD-6** | Flesh out Hackaday + Hackster maker profiles; build-log ready | R9 | DX / Veronica | task·chore / repo-tooling-docs / N/A |
 | **FD-7** | Stage teaser/motion + Social Kit launch assets (0.9.x) | R10 | DesignQA | task·chore / analytics / N/A |
 

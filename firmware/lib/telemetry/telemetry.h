@@ -67,7 +67,7 @@ typedef struct {
                               rides payload config_id= (never a canonical column);
                               parse_v1 reads it, never re-derives. NULL/"" omits it. */
     /* #669 board diagnostics (payload). rssi is WiFi-only: rssi_present=false on a
-     * serial/tethered row OMITS rssi= entirely - honest-absent, never a fake 0
+     * serial/tethered row OMITS rssi= entirely - absent, never a placeholder 0
      * (ADR-0028). uptime_s/heap ride every row (transport-independent). */
     bool rssi_present; /* true only when associated to WiFi              */
     int rssi_dbm; /* WiFi.RSSI() dBm (negative); ignored when !rssi_present */
@@ -140,7 +140,7 @@ int telemetry_format_soil_row(char *buf, size_t buflen,
  * string fields so temp/RH (value+unit set) and a spectral row (channels in
  * payload) both fit one formatter. Empty string ("") = a NULL column.
  *
- * Contextual telemetry, NOT plant-truth — the placement note belongs in payload.
+ * Contextual telemetry, NOT plant data — the placement note belongs in payload.
  */
 typedef struct {
     const char *record_type; /* "plants.env"                         */
@@ -175,7 +175,7 @@ int telemetry_format_env_row(char *buf, size_t buflen,
  *     confidence=<provisional|calibrated|corroborated> scope=<channel|shared>
  * Space-separated k=v (the `# cfg:` convention, NOT the payload's `;` one);
  * bounds are the DESCENDING (dry>wet) raw ints, moisture_classifier order.
- * `date` is omitted entirely (not an empty key) when NULL/"" - same honest-NULL
+ * `date` is omitted entirely (not an empty key) when NULL/"" - same absent
  * rule as device_timestamp_utc. Returns chars written, or -1 on truncation.
  */
 int telemetry_format_cal_ch(char *buf, size_t buflen, const char *sensor_id,

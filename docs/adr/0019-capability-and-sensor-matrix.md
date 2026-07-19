@@ -51,7 +51,7 @@ sensor without touching core.** Concretely:
 - **Runtime-only detection (no descriptor).** Rejected: some capabilities (channel wiring, storage) can't be
   reliably auto-detected; an explicit descriptor is also the contributor seam. Runtime detection *augments* it.
 - **Commit to resistive now.** Rejected: with no resistive probes to baseline, we'd ship uncalibrated claims.
-  Designed-for + Contributors-Welcome is the honest posture.
+  Designed-for + Contributors-Welcome is the plain posture.
 
 ## Consequences
 

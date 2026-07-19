@@ -161,7 +161,7 @@ shared enum stays small: `fault=stuck_wet` (short / water-contamination) or `fau
 **Plants env mapping (`plants.env`, ratified by Data for #373/#374):**
 
 Onboard ambient context from the optional `esp32dev_env` build (SHT45 temp/RH + AS7263
-NIR). **Raw context, NOT plant-truth** — the sensors sit on the breadboard near the
+NIR). **Raw context, NOT plant data** — the sensors sit on the breadboard near the
 ESP32, so `sensor_position` carries that placement on every row. One row per
 (sensor, channel), tidy/long like soil — never a packed multi-value row.
 
@@ -492,7 +492,7 @@ sensor pins, the **live** per-channel cal bounds, and (env build only) the I²C 
 
 - **Firmware-computed** — several inputs (trim, discard, I²C addrs) are firmware constants the host never
   sees, so only the board can honestly hash them. `parse_v1` **reads** the emitted id; it never re-derives
-  (it may optionally re-hash the visible `# cfg:` fields as a *diagnostic*, never as the source of truth).
+  (it may optionally re-hash the visible `# cfg:` fields as a *diagnostic*, never as the canonical source).
 - **Two surfaces:** header-authoritative `# config_id=<hex>` line + a per-row `payload` `config_id=<hex>`
   ref on every soil **and** env row (a lone row stays self-interpreting — the #155 flatten, a pasted bug
   report, a store-and-forward replay all keep it). Same-`config_id` ⇒ directly comparable; a change ⇒ a
@@ -503,7 +503,7 @@ sensor pins, the **live** per-channel cal bounds, and (env build only) the I²C 
 
 ### 13.2 `rssi` / `uptime_s` / `heap` — board diagnostics (#669)
 
-- `rssi=<dBm>` (negative int) — WiFi signal strength, **connected-only + honest-absent** (ADR-0028): an
+- `rssi=<dBm>` (negative int) — WiFi signal strength, **connected-only + absent** (ADR-0028): an
   unassociated or serial/tethered row **omits** the key, never a fake `0`. **Only the dBm number** — never
   SSID/BSSID/MAC (privacy fence). Answers placement/drift/interference from the log.
 - `uptime_s`, `heap` — seconds since boot and free heap, on **every** soil row (transport-independent).
