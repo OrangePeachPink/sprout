@@ -130,3 +130,33 @@ def test_segment_x_is_null_when_no_rewater_so_the_sparkline_goes_calm_empty() ->
     ]
     ctx = build_context(LogData(readings=rows, segments=[], sources=["s"]))
     assert ctx["trajectory"]["datasets"][0]["segment_x"] is None
+
+
+def test_mask_windows_carry_the_reason_class_for_the_hatch() -> None:
+    # #1247 C3: the render's receipt — excluded windows ship as [{x0, x1, kind}] in
+    # the plot's own x-unit, kind from the taxonomy contract ("measured, but not
+    # counted" — the hatch + faint treatment needs the class, never a code).
+    ctx = build_context(LogData(readings=_sawtooth(), segments=[], sources=["s"]))
+    tj = ctx["trajectory"]["datasets"][0]
+    wins = tj["mask_windows"]
+    assert wins, "the sawtooth's transient+rebound must surface as windows"
+    kinds = {w["kind"] for w in wins}
+    assert kinds <= {"watering-transient", "rebound", "flagged"}
+    assert "watering-transient" in kinds and "rebound" in kinds
+    for w in wins:
+        assert w["x0"] <= w["x1"]
+    xs = [w["x0"] for w in wins]
+    assert xs == sorted(xs)  # time-ordered, ready to draw
+    # the transient window covers the re-water drop (plot index 15's x)
+    drop_x = tj["points"][15]["x"]
+    tw = next(w for w in wins if w["kind"] == "watering-transient")
+    assert tw["x0"] <= drop_x <= tw["x1"]
+
+
+def test_a_quiet_window_serves_no_mask_windows() -> None:
+    # calm-empty: a monotone dry-down hatches nothing (no stale shading, ever).
+    rows = [
+        _r(i * 30, 1500 + i * 20, "OK" if i < 20 else "needs water") for i in range(40)
+    ]
+    ctx = build_context(LogData(readings=rows, segments=[], sources=["s"]))
+    assert ctx["trajectory"]["datasets"][0]["mask_windows"] == []

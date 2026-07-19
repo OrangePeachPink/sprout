@@ -45,7 +45,10 @@ from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
     DEFAULT_CAL_BOUNDS,
     LogData,
 )
-from segment_classifier import valid_for_trend  # noqa: E402  (#1244 C0 trend mask)
+from segment_classifier import (  # noqa: E402  (#1244 trend mask · #1247 windows)
+    classify,
+    valid_for_trend,
+)
 from source_adapter import (  # noqa: E402  (the source-adapter seam, #277)
     TetheredAdapter,
 )
@@ -1083,6 +1086,32 @@ def build_context(
         ]
         _seg_fit_pairs = [pair for pair, ok in _in_seg if ok]
         _mask_dropped = len(_in_seg) - len(_seg_fit_pairs)
+        # #1247 C3: the masked WINDOWS, per reason class, in the same hours-x the
+        # points use — the render's receipt for what the fit refused ("measured,
+        # but not counted", never a gap). Consecutive same-kind invalid rows fold
+        # into one window; every kind here comes from the taxonomy contract.
+        _kinds = classify(plot_settled)
+        _mask_windows: list[dict] = []
+        _mw: tuple | None = None  # (kind, x0, x1)
+        for (h, _y), kind, ok in zip(fit_pairs, _kinds, _valid):
+            if ok:
+                if _mw is not None:
+                    _mask_windows.append(
+                        {"x0": round(_mw[1], 4), "x1": round(_mw[2], 4), "kind": _mw[0]}
+                    )
+                    _mw = None
+            elif _mw is not None and _mw[0] == kind:
+                _mw = (kind, _mw[1], h)
+            else:
+                if _mw is not None:
+                    _mask_windows.append(
+                        {"x0": round(_mw[1], 4), "x1": round(_mw[2], 4), "kind": _mw[0]}
+                    )
+                _mw = (kind, h, h)
+        if _mw is not None:
+            _mask_windows.append(
+                {"x0": round(_mw[1], 4), "x1": round(_mw[2], 4), "kind": _mw[0]}
+            )
         locals_ = [
             r.timestamp_local.strftime("%m-%d %H:%M:%S") if r.timestamp_local else ""
             for r in plot_rs
@@ -1272,6 +1301,9 @@ def build_context(
                 "segment_x": (
                     round(_hours_since(_seg_start, start), 4) if _seg_start else None
                 ),
+                # #1247 C3: excluded-from-trend windows for the hatch render —
+                # [{x0, x1, kind}] in points-x hours; [] when everything counted.
+                "mask_windows": _mask_windows,
                 "env_points": env_points,  # #922 opt-in context overlay (temp/RH)
                 "has_env": has_env,  # #922: offer the toggle only when context exists
             }
