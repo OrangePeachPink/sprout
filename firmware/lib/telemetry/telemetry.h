@@ -62,6 +62,11 @@ typedef struct {
         wet_rail_raw; /* #670: board physical wet rail (BOARD_CAP.wet_rail_raw);
                               a raw below it -> SENSOR_FAULT + payload fault=<reason>.
                               0 disables the check (unknown rail -> never self-flag). */
+    uint16_t
+        air_dry_raw; /* #1152: board air rail (BOARD_CAP.air_dry_raw); a raw
+                              ABOVE it -> SENSOR_FAULT + fault=open_adc, the
+                              symmetric mirror of the sub-wet-rail fault.
+                              0 disables the check. */
     const char
         *config_id; /* #576 / ADR-0025: firmware-computed config fingerprint,
                               rides payload config_id= (never a canonical column);
@@ -108,7 +113,7 @@ uint32_t telemetry_fnv1a32(uint32_t h, const void *data, size_t len);
  * pass BOARD_CAP.wet_rail_raw; native tests pass the classic 900.
  */
 const char *telemetry_quality_flag(const moisture_state_t *st,
-                                   uint16_t wet_rail_raw);
+                                   uint16_t wet_rail_raw, uint16_t air_dry_raw);
 
 /*
  * #670 companion reason for the payload `fault=` key: "dead_adc" when the raw floats
@@ -119,7 +124,8 @@ const char *telemetry_quality_flag(const moisture_state_t *st,
  * (Trellis's #739 binding). Same wet_rail_raw the flag uses.
  */
 #define TELEMETRY_DEAD_ADC_MAX 50
-const char *telemetry_fault_reason(uint16_t raw, uint16_t wet_rail_raw);
+const char *telemetry_fault_reason(const moisture_state_t *st,
+                                   uint16_t wet_rail_raw, uint16_t air_dry_raw);
 
 /*
  * Format one soil telemetry CSV row into buf WITHOUT the trailing "*HH" checksum.

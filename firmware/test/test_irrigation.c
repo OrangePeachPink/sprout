@@ -239,7 +239,7 @@ void t_withheld_diverges_from_quality(void)
 
     /* measurement trust: the CURRENT read is fine */
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
-        "OK", telemetry_quality_flag(&CTRL.mstate[0], 900),
+        "OK", telemetry_quality_flag(&CTRL.mstate[0], 900, 3400),
         "clean read -> quality_flag says OK");
     /* actuation policy: the supervisor is STILL holding this channel */
     TEST_ASSERT_TRUE_MESSAGE(irrig_health_warn(&CTRL, 0),
@@ -250,7 +250,7 @@ void t_withheld_diverges_from_quality(void)
     /* the two axes must be independently reportable - that is the whole fix */
     TEST_ASSERT_TRUE_MESSAGE(
         irrig_health_warn(&CTRL, 0) &&
-            telemetry_quality_flag(&CTRL.mstate[0], 900)[0] == 'O',
+            telemetry_quality_flag(&CTRL.mstate[0], 900, 3400)[0] == 'O',
         "withheld=true WITH quality=OK is reachable -> display needs both");
 }
 
@@ -1413,6 +1413,86 @@ void t_config_id_hash(void)
 /* #670: a raw STRICTLY below the board's physical wet rail is a fault, not moisture
  * and not "saturated" (the old raw<=5 bug that masked the dead s3-1 board). Coarse
  * SENSOR_FAULT in quality_flag; specific reason (dead_adc/stuck_wet) in payload. */
+/* #1152 emit: the two source-detectable exception rows TELEMETRY_SCHEMA S4
+ * ratified - open_adc (physics, the symmetric mirror of the sub-wet-rail fault)
+ * and rate_spike (kinematics). Raw is preserved in every case (ADR-0006); only
+ * the trust flag and the payload reason change. */
+void t_exceptions_open_adc_and_rate_spike(void)
+{
+    moisture_cfg_t cfg = (moisture_cfg_t)MOISTURE_CFG_DEFAULT;
+    moisture_state_t st;
+    const uint16_t rail = 900, air = 3400;
+
+    /* --- physics: impossibly DRY -> open circuit / disconnected lead --------- */
+    moisture_init(&st, &cfg, 1300);
+    st.last_raw = 3600; /* above the air rail, below the peg */
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "SENSOR_FAULT", telemetry_quality_flag(&st, rail, air),
+        "above the air rail = SENSOR_FAULT (mirror of the sub-wet-rail fault)");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("open_adc",
+                                     telemetry_fault_reason(&st, rail, air),
+                                     "impossibly dry -> open_adc reason");
+
+    /* the PEG keeps its own distinct value - open_adc must not swallow it */
+    st.last_raw = 4095;
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "SATURATED", telemetry_quality_flag(&st, rail, air),
+        "pegged high stays SATURATED (clamp), not open_adc");
+
+    /* a genuinely dry-but-plausible soil reading is NOT a fault */
+    st.last_raw = 3000;
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "OK", telemetry_quality_flag(&st, rail, air),
+        "dry but below the air rail = real soil, never flagged");
+    TEST_ASSERT_NULL_MESSAGE(telemetry_fault_reason(&st, rail, air),
+                             "plausible dry raw -> no fault reason");
+
+    /* air==0 disables the check (unknown rail -> never self-flag) */
+    st.last_raw = 3600;
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("OK", telemetry_quality_flag(&st, rail, 0),
+                                     "air rail 0 disables the open_adc check");
+
+    /* --- kinematics: a step soil cannot physically make ---------------------- */
+    moisture_init(&st, &cfg, 1500);
+    moisture_update(&st, &cfg, 1560); /* 60 counts: ordinary drift */
+    TEST_ASSERT_FALSE_MESSAGE(st.rate_spike, "ordinary step is not a spike");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "OK", telemetry_quality_flag(&st, rail, air), "ordinary step stays OK");
+
+    moisture_update(&st, &cfg, 3000); /* +1440 in one step */
+    TEST_ASSERT_TRUE_MESSAGE(st.rate_spike,
+                             "implausible step flags rate_spike");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "SUSPECT", telemetry_quality_flag(&st, rail, air),
+        "rate_spike -> SUSPECT (the reading may be real; the JUMP is not)");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("rate_spike",
+                                     telemetry_fault_reason(&st, rail, air),
+                                     "kinematics reason on the payload");
+    TEST_ASSERT_EQUAL_UINT16_MESSAGE(
+        3000, st.last_raw, "raw is PRESERVED (ADR-0006), never masked");
+
+    /* the flag is per-step: a settled step clears it */
+    moisture_update(&st, &cfg, 3010);
+    TEST_ASSERT_FALSE_MESSAGE(st.rate_spike, "spike clears once steps settle");
+
+    /* a HARD fault outranks a kinematics hint */
+    moisture_update(&st, &cfg, 100); /* huge step AND below the wet rail */
+    TEST_ASSERT_TRUE_MESSAGE(st.rate_spike, "precondition: also a spike");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "stuck_wet", telemetry_fault_reason(&st, rail, air),
+        "physically-impossible fault outranks the rate_spike hint (raw 100 is "
+        "sub-rail but not near-zero, so stuck_wet - not dead_adc)");
+}
+
+/* set the raw on the state, then ask for the reason - the reason now reads the
+ * state (it needs rate_spike as well as raw). */
+static const char *fault_of(moisture_state_t *st, uint16_t raw, uint16_t rail,
+                            uint16_t air)
+{
+    st->last_raw = raw;
+    return telemetry_fault_reason(st, rail, air);
+}
+
 void t_sensor_fault(void)
 {
     moisture_cfg_t cfg = (moisture_cfg_t)MOISTURE_CFG_DEFAULT;
@@ -1420,43 +1500,43 @@ void t_sensor_fault(void)
     moisture_init(&st, &cfg,
                   1300); /* neutral spread/health; raw set per case */
     const uint16_t rail = 900; /* classic wet rail (BOARD_CAP.wet_rail_raw) */
+    const uint16_t air = 3400; /* classic air rail  (BOARD_CAP.air_dry_raw)  */
 
     /* dead ADC floating to ~0 (the live s3-1 0/7/4/1 case). */
     st.last_raw = 4;
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
-        "SENSOR_FAULT", telemetry_quality_flag(&st, rail),
+        "SENSOR_FAULT", telemetry_quality_flag(&st, rail, air),
         "raw 4 (dead ADC) below the wet rail = SENSOR_FAULT, not SATURATED");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("dead_adc",
-                                     telemetry_fault_reason(4, rail),
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("dead_adc", fault_of(&st, 4, rail, air),
                                      "near-zero raw -> dead_adc reason");
 
     /* shorted / contaminated probe reading impossibly wet (the P11 s3 ~420). */
     st.last_raw = 420;
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
-        "SENSOR_FAULT", telemetry_quality_flag(&st, rail),
+        "SENSOR_FAULT", telemetry_quality_flag(&st, rail, air),
         "raw 420 below the wet rail = SENSOR_FAULT");
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
-        "stuck_wet", telemetry_fault_reason(420, rail),
+        "stuck_wet", fault_of(&st, 420, rail, air),
         "sub-rail but not near-zero -> stuck_wet reason");
 
     /* genuine full saturation (>= the rail) is NOT a fault (acceptance: no false
      * flag of real saturation). */
     st.last_raw = 930;
     TEST_ASSERT_TRUE_MESSAGE(
-        strcmp("SENSOR_FAULT", telemetry_quality_flag(&st, rail)) != 0,
+        strcmp("SENSOR_FAULT", telemetry_quality_flag(&st, rail, air)) != 0,
         "raw 930 (genuine saturation) is NOT a fault");
-    TEST_ASSERT_NULL_MESSAGE(telemetry_fault_reason(930, rail),
+    TEST_ASSERT_NULL_MESSAGE(fault_of(&st, 930, rail, air),
                              "genuine saturation has no fault reason");
     TEST_ASSERT_NULL_MESSAGE(
-        telemetry_fault_reason(900, rail),
+        fault_of(&st, 900, rail, air),
         "exactly at the rail is not a fault (strict below)");
 
     /* wet_rail==0 disables self-flagging (unknown rail -> never claim a fault). */
     st.last_raw = 4;
     TEST_ASSERT_TRUE_MESSAGE(
-        strcmp("SENSOR_FAULT", telemetry_quality_flag(&st, 0)) != 0,
+        strcmp("SENSOR_FAULT", telemetry_quality_flag(&st, 0, air)) != 0,
         "wet_rail=0 disables the fault check");
-    TEST_ASSERT_NULL_MESSAGE(telemetry_fault_reason(4, 0),
+    TEST_ASSERT_NULL_MESSAGE(fault_of(&st, 4, 0, air),
                              "wet_rail=0 -> no fault reason");
 }
 
@@ -1489,6 +1569,7 @@ void t_soil_row_v4(void)
         "",
         "classic",
         /* v4: */ 900 /*wet_rail*/,
+        3400 /*air_dry_raw (#1152)*/,
         "a1b2c3d4" /*config_id*/,
         true /*rssi_present*/,
         -57 /*rssi_dbm*/,
@@ -1962,6 +2043,7 @@ int main(void)
     RUN_TEST(t_soil_row_time_provenance);
     RUN_TEST(t_config_id_hash);
     RUN_TEST(t_sensor_fault);
+    RUN_TEST(t_exceptions_open_adc_and_rate_spike);
     RUN_TEST(t_soil_row_v4);
     RUN_TEST(t_per_channel_cal);
     RUN_TEST(t_cal_ch_line);

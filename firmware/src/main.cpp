@@ -209,6 +209,7 @@ static moisture_cfg_t cfg = {
     2000, /* confirm_ms_wet  (TESTING; prod 3500) */
     READ_INTERVAL_MS,
     250, /* spread_warn_raw */
+    SENSOR_MAX_DELTA_RAW, /* max_delta_raw (#1152 kinematics) */
     /* boundary (descending raw): 7-band scheme (#3), sourced from the board
      * descriptor (#436) - classic's are ENDPOINT-RATIFIED against the #248
      * common-cup anchors (ADR-0006 §6, cal_verified=true); a non-classic board's
@@ -646,8 +647,11 @@ static void printHeader()
     Serial.println(buf);
     n = snprintf(buf, sizeof(buf), "# health:");
     for (int i = 0; i < NUM_SENSORS && n < (int)sizeof(buf); i++)
+        /* composed (#2 + #1152): `quality` is measurement trust - now including
+         * the air-rail open_adc check - and `/withheld` is actuation policy. */
         n += snprintf(buf + n, sizeof(buf) - n, " ch%d=%s%s", i,
-                      telemetry_quality_flag(&state[i], BOARD_CAP.wet_rail_raw),
+                      telemetry_quality_flag(&state[i], BOARD_CAP.wet_rail_raw,
+                                             BOARD_CAP.air_dry_raw),
                       irrig_health_warn(&g_irrig, i) ? "/withheld" : "");
     if (n < (int)sizeof(buf))
         snprintf(
@@ -776,13 +780,16 @@ static void handleRoot()
          * supervisor has latched out of watering can still take a clean read, so
          * without this a benched channel reads `quality=OK` forever (the bug this
          * closes). Present-or-silent: absent in the normal case, so the line is
-         * byte-identical to before unless the supervisor is actually holding. */
+         * byte-identical to before unless the supervisor is actually holding.
+         * #1152 composes here: quality now also carries the air-rail open_adc
+         * verdict, so the two axes stay independent AND both stay complete. */
         n += snprintf(
             buf + n, sizeof(buf) - (size_t)n,
             "ch%d: level=%s raw=%u quality=%s%s\n", ch,
             moisture_level_name(state[ch].committed),
             (unsigned)state[ch].last_raw,
-            telemetry_quality_flag(&state[ch], BOARD_CAP.wet_rail_raw),
+            telemetry_quality_flag(&state[ch], BOARD_CAP.wet_rail_raw,
+                                   BOARD_CAP.air_dry_raw),
             irrig_health_warn(&g_irrig, ch) ? " withheld=health_spread" : "");
     }
     g_http.send(200, "text/plain", buf);
@@ -1355,6 +1362,7 @@ void loop()
                 ts, /* real UTC when synced; "" = NULL until synced (#278) */
                 g_device_name, /* #601: friendly name -> payload name= on every row */
                 BOARD_CAP.wet_rail_raw, /* #670: sub-rail raw -> SENSOR_FAULT */
+                BOARD_CAP.air_dry_raw, /* #1152: above-rail raw -> open_adc */
                 g_config_id, /* #576 / ADR-0025: payload config_id= */
                 wifi_up, /* #669 rssi_present */
                 rssi_now, /* #669 rssi_dbm (ignored when !wifi_up) */

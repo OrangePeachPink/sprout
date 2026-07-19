@@ -113,6 +113,16 @@ uint16_t moisture_trimmed_mean(uint16_t *s, uint16_t n, uint8_t trim_each,
 moisture_level_t moisture_update(moisture_state_t *st, const moisture_cfg_t *cfg,
                                  uint16_t raw_filtered)
 {
+    /* #1152 kinematics: compare against the PREVIOUS accepted raw before it is
+     * overwritten. Soil cannot move this fast at the sampling cadence, so a
+     * bigger step means the instrument moved, not the moisture. */
+    if (cfg->max_delta_raw > 0) {
+        int delta = (int)raw_filtered - (int)st->last_raw;
+        if (delta < 0) delta = -delta;
+        st->rate_spike = (uint16_t)delta > cfg->max_delta_raw;
+    } else {
+        st->rate_spike = false;
+    }
     st->last_raw = raw_filtered;
 
     moisture_level_t candidate =
@@ -155,6 +165,7 @@ void moisture_init(moisture_state_t *st, const moisture_cfg_t *cfg,
     st->last_raw      = raw_seed;
     st->last_spread   = 0;
     st->health_warn   = false;
+    st->rate_spike = false; /* a seed has no previous step to compare */
 }
 
 moisture_level_t moisture_process(moisture_state_t *st, const moisture_cfg_t *cfg,
