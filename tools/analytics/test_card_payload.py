@@ -168,6 +168,36 @@ def test_last_watered_from_a_detected_rewater_is_labelled_and_glanceable() -> No
     assert last_watered_from_rewater(None, now) is None  # absence -> graceful
 
 
+def test_a_logged_manual_watering_outranks_the_detected_guess() -> None:
+    # #1137: a record the operator made is ground truth; a detection is a guess.
+    from datetime import datetime, timezone
+
+    from card_payload import resolve_last_watered
+
+    now = datetime(2026, 7, 18, 12, tzinfo=timezone.utc)
+    detected = {"ts": "2026-07-12T12:00:00+00:00", "source": "detected"}  # 6d ago
+    manual = {"plant_id": "p01", "source": "manual", "ts": "2026-07-18T09:00:00Z"}  # 3h
+    lw = resolve_last_watered(detected, manual, now)
+    assert lw["source"] == "manual"  # the logged event wins — it's more recent + real
+    assert lw["ago"] == "3h ago"
+    # but an OLDER manual log doesn't override a fresher detection (newest wins)
+    older_manual = {"plant_id": "p01", "source": "manual", "ts": "2026-07-01T00:00:00Z"}
+    assert resolve_last_watered(detected, older_manual, now)["source"] == "detected"
+
+
+def test_manual_or_detected_alone_and_neither_are_all_graceful() -> None:
+    from datetime import datetime, timezone
+
+    from card_payload import resolve_last_watered
+
+    now = datetime(2026, 7, 18, 12, tzinfo=timezone.utc)
+    manual = {"plant_id": "p01", "source": "manual", "ts": "2026-07-18T10:00:00Z"}
+    assert resolve_last_watered(None, manual, now)["source"] == "manual"  # manual only
+    det = {"ts": "2026-07-18T06:00:00+00:00", "source": "detected"}
+    assert resolve_last_watered(det, None, now)["source"] == "detected"  # detected only
+    assert resolve_last_watered(None, None, now) is None  # neither -> honest absence
+
+
 def test_a_stale_rewater_shows_the_chip_but_keeps_the_voice_soil_state() -> None:
     old = {"known": True, "source": "detected", "recent": False, "ago": "6d ago"}
     c = _card(band="Wet", last_watered=old, recent_water=False)
@@ -332,6 +362,38 @@ def test_cards_from_context_bridges_identity_and_leads_with_thirst() -> None:
     assert cards[0]["next_need"]["known"] is True  # reachable forecast surfaced
     assert "provisional" not in cards[0]["frame"]  # #1039: no per-card cal chip
     assert cards[2]["frame"]["state"] == "sensorless"  # not-probed trails, alive
+
+
+def test_manual_watering_reaches_both_probed_and_sensorless_cards() -> None:
+    # #1137: the manual log is the ONLY last_watered a sensorless plant can have (no
+    # sensor -> no detection), and it must also feed a probed plant's card.
+    from datetime import datetime, timezone
+
+    from card_payload import cards_from_context
+
+    ctx = {
+        "devices": [],
+        "sensors": [
+            {"plant_id": "p01", "device_id": "d", "band_fw": "OK", "dryness": 0.3}
+        ],
+        "sensorless": [{"plant_id": "p05", "plant_name": "Cutting"}],
+    }
+    manual = {
+        "p01": {"plant_id": "p01", "source": "manual", "ts": "2026-07-18T10:00:00Z"},
+        "p05": {"plant_id": "p05", "source": "manual", "ts": "2026-07-18T09:00:00Z"},
+    }
+    cards = cards_from_context(
+        ctx,
+        plants_by_id={},
+        mood_map=MOOD,
+        voice_pool=VOICE,
+        manual_by_plant=manual,
+        now=datetime(2026, 7, 18, 12, tzinfo=timezone.utc),
+    )
+    by_id = {c["plant_id"]: c for c in cards}
+    assert by_id["p01"]["last_watered"]["source"] == "manual"  # probed card
+    assert by_id["p05"]["last_watered"]["source"] == "manual"  # sensorless card too
+    assert by_id["p05"]["last_watered"]["ago"] == "3h ago"
 
 
 def test_cards_from_context_routes_a_fault_to_bysurface() -> None:
