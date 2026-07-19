@@ -208,6 +208,12 @@ pre-commit:
 # The pre-merge gate: all hooks + the tests. Exactly what CI runs (mirrors #89).
 check: pre-commit test
 
+# The no-compiler local gate (#1189): everything `just check` runs EXCEPT the native C firmware
+# tests (`test-native`, which need PlatformIO + a host compiler). For a docs / UI / Python /
+# graphics contribution this IS your whole local gate. It is NOT the full gate, though — CI always
+# runs everything (incl. test-native), so a firmware change still needs the real `just check`.
+check-host: pre-commit test-host test-dx test-analytics
+
 # Everything else runs --frozen; commit pyproject.toml + uv.lock together as a deliberate change.
 # Update uv.lock after a pyproject.toml dependency change — the ONE command allowed to rewrite it (#254).
 lock:

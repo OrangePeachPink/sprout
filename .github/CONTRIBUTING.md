@@ -135,13 +135,26 @@ version — claiming, review, timing, and our no-guilt timeout.
    for pre-scoped internal work — is in [docs/team/OPERATIONS.md](../docs/team/OPERATIONS.md); you don't need
    it to contribute.)*
 
-> **`just check` needs one more tool than `just start` does.** `uv sync` + `just` alone are enough to run the
-> dashboard and the *lint/format* hooks — but `just check` also runs `just test`, which **unconditionally**
-> compiles and runs the native C firmware-logic suite (`test-native`), even for a docs-only change. That step
-> needs **PlatformIO** (`pip install platformio`) and a **host C compiler** (`gcc` on PATH — e.g. a winget
-> MinGW install on Windows) *in addition to* `uv`/`just`. If you'd rather skip installing those locally,
-> **GitHub Codespaces already has both** (its base image bundles `gcc`, and `pip install platformio` is a
-> quick add) — see the Firmware section below, or just push and let CI run the full gate for you.
+> **Docs / UI / Python / graphics change? `just check-host` is your whole local gate.** It runs everything
+> `just check` runs — all pre-commit hooks + the host Python / DX / analytics test suites — **except** the
+> native C firmware tests, so it needs **no compiler** (just `uv sync` + `just`). It is *not* the full gate —
+> CI always runs everything, incl. the firmware tests — but for a change that doesn't touch `firmware/` it's
+> the complete local check.
+>
+> **Touching firmware? You need the full `just check`.** It also runs `just test` → the native C
+> firmware-logic suite (`test-native`), which needs **PlatformIO** (`pip install platformio`) and a **host C
+> compiler** on PATH, in addition to `uv`/`just`:
+>
+> | Your OS | One command that lands a compiler `pio test -e native` accepts |
+> |---|---|
+> | **Windows** | `winget install BrechtSanders.WinLibs.POSIX.UCRT` — gcc on PATH (verified here with `pio test -e native`) |
+> | **macOS** | `xcode-select --install` — Apple Clang |
+> | **Linux** (Debian/Ubuntu) | `sudo apt install build-essential` — gcc |
+>
+> *(Windows verified on a maintainer host; macOS/Linux are the standard toolchains — if one doesn't satisfy
+> `pio test -e native` on your setup, open an issue and we'll fix the line.)* Prefer not to install locally?
+> **GitHub Codespaces already has both** (its base image bundles `gcc`, and `pip install platformio` is a quick
+> add) — see the Firmware section below, or just push and let CI run the full gate for you.
 >
 > **Why CI is designed to run everything (the default posture):** `just check` is the same full gate as your
 > machine — on purpose. Pre-commit *hooks* are
