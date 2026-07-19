@@ -102,6 +102,15 @@ GAP_CADENCE_MULT = 3
 # points clip; stats / forecast / band-history keep the FULL windowed data (#80). Set
 # well above any real WiFi/serial dropout so only a genuine multi-day outage triggers.
 TRAJ_GAP_BOUNDARY_H = 36.0
+# #1134: the forecast is a next-watering signal read off CURRENT drying — a linear fit
+# over a 30d window is both meaningless (the reason #1133 binds it to the watering
+# segment) and, at a large corpus, the build's dominant per-sensor cost (sort + four
+# fits + stats + diurnal over every reading). For a WIDE corpus only, its input is
+# bounded to the last FORECAST_INPUT_H; narrow ranges stay byte-identical, and the
+# trajectory keeps its full (decimated) history. NOT applied to band-movement, which
+# feeds the detected-rewater cue (#875 Q2) and legitimately reaches back days.
+FORECAST_INPUT_H = 96.0
+FORECAST_BOUND_MIN_READINGS = 20000
 # #698: a device with no reading within this window is STALE/offline - its last
 # value must not read as the live reading, and it drops out of the online count.
 # 180 s = ~6 sweep intervals at the 30 s cadence; the one canonical threshold the
@@ -915,6 +924,20 @@ def build_context(
     # (#80). No multi-day gap => recent_start == start => every plot is unchanged.
     recent_start = _recent_run_start(soil, TRAJ_GAP_BOUNDARY_H)
 
+    # #1134: bound the forecast input to a recent window for a wide corpus only (see the
+    # FORECAST_INPUT_H note). `_fc_window` returns the rows unchanged for narrow ranges.
+    _fc_cut = (
+        soil[-1].timestamp_utc - timedelta(hours=FORECAST_INPUT_H)
+        if len(soil) > FORECAST_BOUND_MIN_READINGS
+        else None
+    )
+
+    def _fc_window(rows: list) -> list:
+        if _fc_cut is None:
+            return rows
+        recent = [r for r in rows if r.timestamp_utc >= _fc_cut]
+        return recent or rows  # never empty a live sensor's forecast
+
     seg = next((s for s in reversed(data.segments) if s.cal_bounds), None)
     bounds = list(seg.cal_bounds) if seg else list(DEFAULT_CAL_BOUNDS)
     mrange = seg.moist_range if seg and seg.moist_range else (900, 3400)
@@ -1130,7 +1153,7 @@ def build_context(
                 "spread_last": last.spread,
                 "quality_last": last.quality_flag,
                 "slope_per_hr": _round_opt(_slope_per_hour(spairs), 2),
-                "forecast": forecast_payload(sid, settled, bounds),
+                "forecast": forecast_payload(sid, _fc_window(settled), bounds),
                 # #919: rows the #670/#697 gate kept off the trend/forecast fits
                 # (still plotted as raw) - surfaced so exclusion is never silent.
                 "fit_excluded": fit_excluded,
