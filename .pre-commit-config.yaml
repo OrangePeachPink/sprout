@@ -90,7 +90,7 @@ repos:
   #
   # --gitignore-root . (found chasing #524): `useGitignore: true` walks UP from cwd looking
   # for .gitignore files. Any lane working from a `dev/<repo>-<lane>-wt` worktree (the
-  # standard pattern - AGENTS.md worktree convention) has a `.git` FILE, not a directory
+  # standard lane worktree pattern) has a `.git` FILE, not a directory
   # (worktree gitlink) - and the dev workspace root is itself a git repo with a default-deny `/*`
   # .gitignore. Without a root pin, cspell's gitignore walk escapes the worktree, hits that
   # deny-all, and silently checks ZERO files - a false-green local `just check` while CI
