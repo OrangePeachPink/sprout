@@ -150,7 +150,7 @@ shared enum stays small: `fault=stuck_wet` (short / water-contamination) or `fau
 | raw **strictly above** the board air-dry rail (impossibly dry: open circuit / disconnected lead) | `SENSOR_FAULT` | **#1152** — the symmetric mirror of the sub-wet-rail fault, against the per-board air anchor; reason payload `fault=open_adc` |
 | healthy reading, spread within bound | `OK` | normal |
 | sample spread > `spread_warn_raw` (noisy/contact) | `SUSPECT` | `health_warn` |
-| single-step Δ faster than physically plausible (per the 30 s cadence + EMA) | `SUSPECT` | **#1152** — kinematics; the reading may be real but the jump is not trustable; reason payload `fault=rate_spike` |
+| single-step Δ faster than physically plausible (per the 30 s cadence + smoothing) | `SUSPECT` | **#1152** — kinematics; the reading may be real but the jump is not trustable; reason payload `fault=rate_spike` |
 | floating/disconnected probe (incoherent, ~4095 spread) | `NO_SIGNAL` | classifier health |
 | ADC railed **high** (raw pegged at ~4095, dry rail) | `SATURATED` | raw clamp check |
 | *(reserved, unused by soil)* | `WARMING`, `BASELINE_LEARNING`, `ESTIMATED`, `ERROR` | — |
@@ -525,7 +525,7 @@ preserved (ADR-0006).** Firmware's wire flag = the physical-impossibility call; 
 reflash (the #652 two-thresholds-two-homes split).
 
 **The kinematics sibling (#1152).** A `SUSPECT` reading whose single-step Δ is faster than physically
-plausible (per the 30 s cadence + EMA) carries `fault=rate_spike`. Unlike the physics faults it is **not** a
+plausible (per the 30 s cadence + smoothing) carries `fault=rate_spike`. Unlike the physics faults it is **not** a
 claim the value is impossible — only that the *jump* is untrustable — so it rides `SUSPECT`, not
 `SENSOR_FAULT`. The `fault=` key therefore carries the specific non-OK reason for both classes; the enum
 stays frozen (#739). **Placement stays off this layer (#1152 Placement A):** "the probe is in air / in a
