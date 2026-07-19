@@ -1,10 +1,11 @@
 # ADR-0035 — The band model & the instrument-exceptions taxonomy
 
-**Status:** Proposed — *drafted by Trellis from the #1039 grill band-model rulings (2026-07-18, second half;
-maintainer ↔ Workflow live session). Ratification rides the morning queue: the seven **per-board brackets**
-ratify against a **fresh current-fleet dry-down** (Decision 5), and Firmware implements via the #952 cal chain
-only after that. The model, the vocabulary, and the taxonomy are ruled; the specific bracket numbers below are
-the grill's working values pending that capture.*
+**Status:** Accepted — *drafted by Trellis from the #1039 grill band-model rulings (2026-07-18); **maintainer-
+ratified 2026-07-19 (on #1174)** against the fresh in-situ **dual-envelope** dry-down — both boards *measured*
+(classic `y9d41p` + official C5 `8gtt1h`), superseding the June proposal. Ratified: **Faint-ceiling 2500** (D1),
+Data's re-derived two-board bracket sets **as posted** (#995), **#898 annotate-don't-overwrite** (D2); validated
+**36/36** against the grill-locked invariants in the #1164 cal-suite (#1211, cross-board round-trip drift
+~0.0002). The draft's grill working values are replaced by the measured/ratified numbers below.*
 **Date:** 2026-07-18
 **Owner:** Trellis (author — the model + the taxonomy). Cross-lane: **Data** (the per-board bracket values + the
 cross-board index), **Firmware** (the #952 cal-chain implementation + the #898 anchor map), **Design-QA** (the
@@ -81,18 +82,21 @@ layer:** a classic "Dry" and a C5 "Dry" mean the same *soil state* even though t
 - Anything genuinely cross-plant on one axis uses a **clearly-labelled envelope-position index** (where in its
   own board's in-soil envelope this reading sits), never a raw number pretending to be universal.
 
-Working anchor values from the grill (provisional, Firmware-owned): classic air ≈ 3,170 / wet ≈ 978 · C5 air
-≈ 2,740 / wet ≈ 980.
+Anchor values, **measured** (ratified 2026-07-19, both boards' fresh dry-down; #1211): classic air 3137 / wet
+1052 · C5 air 2754 / wet 982. The **water anchor is coincident with the Soaked floor** (the wet rail *is* the
+Soaked floor — the ratified `<=` boundary relax, #1199).
 
 ### 4. The in-soil envelope, the Faint-ceiling, and the humane-calibration doctrine
 
 The seven bands live on the **in-soil envelope** — from the wet floor (a just-watered probe) to the dry ceiling
 where a plant is at the edge of harm. The dry ceiling is the **Faint-ceiling**:
 
-- **Classic Faint-ceiling ≈ 2,800** — the living / potentially-killing boundary, calibrated on the deliberate
-  Pothos-XXL deep-dry (~2,900–2,950 read as "too far"). Maps to **C5 ≈ 2,443** via the anchor map (Decision 3).
-- **Survivor-bias caveat (binding):** the Pothos-XXL is the hardiest plant in the house, so 2,800 is a
-  **hardy-plant** ceiling. Fragile species fold lower; per-species / per-instance refinement comes later via
+- **Classic Faint-ceiling = 2500** — the living / potentially-killing boundary, **measured** on the fresh
+  dual-envelope dry-down and maintainer-ratified (D1, 2026-07-19). **C5 = 2213**, also measured — both boards'
+  envelopes captured directly, not one anchor-mapped from the other. The grill's working ~2,800 (from the
+  Pothos-XXL deep-dry) is superseded by the measured value.
+- **Survivor-bias caveat (binding):** the measured fleet still skews hardy, so the ratified 2500 is a
+  **fleet-level** ceiling. Fragile species fold lower; per-species / per-instance refinement comes later via
   the registry + cal chain ([ADR-0029](0029-plant-pot-site-profile-registry.md) /
   [ADR-0022](0022-calibration-confidence-layer.md)), never by guessing now.
 - **Humane-calibration doctrine (binding):** **wilt-onset is the only capture target. No plant is ever pushed
@@ -103,13 +107,17 @@ where a plant is at the edge of harm. The dry ceiling is the **Faint-ceiling**:
 
 The shipped boundary table partitions the *full instrument range* (diagnostics included) and **does not carry
 over** (the grill's #5 correction). The seven bands are **re-partitioned onto the in-soil envelope, per board
-class**: classic ≈ [wet-floor … 2,800], C5 ≈ [wet-floor … 2,443].
+class** (ratified, measured): classic [1052 … 2500], C5 [982 … 2213].
 
-- **Data proposes the seven bracket sets for both boards** from the dry-down distributions. (The wet edge is
-  fuzzy-low: a just-watered probe transiently reads near the water anchor — arguably what "Soaked" *is*; the
-  distributions place that edge.)
-- **Firmware implements via the #952 cal chain** — but **only after ratification against a fresh current-fleet
-  dry-down** (the June data is the old fleet). That capture is the gate; until it lands, this ADR is Proposed.
+- **Data derived the seven brackets for both boards** from the fresh dry-down distributions (ratified as posted,
+  #995): **classic `{2293, 2086, 1879, 1673, 1466, 1259}`**, **C5 `{2037, 1861, 1685, 1510, 1334, 1158}`** (the
+  six in-soil partition edges between the Soaked floor and the Faint-ceiling). The **#1164 cal-suite (RATIFIED
+  fixtures)** is the authoritative home for these values — this ADR records the ratified snapshot; the suite is
+  what the #952 cal chain reads. (The wet edge is fuzzy-low: a just-watered probe reads near the water anchor,
+  which *is* the Soaked floor.)
+- **The ratification gate has fired** (2026-07-19, #1174): the fresh in-situ dual-envelope dry-down superseded
+  the June data (both boards measured), and the sets passed **36/36** grill-locked invariants in the #1164 suite
+  (#1211). **Firmware's #952 cal chain implements them** from the ratified fixtures.
 
 ## Consequences
 
@@ -139,22 +147,24 @@ class**: classic ≈ [wet-floor … 2,800], C5 ≈ [wet-floor … 2,443].
 
 ## Open (routed)
 
-- **Data:** the seven per-board bracket sets (classic + C5) from the dry-down distributions; the cross-board
-  envelope-position index; #1133 (inter-watering segments) and #1134 (30-day perf) ride alongside.
-- **Firmware:** the #952 cal-chain implementation of the brackets + the #898 anchor map — **after** ratification
-  against a fresh current-fleet dry-down.
+- **Data:** ✓ **delivered** — the ratified two-board bracket sets (#995 → #1211, 36/36). Still open: the
+  cross-board envelope-position index; #1133 (inter-watering segments) and #1134 (30-day perf) ride alongside.
+- **Firmware:** the #952 cal-chain implementation of the ratified brackets + the #898 anchor map
+  (annotate-don't-overwrite, D2) — **now unblocked** (the ratification gate landed).
 - **Design-QA:** fold the band/mood columns into one vocabulary in the #1109 charter; reassign the mark's two
   former end-poses to exception surfaces.
-- **Workflow:** cut the exceptions-taxonomy tracking issue at slicing; schedule the fresh current-fleet dry-down
-  capture (maintainer's bench, `needs:hardware`) — that capture is the ratification gate.
-- **Maintainer:** ratify the seven per-board brackets against the fresh dry-down (morning queue).
+- **Workflow:** cut the exceptions-taxonomy tracking issue at slicing; ✓ the dry-down capture (#1174) landed —
+  the ratification gate is closed.
+- **Maintainer:** ✓ **ratified 2026-07-19** (#1174) — ceiling 2500, the two-board sets as posted, #898
+  annotate-don't-overwrite.
 
 ## Revisit triggers
 
 - **A new exception condition is observed** in real data → add a sub-family (the taxonomy is open, §2).
 - **Per-species / per-instance wilt-onset data accrues** → refine the Faint-ceiling per plant via the registry +
   cal chain (ADR-0029 / ADR-0022), retiring the hardy-plant survivor bias.
-- **The fresh current-fleet dry-down lands** → ratify the brackets; Firmware implements; this ADR → Accepted.
+- **The fresh current-fleet dry-down** — *fired 2026-07-19 (#1174 / #1211): ratified, Firmware implementing. A
+  future re-derivation (new fleet, drifted sensors) re-runs this same gate.*
 - **A new board class joins the fleet** → add its anchor pair (#898) and re-derive its seven brackets.
 
 — Trellis 🪴
