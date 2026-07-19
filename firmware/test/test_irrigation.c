@@ -1618,6 +1618,113 @@ void t_cal_tier_label(void)
     TEST_ASSERT_EQUAL_STRING("uncalibrated", cal_tier_label(CAL_TIER_FACTORY));
 }
 
+/* ============================================================================
+ * #1153 - parameterized band re-partition invariant suite
+ * ----------------------------------------------------------------------------
+ * The grill (#1039) locked the ladder = 7 in-soil mood bands (Soaked -> Faint),
+ * both physical anchors OFF-ladder. This suite asserts the grill-locked
+ * invariants against ANY candidate bracket set, so ratification (#995) reduces
+ * to: paste Data's numbers into the fixtures below, run, open the (V1) PR.
+ *
+ * A set is 8 ascending raw edges (7 in-soil brackets) plus the two #898 board
+ * anchors that sit OUTSIDE the ladder:
+ *   edge[0] = Soaked floor (wettest in-soil, lowest raw)
+ *   edge[7] = Faint  top   (driest  in-soil, highest raw)  [grill-locked top:
+ *                                                classic 2800 / C5 2443]
+ *   water_anchor < edge[0]   (cup-water rail, #898)
+ *   air_anchor   > edge[7]   (air-dry   rail, #898)
+ *
+ * The sets below are PLACEHOLDERS - evenly interpolated within the grill ranges
+ * + the #898 anchors, NOT the ratified numbers. They exist so the harness is
+ * green today; Data drafts the real sets on #995 and they replace these.
+ * ==========================================================================*/
+#define BAND_INSOIL_BRACKETS 7
+#define BAND_INSOIL_EDGES (BAND_INSOIL_BRACKETS + 1) /* 8 edges -> 7 brackets */
+_Static_assert(BAND_INSOIL_EDGES - 1 == 7,
+               "the ladder is exactly 7 in-soil partitions");
+
+/* Cross-board fractional tolerance: the same soil-moisture fraction should read
+ * at the same fractional position within each board's [water..air] envelope
+ * (#898 linear scaling). 0.03 allows real per-board dry-down variance while
+ * still catching a set that ignores the board relationship. */
+#define BAND_XBOARD_FRAC_TOL 0.03
+
+typedef struct {
+    const char *board_class;
+    uint16_t water_anchor; /* #898 cup-water rail (below Soaked floor) */
+    uint16_t edge
+        [BAND_INSOIL_EDGES]; /* ascending raw; [0]=Soaked floor..[7]=Faint top */
+    uint16_t air_anchor; /* #898 air-dry rail (above Faint top)     */
+} band_partition_t;
+
+/* PLACEHOLDER - replace with Data's #995 ratified sets (top edge is grill-locked). */
+static const band_partition_t BAND_SET_CLASSIC_PLACEHOLDER = {
+    "esp32-classic",
+    960,
+    {1050, 1300, 1550, 1800, 2050, 2300, 2550, 2800},
+    3170};
+static const band_partition_t BAND_SET_C5_PLACEHOLDER = {
+    "esp32-c5", 980, {1068, 1264, 1461, 1657, 1854, 2050, 2246, 2443}, 2740};
+
+static double band_dabs(double x)
+{
+    return x < 0.0 ? -x : x;
+}
+
+/* fractional position of a raw value within this board's physical envelope. */
+static double band_frac(uint16_t raw, const band_partition_t *s)
+{
+    return (double)((int)raw - (int)s->water_anchor) /
+           (double)((int)s->air_anchor - (int)s->water_anchor);
+}
+
+/* Assert the grill invariants for one candidate set. */
+static void band_assert_invariants(const band_partition_t *s)
+{
+    char msg[96];
+
+    /* monotonic: 8 edges strictly ascending in raw (no zero-width/inverted band) */
+    for (int i = 0; i + 1 < BAND_INSOIL_EDGES; ++i) {
+        snprintf(msg, sizeof(msg),
+                 "%s: edge[%d]=%u must be < edge[%d]=%u (monotonic)",
+                 s->board_class, i, s->edge[i], i + 1, s->edge[i + 1]);
+        TEST_ASSERT_TRUE_MESSAGE(s->edge[i] < s->edge[i + 1], msg);
+    }
+
+    /* both anchors OUTSIDE the ladder */
+    snprintf(msg, sizeof(msg), "%s: water_anchor=%u must be < Soaked floor=%u",
+             s->board_class, s->water_anchor, s->edge[0]);
+    TEST_ASSERT_TRUE_MESSAGE(s->water_anchor < s->edge[0], msg);
+    snprintf(msg, sizeof(msg), "%s: air_anchor=%u must be > Faint top=%u",
+             s->board_class, s->air_anchor, s->edge[BAND_INSOIL_EDGES - 1]);
+    TEST_ASSERT_TRUE_MESSAGE(s->air_anchor > s->edge[BAND_INSOIL_EDGES - 1],
+                             msg);
+}
+
+/* 7 in-soil partitions (compile-time) + monotonic + anchors-outside (runtime). */
+void t_band_partition_invariants(void)
+{
+    band_assert_invariants(&BAND_SET_CLASSIC_PLACEHOLDER);
+    band_assert_invariants(&BAND_SET_C5_PLACEHOLDER);
+}
+
+/* Cross-board: both sets describe the SAME fractional partition within tolerance
+ * (#898 linear anchor-to-anchor scaling round-trips the ladder). */
+void t_band_partition_xboard_roundtrip(void)
+{
+    const band_partition_t *a = &BAND_SET_CLASSIC_PLACEHOLDER;
+    const band_partition_t *b = &BAND_SET_C5_PLACEHOLDER;
+    for (int i = 0; i < BAND_INSOIL_EDGES; ++i) {
+        double drift =
+            band_dabs(band_frac(a->edge[i], a) - band_frac(b->edge[i], b));
+        char msg[96];
+        snprintf(msg, sizeof(msg),
+                 "edge[%d] cross-board fractional drift %.4f exceeds tol %.2f",
+                 i, drift, BAND_XBOARD_FRAC_TOL);
+        TEST_ASSERT_TRUE_MESSAGE(drift <= BAND_XBOARD_FRAC_TOL, msg);
+    }
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -1652,5 +1759,7 @@ int main(void)
     RUN_TEST(t_cal_resolver_classic_byte_preserved);
     RUN_TEST(t_cal_resolver_c5_board_envelope);
     RUN_TEST(t_cal_tier_label);
+    RUN_TEST(t_band_partition_invariants);
+    RUN_TEST(t_band_partition_xboard_roundtrip);
     return UNITY_END();
 }
