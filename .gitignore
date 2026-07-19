@@ -24,6 +24,11 @@ desktop.ini
 !.env.example
 secrets.h
 wifi_credentials.h
+# OTA password override (#1252, ADR-0026): the real value lives here, never in git.
+# Optional — absent means the build falls back to the documented Phase-0 placeholder.
+firmware/platformio_local.ini
+# but DO commit the template (same habit as .env.example):
+!firmware/platformio_local.example.ini
 
 # Environmental context: the rig's HOME coordinates + the weather cache (PRD-0002 R6 /
 # ADR-0013 §3) - the repo is public-ready, so these MUST NEVER be committed.

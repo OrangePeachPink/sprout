@@ -44,16 +44,51 @@ reads **FAILED**.
 
 ## Password
 
-The OTA upload is password-gated. The **Phase-0 placeholder** is `sprout-phase0`, set in two places
-that must match:
+The OTA upload is password-gated, and the password lives in two places that **must match**:
 
-- **Firmware:** `OTA_PASSWORD` in `firmware/include/config.h` (override at build with
-  `-D OTA_PASSWORD='"…"'`).
-- **Uploader:** `--auth=…` in the `esp32dev_ota` env (`firmware/platformio.ini`).
+- **Firmware:** `OTA_PASSWORD` — compiled into the image (what the board will accept).
+- **Uploader:** `--auth=…` — what espota presents.
 
-**Phase-1 migration:** when a real password is chosen, it moves to a **gitignored local config**
-(the same family as WiFi creds), so no secret is committed. Tracked on #59 (go-public gate) — the
-placeholder must be rotated or superseded before the repo goes public.
+The committed value, `sprout-phase0`, is a **published placeholder — an example, not a secret**. It is
+in a public repo on purpose; it is LAN-scoped and interim, and it is *not* the security fence (that's
+ADR-0026: signed images + verified-marker + key management).
+
+### Running a real password (#1252)
+
+**Do not edit `config.h` or `platformio.ini`** — that would commit the secret. Use the gitignored local
+override, which sets **both sides from one file** so they cannot drift apart:
+
+```sh
+cd firmware
+cp platformio_local.example.ini platformio_local.ini   # gitignored
+# edit platformio_local.ini and replace CHANGE-ME-LOCALLY with your value
+```
+
+The file is **optional**: absent, PlatformIO skips it and the build falls back to the placeholder, so a
+fresh clone needs zero setup. Present, it supplies the firmware's `-D OTA_PASSWORD` *and* the uploader's
+`--auth` together. Never put a real value in this doc, the example file, or any tracked file.
+
+> **Why one file for both:** if the two sides disagree, the flash fails `Authentication Failed` on
+> **both** hash schemes while the espota invitation still succeeds — a signature that reads like a
+> rejecting board when the board is healthy.
+
+**Rotation is a flash, not an edit.** Changing the local value only affects the *next build*: every board
+keeps accepting its **old** password until it is re-flashed with a new image. So rotate by flashing the
+whole fleet — ideally in one coordinated bundle (see #1236 / #1152) — then verify each board answers.
+
+**Rotating over OTA is chicken-and-egg.** The new password is *inside the image you are sending*, but the
+running board still authenticates with its **old** one — so for the rotation flash only, the two sides must
+briefly differ. Either flash over **USB** (no auth at all — simplest), or split the local file for one pass:
+
+```ini
+[env:esp32dev]
+build_flags = -D OTA_PASSWORD='"NEW"'   ; what goes INTO the image
+[env:esp32dev_ota]
+upload_flags = --auth=OLD               ; what the RUNNING board still expects
+```
+
+Once every board is flashed, set `--auth` to `NEW` as well and the two are back in sync. Any board you miss
+keeps the OLD password and will refuse the NEW `--auth` — with the both-hash-schemes-fail signature above.
 
 ## Honest limits (when OTA does NOT apply — flash wired)
 
