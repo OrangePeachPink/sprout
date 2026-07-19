@@ -3,7 +3,7 @@
 
 Classifies a time-ordered (device, sensor) reading series into the #863 taxonomy's
 first four kinds — ``watering-transient`` · ``rebound`` · ``steady-drying`` ·
-``suspect`` — with deliberately simple, stated rules, and derives the **valid-for-trend
+``flagged`` — with deliberately simple, stated rules, and derives the **valid-for-trend
 mask** (steady-drying only) that the Workbench trend fit consumes. A drying-rate fitted
 through a watering transient or the post-watering rebound is fitting two different
 physical processes as one line (the live "+206 c/h *drying* while Soaked" absurdity —
@@ -11,9 +11,11 @@ that was the rebound); the mask keeps the fit on the arc that IS drying.
 
 C0's rules (every constant is a first-pass cut for the C1 contract to refine):
 
-- **suspect** — a row whose ``quality_flag`` isn't OK (NO_SIGNAL / SENSOR_FAULT /
-  SUSPECT). Kinematic suspicion (#1152 ``rate_spike``) joins in C1, aligned with the
-  firmware emit — C0 doesn't fork the vocabulary early.
+- **flagged** — an explicit ROLLUP over the wire's own quality/exception vocabulary
+  (#1152 / ADR-0035 §2 owns those kinds; this module consumes, never authors — the
+  #1245 containment ruling): today any row whose ``quality_flag`` isn't OK
+  (NO_SIGNAL / SENSOR_FAULT / SUSPECT); C1 folds the #1152 ``fault=`` kinds in. The
+  name is deliberately NOT "suspect" so wire-SUSPECT stays one concept, one owner.
 - **watering-transient** — a sustained wettening run: it STARTS at a single-step raw
   drop >= ``ONSET_DROP_RAW`` (wetter = lower), CONTINUES while raw keeps falling
   (small rises <= ``NOISE_RAW`` don't end it), and is CONFIRMED only if the run's
@@ -25,7 +27,7 @@ C0's rules (every constant is a first-pass cut for the C1 contract to refine):
   refinement is C1); rising raw here is NOT drying evidence.
 - **steady-drying** — everything else: the default state between events.
 
-Precedence per row: suspect > watering-transient > rebound > steady-drying.
+Precedence per row: flagged > watering-transient > rebound > steady-drying.
 """
 
 from __future__ import annotations
@@ -45,7 +47,7 @@ CONFIRM_DROP_RAW = 150  # total fall a run needs to be a real watering, not nois
 NOISE_RAW = 25  # a rise this small doesn't end a falling run
 REBOUND_H = 3.0  # post-transient equilibration window (time-boxed in C0)
 
-KINDS = ("watering-transient", "rebound", "steady-drying", "suspect")
+KINDS = ("watering-transient", "rebound", "steady-drying", "flagged")
 
 
 @dataclass(frozen=True)
@@ -96,7 +98,7 @@ def _transient_runs(rows) -> list[tuple[int, int]]:
 
 def classify(rows) -> list[str]:
     """Per-row kinds for a time-ordered single-sensor series (same length as input).
-    Precedence: suspect > watering-transient > rebound > steady-drying."""
+    Precedence: flagged > watering-transient > rebound > steady-drying."""
     rows = list(rows)
     kinds = ["steady-drying"] * len(rows)
     for start, end in _transient_runs(rows):
@@ -112,7 +114,7 @@ def classify(rows) -> list[str]:
             k += 1
     for k, r in enumerate(rows):
         if r.quality_flag != "OK":
-            kinds[k] = "suspect"  # highest precedence — trust nothing about the row
+            kinds[k] = "flagged"  # highest precedence — the wire flagged the row
     return kinds
 
 
@@ -133,5 +135,5 @@ def segments(rows) -> list[Segment]:
 
 def valid_for_trend(rows) -> list[bool]:
     """The mask the trend fit consumes: True only for steady-drying rows. A fit over
-    transient/rebound/suspect rows is fitting a different physical process."""
+    transient/rebound/flagged rows is fitting a different physical process."""
     return [k == "steady-drying" for k in classify(rows)]
