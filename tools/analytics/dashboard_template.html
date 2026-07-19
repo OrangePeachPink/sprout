@@ -1581,12 +1581,15 @@ function buildGauge(s, f){
 
 function ratesCard(rates){
   const card = el('section','card');
-  card.appendChild(el('h3', null, 'Drying rate ("angle") · positive = drying'));
+  /* #1145: windows clip to the active inter-watering segment (#1133 — a fit never
+     bridges a watering); the payload's legacy 'all' key IS the segment window now,
+     so the rendered label tells that truth. */
+  card.appendChild(el('h3', null, 'Drying rate ("angle") · positive = drying · windowed within the current segment'));
   const t = el('table','grid ratetbl');
   t.appendChild((()=>{ const tr=el('tr'); ['window','c/h','±se','r²','n','trend'].forEach((h,i)=>tr.appendChild(el('th', (i>=1&&i<=4)?'num':null, h))); return tr; })());
   ['1h','6h','24h','all'].forEach(w=>{
     const r = rates[w]; const tr = el('tr');
-    tr.appendChild(el('td','mono', w));
+    tr.appendChild(el('td','mono', w==='all' ? 'segment' : w));
     if(!r){ tr.appendChild(el('td','num muted','—')); tr.appendChild(el('td','num muted','—')); tr.appendChild(el('td','num muted','—')); tr.appendChild(el('td','num muted','—')); tr.appendChild(el('td',null,'')); }
     else {
       tr.appendChild(el('td','num', (r.slope>=0?'+':'')+r.slope));
@@ -1598,7 +1601,7 @@ function ratesCard(rates){
     t.appendChild(tr);
   });
   card.appendChild(t);
-  card.appendChild(el('div','small muted', 'a trend is only "drying"/"wetting" when |slope| beats noise (>2·se) and ≥4 c/h; otherwise stable.'));
+  card.appendChild(el('div','small muted', 'a trend is only "drying"/"wetting" when |slope| beats noise (>2·se) and ≥4 c/h; otherwise stable. "segment" = since the last detected watering (the whole window when none is detected) — the cross-event "all" row retired (#1145, grill-ruled).'));
   return card;
 }
 
