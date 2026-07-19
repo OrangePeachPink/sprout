@@ -1,0 +1,31 @@
+{
+  "experiment_id": "2026-07-19-extended-drydown-peak-summer",
+  "title": "Extended in-situ dry-down (peak-summer) — 8 plants, last-watering → now",
+  "subject": "Per-plant extended dry-down for the #995 band ratification",
+  "date_local": "2026-07-19",
+  "lane": "Firmware",
+  "duration": "5.4–8.8 d per plant",
+  "refs": {
+    "ratification_target": "#995",
+    "fresh_drydown_bench": "#1174",
+    "band_model_ruling": "#1039",
+    "sensor_map": "#896",
+    "anchor_envelope": "#898"
+  },
+  "purpose": "The fresh current-fleet dry-down that #995 needs to ratify the 7-in-soil band re-partition — captured ORGANICALLY, not on a bench. Each plant's soil reading from its last watering through to now (2026-07-19), in-situ on the real boards + windowsill spots, untouched, under PEAK July summer light (the fastest-drying / highest-transpiration case of the year — direct southern exposure only declines from here). Data derives the ratified boundary[] from this.",
+  "fast_path_for_data": [
+    "data/summary.csv — per-plant table: watering (CDT), duration, wet→dry endpoints, air/water anchors, cadence",
+    "data/p*.csv — per-plant dry-down series (timestamp_utc + timestamp_cdt, hours_since_water, raw_value, band, pressure_hpa, air/water anchors)"
+  ],
+  "aggregation_boundary": "Firmware provides the extracted per-plant dry-down series (last-watering → now), the watering detection, and the sensor→plant map. Data owns the band-boundary derivation (the #995 seven-bracket sets) and confirms the exact per-plant watering cut against the app's tuned detected-watering signal + the current registry.",
+  "honest_gap_policy": "All 8 plants are DENSELY logged (wifi_poll @ 30 s, ~13 k rows/day) from the canonical logs/ store — an earlier draft read the intentionally-lagging .data-worktree branch and wrongly showed the classic board as sparse; Workflow's host-record measurement corrected the source. Downsampled to 2-min median bins for size (full 30 s in logs/). Empty pressure fields = the weather context row was not populated for that reading.",
+  "caveats": [
+    "Times: CSV timestamp_utc is canonical; timestamp_cdt (UTC−5, CDT) matches the dashboard. Watering times in summary.csv are CDT.",
+    "Plant↔sensor map confirmed against the current registry config/devices.local.json (classic y9d41p s1/s2/s3/s4 = Corn/XXL/Anthurium/Dracaena; 8gtt1h s1/s2/s3/s4 = office/Bromeliad/small/XL).",
+    "8gtt1h = official C5 DevKit (c5off1), RIGHT sill — confirmed 3 ways (logs, registry fleet-note, maintainer's eyes); Workflow's earlier S3 read was corrected. Both board classes are measured densely in-window, so the C5 bracket column is MEASURED here (not derived); the #898 x0.803 map gets validated as a bonus. The S3 is parked/unregistered (#1034); the yellow clone n3jhsp is the empty-channel headroom board (Jul 7/12 only, correctly silent).",
+    "Waterings cluster into 3 sessions (07-10 midday, 07-11 ~21:08, 07-13 21:15), each spanning both boards — cut by session, not per-plant scatter.",
+    "cal_tier: classic = channel-cal (wipe_airdry_bench_20260628); 8gtt1h = board-cal."
+  ],
+  "source_data": "Read-only from the canonical logs/<device>_*.csv — device y9d41p (classic) + 8gtt1h (c5off1), both wifi_poll @ 30 s, unbroken through the window. Stale off-fleet n3jhsp (C5, Jul 7 + 12 only) excluded. No source files modified.",
+  "pii_posture": "Raw ADC counts, device ids, local timestamps, plant names, and weather pressure only. Private RFC1918 IPs (ADR-0015) are not needed here and are absent. No MAC / USB-instance IDs / hostnames / EXIF."
+}
