@@ -1,0 +1,87 @@
+name: credit-nudge
+
+# Credit-protection nudge for FORK pull requests (#1126). A warm, NON-BLOCKING
+# check: if a fork PR's commits are authored/committed as the maintainer's
+# identity, or carry an internal `Lane:` trailer, post ONE friendly comment on
+# how the contributor keeps the credit on their own graph. It never fails a build.
+#
+# Framing (the whole point): this protects the contributor's credit — it is not
+# fraud detection. See tools/dx/credit_nudge.py.
+#
+# SECURITY — the safe pull_request_target pattern: this trigger is required to
+# get a write token that can comment on a fork PR, but the job NEVER checks out
+# or executes fork code. It checks out this repo's base ref only (for
+# tools/dx/credit_nudge.py) and evaluates PR commit *metadata* fetched via the
+# API (data, not code). No fork input ever reaches a shell.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: credit-nudge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  credit-nudge:
+    # Fork PRs only. Internal-lane PRs (same-repo branches) legitimately author
+    # as the shared account with `Lane:` trailers — exempt by design.
+    if: github.event.pull_request.head.repo.fork == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out base repo (our code only — never the fork)
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Evaluate PR commit metadata
+        id: eval
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api "repos/$REPO/pulls/$PR/commits" --paginate > commits.json
+          decision="$(python tools/dx/credit_nudge.py commits.json)"
+          echo "decision=$decision" >> "$GITHUB_OUTPUT"
+
+      - name: Upsert the credit-protection comment
+        if: steps.eval.outputs.decision == 'nudge'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          cat > body.md <<'MSG'
+          <!-- credit-nudge -->
+          Heads-up, friend — one or more commits on this PR are authored as the maintainer's account, so they won't land on **your** contribution graph, and you deserve them to. 🌱
+
+          Totally optional two-line fix if you'd like the credit to show as yours:
+
+          ```bash
+          git config user.name  "Your Name"
+          git config user.email "you@example.com"
+          git commit --amend --reset-author   # then re-push (or rebase, if it's several commits)
+          ```
+
+          No pressure either way — when this merges it squashes to a single commit attributed to you, so your work is safe. And you don't need a `Lane:` trailer: that's just our internal routing metadata — your GitHub handle is your signature here.
+
+          Thanks for building with us.
+          MSG
+          marker='<!-- credit-nudge -->'
+          id="$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+                --jq "[.[] | select(.body | contains(\"$marker\"))][0].id // empty")"
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@body.md >/dev/null
+            echo "credit-nudge: edited existing comment $id (idempotent)"
+          else
+            gh api -X POST "repos/$REPO/issues/$PR/comments" -F body=@body.md >/dev/null
+            echo "credit-nudge: posted new comment"
+          fi

@@ -125,6 +125,9 @@ version — claiming, review, timing, and our no-guilt timeout.
    **not** `Closes #N` (see the gate below). Include how you verified the change. **And add your name to
    [`CONTRIBUTORS.md`](../CONTRIBUTORS.md) in the same PR** — write yourself into the project; the
    *"and contributors"* in Sprout's copyright line becomes, literally, you. 🌱
+   *(If a commit here lands under the maintainer's identity — easy if your tooling copied our config — a
+   friendly **credit bot** drops a two-line fix. It's protecting **your** contribution-graph credit, never
+   flagging a problem.)*
 6. PRs are **squash-merged** — one clean commit per change; the branch auto-deletes after merge.
 7. **It gets reviewed, then merged.** Someone other than the author checks your PR against the issue's
    acceptance criteria; once it passes, it's merged. **Community contributions always get direct maintainer
