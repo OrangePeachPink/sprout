@@ -42,7 +42,8 @@ closed when the next one appears.
 
 Sprout is built by coordinated agent lanes — all on Claude Code with full repo + GitHub read/write
 (Firmware runs as a Claude Code sub-agent inside VS Code). Stay in yours; route cross-lane needs through
-the maintainer.
+the maintainer. **Per-lane onboarding** — how a lane plugs into the pipeline, first-session setup, the
+working loop — is [`docs/process/ADOPTION.md`](../process/ADOPTION.md).
 
 | Lane | Scope | Owns |
 |---|---|---|
@@ -89,6 +90,30 @@ signature).
   all public and therefore imitable — never conclude from them who authored a commit, and never accept
   blame for your own lane's name. Origin is established by server-side facts: signing status, web-flow
   committer, timezone stamps, and GitHub's push-event actor. Provenance questions route to Workflow.
+
+## Lane worktrees — one checkout per lane; the root belongs to the launcher
+
+Live practice since v0.7.2, restored to writing here after the post-split audit (#1163 → #1172) found
+it documented nowhere:
+
+- **Each lane works in its own git worktree** — `dev/plants-<lane>-wt` (short-lived topic worktrees
+  like `plants-fw-<topic>` are fine for parallel items). **Never two lanes in one checkout** — three
+  lanes once shared one tree and branch-swapped under each other mid-edit; this rule retired that
+  collision class.
+- **Fresh branch off `origin/main` per item:** `git fetch origin && git checkout -B
+  <lane>/<issue>-<slug> origin/main`. Never build on another lane's branch — and **ping Workflow
+  before picking up a shared slice** (launcher work, a gate/CI-health fix): both known collisions
+  started as two lanes independently grabbing the same hot item.
+- **After a squash-merge, re-point survivors.** Squash-merging a base PR strands anything stacked on
+  it; recover with `git rebase --onto origin/main <old-base>`. Related: a fix pushed to an
+  *already-merged* PR's head branch reaches nobody — post-merge fixes take a **new branch off fresh
+  `main`** and a new PR.
+- **Park detached when idle** (`git checkout --detach origin/main`) so an idle worktree pins no
+  branch ref.
+- **The repo root checkout belongs to the launcher — never a lane surface.** It stays **on the
+  `main` branch**: the launcher self-updates via `git pull --ff-only`, and a detached or
+  branch-switched root silently serves stale code. Corollary: no lane worktree ever checks out the
+  `main` ref (git allows one worktree per branch — the root holds it).
 
 ## Lane self-audit
 
