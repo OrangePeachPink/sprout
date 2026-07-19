@@ -106,3 +106,63 @@ def test_the_gentle_bromeliad_class_watering_is_caught() -> None:
     rows += [_r(22 + i, 1580 + (i % 2)) for i in range(8)]  # settled wet plateau
     kinds = {s.kind for s in segments(rows)}
     assert "watering-transient" in kinds
+
+
+def test_c1_rebound_ends_when_the_rate_settles_not_at_a_clock() -> None:
+    # C1: a fast 1 h recovery (+120 c/h) then a flat drying arc (+4 c/h). The rate rule
+    # ends the rebound at the settle; C0's 3 h box would have held it 2 h too long.
+    rows = [_r(i, 1700 - i) for i in range(10)]  # steady pre-arc
+    falls = [1560, 1420, 1300]  # 10..12 the transient (-140 steps, confirmed)
+    for k, raw in enumerate(falls):
+        rows.append(_r(10 + k, raw))
+    for k in range(60):  # 13..72 one hour of fast recovery (+2 raw/min = +120 c/h)
+        rows.append(_r(13 + k, 1300 + 2 * k))
+    for k in range(90):  # 73..162 settled slow drying (+4 c/h — under the 30 c/h bar)
+        rows.append(_r(73 + k, 1420 + k // 15))
+    kinds = {s.kind: (s.i0, s.i1) for s in segments(rows) if s.kind != "steady-drying"}
+    assert "watering-transient" in kinds and "rebound" in kinds
+    r0, r1 = kinds["rebound"]
+    # the transient's trough-noise rule swallows the first wobble of the recovery;
+    # the rebound starts immediately after wherever the transient run ends
+    assert r0 == kinds["watering-transient"][1] + 1
+    # the settle happens ~row 73; the 30-min forward window ends the rebound within
+    # a window's width of it — and far before the old 3 h box (row 193)
+    assert 45 <= r1 <= 80
+
+
+def test_c1_a_slow_recovery_extends_past_the_old_3h_box() -> None:
+    # the splash-evaporation arc: +60 c/h sustained for 5 h. Rate-based keeps it
+    # rebound the whole way (the old box cut it at 3 h and let the trend fit +60 c/h
+    # "drying" — the live absurdity).
+    rows = [_r(i, 1900) for i in range(5)]
+    rows.append(_r(5, 1700))  # a -200 single-step transient
+    for k in range(300):  # 6..305 five hours at +1 raw/min = +60 c/h
+        rows.append(_r(6 + k, 1700 + k))
+    kinds = {s.kind: (s.i0, s.i1) for s in segments(rows) if s.kind == "rebound"}
+    r0, r1 = kinds["rebound"]
+    assert r1 - r0 > 240  # far beyond a 3 h (180-row) box; capped only by REBOUND_MAX_H
+
+
+def test_passes_reproduce_the_maintainer_session_truth_in_miniature() -> None:
+    from segment_classifier import passes
+
+    def t(day, h, m):
+        return datetime(2026, 7, day, h, m, tzinfo=timezone.utc)
+
+    events = [
+        # the 07-10 "dose session": spread over ~100 min (gaps < 75) — ONE pass
+        (t(10, 15, 0), "soil", "s2@dev"),
+        (t(10, 16, 5), "soil", "s3@dev"),
+        (t(10, 16, 40), "soil", "s4@dev"),
+        # the 07-19 pass: detections + catch-up glugs 16 min later — ONE pass
+        (t(19, 18, 4), "soil", "s1@dev"),
+        (t(19, 18, 6), "glug", "p02"),
+        (t(19, 18, 22), "glug", "p11"),
+    ]
+    got = passes(events)
+    assert [(p.pass_id, p.n) for p in got] == [
+        ("2026-07-10T15:00", 3),
+        ("2026-07-19T18:04", 3),
+    ]
+    # the naive 30-min gap splits the dose session TWICE — the calibration's point
+    assert len(passes(events, gap_min=30.0)) == 4
