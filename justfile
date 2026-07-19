@@ -109,7 +109,8 @@ flash *ARGS:
 # host_ip (optional 3rd arg, #1227): pins the espota UDP ack-callback interface for a multi-homed
 #   host (LAN + VPN + WSL). Setting PLATFORMIO_UPLOAD_FLAGS *replaces* the ini's upload_flags, so we
 #   repeat --auth, newline-joined (space-joined arrives as one argv token and breaks auth; see #1225).
-#   The auth string must stay in sync with the <board>_ota env in firmware/platformio.ini.
+#   The --auth value is resolved like the ini would (#1268): the gitignored platformio_local.ini
+#   override (#1260) wins, else the in-tree placeholder — so a rotated password still authenticates here.
 # Truth check (#1227): espota's UDP ack can time out even after a healthy flash on a multi-homed host,
 #   exiting FAILED on success. So after upload we poll the board's status page for git= and report
 #   reality — VERIFIED on the sha when it's back on the expected commit; a real failure only if it
@@ -125,9 +126,21 @@ ota device board="esp32dev" host_ip="":
     printf '>> ota: flashing %s (env %s_ota) — expecting git=%s\n' "$host" "{{board}}" "$expected"
     if [ -n "{{host_ip}}" ]; then
         # env var REPLACES the ini upload_flags → repeat --auth; newline-joined, not space (#1225).
-        PLATFORMIO_UPLOAD_FLAGS="$(printf -- '--auth=sprout-phase0\n--host_ip=%s' "{{host_ip}}")"
+        # Resolve --auth like the ini (#1268): the gitignored platformio_local.ini override (#1260)
+        # wins, else the in-tree placeholder — so a rotated password still authenticates on this path.
+        auth="sprout-phase0"; auth_src="in-tree placeholder"
+        if [ -f firmware/platformio_local.ini ]; then
+            la="$(awk -v want="[env:{{board}}_ota]" '
+                $0 == want { inenv = 1; next } /^\[/ { inenv = 0 }
+                inenv && match($0, /--auth=[^[:space:]]+/) { print substr($0, RSTART + 7, RLENGTH - 7); exit }
+            ' firmware/platformio_local.ini)"
+            [ -z "$la" ] && la="$(awk 'match($0, /--auth=[^[:space:]]+/) { print substr($0, RSTART + 7, RLENGTH - 7); exit }' firmware/platformio_local.ini)"
+            [ -n "$la" ] && { auth="$la"; auth_src="platformio_local.ini"; }
+        fi
+        PLATFORMIO_UPLOAD_FLAGS="$(printf -- '--auth=%s\n--host_ip=%s' "$auth" "{{host_ip}}")"
         export PLATFORMIO_UPLOAD_FLAGS
-        printf '>> host_ip pinned to %s (auth repeated in PLATFORMIO_UPLOAD_FLAGS)\n' "{{host_ip}}"
+        # never echo the password — report only its SOURCE (#1268).
+        printf '>> host_ip pinned to %s (auth from %s, repeated in the upload flags)\n' "{{host_ip}}" "$auth_src"
     fi
     {{pio}} run -d firmware -e {{board}}_ota -t upload --upload-port "$host" \
         || printf '>> espota exit was non-zero — checking the board itself before believing it (#1227)\n'
