@@ -46,6 +46,10 @@ credentials.h
 config/identifiers.local.txt
 # Pre-edit backups of the local configs (e.g. devices.local.json.bak-<ts>) - local safety copies.
 config/*.local.json.bak*
+# Manual watering journal (#1137 "glug glug"): the maintainer's real waterings are local
+# operator ground truth, an append-only JSONL stream that grows per plant per season. Same
+# local-operator-data class as the configs above - stays on the machine, never committed.
+config/watering_log.local.jsonl
 # Plant photos (#875 card identity block): camera photos carry EXIF/GPS of the
 # maintainer's home - a hard privacy fence, same class as the home coordinates above. The
 # real photos stay LOCAL; only a committed .gitkeep marks the dir. Exact path/format/size

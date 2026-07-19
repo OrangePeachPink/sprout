@@ -116,15 +116,12 @@ def humanize_ago(hours: float) -> str:
     return f"{round(hours / 24)}d ago"
 
 
-def last_watered_from_rewater(rewater: dict | None, now: datetime) -> dict | None:
-    """Turn a band_movement DETECTED re-water (``{ts, source:'detected'}``) into a
-    last_watered field (#875 Q2): ``{known, source:'detected', ts, hours_ago, ago,
-    recent}``. Always labelled ``detected`` — never a logged event (that stays 0.8.0).
-    Returns None when there's no detected re-water (→ build_card's graceful absence)."""
-    if not isinstance(rewater, dict) or not rewater.get("ts"):
-        return None
+def _last_watered_field(ts_str: str, source: str, now: datetime) -> dict | None:
+    """A last-watered field from an ISO ts + its honest source label. ``source`` is the
+    provenance the chip shows — ``detected`` (band_movement heuristic) or ``manual`` (a
+    logged operator event, #1137). Returns None on an unparseable ts."""
     try:
-        ts = datetime.fromisoformat(str(rewater["ts"]).replace("Z", "+00:00"))
+        ts = datetime.fromisoformat(str(ts_str).replace("Z", "+00:00"))
     except ValueError:
         return None
     if ts.tzinfo is None:
@@ -132,12 +129,43 @@ def last_watered_from_rewater(rewater: dict | None, now: datetime) -> dict | Non
     hours_ago = max(0.0, (now - ts).total_seconds() / 3600.0)
     return {
         "known": True,
-        "source": rewater.get("source", "detected"),  # honest: heuristic, not logged
-        "ts": rewater["ts"],
+        "source": source,
+        "ts": ts_str,
         "hours_ago": round(hours_ago, 1),
         "ago": humanize_ago(hours_ago),
         "recent": hours_ago <= WATERING_RECENT_H,
     }
+
+
+def last_watered_from_rewater(rewater: dict | None, now: datetime) -> dict | None:
+    """Turn a band_movement DETECTED re-water (``{ts, source:'detected'}``) into a
+    last_watered field (#875 Q2). Always labelled with the re-water's own source
+    (``detected``). Returns None when there's no detected re-water (absence)."""
+    if not isinstance(rewater, dict) or not rewater.get("ts"):
+        return None
+    return _last_watered_field(rewater["ts"], rewater.get("source", "detected"), now)
+
+
+def last_watered_from_manual(event: dict | None, now: datetime) -> dict | None:
+    """#1137: a LOGGED manual watering (``{plant_id, source:'manual', ts}`` from the
+    watering journal) as a last_watered field, labelled ``manual``. None when absent."""
+    if not isinstance(event, dict) or not event.get("ts"):
+        return None
+    return _last_watered_field(event["ts"], "manual", now)
+
+
+def resolve_last_watered(
+    rewater: dict | None, manual: dict | None, now: datetime
+) -> dict | None:
+    """#1137: reconcile the DETECTED re-water (a heuristic guess) with a LOGGED manual
+    watering (operator ground truth). A logged event is authoritative — it wins whenever
+    it is at least as recent as the detection (``<=`` hours-ago, so it also wins a tie).
+    Either may be absent; returns the winner, or None when neither exists."""
+    detected = last_watered_from_rewater(rewater, now)
+    logged = last_watered_from_manual(manual, now)
+    if logged and detected:
+        return logged if logged["hours_ago"] <= detected["hours_ago"] else detected
+    return logged or detected
 
 
 def _exception(state: str, diagnostic: bool) -> dict:
@@ -394,13 +422,19 @@ def cards_from_context(
     plants_by_id: dict,
     mood_map: dict,
     voice_pool: dict,
+    manual_by_plant: dict | None = None,
     now: datetime | None = None,
 ) -> list[dict]:
     """Compose the Home's card list from a built dashboard ``context`` (dashboard.py) +
     the temporal registry's plants. This is the bridge the seam-map flagged: live
     band/mood/forecast come from ``ctx['sensors']`` (the static-registry card path),
-    rich identity from ``plants_by_id`` (the temporal registry). Most-thirsty leads."""
+    rich identity from ``plants_by_id`` (the temporal registry). Most-thirsty leads.
+
+    ``manual_by_plant`` (#1137) is the latest LOGGED manual watering per plant_id (from
+    the watering journal, read caller-side to keep this a pure formatter). A logged
+    event outranks the detected re-water for ``last_watered``. Absent -> detected."""
     now = now or datetime.now(timezone.utc)
+    manual_by_plant = manual_by_plant or {}
     # #875 Q2: the DETECTED re-water per plant (band_movement heuristic), by plant.
     rewater = {
         e.get("plant_id"): e.get("rewater")
@@ -416,7 +450,7 @@ def cards_from_context(
             surface, band = None, None  # a no-signal / unassigned frame, not a mood
         else:
             surface, band = None, s.get("band_fw")
-        lw = last_watered_from_rewater(rewater.get(pid), now)
+        lw = resolve_last_watered(rewater.get(pid), manual_by_plant.get(pid), now)
         card = build_card(
             _plant_for(pid, s, plants_by_id),
             band=band,
@@ -437,11 +471,17 @@ def cards_from_context(
         cards.append(card)
     for sl in ctx.get("sensorless", []):
         pid = sl.get("plant_id")
+        # #1137: a sensorless plant has no sensor, so no DETECTED re-water — a logged
+        # manual watering is its ONLY last_watered source (and the whole point of the
+        # log: you still water the plants Sprout can't feel).
+        lw = last_watered_from_manual(manual_by_plant.get(pid), now)
         card = build_card(
             _plant_for(pid, sl, plants_by_id),
             sensorless=True,
             mood_map=mood_map,
             voice_pool=voice_pool,
+            last_watered=lw,
+            recent_water=bool(lw and lw.get("recent")),
         )
         card["urgency"] = None  # a not-probed plant has no urgency to sort on
         card["sensor_id"] = None  # not probed — no series to join (first-class-absent)

@@ -769,6 +769,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     system_cal_state,
                 )
                 from registry_model import load_registry_model
+                from watering_log import latest_by_plant  # #1137 manual waterings
 
                 # The Home reads the SAME served context as the Workbench (one truth,
                 # ADR-0008): live band/mood/forecast from build_context, rich identity
@@ -791,6 +792,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     plants_by_id=plants_by_id,
                     mood_map=load_mood_map(),
                     voice_pool=load_voice_pool(),
+                    # #1137: a logged manual watering outranks the detected heuristic
+                    # for last_watered. Absent journal -> {} -> detected, as before.
+                    manual_by_plant=latest_by_plant(),
                 )
                 # #875 Q3: the normal thirst grid stays readable; off-normal readings
                 # (air-dry / fault / no-signal) go to their own exceptions lane so the
@@ -932,6 +936,24 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self._send_json(env_solar.save_location(self._body()))
                 except ValueError as exc:
                     self._send_json({"error": str(exc)}, status=400)
+            elif parsed.path == "/watering/log":  # #1137: log a manual watering
+                # Appends to the local watering journal; localhost-only (as /quit). The
+                # logged event becomes the authoritative last_watered (beats detection).
+                if not self._is_local():
+                    self._send_json(
+                        {"error": "watering log is localhost-only"}, status=403
+                    )
+                    return
+                from watering_log import log_manual
+
+                b = self._body()
+                try:
+                    event = log_manual(
+                        b.get("plant_id", ""), ml=b.get("ml"), note=b.get("note")
+                    )
+                    self._send_json({"ok": True, "event": event})
+                except (ValueError, TypeError) as exc:
+                    self._send_json({"ok": False, "error": str(exc)}, status=400)
             elif parsed.path.startswith("/photo/"):  # #875 Q4: ingest a plant avatar
                 # Writes a local file + mutates the registry; localhost-only. The image
                 # is downsampled + EXIF-stripped before it ever lands (no home GPS).
