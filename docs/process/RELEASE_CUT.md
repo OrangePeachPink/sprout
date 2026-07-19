@@ -62,7 +62,9 @@ Then: add a 2–4 line human lede above the generated list (what this release *m
 - [ ] **Publishing the release creates the tag** — final look, then Publish. Verify:
       `git ls-remote origin refs/tags/vX.Y.Z` returns the ship commit.
 - [ ] Card sweep, mechanized (#732): **`just board-hygiene`** must print *clean* (zero
-      closed-not-Done) before the milestone closes; fix any findings, rerun to green.
+      closed-not-Done) before the milestone closes; fix any findings, rerun to green. *(Fallback if
+      the recipe or the ProjectV2 token is ever unavailable: eye-sweep the milestone's merged PRs
+      and closed issues to Done.)*
 
 ## 6. Open the next cycle
 
