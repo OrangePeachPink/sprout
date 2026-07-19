@@ -45,7 +45,7 @@ PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ),
     (
         "is-truth formula",
-        re.compile(r"\braw \+ band (?:is|are) truth\b|\bis truth\b", re.I),
+        re.compile(r"\braw \+ band (?:is|are) truth\b|\bis truth\b|=\s*truth\b", re.I),
     ),
     (
         "judgment hook",
