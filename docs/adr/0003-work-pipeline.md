@@ -166,7 +166,8 @@ This is the process the whole team adopts; it will be surfaced to outside contri
 **Attribution (2026-06-27):** all lanes post from the one `OrangePeachPink` account, so each **signs its
 work** — a `— <Lane>` sign-off on PRs, comments, ADRs, docs, and copy, plus a `Lane: <Lane>` commit
 trailer so attribution survives in `git log`/`git blame`. The operative convention lives in
-`AGENTS.md` § Lane attribution.
+[`docs/team/OPERATIONS.md`](../team/OPERATIONS.md) § Lane attribution (internal lanes only) — relocated there
+from `AGENTS.md` by the #1125 doc split.
 
 ## 9. Milestones, releases, insights
 
