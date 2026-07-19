@@ -13,6 +13,23 @@ just ota <device_id>        # e.g.  just ota k7m2rt   -> targets sprout-k7m2rt.l
 Find `<device_id>` on the board's card in the dashboard, the boot banner (`device_id=…`), or any
 telemetry row. The board announces itself as `sprout-<device_id>.local` on the LAN (#676 mDNS).
 
+### Multi-homed host? Pin the callback IP (#1227)
+
+If your PC has more than one network interface (LAN + VPN + WSL is the common trio), espota can finish the
+upload while the board's UDP result-callback goes to the wrong interface: the flash **succeeds**, but espota
+waits and then exits `No response from device after upload completion` — a **false FAILED**. Pass your LAN
+IP as the third argument to pin the callback interface:
+
+```sh
+just ota <device_id> <board> <host_ip>   # e.g.  just ota n3jhsp esp32c5 192.168.1.42
+```
+
+**The recipe trusts the board, not espota's exit code.** After every upload it polls
+`http://sprout-<device_id>.local/` for the running `git=` short-sha and reports reality: `VERIFIED on <sha>`
+when the board is back on the expected commit (even if espota timed out), or a failure only if the board
+never returns. An ack-timeout on a healthy flash therefore reads **VERIFIED**; a genuine half-flash still
+reads **FAILED**.
+
 ## Password
 
 The OTA upload is password-gated. The **Phase-0 placeholder** is `sprout-phase0`, set in two places

@@ -102,15 +102,53 @@ flash *ARGS:
     {{pio}} run -d firmware -t upload {{ARGS}}
 
 # OTA-flash a board over WiFi by its mDNS device_id (#302 Phase-0, LAN-only). No USB.
-#   e.g.  just ota k7m2rt              (classic esp32dev — targets sprout-k7m2rt.local)
-#         just ota n3jhsp esp32c5      (C5 board — uses the esp32c5_ota env)
+#   e.g.  just ota k7m2rt                       (classic esp32dev — targets sprout-k7m2rt.local)
+#         just ota n3jhsp esp32c5               (C5 board — uses the esp32c5_ota env)
+#         just ota n3jhsp esp32c5 192.168.1.42  (multi-homed host: pin the LAN callback IP)
 # Board-aware: the optional 2nd arg selects the <board>_ota env (default esp32dev).
+# host_ip (optional 3rd arg, #1227): pins the espota UDP ack-callback interface for a multi-homed
+#   host (LAN + VPN + WSL). Setting PLATFORMIO_UPLOAD_FLAGS *replaces* the ini's upload_flags, so we
+#   repeat --auth, newline-joined (space-joined arrives as one argv token and breaks auth; see #1225).
+#   The auth string must stay in sync with the <board>_ota env in firmware/platformio.ini.
+# Truth check (#1227): espota's UDP ack can time out even after a healthy flash on a multi-homed host,
+#   exiting FAILED on success. So after upload we poll the board's status page for git= and report
+#   reality — VERIFIED on the sha when it's back on the expected commit; a real failure only if it
+#   never returns (which also catches a genuine half-flash).
 # Prereqs: the board already runs OTA firmware (>= this build) + has WiFi creds set.
 # Honest limits: a DEAD or NEW/unprovisioned board has no OTA receiver — flash it WIRED
-# (just flash). Password is the Phase-0 placeholder in the <board>_ota env. See
-# docs/OTA_FLASH.md.
-ota device board="esp32dev" *ARGS:
-    {{pio}} run -d firmware -e {{board}}_ota -t upload --upload-port sprout-{{device}}.local {{ARGS}}
+# (just flash). Password is the Phase-0 placeholder in the <board>_ota env. See docs/OTA_FLASH.md.
+ota device board="esp32dev" host_ip="":
+    #!/usr/bin/env sh
+    set -u
+    host="sprout-{{device}}.local"
+    expected="$(git rev-parse --short HEAD)"
+    printf '>> ota: flashing %s (env %s_ota) — expecting git=%s\n' "$host" "{{board}}" "$expected"
+    if [ -n "{{host_ip}}" ]; then
+        # env var REPLACES the ini upload_flags → repeat --auth; newline-joined, not space (#1225).
+        PLATFORMIO_UPLOAD_FLAGS="$(printf -- '--auth=sprout-phase0\n--host_ip=%s' "{{host_ip}}")"
+        export PLATFORMIO_UPLOAD_FLAGS
+        printf '>> host_ip pinned to %s (auth repeated in PLATFORMIO_UPLOAD_FLAGS)\n' "{{host_ip}}"
+    fi
+    {{pio}} run -d firmware -e {{board}}_ota -t upload --upload-port "$host" \
+        || printf '>> espota exit was non-zero — checking the board itself before believing it (#1227)\n'
+    printf '>> verifying via http://%s/ (board reboots + re-announces mDNS; polling ~60s)...\n' "$host"
+    got=""
+    i=0
+    while [ "$i" -lt 20 ]; do
+        got="$(curl -fs --max-time 3 "http://$host/" 2>/dev/null | sed -n 's/.*git=\([0-9A-Fa-f][0-9A-Fa-f]*\).*/\1/p' | head -n1)"
+        [ -n "$got" ] && break
+        i=$((i + 1)); sleep 3
+    done
+    if [ -z "$got" ]; then
+        printf '>> FAILED: %s never answered after upload — mDNS/WiFi down, or a genuine bad flash.\n' "$host"
+        exit 1
+    fi
+    if [ "$got" = "$expected" ]; then
+        printf '>> VERIFIED on %s — the board is running the expected commit.\n' "$got"
+    else
+        printf '>> FAILED: board reports git=%s but expected %s (half-flash or a stale image).\n' "$got" "$expected"
+        exit 1
+    fi
 
 # Native host C unit tests for the firmware logic — no ESP32, no flash. (#260)
 # Runs via PlatformIO env:native (Unity framework, host compiler).
