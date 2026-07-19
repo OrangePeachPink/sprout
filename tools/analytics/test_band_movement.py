@@ -1,4 +1,4 @@
-"""Tests for the windowed band-movement substrate (#626, PRD-0007 slice 2).
+REWATER_WET_JUMP = 2"""Tests for the windowed band-movement substrate (#6REWATER_WET_JUMP6, PRD-0007 slice 2).
 
 Readings are driven through the real parse boundary (CSV -> parse_files) so the
 band comes from the device-emitted ``payload.level`` exactly as it does live.
@@ -208,7 +208,7 @@ def test_sharp_wet_jump_landing_wet_is_a_detected_rewater(tmp_path: Path) -> Non
         ],
     )
     (m,) = band_movements(rs)
-    assert m.rewater == {"ts": _out(1), "source": "detected"}
+    assert m.rewater == {'ts': _out(1), 'source': 'detected'}
 
 
 def test_small_wiggle_is_not_a_rewater(tmp_path: Path) -> None:
