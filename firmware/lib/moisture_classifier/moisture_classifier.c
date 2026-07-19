@@ -9,14 +9,17 @@
 
 bool moisture_level_is_display(moisture_level_t l)
 {
-    return (l >= MOIST_DRY) && (l <= MOIST_OVERWATERED);
+    /* #995: all 7 are in-soil display bands (Faint..Soaked). The off-ladder
+     * probe-in-air/water exceptions are the #1152 anchor layer, not a level. */
+    return (l >= MOIST_AIR_DRY) && (l <= MOIST_SUBMERGED);
 }
 
 moisture_class_t moisture_class_of(moisture_level_t l)
 {
-    if (l <= MOIST_AIR_DRY)   return MCLASS_DRY_DIAG;   /* idx 0    */
-    if (l >= MOIST_SUBMERGED) return MCLASS_WET_DIAG;   /* idx 6    */
-    return MCLASS_SOIL;                                 /* idx 1..5 */
+    /* confirm-SPEED grouping (#995): edge bands keep distinct timing. */
+    if (l <= MOIST_AIR_DRY) return MCLASS_DRY_DIAG; /* idx 0  Faint edge  */
+    if (l >= MOIST_SUBMERGED) return MCLASS_WET_DIAG; /* idx 6  Soaked edge */
+    return MCLASS_SOIL; /* idx 1..5 mid soil  */
 }
 
 const char *moisture_level_name(moisture_level_t l)

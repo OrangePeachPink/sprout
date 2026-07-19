@@ -69,8 +69,13 @@ every lane. If two lanes use the same word for different things, or different wo
 - **The reading** *(non-negotiable)* — raw ADC counts + the calibrated **band** are the reading; any 0–100
   figure is a **labelled relative index**, **NEVER** real volumetric moisture or a bare "percentage." Mood,
   status color, and watering derive from the **band**, never the index.
-- **Band** — one of the **7** calibrated firmware moisture classes (`air-dry → DRY → needs water → OK →
-  well watered → overwatered → submerged`); the calibrated truth shown beside raw ADC. **not** the index.
+- **Band** — one of the **7** calibrated in-soil moisture classes; the calibrated truth shown beside raw
+  ADC, **not** the index. Per #1039/#995 the **seven mood words ARE the band names**
+  (`Soaked → Refreshed → Thriving → Content → Thirsty → Parched → Faint`, wettest→driest). The firmware wire
+  keeps the stable technical key (`level=submerged … air-dry`) as the join; the host `mood-band-map.json`
+  translates key→mood for display, so nothing renames on the wire. All seven are in-soil display bands (the
+  old air-dry/submerged "diagnostics" are now the Faint/Soaked edges); the off-ladder probe-in-air / -water
+  exceptions are the anchor layer (#1152), not a band.
 - **Band-label lag** *(👤 user-facing)* — on a **fast transient** (a bench dunk, install poke) the `level`
   **band** trails the raw ADC by **~1 cadence tick** — raw already dropped to 888 while the label still read
   `dry`; raw back to 2985 while still `submerged` (#660). This is **intended anti-flap hysteresis**, not a bug:

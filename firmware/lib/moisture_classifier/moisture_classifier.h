@@ -12,10 +12,11 @@
  * Raw is INVERTED: higher raw = drier (lower moisture). Boundaries are stored
  * in strictly DESCENDING raw order as the level index increases.
  *
- * Level 0 (air-dry) and level 6 (submerged) are out-of-band diagnostics: they
- * bracket the real soil range and are not meant for default UI/log display
- * (see moisture_level_is_display). They are useful for troubleshooting,
- * "probe not in soil" detection at boot, and internal indexing.
+ * #995 (2026-07-19): all 7 levels are IN-SOIL display bands (the Faint..Soaked
+ * mood ladder). Level 0 (Faint) and level 6 (Soaked) are the DRY/WET edge bands
+ * - shown like any other. The true off-ladder "probe in air / probe in water"
+ * exceptions moved to the anchor layer (#1152); until it lands, Faint doubles as
+ * the "probe may not be in soil" hint (mood-band-map diagnosticNote).
  *
  * Framework-agnostic: you fill the sample buffer (analogRead / adc1_get_raw),
  * this module does the rest. No dynamic allocation, no floats required.
@@ -36,22 +37,31 @@ extern "C" {
 #define MOISTURE_BOUNDARY_COUNT  6   /* == MOISTURE_LEVEL_COUNT - 1 */
 
 /* Driest (idx 0) -> wettest (idx 6). 7-band scheme (moisture_classifier_spec). */
+/* #995 (2026-07-19): all 7 are IN-SOIL display bands (the mood ladder Faint..
+ * Soaked, host mood-band-map.json keys on these fwLevel names - do NOT rename).
+ * The old air-dry/submerged "diagnostics" are now the Faint/Soaked edge bands;
+ * the true off-ladder probe-in-air / probe-in-water exceptions move to the
+ * anchor layer (#1152). Faint doubles as "probe may not be in soil" per the
+ * mood-map's diagnosticNote until #1152 lands the precise anchor check. */
 typedef enum {
-    MOIST_AIR_DRY = 0,         /* diagnostic: probe in air / air gap          */
-    MOIST_DRY,                 /* display:   soil too dry (top of soil range) */
-    MOIST_NEEDS_WATER,         /* display                                     */
-    MOIST_OK,                  /* display:   healthy band                     */
-    MOIST_WELL_WATERED,        /* display:   field capacity                   */
-    MOIST_OVERWATERED,         /* display:   saturated / fresh over-soak      */
-    MOIST_SUBMERGED            /* diagnostic: standing water                  */
+    MOIST_AIR_DRY = 0, /* Faint  - driest in-soil (see #1152 air anchor)*/
+    MOIST_DRY, /* Parched                                      */
+    MOIST_NEEDS_WATER, /* Thirsty                                      */
+    MOIST_OK, /* Content - healthy band                       */
+    MOIST_WELL_WATERED, /* Thriving - field capacity                    */
+    MOIST_OVERWATERED, /* Refreshed - fresh over-soak                  */
+    MOIST_SUBMERGED /* Soaked - wettest in-soil (see #1152 water anc)*/
 } moisture_level_t;
 
-/* Confirm-window class. Entering a level uses the window for that level's
- * class, so submersion is recognized fast while soil bands settle slowly. */
+/* Confirm-window class - a CONFIRM-SPEED grouping, not a display/diagnostic
+ * claim (#995: all 7 levels are in-soil bands). The two edge bands keep distinct
+ * timing: a fresh Soaked over-soak is recognized fast, the Faint edge settles at
+ * its own pace, the mid soil bands settle slowly. Names retain the _DIAG suffix
+ * for history; they mean "edge band" now, not "diagnostic". */
 typedef enum {
-    MCLASS_DRY_DIAG = 0,   /* idx 0    (air-dry)   */
-    MCLASS_SOIL,           /* idx 1..5 (soil)      */
-    MCLASS_WET_DIAG        /* idx 6    (submerged) */
+    MCLASS_DRY_DIAG = 0, /* idx 0    (Faint edge)  */
+    MCLASS_SOIL, /* idx 1..5 (mid soil)    */
+    MCLASS_WET_DIAG /* idx 6    (Soaked edge) */
 } moisture_class_t;
 
 /* Sensor-type profile (ADR-0019 §3). Selects the raw->band DIRECTION (and, when a
@@ -76,9 +86,9 @@ typedef struct {
     uint16_t deadband_raw;     /* total dead-band width in raw counts (~60)    */
 
     /* --- persistence (confirmation), in milliseconds --- */
-    uint32_t confirm_ms_soil;  /* display bands idx 1..5  (~8000)              */
-    uint32_t confirm_ms_dry;   /* air-dry diagnostic idx 0                     */
-    uint32_t confirm_ms_wet;   /* submerged diagnostic idx 6 (~3500)           */
+    uint32_t confirm_ms_soil; /* mid soil bands idx 1..5 (~8000)             */
+    uint32_t confirm_ms_dry; /* Faint edge idx 0 (~8000)                    */
+    uint32_t confirm_ms_wet; /* Soaked edge idx 6, fast (~3500)             */
     uint32_t loop_period_ms;   /* measurement cadence; ms->count uses this     */
 
     /* --- health --- */
@@ -86,15 +96,16 @@ typedef struct {
                                   0 disables the check                         */
 
     /* --- calibration thresholds (DESCENDING) ---
-     * boundary[i] separates level i from level i+1.
-     *   [0] 0/1   air-dry      | DRY        <- dry potting-mix / air gap
-     *   [1] 1/2   dry          | needs water
-     *   [2] 2/3   needs water  | OK
-     *   [3] 3/4   OK           | well watered
-     *   [4] 4/5   well watered | overwatered
-     *   [5] 5/6   overwatered  | submerged  <- saturated soil vs standing water
-     * Middle bands [1]..[3] are provisional (interpolated); tighten from the
-     * dry-down log. Wet end + dry center are anchored to measured readings. */
+     * boundary[i] separates level i from level i+1. #995-ratified in-soil edges
+     * (2026-07-19) - ALL six are in-soil dividers now; the air/water rails left
+     * boundary[] for the anchor layer (#1152).
+     *   [0] 0/1   Faint     | Parched   <- driest in-soil (Faint floor ~2293)
+     *   [1] 1/2   Parched   | Thirsty
+     *   [2] 2/3   Thirsty   | Content
+     *   [3] 3/4   Content   | Thriving
+     *   [4] 4/5   Thriving  | Refreshed
+     *   [5] 5/6   Refreshed | Soaked    <- wettest in-soil (Soaked ceiling ~1259)
+     * Both envelopes measured (#1174 dry-down); passed the #1153 cal-suite. */
     uint16_t boundary[MOISTURE_BOUNDARY_COUNT];
 
     /* --- sensor type (ADR-0019 §3) --- */
@@ -112,7 +123,7 @@ typedef struct {
      .confirm_ms_wet = 3500,                                                   \
      .loop_period_ms = 1000,                                                   \
      .spread_warn_raw = 250,                                                   \
-     .boundary = {3050, 2140, 1830, 1520, 1150, 1050},                         \
+     .boundary = {2293, 2086, 1879, 1673, 1466, 1259},                         \
      .sensor_type = SENSOR_CAPACITIVE}
 
 typedef struct {
@@ -152,7 +163,7 @@ moisture_level_t moisture_update(moisture_state_t *st, const moisture_cfg_t *cfg
 
 /* ---- helpers ------------------------------------------------------------ */
 
-bool             moisture_level_is_display(moisture_level_t l); /* idx 1..5 */
+bool moisture_level_is_display(moisture_level_t l); /* #995: all 7 */
 moisture_class_t moisture_class_of(moisture_level_t l);
 const char      *moisture_level_name(moisture_level_t l);
 

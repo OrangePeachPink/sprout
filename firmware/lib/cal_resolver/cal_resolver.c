@@ -9,13 +9,14 @@
 static const cal_class_default_t *s_defaults = NULL;
 static size_t s_count = 0;
 
-/* Layer 3: the shared factory fallback - a never-bench-measured placeholder (the
- * historic board_capability.h placeholder rails + shared A2 interior). Any board
- * with no class default lands here: monitor-only, CAL_TIER_FACTORY. */
+/* Layer 3: the shared factory fallback - a never-bench-measured placeholder that
+ * carries the #995-ratified classic in-soil ladder (so an unknown board still
+ * classifies against the CURRENT band model, not the retired rail shape). Any
+ * board with no class default lands here: monitor-only, CAL_TIER_FACTORY. */
 static const cal_record_t k_factory_fallback = {
     "unknown",
     SENSOR_CLASS_CAPACITIVE_V2,
-    {3050, 2140, 1830, 1520, 1150, 1050},
+    {2293, 2086, 1879, 1673, 1466, 1259},
     "factory_placeholder",
     CAL_TIER_FACTORY,
 };

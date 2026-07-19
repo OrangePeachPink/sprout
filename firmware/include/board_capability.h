@@ -69,8 +69,11 @@ typedef struct {
 
 /* --- the capability matrix (add a board = add a #elif) -------------------- */
 #if defined(CONFIG_IDF_TARGET_ESP32)
-/* the classic baseline - EXACT values, unchanged from config.h's prior literals.
- * cal_boundary: the #248 common-cup-anchored endpoints, real bench data. */
+/* the classic baseline. cal_boundary: the #995-ratified 7-in-soil band edges
+ * (2026-07-19, both envelopes measured; supersedes the #248 common-cup rails).
+ * boundary[] is now FULLY in-soil dividers (Faint floor 2293 .. Soaked ceiling
+ * 1259); the air/water RAILS left boundary[] for the off-ladder anchors
+ * (wet_rail_raw + the #1152 probe-in-air/water exception layer). */
 #define BOARD_CAPABILITY                                                       \
     {"esp32-classic",                                                          \
      true,                                                                     \
@@ -82,7 +85,7 @@ typedef struct {
      2,                                                                        \
      21,                                                                       \
      22,                                                                       \
-     {3050, 2140, 1830, 1520, 1150, 1050},                                     \
+     {2293, 2086, 1879, 1673, 1466, 1259},                                     \
      true,                                                                     \
      900}
 #elif defined(CONFIG_IDF_TARGET_ESP32S3)
@@ -107,7 +110,7 @@ typedef struct {
      BOARD_LED_NONE,                                                           \
      8,                                                                        \
      9,                                                                        \
-     {3050, 2140, 1830, 1520, 1150, 1050},                                     \
+     {2293, 2086, 1879, 1673, 1466, 1259},                                     \
      false,                                                                    \
      900}
 #elif defined(CONFIG_IDF_TARGET_ESP32C5)
@@ -118,8 +121,10 @@ typedef struct {
  * `Pin 36 is not ADC pin!` / `IO 32 is not set as GPIO` errors that starved the
  * loop before WiFi could come up. Valid pins fix that. Continuity + GPIO map
  * are bench-verified now (deployed 2026-07-09, 8gtt1h). cal_boundary below is
- * the #898-measured C5 envelope (air ~2740 / wet ~980, interior linear-scaled;
- * Data signs the values). cal_verified stays FALSE because this is a per-BOARD
+ * the #995-ratified C5 in-soil band edges (2026-07-19, 8gtt1h envelope MEASURED
+ * directly - not #898-derived; Data signs the values). The air/water rails moved
+ * off boundary[] to the #1152 anchor layer, same as the classic.
+ * cal_verified stays FALSE because this is a per-BOARD
  * cal, not the per-channel #170 bench table the classic carries - the #899 seam
  * routes unverified boards to cal_boundary, so false is what makes the C5 use
  * its OWN scale (flipping true wrongly re-applies the classic per-channel table).
@@ -140,7 +145,7 @@ typedef struct {
      BOARD_LED_NONE,                                                           \
      23,                                                                       \
      24,                                                                       \
-     {2740, 1939, 1666, 1394, 1068, 980},                                      \
+     {2037, 1861, 1685, 1510, 1334, 1158},                                     \
      false,                                                                    \
      900}
 #else
@@ -158,7 +163,7 @@ typedef struct {
      2,                                                                        \
      21,                                                                       \
      22,                                                                       \
-     {3050, 2140, 1830, 1520, 1150, 1050},                                     \
+     {2293, 2086, 1879, 1673, 1466, 1259},                                     \
      false,                                                                    \
      900}
 #endif
