@@ -1231,7 +1231,7 @@ def build_context(
                 # "since last watering" instead of implying it spans the whole view.
                 "segment_bound": _seg_start is not None,
                 # #1244 C0: in-segment rows the valid-for-trend mask excluded from
-                # this fit (watering-transient / rebound / suspect) — the honest
+                # this fit (watering-transient / rebound / flagged) — the honest
                 # "what the line did NOT average" count.
                 "mask_dropped": _mask_dropped,
             }

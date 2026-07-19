@@ -114,7 +114,7 @@ def test_trend_fit_consumes_the_c0_mask_end_to_end() -> None:
 
 
 def test_a_quiet_window_masks_nothing() -> None:
-    # a monotone dry-down has no transient/rebound/suspect rows -> nothing dropped.
+    # a monotone dry-down has no transient/rebound/flagged rows -> nothing dropped.
     rows = [
         _r(i * 30, 1500 + i * 20, "OK" if i < 20 else "needs water") for i in range(40)
     ]

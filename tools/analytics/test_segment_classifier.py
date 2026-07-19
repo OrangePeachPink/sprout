@@ -1,6 +1,6 @@
 """#1244 — the C0 segment classifier: golden fixture pins the segment boundaries.
 
-A hand-built plant-week-in-miniature (60 s cadence): steady drying, one suspect-quality
+A hand-built plant-week-in-miniature (60 s cadence): steady drying, one wire-flagged
 row, a confirmed watering transient, the time-boxed rebound window — with the boundary
 indices asserted EXACTLY, plus the near-miss cases the rules must refuse (a small dip
 that reverts is noise, not a watering).
@@ -65,7 +65,7 @@ def test_golden_fixture_boundaries_exact() -> None:
     got = [(s.kind, s.i0, s.i1) for s in segments(_golden())]
     assert got == [
         ("steady-drying", 0, 49),
-        ("suspect", 50, 50),
+        ("flagged", 50, 50),
         ("steady-drying", 51, 98),
         # the last pre-drop reading (99) anchors the transient run
         ("watering-transient", 99, 105),
