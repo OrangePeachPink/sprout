@@ -1,10 +1,11 @@
 # ADR-0036 — Sensor-identity layers: sticker · channel · wire `sensor_id` · display
 
-**Status:** Proposed — *the layer model and the "wire carries the channel, not the probe" rule are decidable from
-[ADR-0027](0027-identity-model.md) §5 and ruled here (Trellis). The **naming scheme** for the wire channel + the
-migration (§"The one maintainer ruling") await the maintainer's word per #1042 ("maintainer decides the rename").
-A wire rename is a `schema_version` boundary (never-stitch, ADR-0006 / ADR-0021), so **nothing changes on the wire
-until she rules.** V1 (ADR/doctrine + wire contract).*
+**Status:** Accepted — *the layer model and the "wire carries the channel, not the probe" rule are decidable from
+[ADR-0027](0027-identity-model.md) §5 and ruled here (Trellis). **The naming scheme is RULED (maintainer,
+2026-07-19, #1042): Fork A — `chN`.** The wire `sensor_id` carries `ch0..ch3` per board. A wire rename is a
+`schema_version` boundary (never-stitch, ADR-0006 / ADR-0021), so the rename lands at **`schema_version=5`**:
+v4 rows keep the old port-as-sticker token and are **never rewritten**, v5 rows carry the channel. V1
+(ADR/doctrine + wire contract).*
 **Date:** 2026-07-19
 **Owner:** Trellis (the ADR + the layer model). Cross-lane at build: **Firmware** (`SENSOR_NAMES` emission +
 parser), **Data** (parser + registry `channels{}` keys), **Design-QA** (display resolution).
