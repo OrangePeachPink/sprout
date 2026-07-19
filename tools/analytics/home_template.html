@@ -118,6 +118,20 @@
   .glug:hover, .glug:focus-visible { color: var(--ink); border-color: var(--muted); }
   .glug:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
   .hero .glug { font-size: 12.5px; padding: 5px 13px; }
+  /* #1229: the RETAINED logged state — unmistakable, not a flash; replaces the
+     button so a double-tap is impossible. Leaf-tinted: a completed good thing. */
+  .glugged { margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11.5px; font-weight: 700; color: var(--leaf);
+    background: color-mix(in srgb, var(--leaf) 10%, var(--surface));
+    border: 1.5px solid color-mix(in srgb, var(--leaf) 45%, transparent);
+    border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+  /* #1229: the explicit re-sort control — present-or-silent (only when the served
+     order drifted from the frozen one); chrome register, never auto-fires. */
+  .resort { display: inline-flex; align-items: center; gap: 5px; margin-left: 12px;
+    font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--muted);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+    padding: 3px 11px; cursor: pointer; user-select: none; vertical-align: 2px; }
+  .resort:hover, .resort:focus-visible { color: var(--ink); border-color: var(--muted); }
 
   .quiet { color: var(--muted); font-size: 12.5px; }
 
@@ -290,6 +304,15 @@ function waterHTML(card) {
     h += '<span class="nn-known">next water ~' + Math.max(1, Math.round(nn.hours / 24)) + "d</span>";
   else
     h += '<span>next <b>&mdash;</b> <span class="src">learning its rhythm</span></span>';
+  /* #1229: once glugged THIS SESSION (or the journal already says manual·just now),
+     the card wears a retained confirmed chip and the button is GONE — a double-tap
+     becomes impossible, a missed plant becomes visible at a glance. */
+  var confirmed = (card.plant_id && _glugged.has(card.plant_id)) ||
+    (lw.known && lw.source === "manual" && lw.ago === "just now");
+  if (confirmed) {
+    h += '<span class="glugged">✓ logged just now</span>';
+    return h;
+  }
   /* #1137 the "glug glug" one-tap: log a manual watering against Data's journal
      (POST /watering/log). span[role=button] because the card itself is a <button>
      (nested buttons are invalid); needs a plant_id to post against. */
@@ -315,7 +338,7 @@ function glugPost(el) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ plant_id: el.dataset.pid })
   }).then(function (r) { return r.json(); }).then(function (doc) {
-    if (doc && doc.ok) { refresh(); }
+    if (doc && doc.ok) { _glugged.add(el.dataset.pid); refresh(); }
     else { label.nodeValue = "couldn’t save"; delete el.dataset.busy; }
   }).catch(function () {
     label.nodeValue = was; delete el.dataset.busy;
@@ -385,6 +408,26 @@ function renderCard(card, opts) {
 
 /* ---- first paint ---- */
 var _cards = null;
+/* #1229: the glugs logged THIS SESSION — drives the retained confirmed chip. */
+var _glugged = new Set();
+/* #1229 fix 2: cards NEVER move mid-session. The order is captured at first paint
+   and held; a served-order drift surfaces an EXPLICIT re-sort chip instead of a
+   silent reshuffle (the operator, live: cards moved out from under her watering
+   pass — 11 taps, 3 doubles, 3 misses). New plants append; departed ones drop. */
+var _order = null;
+function _key(c) { return c.plant_id || "name:" + (((c.identity || {}).name) || "?"); }
+function stableCards(list) {
+  if (!_order) return list;
+  var idx = {};
+  _order.forEach(function (k, i) { idx[k] = i; });
+  return list.slice().sort(function (a, b) {
+    var ia = idx[_key(a)], ib = idx[_key(b)];
+    if (ia === undefined && ib === undefined) return 0;  // both new: served order
+    if (ia === undefined) return 1;   // new plants join at the end
+    if (ib === undefined) return -1;
+    return ia - ib;
+  });
+}
 function paint(doc) {
   var main = document.getElementById("main");
   main.innerHTML = "";
@@ -400,18 +443,38 @@ function paint(doc) {
     main.appendChild(e);
     return;
   }
+  var served = (doc.cards || []).concat(doc.exceptions || []).map(_key);
+  if (!_order) _order = served;
+  var cards = stableCards(doc.cards || []);
+  var exceptions = stableCards(doc.exceptions || []);
+  /* the drift chip — present-or-silent: only when a fresh sort would move cards */
+  var painted = cards.concat(exceptions).map(_key);
+  var drifted = served.join("") !== painted.join("");
   var invite = el("div", "invite",
-    "Tend a tiny jungle. <small>most thirsty first</small>");
+    "Tend a tiny jungle. <small>most thirsty first</small>" +
+    (drifted
+      ? '<span class="resort" role="button" tabindex="0" ' +
+        'title="the thirst order changed while you were here — re-sort when you’re ready">' +
+        "re-sort · most thirsty first</span>"
+      : ""));
   main.appendChild(invite);
+  if (drifted) {
+    var rs = invite.querySelector(".resort");
+    var go = function () { _order = served; paint(_cards); };
+    rs.addEventListener("click", go);
+    rs.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); }
+    });
+  }
   var grid = el("div", "grid");
-  (doc.cards || []).forEach(function (c) { grid.appendChild(renderCard(c)); });
+  cards.forEach(function (c) { grid.appendChild(renderCard(c)); });
   main.appendChild(grid);
-  if ((doc.exceptions || []).length) {
+  if (exceptions.length) {
     /* the exceptions lane (#875 Q3) — off-ladder, quiet, below the meaningful middle */
     main.appendChild(el("h2", "lane-h",
       "Needs a look <small>off the ladder &mdash; placement, physics, or signal</small>"));
     var lane = el("div", "grid lane");
-    doc.exceptions.forEach(function (c) { lane.appendChild(renderCard(c)); });
+    exceptions.forEach(function (c) { lane.appendChild(renderCard(c)); });
     main.appendChild(lane);
   }
 }
