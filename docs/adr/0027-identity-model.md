@@ -80,7 +80,7 @@ stable minted id; the friendly *name* moves to the registry (which already carri
 identifier** as much as legibility: under B a row emitted before the UUID is minted (NVS wipe, mint race,
 factory-fresh first boot) has no valid `device_id`, and `name=` is the only identity it can carry. It is
 ~free (+~10 bytes ≈ 0.06% of the 19200 budget, Data-measured) and does **not** undo B — a clearly-labelled
-`name=` payload field is a separate honest label, not the conflation-in-the-id-column B removes. It closes B's
+`name=` payload field is a separate plain label, not the conflation-in-the-id-column B removes. It closes B's
 one genuine regression vs A (which kept the name in the id column as its fallback). **Rationale:** B fixes
 the conflation *at its root* — `device_id` becomes a true
 stable identifier (its proper job) instead of a mutable label masquerading as an id in the "id" column,
@@ -176,7 +176,7 @@ canonical-column cut.
 
 The #602 work shipped three rules that graduate from a display-time workaround into permanent
 invariants of the identity registry / mapping table: **a live identity is never swallowed** by another's alias,
-**provenance rows are never rewritten** (raw wire truth is preserved), and **any merge is visible,
+**provenance rows are never rewritten** (the raw wire record is preserved), and **any merge is visible,
 not silent**. These are load-bearing for the UUID model, not disposable.
 
 ### 9. Migration — the 2nd epoch
@@ -193,8 +193,8 @@ purely as the reader for pre-migration logs. *(Data's §8/§9 precision.)*
 identities are not equally safe to map. `plants_esp32_f4e9d4` was **unique** to the classic — it coalesces
 directly. `Sprout ESP32` was the **shared firmware default across all three boards** (#601's original
 finding) — it must be split by evidence (session/timeframe/transport) before any mapping, and rows that
-remain genuinely ambiguous stay **honest-unknown** (an explicit unattributable bucket), never
-blind-coalesced. *(Trellis's #620 honest-migration rule, folded in at the maintainer's direction.)*
+remain genuinely ambiguous stay **explicit-unknown** (an explicit unattributable bucket), never
+blind-coalesced. *(Trellis's #620 explicit-migration rule, folded in at the maintainer's direction.)*
 
 ## Wave scoping
 

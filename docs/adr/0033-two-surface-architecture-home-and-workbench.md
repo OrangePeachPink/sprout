@@ -54,7 +54,7 @@ This section is the ADR's spine. Home is friendly; **friendliness is not license
 - **Character layers onto the instrument, never restyling it** (ADR-0008). No character copy inside dense
   readouts; no mood word standing in for a number. The two-surface split **makes this boundary structural** —
   character lives on Home, the instrument on the Workbench.
-- **Raw + band = truth; the 0–100 is a *labelled* relative index; absence is first-class** (ADR-0004 / 0006 /
+- **Raw + band are the reading; the 0–100 is a *labelled* relative index; absence is first-class** (ADR-0004 / 0006 /
   0028) — on Home too. Home leads with mood + band, and the honest raw / index / calibration-confidence is always
   one step away (the plant's instrument detail, on the Workbench). Home never shows an invented "% watered."
 - **Alarms are earned; absence is not an alarm** (ADR-0028, T6). Untethered / asleep / empty states render with

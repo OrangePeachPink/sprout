@@ -14,7 +14,7 @@ behind it.*
 ## The North Star
 
 > **A complete beginner plugs in three wires, and within one sitting they watch the soil come alive on a
-> graph, teach the board what *their* dry and wet look like, and hear their plant say one of three honest
+> graph, teach the board what *their* dry and wet look like, and hear their plant say one of three plain-spoken
 > things. They leave thinking: *"I just did embedded. I want more of this."***
 
 The on-ramp's job is not to water a plant. It's to turn "I've never touched a microcontroller" into "I'm an
@@ -58,17 +58,17 @@ There is a lot out there. None of it is a real on-ramp.
 | What exists | What's good | Why it's not the on-ramp |
 | --- | --- | --- |
 | **[Adafruit STEMMA soil sensor](https://learn.adafruit.com/adafruit-stemma-soil-sensor-i2c-capacitive-moisture-sensor/overview)** | Gorgeous guides; corrosion-proof; I²C | A chip **abstracts the raw signal away** (returns 200–2000 via a library). You never *feel* calibration. I²C + a library + CircuitPython culture = more concepts on day one, and it's not the cheap sensor most people actually bought. |
-| **[SparkFun hookup guides](https://learn.sparkfun.com/tutorials/soil-moisture-sensor-hookup-guide/all)** | Excellent "measure dry, measure wet, calibrate" narrative | Teaches `map()` → a moisture **percentage** (the thing we call a lie); spread across a parts catalog, not one path. |
+| **[SparkFun hookup guides](https://learn.sparkfun.com/tutorials/soil-moisture-sensor-hookup-guide/all)** | Excellent "measure dry, measure wet, calibrate" narrative | Teaches `map()` → a moisture **percentage** (a single number, not the bands we teach); spread across a parts catalog, not one path. |
 | **ESP32 GitHub projects** ([nclman](https://github.com/nclman/esp32-soil-moisture), [Plantwatery](https://github.com/Lumics/Plantwatery), [garduino](https://github.com/thijstriemstra/garduino)) | Real, complete watering systems | Every one **leaps straight to WiFi + pump + Firebase/MQTT/Home Assistant.** That's the deep end at hour one. Overwhelming, and a giant tail to maintain. |
-| **The generic tutorials** ([Maker Portal](https://makersportal.com/blog/2020/5/26/capacitive-soil-moisture-calibration-with-arduino), [DFRobot](https://wiki.dfrobot.com/sen0193/docs/18036)) | Use the real $2 sensor; teach `map()` | All of them end at **"now it's a percentage."** None teach that a percentage is dishonest. |
+| **The generic tutorials** ([Maker Portal](https://makersportal.com/blog/2020/5/26/capacitive-soil-moisture-calibration-with-arduino), [DFRobot](https://wiki.dfrobot.com/sen0193/docs/18036)) | Use the real $2 sensor; teach `map()` | All of them end at **"now it's a percentage"** — a single mapped number, with no sense of the raw signal underneath. |
 
 **The gap — and our wedge:** every existing path either hides the raw signal, or buries the beginner in
-WiFi/pump/cloud, or teaches them a comforting **lie** (moisture %). Our on-ramp does the opposite of all three:
+WiFi/pump/cloud, or collapses the reading into a single **percentage**. Our on-ramp does the opposite of all three:
 
-> **It shows the raw signal honestly, stays radically small, and even at the beginner level refuses the lie —
-> it teaches *bands*, not a fake percentage.** Bands are the truth, and they are the conceptual seed of Sprout
-> Full's seven-band honest-data system. *Even our on-ramp is honest.* That's the soul of the project, present
-> from the first sitting.
+> **It keeps the raw signal in view, stays radically small, and — even at the beginner level — teaches
+> *bands*, not a single percentage.** Bands keep you close to the reading, and they're the conceptual seed of
+> Sprout Full's seven-band mood system. *The character is there from the first sitting* — a plant with a
+> range, not a bare number.
 
 ---
 
@@ -87,10 +87,10 @@ The board is the **Arduino Uno R4 WiFi** — a deliberate maintainer decision (#
    **Serial only**, on purpose. No network, no setup portal, nothing to configure. Just the board, the sensor,
    and the Serial Plotter.
 
-**Named honestly — what this trades vs. an ESP32 on-ramp:** the raw numbers a beginner calibrates here won't be
+**Named plainly — what this trades vs. an ESP32 on-ramp:** the raw numbers a beginner calibrates here won't be
 the *same integers* Sprout Full sees (Full runs an **ESP32** on a 3.3 V ADC; the R4 is a different chip at a
 different reference). That's fine — **the *concepts* transfer, which is what a beginner actually keeps:**
-measure your dry, measure your wet, draw the band lines, trust the raw reading over a fake percentage.
+measure your dry, measure your wet, draw the band lines, and read the raw signal instead of a single percentage.
 Graduation is *"you already know the ideas,"* not *"you already know this exact board."* The ideas are the
 durable thing; the board is just where you learned them.
 
@@ -185,13 +185,13 @@ Every step is designed to land a felt win and set up the next. This is the chore
 The on-ramp deliberately leaves them wanting — each ceiling is a Full headline:
 
 - They calibrated **one** probe by hand → Full calibrates **four**, per-channel, and locks them.
-- They drew **three** lines → Full has **seven** honest bands and a plant with moods.
+- They drew **three** lines → Full has **seven** calibrated bands and a plant with moods.
 - They typed numbers into a file → Full *remembers* calibration and shows a **dashboard**.
 - They watched a Serial Plotter → Full **logs every reading** and lets them explore the history.
 - The LED lit up → Full drives a **real pump**, safely, with an arm-gate.
 
-Crucially, the **values** carry over intact: The on-ramp taught them that a percentage is a lie and bands are the
-truth. Full is just that lesson, all the way up. They don't graduate to a *different* philosophy — they
+Crucially, the **values** carry over intact: the on-ramp taught them to read in bands and stay close to the
+raw signal. Full is just that lesson, all the way up. They don't graduate to a *different* philosophy — they
 graduate to *more* of the one they already fell in love with.
 
 ---
@@ -226,7 +226,7 @@ doc.*
 - **Firmware + Sage (build + verify the sketch, #446):** the actual `.ino` for the **Arduino Uno R4 WiFi** —
   `analogRead(A0)` + `SAMPLES` averaging, the three-band compare, the optional `LED_BUILTIN` blink (WiFi left
   unused, Serial only). Sage measures the real dry/wet anchors on an R4 + probe so the out-of-box defaults are
-  honest (the example values in this doc are placeholders). DX hands them this spec; they own the firmware.
+  real (the example values in this doc are placeholders). DX hands them this spec; they own the firmware.
 - **Design (a later pass, optional):** if the copy ever gets a styled page, Design dresses it — but the on-ramp ships
   in plain Markdown first; no Design dependency to start.
 - **Glossary:** the on-ramp's terms (the three bands, "calibrate by hand") land in the **User-facing 👤**

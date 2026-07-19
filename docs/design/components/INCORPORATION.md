@@ -15,7 +15,7 @@
 ## Data lane — how to consume
 
 - **Band → mood:** read `mood-band-map.json`. Look up the reading's UI band (or firmware level) to get its
-  `mood`, `motion`, and `markColors`. This is the single source of truth; don't hard-code a second mapping.
+  `mood`, `motion`, and `markColors`. This is the single source; don't hard-code a second mapping.
 - **The mark:** load `sprout-mark.js` and place `<sprout-mark band="moist"></sprout-mark>` (or
   `mood="thriving"`). Attributes: `band` | `mood` | `size` (px height, default 72) | `static` (no motion).
   It's a framework-agnostic custom element — drops straight into the served dashboard (vanilla host, per
@@ -38,12 +38,12 @@
   lane (it owns the map), don't fork it.
 - **The air-dry caveat:** `air-dry` is both a moisture band and the diagnostic "probe may not be in soil"
   signal. Its mood (`faint`) and voice deliberately name the ambiguity rather than asserting the plant is
-  dead — keep that honest framing if you surface it anywhere.
+  dead — keep that plain framing if you surface it anywhere.
 
 ## What this does NOT change
 
 - v1 instrument components — untouched.
 - The token contract (ADR-0004) — color/type still consumed from `sprout-tokens.css`.
-- The seven-band honesty rules — reinforced, never bypassed.
+- The seven-band reading rules — reinforced, never bypassed.
 - **Light mode and all `--st-*` / `--band-*` meaning colors** — the soil-mode refinement touches dark
   **neutrals** only; no meaning color moves in either theme.

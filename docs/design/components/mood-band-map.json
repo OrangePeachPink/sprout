@@ -1,5 +1,5 @@
 {
-  "$comment": "Sprout v3 — canonical mood<->band map. PROPOSED (Phase 2). Sprout's mood is a 1:1 function of the seven calibrated moisture bands, never of the 0-100 relative index (ADR-0007 §5, ADR-0004). This file is the single source of truth; sprout-mark.js mirrors it for zero-dependency drop-in and MUST stay in sync. Colors are the brand's mood marks; UI surfaces still consume status/band color from sprout-tokens.css (ADR-0004).",
+  "$comment": "Sprout v3 — canonical mood<->band map. PROPOSED (Phase 2). Sprout's mood is a 1:1 function of the seven calibrated moisture bands, never of the 0-100 relative index (ADR-0007 §5, ADR-0004). This file is the single source; sprout-mark.js mirrors it for zero-dependency drop-in and MUST stay in sync. Colors are the brand's mood marks; UI surfaces still consume status/band color from sprout-tokens.css (ADR-0004).",
   "version": "3.0.0-proposed",
   "bands": [
     {

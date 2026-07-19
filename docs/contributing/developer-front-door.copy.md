@@ -9,12 +9,12 @@
 
 **Start Here for Developers.**
 
-Sprout is a small, honest, self-watering plant project — and the friendliest repo you'll contribute to today.
+Sprout is a small self-watering plant project — and the friendliest repo you'll contribute to today.
 However you arrive — fixing a typo, wiring a sensor, or just curious — there's a place for you. *Tend well.*
 
 ## 1. What Sprout is
 
-Sprout keeps houseplants alive and stays honest about how: it reads soil moisture, waters on a schedule it can
+Sprout keeps houseplants alive and shows its work: it reads soil moisture, waters on a schedule it can
 defend, and never pretends a reading is better than the sensor that made it. It's a teaching project too — we eat
 our own dogfood, so every part is built to be picked up, understood, and improved by the next person (yes, you).
 
@@ -23,7 +23,7 @@ our own dogfood, so every part is built to be picked up, understood, and improve
 Work is split into areas you can take on independently:
 
 - **Firmware** — the ESP32 controller (C / PlatformIO): sensing, watering logic, the safety gate.
-- **Capture** — host-side logging that turns the serial stream into honest, timestamped data.
+- **Capture** — host-side logging that turns the serial stream into clean, timestamped data.
 - **Analytics** — the dashboard and analysis tier that make the data readable.
 - **Design** — the Sprout design system and the front doors (this page is one).
 
@@ -38,7 +38,7 @@ How a change flows, idea to merge:
 - **Your PR** — branch from `main` (`type/short-desc`), open a PR linking the issue with **`Refs #N`** (not
   `Closes #N`), and squash-merge to one tidy commit.
 - **The verification gate** — merging doesn't auto-close the issue; a reviewer confirms it did what was asked,
-  *then* closes it (ADR-0003 §8). That human confirmation is the point — it's how Sprout stays honest about
+  *then* closes it (ADR-0003 §8). That human confirmation is the point — it's how the record stays true to
   what's really done.
 
 New here? The gentle, walked-through version: [your first contribution](your-first-pr.md).
