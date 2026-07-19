@@ -84,6 +84,32 @@ def test_edit_changes_fields_but_not_identity() -> None:
     assert m.plants[0].plant_id == "p01"  # identity is immutable
 
 
+def test_pot_size_and_location_round_trip_through_add_and_edit() -> None:
+    # #833: these two are the fields that forced config-file surgery — pot_size was
+    # settable nowhere in-app, location was add-only. The apply layer already carries
+    # both (they're in _PLANT_FIELDS); this locks that so a future field-list change
+    # can't silently drop what the editor now depends on.
+    m = _model()
+    r = apply_operations(
+        m,
+        {
+            "plants": {
+                "add": [
+                    {"pet_name": "Fern", "pot_size": '6"', "location": "left sill"}
+                ],
+                "edit": [
+                    {"plant_id": "p01", "pot_size": '4"', "location": "right sill"}
+                ],
+            }
+        },
+    )
+    assert r["ok"] and r["applied"]["plants_added"] == 1 and r["applied"]["edited"] == 1
+    added = next(p for p in m.plants if p.pet_name == "Fern")
+    assert added.pot_size == '6"' and added.location == "left sill"  # add carries both
+    edited = next(p for p in m.plants if p.plant_id == "p01")
+    assert edited.pot_size == '4"' and edited.location == "right sill"  # edit too
+
+
 def test_edit_a_nonexistent_entity_is_a_structured_error() -> None:
     r = apply_operations(_model(), {"plants": {"edit": [{"plant_id": "p99"}]}})
     assert not r["ok"]

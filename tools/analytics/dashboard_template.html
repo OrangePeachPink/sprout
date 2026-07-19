@@ -1969,7 +1969,7 @@ function renderRegistry(reg){
     } else {
       card.appendChild(el('div', 'regmap unmapped', 'no sensor yet'));
     }
-    const meta = [p.location, p.pot_description].filter(Boolean).map(esc).join(' · ');
+    const meta = [p.location, p.pot_size, p.pot_description].filter(Boolean).map(esc).join(' · ');
     if(meta) card.appendChild(el('div', 'regmeta muted', meta));
     // #921 3b: the map affordance (the anxiety) — a plant-first picker, never dropdown soup.
     const act = el('button', 'reglink', m ? 'Change sensor' : 'Assign a sensor');
@@ -2060,6 +2060,7 @@ function regAddControl(kind){
     form.appendChild(mk('type (optional)', 'plant_type', ''));
     form.appendChild(mk('pet name (optional)', 'pet_name', ''));
     form.appendChild(mk('pot (optional)', 'pot_description', ''));
+    form.appendChild(mk('pot size (optional)', 'pot_size', ''));
     form.appendChild(mk('location (optional)', 'location', ''));
   } else {
     form.appendChild(mk('number — required (e.g. ' + nid + ')', 'sensor_id', nid));
@@ -2085,7 +2086,8 @@ function regStageAdd(kind, form){
 // #1038: inline field-edit — pencil → prefilled form → stage into *:{edit} → Save (the 3a convention,
 // same batch, same structured 400s). IDs are immutable (edit-not-identity, #1021) — never in the form.
 function regEditPencil(kind, id){
-  const b = el('button', 'reglink', '✎ Rename');
+  // #833: a plant edits its whole detail set (type/pot/pot size/location), not just a name.
+  const b = el('button', 'reglink', kind === 'plant' ? '✎ Edit' : '✎ Rename');
   b.onclick = () => { __regEditing = kind + ':' + id; __regAdding = null; __regPicking = null; renderRegistry(); };
   return b;
 }
@@ -2101,6 +2103,8 @@ function regEditForm(kind, entity){
     form.appendChild(mk('pet name', 'pet_name', entity.pet_name));
     form.appendChild(mk('type', 'plant_type', entity.plant_type));
     form.appendChild(mk('pot', 'pot_description', entity.pot_description));
+    form.appendChild(mk('pot size', 'pot_size', entity.pot_size));   // #833: was JSON-only
+    form.appendChild(mk('location', 'location', entity.location));   // #833: edit, not add-only
   } else if(kind === 'sensor'){
     form.appendChild(mk('label', 'friendly_name', entity.friendly_name));
   } else {   // board — friendly_name is the client key; the server stores it as `name` (#583)
@@ -2109,7 +2113,7 @@ function regEditForm(kind, entity){
   const wrap = el('div', 'regeditwrap');
   wrap.appendChild(form);
   const act = el('div', 'regformact');
-  const save = el('button', 'reglink', 'Save name'); save.onclick = () => regStageEdit(kind, id, form);
+  const save = el('button', 'reglink', kind === 'plant' ? 'Save' : 'Save name'); save.onclick = () => regStageEdit(kind, id, form);
   const cancel = el('button', 'reglink muted', 'Cancel'); cancel.onclick = () => { __regEditing = null; renderRegistry(); };
   act.appendChild(save); act.appendChild(cancel);
   wrap.appendChild(act);
