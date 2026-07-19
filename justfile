@@ -294,6 +294,26 @@ test-dx:
 test-analytics:
     {{py}} -m pytest tools/analytics/ -q
 
+# --- The DuckDB/Parquet analysis-store tier (#828 / #1239; DX ergonomics #1249) --------------
+# Analytics-only path — none of these need a firmware toolchain (pairs with `just check-host`).
+#
+# Build: backfill every historical logs/*.csv -> reports/tier/raw (gitignored + regenerable, per
+# docs/TIER_STORE_CONTRACT.md). Idempotent + resumable (--skip-existing), fidelity-checked per
+# partition (§6). Re-running converges to the same bytes; delete reports/tier to rebuild clean.
+store-rebuild *ARGS:
+    {{py}} tools/analytics/tier_backfill.py {{ARGS}}
+
+# Verify the store is contract-compliant: (re)builds one reference partition and asserts its DuckDB
+# rollup EXACTLY equals an independent integer-us recompute (the s4 invariant) + prints the provenance
+# lineage (source_file / schema_version). Non-zero exit on any mismatch. Consumes tier_store, not a copy.
+store-verify device="y9d41p" date="2026-07-18":
+    {{py}} tools/analytics/tier_store.py --device {{device}} --date {{date}}
+
+# Ad-hoc SQL over the store (registered as the `store` view; date/device are hive-partition columns):
+#   just store-query "SELECT device, band, COUNT(*) FROM store GROUP BY 1, 2 ORDER BY 3 DESC"
+store-query sql:
+    {{py}} tools/analytics/tier_query.py "{{sql}}"
+
 # ============================================================================
 #  LANES: register your recipes in your section above. Pattern:
 #     # One-line summary (this exact line shows in `just --list`).
