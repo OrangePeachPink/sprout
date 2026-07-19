@@ -118,6 +118,13 @@ class** (ratified, measured): classic [1052 … 2500], C5 [982 … 2213].
 - **The ratification gate has fired** (2026-07-19, #1174): the fresh in-situ dual-envelope dry-down superseded
   the June data (both boards measured), and the sets passed **36/36** grill-locked invariants in the #1164 suite
   (#1211). **Firmware's #952 cal chain implements them** from the ratified fixtures.
+- **AMENDMENT — wet end re-derived (2026-07-19, #1236, maintainer-ratified).** The even 7-way partition above
+  gave Soaked a full ~207-count slice on ~1.4 % of the dry-down data, so a *right-sized drink* could read
+  submerged. Route B re-derives the wet end **non-evenly**: Saturated becomes a **thin at-the-rail band**,
+  Wet/Moist/Ideal re-space across the freed healthy range, and the **dry half and both endpoints are
+  unchanged**. Superseding snapshot — classic `{2293, 2086, 1879, 1636, 1393, 1150}`, C5
+  `{2037, 1861, 1685, 1478, 1272, 1065}` (only indices 3–5 move). The **#1164 RATIFIED fixtures remain the
+  authoritative home**; this bullet is the snapshot, not the source of truth.
 
 ## Consequences
 
