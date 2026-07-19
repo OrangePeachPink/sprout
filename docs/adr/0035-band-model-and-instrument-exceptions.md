@@ -5,7 +5,10 @@ ratified 2026-07-19 (on #1174)** against the fresh in-situ **dual-envelope** dry
 (classic `y9d41p` + official C5 `8gtt1h`), superseding the June proposal. Ratified: **Faint-ceiling 2500** (D1),
 Data's re-derived two-board bracket sets **as posted** (#995), **#898 annotate-don't-overwrite** (D2); validated
 **36/36** against the grill-locked invariants in the #1164 cal-suite (#1211, cross-board round-trip drift
-~0.0002). The draft's grill working values are replaced by the measured/ratified numbers below.*
+~0.0002). The draft's grill working values are replaced by the measured/ratified numbers below.
+**Wet-end re-derived (2026-07-19 evening, #1236-ratified, PR #1262):** route B non-evenly re-spaced the wet half
+— only bracket **indices 3–5** moved; the dry half, both ceilings, and the anchors are **unchanged**. See §5's
+amendment for the superseding snapshot; the #1164 cal-suite fixtures remain the authoritative source.*
 **Date:** 2026-07-18
 **Owner:** Trellis (author — the model + the taxonomy). Cross-lane: **Data** (the per-board bracket values + the
 cross-board index), **Firmware** (the #952 cal-chain implementation + the #898 anchor map), **Design-QA** (the
