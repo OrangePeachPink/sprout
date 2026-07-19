@@ -110,6 +110,11 @@ it documented nowhere:
   `main`** and a new PR.
 - **Park detached when idle** (`git checkout --detach origin/main`) so an idle worktree pins no
   branch ref.
+- **Force-push: normal on your own unmerged branch, never on `main`.** Rebasing or amending your
+  own not-yet-merged PR branch and force-pushing it is standard practice here (use
+  `--force-with-lease`). `main` is branch-protected — force-push is impossible there, and no lane
+  should invent a stricter repo-wide ban (one session did, and left its branches diverged for
+  nothing — the 2026-07-19 reconcile finding).
 - **The repo root checkout belongs to the launcher — never a lane surface.** It stays **on the
   `main` branch**: the launcher self-updates via `git pull --ff-only`, and a detached or
   branch-switched root silently serves stale code. Corollary: no lane worktree ever checks out the
