@@ -104,7 +104,7 @@ typedef struct {
      *   [2] 2/3   Thirsty   | Content
      *   [3] 3/4   Content   | Thriving
      *   [4] 4/5   Thriving  | Refreshed
-     *   [5] 5/6   Refreshed | Soaked    <- wettest in-soil (Soaked ceiling ~1259)
+     *   [5] 5/6   Refreshed | Soaked    <- wettest in-soil (Soaked ceiling ~1150)
      * Both envelopes measured (#1174 dry-down); passed the #1153 cal-suite. */
     uint16_t boundary[MOISTURE_BOUNDARY_COUNT];
 
@@ -123,7 +123,7 @@ typedef struct {
      .confirm_ms_wet = 3500,                                                   \
      .loop_period_ms = 1000,                                                   \
      .spread_warn_raw = 250,                                                   \
-     .boundary = {2293, 2086, 1879, 1673, 1466, 1259},                         \
+     .boundary = {2293, 2086, 1879, 1636, 1393, 1150},                         \
      .sensor_type = SENSOR_CAPACITIVE}
 
 typedef struct {

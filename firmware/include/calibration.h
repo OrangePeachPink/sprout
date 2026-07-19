@@ -42,7 +42,7 @@
  * #192's export_config regenerates these per-channel if sessions ever diverge.
  * Values are space-free (the cal_ch line is space-separated k=v). */
 #define SENSOR_CAL_SRC                                                         \
-    "band_ratified_995" /* #995 dual-envelope ratification  */
+    "wet_rederive_1236" /* #1236 wet-end re-derivation      */
 #define SENSOR_CAL_DATE "2026-07-19"
 #define SENSOR_CAL_CONFIDENCE "provisional" /* ADR-0022; Sage's caveat holds  */
 #define SENSOR_CAL_SCOPE "channel" /* per-channel override line (#507 parser) */
@@ -53,8 +53,8 @@ static const uint16_t
          * measured, 2026-07-19), so all four classic channels now share the same
          * board-level edges; per-channel outer rails moved to the off-ladder
          * anchor layer (#1152). ch0=s3 ch1=s4 ch2=s1 ch3=s2. */
-        {2293, 2086, 1879, 1673, 1466, 1259},
-        {2293, 2086, 1879, 1673, 1466, 1259},
-        {2293, 2086, 1879, 1673, 1466, 1259},
-        {2293, 2086, 1879, 1673, 1466, 1259},
+        {2293, 2086, 1879, 1636, 1393, 1150},
+        {2293, 2086, 1879, 1636, 1393, 1150},
+        {2293, 2086, 1879, 1636, 1393, 1150},
+        {2293, 2086, 1879, 1636, 1393, 1150},
 };
