@@ -565,7 +565,7 @@ footer.prov code { font-family: var(--font-data); }
 
   <div id="overview">
     <section class="card">
-      <div class="panel-h"><h2>Channels <span class="proposed" title="endpoints (saturated + air-dry) are ratified; the interior boundaries are the un-reconciled A2 spec">interior bands proposed</span></h2><span class="cap" id="cardsCap"></span></div>
+      <div class="panel-h"><h2>Channels</h2><span class="cap" id="cardsCap"></span></div>
       <div class="cards" id="cards"></div>
     </section>
 
@@ -1472,7 +1472,7 @@ function renderProv(){
     `device <code>${m.device_id||'?'}</code> git <code>${m.git||'?'}</code> run <code>${m.run||'?'}</code><br>` +
     `Sources: ${m.sources.map(s=>`<code>${s.replace(/\\/g,'/').split('/').pop()}</code>`).join(', ')}<br>` +
     `The legacy moist% <code>value</code> column is intentionally not plotted (B2/C2); analysis is on raw_value + band. ` +
-    `The endpoints (saturated + air-dry) are ratified from the common-cup anchors; the interior band boundaries are the un-reconciled spec (A2), shown as <b>proposed</b>. ` +
+    `Band boundaries are the ratified seven-in-soil ladder (#995 → #1218/#1220; per board class). ` +
     `${envConditionsLine()}`;
 }
 
@@ -1596,7 +1596,7 @@ function renderDetail(sid){
   /* header */
   const head = el('section','card');
   const hr = el('div','panel-h');
-  hr.appendChild(el('h2', null, `${plantLabel(s)} <span class="muted" style="font-weight:400">single-plant view</span> <span class="proposed" title="endpoints ratified; interior boundaries pending A2">interior bands proposed</span>`));
+  hr.appendChild(el('h2', null, `${plantLabel(s)} <span class="muted" style="font-weight:400">single-plant view</span>`));
   head.appendChild(hr);
   const dh = el('div','dhead');
   dh.style.borderLeft = `5px solid ${s.color}`; dh.style.paddingLeft = '14px';
