@@ -166,6 +166,10 @@
   .pulse canvas { width: 100%; height: 96px; display: block; border-radius: 8px; }
   .pulse .axis { display: flex; justify-content: space-between; font-size: 10.5px;
     color: var(--muted); margin-top: 3px; }
+  /* #1171: the sparkline is the second pulse element; calm-empty stays quiet, never loud */
+  .pulse.spark { margin-top: 4px; }
+  .pulse .calm { font-size: 12.5px; color: var(--muted); margin: 2px 0 0;
+    padding: 14px 12px; background: var(--surface-2, rgba(0,0,0,.04)); border-radius: 8px; }
   .wb-link { display: inline-block; margin-top: 14px; font-size: 13px;
     color: var(--muted); }
 
@@ -513,7 +517,76 @@ function drawPulse(card) {
       g.beginPath(); g.moveTo(tx * W, 0); g.lineTo(tx * W, H); g.stroke();
       g.setLineDash([]);
     }
+
+    /* #1171: the sparkline — the pulse mandate's SECOND element. Same window, but the
+       TIME shape of the current inter-watering segment (#1133), envelope-scaled y,
+       Tufte-quiet: no gridlines, no numerals, a band-tinted ground, the now-point
+       emphasized. Never a cross-event line — clips to ds.segment_x; calm-empty when
+       there's no detected re-water to anchor a segment. */
+    drawSparkline(box, ds, lo, hi, inner, tok);
   }).catch(function () { /* silent — the hero stands without its chart */ });
+}
+
+/* the segment sparkline. y = the in-soil envelope (wetter top -> drier bottom, so a
+   dry-down descends); x = time across the current segment. Absent-safe: a segment with
+   too few points, or none at all, renders a calm-empty caption, never a fabricated line. */
+function drawSparkline(box, ds, lo, hi, inner, tok) {
+  var sec = document.createElement("div");
+  sec.className = "pulse spark";
+  box.appendChild(sec);
+  var all = (ds && ds.points) || [];
+  var segX = ds && typeof ds.segment_x === "number" ? ds.segment_x : null;
+  /* clip to the current segment (x >= segment_x); drop break/null-y points. With no
+     detected re-water (segment_x null) there is no honest segment to draw. */
+  var seg = segX === null ? [] : all.filter(function (p) {
+    return p && typeof p.x === "number" && typeof p.y === "number" && p.x >= segX;
+  });
+  if (seg.length < 4) {                       /* calm-empty, never a fake shape */
+    sec.innerHTML =
+      "<h4>Since last watering</h4>" +
+      '<p class="calm">' +
+      (segX === null ? "No watering detected yet in this window — the line begins at the next drink."
+                     : "Just watered — the fresh segment is still taking shape.") +
+      "</p>";
+    return;
+  }
+  sec.innerHTML =
+    "<h4>Since last watering <small>the current dry-down, wetter &darr; drier</small></h4>" +
+    '<canvas id="pulseSpark" aria-label="moisture trajectory since the last watering"></canvas>';
+  var cv = document.getElementById("pulseSpark");
+  var W = (cv.width = cv.clientWidth * 2), H = (cv.height = 192);
+  var g = cv.getContext("2d");
+  var x0 = seg[0].x, x1 = seg[seg.length - 1].x, xspan = x1 - x0 || 1;
+  function px(p) { return ((p.x - x0) / xspan) * W; }
+  /* wetter at top: fraction 0 (wettest, lo) -> y 0; 1 (driest, hi) -> y H */
+  function py(p) { var f = (p.y - lo) / (hi - lo); if (f < 0) f = 0; if (f > 1) f = 1; return f * H; }
+
+  /* band-tinted ground: the envelope's own hues as horizontal stripes, wet(top)->dry */
+  var zones = [lo].concat(inner, [hi]);
+  g.globalAlpha = 0.16;
+  for (var z = 0; z + 1 < zones.length; z++) {
+    var y0 = ((zones[z] - lo) / (hi - lo)) * H;
+    var y1 = ((zones[z + 1] - lo) / (hi - lo)) * H;
+    var li = Math.min(z, LADDER.length - 1);
+    g.fillStyle = tok(LADDER[li].token, "#ccc");
+    g.fillRect(0, y0, W, y1 - y0);
+  }
+  g.globalAlpha = 1;
+
+  /* the line — the segment's moisture trajectory (ink, no chartjunk) */
+  g.strokeStyle = tok("--ink", "#1E2A18"); g.lineWidth = 3;
+  g.lineJoin = "round"; g.lineCap = "round";
+  g.beginPath();
+  for (var i = 0; i < seg.length; i++) {
+    var X = px(seg[i]), Y = py(seg[i]);
+    if (i === 0) g.moveTo(X, Y); else g.lineTo(X, Y);
+  }
+  g.stroke();
+
+  /* the now-point: the segment's latest reading, emphasized (a dot, not a numeral) */
+  var last = seg[seg.length - 1];
+  g.fillStyle = tok("--leaf", "#2E7D32");
+  g.beginPath(); g.arc(px(last), py(last), 6, 0, 2 * Math.PI); g.fill();
 }
 </script>
 </body>

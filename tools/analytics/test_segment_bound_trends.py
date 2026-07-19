@@ -90,3 +90,23 @@ def test_no_rewater_is_the_whole_window_byte_identical() -> None:
     tj = ctx["trajectory"]["datasets"][0]
     assert tj["trend"]["segment_bound"] is False
     assert ctx["sensors"][0]["forecast"]["rates"]["all"]["n"] == 40  # full window
+
+
+def test_segment_x_marks_the_rewater_in_the_plot_coordinate() -> None:
+    # #1171: the hero sparkline clips to the segment start, exposed in the SAME x-unit
+    # as the plot points (hours since window start) so the render never re-derives it.
+    ctx = build_context(LogData(readings=_sawtooth(), segments=[], sources=["s"]))
+    tj = ctx["trajectory"]["datasets"][0]
+    # the re-water landed at reading index 15; segment_x is that point's own x
+    assert tj["segment_x"] == tj["points"][15]["x"]
+    assert tj["segment_x"] > 0  # the segment starts partway into the window
+
+
+def test_segment_x_is_null_when_no_rewater_so_the_sparkline_goes_calm_empty() -> None:
+    # #1171: no detected re-water -> no honest segment -> null, and the render draws the
+    # calm-empty caption instead of a fabricated cross-event line.
+    rows = [
+        _r(i * 30, 1500 + i * 20, "OK" if i < 20 else "needs water") for i in range(40)
+    ]
+    ctx = build_context(LogData(readings=rows, segments=[], sources=["s"]))
+    assert ctx["trajectory"]["datasets"][0]["segment_x"] is None
