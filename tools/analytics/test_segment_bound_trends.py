@@ -102,6 +102,26 @@ def test_segment_x_marks_the_rewater_in_the_plot_coordinate() -> None:
     assert tj["segment_x"] > 0  # the segment starts partway into the window
 
 
+def test_trend_fit_consumes_the_c0_mask_end_to_end() -> None:
+    # #1244 C0: the served trend excludes watering-transient + rebound rows from the
+    # fit — end-to-end through build_context. The sawtooth's post-rewater segment
+    # starts with the transient drop + slow-rise rows; the mask drops them and the
+    # trend reports how many (the honest "what the line did NOT average" count).
+    ctx = build_context(LogData(readings=_sawtooth(), segments=[], sources=["s"]))
+    trend = ctx["trajectory"]["datasets"][0]["trend"]
+    assert trend is not None and trend["segment_bound"] is True
+    assert trend["mask_dropped"] > 0  # the transient/rebound rows were excluded
+
+
+def test_a_quiet_window_masks_nothing() -> None:
+    # a monotone dry-down has no transient/rebound/suspect rows -> nothing dropped.
+    rows = [
+        _r(i * 30, 1500 + i * 20, "OK" if i < 20 else "needs water") for i in range(40)
+    ]
+    ctx = build_context(LogData(readings=rows, segments=[], sources=["s"]))
+    assert ctx["trajectory"]["datasets"][0]["trend"]["mask_dropped"] == 0
+
+
 def test_segment_x_is_null_when_no_rewater_so_the_sparkline_goes_calm_empty() -> None:
     # #1171: no detected re-water -> no honest segment -> null, and the render draws the
     # calm-empty caption instead of a fabricated cross-event line.

@@ -45,6 +45,7 @@ from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
     DEFAULT_CAL_BOUNDS,
     LogData,
 )
+from segment_classifier import valid_for_trend  # noqa: E402  (#1244 C0 trend mask)
 from source_adapter import (  # noqa: E402  (the source-adapter seam, #277)
     TetheredAdapter,
 )
@@ -1058,15 +1059,19 @@ def build_context(
             if _seg_start
             else settled
         )
-        _seg_fit_pairs = (
-            [
-                (h, y)
-                for (h, y), r in zip(fit_pairs, plot_settled)
-                if r.timestamp_utc >= _seg_start
-            ]
-            if _seg_start
-            else fit_pairs
-        )
+        # #1244 C0: the valid-for-trend mask — the fit consumes ONLY steady-drying
+        # rows. A fit through the watering transient or the post-watering rebound is
+        # fitting a different physical process (the live "+206 c/h drying while
+        # Soaked" was the rebound). Freshly-watered segments with no steady arc yet
+        # honestly fit NOTHING (the trend disappears rather than lying).
+        _valid = valid_for_trend(plot_settled)
+        _in_seg = [
+            ((h, y), ok)
+            for (h, y), r, ok in zip(fit_pairs, plot_settled, _valid)
+            if _seg_start is None or r.timestamp_utc >= _seg_start
+        ]
+        _seg_fit_pairs = [pair for pair, ok in _in_seg if ok]
+        _mask_dropped = len(_in_seg) - len(_seg_fit_pairs)
         locals_ = [
             r.timestamp_local.strftime("%m-%d %H:%M:%S") if r.timestamp_local else ""
             for r in plot_rs
@@ -1225,6 +1230,10 @@ def build_context(
                 # True once a re-water was detected in-window; the surface can say
                 # "since last watering" instead of implying it spans the whole view.
                 "segment_bound": _seg_start is not None,
+                # #1244 C0: in-segment rows the valid-for-trend mask excluded from
+                # this fit (watering-transient / rebound / suspect) — the honest
+                # "what the line did NOT average" count.
+                "mask_dropped": _mask_dropped,
             }
         # #718: a plant-first label for the legend + tooltip - never the machine
         # id or GPIO. Falls back to plant_id -> probe -> the raw sid when a channel
