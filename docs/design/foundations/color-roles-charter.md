@@ -60,9 +60,10 @@ to the right pot on the shelf.
 
 ### 5. State speaks one language
 
-Mood hues (ADR-0008) and the seven band hues (ADR-0004) **reconcile into a single state language** — one
-consistent set of state colors, not two parallel systems a viewer has to hold in their head. Wherever state
-appears, it's the same hue for the same meaning. (The consolidated value set is part of the V2 token pass.)
+Mood hues (ADR-0008) and the seven band hues (ADR-0004) are **one state language — ruled, not proposed**
+(#1039, 2026-07-18): one ramp of seven hues wearing seven words, the mood words as the band names. Wherever
+state appears — frame, chip, gauge, ladder, chart ground — it's the same hue and the same word for the same
+meaning. Diagnostics are not states: they live off-ladder, in the exceptions lane, in neutral.
 
 ## The state ramp — the one state language (proposed values · V2)
 
@@ -70,15 +71,22 @@ State is a single seven-step ramp, wet→dry. The mood colors (ADR-0008), the ba
 status colors are **already the same hues** — this charter just declares them one ramp so nothing drifts.
 Every surface that shows state reads from this ramp and nothing else.
 
-| Step | Band · mood | Hue | Token |
+| Step | The word | Hue | Token |
 |---|---|---|---|
-| 1 | Saturated · Soaked | `#0E7A86` | `--band-saturated` |
-| 2 | Wet · Refreshed | `#17B6C4` | `--band-wet` = `--st-watering` |
-| 3 | Moist · Thriving | `#34A853` | `--band-moist` = `--leaf` |
-| 4 | Ideal · Content | `#8BD24F` | `--band-ideal` = `--sprout` |
-| 5 | Drying · Thirsty | `#F5A623` | `--band-drying` = `--st-dry` |
-| 6 | Dry · Parched | `#E8703A` | `--band-dry` = `--st-due` |
-| 7 | Parched · Faint | `#E0483D` | `--band-parched` = `--st-fault` |
+| 1 | Soaked | `#0E7A86` | `--band-saturated` |
+| 2 | Refreshed | `#17B6C4` | `--band-wet` = `--st-watering` |
+| 3 | Thriving | `#34A853` | `--band-moist` = `--leaf` |
+| 4 | Content | `#8BD24F` | `--band-ideal` = `--sprout` |
+| 5 | Thirsty | `#F5A623` | `--band-drying` = `--st-dry` |
+| 6 | Parched | `#E8703A` | `--band-dry` = `--st-due` |
+| 7 | Faint | `#E0483D` | `--band-parched` = `--st-fault` |
+
+**One vocabulary (the #1039 ruling, 2026-07-18):** the seven mood words ARE the band names —
+Soaked → Faint, wet → dry — on the dashboard, in this charter, and in the mark. The former parallel
+band-word column (Saturated … Parched) is retired; the CSS token names stay as shipped (a token
+rename is a contract change, not a vocabulary one). **The ramp is in-soil only** — every diagnostic
+(air-dry / placement, physics, kinematics, comms) lives **off-ladder** in the exceptions lane and
+wears the neutral treatment, never a ramp hue.
 
 Two channels sit **outside** the state ramp on purpose, so they never read as a current mood:
 
