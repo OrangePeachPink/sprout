@@ -4,7 +4,7 @@
   "subject": "Per-plant extended dry-down for the #995 band ratification",
   "date_local": "2026-07-19",
   "lane": "Firmware",
-  "duration": "4.3–8.3 d per plant",
+  "duration": "5.4–8.8 d per plant",
   "refs": {
     "ratification_target": "#995",
     "fresh_drydown_bench": "#1174",
@@ -18,13 +18,14 @@
     "data/p*.csv — per-plant dry-down series (timestamp_utc + timestamp_cdt, hours_since_water, raw_value, band, pressure_hpa, air/water anchors)"
   ],
   "aggregation_boundary": "Firmware provides the extracted per-plant dry-down series (last-watering → now), the watering detection, and the sensor→plant map. Data owns the band-boundary derivation (the #995 seven-bracket sets) and confirms the exact per-plant watering cut against the app's tuned detected-watering signal + the current registry.",
-  "honest_gap_policy": "The 4 CLASSIC plants (Corn / Anthurium / XXL / Dracaena on device y9d41p) are SPARSELY logged this window (~2 h cadence, 10–22 points) — the dry-down SHAPE + endpoints are solid but the watering time is ±hours and interior resolution is coarse; do NOT over-fit interior boundaries to them. The 4 C5 plants (office / small / XL / Bromeliad on 8gtt1h) are DENSE (30 s, downsampled to 2-min median here; full 30 s remains in the archive). Empty pressure fields mean the weather context row was not populated for that reading.",
+  "honest_gap_policy": "All 8 plants are DENSELY logged (wifi_poll @ 30 s, ~13 k rows/day) from the canonical logs/ store — an earlier draft read the intentionally-lagging .data-worktree branch and wrongly showed the classic board as sparse; Workflow's host-record measurement corrected the source. Downsampled to 2-min median bins for size (full 30 s in logs/). Empty pressure fields = the weather context row was not populated for that reading.",
   "caveats": [
     "Times: CSV timestamp_utc is canonical; timestamp_cdt (UTC−5, CDT) matches the dashboard. Watering times in summary.csv are CDT.",
-    "Plant↔sensor map is the #896 sensor_map (2026-07-10); confirm against the current registry (#921 edits) before final band assignment.",
-    "Dense C5 series downsampled to 2-min median bins for file size; full 30 s remains in .data-worktree/data/archive (device 8gtt1h).",
-    "cal_tier: classic = channel-cal (wipe_airdry_bench_20260628); C5 = board-cal (board_envelope_20260710)."
+    "Plant↔sensor map confirmed against the current registry config/devices.local.json (classic y9d41p s1/s2/s3/s4 = Corn/XXL/Anthurium/Dracaena; 8gtt1h s1/s2/s3/s4 = office/Bromeliad/small/XL).",
+    "8gtt1h BOARD CLASS UNRESOLVED: payload name=c5off1 + compressed anchors (~2661–2792 air) say C5-class; Workflow's host read called it classic-class/S3. Reconcile before deciding measured-vs-derived C5 brackets.",
+    "Waterings cluster into 3 sessions (07-10 midday, 07-11 ~21:08, 07-13 21:15), each spanning both boards — cut by session, not per-plant scatter.",
+    "cal_tier: classic = channel-cal (wipe_airdry_bench_20260628); 8gtt1h = board-cal."
   ],
-  "source_data": "Read-only from the data branch archive (.data-worktree/data/archive/) — device y9d41p (classic, payload name=classic) + 8gtt1h (c5off1). No files on the data branch were modified.",
+  "source_data": "Read-only from the canonical logs/<device>_*.csv — device y9d41p (classic) + 8gtt1h (c5off1), both wifi_poll @ 30 s, unbroken through the window. Stale off-fleet n3jhsp (C5, Jul 7 + 12 only) excluded. No source files modified.",
   "pii_posture": "Raw ADC counts, device ids, local timestamps, plant names, and weather pressure only. Private RFC1918 IPs (ADR-0015) are not needed here and are absent. No MAC / USB-instance IDs / hostnames / EXIF."
 }
