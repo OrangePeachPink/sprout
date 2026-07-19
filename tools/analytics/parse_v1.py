@@ -112,6 +112,10 @@ DEFAULT_CAL_BOUNDS = (2293, 2086, 1879, 1636, 1393, 1150)
 # spans them (#1235) and the #1152 exception layer keys off the SAME rails (dry past
 # air = probe-in-air; wet past water = probe-in-water) — never two copies. A profiled
 # per-CHANNEL anchor (registry cal chain) beats the class value when present (ADR-0019).
+# #1215 (ratified): the #898 cross-board factor is INTERVAL-DEPENDENT — 0.803 on the
+# full rail-to-rail envelope (978 cup rail; the probe-in-water exception interval) vs
+# 0.850 on the in-soil ladder interval (these 1052/982 wet floors). Both valid for
+# their jobs; ADC compression isn't perfectly linear rail-to-rail. Never conflate.
 BOARD_CLASS_ANCHORS = {
     "classic": {"air": 3137, "water": 1052},
     "c5": {"air": 2754, "water": 982},
