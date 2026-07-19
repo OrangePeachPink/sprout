@@ -354,6 +354,13 @@ details.wiring > summary { cursor: pointer; color: var(--muted); font-size: 12px
 .legend { display: flex; gap: var(--space-md); flex-wrap: wrap; margin-top: var(--space-sm); font-size: 12px; }
 .legend .it { display: flex; align-items: center; gap: 6px; }
 .legend .dot { width: 12px; height: 12px; border-radius: 3px; }
+/* #1186 focus-tap: the legend is the chart's focus control */
+.legend .it.focusable { cursor: pointer; border-radius: 6px; padding: 1px 5px; }
+.legend .it.focusable:hover { background: var(--surface-2); }
+.legend .it.focusable:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.legend .it.focused { font-weight: 700; color: var(--ink); }
+.legend .it.focused .dot { background: var(--ink) !important; }
+.legend .it.faded { opacity: .45; }
 .kpi { display: flex; gap: var(--space-xl); flex-wrap: wrap; margin-top: var(--space-sm); }
 .kpi .k .v { font-family: var(--font-data); font-weight: 600; font-size: 20px; }
 .kpi .k .l { color: var(--muted); font-size: 11px; }
@@ -1218,7 +1225,8 @@ function renderTraj(){
     const _s = (DASH.sensors||[]).find(x=>x.id===d.id);
     const _dash = _multiDev ? _dashFor(_s && _s.device_id) : [];
     return { label:(d.label||d.id), data:g.points, parsing:false, borderColor:d.color, backgroundColor:d.color,
-      borderWidth:1.6, borderDash:_dash, pointRadius:0, tension:0.25, spanGaps:false, _local:g.locals };
+      borderWidth:1.6, borderDash:_dash, pointRadius:0, tension:0.25, spanGaps:false, _local:g.locals,
+      _sid:d.id, _base:d.color };  // #1186: focus-tap join key + restore color
   });
   charts.traj = new Chart(document.getElementById('trajChart'), {
     type:'line', data:{ datasets },
@@ -1252,6 +1260,38 @@ function renderTraj(){
   DASH.sensors.forEach(s=>{
     const it=el('div','it'); const d=el('span','dot'); d.style.background=s.color; it.appendChild(d);
     it.appendChild(el('span',null, plantLabel(s))); lg.appendChild(it);  // #713/#714/#925: plant-first, no GPIO (chart title/time = #718)
+    // #1186 (the charter's chart-series pass, interaction half): legend-tap focuses
+    // ONE series — it saturates to --series-focus (ink), the rest drop to
+    // --series-faint. Tap again to release. Only sensors that are actually
+    // plotted get the affordance (the #807 live-channel filter can drop some).
+    if (charts.traj.data.datasets.some(ds=>ds._sid===s.id)) {
+      it.classList.add('focusable'); it.setAttribute('role','button');
+      it.setAttribute('tabindex','0'); it.title='tap to focus this plant';
+      const go = ()=>applyTrajFocus(trajFocus===s.id ? null : s.id);
+      it.addEventListener('click', go);
+      it.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
+      it.dataset.sid = s.id;
+    }
+  });
+  if (trajFocus) applyTrajFocus(trajFocus);  // keep focus across auto-refresh rebuilds
+}
+
+// #1186: one vivid line at a time — the state channel stays uncontested (charter).
+let trajFocus = null;
+function applyTrajFocus(sid){
+  if (!charts.traj) return;
+  const faint = parseFloat(css('--series-faint')) || 0.28;
+  const ink = css('--series-focus') || css('--ink') || '#1E2A18';
+  trajFocus = sid && charts.traj.data.datasets.some(ds=>ds._sid===sid) ? sid : null;
+  charts.traj.data.datasets.forEach(ds=>{
+    if (!trajFocus) { ds.borderColor=ds._base; ds.backgroundColor=ds._base; ds.borderWidth=1.6; }
+    else if (ds._sid===trajFocus) { ds.borderColor=ink; ds.backgroundColor=ink; ds.borderWidth=2.6; }
+    else { ds.borderColor=hexA(ds._base,faint); ds.backgroundColor=hexA(ds._base,faint); ds.borderWidth=1.2; }
+  });
+  charts.traj.update('none');
+  document.querySelectorAll('#trajLegend .it.focusable').forEach(n=>{
+    n.classList.toggle('focused', !!trajFocus && n.dataset.sid===trajFocus);
+    n.classList.toggle('faded', !!trajFocus && n.dataset.sid!==trajFocus);
   });
 }
 
