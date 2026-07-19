@@ -67,7 +67,32 @@ jobs:
       # --all-files (the firmware's manual column alignment must survive — AGENTS.md
       # §code-style, changed-lines via git-clang-format, #352). It runs next, below.
       - name: Lint + format + hygiene (pre-commit; clang-format runs changed-lines below)
-        run: SKIP=clang-format uv run pre-commit run --all-files --show-diff-on-failure
+        run: |
+          set -o pipefail
+          SKIP=clang-format uv run pre-commit run --all-files --show-diff-on-failure 2>&1 \
+            | tee /tmp/precommit.log
+
+      # #1190: the per-hook readout — every hook's result as a table on the run's
+      # Summary page (the maintainer's drift-watch: ~15 hooks otherwise hide behind
+      # this job's single ✓). Parses whatever pre-commit ACTUALLY ran, so it is
+      # self-maintaining — a new hook appears here the day it joins the config, and
+      # there is no second list to drift. The pytest suites below need no rows: each
+      # is already its own named step. cspell's advisory notes get a count line so
+      # the signal stays visible without being load-bearing (#524 posture).
+      - name: Job summary — per-hook results (#1190)
+        if: always()
+        run: |
+          {
+            echo "### Pre-commit battery — per-hook results"
+            echo ""
+            echo "| Hook | Result |"
+            echo "|---|---|"
+            sed -nE 's/^(.+[^.])\.{4,}(\(no files to check\))?(Passed|Failed|Skipped)$/| \1 | \3\2 |/p' \
+              /tmp/precommit.log
+            n=$(grep -c "Unknown word" /tmp/precommit.log || true)
+            echo ""
+            echo "_cspell advisory notes: ${n} (never blocking — #524)_"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # clang-format — ONLY the C/C++ *lines* this PR changed (never whole files, never
       # the whole tree) — #352. Diffs against the PR merge-base (the blocking authority,
