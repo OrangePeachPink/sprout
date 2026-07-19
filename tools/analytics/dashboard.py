@@ -1221,6 +1221,15 @@ def build_context(
                 "points": points,
                 "local": locals_,
                 "trend": trend,
+                # #1171: the hero sparkline draws the CURRENT inter-watering segment.
+                # Expose the segment start in the same x-unit as points (hours since
+                # the window start), or None when no re-water was detected in-window —
+                # then the sparkline goes calm-empty, never a fabricated cross-event
+                # line. Same #1133 boundary the trend fit uses; the PLOT still keeps
+                # every point (segment clipping is a render concern, not a data one).
+                "segment_x": (
+                    round(_hours_since(_seg_start, start), 4) if _seg_start else None
+                ),
                 "env_points": env_points,  # #922 opt-in context overlay (temp/RH)
                 "has_env": has_env,  # #922: offer the toggle only when context exists
             }
