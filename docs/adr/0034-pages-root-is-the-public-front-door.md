@@ -50,7 +50,7 @@ ADR-0010 ("the Design Library is the single front door") is **reconciled, not ov
   external.**
 - ADR-0032 §5's deliberate unpkg/React exception is **scoped to the Library** (a showcase with a knowingly-chosen
   local-first tension). It is **explicitly NOT inherited by the hub.** The hub is the public first render — it must
-  be self-contained, fast, and honest to local-first doctrine; if it ever needs JS it is inline or vendored, never
+  be self-contained, fast, and faithful to local-first doctrine; if it ever needs JS it is inline or vendored, never
   a CDN fetch. This tightens, not loosens, the §5 posture at the highest-visibility surface.
 
 ## Consequences

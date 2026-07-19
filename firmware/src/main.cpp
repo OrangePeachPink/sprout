@@ -99,7 +99,7 @@ static bool g_ota_marked_valid = false;
  * 2026-07-01). device_seq: monotonic per emitted telemetry row, survives a
  * store-and-forward reconnect/replay (the dedupe key's device-side half); resets
  * only on reboot, same lifecycle as g_session_id - a fresh `static` already gives
- * this for free. time_source is HONEST about what this firmware can currently
+ * this for free. time_source states plainly what this firmware can currently
  * prove: no NTP/RTC sync path exists yet (WiFi connect itself isn't wired, #21),
  * so every row correctly reports "device_uptime" with device_timestamp_utc
  * omitted (NULL) - never a guessed/fabricated UTC value. Flips to
@@ -323,7 +323,7 @@ static void onIrrigEvent(const irrig_event_t *ev, void *user)
 #ifdef ENABLE_ENV_SENSORS
 /* ---- bench contextual env sensors (#373/#374) --------------------------- */
 /* I2C/Qwiic SHT45 (ambient temp/RH) + AS7263 (NIR spectral). Raw CONTEXT, not
- * plant-truth — breadboard-mounted near the ESP32 (see ENV_PLACEMENT below). The
+ * plant data — breadboard-mounted near the ESP32 (see ENV_PLACEMENT below). The
  * pure-C drivers run over these Arduino Wire-backed callbacks. I2C reads never
  * touch the soil ADC, so there's no "no sampling while pumping" concern. */
 
@@ -534,11 +534,11 @@ static void emitEnvRows(unsigned long long up_ms)
  * I2C/AS7263 knobs on an env build). Same config -> same id; any set-once knob
  * change -> a new id (the cross-session comparability boundary + the no-auto-adjust
  * alarm). FIRMWARE-computed: several inputs (trim, discard, I2C addrs) are firmware
- * constants the host never sees, so only the board can honestly hash them; parse_v1
+ * constants the host never sees, so only the board can hash them; parse_v1
  * reads the emitted id, never re-derives (Decision 3 / Data's #576 confirmation).
  * Called once at boot after cal load, before printHeader. v1 scope: a *runtime* cal
  * or cadence retune does not yet re-roll the id (follow-on) - set-once-held is the
- * doctrine, so this honestly fingerprints the boot config. */
+ * doctrine, so this fingerprints the boot config. */
 static void computeConfigId()
 {
     uint32_t h = TELEMETRY_FNV1A32_INIT;
@@ -593,7 +593,7 @@ static void printHeader()
      * id (not the friendly name) + name= rides every payload. The host reads THIS
      * banner line for the version (plants_logger.schema_version_from_header) and
      * applies the >=3 rule (parse_v1). Computed from the one PLANTS_SCHEMA_VERSION
-     * source of truth (config.h) so no banner line can disagree with another (#601). */
+     * canonical source (config.h) so no banner line can disagree with another (#601). */
     snprintf(buf, sizeof(buf),
              "# plants telemetry  schema_version=%d  "
              "contract=docs/TELEMETRY_SCHEMA.md@v%d",
@@ -624,7 +624,7 @@ static void printHeader()
              BOARD_CAP.storage,
              board_has_wifi() ? "untethered-ready" : "tethered");
     Serial.println(buf);
-    /* Calibration honesty (#436): a non-verified board runs on the CLASSIC
+    /* Calibration provenance (#436): a non-verified board runs on the CLASSIC
      * placeholder endpoints - never silently presented as this board's own
      * calibration (matches the config-provenance principle, #416/ADR-0025). */
     if (!BOARD_CAP.cal_verified) {
@@ -664,7 +664,7 @@ static void printHeader()
     /* Per-channel cal provenance (#404) - one cal_ch line per channel, sourced
      * from the LIVE g_mcfg[ch].boundary (what the classifier actually uses, per
      * the #170 seam), never re-read from calibration.h - so a future runtime
-     * boundary update stays honest in the header. Format locked with Data's
+     * boundary update stays accurate in the header. Format locked with Data's
      * #507 parser; the shared line above remains the fallback tier. */
     for (int ch = 0; ch < NUM_SENSORS; ch++) {
         if (telemetry_format_cal_ch(
@@ -697,7 +697,7 @@ static void printHeader()
     snprintf(
         buf, sizeof(buf),
         "# env(bench): SHT45 ambient_temp/rh + AS7263 NIR(610-860nm) on I2C "
-        "SDA%d/SCL%d - %s, CONTEXT not plant-truth%s",
+        "SDA%d/SCL%d - %s, CONTEXT not plant data%s",
         ENV_I2C_SDA, ENV_I2C_SCL, ENV_PLACEMENT,
         g_as7263_ok ? "" : " [AS7263 init FAILED]");
     Serial.println(buf);
@@ -1074,7 +1074,7 @@ void setup()
 
 #ifdef ENABLE_ENV_SENSORS
     /* Bring up the I2C/Qwiic contextual sensors (#373/#374). SHT45 is single-shot
-     * (no init); AS7263 needs reset + config. Bench instrumentation, not plant-truth. */
+     * (no init); AS7263 needs reset + config. Bench instrumentation, not plant data. */
     Wire.begin(ENV_I2C_SDA, ENV_I2C_SCL, ENV_I2C_HZ);
     g_as7263_ok = (as7263_init(&g_env_i2c, AS7263_CFG_GAIN, AS7263_CFG_ITIME) ==
                    AS7263_OK);
@@ -1238,7 +1238,7 @@ void loop()
                 Serial.println("# OTA: update start (rebooting after)");
             });
             /* #302 menu-2: an OTA write blocks the loop for 10-30 s; without feeding
-             * it here the honest 8 s task-WDT (#599) would fire mid-transfer and reset
+             * it here the 8 s task-WDT (#599) would fire mid-transfer and reset
              * the board. onProgress runs per chunk, so resetting the WDT here keeps it
              * fed for the write - the WDT stays a real backstop, OTA still finishes.
              * (Benign either way: an interrupted write only touches the INACTIVE slot.) */
@@ -1307,15 +1307,15 @@ void loop()
             (unsigned long long)esp_timer_get_time() / 1000ULL;
 
         /* Time provenance for this sweep (#278): device_synced + a real UTC
-         * stamp once NTP has answered; honestly device_uptime + NO stamp until
+         * stamp once NTP has answered; device_uptime + NO stamp until
          * then. One read per sweep - all four rows share the moment. */
         char ts[32] = "";
         bool synced = timeIsSynced();
         if (synced) isoUtcNow(ts, sizeof(ts));
 
         /* #669 board diagnostics, read once per sweep (all four rows share them).
-         * rssi is honest-absent off WiFi: wifi_up=false -> the row omits rssi=
-         * entirely (never a fake 0, ADR-0028). uptime_s/heap ride every row. Only
+         * rssi is absent off WiFi: wifi_up=false -> the row omits rssi=
+         * entirely (never a placeholder 0, ADR-0028). uptime_s/heap ride every row. Only
          * the RSSI number is emitted - never SSID/BSSID/MAC (privacy fence). */
         bool wifi_up = board_has_wifi() && g_wifi.state == WIFI_NET_CONNECTED;
         int rssi_now = wifi_up ? (int)WiFi.RSSI() : 0;
@@ -1344,7 +1344,7 @@ void loop()
                 &state[ch],
                 g_device_seq++, /* #278: one tick per emitted row, every channel */
                 synced ? TIME_SOURCE_DEVICE_SYNCED : TIME_SOURCE_DEVICE_UPTIME,
-                ts, /* real UTC when synced; "" = honestly NULL (#278) */
+                ts, /* real UTC when synced; "" = NULL until synced (#278) */
                 g_device_name, /* #601: friendly name -> payload name= on every row */
                 BOARD_CAP.wet_rail_raw, /* #670: sub-rail raw -> SENSOR_FAULT */
                 g_config_id, /* #576 / ADR-0025: payload config_id= */
@@ -1353,7 +1353,7 @@ void loop()
                 uptime_s_now, /* #669 uptime_s */
                 heap_now, /* #669 heap= */
                 /* #952/#997: tier + provenance from the resolved record; the formatter
-                 * emits these only on WiFi rows (rssi_present gate), honest-absent on
+                 * emits these only on WiFi rows (rssi_present gate), absent on
                  * tethered rows so the header derivation governs. g_cal[ch] is set for
                  * every channel at setup; the guard is defensive. */
                 g_cal[ch] ? cal_tier_label(g_cal[ch]->tier)

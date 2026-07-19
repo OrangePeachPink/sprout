@@ -1,4 +1,4 @@
-# ADR-0022 — Calibration-confidence layer (local-truth vs pot-truth gating)
+# ADR-0022 — Calibration-confidence layer (local-reading vs pot-need gating)
 
 **Status:** Accepted — *the gate **model** ratified by the maintainer 2026-06-30 (#400 / #402). The
 **thresholds/metrics** remain design-light-before-build, tracked as non-blocking cross-lane inputs
@@ -9,7 +9,7 @@ named open concern owned by the #410 epic — gate item 5.*
 **Lane:** architecture (cross-lane: Firmware enforcement · Sage bench · Data substrate)
 **Extends:** [ADR-0016](0016-actuation-wiring-seam.md) (single authority / arm-gate)
 **Relates:** #170 (per-channel split) · #348 (arm-gate chain) · #383 (bench evidence) ·
-[ADR-0006](0006-data-architecture.md) (honest data) · #377 / #300 (telemetry header) · the capability-stage
+[ADR-0006](0006-data-architecture.md) (raw-first data) · #377 / #300 (telemetry header) · the capability-stage
 vocabulary (`docs/GLOSSARY.md`) · #400
 
 ---
@@ -18,8 +18,8 @@ vocabulary (`docs/GLOSSARY.md`) · #400
 
 Per-channel calibration (#170) removes **sensor personality** — each probe gets its own raw→band boundaries,
 so a reading is no longer skewed by that probe's individual signature. But Sage's #383 greenhouse pass shows
-the deeper problem: even a perfectly-calibrated band is **local truth** — what one probe senses in its
-microzone — and **not pot truth**, i.e. whether the plant actually needs water. Microzone disagreement,
+the deeper problem: even a perfectly-calibrated band is **the local reading** — what one probe senses in its
+microzone — and **not pot need**, i.e. whether the plant actually needs water. Microzone disagreement,
 contact quality, hydrophobic/preferential flow, and tray state routinely dominate the whole-pot decision.
 Across P01–P11, runoff did not mean "fully watered," a plausible number did not mean "good contact," and one
 dry channel did not mean the pot was dry.
@@ -27,7 +27,7 @@ dry channel did not mean the pot was dry.
 ADR-0016 ships autonomous dosing **DISARMED** and gates arming on the dry-safety chain
 (`#93 / #191 / #2 / #215`) — but that chain proves the *hardware* is safe (relays fail off, the watchdog
 resets, the bench passed). Hardware-safe is not the same as **decision-trustworthy**: there is no gate today
-on whether the *reading* justifies watering. Acting on local truth as if it were pot truth is precisely how an
+on whether the *reading* justifies watering. Acting on the local reading as if it were pot need is precisely how an
 autonomous loop over-waters. This ADR defines that missing decision-trust gate.
 
 It is explicitly **not** the per-channel raw→band split (that is #170) and **not** the value-locking of bounds
@@ -87,7 +87,7 @@ tightens dose behavior.
 3. the calibration-confidence layer **active** (this ADR): a channel may autonomously dose **only while
    `corroborated`** — no disagreement veto, good contact, profile-consistent.
 4. **schema-conformant pump telemetry** (#18) — when armed, pump events must emit as schema-conformant
-   `plants.pump` records, not the interim diagnostic line, so telemetry honesty and the data join hold
+   `plants.pump` records, not the interim diagnostic line, so telemetry integrity and the data join hold
    exactly when watering happens. (#348 ships DISARMED precisely because this and the dry-safety chain are
    not yet met.)
 5. **the under-watering fail-safe** (#410) — items 1-4 guard *over*-action (do not dose without
@@ -116,7 +116,7 @@ The very conservatism that makes this gate fail-safe for the **pump** (disagreem
 do not water) makes it fail-**deadly** for the **plant** in a persistently-ambiguous pot. "Fail-safe by not
 acting" is the right default for hardware; it is **not** sufficient for the mission (the plant surviving).
 The silent / irreversible failure deserves *more* engineering attention than the noisy / recoverable one —
-yet it is the currently-unguarded one. (Owning the honesty: this blind spot is a direct consequence of how
+yet it is the currently-unguarded one. (Owning it plainly: this blind spot is a direct consequence of how
 conservative the gate above is — naming it, not hiding it.)
 
 **First-class open concern, owned by the #410 epic** (Trellis architecture + Data forecast + Firmware
@@ -145,7 +145,7 @@ tracked in #400:
 ## Rejected alternatives
 
 - **Act on per-channel calibrated bands directly (no confidence layer).** Rejected: #383 proves a calibrated
-  band is local truth; acting on it as pot truth over-waters parched / hydrophobic / tray-confounded plants.
+  band is the local reading; acting on it as pot need over-waters parched / hydrophobic / tray-confounded plants.
   Calibration is necessary, not sufficient.
 - **A single global moisture threshold across plants.** Rejected: #383 plant-pathway diversity (cactus vs
   rootbound vs pothos) — no naive trigger generalizes.
@@ -162,7 +162,7 @@ tracked in #400:
 - Confidence is **per-channel, per-decision, continuous** — a channel can lose its autonomous grant mid-cycle on
   disagreement or contact loss (fail-safe direction).
 - New telemetry surfaces: confidence stage + contact-quality + disagreement flag per channel (Data header).
-  Per ADR-0006 honesty, these are **surfaced, not smoothed**.
+  Per ADR-0006, these are **surfaced, not smoothed**.
 - Plant-pathway profiles become operator config per pot — a future UX surface (Design / DX), conservative by
   default.
 - **This ADR can be ratified as the architecture (the gate model) now**, with thresholds/metrics named as

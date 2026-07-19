@@ -37,7 +37,7 @@ deliberately, never as a side effect of adding one board.**
 - `esp32dev` / `esp32dev_env` / `esp32dev_wdttest` / `esp32s3` / `esp32c5` all pin to the **same exact release**
   (`==`, never floating — the discipline that survives from this ADR's first version) on **pioarduino**
   (`https://github.com/pioarduino/platform-espressif32.git#55.03.39` — the same tag `esp32c5` already proved).
-- **pioarduino is named honestly**: it is the community-maintained successor for Arduino-ESP32 3.x on
+- **pioarduino is named plainly**: it is the community-maintained successor for Arduino-ESP32 3.x on
   PlatformIO — Espressif ended official first-party PlatformIO support for the 3.x line. It's the de-facto
   standard path, not a fringe choice, and exact pinning contains the risk of depending on a community fork the
   same way it contained the risk of the original Espressif-official pin.
@@ -77,7 +77,7 @@ is superseded; the **exact-pin, never-floating, deliberate-not-incidental** disc
   the **#21 WiFi scaffold directly against the new pin** — a sequencing win: WiFi code gets written once on the
   3.x API, never ported from 2.x later.
 - **Firmware** adds a **classic re-qualification section to the #443 bench run sheet**: re-flash on the new
-  toolchain, re-run the wedge test fresh, an ADC sanity A/B against current raw counts (honest-data law — verify
+  toolchain, re-run the wedge test fresh, an ADC sanity A/B against current raw counts (raw-first data law — verify
   and record any shift), and re-check bands against the just-landed per-channel calibration.
 - **Data**: no schema change. `firmware_version` in the telemetry header carries the toolchain lineage. The
   live-logger switch to the new toolchain should land at an experiment boundary and be annotated, so a bench

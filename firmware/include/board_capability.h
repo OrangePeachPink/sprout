@@ -63,7 +63,7 @@ typedef struct {
      * Classic is bench-real (900, below the #248 saturated anchors: center 978,
      * min probe 926; equals config.h SENSOR_WET_RAW by design). The unverified
      * boards carry the classic placeholder until #443 measures their real rail -
-     * same honesty posture as their placeholder cal_boundary (cal_verified=false). */
+     * same provisional stance as their placeholder cal_boundary (cal_verified=false). */
     uint16_t wet_rail_raw;
 } board_capability_t;
 

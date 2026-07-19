@@ -36,7 +36,7 @@ bottom for every `vX.Y.Z`.
 Notes are a per-version **changelog, not product documentation**. Approve against five checks — never
 exhaustiveness:
 
-- [ ] **Honest** — every claim true; no "complete/validated/compliant" unless verified; limitations disclosed.
+- [ ] **Accurate** — every claim true; no "complete/validated/compliant" unless verified; limitations disclosed.
 - [ ] **At altitude** — a 30-second skim says what this version delivers and what it doesn't.
 - [ ] **Version-framed** — a delta since the previous tag (only a first release is a baseline snapshot).
 - [ ] **No invented history** — never reconstruct notes for versions that didn't exist.

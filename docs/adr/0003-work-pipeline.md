@@ -18,7 +18,7 @@ releases and their notes are produced.
 
 The record used to be a flat markdown backlog edited by several people. A mutable, multi-writer record
 belongs in a service with native IDs and concurrency — a database, not a version-control file — so it
-moves to GitHub's native tools. This ADR is the single source of truth for that pipeline. It is
+moves to GitHub's native tools. This ADR is the single source for that pipeline. It is
 deliberately **right-sized as one ADR**; a sub-area spins out only if it grows heavy (a revisit
 trigger), rather than fragmenting the pipeline on day one.
 

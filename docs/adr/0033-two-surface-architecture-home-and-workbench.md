@@ -101,8 +101,9 @@ The spine. Home is warm and friendly; that is not license to soften or invent.
   away in Classic Sprout. Home **won't invent a percentage.**
 - **Alarms are earned; absence is not an alarm** (ADR-0028). Untethered / asleep / empty states render with
   character but never manufacture urgency — a sensorless plant reads *"alive, not probed,"* never *"in distress."*
-- **Provisional stays provisional** (ADR-0022). A board on `board-cal` / uncalibrated bands keeps its provisional
-  badge inside Home's friendly framing — the mood reflects a *provisional* band, labelled as such.
+- **Provisional stays provisional — as system-level cal state, never a per-card badge** (ADR-0022; the
+  2026-07-18 grill, item 3). Home's mood reflects a *provisional* band without wearing a chip for it; the cal
+  state lives once on the Workbench's Plants & Sensors surface, with a defined path to clearing.
 
 ### 4. Navigation + first-run
 
