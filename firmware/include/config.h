@@ -170,11 +170,17 @@ constexpr int WIFI_HTTP_PORT = 80; // served-status skeleton (#21)
 // --- Phase-0 OTA (#302, maintainer-ruled interim; NOT the ADR-0026 fence) -----
 // ArduinoOTA is LAN-only (espota over the local net, mDNS-advertised) and armed only
 // while WiFi-connected. It is PASSWORD-gated: the espota password below. This is a
-// deliberately weak Phase-0 interim - a shared, LAN-scoped default, overridable per
-// build with `-D OTA_PASSWORD='"..."'`. The real posture (signed images + a
-// verified-marker + key management) is ADR-0026, staged as a follow-up amendment;
-// do NOT treat this as the security fence. Public-repo note: this is a placeholder,
-// not a secret - exploiting it still requires being on the LAN.
+// deliberately weak Phase-0 interim - a shared, LAN-scoped default. The real posture
+// (signed images + a verified-marker + key management) is ADR-0026, staged as a
+// follow-up amendment; do NOT treat this as the security fence.
+//
+// PUBLIC-REPO NOTE (#1252): the value below is a PLACEHOLDER, published on purpose -
+// it is an example, not a secret, and exploiting it still requires being on the LAN.
+// To run a REAL password, do NOT edit this line (it would commit the secret). Instead
+// copy firmware/platformio_local.example.ini -> platformio_local.ini (gitignored) and
+// set it there: that one file supplies BOTH the -D OTA_PASSWORD compiled in here AND
+// the uploader's --auth, which must match. See docs/OTA_FLASH.md § Password.
+// A board keeps accepting its OLD password until it is re-flashed.
 #ifndef OTA_PASSWORD
 #define OTA_PASSWORD "sprout-phase0"
 #endif
