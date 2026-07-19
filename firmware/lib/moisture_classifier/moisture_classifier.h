@@ -94,6 +94,13 @@ typedef struct {
     /* --- health --- */
     uint16_t spread_warn_raw;  /* trimmed-set range above this flags a fault;
                                   0 disables the check                         */
+    /* #1152 kinematics (TELEMETRY_SCHEMA S4, Data-ratified): a single-step
+     * |delta| larger than this is faster than soil physically moves at the
+     * sampling cadence - the reading may be real but the JUMP is not trustable
+     * (probe yanked/reseated, contact break). Emits SUSPECT + fault=rate_spike;
+     * raw is preserved either way (ADR-0006). 0 disables the check.
+     * PROVISIONAL value - see MOISTURE_CFG_DEFAULT. */
+    uint16_t max_delta_raw;
 
     /* --- calibration thresholds (DESCENDING) ---
      * boundary[i] separates level i from level i+1. #995-ratified in-soil edges
@@ -123,6 +130,7 @@ typedef struct {
      .confirm_ms_wet = 3500,                                                   \
      .loop_period_ms = 1000,                                                   \
      .spread_warn_raw = 250,                                                   \
+     .max_delta_raw = 1200,                                                    \
      .boundary = {2293, 2086, 1879, 1636, 1393, 1150},                         \
      .sensor_type = SENSOR_CAPACITIVE}
 
@@ -133,6 +141,7 @@ typedef struct {
     uint16_t         last_raw;      /* last trimmed-mean value                 */
     uint16_t         last_spread;   /* range of the kept (trimmed) samples     */
     bool             health_warn;   /* last measurement exceeded spread_warn   */
+    bool rate_spike; /* #1152: last step exceeded max_delta_raw */
 } moisture_state_t;
 
 /* ---- lifecycle ---------------------------------------------------------- */

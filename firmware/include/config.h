@@ -70,6 +70,16 @@ constexpr const char *SOIL_CHANNEL     = "soil_moisture";    // the measured qua
 // min probe 926); DRY_RAW 3400 stays above the air-dry anchors (center 3170, max probe
 // 3191), leaving room for very dry winter air. NOTE: value/unit (the moist%) are emitted
 // NULL (#38) - this linear map is reserved, never analysed; raw + band is the reading.
+// #1152 kinematics (TELEMETRY_SCHEMA S4, Data-ratified wire row): a single-step
+// |delta| bigger than this is faster than soil moves at READ_INTERVAL_MS - the
+// reading may be real but the JUMP is not trustable (probe yanked/reseated,
+// contact break). Emits SUSPECT + fault=rate_spike; raw is preserved (ADR-0006).
+// PROVISIONAL: derived with margin from the #1174 dry-down, where a FULL watering
+// moved a channel ~900 counts across MANY 30 s steps - so a single step this big
+// is instrument motion, not soil. Data owns cal values; ratify or retune there.
+// 0 disables the check.
+constexpr uint16_t SENSOR_MAX_DELTA_RAW = 1200;
+
 constexpr int SENSOR_WET_RAW = 900;   // raw at/below this would read 100% (reserved)
 constexpr int SENSOR_DRY_RAW = 3400;  // raw at/above this would read 0% (reserved)
 

@@ -124,13 +124,28 @@ subsystem.
 | Family | Sub-type | At source? | Threshold basis | Wire (proposed) |
 | --- | --- | --- | --- | --- |
 | placement | probe-in-air | yes | `air_dry_raw` ≥ raw > Faint-top | `SUSPECT` + `fault=probe_air` |
-| placement | probe-in-water | yes | Soaked-floor > raw ≥ `wet_rail_raw` | `SATURATED` (exists) |
-| physics | above-air-in-air | yes (add) | raw > `air_dry_raw` | `SENSOR_FAULT` + `fault=open_adc` |
+| placement | probe-in-water | yes | Soaked-floor > raw ≥ `wet_rail_raw` | ~~`SATURATED`~~ **CORRECTION** — see note |
+| physics | above-air-in-air | **SHIPS (#1152 emit)** | raw > `air_dry_raw` | `SENSOR_FAULT` + `fault=open_adc` |
 | physics | below-water-in-water | **ships** | raw < `wet_rail_raw` | `SENSOR_FAULT` + `fault=dead_adc` |
-| kinematics | too-fast spike | partial | Δraw > physical max per `dt` | `SUSPECT` + `fault=rate_spike` |
+| kinematics | too-fast spike | **SHIPS (#1152 emit)** | Δraw > `max_delta_raw` per step | `SUSPECT` + `fault=rate_spike` |
 | kinematics | wrong-dir mid-watering | host | needs watering-event ctx | host-qualified |
 | comms | no-signal / stale | host | row absence / last-seen age | host-derived `NO_SIGNAL` |
 | comms | sensor-disconnect | yes | floating / railed ADC | `SENSOR_FAULT` + `fault=dead_adc` |
+
+> **CORRECTION (2026-07-19, during the emit build).** This table originally mapped
+> **probe-in-water → `SATURATED`**. That is **wrong against the owning contract**:
+> `TELEMETRY_SCHEMA` §4 defines `SATURATED` as the ADC railed **high** (the *dry*
+> rail, "pegged at ~4095") — the opposite end of the scale. The v4 `#670` fix exists
+> precisely because a **low**-rail reading used to be mislabelled `SATURATED`, which
+> masked a dead board as four drowning plants. Probe-in-water below the wet rail is
+> already `SENSOR_FAULT` + `fault=stuck_wet`/`dead_adc`; the band **between** the wet
+> rail and the Soaked floor is ordinary wet soil and is deliberately **not** flagged.
+> No second vocabulary was introduced — the schema wins.
+>
+> **Emit status:** the two rows the schema ratified for #1152 (`open_adc`,
+> `rate_spike`) now **ship**. `probe_air` (a SUSPECT band between the Faint-ceiling
+> and the air rail) is **not** in the schema table and was **not** minted — it stays
+> a proposal for Data, not firmware-authored vocabulary.
 
 ## 5. The split argument (why source-vs-host lands where it does)
 
