@@ -45,7 +45,7 @@ _VOICE = _COMPONENTS / "voice-strings.json"
 # ("~6 days ago") — the maintainer's #1 watering cue — but the voice stays soil-state.
 WATERING_RECENT_H = 48.0
 
-# #1229: a glug and a detected re-water this close in time are ONE watering seen two
+# #1137 follow-up: a glug and a detected re-water this close are ONE watering seen two
 # ways (soil-change + button-press), not two competing events. A same-session catch-up
 # glug lands minutes-to-hours after the soil already moved; beyond a same-day window
 # they are genuinely different waterings. A heuristic — the maintainer can tune it.
@@ -163,10 +163,10 @@ def last_watered_from_manual(event: dict | None, now: datetime) -> dict | None:
 def resolve_last_watered(
     rewater: dict | None, manual: dict | None, now: datetime
 ) -> dict | None:
-    """#1137/#1229: reconcile the DETECTED re-water (a soil-change — an accurate TIME)
+    """#1137: reconcile the DETECTED re-water (a soil-change — an accurate TIME)
     with a LOGGED manual watering (the operator's ground-truth FACT).
 
-    - **Same watering, two clocks (#1229):** when both fire within
+    - **Same watering, two clocks (#1137 follow-up):** when both fire within
       ``SAME_EVENT_WINDOW_H`` they are ONE event — keep the human FACT (``source`` stays
       ``manual``) but adopt the **earlier** timestamp, the one closest to the physical
       watering. The detector reads the soil a few minutes after; a catch-up glug records

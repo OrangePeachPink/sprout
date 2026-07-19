@@ -186,7 +186,7 @@ def test_a_logged_manual_watering_outranks_the_detected_guess() -> None:
 
 
 def test_a_glug_and_a_detection_in_window_pair_keeping_the_earlier_time() -> None:
-    # #1229 (live-observed): a catch-up glug + a same-watering detection are ONE event.
+    # #1137 follow-up (live-observed): glug + same-watering detection are ONE event.
     # Keep the human FACT (source=manual) but adopt the detector's EARLIER soil time —
     # the glug records a button-press that lagged the soil-change by ~18 min.
     from datetime import datetime, timezone
@@ -202,7 +202,7 @@ def test_a_glug_and_a_detection_in_window_pair_keeping_the_earlier_time() -> Non
 
 
 def test_a_glug_far_after_the_last_detection_is_a_new_watering() -> None:
-    # #1229: if the detector's last re-water was days ago (a plant it didn't catch this
+    # #1137 follow-up: if the last detection was days ago (a plant it didn't catch this
     # time, e.g. the Bromeliad), a glug now is a NEW watering — its own time stands.
     from datetime import datetime, timezone
 
