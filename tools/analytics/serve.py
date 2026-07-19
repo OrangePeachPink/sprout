@@ -58,6 +58,7 @@ from dashboard import (  # noqa: E402  (sibling import)
     filter_since,
     gather_inputs,
     render,
+    render_home,
 )
 from device_registry import load_registry  # noqa: E402  (the fleet config, #486)
 from experiments_catalog import (  # noqa: E402  (Lab #154; #444 combined source)
@@ -676,13 +677,24 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
         try:
             if parsed.path in ("/", "/index.html"):
-                # #1018: serve the SHELL fast - do NOT run the analytics pipeline (fetch
-                # + build, ~10 s) just to hand back the HTML. A landing tab (#capture /
-                # #plants) reads none of it, and Monitor re-fetches /data.json on boot
-                # (setRange -> refresh), so the server-side build was redundant tax.
-                # Discovering files is cheap; a genuinely-fresh checkout (no segments)
-                # keeps its empty-state page, otherwise serve the shell and let the
-                # client hydrate Monitor from /data.json (the form paints in ~ms).
+                # #875 (grill night 1, locked): HOME — the plant-card grid — is the
+                # app's landing surface; the Workbench tucks behind it at /classic.
+                # A genuinely fresh checkout keeps the install-day launchpad
+                # (#543/#644 — the "one Start" stays reachable at zero data); the
+                # moment anything is logged, Home takes the front door. Home is a
+                # pure shell (the #1018 fast-shell rule holds — no pipeline here;
+                # the page hydrates itself from /cards.json).
+                if not _has_segments(self.inputs):
+                    self._send(_empty_state_html(False), "text/html; charset=utf-8")
+                else:
+                    self._send(render_home(), "text/html; charset=utf-8")
+            elif parsed.path == "/classic":
+                # The Workbench — "Classic Sprout" (ADR-0033): the numeric
+                # instrument behind Home, retired piece-by-piece as the new design
+                # subsumes its utility. #1018: serve the SHELL fast - do NOT run
+                # the analytics pipeline (fetch + build, ~10 s) just to hand back
+                # the HTML; Monitor re-fetches /data.json on boot. A genuinely-
+                # fresh checkout (no segments) keeps its empty-state page.
                 if not _has_segments(self.inputs):
                     self._send(_empty_state_html(False), "text/html; charset=utf-8")
                 else:
@@ -690,7 +702,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     html = render({"shell": True})
                     with contextlib.suppress(Exception):  # #1018: render-only cost
                         sys.stderr.write(
-                            "[perf] route=/ shell render="
+                            "[perf] route=/classic shell render="
                             f"{round((time.perf_counter() - _t) * 1000)}ms"
                             " (pipeline skipped, #1018)\n"
                         )

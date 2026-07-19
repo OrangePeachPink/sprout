@@ -61,6 +61,10 @@ TOKENS_CSS = _REPO / "docs" / "design" / "tokens" / "sprout-tokens.css"
 # regenerate via tools/analytics/embed_fonts.py.
 FONTS_CSS = _HERE / "vendor" / "sprout-fonts.css"
 TEMPLATE = _HERE / "dashboard_template.html"
+# #875: the Home surface (the Sprout Voice UI's landing page). A pure shell —
+# tokens/fonts injected here, data hydrated client-side from /cards.json — so
+# serving it never runs the analytics pipeline (the #1018 fast-shell rule).
+HOME_TEMPLATE = _HERE / "home_template.html"
 DEFAULT_OUT = _REPO / "reports" / "plants_dashboard.html"
 # Vendored Chart.js -> inlined for a self-contained, offline dashboard. Falls
 # back to CDN only if the vendored copy is missing.
@@ -1893,6 +1897,16 @@ def _integrity(soil, sweeps, by_sensor, sensor_ids, sessions) -> dict:
 # --------------------------------------------------------------------------- #
 # render
 # --------------------------------------------------------------------------- #
+def render_home() -> str:
+    """#875: the Home shell — the same token/font injection as the Workbench shell,
+    no context blob (the page hydrates itself from ``/cards.json``). Kept beside
+    ``render()`` so the two surfaces can never drift on how brand CSS arrives."""
+    tokens = TOKENS_CSS.read_text(encoding="utf-8") if TOKENS_CSS.exists() else ""
+    fonts = FONTS_CSS.read_text(encoding="utf-8") if FONTS_CSS.exists() else ""
+    template = HOME_TEMPLATE.read_text(encoding="utf-8")
+    return template.replace("/*__SPROUT_TOKENS__*/", fonts + "\n" + tokens)
+
+
 def render(ctx: dict) -> str:
     tokens = TOKENS_CSS.read_text(encoding="utf-8") if TOKENS_CSS.exists() else ""
     fonts = FONTS_CSS.read_text(encoding="utf-8") if FONTS_CSS.exists() else ""
