@@ -212,6 +212,48 @@ void t_health_veto_and_latch(void)
                              "accessor clears after manual clear");
 }
 
+/* #2: the INVISIBLE LATCH. `quality_flag` answers "can I trust this reading?";
+ * irrig_health_warn() answers "may this channel be watered?". They are different
+ * questions and they DIVERGE exactly where the bug lived: once the sustained
+ * latch has fired, the supervisor benches the channel permanently, but a later
+ * clean read makes quality_flag say OK - so a display carrying only quality
+ * shows a healthy channel that will never be watered again.
+ *
+ * This pins the divergence as a CONTRACT, so the served status / banner must
+ * carry BOTH (the `withheld=` field). If someone ever "simplifies" by deriving
+ * withheld from quality_flag, this test fails - which is the point. */
+void t_withheld_diverges_from_quality(void)
+{
+    base_cfg(/*mhw*/ 3, /*mdoses*/ 3, /*pmax*/ 5000, /*dose*/ 2000);
+    RIG.sim[0] = (chan_sim_t){.target_raw = 2400, .noisy = true};
+    start();
+
+    for (int i = 0; i < 3; i++)
+        step(SYS.sample_period_ms); /* -> latch */
+    TEST_ASSERT_TRUE_MESSAGE(irrig_health_warn(&CTRL, 0),
+                             "precondition: latched");
+
+    RIG.sim[0].noisy = false; /* the probe recovers - reads clean now */
+    step(SYS.sample_period_ms);
+    step(SYS.sample_period_ms);
+
+    /* measurement trust: the CURRENT read is fine */
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "OK", telemetry_quality_flag(&CTRL.mstate[0], 900),
+        "clean read -> quality_flag says OK");
+    /* actuation policy: the supervisor is STILL holding this channel */
+    TEST_ASSERT_TRUE_MESSAGE(irrig_health_warn(&CTRL, 0),
+                             "...but the channel is still withheld (latched)");
+    TEST_ASSERT_TRUE_MESSAGE(RIG.pump_on_count[0] == 0,
+                             "and it genuinely never waters while withheld");
+
+    /* the two axes must be independently reportable - that is the whole fix */
+    TEST_ASSERT_TRUE_MESSAGE(
+        irrig_health_warn(&CTRL, 0) &&
+            telemetry_quality_flag(&CTRL.mstate[0], 900)[0] == 'O',
+        "withheld=true WITH quality=OK is reachable -> display needs both");
+}
+
 /* Control: a healthy dry channel DOES get watered (proves the veto above is the
  * only thing stopping ch0), with both hard invariants intact. */
 void t_healthy_dry_waters(void)
@@ -1899,6 +1941,7 @@ int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(t_health_veto_and_latch);
+    RUN_TEST(t_withheld_diverges_from_quality);
     RUN_TEST(t_healthy_dry_waters);
     RUN_TEST(t_invariants_two_channels);
     RUN_TEST(t_no_improvement_fault);
