@@ -97,8 +97,22 @@ def test_lowercase_dry_renders_the_dry_chip_not_a_question_mark(tmp_path: Path) 
     p = tmp_path / "a.csv"
     p.write_text(_HEADER + _COLS + _row("s2", 2900, "dry"), encoding="utf-8")
     s = build_context(parse_files([str(p)]), registry=reg)["sensors"][0]
-    # band_ui from BAND_UI["DRY"]; mood is the canonical lowercase word read from
-    # mood-band-map.json (ruling #638 / #653), not the old authored "Parched".
-    assert s["band_ui"] == "Dry" and s["mood"] == "parched"
+    # #1234 one-vocabulary: band_ui IS the capitalized mood (derived from the
+    # mood-band-map, #638); the lowercase mood field rides unchanged.
+    assert s["band_ui"] == "Parched" and s["mood"] == "parched"
     assert s["band_ui"] != "?"
     assert s["band_color"] == "#E8703A"  # the real DRY colour, not the '?' grey
+
+
+def test_band_ui_is_the_capitalized_mood_one_vocabulary() -> None:
+    # #1234 (Design-QA ruling, ADR-0035): the rendered band word IS the mood word,
+    # capitalized, DERIVED from mood-band-map (never a second authored copy — #638).
+    # Same word, same meaning as the Home; the fw level stays the wire layer.
+    from dashboard import BAND_UI, MOOD_BY_BAND
+
+    assert MOOD_BY_BAND, "the design map must be present in a full checkout"
+    for fw, (word, _color) in BAND_UI.items():
+        assert word == MOOD_BY_BAND[fw].capitalize()
+    assert BAND_UI["DRY"][0] == "Parched"  # the wilt band carries the alarming word
+    assert BAND_UI["submerged"][0] == "Soaked"
+    assert BAND_UI["air-dry"][0] == "Faint"
