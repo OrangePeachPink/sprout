@@ -11,6 +11,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from card_payload import (
+    _ELAPSED_CLAIM,
+    _RECENT_DRINK,
     build_card,
     load_mood_map,
     load_voice_pool,
@@ -94,35 +96,44 @@ def test_identity_degrades_gracefully_without_a_name_or_photo() -> None:
 # the honesty filter — voice reconciles with the last-watered truth (#875 Q2)
 # --------------------------------------------------------------------------- #
 def test_an_elapsed_number_line_is_always_filtered_until_templated() -> None:
-    # thriving's "my last drink was two days ago" hard-codes a number — filtered even
-    # WITH a recent re-water (a static pool can't be honest by luck). The safe alt wins.
+    # An elapsed-number claim never renders from the static byMood pool (a static
+    # line can't be honest by luck). The elapsed copy now lives in byMoodElapsed as
+    # {ago} templates (the voice-strings batch) — byMood picks stay number-free.
     for recent in (False, True):
         line, gap = pick_voice_line(
             VOICE, "thriving", plant_id="p01", recent_water=recent
         )
         assert gap is None
         assert "days ago" not in line
-        assert line == "Feeling great today, thanks for asking."
+        assert not _ELAPSED_CLAIM.search(line)
 
 
-def test_refreshed_is_a_gap_without_a_recent_rewater() -> None:
-    # 'refreshed' has ONE line ("just had a good drink") — a recent-drink claim. With no
-    # recent detected re-water it's a named gap, never fabricated.
+def test_refreshed_without_a_recent_rewater_speaks_soil_state() -> None:
+    # #875 Q1 CLOSED (the voice-strings batch): 'refreshed' now carries an event-free
+    # line, so with no recent detected re-water the plant still speaks — but only in
+    # soil-state terms, never a drink claim it can't back.
     line, gap = pick_voice_line(VOICE, "refreshed", plant_id="p01", recent_water=False)
-    assert line is None and gap and "refreshed" in gap
+    assert gap is None and line is not None
+    assert not _RECENT_DRINK.search(line) and not _ELAPSED_CLAIM.search(line)
     c = _card(band="Wet")  # Wet -> refreshed, no last_watered
-    assert c["voice"] is None and c["voice_gap"] is not None
+    assert c["voice"] is not None and c["voice_gap"] is None
+    assert not _RECENT_DRINK.search(c["voice"])
 
 
 def test_a_recent_detected_rewater_unlocks_the_refreshed_line() -> None:
     # #875 Q2 (maintainer's call): the detected re-water is real — a recent one makes
     # "just had a good drink" honest, closing the refreshed gap.
+    # the recent-drink line is IN the honest pool now (alongside the event-free
+    # variant); the stable pick may land on either — both are honest with a recent
+    # detected re-water, and no gap remains.
+    pool = VOICE["byMood"]["refreshed"]
+    honest = [ln for ln in pool if not _ELAPSED_CLAIM.search(ln)]
+    assert any(_RECENT_DRINK.search(ln) for ln in honest)  # the unlock is real
     line, gap = pick_voice_line(VOICE, "refreshed", plant_id="p01", recent_water=True)
-    assert gap is None
-    assert line == "Ahh — just had a good drink. All better."
+    assert gap is None and line in honest
     fresh = {"known": True, "source": "detected", "recent": True, "ago": "3h ago"}
     c = _card(band="Wet", last_watered=fresh, recent_water=True)
-    assert c["voice"] == "Ahh — just had a good drink. All better."
+    assert c["voice"] in honest and c["voice_gap"] is None
 
 
 def test_the_voice_pick_is_stable_per_plant_but_varies_across_plants() -> None:
@@ -161,7 +172,10 @@ def test_a_stale_rewater_shows_the_chip_but_keeps_the_voice_soil_state() -> None
     old = {"known": True, "source": "detected", "recent": False, "ago": "6d ago"}
     c = _card(band="Wet", last_watered=old, recent_water=False)
     assert c["last_watered"]["ago"] == "6d ago"  # the cue is shown
-    assert c["voice"] is None  # but "just had a drink" isn't honest 6 days on -> gap
+    # "just had a drink" isn't honest 6 days on — the voice falls back to the
+    # event-free soil-state line (the Q1 batch), never the stale drink claim.
+    assert c["voice"] is not None
+    assert not _RECENT_DRINK.search(c["voice"])
 
 
 # --------------------------------------------------------------------------- #
