@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Can you trust your sensor? — Sprout</title>
+<meta name="description" content="A three-minute check for capacitive soil-moisture sensor boards: spot the 662K regulator and TLC555 timer, meter the hidden 1 M&#937; flaw, and know which defects matter for your setup.">
+<link rel="canonical" href="https://orangepeachpink.github.io/sprout/trust-your-sensor.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Sprout">
+<meta property="og:title" content="Can you trust your sensor? A 3-minute board check.">
+<meta property="og:description" content="Many cheap capacitive soil sensors ship with functional flaws. Three minutes, your eyes, and a multimeter tell you if yours is the well-made kind.">
+<meta property="og:url" content="https://orangepeachpink.github.io/sprout/trust-your-sensor.html">
+<meta property="og:image" content="https://orangepeachpink.github.io/sprout/design/brand/social-preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Sprout — local-first plant care on an ESP32.">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="design/brand/sprout-avatar.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="design/brand/favicon-32.png">
+<link rel="icon" href="design/brand/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" sizes="180x180" href="design/brand/apple-touch-icon.png">
+<meta name="theme-color" content="#34A853">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Fonts are the ONLY sanctioned external request (front-door brief §7); token stacks fall
+     back to system fonts, so the page stays fully legible if Google Fonts fails. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<!-- Design tokens are consumed, never redefined (ADR-0004). Same-origin, not a runtime dep. -->
+<link rel="stylesheet" href="design/tokens/sprout-tokens.css">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:var(--font-ui); background:var(--bg); color:var(--ink);}
+  .wrap{display:flex; justify-content:center; padding:clamp(20px,4vw,56px) clamp(14px,4vw,44px);}
+  .doc{width:min(880px,100%); background:var(--surface); border:1px solid var(--border); border-radius:22px; box-shadow:var(--e2); overflow:hidden;}
+  .pad{padding:clamp(22px,5vw,56px);}
+  .kick{font-family:var(--font-data); font-size:12px; letter-spacing:.14em; color:var(--leaf); font-weight:600; text-transform:uppercase;}
+  .stepk{font-family:var(--font-data); font-size:12px; letter-spacing:.12em; color:var(--st-dry); font-weight:600; text-transform:uppercase;}
+  h1{font-family:var(--font-display); font-weight:700; font-size:clamp(30px,6vw,46px); line-height:1.04; letter-spacing:-0.02em; margin:.34em 0 .26em; color:var(--ink);}
+  h2{font-family:var(--font-display); font-weight:700; font-size:clamp(23px,3.6vw,31px); line-height:1.1; letter-spacing:-0.01em; margin:0 0 .25em; color:var(--ink);}
+  h3{font-family:var(--font-display); font-weight:600; font-size:18px; margin:0 0 6px; color:var(--ink);}
+  .lede{font-size:clamp(16px,2.3vw,19px); line-height:1.6; color:var(--muted); margin:0;}
+  .doc p{font-size:16px; line-height:1.65; color:var(--ink); margin:0 0 14px;}
+  .doc a{color:var(--leaf); font-weight:600; text-decoration:none; border-bottom:1px solid color-mix(in srgb,var(--leaf) 40%,transparent);}
+  .mono{font-family:var(--font-data);}
+  .pin{font-family:var(--font-data); font-weight:600; background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:1px 6px; font-size:.92em; color:var(--ink); white-space:nowrap;}
+  .sec{border-top:1px solid var(--border);}
+  .grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(248px,1fr)); gap:18px;}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:16px;}
+  .photo{position:relative; border-radius:var(--r-tile); overflow:hidden; border:1px solid var(--border); background:#0c0f0e;}
+  .photo .img{display:block; width:100%; aspect-ratio:4/3; object-fit:cover; object-position:center;}
+  .photo.hero .img{aspect-ratio:16/9;}
+  .photo.tall .img{aspect-ratio:5/4;}
+  .cap{font-family:var(--font-data); font-size:11.5px; color:var(--muted); padding:9px 12px; background:var(--surface-2); border-top:1px solid var(--border); line-height:1.4;}
+  .badge{position:absolute; top:10px; left:10px; font-family:var(--font-data); font-size:11px; font-weight:700; letter-spacing:.04em; padding:4px 10px; border-radius:var(--r-pill); backdrop-filter:blur(3px);}
+  .pass{background:color-mix(in srgb,var(--leaf) 88%,transparent); color:#fff;}
+  .fail{background:color-mix(in srgb,var(--st-fault) 90%,transparent); color:#fff;}
+  .flawtag{display:inline-block; font-family:var(--font-data); font-size:11px; font-weight:700; color:#fff; background:var(--st-dry); border-radius:var(--r-pill); padding:2px 10px; letter-spacing:.03em;}
+  .callout{background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:18px 20px;}
+  .voice{font-family:var(--font-ui); font-style:italic; color:var(--ink); font-size:16px; line-height:1.5; margin:0;}
+  .steps{counter-reset:st; display:flex; flex-direction:column; gap:12px; margin:0; padding:0; list-style:none;}
+  .steps li{position:relative; padding:3px 0 3px 44px; font-size:15.5px; line-height:1.5; color:var(--ink);}
+  .steps li::before{counter-increment:st; content:counter(st); position:absolute; left:0; top:0; width:30px; height:30px; border-radius:50%; background:var(--leaf); color:#fff; font-family:var(--font-data); font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:center;}
+  .resultrow{display:flex; gap:12px; flex-wrap:wrap; margin-top:16px;}
+  .result{flex:1; min-width:200px; border-radius:var(--r-tile); padding:14px 16px; display:flex; align-items:center; gap:12px;}
+  .result .tag{font-family:var(--font-data); font-weight:700; font-size:13px; padding:4px 11px; border-radius:var(--r-pill); flex-shrink:0;}
+  .r-pass{background:color-mix(in srgb,var(--leaf) 9%,var(--surface)); border:1px solid color-mix(in srgb,var(--leaf) 35%,transparent);}
+  .r-fail{background:color-mix(in srgb,var(--st-fault) 8%,var(--surface)); border:1px solid color-mix(in srgb,var(--st-fault) 32%,transparent);}
+  .flawcard{background:var(--surface); border:1px solid var(--border); border-radius:var(--r-tile); padding:16px 16px 18px; display:flex; flex-direction:column; gap:10px;}
+  .sev{display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:13px; padding:7px 11px; border-radius:var(--r-control); background:var(--surface-2);}
+  .sevpill{font-family:var(--font-data); font-size:11px; font-weight:700; padding:2px 9px; border-radius:var(--r-pill); white-space:nowrap;}
+  .linkcard{display:flex; flex-direction:column; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-tile); padding:16px; text-decoration:none;}
+  .choice{display:flex; gap:12px; align-items:flex-start; padding:12px 0;}
+  .choice + .choice{border-top:1px dashed var(--border);}
+  .num{font-family:var(--font-data); font-size:11px; color:var(--leaf); font-weight:700; margin-top:3px;}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="sprout-mark-static" viewBox="0 0 24 28">
+    <path d="M12 26 L12 14" stroke="#2F7D3F" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+    <path d="M12 16 C5 15 3 8 9 6 C13 9 13 13 12 16 Z" fill="#34A853"/>
+    <path d="M12 16 C19 15 21 8 15 6 C11 9 11 13 12 16 Z" fill="#8BD24F"/>
+    <ellipse cx="12" cy="26" rx="6.5" ry="1.6" fill="#2C3A24" opacity=".55"/>
+  </symbol>
+</svg>
+<main>
+<div class="wrap">
+<article class="doc" data-screen-label="Trust Your Sensor guide">
+
+  <!-- HERO -->
+  <div class="pad" style="background:linear-gradient(180deg, color-mix(in srgb,var(--leaf) 7%, var(--surface)) 0%, var(--surface) 70%);">
+    <div style="display:flex; align-items:center; gap:9px; margin-bottom:6px;">
+      <svg width="24" height="28" aria-hidden="true" style="flex-shrink:0"><use href="#sprout-mark-static"/></svg>
+      <span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--ink);">Sprout</span>
+      <span class="kick" style="margin-left:6px;">User guide · a 3-minute board check</span>
+    </div>
+    <h1>Can you trust your sensor?</h1>
+    <p class="lede">A cheap capacitive soil sensor can be wrong <em>before</em> Sprout ever sees the number — a large share of inexpensive boards ship with a known functional flaw. Three minutes, your eyes, and a cheap multimeter tell you whether yours is the well-made kind.</p>
+    <div class="callout" style="display:flex; gap:14px; align-items:center; margin-top:20px; background:color-mix(in srgb,var(--leaf) 6%, var(--surface));">
+      <svg width="40" height="46" aria-hidden="true" style="flex-shrink:0"><use href="#sprout-mark-static"/></svg>
+      <p class="voice">I can only be as good as the sensor I'm reading — so let's make sure yours reads right.</p>
+    </div>
+    <div class="photo hero" style="margin-top:22px;">
+
+      <div style="position:relative;">
+        <img class="img" src="evidence/sensor_photos/IMG_0529.JPEG" alt="Capacitive Soil Moisture Sensor V2.0.0 board">
+        <svg viewBox="0 0 1600 900" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%; overflow:visible; filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.65));">
+          <line x1="928" y1="160" x2="1184" y2="365" stroke="#ffffff" stroke-width="2.5" vector-effect="non-scaling-stroke"></line>
+          <line x1="800" y1="786" x2="1176" y2="486" stroke="#ffffff" stroke-width="2.5" vector-effect="non-scaling-stroke"></line>
+          <line x1="1408" y1="160" x2="1368" y2="477" stroke="#ffffff" stroke-width="2.5" vector-effect="non-scaling-stroke"></line>
+        </svg>
+        <span style="position:absolute; left:74%; top:40.5%; width:18px; height:18px; margin:-9px 0 0 -9px; border-radius:50%; background:transparent; border:3px solid var(--leaf); box-shadow:0 0 0 2px #fff, 0 1px 3px rgba(0,0,0,.55);"></span>
+        <span style="position:absolute; left:73.5%; top:54%; width:18px; height:18px; margin:-9px 0 0 -9px; border-radius:50%; background:transparent; border:3px solid var(--leaf); box-shadow:0 0 0 2px #fff, 0 1px 3px rgba(0,0,0,.55);"></span>
+        <span style="position:absolute; left:85.5%; top:53%; width:18px; height:18px; margin:-9px 0 0 -9px; border-radius:50%; background:transparent; border:3px solid var(--st-watering); box-shadow:0 0 0 2px #fff, 0 1px 3px rgba(0,0,0,.55);"></span>
+        <span style="position:absolute; left:58%; top:16.5%; transform:translate(-50%,-50%); display:flex; align-items:center; gap:6px; background:#fff; border-radius:var(--r-pill); padding:4px 12px 4px 4px; box-shadow:0 2px 9px rgba(0,0,0,.3); white-space:nowrap;"><span style="width:18px; height:18px; border-radius:50%; background:var(--leaf); color:#fff; font-family:var(--font-data); font-weight:700; font-size:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">1</span><span style="font-family:var(--font-data); font-size:11.5px; font-weight:600; color:var(--ink);">662K regulator</span></span>
+        <span style="position:absolute; left:50%; top:90%; transform:translate(-50%,-50%); display:flex; align-items:center; gap:6px; background:#fff; border-radius:var(--r-pill); padding:4px 12px 4px 4px; box-shadow:0 2px 9px rgba(0,0,0,.3); white-space:nowrap;"><span style="width:18px; height:18px; border-radius:50%; background:var(--leaf); color:#fff; font-family:var(--font-data); font-weight:700; font-size:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">2</span><span style="font-family:var(--font-data); font-size:11.5px; font-weight:600; color:var(--ink);">TLC555 timer</span></span>
+        <span style="position:absolute; left:88%; top:16.5%; transform:translate(-50%,-50%); display:flex; align-items:center; gap:6px; background:#fff; border-radius:var(--r-pill); padding:4px 12px 4px 4px; box-shadow:0 2px 9px rgba(0,0,0,.3); white-space:nowrap;"><span style="width:18px; height:18px; border-radius:50%; background:var(--st-watering); color:#fff; font-family:var(--font-data); font-weight:700; font-size:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">3</span><span style="font-family:var(--font-data); font-size:11.5px; font-weight:600; color:var(--ink);">GND · AOUT</span></span>
+      </div>
+      <div class="cap">Get your bearings — every part lives in the cluster by the cable. <span style="color:var(--ink);">①</span> the tiny <span style="color:var(--ink);">662K</span> regulator (top corner — easiest to miss), <span style="color:var(--ink);">②</span> the 8-pin <span style="color:var(--ink);">TLC555</span> timer, <span style="color:var(--ink);">③</span> the <span style="color:var(--ink);">GND/AOUT</span> pins you'll meter.</div>
+    </div>
+  </div>
+
+  <!-- SHORT VERSION -->
+  <div class="pad sec">
+    <div class="callout" style="border-color:color-mix(in srgb,var(--leaf) 40%,transparent); background:color-mix(in srgb,var(--leaf) 6%, var(--surface));">
+      <div class="kick" style="margin-bottom:12px;">The short version</div>
+      <div class="grid3" style="gap:14px;">
+        <div style="display:flex; gap:10px; align-items:flex-start;"><span class="num">01</span><div style="font-size:14.5px; line-height:1.45;">Find a <span class="pin">662K</span> voltage regulator</div></div>
+        <div style="display:flex; gap:10px; align-items:flex-start;"><span class="num">02</span><div style="font-size:14.5px; line-height:1.45;">Find a <span class="pin">TLC555</span> timer — not <span class="pin">NE555</span></div></div>
+        <div style="display:flex; gap:10px; align-items:flex-start;"><span class="num">03</span><div style="font-size:14.5px; line-height:1.45;">Meter <span class="pin">~1 MΩ</span> between <span class="pin">GND</span> &amp; <span class="pin">AOUT</span></div></div>
+      </div>
+      <p style="margin:14px 0 0; font-size:14.5px; color:var(--muted);">All three check out → your board is the trustworthy kind.</p>
+    </div>
+  </div>
+
+  <!-- WHY THIS MATTERS -->
+  <div class="pad sec">
+    <div class="kick" style="color:var(--muted); margin-bottom:8px;">Why this matters</div>
+    <h2>Dry reads high, wet reads low</h2>
+    <p>These boards measure how much water sits near two copper plates — a capacitor — and turn it into a voltage Sprout reads. <strong>More water means lower voltage</strong>, so it feels backwards until it clicks. A well-made board caps its output around 0–3.0 V, which is why it reads cleanly on a 3.3 V board with no extra parts.</p>
+    <div style="margin:18px 0 16px;">
+      <div style="display:flex; height:16px; border-radius:var(--r-pill); overflow:hidden;">
+        <span style="flex:1; background:var(--band-wet);"></span><span style="flex:1; background:var(--band-ideal);"></span><span style="flex:1; background:var(--st-dry);"></span><span style="flex:1; background:var(--band-dry);"></span><span style="flex:1; background:var(--band-parched);"></span>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-top:6px; font-family:var(--font-data); font-size:11.5px; color:var(--muted);"><span>WET · low voltage</span><span>DRY · high voltage</span></div>
+    </div>
+    <p style="margin-bottom:0;">Capacitive sensors beat the older <em>resistive</em> probes because no metal touches the soil, so nothing corrodes away in a few days. But "capacitive" alone doesn't mean "good" — three flaws separate a trustworthy board from a pretty paperweight.</p>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="pad sec">
+    <div class="stepk" style="margin-bottom:8px;">Step 1 · Identify · eyes only, ~60s</div>
+    <h2>Find two parts near the cable end</h2>
+    <p>Hold the board up to the light. You're looking for a voltage regulator and a timer chip — present and correctly marked.</p>
+
+    <div class="callout" style="margin-top:16px; display:flex; gap:14px; align-items:flex-start; border-color:color-mix(in srgb,var(--st-watering) 35%,transparent); background:color-mix(in srgb,var(--st-watering) 6%, var(--surface));">
+      <span style="flex-shrink:0; width:30px; height:30px; border-radius:50%; background:color-mix(in srgb,var(--st-watering) 16%,transparent); display:flex; align-items:center; justify-content:center;"><span style="width:12px; height:12px; border-radius:50%; border:2px solid var(--st-watering);"></span></span>
+      <div>
+        <div class="mono" style="font-size:11px; letter-spacing:.1em; color:var(--st-watering); font-weight:700; margin-bottom:6px;">TIP · READING THE TINY MARKINGS</div>
+        <p style="font-size:14.5px; margin:0;">Those chip labels are smaller than this sentence — and your phone is the best magnifier you own. Open the camera, get in close, and tap to focus (switch on <strong>Macro</strong> mode if your phone has it). Turn on the <strong>flashlight</strong>, or angle a lamp low across the board so the engraved letters catch the light and cast a shadow — that raking light makes faint markings jump out. Snap a few frames from different angles, then pinch to zoom. On iPhone, the <strong>Magnifier</strong> app (add it to Control Center, or ask Siri) gives you zoom, a light, and contrast filters made for exactly this.</p>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:18px;">
+      <div>
+        <h3>The voltage regulator</h3>
+        <div class="photo tall">
+          <span class="badge pass">✓ 662K · PASS</span>
+          <img class="img" src="evidence/sensor_photos/IMG_0527.JPEG" alt="662K voltage regulator at U2">
+          <div class="cap">A 3-pin chip at <span style="color:var(--ink);">U2</span> marked <span style="color:var(--ink);">662K</span>.</div>
+        </div>
+        <p style="font-size:14px; margin-top:12px;"><strong>Present</strong> means good — readings hold steady even as a battery drains. <strong>Missing</strong> (two solder pads bridged instead) means the output drifts with the supply. <span class="flawtag">Flaw 1</span></p>
+      </div>
+      <div>
+        <h3>The timer chip</h3>
+        <div class="grid2" style="gap:10px; grid-template-columns:1fr 1fr;">
+          <div class="photo tall">
+            <span class="badge pass">✓ TLC555</span>
+            <img class="img" src="evidence/sensor_photos/IMG_0526.JPEG" alt="TLC555 timer chip">
+            <div class="cap">Good · runs to ~3 V</div>
+          </div>
+          <div class="photo tall">
+            <span class="badge fail">✗ NE555</span>
+            <img class="img" src="evidence/sensor_photos/IMG_0537.JPEG" alt="NE555 timer chip">
+            <div class="cap">Trouble · needs ~4.5 V</div>
+          </div>
+        </div>
+        <p style="font-size:14px; margin-top:12px;"><span class="pin">TLC555</span> is happy on a 3.3 V board. <span class="pin">NE555</span> needs ~4.5 V, so it's unreliable or dead at 3.3 V. <span class="flawtag">Flaw 2</span></p>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:20px;">
+      <h3 style="margin-bottom:4px;">Ignore the version number</h3>
+      <p style="font-size:14.5px; margin:0;"><span class="pin">v1.2</span> vs <span class="pin">v2.0</span> printed on the board is <em>marketing, not quality</em> — often the exact same product from one of ~five factories. Judge a board by its parts and the meter test, never by its printed version.</p>
+    </div>
+
+    <div style="display:flex; gap:13px; align-items:center; margin-top:18px;">
+      <svg width="34" height="39" aria-hidden="true" style="flex-shrink:0"><use href="#sprout-mark-static"/></svg>
+      <p class="voice" style="font-size:15px;">My own four probes carry the 662K <strong style="font-style:normal; font-weight:600;">and</strong> a real TLC555 — the well-made variant. I checked all four.</p>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="pad sec">
+    <div class="stepk" style="margin-bottom:8px;">Step 2 · Meter the hidden flaw · multimeter, ~90s</div>
+    <h2>The flaw you can't see</h2>
+    <p>A misplaced connection can leave a 1 MΩ resistor's ground side floating. A board like that returns the <strong>same stale number</strong> read after read — it <em>looks</em> like it's working, which is exactly what makes it dangerous. You can't see this one; you measure it.</p>
+
+    <div class="grid2" style="margin-top:18px; align-items:start;">
+      <div>
+        <ol class="steps">
+          <li>Unplug the sensor. Set the meter to resistance (<span class="pin" style="margin:0 4px;">Ω</span>), ~2 MΩ range.</li>
+          <li>One probe on <span class="pin" style="margin:0 4px;">GND</span>, one on <span class="pin" style="margin:0 4px;">AOUT</span>.</li>
+          <li>Let it settle a second — a small cap charges off the meter.</li>
+          <li>Read the number.</li>
+        </ol>
+        <div class="resultrow">
+          <div class="result r-pass"><span class="tag" style="background:var(--leaf); color:#fff;">PASS</span><span style="font-size:13.5px;">Steady <span class="mono" style="font-weight:600;">~1 MΩ</span> — the resistor is grounded.</span></div>
+          <div class="result r-fail"><span class="tag" style="background:var(--st-fault); color:#fff;">FAIL</span><span style="font-size:13.5px;"><span class="mono" style="font-weight:600;">OL</span> both directions — ground link broken. <span class="flawtag">Flaw 3</span></span></div>
+        </div>
+      </div>
+      <div class="photo tall">
+        <img class="img" src="evidence/sensor_photos/IMG_0528.JPEG" alt="Sensor connector showing GND VCC AOUT pins and resistor cluster">
+        <div class="cap">Meter across <span style="color:var(--ink);">GND</span> and <span style="color:var(--ink);">AOUT</span> on the 3-pin header. (Note the silkscreen reads <span style="color:var(--st-dry);">AUOT</span> — a typo; see below.)</div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:13px; align-items:center; margin-top:18px;">
+      <svg width="34" height="39" aria-hidden="true" style="flex-shrink:0"><use href="#sprout-mark-static"/></svg>
+      <p class="voice" style="font-size:15px;">My four boards metered 0.993–1.000 MΩ — essentially nominal, and the tight cluster is itself a sign of a good batch.</p>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="pad sec">
+    <div class="stepk" style="margin-bottom:8px;">Step 3 · Understand each flaw, and decide</div>
+    <h2>Which flaw actually bites?</h2>
+    <p>It depends on how you power the board. Match the flaw to your setup before you decide.</p>
+
+    <div class="grid3" style="margin-top:18px;">
+      <div class="flawcard">
+        <div><span class="flawtag">Flaw 1</span></div>
+        <h3 style="margin:0;">No 662K regulator</h3>
+        <div class="sev"><span style="color:var(--muted);">3.3 V / battery</span><span class="sevpill" style="background:color-mix(in srgb,var(--st-fault) 14%,transparent); color:var(--st-fault);">MATTERS</span></div>
+        <div class="sev"><span style="color:var(--muted);">5 V steady</span><span class="sevpill" style="background:color-mix(in srgb,var(--leaf) 14%,transparent); color:var(--leaf);">MINOR</span></div>
+        <p style="font-size:13.5px; margin:2px 0 0; color:var(--muted);">Give it a clean, steady voltage.</p>
+      </div>
+      <div class="flawcard">
+        <div><span class="flawtag">Flaw 2</span></div>
+        <h3 style="margin:0;">NE555 timer</h3>
+        <div class="sev"><span style="color:var(--muted);">3.3 V / battery</span><span class="sevpill" style="background:var(--st-fault); color:#fff;">FATAL</span></div>
+        <div class="sev"><span style="color:var(--muted);">5 V steady</span><span class="sevpill" style="background:color-mix(in srgb,var(--leaf) 14%,transparent); color:var(--leaf);">USUALLY OK</span></div>
+        <p style="font-size:13.5px; margin:2px 0 0; color:var(--muted);">Run it at ≥ 4.5 V, or replace it.</p>
+      </div>
+      <div class="flawcard">
+        <div><span class="flawtag">Flaw 3</span></div>
+        <h3 style="margin:0;">Floating 1 MΩ resistor</h3>
+        <div class="sev"><span style="color:var(--muted);">3.3 V / battery</span><span class="sevpill" style="background:color-mix(in srgb,var(--st-fault) 14%,transparent); color:var(--st-fault);">MATTERS</span></div>
+        <div class="sev"><span style="color:var(--muted);">5 V steady</span><span class="sevpill" style="background:color-mix(in srgb,var(--st-fault) 14%,transparent); color:var(--st-fault);">MATTERS</span></div>
+        <p style="font-size:13.5px; margin:2px 0 0; color:var(--muted);">Supply doesn't help — fix it, or replace it.</p>
+      </div>
+    </div>
+
+    <h3 style="margin:24px 0 4px;">Three plain choices if a board fails</h3>
+    <div>
+      <div class="choice"><span class="num">A</span><div><strong>Fix it.</strong> For Flaw 3, solder a 1 MΩ resistor across the <span class="pin">AOUT</span> and <span class="pin">GND</span> pins, or run a short wire from the resistor's floating side to ground.</div></div>
+      <div class="choice"><span class="num">B</span><div><strong>Power it differently.</strong> For Flaw 1, feed it a steady voltage; for Flaw 2, run it at 4.5 V or more.</div></div>
+      <div class="choice"><span class="num">C</span><div><strong>Reorder — carefully.</strong> Zoom all the way into the product photos first: confirm a <span class="pin">662K</span>, a <span class="pin">TLC555</span> (not <span class="pin">NE555</span>), and the small via sitting <em>between</em> the two output resistors.</div></div>
+    </div>
+
+    <div class="callout" style="margin-top:20px; border-color:color-mix(in srgb,var(--st-dry) 40%,transparent); background:color-mix(in srgb,var(--st-dry) 7%, var(--surface));">
+      <h3 style="margin-bottom:4px;">A slow sensor isn't automatically trash</h3>
+      <p style="font-size:14.5px; margin:0;">A board that fails the meter test reacts sluggishly — no quick swing when you push it into wet soil. But soil changes slowly, and Sprout reads on plant-time (every few hours), not by the second. Let each reading settle, skip rapid 5-in-a-row averaging, and a slow board can still tell "dry" from "watered" usefully. <em>Use what you have</em> beats a landfill sensor — just mind the fast-averaging caveat.</p>
+    </div>
+  </div>
+
+  <!-- VOLTAGE -->
+  <div class="pad sec">
+    <div class="kick" style="color:var(--muted); margin-bottom:8px;">Match your board's voltage</div>
+    <h2>The kit won't tell you</h2>
+    <p>A sensor and a microcontroller only get along if their voltages agree — and the kit usually says nothing about either.</p>
+    <div class="grid2" style="margin-top:16px;">
+      <div class="callout">
+        <h3>Your board's logic voltage</h3>
+        <p style="font-size:14.5px; margin:0;">Most modern Wi-Fi boards — <span class="pin">ESP32</span> (all variants) and <span class="pin">ESP8266</span> — run at <strong>3.3 V</strong>. Classic <span class="pin">Arduino</span> boards (Uno, Nano, Mega) run at <strong>5 V</strong>. Not all match, though — a Nano 33 or Nano ESP32 is 3.3 V — so check <em>your</em> board's spec.</p>
+      </div>
+      <div class="callout">
+        <h3>What that means for the sensor</h3>
+        <p style="font-size:14.5px; margin:0;">An <span class="pin">NE555</span> needs ~4.5 V: fine on a 5 V Arduino, <strong>dead on a 3.3 V ESP32</strong>. A <strong>regulated</strong> board caps output at ~0–3.0 V, so it reads safely on a 3.3 V ADC. An <strong>unregulated</strong> board fed 5 V can push output <strong>above 3.3 V</strong> — past an ESP32's input range, which can damage the pin. Regulate it, or use a voltage divider.</p>
+      </div>
+    </div>
+    <p style="margin:16px 0 0; font-size:15px; color:var(--muted);">A voltage mismatch isn't a defect — it's a pairing problem. Match the parts, or swap one.</p>
+  </div>
+
+  <!-- SILKSCREEN -->
+  <div class="pad sec">
+    <div class="kick" style="color:var(--muted); margin-bottom:8px;">The silkscreen lesson</div>
+    <h2>Trust the position, not the label</h2>
+    <p>Beyond the three functional flaws, these boards routinely ship with silkscreen typos. The most common: the analog-output pin is often printed <span class="pin" style="color:var(--st-dry);">AUOT</span>, a typo for <span class="pin">AOUT</span>. It's cosmetic — the pin works fine. Power-pin mislabels happen too.</p>
+    <p style="margin-bottom:0;"><strong>Trust the pin's position and the chip markings, not the printed text</strong> — and when in doubt, meter it. That habit is the whole point of this guide: trust, or distrust, your own hardware.</p>
+  </div>
+
+  <!-- TOOLS -->
+  <div class="pad sec">
+    <div class="kick" style="color:var(--muted); margin-bottom:8px;">New to the tools?</div>
+    <h2 style="margin-bottom:16px;">Two short primers &amp; a teardown</h2>
+    <div class="grid3">
+      <a class="linkcard" href="https://learn.sparkfun.com/tutorials/how-to-use-a-multimeter" target="_blank" rel="noopener">
+        <span class="mono" style="font-size:11px; color:var(--st-watering);">SPARKFUN ↗</span>
+        <span style="font-weight:600; color:var(--ink); font-size:15px; border:none;">How to use a multimeter</span>
+        <span style="font-size:13px; color:var(--muted);">Resistance + continuity — exactly Step 2.</span>
+      </a>
+      <a class="linkcard" href="https://learn.adafruit.com/adafruit-guide-excellent-soldering" target="_blank" rel="noopener">
+        <span class="mono" style="font-size:11px; color:var(--st-watering);">ADAFRUIT ↗</span>
+        <span style="font-weight:600; color:var(--ink); font-size:15px; border:none;">Guide to excellent soldering</span>
+        <span style="font-size:13px; color:var(--muted);">Through-hole, for the 1 MΩ fix.</span>
+      </a>
+      <a class="linkcard" href="https://www.youtube.com/watch?v=IGP38bz-K48" target="_blank" rel="noopener">
+        <span class="mono" style="font-size:11px; color:var(--st-fault);">VIDEO ↗</span>
+        <span style="font-weight:600; color:var(--ink); font-size:15px; border:none;">The Flaura teardown</span>
+        <span style="font-size:13px; color:var(--muted);">~10 min on why so many of these are faulty.</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- SOURCES + FOOTER -->
+  <div class="pad sec" style="background:var(--surface-2);">
+    <div class="kick" style="color:var(--muted); margin-bottom:10px;">Where this comes from</div>
+    <div style="display:flex; flex-direction:column; gap:8px; font-size:13.5px; color:var(--ink);">
+      <div><span class="pin">SENSOR_QA.md</span> — Sprout's own bench checks on its four sensors; the authoritative source for every claim here.</div>
+      <div><span class="pin">docs/RESEARCH_capacitive_soil_moisture_sensors.md</span> — the longer research foundation: defects, diagnosis, fixes, buying guidance, with citations.</div>
+      <div>The Flaura project (Martin Uhlmann), <em>"Capacitive soil moisture sensors — 82% are faulty"</em> — the originating teardown this all traces back to.</div>
+    </div>
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:24px; padding-top:18px; border-top:1px solid var(--border); flex-wrap:wrap;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <svg width="26" height="30" aria-hidden="true" style="flex-shrink:0"><use href="#sprout-mark-static"/></svg>
+        <span style="font-size:13px; color:var(--muted);">Part of the Sprout front door</span>
+      </div>
+      <a href="./" style="font-size:13px;">&larr; back to Sprout</a>
+    </div>
+  </div>
+
+</article>
+</div>
+
+</main>
+</body>
+</html>
