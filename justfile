@@ -218,6 +218,15 @@ link-check *ARGS:
 voice-guard *ARGS:
     {{py}} tools/dx/voice_guard.py {{ARGS}}
 
+# Board-hygiene lint (#732): the board must tell the truth. Sweeps every card for
+# closed-not-Done drift (blocking), stale In-Progress (advisory, --stale-days 4), and
+# oversized milestones (advisory, --milestone-warn 40). Event-driven: run at the release
+# cut + on demand; needs the local gh login (ProjectV2 scope — not a per-PR CI job).
+#   just board-hygiene              # sweep + non-zero on closed-not-Done drift
+#   just board-hygiene --advisory   # report only
+board-hygiene *ARGS:
+    {{py}} tools/dx/board_hygiene.py {{ARGS}}
+
 # DX tool tests (pytest — identifier-guard + link-check suites; new DX suites land here too).
 test-dx:
     {{py}} -m pytest tools/dx/ -q
