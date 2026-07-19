@@ -43,7 +43,8 @@ maintainer, and a curious community member each find their own path from one pag
 | [Arduino on-ramp](contributing/arduino-onramp-north-star.md) · [Arduino starter](contributing/arduino-starter.md) | New to microcontrollers? Graduate into the project. |
 | [Firmware: FLASHING](FLASHING.md) · [BRINGUP](BRINGUP.md) · [PlatformIO troubleshooting](PLATFORMIO_TROUBLESHOOTING.md) | The firmware toolchain, first flash, and the dev-env gotchas. |
 | [Architecture Decision Records](adr/) | *Why* things are the way they are — decisions of record (ADR-0000 → ADR-0028). |
-| [AGENTS.md](../AGENTS.md) | Working rules for the AI agents in the lane workflow. |
+| [AGENTS.md](../AGENTS.md) | Ground rules for anyone (or any agent) contributing here. |
+| [docs/team/OPERATIONS.md](team/OPERATIONS.md) | How the maintainer's internal agent-lane team operates (documentation, not contributor instructions). |
 
 ---
 

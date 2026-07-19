@@ -190,6 +190,15 @@ def test_migrate_static_brings_sensorless_plants_into_the_model() -> None:
     assert {a.plant_id for a in m.open_assignments()} == {"p01"}
 
 
+def test_plant_photo_round_trips_and_defaults_absent() -> None:
+    # #875 card contract: the optional identity-block photo is absent by default and
+    # round-trips through the model when set (a local, gitignored path).
+    assert Plant(plant_id="p01").photo is None  # absent-safe default
+    m = RegistryModel(plants=[Plant(plant_id="p01", photo="config/photos/p01.jpg")])
+    back = RegistryModel.from_dict(m.to_dict())
+    assert back.plants[0].photo == "config/photos/p01.jpg"
+
+
 def test_migrate_static_a_probed_plant_is_not_duplicated_by_sensorless() -> None:
     # a plant can't be both probed and sensorless — a live reading wins, no dup Plant.
     static = {

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 5 1200 630" width="1200" height="630" role="img" aria-label="Sprout asleep for the night — social card: a sleeping seedling under a crescent moon, with the line: asleep, watering can wait until morning">
+  <!-- Sprout asleep (night) — social-card composition, 1280x640 (the repo's social standard, 2:1).
+       Workflow-authored variant, 2026-07-15. Export: sprout-asleep-night-card.png (raster for feeds).
+       Same night palette + canonical mark geometry as sprout-asleep-night.svg.
+       Center-safe: all signature elements live in the middle band; edges are quiet ground. -->
+  <g id="sprout-asleep-card">
+    <rect x="0" y="0" width="1280" height="640" fill="#0C1311"/>
+    <circle cx="1020" cy="140" r="42" fill="#DCE9DF" opacity="0.9"/>
+    <circle cx="1004" cy="127" r="39" fill="#0C1311"/>
+    <circle cx="180" cy="110" r="2.6" fill="#8FA697"/><circle cx="300" cy="180" r="1.8" fill="#8FA697"/>
+    <circle cx="430" cy="90" r="2.2" fill="#8FA697"/><circle cx="620" cy="140" r="1.8" fill="#8FA697"/>
+    <circle cx="790" cy="80" r="2.4" fill="#8FA697"/><circle cx="880" cy="210" r="1.8" fill="#8FA697"/>
+    <circle cx="140" cy="260" r="1.9" fill="#8FA697"/><circle cx="1150" cy="300" r="1.8" fill="#8FA697"/>
+    <g transform="translate(464,205) scale(7.4)">
+      <g fill="none" stroke="#3E5C48" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 25 C12 20 12 17 12 14"/>
+        <path d="M12 15 C9.5 14 8 11.5 8.6 9.2 C11.2 10 12 12.6 12 15 Z" fill="#2E4A38" stroke="#3E5C48"/>
+        <path d="M12 16.5 C14.5 15.5 16 13 15.4 10.7 C12.8 11.5 12 14.1 12 16.5 Z" fill="#3E5C48" stroke="#4C6B54"/>
+        <path d="M12 14 C11 11.5 11.3 9 12.6 7.4 C13.8 9.3 13.3 11.9 12 14 Z" fill="#557A5E" stroke="#557A5E"/>
+      </g>
+      <path d="M4 25.6 C7 24.4 17 24.4 20 25.6" fill="none" stroke="#1C2A22" stroke-width="2.2" stroke-linecap="round"/>
+    </g>
+    <g fill="#8FA697" font-family="'Baloo 2','Segoe UI',system-ui,sans-serif">
+      <text x="680" y="240" font-size="26" opacity="0.5">z</text>
+      <text x="702" y="212" font-size="32" opacity="0.65">z</text>
+      <text x="730" y="180" font-size="40" opacity="0.8">Z</text>
+    </g>
+    <text x="640" y="516" text-anchor="middle" font-family="'Baloo 2','Segoe UI',system-ui,sans-serif" font-size="34" fill="#DCE9DF">asleep &#183; watering can wait until morning</text>
+    <text x="640" y="558" text-anchor="middle" font-family="'Baloo 2','Segoe UI',system-ui,sans-serif" font-size="20" fill="#8FA697">Sprout &#183; plants with a pulse</text>
+  </g>
+</svg>

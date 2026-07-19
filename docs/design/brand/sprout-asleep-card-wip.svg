@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="Sprout asleep social card, work-in-progress variant — the sleeping seedling and wordmark, with the night colour palette exposed and labelled below as a build-in-progress cue">
+  <!--
+    Sprout "asleep" social card — WORK-IN-PROGRESS variant (1200x630). Same sleeping scene + wordmark as
+    sprout-asleep-card.svg, but with the night palette exposed and labelled along the bottom under a
+    "work in progress" header. The visible design tokens are an honest build-in-progress signal — Sprout is
+    still being built and released, not finished — a friendly cue for viewers. Self-contained, CSS-animated,
+    prefers-reduced-motion-aware.
+  -->
+  <defs>
+    <radialGradient id="sky" cx="28%" cy="26%" r="100%">
+      <stop offset="0" stop-color="#152c22"/><stop offset="0.55" stop-color="#0d1a15"/><stop offset="1" stop-color="#070f0b"/>
+    </radialGradient>
+    <radialGradient id="mglow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#cfe7d8" stop-opacity="0.4"/><stop offset="1" stop-color="#cfe7d8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="leafA" x1="0" y1="0" x2="0.2" y2="1"><stop offset="0" stop-color="#7aa961"/><stop offset="1" stop-color="#4a7346"/></linearGradient>
+    <linearGradient id="leafB" x1="0" y1="0" x2="0.2" y2="1"><stop offset="0" stop-color="#4f7d4a"/><stop offset="1" stop-color="#33553a"/></linearGradient>
+    <radialGradient id="soil" cx="50%" cy="0%" r="95%"><stop offset="0" stop-color="#241b13"/><stop offset="1" stop-color="#100b08"/></radialGradient>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Hanken+Grotesk:wght@400;500&amp;family=JetBrains+Mono:wght@500&amp;display=swap');
+      .breath { transform-box: fill-box; transform-origin: 50% 0%; animation: breath 7s ease-in-out infinite; }
+      @keyframes breath { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
+      .z { animation: floatz 4.8s ease-in-out infinite; }
+      .z2 { animation-delay: 0.8s; } .z3 { animation-delay: 1.6s; }
+      @keyframes floatz {
+        0% { opacity: 0.5; transform: translate(0, 6px); }
+        50% { opacity: 0.9; transform: translate(8px, -8px); }
+        100% { opacity: 0.5; transform: translate(16px, -20px); }
+      }
+      .blink { animation: blink 2.4s ease-in-out infinite; }
+      @keyframes blink { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+      @media (prefers-reduced-motion: reduce) { .breath, .z, .blink { animation: none; } }
+      .wm { font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800; }
+      .hl { font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 600; }
+      .sub { font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 400; }
+      .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 500; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#sky)"/>
+
+  <g fill="#cfe7d8">
+    <circle cx="90" cy="70" r="1.8" opacity="0.7"/><circle cx="180" cy="140" r="1.2" opacity="0.5"/>
+    <circle cx="60" cy="220" r="1.4" opacity="0.55"/><circle cx="300" cy="64" r="1.2" opacity="0.45"/>
+    <circle cx="470" cy="110" r="1.3" opacity="0.5"/><circle cx="120" cy="320" r="1.2" opacity="0.45"/>
+    <circle cx="880" cy="80" r="1.4" opacity="0.5"/><circle cx="1050" cy="160" r="1.6" opacity="0.6"/>
+    <circle cx="1130" cy="280" r="1.2" opacity="0.45"/><circle cx="960" cy="230" r="1.1" opacity="0.4"/>
+    <circle cx="740" cy="130" r="1.2" opacity="0.45"/><circle cx="400" cy="170" r="1.1" opacity="0.4"/>
+  </g>
+  <circle cx="150" cy="378" r="2.6" fill="#8BD24F" opacity="0.5"/>
+  <circle cx="560" cy="270" r="2" fill="#A9DA6E" opacity="0.45"/>
+
+  <circle cx="200" cy="140" r="115" fill="url(#mglow)"/>
+  <circle cx="200" cy="140" r="55" fill="#E8F0E4"/>
+  <circle cx="222" cy="120" r="48" fill="#101d17"/>
+
+  <ellipse cx="340" cy="442" rx="230" ry="32" fill="url(#soil)"/>
+
+  <g transform="translate(234,214) scale(8)" stroke="#2f5a3c" stroke-width="1.15" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 26 C12 20 12 18 12 16"/>
+    <g class="breath">
+      <path d="M12 16 C8 17 6 20 6 23 C10 22 12 19 12 16 Z" fill="url(#leafA)"/>
+      <path d="M12 16 C16 17 18 20 18 23 C14 22 12 19 12 16 Z" fill="url(#leafB)"/>
+    </g>
+  </g>
+
+  <g fill="#9fbf9a" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="700">
+    <text class="z z1" x="398" y="332" font-size="20" opacity="0.6">z</text>
+    <text class="z z2" x="418" y="298" font-size="28" opacity="0.6">z</text>
+    <text class="z z3" x="446" y="258" font-size="38" opacity="0.6">Z</text>
+  </g>
+
+  <text class="wm" x="712" y="232" font-size="64" fill="#EAF1E5">Sprout</text>
+  <text class="hl" x="712" y="300" font-size="40" fill="#dfead9">Resting up.</text>
+  <text class="sub" x="714" y="342" font-size="25" fill="#9fb2a3">Back to watching at first light.</text>
+
+  <line x1="44" y1="496" x2="1156" y2="496" stroke="#22332b" stroke-width="1"/>
+  <circle class="blink" cx="52" cy="521" r="4" fill="#8BD24F"/>
+  <text class="mono" x="66" y="526" font-size="13" letter-spacing="2" fill="#8aa694">NIGHT PALETTE · WORK IN PROGRESS</text>
+
+  <g class="mono">
+    <rect x="44" y="548" width="22" height="22" rx="4" fill="#0d1a15" stroke="#2a3b33"/>
+    <text x="76" y="559" font-size="12.5" fill="#c3d4c6">night</text><text x="76" y="577" font-size="11" fill="#7f9788">#0D1A15</text>
+    <rect x="268" y="548" width="22" height="22" rx="4" fill="#e8f0e4"/>
+    <text x="300" y="559" font-size="12.5" fill="#c3d4c6">moon</text><text x="300" y="577" font-size="11" fill="#7f9788">#E8F0E4</text>
+    <rect x="492" y="548" width="22" height="22" rx="4" fill="#4e7e45"/>
+    <text x="524" y="559" font-size="12.5" fill="#c3d4c6">rest leaf</text><text x="524" y="577" font-size="11" fill="#7f9788">#4E7E45</text>
+    <rect x="716" y="548" width="22" height="22" rx="4" fill="#8bd24f"/>
+    <text x="748" y="559" font-size="12.5" fill="#c3d4c6">firefly</text><text x="748" y="577" font-size="11" fill="#7f9788">#8BD24F</text>
+    <rect x="940" y="548" width="22" height="22" rx="4" fill="#9fbf9a"/>
+    <text x="972" y="559" font-size="12.5" fill="#c3d4c6">zZZ</text><text x="972" y="577" font-size="11" fill="#7f9788">#9FBF9A</text>
+  </g>
+</svg>

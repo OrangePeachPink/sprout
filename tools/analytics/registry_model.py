@@ -53,6 +53,12 @@ class Plant:
     pot_description: str | None = None  # "the red pot" (Q7)
     pot_size: str | None = None
     location: str | None = None  # current spot; MOVES are events (see location_events)
+    # #875 card contract: an optional plant photo for the identity block. A LOCAL-only,
+    # gitignored path (never committed; EXIF-strip applies if a share path is ever added
+    # — same fence as the operator's home coordinates). Absent-safe: the card renders a
+    # clean no-photo identity block when None. The path convention / allowed formats /
+    # size cap are a grill question; the field itself is decided and additive here.
+    photo: str | None = None
     lifecycle: str = "active"
 
 
@@ -532,7 +538,14 @@ _MODEL_KEYS = {
 _PLANT_ID_RE = re.compile(r"p\d{2,}")
 _SENSOR_ID_RE = re.compile(r"s\d{2,}")
 # what a plant edit may change - never `plant_id` (canonical, immutable post-save)
-_PLANT_FIELDS = ("plant_type", "pet_name", "pot_description", "pot_size", "location")
+_PLANT_FIELDS = (
+    "plant_type",
+    "pet_name",
+    "pot_description",
+    "pot_size",
+    "location",
+    "photo",  # #875: the optional identity-block photo path (local-only, gitignored)
+)
 
 
 def _next_numbered(existing: set[str], prefix: str) -> str:

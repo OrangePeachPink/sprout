@@ -46,6 +46,12 @@ credentials.h
 config/identifiers.local.txt
 # Pre-edit backups of the local configs (e.g. devices.local.json.bak-<ts>) - local safety copies.
 config/*.local.json.bak*
+# Plant photos (#875 card identity block): camera photos carry EXIF/GPS of the
+# maintainer's home - a hard privacy fence, same class as the home coordinates above. The
+# real photos stay LOCAL; only a committed .gitkeep marks the dir. Exact path/format/size
+# convention is a grill question; the never-commit fence is not.
+config/photos/*
+!config/photos/.gitkeep
 
 # PlatformIO
 .pio/

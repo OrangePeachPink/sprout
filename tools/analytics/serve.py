@@ -749,6 +749,59 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         "any_calibrated": bool(anchors),
                     }
                 )
+            elif parsed.path == "/cards.json":  # #875 the Home plant-card payloads
+                from card_payload import (
+                    cards_from_context,
+                    load_mood_map,
+                    load_voice_pool,
+                )
+                from registry_model import load_registry_model
+
+                # The Home reads the SAME served context as the Workbench (one truth,
+                # ADR-0008): live band/mood/forecast from build_context, rich identity
+                # (name/pot/location/photo) bridged from the temporal registry.
+                model = load_registry_model()
+                plants_by_id = {p.plant_id: p for p in model.plants}
+                try:
+                    ctx = _context(self.inputs, hours, channels)
+                except NoDataYet as exc:  # first-run: the Home's honest empty state
+                    self._send_json(
+                        {
+                            "cards": [],
+                            "empty": True,
+                            "had_any_logged": exc.had_any_logged,
+                        }
+                    )
+                    return
+                allcards = cards_from_context(
+                    ctx,
+                    plants_by_id=plants_by_id,
+                    mood_map=load_mood_map(),
+                    voice_pool=load_voice_pool(),
+                )
+                # #875 Q3: the normal thirst grid stays readable; off-normal readings
+                # (air-dry / fault / no-signal) go to their own exceptions lane so the
+                # extremes never compress the meaningful middle.
+                cards = [c for c in allcards if not c["exception"]["is"]]
+                exceptions = [c for c in allcards if c["exception"]["is"]]
+                self._send_json(
+                    {
+                        "cards": cards,
+                        "exceptions": exceptions,
+                        "count": len(cards),
+                        "exception_count": len(exceptions),
+                    }
+                )
+            elif parsed.path.startswith("/photo/"):  # #875 Q4: a plant's small avatar
+                pid = parsed.path[len("/photo/") :]
+                if not re.fullmatch(r"[A-Za-z0-9]+", pid):  # no traversal from the id
+                    self._send("bad photo id", "text/plain", status=400)
+                else:
+                    f = _REPO / "config" / "photos" / f"{pid}.jpg"
+                    if f.is_file():
+                        self._send_raw(f.read_bytes(), "image/jpeg")
+                    else:
+                        self._send("no photo", "text/plain", status=404)
             elif parsed.path == "/serial/owner":  # who holds the port (#330)
                 self._send_json(serial_lock.owner_status())
             elif parsed.path.startswith("/docs/"):  # #808: front-door docs, guarded
@@ -863,6 +916,25 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self._send_json(env_solar.save_location(self._body()))
                 except ValueError as exc:
                     self._send_json({"error": str(exc)}, status=400)
+            elif parsed.path.startswith("/photo/"):  # #875 Q4: ingest a plant avatar
+                # Writes a local file + mutates the registry; localhost-only. The image
+                # is downsampled + EXIF-stripped before it ever lands (no home GPS).
+                if not self._is_local():
+                    self._send_json(
+                        {"error": "photo upload is localhost-only"}, status=403
+                    )
+                    return
+                pid = parsed.path[len("/photo/") :]
+                raw = self._raw_body()
+                if not re.fullmatch(r"[A-Za-z0-9]+", pid):
+                    self._send_json({"error": "bad photo id"}, status=400)
+                elif not raw:
+                    self._send_json(
+                        {"error": "empty upload — send the image as the body"},
+                        status=400,
+                    )
+                else:
+                    self._ingest_photo(pid, raw)
             elif (
                 parsed.path == "/registry/apply"
             ):  # #921 slice 3 — classic-save a batch
@@ -988,6 +1060,43 @@ class DashboardHandler(BaseHTTPRequestHandler):
         if not isinstance(data, dict):
             raise ControlError("request body must be a JSON object")
         return data
+
+    def _raw_body(self) -> bytes:
+        """The raw request body bytes (for a binary upload — #875 Q4 photo intake)."""
+        length = int(self.headers.get("Content-Length", 0) or 0)
+        return self.rfile.read(length) if length else b""
+
+    def _ingest_photo(self, pid: str, raw: bytes) -> None:
+        """#875 Q4: downsample + EXIF-strip the uploaded bytes into the gitignored
+        avatar, then link it on the plant's registry entry. The strip happens before the
+        file lands, so home GPS never touches disk."""
+        from photo_intake import ingest_photo, registry_photo_path
+        from registry_model import (
+            apply_operations,
+            load_registry_model,
+            registry_payload,
+            save_registry_model,
+        )
+
+        try:
+            ingest_photo(raw, pid)  # → config/photos/<pid>.jpg (small, no metadata)
+        except (ValueError, OSError) as exc:
+            self._send_json({"error": f"not a readable image: {exc}"}, status=400)
+            return
+        rel = registry_photo_path(pid)
+        model = load_registry_model()
+        result = apply_operations(
+            model, {"plants": {"edit": [{"plant_id": pid, "photo": rel}]}}
+        )
+        if result.get("ok"):
+            save_registry_model(model)
+            self._send_json(
+                {"ok": True, "photo": rel, "registry": registry_payload(model)}
+            )
+        else:
+            # the avatar saved, but this plant isn't in the temporal registry yet — the
+            # file serves from /photo/<pid>; the surface links it once the plant exists.
+            self._send_json({"ok": True, "photo": rel, "not_linked": result})
 
     def _is_local(self) -> bool:  # loopback-only guard for the shutdown endpoint
         host = self.client_address[0] if self.client_address else ""

@@ -101,6 +101,42 @@ question and the pin-assignment question are separate, and only the first is res
   header→GPIO routing wants confirming; expect per-VARIANT entries if the two C5s' usable pins
   differ.
 
+### ADC1 sensor ceiling per board (scale headroom)
+
+The pin budget above is built around the kit's **4** soil probes. This table is the verified
+**ADC1-only** ceiling if a single board ever scales past 4 (ADC2 stays off with Wi-Fi on every
+chip, so the ceiling is simply "how many usable ADC1 channels does the family expose?"). It sizes
+the card-grid scale ceiling — e.g. 4 boards × 6 = 24 plants. Channel counts are datasheet-verified
+(retrieved 2026-07-12); the "clean-for-soil" column subtracts strapping/JTAG/unbonded pins.
+
+| Board | ADC1 channels (datasheet) | Clean-for-soil ceiling | Why |
+| --- | --- | --- | --- |
+| classic ESP32-D0WD (WROOM-32) | 8 — GPIO32–39 | **6** | WROOM bonds only 6 of the 8 (GPIO37/38 not on the module); none are strapping; 34–39 input-only = fine for ADC. 6 uses every exposed ADC1 pin — zero spare. |
+| ESP32-S3 | 10 — GPIO1–10 | **9** | Skip strapping GPIO3; flash/PSRAM (≈GPIO26–32) and native USB-JTAG (19/20) don't touch ADC1. Most headroom of the three. |
+| ESP32-C5 | 6 — GPIO1–6 | **4** | GPIO2 & GPIO3 are JTAG **+ boot-strapping** — the same reason the C5 soil map is forced to `{1,4,5,6}`. Reaching 6 means sensors on strap pins (boot-mode risk), so the clean ceiling stays 4. |
+
+**So 6-per-board holds for an all-S3 fleet; classic WROOM reaches exactly 6 (no spare ADC1 pin);
+the C5 caps at 4 clean** — a mixed fleet's per-board ceiling is set by whichever C5s are in it.
+Secondary constraint: 6 sensors implies 6 pumps → 6 more (digital) GPIOs for relays; on the 32-pin
+C5 the total budget (6 sensors + 6 relays + I²C + power) gets tight fast, a second reason the C5
+sits at 4.
+
+**Not yet verified (honest — bench-pass trio, no urgency):**
+
+1. That *our* classic module truly doesn't bond GPIO37/38 (standard WROOM-32, but confirm on the
+   silkscreen — a bare-chip board that exposes them could reach 8).
+2. Whether a capacitive sensor on the C5's GPIO2/3 actually disrupts boot. The datasheet says
+   "strapping"; only a bench test says "tolerable or not." Rides the next bench day.
+3. The S3's chosen ADC1 pins vs. the relay/I²C map (10 channels exist, but confirm the 6 picked
+   don't collide with chosen relay/I²C pins).
+
+Sources (retrieved 2026-07-12): [ESP32-C5 datasheet Table 2-7][c5ds] · [ESP32-S3 IDF ADC][s3adc] ·
+[ESP32 IDF ADC][esp32adc], plus the respective datasheets.
+
+[c5ds]: https://documentation.espressif.com/esp32-c5_datasheet_en.html
+[s3adc]: https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/adc/index.html
+[esp32adc]: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/adc/index.html
+
 ## Serial per board (the real gotcha)
 
 - **Classic — UART bridge** (CP2102): `Serial` @ 19200 exactly as today; the host logger

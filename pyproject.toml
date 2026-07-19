@@ -13,6 +13,7 @@ dependencies = [
   "pyserial>=3.5",  # the host serial logger / experiment-capture runtime
   "duckdb>=1.0",    # the Lab Notebook analysis store (derived/rebuildable tier, #155)
   "pandas>=2.0",    # ingestion into the store + query results
+  "pillow>=11",     # card photo intake (#875 Q4): downsample + EXIF strip, local-only
 ]
 
 [dependency-groups]

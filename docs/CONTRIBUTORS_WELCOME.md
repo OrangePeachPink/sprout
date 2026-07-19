@@ -54,8 +54,7 @@ deliverable — which is exactly why your PR matters.
 
 Surfaced a "designed-for, not core-committed" idea in a discussion? **Add a bullet here and sign it** — name the
 seam if you know it, plus a one-line "how to start." This page is meant to *grow*: the ideas that escaped memory
-belong here too. At launch, Workflow converts each into a labeled `help wanted` issue so contributors can grab
-them.
+belong here too. At launch, each becomes a labeled `help wanted` issue you can grab.
 
 ## Wear the badge
 
@@ -64,10 +63,3 @@ you're welcome to post anywhere you like — there's a [square one](design/brand
 Instagram, and light-theme versions too. Zero pressure; it's just here if you're proud of what we're growing. 🌱
 
 *New to contributing? [Your first contribution](contributing/your-first-pr.md) walks the whole flow.*
-
----
-
-*Crafted from the #265 seed into the Contributors Welcome surface (#266). Content + experience by DX; a Design
-pass may dress it in Sprout tokens/voice.*
-
-— DX 🌱

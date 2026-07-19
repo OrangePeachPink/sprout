@@ -87,6 +87,9 @@ So two people never unknowingly build the same thing:
 - **No rush, no race.** First to claim gets it, there's plenty to go around, and starting is never a
   competition. If two claims cross in the mail, we'll sort it kindly and find you both something. 🌱
 
+New to how we work? **[What to expect](../docs/contributing/what-to-expect.md)** is the friendly one-page
+version — claiming, review, timing, and our no-guilt timeout.
+
 ## Making a change
 
 1. **Claim it first** ([Claiming an issue](#claiming-an-issue)) — a maintainer assigns you and moves the
@@ -118,19 +121,12 @@ So two people never unknowingly build the same thing:
 > **GitHub Codespaces already has both** (its base image bundles `gcc`, and `pip install platformio` is a
 > quick add) — see the Firmware section below, or just push and let CI run the full gate for you.
 >
-> **Why CI is designed to run everything (the default posture — currently overridden; see the sprint note
-> below):** `just check` is the same full gate as your machine — on purpose. Pre-commit *hooks* are
+> **Why CI is designed to run everything (the default posture):** `just check` is the same full gate as your
+> machine — on purpose. Pre-commit *hooks* are
 > file-type-scoped for speed (e.g. `clang-format` only touches `.c`/`.h` files) — but the *test* step above is
 > not type-scoped, so don't read "hooks are scoped" as "a docs change skips firmware tests." Running
 > everything is what buys predictability and prevents local≠remote drift; path-filtering would re-introduce
 > exactly the class of surprise we deliberately closed.
->
-> ⚠️ **Temporary sprint posture (#740, private phase only):** remote per-PR CI currently runs the *fast lane
-> only* (lint + hygiene + host tests); the firmware compile, native C tests, and experimental boards run in a
-> **weekly full battery** (+ on-demand dispatch) instead — an Actions-minutes decision, velocity over
-> per-commit remote coverage. **`just check` locally is therefore the real full gate during the sprint** —
-> run it before pushing, and post local `just test-native` + `just build` evidence on firmware-touching PRs.
-> This posture is reverted per #740's launch checklist before the repo goes public.
 >
 > **The one exception — clang-format:** it runs on the *lines you changed*, not `--all-files`, because the
 > firmware carries intentional manual column alignment a full-tree reformat would destroy (AGENTS.md
@@ -198,7 +194,8 @@ author's say-so alone.
 **You don't need more than that to contribute.** How that review runs *internally* — the per-stage pipeline
 (Backlog → In Progress → Needs Verification → Ready to Merge → Done), Workflow's independent certification, the
 velocity modes, and the tombstone-banner conventions for closing issues — lives in
-**[AGENTS.md](../AGENTS.md#the-verification-pipeline)**, the operating manual for the maintainer and the AI
+**[docs/team/OPERATIONS.md](../docs/team/OPERATIONS.md#the-verification-pipeline)**, the operating
+manual for the maintainer and the AI
 workstreams ("lanes") that do the day-to-day building. Open a PR with **`Refs #N`** (never `Closes`) plus a
 note on how you verified it, and it'll be reviewed there.
 
@@ -232,7 +229,7 @@ less custom machinery you have to learn, the faster you can help — that's the 
 - `layer:*` — `firmware` (needs a reflash) vs `host` (build anytime)
 - `for:*` — routing hint to a lane (a best-guess owner, not a commitment — Workflow still triages):
   `for:firmware` (incl. bench) · `for:data` · `for:design` (→ DesignQA) · `for:dx` · `for:trellis` ·
-  `for:workflow` · `for:maintainer`. See the lane roster in [AGENTS.md](../AGENTS.md#the-lanes).
+  `for:workflow` · `for:maintainer`. See the lane roster in [docs/team/OPERATIONS.md](../docs/team/OPERATIONS.md#the-lanes).
 - `blocks:*` — milestone **gates**, independent of Priority: `blocks:pumps`, `blocks:public-release`,
   `blocks:data-integrity`. Filter by these to see what stands between us and pumps / a public release /
   trustworthy data.
