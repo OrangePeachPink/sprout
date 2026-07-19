@@ -37,6 +37,16 @@ is retired as a competitive hook; *self-candor* ("I'm not sure — check my sens
 Sprout's character, never as a claim about anyone else's work. This is a rhetoric decision, not a
 data-model change — bands-primary / %-as-labeled-index stays a valid engineering choice.
 
+**Audience — the plant/data overlap.** In the maintainer's words, the followers this project earns are
+*"plant people that love data, and data people that love plants"* — and that overlap is where an OSS
+plant-monitoring project finds its community (grill ruling, #1039). It's why the hero is **data-forward**:
+leading with the instrument — real readings, the calibrated band, the four-plant mood wall — lets a data
+person feel the rigor and a plant person feel seen, each recognizing their own half in the other. The
+data-forward hero and the voice-led positioning above are one move, not two: the readings are the
+substance, the first-person character is what makes them *Sprout's*. Every front-door choice — hero, share
+card, the `understand → run → contribute` routing — tunes to that overlap, not to a general gardening
+audience.
+
 ## Goals
 
 - Replace the redirect stub with a **first-class designed front-door hub** that routes every kind of

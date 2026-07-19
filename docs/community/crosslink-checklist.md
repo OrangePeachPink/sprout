@@ -10,6 +10,11 @@ to epic sub-issues. **Tier 1 is the ship-early item** — cheap, approved, indep
 strong identity key; the name string is the assist. Copy pivot note: retire competitive-honesty phrasing
 ("never a fake %", "refuses to lie") from OG/description strings; **identity nodes are unaffected.**
 
+**Audience anchor for all description / keyword copy:** write to the *plant/data overlap* — "plant people
+who love data, and data people who love plants" (grill ruling #1039; see the PRD's **Audience** note). OG
+descriptions and `keywords` lead with the instrument (readings, the calibrated band, the mood wall) *and*
+the character — never a generic gardening pitch.
+
 ---
 
 ## Tier 1 — repo crosslinks · FD-4 · SHIP FIRST (0.7.x)
