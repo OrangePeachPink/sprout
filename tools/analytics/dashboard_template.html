@@ -368,7 +368,6 @@ table.grid tr:last-child td { border-bottom: none; }
 .dhead .raw { font-family: var(--font-data); font-weight: 600; font-size: 40px; line-height: 1; }
 .dhead .rawu { color: var(--muted); font-size: 12px; }
 .dgrid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg); }
-.dgrid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: var(--space-md); }
 @media (max-width: 820px){ .dgrid2 { grid-template-columns: 1fr; } }
 
 /* headroom gauge */
@@ -381,14 +380,8 @@ table.grid tr:last-child td { border-bottom: none; }
   font-family: var(--font-data); margin-top: 2px; white-space: nowrap; }
 .gauge .row2 { position: relative; height: 18px; margin-top: 2px; }
 
-/* forecast cards */
-.fcard { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-tile); padding: var(--space-md); }
-.fcard .ft { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
-.fcard .fv { font-family: var(--font-data); font-weight: 600; font-size: 22px; margin: 4px 0 2px; }
-.fcard .fsub { font-size: 12px; color: var(--muted); }
-.fcard.gated { border-style: dashed; }
-.fcard .gate { display: inline-block; font-size: 10px; font-weight: 700; color: var(--muted);
-  border: 1px solid var(--border); border-radius: var(--r-pill); padding: 0 7px; }
+/* #1147: the reconciled forecast line — quiet chrome under the gauge */
+.fcline { margin-top: 8px; }
 
 /* #922: env-overlay toggle on the detail trajectory (opt-in, faint, context-not-cause) */
 .envctl { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
@@ -1435,25 +1428,26 @@ function renderOverview(){
 }
 
 /* ---- single-plant detail view ---- */
-function etaLine(eta, label, caveat){
-  const card = el('div','fcard');
-  card.appendChild(el('div','ft', label));
-  if(!eta){ card.appendChild(el('div','fv','—')); return card; }
-  const band = bandByLo(eta.target);
+function _etaBit(eta, label){
+  if(!eta) return label + ' —';
   if(eta.reachable && eta.hours!=null && eta.hours>0){
-    let rng = (eta.hours_lo!=null && eta.hours_hi!=null) ? ` <span class="fsub">[${fmtHours(eta.hours_lo)}–${fmtHours(eta.hours_hi)}]</span>` : '';
-    card.appendChild(el('div','fv', fmtHours(eta.hours)+rng));
-    card.appendChild(el('div','fsub', `to raw ${fmt(eta.target)}${band? ' ('+band.ui+')':''} · +${fmt(eta.headroom)} counts`));
-  } else if(eta.reason==='already past'){
-    card.appendChild(el('div','fv', 'now'));
-    card.appendChild(el('div','fsub', `already at/past raw ${fmt(eta.target)}${band? ' ('+band.ui+')':''}`));
-  } else {
-    card.classList.add('gated');
-    card.appendChild(el('div','fv', '<span class="gate">no estimate yet</span>'));
-    card.appendChild(el('div','fsub', `${eta.reason} · +${fmt(eta.headroom)} counts to raw ${fmt(eta.target)}${band? ' ('+band.ui+')':''}`));
+    const rng = (eta.hours_lo!=null && eta.hours_hi!=null) ? ` [${fmtHours(eta.hours_lo)}–${fmtHours(eta.hours_hi)}]` : '';
+    return `${label} ~${fmtHours(eta.hours)}${rng}`;
   }
-  if(caveat) card.appendChild(el('div','fsub tiny', caveat));
-  return card;
+  if(eta.reason==='already past') return label + ' now';
+  return `${label} — no estimate yet (${eta.reason})`;
+}
+/* #1147: one honest line where three tiles stood. Targets live on the gauge ticks;
+   this line carries only the time estimates + the diurnal readiness word. */
+function forecastLine(f){
+  const bits = [
+    _etaBit(f.next_band, 'next band'),
+    _etaBit(f.thirsty, 'thirsty'),
+    f.diurnal && f.diurnal.ready ? `diurnal ready (${f.diurnal.days}d)` : `diurnal collecting`
+  ];
+  const line = el('div','small muted fcline', bits.join(' · '));
+  line.title = 'extrapolated from the current drying rate, within the active segment · thirsty threshold = the ratified needs-water edge (#1218, per board class)';
+  return line;
 }
 
 // #725: a plant-first label for the detail nav (prev/next tooltips + picker).
@@ -1519,6 +1513,11 @@ function renderDetail(sid){
   head.appendChild(dh);
   /* headroom gauge */
   head.appendChild(buildGauge(s, f));
+  /* #1147: the reconciled forecast line — the retired tiles' unique content joins the
+     gauge (whose ticks already mark the same targets); the thirsty tile's headline job
+     lives on the Home card's next-need chip + the hero's plain answer. Gates stay
+     honest: no estimate renders as the reason, never a number. */
+  head.appendChild(forecastLine(f));
   /* #714: the wiring map (probe -> GPIO/channel -> board) lives behind an explicit expand — never on the
      glance card, never in the detail header. */
   const wiring = el('details','wiring');
@@ -1526,15 +1525,6 @@ function renderDetail(sid){
   wiring.appendChild(el('div','small muted', [s.probe||s.sensor_id, `GPIO ${s.gpio}`, s.channel, s.device_name && (s.device_side?`${s.device_name} (${s.device_side})`:s.device_name)].filter(Boolean).join(' · ')));
   head.appendChild(wiring);
   det.appendChild(head);
-
-  /* forecasts */
-  const fc = el('section','card');
-  fc.appendChild((()=>{ const h=el('div','panel-h'); h.appendChild(el('h2',null,'Forecasts')); h.appendChild(el('span','cap','extrapolated from the current drying rate — gated until drying is statistically real')); return h; })());
-  const grid = el('div','dgrid3');
-  grid.appendChild(etaLine(f.next_band, 'enters next drier band', null));
-  grid.appendChild(etaLine(f.thirsty, 'thirsty (needs water)', 'threshold = the ratified needs-water edge (#1218, per board class)'));
-  grid.appendChild(diurnalCard(f.diurnal));
-  fc.appendChild(grid); det.appendChild(fc);
 
   /* trajectory + trend */
   const tj = el('section','card');
@@ -1589,28 +1579,17 @@ function buildGauge(s, f){
   return wrap;
 }
 
-function diurnalCard(d){
-  const card = el('div','fcard');
-  card.appendChild(el('div','ft','diurnal cycle / next-day'));
-  if(d.ready){
-    card.appendChild(el('div','fv','ready'));
-    card.appendChild(el('div','fsub', `${d.days} d captured · daily wet/dry shape available`));
-  } else {
-    card.classList.add('gated');
-    card.appendChild(el('div','fv','<span class="gate">collecting</span>'));
-    card.appendChild(el('div','fsub', `${d.reason} · next-day start/end unlocks at ≥2 days`));
-  }
-  return card;
-}
-
 function ratesCard(rates){
   const card = el('section','card');
-  card.appendChild(el('h3', null, 'Drying rate ("angle") · positive = drying'));
+  /* #1145: windows clip to the active inter-watering segment (#1133 — a fit never
+     bridges a watering); the payload's legacy 'all' key IS the segment window now,
+     so the rendered label tells that truth. */
+  card.appendChild(el('h3', null, 'Drying rate ("angle") · positive = drying · windowed within the current segment'));
   const t = el('table','grid ratetbl');
   t.appendChild((()=>{ const tr=el('tr'); ['window','c/h','±se','r²','n','trend'].forEach((h,i)=>tr.appendChild(el('th', (i>=1&&i<=4)?'num':null, h))); return tr; })());
   ['1h','6h','24h','all'].forEach(w=>{
     const r = rates[w]; const tr = el('tr');
-    tr.appendChild(el('td','mono', w));
+    tr.appendChild(el('td','mono', w==='all' ? 'segment' : w));
     if(!r){ tr.appendChild(el('td','num muted','—')); tr.appendChild(el('td','num muted','—')); tr.appendChild(el('td','num muted','—')); tr.appendChild(el('td','num muted','—')); tr.appendChild(el('td',null,'')); }
     else {
       tr.appendChild(el('td','num', (r.slope>=0?'+':'')+r.slope));
@@ -1622,7 +1601,7 @@ function ratesCard(rates){
     t.appendChild(tr);
   });
   card.appendChild(t);
-  card.appendChild(el('div','small muted', 'a trend is only "drying"/"wetting" when |slope| beats noise (>2·se) and ≥4 c/h; otherwise stable.'));
+  card.appendChild(el('div','small muted', 'a trend is only "drying"/"wetting" when |slope| beats noise (>2·se) and ≥4 c/h; otherwise stable. "segment" = since the last detected watering (the whole window when none is detected) — the cross-event "all" row retired (#1145, grill-ruled).'));
   return card;
 }
 
