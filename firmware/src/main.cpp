@@ -646,14 +646,15 @@ static void printHeader()
     Serial.println(buf);
     n = snprintf(buf, sizeof(buf), "# health:");
     for (int i = 0; i < NUM_SENSORS && n < (int)sizeof(buf); i++)
-        n +=
-            snprintf(buf + n, sizeof(buf) - n, " ch%d=%s", i,
-                     telemetry_quality_flag(&state[i], BOARD_CAP.wet_rail_raw));
+        n += snprintf(buf + n, sizeof(buf) - n, " ch%d=%s%s", i,
+                      telemetry_quality_flag(&state[i], BOARD_CAP.wet_rail_raw),
+                      irrig_health_warn(&g_irrig, i) ? "/withheld" : "");
     if (n < (int)sizeof(buf))
         snprintf(
             buf + n, sizeof(buf) - n,
-            "  (NO_SIGNAL/SUSPECT = probe fault; supervisor won't water it, "
-            "latch x%u)",
+            "  (quality = trust in the READING; /withheld = supervisor "
+            "won't water that channel - per-read or latched x%u. A latched "
+            "channel can read OK: that is why withheld is separate.)",
             (unsigned)IRRIG_MAX_HEALTH_WARN);
     Serial.println(buf);
     n = snprintf(buf, sizeof(buf), "# cal bounds(dry>wet):");
@@ -770,12 +771,19 @@ static void handleRoot()
         millis());
     for (int ch = 0; ch < NUM_SENSORS && n > 0 && (size_t)n < sizeof(buf);
          ch++) {
+        /* #2: `quality` is MEASUREMENT trust; `withheld` is ACTUATION policy -
+         * two different questions that can legitimately disagree. A channel the
+         * supervisor has latched out of watering can still take a clean read, so
+         * without this a benched channel reads `quality=OK` forever (the bug this
+         * closes). Present-or-silent: absent in the normal case, so the line is
+         * byte-identical to before unless the supervisor is actually holding. */
         n += snprintf(
             buf + n, sizeof(buf) - (size_t)n,
-            "ch%d: level=%s raw=%u quality=%s\n", ch,
+            "ch%d: level=%s raw=%u quality=%s%s\n", ch,
             moisture_level_name(state[ch].committed),
             (unsigned)state[ch].last_raw,
-            telemetry_quality_flag(&state[ch], BOARD_CAP.wet_rail_raw));
+            telemetry_quality_flag(&state[ch], BOARD_CAP.wet_rail_raw),
+            irrig_health_warn(&g_irrig, ch) ? " withheld=health_spread" : "");
     }
     g_http.send(200, "text/plain", buf);
 }
