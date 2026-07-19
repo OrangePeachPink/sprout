@@ -72,8 +72,16 @@ divergence is the **classic water anchor**: measured **1052** here vs the map's 
 (June). At mid-range the 0.803 map undershoots the measured C5 cuts by ~30 counts.
 
 **This is a check-finding, not a crutch:** both columns above are measured from their own
-envelopes, so cross-board is exact by construction — the open item is a Firmware/#898 call:
-update the map factor 0.803 → 0.850, or reconcile the classic water anchor.
+envelopes, so cross-board is exact by construction.
+
+> **RESOLVED (#1215, ratified 2026-07-19 — Firmware's reconciliation, maintainer-agreed):
+> both pairs are valid for their jobs; the cross-board factor is interval-dependent (ADC
+> compression isn't perfectly linear rail-to-rail).**
+> **0.803 with the 978 cup rail = the full rail-to-rail envelope** — the probe-in-water
+> exception threshold interval (#1152's layer). · **0.850 with the 1052 in-soil wet
+> floor = the ladder interval** — the Soaked floor correctly above free water; the
+> interval the seven-band re-partition (this derivation) lives on. Neither overwrites
+> the other.
 
 ## Honest coverage caveats
 
