@@ -14,25 +14,21 @@
  * A probe<->channel swap INVALIDATES this table -> re-measure (run_meta
  * sensor_position, #321, records which probe sits on which channel).
  *
- * Each channel gets its own boundary[] (the raw->band map) so per-sensor
- * personality is removed; the band->action policy (irrig_chan_cfg) stays SHARED.
  * Boundaries are DESCENDING raw (higher raw = drier); see moisture_classifier.h
- * for the 7-band semantics ([0]=air-dry rail ... [5]=submerged rail). This is a
- * refinement ON TOP of board_capability.h's per-BOARD cal_boundary (the shared
- * baseline every channel starts from) - the interior [1..4] below is identical
- * to the classic board's shared A2 values; only the outer rails diverge.
+ * for the 7-band semantics. As of the #995 ratification (2026-07-19) boundary[]
+ * is a per-BOARD in-soil ladder ([0]=Faint floor .. [5]=Soaked ceiling) shared
+ * across all four channels - the air/water RAILS that per-channel #170 measured
+ * now live off-ladder in the anchor layer (#1152), so the per-channel divergence
+ * collapsed to one board-level set. Per-instance refinement is a later
+ * registry+cal job (Data). Kept per-channel in shape for that future seam.
  *
- * CONFIDENCE: provisional. cal-source: 2026-06-28 full-wipe / full-air-dry
- * per-channel characterization (Sage bench session; raw captures under
- * docs/experiments/20260628_23*_*_full_wipe_and_full_air_dry*.json — no
- * consolidated findings write-up exists yet for this specific session). Step 1
- * (#170) sets only the per-channel OUTER rails [0]/[5] from that wet/dry
- * envelope; the interior [1..4] stays at the shared A2 values, so the WATERING
- * decision is unchanged until Step 2 (per-channel field-capacity anchor, gated
- * on Sage's next round). Caveat (Sage, carried verbatim — not sanded off):
- * practical anchors with margins, not absolute physics limits; s1/s4 dry
- * endpoints still drift a little with residual surface film / temperature, and
- * s2 is wet-biased (gain+offset).
+ * CONFIDENCE: provisional. cal-source: #995 dual-envelope band ratification
+ * (2026-07-19) - a fresh in-situ peak-summer dry-down (#1174) measured BOTH the
+ * classic and C5 envelopes densely; Data derived the seven-bracket sets and they
+ * passed the #1153 parameterized cal-suite (#1211). Supersedes the 2026-06-28
+ * per-channel #170 rails. Caveat (still provisional): peak-July drying is the
+ * fast-transpiration / aggressive end of the range; slower-light months dry more
+ * gently, so these edges run a touch dry-biased by design.
  */
 
 /* Calibrated channel count. Must equal NUM_SENSORS (config.h) and IRRIG_CHANNELS
@@ -45,19 +41,20 @@
  * across all four channels for now — one bench session produced every rail;
  * #192's export_config regenerates these per-channel if sessions ever diverge.
  * Values are space-free (the cal_ch line is space-separated k=v). */
-#define SENSOR_CAL_SRC "wipe_airdry_bench" /* the 2026-06-28 characterization */
-#define SENSOR_CAL_DATE "2026-06-28"
+#define SENSOR_CAL_SRC                                                         \
+    "band_ratified_995" /* #995 dual-envelope ratification  */
+#define SENSOR_CAL_DATE "2026-07-19"
 #define SENSOR_CAL_CONFIDENCE "provisional" /* ADR-0022; Sage's caveat holds  */
 #define SENSOR_CAL_SCOPE "channel" /* per-channel override line (#507 parser) */
 
 static const uint16_t
     SENSOR_CAL_BOUNDARY[SENSOR_CAL_CHANNELS][MOISTURE_BOUNDARY_COUNT] = {
-        /* ch0 = s3 (GPIO36/SVP): wet ~969, dry ~3123 */
-        {3123, 2140, 1830, 1520, 1150, 969},
-        /* ch1 = s4 (GPIO39/SVN): wet ~970, dry ~3096 */
-        {3096, 2140, 1830, 1520, 1150, 970},
-        /* ch2 = s1 (GPIO34/P34): wet ~958, dry ~3086 */
-        {3086, 2140, 1830, 1520, 1150, 958},
-        /* ch3 = s2 (GPIO35/P35): wet ~900, dry ~3120  (wet-biased; gain+offset) */
-        {3120, 2140, 1830, 1520, 1150, 900},
+        /* #995 ratified the bands to a per-BOARD in-soil ladder (both envelopes
+         * measured, 2026-07-19), so all four classic channels now share the same
+         * board-level edges; per-channel outer rails moved to the off-ladder
+         * anchor layer (#1152). ch0=s3 ch1=s4 ch2=s1 ch3=s2. */
+        {2293, 2086, 1879, 1673, 1466, 1259},
+        {2293, 2086, 1879, 1673, 1466, 1259},
+        {2293, 2086, 1879, 1673, 1466, 1259},
+        {2293, 2086, 1879, 1673, 1466, 1259},
 };

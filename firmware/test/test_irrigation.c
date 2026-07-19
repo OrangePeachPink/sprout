@@ -309,45 +309,39 @@ static moisture_level_t band_of(uint16_t raw)
 
 void t_band_anchors(void)
 {
-    /* probe in air -> air-dry diagnostic (never waters) */
-    TEST_ASSERT_TRUE_MESSAGE(band_of(3180) == MOIST_AIR_DRY,
-                             "air ~3180 -> air-dry (out of soil)");
-    /* THE FIX: bone-dry / parched soil now reads DRY, not air-dry. 2760 was the
-     * old air-dry edge; ~2900 is a loose, air-gappy dry-soil hole. */
-    TEST_ASSERT_TRUE_MESSAGE(band_of(2900) == MOIST_DRY,
-                             "parched soil ~2900 -> DRY (waters)");
-    TEST_ASSERT_TRUE_MESSAGE(band_of(2760) == MOIST_DRY,
-                             "old air-dry edge 2760 -> DRY now");
-    TEST_ASSERT_TRUE_MESSAGE(band_of(2440) == MOIST_DRY,
-                             "bone-dry soil ~2440 -> DRY");
-    TEST_ASSERT_TRUE_MESSAGE(moisture_level_is_display(band_of(2900)),
-                             "parched soil is a watering display band");
-    /* field capacity -> well-watered (healthy; no too-wet alarm) */
-    TEST_ASSERT_TRUE_MESSAGE(band_of(1300) == MOIST_WELL_WATERED,
-                             "field capacity ~1300 -> well-watered");
-    /* saturated soil / standing water -> the 'too wet / check probe'
-     * diagnostics */
-    TEST_ASSERT_TRUE_MESSAGE(band_of(1060) == MOIST_OVERWATERED,
-                             "saturated soil ~1060 -> overwatered");
-    TEST_ASSERT_TRUE_MESSAGE(band_of(1010) == MOIST_SUBMERGED,
-                             "standing water ~1010 -> submerged");
+    /* #995 ratified 7-in-soil ladder (classic default {2293,2086,1879,1673,
+     * 1466,1259}). ALL seven levels are in-soil display bands now (Faint..
+     * Soaked); the off-ladder air/water exceptions are the #1152 anchor layer.
+     * One representative raw per band, driest -> wettest: */
+    TEST_ASSERT_TRUE_MESSAGE(band_of(2600) == MOIST_AIR_DRY,
+                             "Faint  ~2600 (>=2293) driest in-soil");
+    TEST_ASSERT_TRUE_MESSAGE(band_of(2200) == MOIST_DRY,
+                             "Parched ~2200 (2086..2293)");
+    TEST_ASSERT_TRUE_MESSAGE(band_of(2000) == MOIST_NEEDS_WATER,
+                             "Thirsty ~2000 (1879..2086)");
+    TEST_ASSERT_TRUE_MESSAGE(band_of(1780) == MOIST_OK,
+                             "Content ~1780 (1673..1879) healthy");
+    TEST_ASSERT_TRUE_MESSAGE(band_of(1570) == MOIST_WELL_WATERED,
+                             "Thriving ~1570 (1466..1673)");
+    TEST_ASSERT_TRUE_MESSAGE(band_of(1360) == MOIST_OVERWATERED,
+                             "Refreshed ~1360 (1259..1466)");
+    TEST_ASSERT_TRUE_MESSAGE(band_of(1100) == MOIST_SUBMERGED,
+                             "Soaked ~1100 (<1259) wettest in-soil");
 
-    /* #248 ratified ENDPOINTS (common-cup, 4-probe measured): the endpoint
-     * bands must bracket the real anchors. Air-dry center 3170 (per-probe
-     * 3151..3191) and saturated center 978 (per-probe 926..1020, s2 the
-     * wet-biased min) - the boundaries are unchanged; these assertions are what
-     * take "proposed" off the endpoints + guard them. */
-    TEST_ASSERT_TRUE_MESSAGE(band_of(3170) == MOIST_AIR_DRY,
-                             "#248 air-dry center 3170 -> air-dry");
-    TEST_ASSERT_TRUE_MESSAGE(band_of(3151) == MOIST_AIR_DRY,
-                             "#248 air-dry min (s2 3151) -> air-dry");
-    TEST_ASSERT_TRUE_MESSAGE(band_of(978) == MOIST_SUBMERGED,
-                             "#248 saturated center 978 -> submerged");
-    TEST_ASSERT_TRUE_MESSAGE(
-        band_of(926) == MOIST_SUBMERGED,
-        "#248 saturated min (s2 wet-bias 926) -> submerged");
-    TEST_ASSERT_TRUE_MESSAGE(band_of(1020) == MOIST_SUBMERGED,
-                             "#248 saturated max (s3 1020) -> submerged");
+    /* #995: all seven are watering-display bands (Faint + Soaked included). */
+    for (int lvl = MOIST_AIR_DRY; lvl <= MOIST_SUBMERGED; lvl++) {
+        TEST_ASSERT_TRUE_MESSAGE(
+            moisture_level_is_display((moisture_level_t)lvl),
+            "every in-soil band is a display band");
+    }
+
+    /* Off-ladder extremes (until #1152's anchor check): a probe in air still
+     * lands in Faint - which doubles as the "probe may not be in soil" hint per
+     * the mood-band-map - and a probe in water lands in Soaked. */
+    TEST_ASSERT_TRUE_MESSAGE(band_of(3180) == MOIST_AIR_DRY,
+                             "air ~3180 -> Faint (probe-maybe-air, see #1152)");
+    TEST_ASSERT_TRUE_MESSAGE(band_of(950) == MOIST_SUBMERGED,
+                             "standing water ~950 -> Soaked (see #1152)");
 }
 
 /* #92: the host->device command registry + dispatcher - register/dispatch, the
@@ -1192,8 +1186,8 @@ void t_board_capability(void)
      * has_wifi/storage, is NOT a real board -> cal_verified=false. This
      * pins the value/flag as two independent facts: the numbers can match
      * classic's without the board being claimed as bench-verified. */
-    const uint16_t cal[BOARD_CAL_BOUNDARY_COUNT] = {3050, 2140, 1830,
-                                                    1520, 1150, 1050};
+    const uint16_t cal[BOARD_CAL_BOUNDARY_COUNT] = {2293, 2086, 1879,
+                                                    1673, 1466, 1259};
     for (int i = 0; i < BOARD_CAL_BOUNDARY_COUNT; i++) {
         TEST_ASSERT_EQUAL_MESSAGE(cal[i], BOARD_CAP.cal_boundary[i],
                                   "host cal boundary matches the placeholder");
@@ -1249,35 +1243,33 @@ static moisture_level_t band_on_channel(int ch, uint16_t raw)
     return st.committed;
 }
 
-/* #170: per-channel raw->band calibration. Pins the MECHANISM (each channel
- * classifies against its OWN boundary[]), NOT the provisional values (Data's
- * #192 owns those, so this test survives a value regen). The seam: an identical
- * raw lands in different bands on two channels whose outer rails differ, while
- * the still-shared interior keeps the watering decision uniform (Step 1). */
+/* #170 mechanism / #995 values: each channel classifies against its OWN
+ * boundary[] (the seam survives a value regen - Data owns the values). #995
+ * ratified ONE board-level in-soil ladder, so all four classic channels now
+ * carry byte-identical boundaries and band uniformly; per-instance divergence
+ * is a later registry+cal job. */
 void t_per_channel_cal(void)
 {
-    /* the table covers every channel and is genuinely per-channel (not a copy) */
+    /* the table covers every channel */
     TEST_ASSERT_EQUAL_INT_MESSAGE(IRRIG_CHANNELS, SENSOR_CAL_CHANNELS,
                                   "cal table covers every channel");
-    TEST_ASSERT_TRUE_MESSAGE(SENSOR_CAL_BOUNDARY[0][5] !=
-                                 SENSOR_CAL_BOUNDARY[3][5],
-                             "ch0(s3) and ch3(s2) have distinct wet rails");
 
-    /* a raw between s2's wet rail (ch3 ~900) and s3's wet rail (ch0 ~969):
-     * submerged on s3 (below its rail) but NOT on s2 (above its rail). */
-    const uint16_t raw = 930;
-    TEST_ASSERT_TRUE_MESSAGE(band_on_channel(0, raw) == MOIST_SUBMERGED,
-                             "raw 930 < s3 wet rail -> submerged on ch0");
-    TEST_ASSERT_TRUE_MESSAGE(band_on_channel(3, raw) != MOIST_SUBMERGED,
-                             "raw 930 > s2 wet rail -> NOT submerged on ch3");
-
-    /* Step-1 invariant: interior [1..4] stays SHARED, so a mid-soil raw bands
-     * the SAME on every channel — the watering decision is unchanged until the
-     * Step-2 per-channel field-capacity anchor lands. */
+    /* #995 collapsed the per-channel classic rails to ONE board-level in-soil
+     * ladder (per-instance refinement is a later registry+cal job) - so every
+     * channel now carries byte-identical boundaries. */
     for (int ch = 1; ch < SENSOR_CAL_CHANNELS; ch++) {
-        TEST_ASSERT_EQUAL_MESSAGE(band_on_channel(0, 1300),
-                                  band_on_channel(ch, 1300),
-                                  "shared interior -> same mid-soil band");
+        TEST_ASSERT_EQUAL_UINT16_ARRAY_MESSAGE(
+            SENSOR_CAL_BOUNDARY[0], SENSOR_CAL_BOUNDARY[ch],
+            MOISTURE_BOUNDARY_COUNT,
+            "all classic channels share the #995 board-level ladder");
+    }
+
+    /* the mechanism still holds: each channel classifies against its own
+     * boundary[]; identical (board-level) boundaries -> uniform watering. */
+    for (int ch = 1; ch < SENSOR_CAL_CHANNELS; ch++) {
+        TEST_ASSERT_EQUAL_MESSAGE(band_on_channel(0, 1780),
+                                  band_on_channel(ch, 1780),
+                                  "board-level ladder -> same mid-soil band");
     }
 }
 
@@ -1296,8 +1288,8 @@ void t_cal_ch_line(void)
         SENSOR_CAL_SCOPE);
     TEST_ASSERT_TRUE_MESSAGE(n > 0, "cal_ch line formatted");
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
-        "# cal_ch s3: bounds=3123,2140,1830,1520,1150,969 "
-        "src=wipe_airdry_bench date=2026-06-28 confidence=provisional "
+        "# cal_ch s3: bounds=2293,2086,1879,1673,1466,1259 "
+        "src=band_ratified_995 date=2026-07-19 confidence=provisional "
         "scope=channel",
         buf, "exact wire format the #507 parser reads");
 
@@ -1593,10 +1585,10 @@ void t_cal_resolver_classic_byte_preserved(void)
 void t_cal_resolver_c5_board_envelope(void)
 {
     /* C5 resolves to its PER-BOARD envelope - the SAME record for every channel,
-     * tier BOARD, byte-matching the #898/#899 measured values. */
+     * tier BOARD, byte-matching the #995-ratified measured C5 envelope. */
     cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
-    static const uint16_t c5[MOISTURE_BOUNDARY_COUNT] = {2740, 1939, 1666,
-                                                         1394, 1068, 980};
+    static const uint16_t c5[MOISTURE_BOUNDARY_COUNT] = {2037, 1861, 1685,
+                                                         1510, 1334, 1158};
     for (int ch = 0; ch < 4; ch++) {
         const cal_record_t *r =
             cal_resolve("esp32-c5", SENSOR_CLASS_CAPACITIVE_V2, ch);
@@ -1605,7 +1597,7 @@ void t_cal_resolver_c5_board_envelope(void)
                                       "C5 is board-cal");
         TEST_ASSERT_EQUAL_UINT16_ARRAY_MESSAGE(
             c5, r->anchors, MOISTURE_BOUNDARY_COUNT,
-            "C5 anchors must byte-match the #898 envelope on every channel");
+            "C5 anchors must byte-match the #995 envelope on every channel");
     }
 }
 

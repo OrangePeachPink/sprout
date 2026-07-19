@@ -24,40 +24,43 @@
 #include "cal_resolver.h"
 
 static const cal_class_default_t CAL_CLASS_DEFAULTS[] = {
-    /* esp32-classic x capacitive-v2 - PER-CHANNEL (#170/#248, 2026-06-28 bench).
+    /* esp32-classic x capacitive-v2 - #995 dual-envelope band ratification
+     * (2026-07-19). All four channels now share the per-BOARD in-soil ladder;
+     * per-channel outer rails moved to the off-ladder anchor layer (#1152).
      * Byte-identical to calibration.h SENSOR_CAL_BOUNDARY[ch0..ch3]. */
     {0,
      {"esp32-classic",
       SENSOR_CLASS_CAPACITIVE_V2,
-      {3123, 2140, 1830, 1520, 1150, 969},
-      "wipe_airdry_bench_20260628",
+      {2293, 2086, 1879, 1673, 1466, 1259},
+      "band_ratified_995_20260719",
       CAL_TIER_CHANNEL}},
     {1,
      {"esp32-classic",
       SENSOR_CLASS_CAPACITIVE_V2,
-      {3096, 2140, 1830, 1520, 1150, 970},
-      "wipe_airdry_bench_20260628",
+      {2293, 2086, 1879, 1673, 1466, 1259},
+      "band_ratified_995_20260719",
       CAL_TIER_CHANNEL}},
     {2,
      {"esp32-classic",
       SENSOR_CLASS_CAPACITIVE_V2,
-      {3086, 2140, 1830, 1520, 1150, 958},
-      "wipe_airdry_bench_20260628",
+      {2293, 2086, 1879, 1673, 1466, 1259},
+      "band_ratified_995_20260719",
       CAL_TIER_CHANNEL}},
     {3,
      {"esp32-classic",
       SENSOR_CLASS_CAPACITIVE_V2,
-      {3120, 2140, 1830, 1520, 1150, 900},
-      "wipe_airdry_bench_20260628",
+      {2293, 2086, 1879, 1673, 1466, 1259},
+      "band_ratified_995_20260719",
       CAL_TIER_CHANNEL}},
 
-    /* esp32-c5 x capacitive-v2 - PER-BOARD envelope (#898 measured, set by #899).
+    /* esp32-c5 x capacitive-v2 - #995 ratification, 8gtt1h envelope MEASURED
+     * directly (2026-07-19; no longer #898-derived).
      * Byte-identical to board_capability.h's C5 cal_boundary. */
     {-1,
      {"esp32-c5",
       SENSOR_CLASS_CAPACITIVE_V2,
-      {2740, 1939, 1666, 1394, 1068, 980},
-      "board_envelope_20260710",
+      {2037, 1861, 1685, 1510, 1334, 1158},
+      "band_ratified_995_20260719",
       CAL_TIER_BOARD}},
 };
 
