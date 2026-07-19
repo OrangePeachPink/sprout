@@ -31,7 +31,7 @@ You need three tools. Each does one job:
 ## Step 1 — Get Sprout running
 
 ```text
-git clone https://github.com/OrangePeachPink/sprout && cd plants
+git clone https://github.com/OrangePeachPink/sprout && cd sprout
 uv sync                     # reproduce the exact, locked dev environment
 uv run pre-commit install   # the quality checks auto-run on every commit
 just start                  # launch Sprout — opens the dashboard in your browser
