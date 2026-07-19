@@ -47,6 +47,9 @@ Then: add a 2–4 line human lede above the generated list (what this release *m
 
 - [ ] **Register sweep** (#1161) — run `just voice-guard --all` and attach the delta (or "clean")
       to the release evidence; the retired register (PR #1099's wash) never migrates back silently.
+      **Include repo metadata**: the GitHub description, topics, and About fields live in Settings,
+      outside every tree sweep — read them by eye (the 2026-07-19 "Honest…" description hid there
+      through every wash).
 
 ## 4. CHANGELOG
 
@@ -58,14 +61,17 @@ Then: add a 2–4 line human lede above the generated list (what this release *m
 
 - [ ] **Publishing the release creates the tag** — final look, then Publish. Verify:
       `git ls-remote origin refs/tags/vX.Y.Z` returns the ship commit.
-- [ ] Card sweep: every merged PR / closed issue of the milestone shows **Done** on the board.
+- [ ] Card sweep, mechanized (#732): **`just board-hygiene`** must print *clean* (zero
+      closed-not-Done) before the milestone closes; fix any findings, rerun to green.
 
 ## 6. Open the next cycle
 
 - [ ] Create the next milestone(s) per the version roadmap (ADR-0009 §5); triage carry-overs into them.
-- [ ] **Replenish the good-first shelf** — keep **6–8 open `good first issue`s** for newcomers (#1088).
-      This cut's closed ones become learning-path examples (trace issue → PR → release); top up the open
-      stock with small, additive, non-ship-blocking tasks so a contributor never lands on an empty shelf.
+- [ ] **Good-first shelf: intentional growth only** (maintainer's ruling, 2026-07-19 — supersedes the
+      #1088 keep-6-8 rule). **No automatic restock**: contributor waves are paced by the maintainer,
+      who seeds the next batch deliberately (her UI-review hour with DX) when she wants one. At the
+      cut: absorb any still-unclaimed shelf items into lanes (each close linking its implementing PR —
+      completed good-firsts are teaching artifacts), and leave the shelf as she set it.
 - [ ] Post the release link where the team coordinates; the retro (per-release, DesignQA chunk-a) keys
       off the shipped version.
 
