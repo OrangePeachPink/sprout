@@ -149,6 +149,13 @@ Firmware lives in [`firmware/`](firmware/) as a PlatformIO project (ESP32, Ardui
 - Upload: `pio run -t upload`
 - Monitor: `pio device monitor` (19200 baud, set in `platformio.ini`)
 
+> **Build failing with `Python version mismatch: penv has X.Y, current interpreter is X.Z. Recreating
+> penv...` then `uv installation via pip failed with exit code 106`?** You likely have **two** PlatformIO
+> installs — the IDE extension's bundled core *and* a standalone `pio` on your PATH — sharing
+> `~/.platformio` and rebuilding each other's `penv` with different Pythons. Native tests still pass (they
+> skip the ESP32 platform), which hides it. The untangle is machine-specific; the fix is to let **one**
+> install own the core.
+
 Board env is `esp32dev` (classic ESP32); the `esp32s3` and ESP32-C5 envs build from the same source for the
 wider fleet — see [`docs/hardware/BOARDS.md`](docs/hardware/BOARDS.md) for per-board serial paths and pin
 maps. Pin assignments and tunables live in `firmware/include/config.h`.

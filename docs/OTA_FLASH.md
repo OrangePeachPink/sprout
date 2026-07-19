@@ -24,6 +24,18 @@ IP as the third argument to pin the callback interface:
 just ota <device_id> <board> <host_ip>   # e.g.  just ota n3jhsp esp32c5 192.168.1.42
 ```
 
+> **Setting `--host_ip` by hand instead? Two traps bite together (#1225).**
+> `PLATFORMIO_UPLOAD_FLAGS` **replaces** the ini's `upload_flags` — it does not merge, so you must repeat
+> `--auth=…` yourself — and PlatformIO splits multi-value env vars on **newlines, not spaces**, so a
+> space-joined value reaches espota as *one* argv token and the board ends up checking the literal password
+> `sprout-phase0 --host_ip=…` — flag, space and all. **Fingerprint:** the invitation succeeds, then auth fails
+> deterministically on *both* PBKDF2-HMAC-SHA256 and MD5 — which reads like a rejecting board when the
+> board is healthy. Correct form, or just use the recipe above:
+>
+> ```sh
+> PLATFORMIO_UPLOAD_FLAGS=$'--auth=sprout-phase0\n--host_ip=192.168.1.42'
+> ```
+
 **The recipe trusts the board, not espota's exit code.** After every upload it polls
 `http://sprout-<device_id>.local/` for the running `git=` short-sha and reports reality: `VERIFIED on <sha>`
 when the board is back on the expected commit (even if espota timed out), or a failure only if the board
