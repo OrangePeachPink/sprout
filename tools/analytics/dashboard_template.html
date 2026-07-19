@@ -458,6 +458,7 @@ footer.prov code { font-family: var(--font-data); }
         <button class="rangebtn" data-r="24h" type="button" title="Last 24 hours">24h</button>
         <button class="rangebtn" data-r="48h" type="button" title="Last 48 hours">48h</button>
         <button class="rangebtn" data-r="7d" type="button" title="Last 7 days">7d</button>
+        <button class="rangebtn" data-r="14d" type="button" title="Last 14 days — find the last watering (#1191)">14d</button>
         <button class="rangebtn" data-r="30d" type="button" title="Last 30 days">30d</button>
         <button class="rangebtn" data-r="all" type="button" title="All recorded history">all</button>
       </div>
@@ -710,7 +711,7 @@ let connOk = true;          // did the last /data.json fetch succeed? (live mode
 let lastOkMs = Date.now();  // when we last had good data, for the disconnect notice
 let activeChannels = null;  // Set of active sensor ids; null = all (E10)
 let __chanClickT = null;    // #993: debounce a single click so a double-click (solo) can pre-empt it
-const RANGE_H = { '1h': 1, '3h': 3, '12h': 12, '24h': 24, '48h': 48, '7d': 168, '30d': 720, all: null };  // #821: 48h between 1d and 7d
+const RANGE_H = { '1h': 1, '3h': 3, '12h': 12, '24h': 24, '48h': 48, '7d': 168, '14d': 336, '30d': 720, all: null };  // #821: 48h; #1191: 14d sawtooth-finder
 const SENSOR_COLORS = ['#17B6C4','#34A853','#8BD24F','#F5A623'];  // band-ramp series, one palette (#203)
 function chanColor(sid){ const d=(sid.match(/\d+/)||['1'])[0]; return SENSOR_COLORS[(parseInt(d)-1) % SENSOR_COLORS.length]; }
 
