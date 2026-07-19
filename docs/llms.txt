@@ -1,7 +1,8 @@
 # Sprout
 
-> Sprout is the plant that talks back. Four plants, four moods, one voice — local-first plant care on an
-> ESP32. It tells you how it's doing in its own words.
+> Sprout is a local-first, open-source plant-monitoring system for ESP32 devices. It reads soil moisture and
+> gives each plant a simple, at-a-glance mood — voiced in a friendly first person ("I'm a little dry today")
+> — though Sprout itself is software you run on your own hardware.
 
 Sprout is an open-source software project for ESP32 devices. Its repository contains C++ firmware and
 Python host tooling and uses the MIT License.
