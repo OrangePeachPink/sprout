@@ -1666,6 +1666,86 @@ void t_device_hostname(void)
 
 /* --- #952 cal_resolver: the resolution chain + byte-preservation ---------- */
 
+/* #963 Layer 1: the runtime-writable OWNER slot. A user flashes a SIGNED
+ * PREBUILT binary and cannot rebuild firmware to bake in a cal for a sensor
+ * Sprout has never seen - so this slot is the only mechanism compatible with our
+ * own supply chain. Pins the RESOLUTION CONTRACT (instance > class > factory)
+ * and the two safety properties the store must have. */
+void t_owner_cal_instance_slot(void)
+{
+    cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
+    for (int ch = 0; ch < 4; ch++)
+        cal_instance_clear(ch);
+
+    /* baseline: with no owner record, ch0 resolves to the class default */
+    const cal_record_t *base =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_NOT_NULL(base);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CAL_TIER_CHANNEL, base->tier,
+                                  "no owner cal -> class default resolves");
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_present(0), "slot starts empty");
+
+    /* the owner runs the wizard: a record for a sensor we have never seen */
+    uint16_t owner_anchors[MOISTURE_BOUNDARY_COUNT] = {2000, 1800, 1600,
+                                                       1400, 1200, 1000};
+    {
+        /* deliberately SCOPED so the source buffers die before we read back -
+         * the slot must own copies, not the caller's pointers. */
+        char board[16];
+        char prov[24];
+        strcpy(board, "esp32-classic");
+        strcpy(prov, "owner_wizard_x");
+        cal_record_t rec = {
+            board, SENSOR_CLASS_CAPACITIVE_V2, {0}, prov, CAL_TIER_CHANNEL};
+        memcpy(rec.anchors, owner_anchors, sizeof(owner_anchors));
+        cal_instance_set(0, &rec);
+        memset(board, 'X', sizeof(board)); /* scribble the caller's buffers */
+        memset(prov, 'X', sizeof(prov));
+    }
+
+    /* PRECEDENCE: the owner record now wins over the class default */
+    const cal_record_t *r =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_NOT_NULL(r);
+    TEST_ASSERT_EQUAL_UINT16_ARRAY_MESSAGE(
+        owner_anchors, r->anchors, MOISTURE_BOUNDARY_COUNT,
+        "owner cal outranks the class table");
+    /* STRING OWNERSHIP: survives the caller's buffers being destroyed */
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "owner_wizard_x", r->provenance,
+        "the slot COPIED provenance - caller's buffer is gone");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("esp32-classic", r->board_class,
+                                     "the slot COPIED board_class too");
+
+    /* ISOLATION: only ch0 was written */
+    TEST_ASSERT_TRUE_MESSAGE(cal_instance_present(0),
+                             "ch0 has an owner record");
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_present(1), "ch1 untouched");
+    const cal_record_t *r1 =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 1);
+    TEST_ASSERT_TRUE_MESSAGE(r1->anchors[0] != owner_anchors[0],
+                             "ch1 still resolves its own record");
+
+    /* BOARD-CLASS GUARD: a probe moved to a different board must NOT silently
+     * inherit the old board's owner calibration - raw scales differ per board. */
+    const cal_record_t *other =
+        cal_resolve("esp32-c5", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_NOT_NULL(other);
+    TEST_ASSERT_TRUE_MESSAGE(
+        other->anchors[0] != owner_anchors[0],
+        "a classic owner record must not leak onto a C5 channel");
+
+    /* CLEAR: falls back down the chain, never to NULL */
+    cal_instance_clear(0);
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_present(0), "cleared");
+    const cal_record_t *after =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_NOT_NULL_MESSAGE(after, "chain always returns a record");
+    TEST_ASSERT_EQUAL_UINT16_ARRAY_MESSAGE(
+        base->anchors, after->anchors, MOISTURE_BOUNDARY_COUNT,
+        "clearing the owner slot restores the class default");
+}
+
 void t_cal_resolver_chain_order(void)
 {
     cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
@@ -2051,6 +2131,7 @@ int main(void)
     RUN_TEST(t_device_uid_encode);
     RUN_TEST(t_device_hostname);
     RUN_TEST(t_cal_resolver_chain_order);
+    RUN_TEST(t_owner_cal_instance_slot);
     RUN_TEST(t_cal_resolver_classic_byte_preserved);
     RUN_TEST(t_cal_resolver_c5_board_envelope);
     RUN_TEST(t_cal_tier_label);
