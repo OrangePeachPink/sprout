@@ -10,10 +10,65 @@ in-repo record; per ADR-0009 §3 it states what changed **per component** (firmw
 
 ## [Unreleased]
 
-### v0.7.1 — Wave 1.1: Stabilize _(in progress)_
+_Next cycle: v0.8.0 "Predict" — planning packet #877._
 
-Point-release on top of `v0.7.0`: fixes, polish, docs, and fleet robustness — no new headline
-capability (new features land in `v0.8.0`). Scope tracked in the [`v0.7.1` milestone](https://github.com/OrangePeachPink/sprout/milestone/2).
+## [0.7.3] — 2026-07-19 — Monitor: Sprout Gets a Voice
+
+**The surface we designed first is now the product** — the full curated notes live on the
+[release](https://github.com/OrangePeachPink/sprout/releases/tag/v0.7.3).
+
+**Firmware**
+
+- The ratified band ladder (the one flash-affecting change): all seven levels are in-soil moods,
+  boundaries measured on a six-day in-situ dry-down and maintainer-ratified (ADR-0035 Accepted);
+  the coincident water-anchor rule.
+- Native suites grew: band-partition invariants (fixture-driven, ratification-ready) and the
+  dose-control simulation (Epic #410·C, sim-only — not linked into the shipped build).
+
+**Host / dashboard**
+
+- The production Home + hero (two-surface architecture, ADR-0033 Accepted): the card grid in
+  Sprout's voice, most-thirsty first; the Workbench ("Classic Sprout") one click behind.
+- The pulse delivered twice: the hero histogram and the segment-bound sparkline.
+- The voice pool: event-free variants per mood + `{ago}` templates; one-tap "Glug glug" manual
+  watering with honest MANUAL/DETECTED provenance; the 14d sawtooth-finder window.
+- The full creative palette (chrome aliases, 12-material identity register, chart-series pass +
+  focus-tap); in-app pot-size and location editing; shell route coverage.
+
+**Docs / process / community**
+
+- ADR-0033 + ADR-0035 Accepted; the color-roles charter and BRAND.md carry the grill canon
+  (tagline four-slot, register rule, one band vocabulary, absence patterns).
+- The audience-scoped instruction-file split (#1125) with the fork-PR credit-protection CI;
+  CONTRIBUTORS.md names our first three community contributors.
+- Trust Your Sensor live on Pages; the front door portfolio-pass optimal.
+- New tooling: the voice-guard, the per-hook CI job summary, the board-hygiene lint.
+
+## [0.7.2] — 2026-07-12 — the monitor you can trust
+
+Mirrored from the [published release](https://github.com/OrangePeachPink/sprout/releases/tag/v0.7.2)
+(this file lagged two cuts; healed at the v0.7.3 cut from the published record).
+
+**Firmware**
+
+- Per-channel calibration tiers live on the wire; ed25519 release signing (first live fire);
+  the web flasher offers only bench-proven images.
+
+**Host / dashboard**
+
+- The self-supervising collection worker (restarts on any death, refuses loudly, plain-word
+  failure logs); the recording state never misrepresented.
+- Plants & Sensors: the fleet registry tab — add/map/pause/delete with review-then-save and
+  deletion receipts; plant-first sensor picker.
+- Calibration chips honest per tier; opt-in environment overlay (context, not cause); era-aware
+  provenance; the 15-second dashboard slowness diagnosed to ~3.
+
+## [0.7.1] — 2026-07-10 — Wave 1.1: Stabilize
+
+Mirrored from the [published release](https://github.com/OrangePeachPink/sprout/releases/tag/v0.7.1).
+
+- Point-release on v0.7.0: fixes, polish, docs, and fleet robustness; no new headline capability.
+  Full notes on the release.
 
 ## [0.7.0] — 2026-07-04 — Wave 1: Monitor
 
@@ -47,5 +102,8 @@ ESP32s — one power cord each, zero data cables — all live in one dashboard, 
 - The `!wedge` safety check was not re-run at install (#599).
 - The yellow C5 spare needs a recovery re-flash before redeploy.
 
-[Unreleased]: https://github.com/OrangePeachPink/sprout/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/OrangePeachPink/sprout/compare/v0.7.3...HEAD
+[0.7.3]: https://github.com/OrangePeachPink/sprout/compare/v0.7.2...v0.7.3
+[0.7.2]: https://github.com/OrangePeachPink/sprout/compare/v0.7.1...v0.7.2
+[0.7.1]: https://github.com/OrangePeachPink/sprout/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/OrangePeachPink/sprout/releases/tag/v0.7.0
