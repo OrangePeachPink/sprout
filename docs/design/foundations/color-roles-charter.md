@@ -128,7 +128,7 @@ invents its own scheme:
 | **Empty / no-signal** | the calm-empty grey — absence, not a fault red |
 | **Identity** (name/photo/location/pot) | **no hue** — chrome-neutral; identity never competes for saturation |
 | **Chrome / structure** | the muted neutral family |
-| **Multi-series charts** | own pass (per-plant hue failed) — band-ground + focus interaction, later |
+| **Multi-series charts** | series strokes = muted materials (identity); band-ground = state; focus = ink |
 
 ## Scope
 
@@ -138,9 +138,20 @@ invents its own scheme:
 **V2 (Design-QA proposes token values inside these rules):** the muted-neutral chrome values, the consolidated
 state-hue set, and the swatch sheet — all consumed from / folded into `sprout-tokens.css`, never redefined.
 
-**Rides the Classic-migration backlog (not the first tracer):** multi-series charts. Per-plant line colors are
-**declared failed** (indistinguishable at scale); the redesign explores focus-on-interaction, one-plant
-emphasis with muted others, and letting the band-ground carry the meaning — a dedicated design pass, later.
+**The chart-series pass (ruled forward, #930 2026-07-19):** a chart line is a plant's **identity**, so the
+two-register principle settles multi-series charts too. Per-plant *state-hue* lines are **declared failed**
+(four ramp hues rotated across twelve channels was the braided-lines bug); the ruled system:
+
+- **Series strokes come from the muted materials register** (`--series-1..12` → `--mat-*`), never the state
+  ramp — quiet, differentiated, legibility-first ordering.
+- **The band-ground carries state**: horizontal band-tinted zones behind the lines; where a line sits *is*
+  its state, read from the ground, not the stroke.
+- **Focus-on-interaction**: selecting a plant (legend chip / hover) saturates that ONE series to
+  `--series-focus` (ink) and drops the rest to `--series-faint` — one vivid line at a time, so the state
+  channel stays uncontested.
+- **Never a fleet-wide 0–100 raw normalization** behind a cross-plant chart (#1039 ruling 3); cross-board
+  comparability rides the per-board-class anchor map, with a clearly-labeled envelope-position index where
+  needed.
 
 ## References
 
