@@ -138,6 +138,17 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      # voice-guard (#1161) — the retired register (the PR #1099 wash + the #1138 copula rule)
+      # stays out of NEW copy. Changed-lines only; ADVISORY on purpose (always exits 0 — the
+      # teaching message is the enforcement; promotion to blocking is a maintainer call).
+      # verbose:true so the warning shows even on pass. Release backstop: RELEASE_CUT.md §3.
+      - id: voice-guard
+        name: voice-guard (#1161 — retired register in changed lines; advisory)
+        entry: uv run python tools/dx/voice_guard.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
+        verbose: true
 
   # adr-register-status (#928) — every ADR file's `**Status:**` must match its register row,
   # and no ADR may appear twice. BLOCKING: Trellis caught this drift by hand twice (0025; then
