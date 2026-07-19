@@ -138,6 +138,11 @@ RANGE_HOURS: dict[str, float | None] = {
     "24h": 24.0,
     "48h": 48.0,  # #821: between 1 day and 7 days — same windowing as every chip
     "7d": 24.0 * 7,
+    # #1191: the sawtooth-finder window (maintainer ask). Watering cycles run 8-10+
+    # days, so 7d often just misses the last-watering edge and 30d is the slow build
+    # (#1134). A maintainer-ruled bridge on parity-then-retire Classic (ADR-0033) until
+    # the rollup tier lands. Fast now the fit windows are segment-bound (#1157/#1162).
+    "14d": 24.0 * 14,
     "30d": 24.0 * 30,
     "all": None,
 }
