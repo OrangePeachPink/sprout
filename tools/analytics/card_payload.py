@@ -413,6 +413,10 @@ def cards_from_context(
         # the Home's lead signal: the calibrated dryness index (0=wettest..1=driest), a
         # LABELLED index for "who needs water first" — never the raw value.
         card["urgency"] = s.get("dryness")
+        # #875 hero: the JOIN KEY to the served context (trajectory dataset id) so
+        # the pulse chart can find its series even when no plant is registered
+        # (plant_id None). Plumbing, never rendered.
+        card["sensor_id"] = s.get("id")
         cards.append(card)
     for sl in ctx.get("sensorless", []):
         pid = sl.get("plant_id")
@@ -423,6 +427,7 @@ def cards_from_context(
             voice_pool=voice_pool,
         )
         card["urgency"] = None  # a not-probed plant has no urgency to sort on
+        card["sensor_id"] = None  # not probed — no series to join (first-class-absent)
         cards.append(card)
     # most-thirsty leads (#715/#747): highest dryness first; no-urgency cards trail.
     cards.sort(

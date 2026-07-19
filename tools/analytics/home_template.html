@@ -1,0 +1,520 @@
+<!doctype html>
+<!-- #875 — the HOME surface (the Sprout Voice UI's landing page).
+
+     The locked contracts this renders (grill 2026-07-18, night 1 + 2nd half; #875 / #1039):
+       · Home = the plant-card grid, the app's landing surface — "which plant" + "how
+         thirsty," in Sprout's voice. Workbench ("Classic Sprout") tucks behind it.
+       · Three questions → three element groups: WHAT ACTION (mark + words + last-watered)
+         · HOW URGENTLY (the frame color — state, never identity) · WHICH PLANT (photo/
+         icon + pot + location — the muted identity register).
+       · The mark sits BESIDE the identity visual — two pictorial elements, never merged.
+         Thumbnail ladder: photo → chosen icon → generic, one slot, replace-never-both.
+       · ONE vocabulary: the 7 mood words ARE the band names (Soaked → Faint); diagnostics
+         live off-ladder in the exceptions lane. The card headline is the mood word.
+       · Absence patterns (canonical, internal names — never rendered): present-or-silent
+         (voice line, next-need render-or-not) · calm-empty (water story "—" placeholders,
+         the no-photo leaf, the first-run page) · first-class-absent (sensorless: a reason,
+         not a data-pretending null).
+       · Cal-provisional stays OFF the card face (Workbench detail; payload still carries it).
+       · Raw numbers never render here — Workbench-side only. The hero's pulse chart uses
+         the in-soil envelope axis with mood-word labels, no raw numerals.
+       · The hero ships ≥1 per-plant chart (histogram minimum) — the pulse visual, because
+         the tagline is a promise: "Plants with a pulse."
+
+     Data seam: GET /cards.json (card_payload.py — one truth, nothing re-derived here).
+     The hero's chart hydrates lazily from GET /data.json (the same served context the
+     Workbench reads). Tokens/fonts are injected server-side (render_home), same pattern
+     as the Workbench shell. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sprout — home</title>
+<style>
+/*__SPROUT_TOKENS__*/
+</style>
+<style>
+  /* ---- chrome: the muted neutral family only (charter rule 2) ---- */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--font-ui); }
+  a { color: inherit; }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 24px 64px; }
+
+  /* masthead — identity + the ratified tagline; Workbench tucks behind a quiet link */
+  .mast { display: flex; align-items: center; gap: 14px; padding: 6px 0 18px; }
+  .mast .word { font-family: var(--font-display); font-weight: 800; font-size: 30px;
+    line-height: 1; }
+  .mast .tagline { color: var(--muted); font-size: 14.5px; margin-top: 3px; }
+  .mast nav { margin-left: auto; }
+  .mast nav a { color: var(--muted); text-decoration: none; font-size: 14px;
+    border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px;
+    background: var(--surface); }
+  .mast nav a:hover { color: var(--ink); border-color: var(--muted); }
+
+  /* the grid's invitation line — "Tend a tiny jungle." placement proposal A (#1039) */
+  .invite { font-family: var(--font-display); font-weight: 700; font-size: 19px;
+    margin: 10px 0 14px; }
+  .invite small { font-family: var(--font-ui); font-weight: 400; font-size: 13.5px;
+    color: var(--muted); margin-left: 10px; }
+
+  /* ---- the card grid — scale-not-zoom: the responsive grid IS the zoom ---- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px; }
+
+  /* ---- one plant card. Frame = state (the ONLY saturated element, charter rule 1) ---- */
+  .card { position: relative; background: var(--surface);
+    border: 3px solid var(--frame, var(--border)); border-radius: 18px;
+    padding: 14px 16px 12px; cursor: pointer; text-align: left; width: 100%;
+    font: inherit; color: inherit; display: flex; flex-direction: column; gap: 10px; }
+  .card:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+  .card.neutral { border-color: var(--border); cursor: default; }
+
+  .top { display: flex; gap: 12px; align-items: flex-start; }
+  /* WHICH PLANT — the muted identity register: thumb + name/pot/location */
+  .thumb { flex: 0 0 56px; width: 56px; height: 56px; border-radius: 12px;
+    background: var(--surface-2); border: 1px solid var(--border); overflow: hidden;
+    display: flex; align-items: center; justify-content: center; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb svg { width: 44px; height: 44px; display: block; }
+  .who { flex: 1 1 auto; min-width: 0; }
+  .name { font-family: var(--font-display); font-weight: 700; font-size: 17.5px;
+    margin: 1px 0 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meta { color: var(--muted); font-size: 12.5px; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; margin-top: 5px;
+    font-size: 11.5px; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px;
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip::before { content: ""; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--muted); flex: 0 0 auto; }
+  /* WHAT ACTION's glyph — the living mark, vivid state, BESIDE the thumb (never merged) */
+  .mark { flex: 0 0 auto; margin-left: 2px; }
+
+  /* the state group: mood word (the band name — one vocabulary) + first-person line */
+  .state { border-radius: 12px; padding: 8px 12px 9px;
+    background: color-mix(in srgb, var(--frame, var(--border)) 9%, var(--surface)); }
+  .mood { display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-display); font-weight: 800; font-size: 19px; }
+  .mood .dot { width: 10px; height: 10px; border-radius: 50%;
+    background: var(--frame, var(--muted)); flex: 0 0 auto; }
+  .line { margin: 3px 0 0; font-size: 14px; line-height: 1.45; color: var(--ink); }
+
+  /* the water story — last-watered (detected) + next-need (forecast, its own channel) */
+  .water { display: flex; gap: 14px; flex-wrap: wrap; align-items: baseline;
+    font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--border);
+    padding-top: 8px; margin-top: auto; }
+  .water b { color: var(--ink); font-weight: 600; }
+  .water .src { font-size: 10.5px; letter-spacing: .06em; color: var(--muted); }
+  .nn-known { color: var(--st-predicted); }  /* forecast = the violet channel, never a mood */
+
+  .quiet { color: var(--muted); font-size: 12.5px; }
+
+  /* ---- the exceptions lane (#875 Q3): off-ladder readings, calm, below the grid ---- */
+  .lane-h { font-family: var(--font-display); font-weight: 700; font-size: 16px;
+    margin: 28px 0 10px; color: var(--ink); }
+  .lane-h small { font-family: var(--font-ui); font-weight: 400; color: var(--muted);
+    font-size: 12.5px; margin-left: 8px; }
+  .lane .card { border-width: 1.5px; }
+
+  /* ---- first-run / calm-empty ---- */
+  .empty { max-width: 560px; margin: 8vh auto 0; text-align: center;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    padding: 36px 30px; }
+  .empty h2 { font-family: var(--font-display); font-weight: 800; font-size: 24px;
+    margin: 14px 0 6px; }
+  .empty p { color: var(--muted); font-size: 14.5px; line-height: 1.55; margin: 6px 0 0; }
+  .empty a { color: var(--ink); }
+
+  /* ---- the hero overlay: one plant, large — mark + ladder + the pulse ---- */
+  .overlay { position: fixed; inset: 0; background: color-mix(in srgb, var(--ink) 42%, transparent);
+    display: none; align-items: flex-start; justify-content: center; overflow: auto;
+    padding: 4vh 16px; z-index: 30; }
+  .overlay.open { display: flex; }
+  .hero { background: var(--surface); border: 3px solid var(--frame, var(--border));
+    border-radius: 22px; max-width: 620px; width: 100%; padding: 22px 24px 20px;
+    position: relative; }
+  .hero .close { position: absolute; top: 12px; right: 14px; border: 0;
+    background: none; font-size: 22px; color: var(--muted); cursor: pointer;
+    line-height: 1; padding: 6px; }
+  .hero .top { margin-bottom: 4px; }
+  .hero .thumb { flex-basis: 84px; width: 84px; height: 84px; }
+  .hero .thumb svg { width: 64px; height: 64px; }
+  .hero .name { font-size: 24px; white-space: normal; }
+  .hero .state { margin: 10px 0; }
+  .hero .mood { font-size: 24px; }
+  .hero .line { font-size: 15.5px; }
+
+  /* the 7-step ladder — ONE vocabulary; dimmed-same-palette must READ as dimmed:
+     non-current steps drop to low opacity AND lose their border; the current step
+     keeps full color + an ink ring + its word. (#1039 ladder-legibility ruling) */
+  .ladder { display: flex; gap: 5px; margin: 14px 0 4px; }
+  .ladder .step { flex: 1; height: 26px; border-radius: 7px; opacity: .22;
+    position: relative; }
+  .ladder .step.cur { opacity: 1; outline: 2.5px solid var(--ink); outline-offset: 1.5px; }
+  .ladder-words { display: flex; gap: 5px; margin-bottom: 10px; }
+  .ladder-words span { flex: 1; text-align: center; font-size: 10px;
+    color: var(--muted); visibility: hidden; }
+  .ladder-words span.cur { visibility: visible; color: var(--ink); font-weight: 600; }
+
+  /* the pulse — Tufte-esque: bare canvas, band-tinted ground, no gridlines/numerals */
+  .pulse h4 { font-family: var(--font-display); font-weight: 700; font-size: 14px;
+    margin: 14px 0 6px; }
+  .pulse h4 small { font-family: var(--font-ui); font-weight: 400; color: var(--muted);
+    margin-left: 8px; font-size: 11.5px; }
+  .pulse canvas { width: 100%; height: 96px; display: block; border-radius: 8px; }
+  .pulse .axis { display: flex; justify-content: space-between; font-size: 10.5px;
+    color: var(--muted); margin-top: 3px; }
+  .wb-link { display: inline-block; margin-top: 14px; font-size: 13px;
+    color: var(--muted); }
+
+  @media (prefers-reduced-motion: reduce) { .overlay, .card { transition: none; } }
+</style>
+<script src="/docs/design/components/sprout-mark.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <sprout-mark mood="thriving" size="46" aria-hidden="true"></sprout-mark>
+    <div>
+      <div class="word">Sprout</div>
+      <div class="tagline">Plants with a pulse.</div>
+    </div>
+    <nav><a href="/classic" title="the Workbench — Classic Sprout, raw numbers and all">Workbench &rarr;</a></nav>
+  </header>
+  <main id="main" aria-live="polite"></main>
+</div>
+
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-label="plant detail">
+  <div class="hero" id="hero"></div>
+</div>
+
+<script>
+"use strict";
+/* Pre-#875 deep-links: the classic tabs lived on "/" as hash anchors. Anyone
+   arriving with one (a bookmark, the launcher's capture tab) belongs on the
+   Workbench — forward before first paint, hash intact. */
+if (/^#(capture|plants|monitor|lab|registry)/.test(location.hash))
+  location.replace("/classic" + location.hash);
+
+/* ---- ONE vocabulary (#1039): the mood words ARE the band names, wet → dry. ----
+   Order matters: it is the ladder. Tokens stay the shipped --band-* CSS names
+   (a token rename is a contract change; the RULING renames the words). */
+var LADDER = [
+  { mood: "soaked",    token: "--band-saturated" },
+  { mood: "refreshed", token: "--band-wet" },
+  { mood: "thriving",  token: "--band-moist" },
+  { mood: "content",   token: "--band-ideal" },
+  { mood: "thirsty",   token: "--band-drying" },
+  { mood: "parched",   token: "--band-dry" },
+  { mood: "faint",     token: "--band-parched" }
+];
+function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+/* ---- the identity icon set — my #1121 silhouettes, inlined for the live fleet's
+   types + the generic seedling fallback. Muted register only (charter rule 3);
+   the chosen-icon registry field arrives with the picker (#1121 follow-up). ---- */
+var F1 = "#7E9B6B", F2 = "#6B8659", F3 = "#93A87E";
+var ICONS = {
+  pothos: '<g><line x1="22" y1="34" x2="14" y2="20" stroke="' + F2 + '" stroke-width="2"/><line x1="22" y1="34" x2="30" y2="20" stroke="' + F2 + '" stroke-width="2"/><line x1="22" y1="34" x2="22" y2="16" stroke="' + F2 + '" stroke-width="2"/><ellipse cx="14" cy="17" rx="6" ry="7" fill="' + F1 + '"/><ellipse cx="30" cy="17" rx="6" ry="7" fill="' + F2 + '"/><ellipse cx="22" cy="13" rx="6" ry="7" fill="' + F1 + '"/><path d="M18 34 Q8 38 10 46" fill="none" stroke="' + F2 + '" stroke-width="1.6"/><path d="M26 34 Q36 39 34 46" fill="none" stroke="' + F2 + '" stroke-width="1.6"/><ellipse cx="10" cy="43" rx="3.6" ry="4.4" fill="' + F1 + '"/><ellipse cx="34" cy="44" rx="3.6" ry="4.4" fill="' + F1 + '"/></g>',
+  dracaena: '<g><rect x="20" y="22" width="4" height="20" rx="1.5" fill="#7C6A4E"/><path d="M20 24 Q12 18 8 8 L11 9 Q16 17 22 23 Z" fill="' + F1 + '"/><path d="M21 23 Q19 13 16 5 L19 6 Q22 14 23 22 Z" fill="' + F2 + '"/><path d="M22 22 Q24 12 24 4 L27 5 Q26 14 24 22 Z" fill="' + F1 + '"/><path d="M23 23 Q28 14 32 6 L34 8 Q30 16 24 23 Z" fill="' + F2 + '"/><path d="M23 24 Q30 19 36 12 L37 15 Q31 21 24 25 Z" fill="' + F1 + '"/></g>',
+  anthurium: '<g><line x1="22" y1="40" x2="14" y2="24" stroke="' + F2 + '" stroke-width="2"/><line x1="22" y1="40" x2="28" y2="20" stroke="' + F2 + '" stroke-width="2"/><path d="M14 30 C7 22 10 14 14 18 C18 14 21 22 14 30 Z" fill="' + F2 + '"/><path d="M28 26 C21 18 24 10 28 14 C32 10 35 18 28 26 Z" fill="' + F1 + '"/><line x1="22" y1="40" x2="33" y2="30" stroke="' + F2 + '" stroke-width="1.8"/><path d="M33 34 C28 28 31 22 34 25 C37 22 39 28 33 34 Z" fill="#C56B5C"/><path d="M34 25 Q36 20 35 17" stroke="#E7D9A8" stroke-width="2.2" fill="none"/></g>',
+  bromeliad: '<g><path d="M20 40 Q10 34 6 22 L10 22 Q15 31 22 38 Z" fill="' + F1 + '"/><path d="M21 39 Q16 28 15 16 L19 17 Q21 28 23 38 Z" fill="' + F2 + '"/><path d="M23 38 Q26 27 27 15 L31 17 Q28 28 24 39 Z" fill="' + F2 + '"/><path d="M24 38 Q31 31 36 21 L39 23 Q34 33 25 40 Z" fill="' + F1 + '"/><path d="M20 26 L17 12 L23 12 Z" fill="#CE8A6E"/><path d="M24 26 L22 10 L28 11 Z" fill="#CE8A6E"/></g>',
+  monstera: '<g><line x1="22" y1="42" x2="14" y2="26" stroke="' + F2 + '" stroke-width="2"/><line x1="22" y1="42" x2="30" y2="24" stroke="' + F2 + '" stroke-width="2"/><path d="M14 30 C4 27 3 13 13 9 C23 13 24 25 14 30 Z" fill="' + F2 + '"/><path d="M13 26 L7 22 M12 19 L6 16" stroke="var(--surface-2,#F7FAF2)" stroke-width="2"/><path d="M30 28 C20 25 19 11 29 7 C39 11 40 23 30 28 Z" fill="' + F1 + '"/><path d="M29 24 L23 20 M28 17 L22 14" stroke="var(--surface-2,#F7FAF2)" stroke-width="2"/></g>',
+  snake: '<g><path d="M12 42 Q11 26 14 12 Q17 26 16 42 Z" fill="' + F1 + '"/><path d="M19 42 Q18 22 22 6 Q26 22 25 42 Z" fill="' + F2 + '"/><path d="M28 42 Q28 24 32 12 Q34 27 32 42 Z" fill="' + F1 + '"/></g>',
+  zz: '<g><path d="M22 42 Q14 30 10 16" fill="none" stroke="' + F2 + '" stroke-width="2"/><path d="M22 42 Q30 30 34 16" fill="none" stroke="' + F2 + '" stroke-width="2"/><ellipse cx="11" cy="17" rx="4" ry="5.5" fill="' + F1 + '"/><ellipse cx="14" cy="24" rx="4" ry="5.5" fill="' + F1 + '"/><ellipse cx="17" cy="31" rx="4" ry="5.5" fill="' + F1 + '"/><ellipse cx="33" cy="17" rx="4" ry="5.5" fill="' + F1 + '"/><ellipse cx="30" cy="24" rx="4" ry="5.5" fill="' + F1 + '"/><ellipse cx="27" cy="31" rx="4" ry="5.5" fill="' + F1 + '"/></g>',
+  generic: '<g><path d="M22 40 L22 24" stroke="#4F7D34" stroke-width="3" stroke-linecap="round"/><path d="M22 26 C12 24 10 12 20 10 C24 16 24 22 22 26 Z" fill="' + F1 + '"/><path d="M22 26 C32 24 34 12 24 10 C20 16 20 22 22 26 Z" fill="' + F2 + '"/></g>'
+};
+/* keyword → icon; matched against the identity name (the live fleet names its types) */
+var ICON_KEYS = [
+  ["pothos", "pothos"], ["dracaena", "dracaena"], ["corn", "dracaena"],
+  ["anthurium", "anthurium"], ["bromeliad", "bromeliad"], ["monstera", "monstera"],
+  ["snake", "snake"], ["sansevieria", "snake"], ["zz", "zz"]
+];
+function iconFor(name) {
+  var n = (name || "").toLowerCase();
+  for (var i = 0; i < ICON_KEYS.length; i++)
+    if (n.indexOf(ICON_KEYS[i][0]) !== -1) return ICONS[ICON_KEYS[i][1]];
+  return ICONS.generic;
+}
+
+function el(tag, cls, html) {
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html !== undefined) e.innerHTML = html;
+  return e;
+}
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+/* the muted identity thumbnail — ONE slot, best-available: photo → icon → generic */
+function thumbHTML(card) {
+  var ident = card.identity || {};
+  if (ident.photo && card.plant_id)
+    return '<img src="/photo/' + encodeURIComponent(card.plant_id) + '" alt=""' +
+      ' onerror="this.parentNode.innerHTML=window.__iconFor(this.dataset.n)"' +
+      ' data-n="' + esc(ident.name) + '">';
+  return '<svg viewBox="0 0 44 48" aria-hidden="true">' + iconFor(ident.name) + "</svg>";
+}
+window.__iconFor = function (n) { return '<svg viewBox="0 0 44 48">' + iconFor(n) + "</svg>"; };
+
+/* the water story — calm-empty: a quiet "—", never a data-pretending value */
+function waterHTML(card) {
+  var lw = card.last_watered || {}, nn = card.next_need || {};
+  var h = "";
+  if (lw.known)
+    h += '<span>watered <b>' + esc(lw.ago) + '</b> <span class="src">DETECTED</span></span>';
+  else
+    h += '<span>watered <b>&mdash;</b> <span class="src">not seen yet</span></span>';
+  if (nn.known)
+    h += '<span class="nn-known">next water ~' + Math.max(1, Math.round(nn.hours / 24)) + "d</span>";
+  else
+    h += '<span>next <b>&mdash;</b> <span class="src">learning its rhythm</span></span>';
+  return h;
+}
+
+/* one plant card against the locked contract (frame=state; mark BESIDE thumb) */
+function renderCard(card, opts) {
+  var o = opts || {};
+  var frame = card.frame || {};
+  var ident = card.identity || {};
+  var isExcFrame = !!(card.exception && card.exception.is);
+  var tag = o.neutral ? "div" : "button";
+  var c = el(tag, "card" + (o.neutral ? " neutral" : ""));
+  /* off-ladder readings get the NEUTRAL frame — state color is for states */
+  if (frame.token && !isExcFrame)
+    c.style.setProperty("--frame", "var(" + frame.token + ")");
+  var metaBits = [];
+  if (ident.number && ident.number !== ident.name) metaBits.push(esc(ident.number));
+  if (ident.pot) metaBits.push(esc(ident.pot));
+  /* #1039: diagnostics live OFF the ladder — an exception card never wears a mood
+     word or the state mark; it leads with its plain reason (the calm lane). */
+  var isExc = !!(card.exception && card.exception.is);
+  var top =
+    '<div class="top">' +
+    '<div class="thumb">' + thumbHTML(card) + "</div>" +
+    '<div class="who"><h3 class="name">' + esc(ident.name) + "</h3>" +
+    '<div class="meta">' + metaBits.join(" · ") + "</div>" +
+    (ident.location ? '<span class="chip">' + esc(ident.location) + "</span>" : "") +
+    "</div>" +
+    (frame.mood && !isExc
+      ? '<sprout-mark class="mark" mood="' + esc(frame.mood) + '" size="42"' +
+        (frame.asleep || frame.motion === "none" ? " static" : "") + "></sprout-mark>"
+      : "") +
+    "</div>";
+  var state = "";
+  if (isExc) {
+    state = '<div class="quiet">' + esc(card.exception.reason || "") + "</div>" +
+      (card.voice ? '<p class="line">' + esc(card.voice) + "</p>" : "");
+  } else if (frame.mood) {
+    state =
+      '<div class="state"><div class="mood"><span class="dot"></span>' +
+      esc(cap(frame.mood)) + "</div>" +
+      (card.voice ? '<p class="line">' + esc(card.voice) + "</p>" : "") +
+      "</div>";
+  } else if (frame.state === "sensorless") {
+    /* first-class-absent: present by design, not probed — never fake-degraded */
+    state = '<div class="quiet">living here &middot; not probed</div>';
+  }
+  c.innerHTML = top + state + '<div class="water">' + waterHTML(card) + "</div>";
+  if (!o.neutral) {
+    c.setAttribute("aria-label", esc(ident.name) + (frame.mood ? " — " + frame.mood : ""));
+    c.addEventListener("click", function () { openHero(card); });
+  }
+  return c;
+}
+
+/* ---- first paint ---- */
+var _cards = null;
+function paint(doc) {
+  var main = document.getElementById("main");
+  main.innerHTML = "";
+  if (doc.empty || !((doc.cards || []).length + (doc.exceptions || []).length)) {
+    /* calm-empty first run — the one-card principle's older sibling */
+    var e = el("div", "empty");
+    e.innerHTML =
+      '<sprout-mark mood="content" size="72"></sprout-mark>' +
+      "<h2>Tend a tiny jungle.</h2>" +
+      "<p>No readings yet &mdash; once a plant is listening, it shows up here " +
+      'and speaks for itself.</p>' +
+      '<p><a href="/classic">Start logging on the Workbench &rarr;</a></p>';
+    main.appendChild(e);
+    return;
+  }
+  var invite = el("div", "invite",
+    "Tend a tiny jungle. <small>most thirsty first</small>");
+  main.appendChild(invite);
+  var grid = el("div", "grid");
+  (doc.cards || []).forEach(function (c) { grid.appendChild(renderCard(c)); });
+  main.appendChild(grid);
+  if ((doc.exceptions || []).length) {
+    /* the exceptions lane (#875 Q3) — off-ladder, quiet, below the meaningful middle */
+    main.appendChild(el("h2", "lane-h",
+      "Needs a look <small>off the ladder &mdash; placement, physics, or signal</small>"));
+    var lane = el("div", "grid lane");
+    doc.exceptions.forEach(function (c) { lane.appendChild(renderCard(c)); });
+    main.appendChild(lane);
+  }
+}
+
+function refresh() {
+  fetch("/cards.json").then(function (r) { return r.json(); }).then(function (doc) {
+    _cards = doc; paint(doc);
+  }).catch(function () { /* keep the last good paint; the next tick retries */ });
+}
+refresh();
+setInterval(refresh, 90000);
+
+/* ---- the hero: one plant, large — ladder + the pulse (chart, histogram minimum) ---- */
+var _ctx = null, _ctxAt = 0;
+function ctxFetch() {
+  var now = Date.now();
+  if (_ctx && now - _ctxAt < 120000) return Promise.resolve(_ctx);
+  return fetch("/data.json?range=7d").then(function (r) { return r.json(); })
+    .then(function (c) { _ctx = c; _ctxAt = Date.now(); return c; });
+}
+
+function ladderHTML(mood) {
+  var steps = "", words = "";
+  LADDER.forEach(function (s) {
+    var cur = s.mood === mood ? " cur" : "";
+    steps += '<div class="step' + cur + '" style="background:var(' + s.token + ')"></div>';
+    words += '<span class="' + (cur ? "cur" : "") + '">' + cap(s.mood) + "</span>";
+  });
+  return '<div class="ladder" aria-label="the seven bands, wet to dry">' + steps +
+    '</div><div class="ladder-words">' + words + "</div>";
+}
+
+function openHero(card) {
+  var frame = card.frame || {};
+  var hero = document.getElementById("hero");
+  var ov = document.getElementById("overlay");
+  /* the off-ladder rule holds in the hero too: no mood crown, no ladder step,
+     neutral frame — the diagnostic reason leads, the pulse helps diagnose. */
+  var isExc = !!(card.exception && card.exception.is);
+  if (frame.token && !isExc)
+    hero.style.setProperty("--frame", "var(" + frame.token + ")");
+  else hero.style.removeProperty("--frame");
+  var ident = card.identity || {};
+  hero.innerHTML =
+    '<button class="close" aria-label="close">&times;</button>' +
+    '<div class="top">' +
+    '<div class="thumb">' + thumbHTML(card) + "</div>" +
+    '<div class="who"><h3 class="name">' + esc(ident.name) + "</h3>" +
+    '<div class="meta">' + [ident.number, ident.pot].filter(Boolean).map(esc).join(" · ") + "</div>" +
+    (ident.location ? '<span class="chip">' + esc(ident.location) + "</span>" : "") +
+    "</div>" +
+    (frame.mood && !isExc
+      ? '<sprout-mark mood="' + esc(frame.mood) + '" size="64"' +
+        (frame.asleep ? " static" : "") + "></sprout-mark>"
+      : "") +
+    "</div>" +
+    (isExc
+      ? '<div class="quiet">' + esc(card.exception.reason || "") + "</div>" +
+        (card.voice ? '<p class="line">' + esc(card.voice) + "</p>" : "")
+      : "") +
+    (frame.mood && !isExc
+      ? '<div class="state"><div class="mood"><span class="dot"></span>' +
+        esc(cap(frame.mood)) + "</div>" +
+        (card.voice ? '<p class="line">' + esc(card.voice) + "</p>" : "") + "</div>"
+      : "") +
+    (frame.mood && !isExc ? ladderHTML(frame.mood) : "") +
+    '<div class="water">' + waterHTML(card) + "</div>" +
+    '<div class="pulse" id="pulse"></div>' +
+    '<a class="wb-link" href="/classic">raw numbers &amp; history on the Workbench &rarr;</a>';
+  ov.classList.add("open");
+  hero.querySelector(".close").addEventListener("click", closeHero);
+  hero.querySelector(".close").focus();
+  drawPulse(card);
+}
+function closeHero() { document.getElementById("overlay").classList.remove("open"); }
+document.getElementById("overlay").addEventListener("click", function (e) {
+  if (e.target === this) closeHero();
+});
+document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeHero(); });
+
+/* The pulse (locked contract): >=1 per-plant chart, HISTOGRAM minimum, Tufte-esque —
+   plus a sparkline of the same window. Axis = the in-soil envelope (#372 ingredient),
+   labelled in mood words; NO raw numerals anywhere (raw stays Workbench-side). */
+function drawPulse(card) {
+  var box = document.getElementById("pulse");
+  box.innerHTML = "";
+  ctxFetch().then(function (ctx) {
+    /* join on the payload's sensor_id (works registered or not); plant_id is the
+       fallback for older payload shapes. present-or-silent when neither binds. */
+    var sensors = ctx.sensors || [];
+    var s = null;
+    for (var i = 0; i < sensors.length; i++) {
+      if (card.sensor_id ? sensors[i].id === card.sensor_id
+                         : sensors[i].plant_id === card.plant_id) { s = sensors[i]; break; }
+    }
+    if (!s) return; /* present-or-silent: no series, no chart */
+    var ds = null, sets = (ctx.trajectory || {}).datasets || [];
+    for (var j = 0; j < sets.length; j++)
+      if (sets[j].id === s.id) { ds = sets[j]; break; }
+    var pts = ds ? (ds.points || []).map(function (p) { return p.y; })
+      .filter(function (y) { return typeof y === "number"; }) : [];
+    if (pts.length < 8) return; /* too few to be a pulse — silent, never a fake shape */
+
+    /* the in-soil envelope, from the served cal boundaries (wet rail .. dry rail) */
+    var bounds = ((ctx.cal || {}).bounds || []).slice().map(Number)
+      .filter(function (b) { return !isNaN(b); }).sort(function (a, b) { return a - b; });
+    var lo = bounds.length ? bounds[0] : Math.min.apply(null, pts);
+    var hi = bounds.length ? bounds[bounds.length - 1] : Math.max.apply(null, pts);
+    if (hi <= lo) return;
+    var inner = bounds.slice(1, -1); /* interior band edges, wet -> dry */
+
+    box.innerHTML =
+      "<h4>The pulse <small>last 7 days &middot; where it lived, wetter &rarr; drier</small></h4>" +
+      '<canvas id="pulseHist" aria-label="time spent across the bands, last 7 days"></canvas>' +
+      '<div class="axis"><span>wetter</span><span>drier</span></div>';
+    var cv = document.getElementById("pulseHist");
+    var W = (cv.width = cv.clientWidth * 2), H = (cv.height = 192);
+    var g = cv.getContext("2d");
+    var css = getComputedStyle(document.documentElement);
+    function tok(n, f) { return (css.getPropertyValue(n) || f).trim() || f; }
+
+    /* band-tinted ground: the ladder's own hues at ground opacity (state speaks) */
+    var zones = [lo].concat(inner, [hi]);
+    g.globalAlpha = 0.16;
+    for (var z = 0; z + 1 < zones.length; z++) {
+      var x0 = ((zones[z] - lo) / (hi - lo)) * W;
+      var x1 = ((zones[z + 1] - lo) / (hi - lo)) * W;
+      var li = Math.min(z, LADDER.length - 1);
+      g.fillStyle = tok(LADDER[li].token, "#ccc");
+      g.fillRect(x0, 0, x1 - x0, H);
+    }
+    g.globalAlpha = 1;
+
+    /* the histogram: time spent per envelope slice (ink bars, no chartjunk) */
+    var BINS = 28, counts = new Array(BINS).fill(0), maxC = 0;
+    pts.forEach(function (y) {
+      var t = (y - lo) / (hi - lo);
+      if (t < 0) t = 0; if (t > 1) t = 1;
+      var b = Math.min(BINS - 1, Math.floor(t * BINS));
+      if (++counts[b] > maxC) maxC = counts[b];
+    });
+    g.fillStyle = tok("--ink", "#1E2A18");
+    var bw = W / BINS;
+    for (var b2 = 0; b2 < BINS; b2++) {
+      var h = maxC ? (counts[b2] / maxC) * (H - 14) : 0;
+      g.fillRect(b2 * bw + 1.5, H - h, bw - 3, h);
+    }
+
+    /* the now-marker: today's position on the envelope (a position, not a numeral) */
+    if (typeof s.raw_last === "number") {
+      var tx = ((s.raw_last - lo) / (hi - lo)); if (tx < 0) tx = 0; if (tx > 1) tx = 1;
+      g.strokeStyle = tok("--ink", "#1E2A18"); g.lineWidth = 3;
+      g.setLineDash([7, 5]);
+      g.beginPath(); g.moveTo(tx * W, 0); g.lineTo(tx * W, H); g.stroke();
+      g.setLineDash([]);
+    }
+  }).catch(function () { /* silent — the hero stands without its chart */ });
+}
+</script>
+</body>
+</html>
