@@ -26,6 +26,7 @@ def test_noun_frames_fire():
 def test_is_truth_formulas_fire():
     assert _names("raw + band is truth, % is an index")
     assert _names("The manifest is truth for the fleet.")
+    assert _names("rows kept on the plot (raw = truth) but excluded")  # the = form
 
 
 def test_judgment_hooks_fire():

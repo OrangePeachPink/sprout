@@ -78,7 +78,7 @@ every lane. If two lanes use the same word for different things, or different wo
   ms confirmation window, so a band **change must be confirmed**, not chased sample-to-sample — trading
   transient-responsiveness for stability in slow soil (band flapping would be noise, not signal). At the 30 s
   cadence the confirm window rounds to ~1 sample, so the lag is ~1 tick (`READ_INTERVAL_MS`, `lib/moisture_classifier`).
-  **Raw ADC stays the authoritative fast signal** (ADR-0006: raw is truth; the band is a smoothed index) — read
+  **Raw ADC stays the authoritative fast signal** (ADR-0006; the band is a smoothed index) — read
   raw, not the band, when watching a live transient. (#678)
 - **Raw-only contract** — firmware writes empty `value`/`unit` (`,,`) for `plants.soil` (DEC-#38): soil is
   uncalibrated, so an engineering value would be false precision. **Soil-specific** — a factory-calibrated env
