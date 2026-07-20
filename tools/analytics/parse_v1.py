@@ -595,7 +595,7 @@ class Reading:
         """#1042 / ADR-0036: does this row's ``sensor_id`` mean the firmware CHANNEL
         (``ch0``..``ch3``) rather than the retired port sticker (``s1``..``s4``)?
 
-        The same version-gated pattern as ``has_stable_device_id`` (the v3
+        The same version-gated pattern as ``device_id_is_stable_id`` (the v3
         precedent): the column stays a string, only its meaning is gated.
         ``schema_version >= 5`` ⇒ channel; below (or absent) ⇒ the legacy sticker,
         treated as legacy and never guessed as a channel. v4 rows are never
