@@ -28,10 +28,13 @@ name: sign release firmware (#302)
 #      signing key) and PlatformIO is pinned to an exact version so the bytes are
 #      reproducible from the same ref.
 #
-# THE KEY CEREMONY (docs/process/signing-key-ceremony.md) is the maintainer's, and
-# it gates the first RUN of this job, not the merge of this file. Landing it with
-# the fail-closed flag on is deliberate: the alternative is discovering the missing
-# key AT the cut, which is the worst possible moment.
+# KEY STATE, VERIFIED (2026-07-20, not assumed): the ceremony has ALREADY RUN -
+# SPROUT_SIGNING_KEY exists as a repo secret (created 2026-07-11) and the public key
+# is committed at firmware/keys/. So the fail-closed flag blocks nothing today; it is
+# a forward gate for a future keyless state (rotation, a fork, a re-created repo).
+# The file header this replaced said the ceremony was pending - it wasn't, and the
+# claim came from reading this workflow's own conditional comment instead of
+# checking the secret.
 
 on:
   release:
