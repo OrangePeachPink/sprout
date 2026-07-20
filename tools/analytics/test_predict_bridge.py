@@ -192,7 +192,11 @@ def test_temporal_is_rejected_when_it_maps_a_fleet_the_tier_never_saw() -> None:
     try:
         pairs, source = resolve_identity(reg, None, devices_in_tier={"realdev"})
         assert source == "static"  # rejected: zero overlap with the real tier
-        assert pairs == {("realdev", "s1"): "pA"}
+        # #1315: the static fallback is now keyed in the CANONICAL chN namespace —
+        # the registry's "s1" key folds to "ch2" (the port that emitted s1). The
+        # guard is unchanged and still rejects the ghost fleet (source == "static");
+        # only the key shape moved, which is the translation doing its job.
+        assert pairs == {("realdev", "ch2"): "pA"}
         # and when the temporal map DOES cover the tier, it wins honestly
         _pairs2, source2 = resolve_identity(reg, None, devices_in_tier={"ghostdev"})
         assert source2 == "temporal"

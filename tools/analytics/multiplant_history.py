@@ -57,6 +57,7 @@ if str(_HERE) not in sys.path:
 from collections import namedtuple  # noqa: E402
 
 from device_registry import load_registry  # noqa: E402
+from parse_v1 import canonical_channel  # noqa: E402  (#1315 read translation)
 from segment_classifier import classify, passes  # noqa: E402
 from segment_history import _journal_events  # noqa: E402
 from tier_rollup import read_events  # noqa: E402
@@ -107,7 +108,9 @@ def read_series(root: Path | None = None, registry=None) -> dict:
         for channel in dev.channels or {}:
             p = dev.plant_for(channel)
             if p:
-                pair_to_plant[(dev.device_id, channel)] = p["plant_id"]
+                pair_to_plant[(dev.device_id, canonical_channel(channel))] = p[
+                    "plant_id"
+                ]
     con = duckdb.connect()
     rows = con.execute(
         "SELECT device_id, sensor_id, timestamp_utc, raw_value, quality_flag, band "
@@ -117,7 +120,7 @@ def read_series(root: Path | None = None, registry=None) -> dict:
     con.close()
     series: dict = {}
     for device_id, sensor_id, ts, raw, flag, band in rows:
-        pid = pair_to_plant.get((device_id, sensor_id))
+        pid = pair_to_plant.get((device_id, canonical_channel(sensor_id)))
         if pid is None:
             continue
         if ts.tzinfo is None:
@@ -288,11 +291,15 @@ def band_ledger(series: dict, registry, root: Path | None = None) -> dict:
         for channel in dev.channels or {}:
             p = dev.plant_for(channel)
             if p:
-                pair_to_plant[(dev.device_id, channel)] = p["plant_id"]
+                pair_to_plant[(dev.device_id, canonical_channel(channel))] = p[
+                    "plant_id"
+                ]
     steps: dict = {pid: [] for pid in series}
     try:
         for ev in read_events(kind="band", root=root):
-            pid = pair_to_plant.get((ev["device_id"], ev["sensor_id"]))
+            pid = pair_to_plant.get(
+                (ev["device_id"], canonical_channel(ev["sensor_id"]))
+            )
             if pid is None or pid not in steps:
                 continue
             detail = str(ev.get("detail") or "")
