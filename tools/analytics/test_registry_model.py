@@ -274,3 +274,79 @@ if __name__ == "__main__":
         test_save_and_load_round_trip(Path(d))
         test_load_missing_file_is_empty_not_a_crash(Path(d))
     print("All checks passed.")
+
+
+# --------------------------------------------------------------------------- #
+# #1188 — a location edit is a MOVE (the #921 "c" ruling)
+# --------------------------------------------------------------------------- #
+
+
+def test_a_location_edit_records_a_move_and_never_loses_the_old_spot() -> None:
+    from registry_model import Plant, RegistryModel, apply_operations
+
+    m = RegistryModel(plants=[Plant(plant_id="p01", location="windowsill left")])
+    apply_operations(
+        m, {"plants": {"edit": [{"plant_id": "p01", "location": "windowsill right"}]}}
+    )
+    hist = m.location_history("p01")
+    assert [e.location for e in hist] == ["windowsill left", "windowsill right"]
+    # the grandfathered prior: it WAS there, we don't know since when
+    assert hist[0].start_ts is None and hist[0].end_ts is not None
+    assert hist[-1].is_open  # the new spot is current
+    assert m.plants[0].location == "windowsill right"  # cheap-read mirror kept
+
+
+def test_a_second_move_chains_without_a_hole() -> None:
+    from registry_model import Plant, RegistryModel, apply_operations
+
+    m = RegistryModel(plants=[Plant(plant_id="p01", location="left")])
+    for spot in ("right", "office"):
+        apply_operations(
+            m, {"plants": {"edit": [{"plant_id": "p01", "location": spot}]}}
+        )
+    hist = m.location_history("p01")
+    assert [e.location for e in hist] == ["left", "right", "office"]
+    assert sum(1 for e in hist if e.is_open) == 1  # exactly one current spot
+    # every closed span's end is the next span's start — a hole-free chain
+    assert hist[0].end_ts == hist[1].start_ts and hist[1].end_ts == hist[2].start_ts
+
+
+def test_move_boundaries_are_the_context_edges_consumers_gate_on() -> None:
+    from registry_model import Plant, RegistryModel, apply_operations
+
+    m = RegistryModel(plants=[Plant(plant_id="p01", location="left")])
+    assert m.move_boundaries("p01") == []  # never moved -> one continuous context
+    apply_operations(
+        m, {"plants": {"edit": [{"plant_id": "p01", "location": "right"}]}}
+    )
+    bounds = m.move_boundaries("p01")
+    assert len(bounds) == 1 and isinstance(bounds[0], str)
+
+
+def test_a_non_location_edit_is_not_a_move() -> None:
+    from registry_model import Plant, RegistryModel, apply_operations
+
+    m = RegistryModel(plants=[Plant(plant_id="p01", location="left")])
+    apply_operations(
+        m, {"plants": {"edit": [{"plant_id": "p01", "pet_name": "Bernie"}]}}
+    )
+    assert m.location_events == []  # renaming a plant never moved it
+    # and re-saving the SAME location is not a move either (the editor round-trips
+    # every field on save — an unchanged value must not manufacture history)
+    apply_operations(m, {"plants": {"edit": [{"plant_id": "p01", "location": "left"}]}})
+    assert m.location_events == []
+
+
+def test_the_payload_carries_the_move_record_for_movers_only() -> None:
+    from registry_model import Plant, RegistryModel, apply_operations, registry_payload
+
+    m = RegistryModel(
+        plants=[Plant(plant_id="p01", location="left"), Plant(plant_id="p02")]
+    )
+    apply_operations(
+        m, {"plants": {"edit": [{"plant_id": "p01", "location": "right"}]}}
+    )
+    doc = registry_payload(m)
+    assert "p01" in doc["location_history"]
+    assert "p02" not in doc["location_history"]  # present-or-silent: no move, no key
+    assert doc["location_history"]["p01"][-1]["end_ts"] is None

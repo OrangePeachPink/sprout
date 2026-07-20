@@ -159,6 +159,23 @@ class RegistryModel:
                 return a
         return None
 
+    def location_history(self, plant_id: str) -> list[LocationEvent]:
+        """#1188: every spot this plant has occupied, oldest first — the move record
+        the editor renders and the confidence re-evaluation reads. A grandfathered
+        first entry carries ``start_ts=None`` (it was there; we don't know since
+        when) rather than inventing a start."""
+        evs = [ev for ev in self.location_events if ev.plant_id == plant_id]
+        return sorted(evs, key=lambda e: (e.start_ts or "", e.end_ts or "~"))
+
+    def move_boundaries(self, plant_id: str) -> list[str]:
+        """#1188: the timestamps at which this plant CHANGED location — the context
+        boundaries. Readings either side of one are not a continuous context (the
+        micro-climate changed), so a trend/forecast that spans a boundary is
+        comparing two different situations. Consumers gate on these."""
+        return [
+            ev.end_ts for ev in self.location_history(plant_id) if ev.end_ts is not None
+        ]
+
     def history_for_plant(self, plant_id: str) -> list[Assignment]:
         """Every assignment a plant held, oldest-first — the derivable series (Q8)."""
         got = [a for a in self.assignments if a.plant_id == plant_id]
@@ -222,9 +239,27 @@ class RegistryModel:
     ) -> LocationEvent:
         """Record a plant move as an event (Q7): close the open spot, open the new."""
         ts = now or _utc_now()
-        for ev in self.location_events:
-            if ev.plant_id == plant_id and ev.is_open:
-                ev.end_ts = ts
+        open_evs = [
+            ev for ev in self.location_events if ev.plant_id == plant_id and ev.is_open
+        ]
+        if not open_evs:
+            # #1188: the FIRST move of a grandfathered plant. Its current spot was
+            # set without an event (migrated / created directly), so closing "the
+            # open event" would close nothing and the old location would vanish from
+            # history. Synthesize the prior spot with start_ts=None — the ADR-0027
+            # grandfathered convention: it WAS there, we don't know since when — and
+            # close it at the move instant. History gains a hole-free chain.
+            prior = next(
+                (pl.location for pl in self.plants if pl.plant_id == plant_id), None
+            )
+            if prior:
+                self.location_events.append(
+                    LocationEvent(
+                        plant_id=plant_id, location=prior, start_ts=None, end_ts=ts
+                    )
+                )
+        for ev in open_evs:
+            ev.end_ts = ts
         fresh = LocationEvent(plant_id=plant_id, location=location, start_ts=ts)
         self.location_events.append(fresh)
         for p in self.plants:
@@ -462,6 +497,16 @@ def registry_payload(model: RegistryModel) -> dict:
         }
         for a in model.open_assignments()
     ]
+    # #1188: the move record per plant — the editor renders "moved on X" from this,
+    # and a mover's context boundaries are queryable without a second round trip.
+    doc["location_history"] = {
+        p.plant_id: [
+            {"location": ev.location, "start_ts": ev.start_ts, "end_ts": ev.end_ts}
+            for ev in model.location_history(p.plant_id)
+        ]
+        for p in model.plants
+        if model.location_history(p.plant_id)
+    }
     doc["first_run"] = not (model.plants or model.sensors or model.devices)
     # #921 slice 3 Q2: the server owns id allocation - the client prefills the next
     # number from here instead of computing it (one source of truth, no add-race).
@@ -760,7 +805,17 @@ def apply_operations(
     for rec in plants.get("edit") or []:
         p = next(x for x in model.plants if x.plant_id == rec.get("plant_id"))
         for k in _PLANT_FIELDS:
-            if k in rec:
+            if k not in rec:
+                continue
+            # #1188 (the #921 "c" ruling): a LOCATION edit is a MOVE, not a text
+            # field write. Route it through move_plant so the old spot CLOSES and a
+            # new one opens — history is never lost, and the boundary is queryable
+            # by the consumers that must re-evaluate across it (a plant that moved
+            # is in a different micro-climate; readings either side are not one
+            # continuous context). Every other field is a plain edit.
+            if k == "location" and (rec[k] or None) != (p.location or None):
+                model.move_plant(p.plant_id, rec[k], now=now)
+            else:
                 setattr(p, k, rec[k])
         applied["edited"] += 1
     for rec in sensors.get("edit") or []:
