@@ -218,14 +218,38 @@ lint-adr:
 pre-commit:
     uv run --frozen pre-commit run --all-files
 
-# The pre-merge gate: all hooks + the tests. Exactly what CI runs (mirrors #89).
-check: pre-commit test
+# THE DEFAULT GATE (#1337) — needs exactly two tools: `uv` and `just`.
+#
+# This runs everything a docs / dashboard / Python / graphics contribution can break: every
+# pre-commit hook plus the host, DX and analytics suites. Most arrivals touch one of those, so
+# the default is the door most people walk through, and the two-tool promise in the README is
+# TRUE for it rather than true-with-a-correction.
+#
+# It deliberately does NOT run the native C firmware tests — those need PlatformIO and a host
+# compiler, which is a real install we do not ask a docs contributor to do. The recipe SAYS SO
+# when it finishes: a gate that quietly runs less than you think it does is indistinguishable
+# from one that passed (the #1327 lesson), so the omission is announced, never implied.
 
-# The no-compiler local gate (#1189): everything `just check` runs EXCEPT the native C firmware
-# tests (`test-native`, which need PlatformIO + a host compiler). For a docs / UI / Python /
-# graphics contribution this IS your whole local gate. It is NOT the full gate, though — CI always
-# runs everything (incl. test-native), so a firmware change still needs the real `just check`.
-check-host: pre-commit test-host test-dx test-analytics
+# The default gate: pre-commit + host/DX/analytics tests. Needs only uv + just (#1337).
+check: pre-commit test-host test-dx test-analytics
+    @echo ""
+    @echo "  check PASSED - pre-commit + host + DX + analytics."
+    @echo "  NOT run: test-native (the native C firmware tests; they need PlatformIO + a compiler)."
+    @echo "  Touched firmware/ ? run:  just check-firmware"
+    @echo "  Either way CI runs the full battery on every PR - this is your local gate, not the gate."
+
+# THE FIRMWARE GATE (#1337): the default gate PLUS the native C tests. Needs PlatformIO and a
+# host compiler on top of uv + just — named honestly on its own path rather than hidden inside
+# the default, so the bigger install belongs to the smaller door.
+
+# The firmware gate: everything `check` runs PLUS the native C tests (needs PlatformIO).
+check-firmware: check test-native
+
+# Back-compat alias (#1189 shipped this name; `check` now means the same thing). Kept so muscle
+# memory and existing docs/scripts keep working — safe to use, nothing to change.
+
+# Alias for `check` — the old #1189 name, kept working.
+check-host: check
 
 # Everything else runs --frozen; commit pyproject.toml + uv.lock together as a deliberate change.
 # Update uv.lock after a pyproject.toml dependency change — the ONE command allowed to rewrite it (#254).

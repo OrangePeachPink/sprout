@@ -117,7 +117,8 @@ version — claiming, review, timing, and our no-guilt timeout.
 3. **Commit** with [Conventional Commits](https://www.conventionalcommits.org/):
    `type(scope): imperative subject`, where `type` is `feat | fix | docs | refactor | chore` (plus
    `test | ci | style` for finer changes). State the *result* in the subject when that's the point.
-4. **Run the checks** before pushing: **`just check`** (lint + format + tests — exactly what CI runs).
+4. **Run the checks** before pushing: **`just check`** (lint + format + the host test suites — needs only
+   `uv` and `just`, never a compiler).
    Even better, run **`uv run pre-commit install`** once and the format/lint runs automatically on every
    commit. (First-time setup: `uv sync`, or open the repo in **Codespaces** — see the
    [README quick start](../README.md#quick-start).)
@@ -135,13 +136,13 @@ version — claiming, review, timing, and our no-guilt timeout.
    for pre-scoped internal work — is in [docs/team/OPERATIONS.md](../docs/team/OPERATIONS.md); you don't need
    it to contribute.)*
 
-> **Docs / UI / Python / graphics change? `just check-host` is your whole local gate.** It runs everything
-> `just check` runs — all pre-commit hooks + the host Python / DX / analytics test suites — **except** the
-> native C firmware tests, so it needs **no compiler** (just `uv sync` + `just`). It is *not* the full gate —
-> CI always runs everything, incl. the firmware tests — but for a change that doesn't touch `firmware/` it's
-> the complete local check.
+> **Docs / UI / Python / graphics change? `just check` is your whole local gate — and it needs no compiler.**
+> It runs every pre-commit hook plus the host Python / DX / analytics test suites, on `uv` + `just` alone.
+> Most contributions land here, so it's the default. It is *not* the full gate — CI always runs everything,
+> including the firmware tests — and `just check` tells you so when it finishes rather than letting you
+> assume otherwise. *(`just check-host` is the old name for this and still works.)*
 >
-> **Touching firmware? You need the full `just check`.** It also runs `just test` → the native C
+> **Touching firmware? Use `just check-firmware`.** It runs everything above **plus** the native C
 > firmware-logic suite (`test-native`), which needs **PlatformIO** (`pip install platformio`) and a **host C
 > compiler** on PATH, in addition to `uv`/`just`:
 >
@@ -156,8 +157,9 @@ version — claiming, review, timing, and our no-guilt timeout.
 > **GitHub Codespaces already has both** (its base image bundles `gcc`, and `pip install platformio` is a quick
 > add) — see the Firmware section below, or just push and let CI run the full gate for you.
 >
-> **Why CI is designed to run everything (the default posture):** `just check` is the same full gate as your
-> machine — on purpose. Pre-commit *hooks* are
+> **Why CI is designed to run everything (the default posture):** CI runs the full battery on every PR —
+> `just check-firmware` is the local equivalent, and `just check` is that minus the compiler-dependent part.
+> Nothing is path-filtered or skipped remotely. Pre-commit *hooks* are
 > file-type-scoped for speed (e.g. `clang-format` only touches `.c`/`.h` files) — but the *test* step above is
 > not type-scoped, so don't read "hooks are scoped" as "a docs change skips firmware tests." Running
 > everything is what buys predictability and prevents local≠remote drift; path-filtering would re-introduce
@@ -191,8 +193,9 @@ without the IDE or a hand-assembled cross-compiler). **Two first-class ways in �
 - **VS Code + PlatformIO (local).** Install the PlatformIO extension; it fetches the ESP32 toolchain for you.
   Your own editor, full local control, the board on your own USB.
 - **GitHub Codespaces (browser).** *Open in Codespaces* → the devcontainer builds the toolchain for you →
-  `just check` runs green. Zero local install — ideal for editing, building, and the native tests; flashing a
-  board you're holding stays a local USB step.
+  `just check` runs green — and because the image bundles a compiler, `just check-firmware` works there too.
+  Zero local install — ideal for editing, building, and the native tests; flashing a board you're holding
+  stays a local USB step.
 
 Neither is "the" way. Once you're in, the commands are identical:
 
