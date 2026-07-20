@@ -175,6 +175,26 @@ _FLEET = FleetController()
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 
+# #822: the pass-anchored range labels (Data's contract, consumed not re-authored)
+# and the fixed window served when no watering is on record.
+from cycle_range import CYCLE_RANGES  # noqa: E402  (#822 the ratified labels)
+
+_CYCLE_FALLBACK = "7d"
+
+
+def _cycle_window_for(inputs):
+    """A resolver bound to this server's inputs: label -> the pass-anchored window
+    dict, or None when no anchor exists. Reads the same series the tier reads."""
+
+    def resolve(which: str):
+        from cycle_range import cycle_window
+        from multiplant_history import read_series
+
+        return cycle_window(read_series(), which=which)
+
+    return resolve
+
+
 _EID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")  # no traversal from a status id
 
 # #969: a client that gives up mid-response (tab close / refresh / back) aborts the
@@ -715,6 +735,23 @@ class DashboardHandler(BaseHTTPRequestHandler):
         # so the initial root render + a bare data.json don't parse the whole corpus.
         rng = q.get("range", [_DEFAULT_RANGE])[0]  # the label, for the #953 perf log
         hours = RANGE_HOURS.get(rng)  # "all" -> None
+        # #822: the pass-anchored cycle ranges. The window is resolved from the
+        # RESOLVED watering pass (Data's cycle_range, ruling B — the fleet's pass,
+        # never one plant's event) and handed to the same hours-based reader every
+        # other range uses, so this composes instead of forking the machinery.
+        # Honest decline: no watering on record -> cycle_window returns None, we keep
+        # the fixed fallback AND tell the client why, rather than silently serving a
+        # different window.
+        cycle_win = None
+        if rng in CYCLE_RANGES:
+            try:
+                cycle_win = _cycle_window_for(self.inputs)(rng)
+            except Exception:
+                cycle_win = None
+            if cycle_win:
+                hours = cycle_win["hours"]
+            else:
+                hours = RANGE_HOURS.get(_CYCLE_FALLBACK)
         channels = [c for c in q.get("channels", [""])[0].split(",") if c] or None
         # #972 test hook: a deliberately-slow handler to prove Stop preempts an
         # in-flight build. Gated behind SPROUT_TEST_SLOW; absent in a real run.
@@ -772,6 +809,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 from registry_model import load_registry_model as _lrm
 
                 attach_pulse_anchors(ctx, _lrm())
+                # #822: what the cycle chip should SAY — the served window, or the
+                # honest reason there isn't one. Absent for non-cycle ranges.
+                if rng in CYCLE_RANGES:
+                    ctx["cycle_range"] = cycle_win or {
+                        "declined": "no watering on record yet",
+                        "fallback": _CYCLE_FALLBACK,
+                    }
                 _t = time.perf_counter()
                 blob = json.dumps(ctx, separators=(",", ":"), ensure_ascii=False)
                 _perf_log(ctx, "serialize", time.perf_counter() - _t, rng)  # #953

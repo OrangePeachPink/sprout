@@ -77,6 +77,12 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .rangesel .rangebtn:first-child { border-left: none; }
 .rangesel .rangebtn:hover { color: var(--ink); }
 .rangesel .rangebtn.active { background: var(--leaf); color: #fff; }
+/* #822: the pass-anchored selector sits beside the clock ranges, visibly its own
+   group; the note beside it carries what the window actually served. */
+.cyclesel { margin-left: 8px; }
+.cyclenote { font-size: 11.5px; color: var(--muted); margin-left: 8px; }
+.cyclenote b { color: var(--ink); font-weight: 600; }
+.cyclenote .declined { color: var(--st-dry, #E8703A); }
 .chansel { display: inline-flex; gap: 4px; }
 .chanchip { font-family: var(--font-data); font-size: 11px; font-weight: 600; cursor: pointer; color: #fff;
   border-radius: var(--r-pill); padding: 3px 9px; border: 1px solid transparent; user-select: none; }
@@ -469,6 +475,16 @@ footer.prov code { font-family: var(--font-data); }
         <button class="rangebtn" data-r="30d" type="button" title="Last 30 days">30d</button>
         <button class="rangebtn" data-r="all" type="button" title="All recorded history">all</button>
       </div>
+      <!-- #822: the pass-anchored ranges. Separated from the clock ranges above on
+           purpose — these answer "since I last watered", not "the last N hours", and
+           the window moves with the fleet rather than the clock. -->
+      <div class="rangesel cyclesel" id="cyclesel">
+        <button class="rangebtn" data-r="cycle1" type="button"
+          title="Since the last watering round — anchored to the detected pass, with a short lead-in so the pre-water state is visible">since watering</button>
+        <button class="rangebtn" data-r="cycle2" type="button"
+          title="The last two watering rounds — for comparing one dry-down against the previous">2 cycles</button>
+      </div>
+      <span class="cyclenote" id="cyclenote"></span>
       <span class="refreshed" id="refreshed"></span>
       <!-- #724: always-live model — the redundant `auto` toggle is retired (a live
            view auto-refreshes by default). Refresh keeps ONE distinct job: force an
@@ -1577,6 +1593,7 @@ function renderProvenance(){  // #324 bench-evidence panel
 function renderOverview(){
   destroyCharts();
   renderHeader(); renderCards(); renderLadder(); renderBandHistory(); renderCalRef();
+  renderCycleNote();
   renderTraj(); renderSpread(); renderDist();
   renderQuality(); renderIntegrity(); renderProvenance(); renderProv();
   if(!LIVE) applyStaticChannels();
@@ -2462,6 +2479,27 @@ function setRange(r){
   curRange = r;
   document.querySelectorAll('.rangebtn').forEach(b=> b.classList.toggle('active', b.dataset.r===r));
   if(LIVE) refresh(); else applyStaticZoom();
+}
+
+/* #822: say what the pass-anchored window actually served. Three honest states:
+   the window it anchored to; the DECLINE when no watering is on record (the chip
+   falls back to a fixed range and says so); and the partial serve when two cycles
+   were asked for but only one exists — never a silent substitution. */
+function renderCycleNote(){
+  const el = document.getElementById('cyclenote'); if(!el) return;
+  const cw = DASH.cycle_range;
+  if(!cw || (curRange!=='cycle1' && curRange!=='cycle2')){ el.innerHTML=''; return; }
+  if(cw.declined){
+    el.innerHTML = `<span class="declined">no watering on record yet</span> · showing the fixed ${cw.fallback} window instead`;
+    return;
+  }
+  const hrs = Math.round(cw.hours);
+  const span = hrs < 48 ? `${hrs}h` : `${Math.round(hrs/24)}d`;
+  const anchor = (cw.anchor||'').replace('T',' ').slice(5,16);
+  let s = `anchored to the watering round at <b>${anchor}</b> · <b>${span}</b> window (+${cw.pad_h}h lead-in)`;
+  if(cw.exact === false)
+    s += ` · <span class="declined">only ${cw.n_passes} round on record — served ${cw.label}, not ${cw.requested}</span>`;
+  el.innerHTML = s;
 }
 
 /* ---- channel on/off (E10) ---- */
