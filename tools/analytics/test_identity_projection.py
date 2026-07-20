@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from device_registry import Device, Registry
 from identity import Binding, Projection, build_projection, resolve_plant
-from registry_model import Assignment, Plant, RegistryModel
+from registry_model import Assignment, Plant, RegistryModel, Sensor
 
 T = lambda h: datetime(2026, 7, 10, h, 0, 0, tzinfo=timezone.utc)  # noqa: E731
 
@@ -131,3 +131,66 @@ def test_the_module_level_function_matches_adr_0038_signature() -> None:
     assert resolve_plant("d1", "s1", None, projection=proj) == "p11"
     assert isinstance(Binding("d1", "ch2", "p11"), Binding)
     assert isinstance(proj, Projection)
+
+
+def test_deleted_is_gone_at_every_instant_not_merely_now() -> None:
+    """#1335 fork 1, Option A: `deleted` means entity + history."""
+    m = RegistryModel(
+        plants=[Plant(plant_id="p11", pet_name="Gone", lifecycle="deleted")],
+        assignments=[Assignment("p11", "s1", "d1", "ch2", start_ts=None, end_ts=None)],
+    )
+    proj = build_projection(m)
+    assert proj.resolve_plant("d1", "ch2") is None  # now
+    assert proj.resolve_plant("d1", "ch2", T(9)) is None  # and in the past
+    assert proj.current() == {}
+
+
+def test_the_precision_closed_bindings_survive_the_dead_entity_filter() -> None:
+    """Trellis's precision: lift only the DEAD-ENTITY half of open_assignments().
+
+    Copying that method wholesale would also drop every CLOSED binding — breaking
+    historical resolution and producing a third behaviour instead of removing one.
+    A live plant's earlier interval must still resolve for readings from that time.
+    """
+    m = RegistryModel(
+        plants=[Plant(plant_id="p11"), Plant(plant_id="p02")],
+        assignments=[
+            Assignment(
+                "p11", "s1", "d1", "ch2", start_ts=None, end_ts="2026-07-10T12:00:00Z"
+            ),
+            Assignment("p02", "s1", "d1", "ch2", start_ts="2026-07-10T12:00:00Z"),
+        ],
+    )
+    proj = build_projection(m)
+    assert proj.resolve_plant("d1", "ch2", T(9)) == "p11"  # the CLOSED binding lives
+    assert proj.resolve_plant("d1", "ch2") == "p02"
+
+
+def test_a_deleted_sensor_or_device_also_removes_the_binding() -> None:
+    for kill in ("sensor", "device"):
+        m = RegistryModel(
+            plants=[Plant(plant_id="p11")],
+            sensors=[
+                Sensor(
+                    sensor_id="s1",
+                    lifecycle="deleted" if kill == "sensor" else "active",
+                )
+            ],
+            devices=[
+                {
+                    "device_id": "d1",
+                    "lifecycle": "deleted" if kill == "device" else "active",
+                }
+            ],
+            assignments=[Assignment("p11", "s1", "d1", "ch2")],
+        )
+        assert build_projection(m).resolve_plant("d1", "ch2") is None, kill
+
+
+def test_a_paused_plant_is_NOT_deleted_it_keeps_resolving() -> None:
+    # `paused` IS the tombstone: entity persists, history intact (Trellis's ruling)
+    m = RegistryModel(
+        plants=[Plant(plant_id="p11", lifecycle="paused")],
+        assignments=[Assignment("p11", "s1", "d1", "ch2")],
+    )
+    assert build_projection(m).resolve_plant("d1", "ch2") == "p11"

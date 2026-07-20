@@ -133,14 +133,17 @@ def test_current_map_omits_unmapped_channels() -> None:
 # --------------------------------------------------------------------------- #
 # Confirmed forks — decision list on #1335
 # --------------------------------------------------------------------------- #
-@pytest.mark.xfail(
-    strict=True,
-    reason="#1335 fork 1: the projection resolves a DELETED plant as current, where "
-    "registry_model.open_assignments() excludes it ('a deleted entity has no current "
-    "mapping'). Since the projection REPLACES that path, this is a regression: delete "
-    "a plant and it keeps appearing on its channel. Awaiting the Data/Trellis ruling.",
-)
 def test_a_deleted_plant_has_no_current_binding() -> None:
+    """#1335 fork 1 — RULED (Trellis): Option A with the all-bindings precision.
+
+    Promoted from strict-xfail on the fix. `deleted` means gone — *entity + history* —
+    and `paused` is the tombstone that keeps history, so a deleted plant resolves to
+    None at EVERY instant, not merely now.
+
+    The precision matters: the projection applies only the DEAD-ENTITY half of
+    open_assignments()' filter, never the open-only half, so closed bindings survive
+    and historical resolution keeps working.
+    """
     m = RegistryModel(
         plants=[Plant(plant_id="p01", pet_name="Gone", lifecycle="deleted")],
         sensors=[Sensor(sensor_id="s1")],

@@ -128,8 +128,32 @@ class Projection:
 
 def _from_temporal(model) -> list[Binding]:
     plants = {p.plant_id: p for p in getattr(model, "plants", [])}
+    # #1335 fork 1 (Trellis, Option A + the all-bindings precision): a DELETED entity
+    # is gone — `deleted` means "entity + history", and `paused` is the tombstone that
+    # keeps history. So a deleted plant resolves to None at EVERY instant, not merely
+    # now: "history gone" means gone at all instants.
+    #
+    # Deliberately NOT open_assignments()' filter, which does two things — excludes
+    # dead entities AND narrows to open bindings. Lifting it whole would drop every
+    # closed binding and break historical resolution, producing a THIRD behaviour
+    # instead of removing one. Only the dead-entity half is lifted; closed bindings
+    # stay, so a probe's earlier plant still resolves for readings from that interval.
+    #
+    # Never-stitch is untouched: deleting a plant does not delete readings. The tier
+    # stays board-true; those rows simply resolve to no plant, which is the honest
+    # answer once the entity is gone.
+    dead = model._deleted_ids() if hasattr(model, "_deleted_ids") else {}
+    dead_plants = dead.get("plants", set())
+    dead_sensors = dead.get("sensors", set())
+    dead_devices = dead.get("devices", set())
     out = []
     for a in getattr(model, "assignments", []):
+        if (
+            a.plant_id in dead_plants
+            or a.sensor_id in dead_sensors
+            or a.device_id in dead_devices
+        ):
+            continue
         p = plants.get(a.plant_id)
         out.append(
             Binding(
