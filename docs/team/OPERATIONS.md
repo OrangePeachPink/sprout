@@ -374,6 +374,14 @@ grill rulings, first renders of new user surfaces, ADRs, and hardware.
   (Allowlist/suppression *clears* with fix-landed evidence are V2 — the #1013 precedent.)
 - **External contributions** — a community PR never rides V2; outside contributors always get
   maintainer review.
+  **Record it as a formal GitHub review** (*Files changed → Review changes → **Approve***), not a
+  comment that says "looks good" followed by a merge. Costs nothing, and it is the difference
+  between a contributor being approved and merely being merged: the approval is a first-class event
+  on their PR, it shows in the timeline as a review rather than a remark, and it leaves the record
+  saying who signed off rather than only who clicked merge. A changes-requested review is the same
+  instrument pointed the other way — clearer than a comment thread, and it tells them the ball is in
+  their court without anyone having to say so. Internal lane PRs keep using certification comments;
+  this applies where someone outside the team is waiting to find out whether their work was accepted.
 - **Hardware/bench actions and the maintainer's local config** — her hands, her files.
 - **PII/identifier-adjacent work** — evidence packets carrying captured output, images, or logs;
   identifier-guard/denylist changes; and any issue/PR **text** naming machines, networks, or people.
