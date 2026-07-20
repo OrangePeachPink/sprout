@@ -184,6 +184,17 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      # action-pin-guard (#1346) — every workflow `uses:` is a 40-hex commit SHA with a
+      # version comment. STRUCTURAL only here: offline, instant, no rate limit. The
+      # network half (--resolve, which is what catches an annotated TAG OBJECT pinned in
+      # place of a commit — the failure that reads as a valid pin and only fails at job
+      # startup) runs in the weekly battery, same posture as the external-link check.
+      - id: action-pin-guard
+        name: action-pin-guard (#1346 — workflow actions pinned to a commit SHA)
+        entry: uv run python tools/dx/action_pin_guard.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
   # link-check (#913) — internal-link gate: every relative / GitHub-self link in md+html
   # resolves to a tracked file, and no self-link carries a broken ref (the /blob/HEAD/ class
   # that produced #908's error/404 pages). BLOCKING. uv-native (identifier-guard pattern) not

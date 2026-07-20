@@ -163,3 +163,28 @@ jobs:
         if: steps.lychee.outcome == 'failure'
         run: |
           echo "::warning title=External link(s) unreachable (non-blocking)::lychee found dead external links. Non-blocking (weekly battery, #740) - see the lychee report in the step summary, then fix or file follow-ups."
+
+  # Action-pin resolvability (#1346) — the OTHER network check, same posture as lychee
+  # above. Per-PR we assert only that every `uses:` is a 40-hex SHA (offline, in
+  # pre-commit); here we ask upstream whether each SHA is a real COMMIT. That is what
+  # catches an annotated TAG OBJECT pinned in place of a commit: it looks like a perfectly
+  # good pin in the diff and fails only at job startup, on whatever workflow holds it.
+  # Non-blocking on purpose — a rate limit or an upstream outage must not red the battery
+  # — but it never reports a network failure as a clean pin (it says "not checked").
+  action-pins:
+    name: action pin resolvability — non-blocking
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Verify every pinned action SHA resolves to a commit
+        id: pins
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }} # authenticated = a usable API rate limit
+        run: python tools/dx/action_pin_guard.py --check --resolve
+
+      - name: Surface a non-blocking failure
+        if: steps.pins.outcome == 'failure'
+        run: |
+          echo "::warning title=Action pin does not resolve (non-blocking)::A workflow pins an action SHA that is not a commit in that repo - likely an annotated tag OBJECT. That workflow will fail at job startup with 'unable to find version'. See the step log for the file, line and action."
