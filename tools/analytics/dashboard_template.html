@@ -329,6 +329,23 @@ details.wiring > summary { cursor: pointer; color: var(--muted); font-size: 12px
 .ladrow .here { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip { font-family: var(--font-data); font-size: 11px; font-weight: 600; color: #fff;
   border-radius: var(--r-pill); padding: 1px 8px; }
+/* #627/#717: band-movement row — plant · 7-segment lane · trend · meta. */
+.bmrow { display: grid; grid-template-columns: minmax(90px,150px) 1fr auto auto; align-items: center; gap: 12px; padding: 5px 2px; }
+.bmname { font-family: var(--font-ui); font-weight: 600; font-size: 13px; }
+.bmlane { display: flex; height: 15px; border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
+.bmseg { flex: 1 1 0; min-width: 0; }
+.bmseg.cur { outline: 2px solid var(--ink); outline-offset: -2px; z-index: 1; }
+.bmtrend { font-size: 11px; font-weight: 700; padding: 1px 9px; border-radius: var(--r-pill); border: 1px solid var(--border); white-space: nowrap; }
+.bmtrend.drying { color: var(--st-dry, #E8703A); }
+.bmtrend.wetting { color: var(--leaf); }
+.bmtrend.steady { color: var(--muted); }
+/* #627 phone/icon reduction: collapse to the glyph — name + lane + trend — and
+   drop the prose meta; the 7-seg lane + marker + arrow stays legible small. */
+@media (max-width: 560px){
+  .bmrow { grid-template-columns: 1fr auto; gap: 8px; }
+  .bmrow .bmlane { grid-column: 1 / -1; order: 3; }
+  .bmmeta { display: none; }
+}
 
 /* charts */
 .chartbox { position: relative; height: 340px; }
@@ -368,6 +385,7 @@ table.grid tr:last-child td { border-bottom: none; }
 .dhead .raw { font-family: var(--font-data); font-weight: 600; font-size: 40px; line-height: 1; }
 .dhead .rawu { color: var(--muted); font-size: 12px; }
 .dgrid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg); }
+.dgrid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: var(--space-md); }
 @media (max-width: 820px){ .dgrid2 { grid-template-columns: 1fr; } }
 
 /* headroom gauge */
@@ -380,8 +398,14 @@ table.grid tr:last-child td { border-bottom: none; }
   font-family: var(--font-data); margin-top: 2px; white-space: nowrap; }
 .gauge .row2 { position: relative; height: 18px; margin-top: 2px; }
 
-/* #1147: the reconciled forecast line — quiet chrome under the gauge */
-.fcline { margin-top: 8px; }
+/* forecast cards */
+.fcard { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-tile); padding: var(--space-md); }
+.fcard .ft { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+.fcard .fv { font-family: var(--font-data); font-weight: 600; font-size: 22px; margin: 4px 0 2px; }
+.fcard .fsub { font-size: 12px; color: var(--muted); }
+.fcard.gated { border-style: dashed; }
+.fcard .gate { display: inline-block; font-size: 10px; font-weight: 700; color: var(--muted);
+  border: 1px solid var(--border); border-radius: var(--r-pill); padding: 0 7px; }
 
 /* #922: env-overlay toggle on the detail trajectory (opt-in, faint, context-not-cause) */
 .envctl { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
@@ -546,6 +570,19 @@ footer.prov code { font-family: var(--font-data); }
     </section>
 
     <section class="card">
+      <div class="panel-h"><h2>Watering status</h2><span class="cap">each plant's current band · raw ADC, higher = drier · the band lags raw by ~1 reading on a fast change (anti-flap hysteresis, #678) — read raw for live transients</span></div>
+      <div class="ladder" id="ladder"></div>
+    </section>
+
+    <!-- #627/#717: band movement — which way each plant is heading + how far it
+         has swung across the 7 bands over the window. The human-legible "time
+         dimension" of watering status: position now + discrete trail + trend. -->
+    <section class="card" id="bandMoveCard">
+      <div class="panel-h"><h2>Band movement</h2><span class="cap">which way each plant is heading across the 7 bands — drier ⟶ wetter · discrete steps, not a slope</span></div>
+      <div id="bandMove"></div>
+    </section>
+
+    <section class="card">
       <!-- #718: plain-language title + a one-line "what am I looking at". It's a
            HISTORY view over the header's selected window; the range buttons up top
            control it. Higher = drier; band colours shade behind. -->
@@ -560,10 +597,7 @@ footer.prov code { font-family: var(--font-data); }
        live in Diagnostics & Logs, off Monitor so they stop crowding the bench
        working view. Split: spread + distribution (mid-tier, Design-QA's call) →
        here; quality timeline, data integrity, bench provenance, segment listing →
-       here; fleet groups + cards + ladder + trajectory stay on Monitor.
-       #1142: the watering-status ladder is retired — the Home grid is its
-       replacement (band-at-a-glance, who's-where, urgency lead); raw stays on
-       the Channels cards, boundaries on the Diagnostics cal reference. -->
+       here; fleet groups + cards + ladder + trajectory stay on Monitor. -->
   <div id="diagnostics" style="display:none">
     <!-- #995: the per-physical-sensor health/QA readout (grill Q8) — extends the bench
          SENSOR_QA discipline into the running rig. NOT a plant life-story; a probe QA
@@ -786,7 +820,7 @@ function deviceState(d){
 /* ---- summary cards, grouped per device (#583 / #575's eight rules) ---- */
 function renderCards(){
   const wrap = document.getElementById('cards'); wrap.innerHTML = '';
-  document.getElementById('cardsCap').textContent = 'the reading is raw + band · the band lags raw by ~1 reading on a fast change (anti-flap hysteresis, #678) — read raw for live transients · click a card for the single-plant view';
+  document.getElementById('cardsCap').textContent = 'the reading is raw + band · click a card for the single-plant view';
   const devices = (DASH.devices && DASH.devices.length) ? DASH.devices
     : [{device_id:null, name:'Sprout', sensors: DASH.sensors.map(s=>s.id)}];
   const multi = devices.length > 1;                    // COLLAPSE: one device = today's flat wall
@@ -1008,8 +1042,70 @@ setInterval(() => {
   });
 }, 5000);
 
-// #716: the calibration REFERENCE — band definitions + ratification state, on Diagnostics & Logs. The
-// same band lanes the retired Monitor watering-status view used (#1142), minus live chips (definition, not reading).
+/* ---- calibration ladder ---- */
+function renderLadder(){
+  const wrap = document.getElementById('ladder'); wrap.innerHTML = '';
+  // #803: plant-first chips (never sN@deviceid), and exclude retired-device sensors — they live in
+  // Diagnostics now (#683), so the live watering-status ladder shows only the active plants.
+  const _retired = new Set((DASH.devices||[]).filter(d=>d.retired).map(d=>d.device_id));
+  DASH.cal.bands.forEach(b => {
+    const row = el('div','ladrow');
+    row.style.background = hexA(b.color, 0.10);
+    const sw = el('div','sw'); sw.style.background = b.color; row.appendChild(sw);
+    row.appendChild(el('div', null, `<span class="nm">${b.ui}</span> <span class="uin">${b.fw}</span>`));
+    row.appendChild(el('div','rg', `${fmt(b.lo)} – ${fmt(b.hi)}`));
+    const here = el('div','here');
+    DASH.sensors.filter(s => s.raw_last>=b.lo && s.raw_last<b.hi && !_retired.has(s.device_id)).forEach(s => {
+      const chip = el('span','chip', `${plantLabel(s, {side:true})} ${fmt(s.raw_last)}`); chip.style.background = s.color;
+      here.appendChild(chip);
+    });
+    row.appendChild(here);
+    wrap.appendChild(row);
+  });
+}
+
+// #627/#717: band-movement view — per plant, a 7-segment lane (drier ⟶ wetter)
+// with the TOUCHED-band span lit, a marker at the current band, and a net-trend
+// chip. The human-legible time dimension of watering status: which way is each
+// plant heading + how far has it swung. Discrete + honest — no %, only the bands
+// the plant actually reached. Sorted driest-first so "who's heading to dry" leads.
+function renderBandHistory(){
+  const wrap = document.getElementById('bandMove'); if(!wrap) return; wrap.innerHTML = '';
+  const bh = DASH.band_history || [];
+  const bands = DASH.cal.bands || [];   // dry -> wet, 7 entries with .color/.ui
+  if(!bh.length){
+    wrap.appendChild(el('div','small muted', 'No band-bearing readings yet — nothing to trail (a channel with no plant band is honestly absent here).'));
+    return;
+  }
+  const rows = bh.slice().sort((a,b)=> ((a.current_index==null?9:a.current_index)-(b.current_index==null?9:b.current_index)));
+  rows.forEach(e=>{
+    const row = el('div','bmrow');
+    row.appendChild(el('div','bmname', e.label));
+    const lane = el('div','bmlane'); lane.setAttribute('role','img');
+    lane.setAttribute('aria-label', `${e.label}: now ${e.current.band}, ${(e.trend&&e.trend.dir)||'steady'}`);
+    bands.forEach((b,i)=>{
+      const seg = el('div','bmseg'); seg.style.background = b.color;
+      const inSpan = (i>=e.driest_index && i<=e.wettest_index);
+      seg.style.opacity = inSpan ? '1' : '.26';     // only the touched bands are lit
+      if(i===e.current_index) seg.classList.add('cur');
+      seg.title = b.ui + (i===e.current_index ? ' · now' : '');
+      lane.appendChild(seg);
+    });
+    row.appendChild(lane);
+    const t = e.trend || {};
+    const arrow = t.dir==='drying' ? '↓ drier' : t.dir==='wetting' ? '↑ wetter' : '→ steady';
+    row.appendChild(el('span','bmtrend '+(t.dir||'steady'), arrow));
+    const curUi = (bands[e.current_index] && bands[e.current_index].ui) || e.current.band;
+    const meta = [curUi];
+    if(e.span>0) meta.push(`swung ${e.span} band${e.span===1?'':'s'}`);
+    if(e.rewater) meta.push('since a detected watering');
+    row.appendChild(el('span','small muted bmmeta', meta.join(' · ')));
+    wrap.appendChild(row);
+  });
+}
+
+// #716: the calibration REFERENCE — band definitions + ratification state, on Diagnostics & Logs. Same
+// band lanes as the Monitor watering-status view, minus the live chips (definition, not live reading).
 function renderCalRef(){
   const wrap = document.getElementById('calref'); if(!wrap) return; wrap.innerHTML = '';
   DASH.cal.bands.forEach(b => {
@@ -1478,33 +1574,32 @@ function renderProvenance(){  // #324 bench-evidence panel
 
 function renderOverview(){
   destroyCharts();
-  renderHeader(); renderCards(); renderCalRef();
+  renderHeader(); renderCards(); renderLadder(); renderBandHistory(); renderCalRef();
   renderTraj(); renderSpread(); renderDist();
   renderQuality(); renderIntegrity(); renderProvenance(); renderProv();
   if(!LIVE) applyStaticChannels();
 }
 
 /* ---- single-plant detail view ---- */
-function _etaBit(eta, label){
-  if(!eta) return label + ' —';
+function etaLine(eta, label, caveat){
+  const card = el('div','fcard');
+  card.appendChild(el('div','ft', label));
+  if(!eta){ card.appendChild(el('div','fv','—')); return card; }
+  const band = bandByLo(eta.target);
   if(eta.reachable && eta.hours!=null && eta.hours>0){
-    const rng = (eta.hours_lo!=null && eta.hours_hi!=null) ? ` [${fmtHours(eta.hours_lo)}–${fmtHours(eta.hours_hi)}]` : '';
-    return `${label} ~${fmtHours(eta.hours)}${rng}`;
+    let rng = (eta.hours_lo!=null && eta.hours_hi!=null) ? ` <span class="fsub">[${fmtHours(eta.hours_lo)}–${fmtHours(eta.hours_hi)}]</span>` : '';
+    card.appendChild(el('div','fv', fmtHours(eta.hours)+rng));
+    card.appendChild(el('div','fsub', `to raw ${fmt(eta.target)}${band? ' ('+band.ui+')':''} · +${fmt(eta.headroom)} counts`));
+  } else if(eta.reason==='already past'){
+    card.appendChild(el('div','fv', 'now'));
+    card.appendChild(el('div','fsub', `already at/past raw ${fmt(eta.target)}${band? ' ('+band.ui+')':''}`));
+  } else {
+    card.classList.add('gated');
+    card.appendChild(el('div','fv', '<span class="gate">no estimate yet</span>'));
+    card.appendChild(el('div','fsub', `${eta.reason} · +${fmt(eta.headroom)} counts to raw ${fmt(eta.target)}${band? ' ('+band.ui+')':''}`));
   }
-  if(eta.reason==='already past') return label + ' now';
-  return `${label} — no estimate yet (${eta.reason})`;
-}
-/* #1147: one honest line where three tiles stood. Targets live on the gauge ticks;
-   this line carries only the time estimates + the diurnal readiness word. */
-function forecastLine(f){
-  const bits = [
-    _etaBit(f.next_band, 'next band'),
-    _etaBit(f.thirsty, 'thirsty'),
-    f.diurnal && f.diurnal.ready ? `diurnal ready (${f.diurnal.days}d)` : `diurnal collecting`
-  ];
-  const line = el('div','small muted fcline', bits.join(' · '));
-  line.title = 'extrapolated from the current drying rate, within the active segment · thirsty threshold = the ratified needs-water edge (#1218, per board class)';
-  return line;
+  if(caveat) card.appendChild(el('div','fsub tiny', caveat));
+  return card;
 }
 
 // #725: a plant-first label for the detail nav (prev/next tooltips + picker).
@@ -1570,11 +1665,6 @@ function renderDetail(sid){
   head.appendChild(dh);
   /* headroom gauge */
   head.appendChild(buildGauge(s, f));
-  /* #1147: the reconciled forecast line — the retired tiles' unique content joins the
-     gauge (whose ticks already mark the same targets); the thirsty tile's headline job
-     lives on the Home card's next-need chip + the hero's plain answer. Gates stay
-     honest: no estimate renders as the reason, never a number. */
-  head.appendChild(forecastLine(f));
   /* #714: the wiring map (probe -> GPIO/channel -> board) lives behind an explicit expand — never on the
      glance card, never in the detail header. */
   const wiring = el('details','wiring');
@@ -1582,6 +1672,15 @@ function renderDetail(sid){
   wiring.appendChild(el('div','small muted', [s.probe||s.sensor_id, `GPIO ${s.gpio}`, s.channel, s.device_name && (s.device_side?`${s.device_name} (${s.device_side})`:s.device_name)].filter(Boolean).join(' · ')));
   head.appendChild(wiring);
   det.appendChild(head);
+
+  /* forecasts */
+  const fc = el('section','card');
+  fc.appendChild((()=>{ const h=el('div','panel-h'); h.appendChild(el('h2',null,'Forecasts')); h.appendChild(el('span','cap','extrapolated from the current drying rate — gated until drying is statistically real')); return h; })());
+  const grid = el('div','dgrid3');
+  grid.appendChild(etaLine(f.next_band, 'enters next drier band', null));
+  grid.appendChild(etaLine(f.thirsty, 'thirsty (needs water)', 'threshold = the ratified needs-water edge (#1218, per board class)'));
+  grid.appendChild(diurnalCard(f.diurnal));
+  fc.appendChild(grid); det.appendChild(fc);
 
   /* trajectory + trend */
   const tj = el('section','card');
@@ -1637,6 +1736,20 @@ function buildGauge(s, f){
   if(th) mark(th.target, `thirsty ${fmt(th.target)}`);
   wrap.appendChild(row2);
   return wrap;
+}
+
+function diurnalCard(d){
+  const card = el('div','fcard');
+  card.appendChild(el('div','ft','diurnal cycle / next-day'));
+  if(d.ready){
+    card.appendChild(el('div','fv','ready'));
+    card.appendChild(el('div','fsub', `${d.days} d captured · daily wet/dry shape available`));
+  } else {
+    card.classList.add('gated');
+    card.appendChild(el('div','fv','<span class="gate">collecting</span>'));
+    card.appendChild(el('div','fsub', `${d.reason} · next-day start/end unlocks at ≥2 days`));
+  }
+  return card;
 }
 
 function ratesCard(rates){
