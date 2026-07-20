@@ -62,6 +62,17 @@
       background: color-mix(in srgb, var(--st-due) 14%, transparent);
       border: 1px solid color-mix(in srgb, var(--st-due) 42%, transparent);
     }
+    /* #1334 alpha channel: deliberately NOT a second primary CTA. The opt-in reads as a
+       setting, and the button that appears is visibly secondary — --st-due is the "pay
+       attention" token (same one the unsupported notice uses), never --leaf. */
+    .alpha-optin { display: flex; gap: .55rem; align-items: flex-start; cursor: pointer; }
+    .alpha-optin input { margin-top: .3rem; flex: none; }
+    #alpha-gate { border-color: color-mix(in srgb, var(--st-due) 42%, var(--border)); }
+    button.activate.alpha {
+      background: transparent; color: var(--ink);
+      border: 1px solid color-mix(in srgb, var(--st-due) 60%, transparent);
+    }
+    button.activate.alpha:hover { background: color-mix(in srgb, var(--st-due) 14%, transparent); }
     dl.prov { display: grid; grid-template-columns: auto 1fr; gap: .25rem .75rem; margin: .5rem 0 0; }
     dl.prov dt { font-weight: 600; color: var(--muted); }
     /* --font-data: the token that exists for exactly this — version, git sha, SHA-256, size. */
@@ -90,6 +101,38 @@
         again and pick your board from the list.
       </span>
     </esp-web-install-button>
+  </div>
+
+  <!--
+    #1334 release channels. STABLE is the default and the only thing on offer without a
+    deliberate act: one known-working firmware per cut release. ALPHA is current main —
+    useful to the dev team, not something a visitor should be able to flash by misreading
+    a button. Hence a checkbox that must be ticked to reveal it, not a second button
+    sitting next to Install.
+    The alpha panel stays hidden entirely until manifest-alpha.json is confirmed to exist,
+    so this page never offers a channel that isn't published.
+  -->
+  <div class="card" id="alpha-gate" hidden>
+    <label class="alpha-optin">
+      <input type="checkbox" id="alpha-optin" />
+      <span>Show the alpha channel <span class="muted">— current <code>main</code>, for the
+        dev team. Unexpected results are the point of it.</span></span>
+    </label>
+
+    <div id="alpha-body" hidden>
+      <p class="muted" style="margin:.6rem 0 .4rem">This is not a release. It's whatever
+        <code>main</code> built most recently — it has not been through a release cut, and it may
+        misbehave in ways a stable build won't.</p>
+      <dl class="prov">
+        <dt>Commit</dt><dd id="a-git">—</dd>
+        <dt>Built</dt><dd id="a-built">—</dd>
+      </dl>
+      <div class="install">
+        <esp-web-install-button manifest="./manifest-alpha.json">
+          <button class="activate alpha" slot="activate">Install the alpha build</button>
+        </esp-web-install-button>
+      </div>
+    </div>
   </div>
 
   <div class="card" id="provenance" hidden>
@@ -144,6 +187,25 @@
         if (m.version || p.git || p.sha256) document.getElementById("provenance").hidden = false;
       })
       .catch(() => { /* no manifest yet (e.g. previewing the page alone) — just hide the panel */ });
+
+    // #1334: reveal the alpha channel ONLY if an alpha manifest is actually published.
+    // A visible opt-in for a channel that 404s would be worse than no channel at all —
+    // the reader ticks a box, gets a broken installer, and learns the page lies.
+    fetch("./manifest-alpha.json", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((m) => {
+        const p = m.provenance || {};
+        // Alpha is labelled by its exact COMMIT, never a release version string (#1334) —
+        // calling current main "0.8.1" is precisely the drift this channel split ends.
+        document.getElementById("a-git").textContent = p.git || "unknown commit";
+        document.getElementById("a-built").textContent = p.built_utc || p.built || "—";
+        document.getElementById("alpha-gate").hidden = false;
+        const box = document.getElementById("alpha-optin");
+        box.addEventListener("change", () => {
+          document.getElementById("alpha-body").hidden = !box.checked;
+        });
+      })
+      .catch(() => { /* no alpha published — the gate stays hidden, stable is the only offer */ });
   </script>
 </body>
 </html>
