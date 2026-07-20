@@ -65,7 +65,7 @@ the cross-project core both repos carry.
 | 8 | `logger_version` | host | yes | `plants_logger_0_1` | |
 | 9 | `millis_ms` | dev | yes | `30000` | device monotonic ms since boot; 64-bit via `esp_timer` — no 49.7-day wrap (B4/B5) |
 | 10 | `sensor_model` | dev | yes | `UMLIFE_v2_TLC555` | probe family |
-| 11 | `sensor_id` | dev | yes | `s3` | physical sensor id |
+| 11 | `sensor_id` | dev | yes | `ch0` (v5) · `s3` (≤v4) | the board **channel** at `schema_version>=5`; the retired port sticker below — see the v5 note |
 | 12 | `sensor_position` | dev | yes | `origplant` | placement; all four co-located now |
 | 13 | `channel` | dev | yes | `soil_moisture` | the measured quantity |
 | 14 | `raw_value` | dev | yes | `1493` | ADC counts (trimmed mean) |
@@ -379,6 +379,31 @@ duplicates.
 | column | origin | shared | example | notes |
 | --- | --- | --- | --- | --- |
 | `device_seq` | dev | proposed | `40217` | device-monotonic counter, **survives reconnect** (persists across a buffered/replayed send; resets only on device reboot, same as `session_id`) |
+
+### `sensor_id` at schema_version 5 — the chN rename (#1042 / ADR-0036)
+
+**Fork A, maintainer-ruled 2026-07-19.** The wire's `sensor_id` becomes the firmware
+**channel**; `SENSOR_NAMES`-as-stickers retires; probe↔channel moves to the registry.
+
+| | ≤ v4 | **v5** |
+| --- | --- | --- |
+| `sensor_id` | `s1`..`s4` — the port, *looking like* a sticker | **`ch0`..`ch3`** — the channel, per board |
+| probe↔channel | a flashed firmware constant (immutable) | **the registry** (a probe move is a registry event) |
+| uniqueness | `(device_id, sensor_id)` | **unchanged** — `(device_id, sensor_id)` |
+
+**A wire rename IS a `schema_version` boundary** (never-stitch, ADR-0006 / ADR-0021):
+
+- **v4 rows keep the old token and are NEVER rewritten** — no historical mutation.
+- **v5 rows carry the channel.**
+- A parser tells *from the version* which contract a row was written under, so no row
+  is ambiguous and nothing needs stitching.
+
+Host mirror: `parse_v1.CHANNEL_ID_SCHEMA_VERSION = 5` gates the meaning via
+`Reading.sensor_id_is_channel` — the same version-gated shape as
+`STABLE_ID_SCHEMA_VERSION` (the v3 `device_id` precedent), where the column stays a
+string and only its meaning moves. Note the two vocabularies use **different bases**:
+the sticker was 1-based (`s1`→index 0), the channel is 0-based (`ch0`→index 0), so any
+consumer deriving an index from the token must read the prefix, not the digits alone.
 
 **Dedupe key:** `(device_id, session_id, device_seq, record_type, sensor_id)` — the tuple that
 identifies *this exact reading* independent of how many times its bytes crossed the wire. A store, not
