@@ -30,6 +30,12 @@ on:
 permissions:
   contents: write # attach release assets
 
+# #1346 (maintainer ruling: 6.1.19 everywhere) — same declaration shape as ci.yml,
+# pages.yml and weekly-battery.yml, so `grep PIO_VERSION .github/workflows/` shows the
+# whole fleet and a bump is the same one-line edit in every file.
+env:
+  PIO_VERSION: "6.1.19"
+
 jobs:
   sign:
     name: build + sign factory bins
@@ -92,7 +98,7 @@ jobs:
 
       # Pinned so a re-run of an old tag builds with the same toolchain it shipped with.
       - name: Install PlatformIO
-        run: pip install --quiet platformio==6.1.19
+        run: pip install --quiet "platformio==${PIO_VERSION}"
 
       - name: Build board-aware factory bins (classic + C5)
         working-directory: firmware
