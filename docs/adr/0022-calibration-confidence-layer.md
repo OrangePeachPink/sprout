@@ -78,6 +78,26 @@ cannot share one naive trigger. Profiles are **config/data, not hardcoded**, and
 most conservative** (smallest pulse, longest observe). A profile never *loosens* the safety gates; it only
 tightens dose behavior.
 
+### 5. Cal ownership — Data owns the values, Firmware owns the resolution chain
+
+*(Added 2026-07-20, #963 — the rule was in force but written nowhere, so two lanes re-derived it from first
+principles before anyone noticed it was undocumented. That is the evidence it needed a home.)*
+
+- **The host record is the source of truth for cal values.** An owner-entered calibration is a host-written
+  `Profile` — `(profile_id, name, sensor_type, anchors{air,water}, provenance, tier)` — in the registry.
+- **Channels reference, never copy.** `profile_id` hangs off the per-channel `Assignment`, so re-characterizing
+  a probe moves every channel referencing it together. A private per-channel copy is a defect: it is the same
+  two-truths shape as a second identity path, wearing calibration's clothes. **Cal is per-channel, never
+  per-device.**
+- **The device slot is a projection, not the source.** The runtime-writable NVS slot (#1290) receives what the
+  host pushes; the board still resolves **instance → class → factory** locally and offline, unchanged.
+- **Consequence that decided #963:** the owner-cal wizard writes the registry, which is always reachable, so
+  there is no "board not reachable" state to design — the bench case where a probe is calibrated off-network
+  stops being a degraded path and becomes the normal one.
+
+Ownership is the durable half; the storage location is the changeable half. If the projection mechanism is ever
+replaced, this rule survives it.
+
 ### The promotion gate (the core decision)
 
 `plant-deployed → autonomous-enabled` requires **all** of:
