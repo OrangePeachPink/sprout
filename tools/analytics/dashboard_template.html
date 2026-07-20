@@ -329,6 +329,23 @@ details.wiring > summary { cursor: pointer; color: var(--muted); font-size: 12px
 .ladrow .here { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip { font-family: var(--font-data); font-size: 11px; font-weight: 600; color: #fff;
   border-radius: var(--r-pill); padding: 1px 8px; }
+/* #627/#717: band-movement row — plant · 7-segment lane · trend · meta. */
+.bmrow { display: grid; grid-template-columns: minmax(90px,150px) 1fr auto auto; align-items: center; gap: 12px; padding: 5px 2px; }
+.bmname { font-family: var(--font-ui); font-weight: 600; font-size: 13px; }
+.bmlane { display: flex; height: 15px; border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
+.bmseg { flex: 1 1 0; min-width: 0; }
+.bmseg.cur { outline: 2px solid var(--ink); outline-offset: -2px; z-index: 1; }
+.bmtrend { font-size: 11px; font-weight: 700; padding: 1px 9px; border-radius: var(--r-pill); border: 1px solid var(--border); white-space: nowrap; }
+.bmtrend.drying { color: var(--st-dry, #E8703A); }
+.bmtrend.wetting { color: var(--leaf); }
+.bmtrend.steady { color: var(--muted); }
+/* #627 phone/icon reduction: collapse to the glyph — name + lane + trend — and
+   drop the prose meta; the 7-seg lane + marker + arrow stays legible small. */
+@media (max-width: 560px){
+  .bmrow { grid-template-columns: 1fr auto; gap: 8px; }
+  .bmrow .bmlane { grid-column: 1 / -1; order: 3; }
+  .bmmeta { display: none; }
+}
 
 /* charts */
 .chartbox { position: relative; height: 340px; }
@@ -550,6 +567,14 @@ footer.prov code { font-family: var(--font-data); }
     <section class="card">
       <div class="panel-h"><h2>Channels</h2><span class="cap" id="cardsCap"></span></div>
       <div class="cards" id="cards"></div>
+    </section>
+
+    <!-- #627/#717: band movement — which way each plant is heading + how far it
+         has swung across the 7 bands over the window. The human-legible "time
+         dimension" of watering status: position now + discrete trail + trend. -->
+    <section class="card" id="bandMoveCard">
+      <div class="panel-h"><h2>Band movement</h2><span class="cap">which way each plant is heading across the 7 bands — drier ⟶ wetter · discrete steps, not a slope</span></div>
+      <div id="bandMove"></div>
     </section>
 
     <section class="card">
@@ -1015,8 +1040,48 @@ setInterval(() => {
   });
 }, 5000);
 
-// #716: the calibration REFERENCE — band definitions + ratification state, on Diagnostics & Logs. The
-// same band lanes the retired Monitor watering-status view used (#1142), minus live chips (definition, not reading).
+// #627/#717: band-movement view — per plant, a 7-segment lane (drier ⟶ wetter)
+// with the TOUCHED-band span lit, a marker at the current band, and a net-trend
+// chip. The human-legible time dimension of watering status: which way is each
+// plant heading + how far has it swung. Discrete + honest — no %, only the bands
+// the plant actually reached. Sorted driest-first so "who's heading to dry" leads.
+function renderBandHistory(){
+  const wrap = document.getElementById('bandMove'); if(!wrap) return; wrap.innerHTML = '';
+  const bh = DASH.band_history || [];
+  const bands = DASH.cal.bands || [];   // dry -> wet, 7 entries with .color/.ui
+  if(!bh.length){
+    wrap.appendChild(el('div','small muted', 'No band-bearing readings yet — nothing to trail (a channel with no plant band is honestly absent here).'));
+    return;
+  }
+  const rows = bh.slice().sort((a,b)=> ((a.current_index==null?9:a.current_index)-(b.current_index==null?9:b.current_index)));
+  rows.forEach(e=>{
+    const row = el('div','bmrow');
+    row.appendChild(el('div','bmname', e.label));
+    const lane = el('div','bmlane'); lane.setAttribute('role','img');
+    lane.setAttribute('aria-label', `${e.label}: now ${e.current.band}, ${(e.trend&&e.trend.dir)||'steady'}`);
+    bands.forEach((b,i)=>{
+      const seg = el('div','bmseg'); seg.style.background = b.color;
+      const inSpan = (i>=e.driest_index && i<=e.wettest_index);
+      seg.style.opacity = inSpan ? '1' : '.26';     // only the touched bands are lit
+      if(i===e.current_index) seg.classList.add('cur');
+      seg.title = b.ui + (i===e.current_index ? ' · now' : '');
+      lane.appendChild(seg);
+    });
+    row.appendChild(lane);
+    const t = e.trend || {};
+    const arrow = t.dir==='drying' ? '↓ drier' : t.dir==='wetting' ? '↑ wetter' : '→ steady';
+    row.appendChild(el('span','bmtrend '+(t.dir||'steady'), arrow));
+    const curUi = (bands[e.current_index] && bands[e.current_index].ui) || e.current.band;
+    const meta = [curUi];
+    if(e.span>0) meta.push(`swung ${e.span} band${e.span===1?'':'s'}`);
+    if(e.rewater) meta.push('since a detected watering');
+    row.appendChild(el('span','small muted bmmeta', meta.join(' · ')));
+    wrap.appendChild(row);
+  });
+}
+
+// #716: the calibration REFERENCE — band definitions + ratification state, on Diagnostics & Logs. Same
+// band lanes as the Monitor watering-status view, minus the live chips (definition, not live reading).
 function renderCalRef(){
   const wrap = document.getElementById('calref'); if(!wrap) return; wrap.innerHTML = '';
   DASH.cal.bands.forEach(b => {
@@ -1485,7 +1550,7 @@ function renderProvenance(){  // #324 bench-evidence panel
 
 function renderOverview(){
   destroyCharts();
-  renderHeader(); renderCards(); renderCalRef();
+  renderHeader(); renderCards(); renderBandHistory(); renderCalRef();
   renderTraj(); renderSpread(); renderDist();
   renderQuality(); renderIntegrity(); renderProvenance(); renderProv();
   if(!LIVE) applyStaticChannels();
