@@ -31,6 +31,46 @@ def _fw_version():
         return "0.0.0"
 
 
+# --- release channel + label (#1334) ----------------------------------------
+# An alpha build is a build of `main` between releases. Today it inherits
+# PLANTS_FW_VERSION wholesale, so bytes that are NOT the 0.8.1 release still
+# present themselves as "0.8.1" - and a bug report then names a version that
+# doesn't identify what was running. That is the drift #1334 closes.
+#
+# STABLE is not a claim a build gets to make about itself: it requires HEAD to be
+# exactly a release tag AND the tree to be clean. Everything else is alpha, and an
+# alpha label is built so it CANNOT be mistaken for a release - the "-alpha+<sha>"
+# suffix is structural, not cosmetic, so the exact commit always travels and no
+# bare release version can appear on a non-release build.
+def channel_label(fw_version, exact_tag, dirty):
+    """(channel, version_label) from the config version + git state. Pure - the
+    git calls live in the caller so this is testable without a repo."""
+    if exact_tag and not dirty:
+        return "stable", exact_tag.lstrip("v")
+    suffix = "-alpha"
+    if dirty:
+        suffix = "-alpha-dirty"
+    return "alpha", f"{fw_version}{suffix}"
+
+
+def _exact_tag(root):
+    """The release tag HEAD points AT, or None. --exact-match means a commit that
+    merely descends from a tag is NOT that release."""
+    try:
+        return (
+            subprocess.check_output(
+                ["git", "describe", "--tags", "--exact-match"],
+                cwd=root,
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .strip()
+            or None
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
 def _git_rev():
     """Short HEAD (+ "+dirty") for provenance - mirrors scripts/git_rev.py."""
     root = env.subst("$PROJECT_DIR")  # noqa: F821
@@ -128,9 +168,15 @@ def make_factory(source, target, env):
         )
         return
 
+    root = env.subst("$PROJECT_DIR")
+    rev = _git_rev()
+    channel, version_label = channel_label(
+        _fw_version(), _exact_tag(root), rev.endswith("+dirty")
+    )
+
     manifest = {
         "name": "Sprout",
-        "version": _fw_version(),
+        "version": version_label,
         "new_install_prompt_erase": True,
         "builds": [
             {
@@ -145,15 +191,20 @@ def make_factory(source, target, env):
             "board": mcu,
             "sha256": digest,
             "bytes": size,
-            "git": _git_rev(),
+            "git": rev,
+            # #1334: the channel is explicit, never inferred from the version
+            # string. `release_tag` is None on alpha - a consumer that wants "is
+            # this a release?" asks this, not a regex over the label.
+            "channel": channel,
+            "release_tag": _exact_tag(root),
         },
     }
     manifest_path = os.path.join(build_dir, f"manifest-{mcu}.json")
     with open(manifest_path, "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2)
     print(
-        f"ESP Web Tools manifest ({chip_family}) -> {manifest_path}  "
-        f"(sha256 {digest[:12]}...)"
+        f"ESP Web Tools manifest ({chip_family}, {channel} {version_label}) -> "
+        f"{manifest_path}  (sha256 {digest[:12]}...)"
     )
 
 
