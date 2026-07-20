@@ -107,19 +107,60 @@ const char *cal_tier_label(cal_tier_t tier);
  * Sprout has never seen - so the owner slot is the only mechanism compatible
  * with our own supply chain (#963).
  *
- * This store is IN-RAM and deliberately NOT persisted yet: whether owner cal
- * lives in device NVS or the host registry is an open design decision on #963
- * (ADR-0016 wants cal where actuation decides; ADR-0026 §5 preserves NVS).
- * Persistence drops in behind this same API once that is ruled - callers and
- * the resolution chain do not change either way.
+ * This store is IN-RAM. WHERE the bytes come to rest - device NVS or the host
+ * registry - is still an open design decision on #963 (ADR-0016 wants cal where
+ * actuation decides; ADR-0026 §5 preserves NVS across updates). The CODEC below
+ * is deliberately agnostic to that ruling: both destinations need one stable
+ * encoding, so it exists now and the storage backend drops in behind it.
  *
  * Strings are COPIED into the slot: a runtime record arrives from a parsed
  * command whose buffer does not outlive the call, so storing the caller's
  * pointers would dangle.
  */
+/* Max bytes a slot string holds, terminator included (a longer input truncates). */
+#define CAL_INSTANCE_STR_MAX 32
+
 void cal_instance_set(int channel, const cal_record_t *rec);
 void cal_instance_clear(int channel);
 bool cal_instance_present(int channel);
+
+/* ---- Layer 1 persistence: a storage-AGNOSTIC codec (#963) ---------------- */
+/*
+ * Pack/unpack the whole owner store as one self-describing, CRC'd blob. NVS
+ * writes it as a blob; a host registry can base64 it; neither backend changes
+ * the bytes, so a record written under one is readable under the other.
+ *
+ * FAIL-CLOSED, and that is the whole design. A bad calibration is worse than no
+ * calibration: it silently shifts every band edge, which shifts every watering
+ * decision, and nothing looks broken while it does. So a blob that is truncated,
+ * mis-versioned, CRC-bad, or internally inconsistent restores NOTHING and leaves
+ * the existing store untouched - the chain falls through to the class default
+ * (a valid, bench-measured, monitor-only record). Losing owner cal is a visible
+ * downgrade the owner can redo; applying half a corrupt one is invisible.
+ *
+ * Concretely defended: a power-loss-truncated NVS write, a firmware update that
+ * changes the record layout (ADR-0026 §5 hands the OLD blob to the NEW build),
+ * a blob from a wider-channel board, and anchors that arrive non-descending
+ * (which would break the moisture_classifier contract outright).
+ */
+#define CAL_BLOB_VERSION 1u
+/* Upper bound on cal_instance_serialize() output - size a caller's buffer with
+ * this. header(6) + per-channel(1 + 2 + 2*MOISTURE_BOUNDARY_COUNT
+ * + 2*(1 + CAL_INSTANCE_STR_MAX - 1)) + crc(2). */
+#define CAL_BLOB_MAX                                                           \
+    (6u +                                                                      \
+     CAL_MAX_CHANNELS *                                                        \
+         (3u + 2u * MOISTURE_BOUNDARY_COUNT + 2u * CAL_INSTANCE_STR_MAX) +     \
+     2u)
+
+/* Serialize the owner store into buf. Returns bytes written, or 0 if cap is too
+ * small (never a partial write). An empty store still yields a valid blob. */
+size_t cal_instance_serialize(uint8_t *buf, size_t cap);
+
+/* Restore the owner store from a blob. ALL-OR-NOTHING: returns true only if the
+ * blob fully validated AND was applied; on false the store is exactly as it was.
+ * Parsing stages into a scratch copy and commits only after the last check. */
+bool cal_instance_deserialize(const uint8_t *buf, size_t len);
 
 #ifdef __cplusplus
 }
