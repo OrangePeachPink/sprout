@@ -59,9 +59,32 @@ jobs:
       # The exact released ref - NOT rolling main. This is the defect #1346 exists to close:
       # without `ref:`, a release published from tag vX.Y.Z built whatever main happened to
       # be, then wore the tag's version label.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ steps.tag.outputs.tag }}
+
+      # Requesting the ref fixes the bug; PROVING it is what makes the claim checkable
+      # rather than trusted (Firmware's hunk, #1346). The explicit fetch --tags matters:
+      # without it the likeliest failure is "the tag object isn't local", which would
+      # block a GOOD release at the worst moment - and a gate that fires on its own
+      # plumbing teaches people to disable it.
+      - name: Confirm the checkout IS the released ref
+        id: prov
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          git fetch --tags --force --quiet || true
+          sha="$(git rev-parse HEAD)"
+          tag_sha="$(git rev-list -n1 "$TAG" 2>/dev/null || true)"
+          if [ -z "$tag_sha" ]; then
+            echo "::error title=Cannot prove the ref::$TAG did not resolve to a commit locally. Refusing rather than assuming."
+            exit 1
+          fi
+          if [ "$sha" != "$tag_sha" ]; then
+            echo "::error title=Ref mismatch::HEAD ($sha) is not $TAG ($tag_sha)."
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
@@ -118,6 +141,28 @@ jobs:
           done
           rm -f domain.tag
           shred -u signing.key 2>/dev/null || rm -f signing.key
+
+      # The exact-bytes receipt (#1346). The flasher must serve the RELEASED bytes and be
+      # able to prove it - a rebuild from the same tag is a second build merely *expected*
+      # to match. This records the digest of every published asset alongside the commit
+      # they were built from, so a consumer can check bytes-on-disk against bytes-as-
+      # published without trusting the build to be reproducible.
+      #
+      # The leading '#' line is a comment to `sha256sum -c` (GNU coreutils skips it), so
+      # the file stays directly verifiable: `sha256sum -c SHA256SUMS`.
+      - name: Write the exact-bytes receipt (SHA256SUMS)
+        env:
+          COMMIT: ${{ steps.prov.outputs.sha }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          cd dist
+          # Capture BEFORE writing: `{ ...; } > SHA256SUMS` would create the (empty) file
+          # first, so `*` would glob the receipt into its own manifest and `-c` would then
+          # fail on every release. Verified both forms; this is the one that holds.
+          sums="$(printf '# sprout %s - built from %s\n' "$TAG" "$COMMIT"; sha256sum -- *)"
+          printf '%s\n' "$sums" > SHA256SUMS
+          sha256sum -c SHA256SUMS   # the receipt must describe what is actually here
+          cat SHA256SUMS
 
       - name: Attach artifacts to the release
         env:
