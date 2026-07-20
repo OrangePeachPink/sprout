@@ -3,6 +3,7 @@ the classification-order property that keeps bench evidence out of the delete se
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -13,11 +14,13 @@ from epoch_sweep import (
     KEEP_ADMISSIBLE,
     KEEP_LAB_RECORD,
     PRODUCTION_EPOCH,
+    apply_epoch_stamps,
     classify_file,
     execute_sweep,
     plan_epoch_stamp,
     plan_sweep,
     sweep_is_executable,
+    write_tombstone,
 )
 
 _COLS = (
@@ -56,6 +59,7 @@ def _registry() -> Registry:
 
 WIRED, KNOWN = {"y9d41p"}, {"y9d41p", "bench1"}
 POST = "2026-07-07T01:09:57.000000Z"  # after the epoch
+EPOCH_S = "2026-07-06T00:00:06Z"
 
 
 def test_epoch_is_the_ratified_instant() -> None:
@@ -188,3 +192,78 @@ def test_approved_execute_archives_before_it_deletes(tmp_path: Path) -> None:
     assert r["executed"] is True and r["failures"] == []
     assert not f.exists()  # deleted
     assert (arch / f.name).read_bytes() == before  # ...but preserved verbatim first
+
+
+def test_stamps_are_additive_and_never_overwrite(tmp_path: Path) -> None:
+    # the stamp fills nulls only: an assignment already carrying a start_ts is left
+    # exactly as found, so re-running can't rewrite a recorded interval boundary
+    reg = tmp_path / "devices.local.json"
+    reg.write_text(
+        json.dumps(
+            {
+                "devices": [
+                    {
+                        "device_id": "y9d41p",
+                        "channels": {
+                            "s1": {"plant_id": "p11"},
+                            "s2": {
+                                "plant_id": "p02",
+                                "start_ts": "2026-01-01T00:00:00Z",
+                            },
+                        },
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    plan = {
+        "ok": True,
+        "stamps": [
+            {
+                "device_id": "y9d41p",
+                "channel": "s1",
+                "start_ts": "2026-07-06T00:00:06Z",
+            },
+            {
+                "device_id": "y9d41p",
+                "channel": "s2",
+                "start_ts": "2026-07-06T00:00:06Z",
+            },
+        ],
+        "already_stamped": [],
+    }
+    assert apply_epoch_stamps(reg, plan, approved=False)["written"] is False
+    r = apply_epoch_stamps(reg, plan, approved=True)
+    assert r["written"] is True and r["stamped"] == 1  # only the null one
+    doc = json.loads(reg.read_text(encoding="utf-8"))
+    chans = doc["devices"][0]["channels"]
+    assert chans["s1"]["start_ts"] == "2026-07-06T00:00:06Z"
+    assert chans["s2"]["start_ts"] == "2026-01-01T00:00:00Z"  # untouched
+    assert Path(r["backup"]).is_file()  # restore path exists
+
+
+def test_tombstone_records_hashes_before_removal(tmp_path: Path) -> None:
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    f = _log(logs, "n3jhsp_20260707_010957.csv", "n3jhsp", [POST])
+    plan = {
+        "to_delete": [
+            {
+                "file": f.name,
+                "path": str(f),
+                "devices": ["n3jhsp"],
+                "rows": 1,
+                "first": None,
+                "last": None,
+            }
+        ]
+    }
+    dest = tmp_path / "tombstone.json"
+    doc = write_tombstone(plan, dest, authority="maintainer (#1330)", ruling="A")
+    assert dest.is_file() and doc["n_removed"] == 1
+    e = doc["removed"][0]
+    assert len(e["sha256"]) == 64 and e["size_bytes"] > 0  # recorded while it EXISTS
+    assert "unwired" in e["rule_applied"]
+    assert doc["epoch_ruling"]["production_epoch"].startswith("2026-07-06T00:00:06")
+    assert f.is_file()  # the tombstone itself removes nothing

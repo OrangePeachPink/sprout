@@ -215,6 +215,88 @@ def plan_sweep(
     }
 
 
+def apply_epoch_stamps(
+    registry_path: Path, stamp_plan: dict, *, approved: bool = False
+) -> dict:
+    """Write the ratified epoch as real ``start_ts`` on the open assignments.
+
+    Additive by construction: it only fills assignments whose ``start_ts`` is null,
+    and touches no other field — so an already-stamped or differently-stamped
+    assignment is left exactly as found rather than overwritten. Backs the registry
+    up first (same restore path as #1315). Refuses without ``approved=True``."""
+    if not approved:
+        return {"written": False, "reason": "not approved — the dry-run is the gate"}
+    if not stamp_plan.get("ok"):
+        return {"written": False, "reason": stamp_plan.get("reason", "plan not ok")}
+    if not stamp_plan["stamps"]:
+        return {"written": False, "reason": "nothing to stamp"}
+    path = Path(registry_path)
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    want = {(s["device_id"], s["channel"]): s["start_ts"] for s in stamp_plan["stamps"]}
+    stamped = 0
+    for dev in doc.get("devices", []):
+        for channel, meta in (dev.get("channels") or {}).items():
+            key = (dev.get("device_id"), channel)
+            if key in want and isinstance(meta, dict) and not meta.get("start_ts"):
+                meta["start_ts"] = want[key]
+                stamped += 1
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    backup = path.with_suffix(path.suffix + f".bak-epoch-{ts}")
+    shutil.copy2(path, backup)
+    path.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
+    return {"written": True, "stamped": stamped, "backup": str(backup)}
+
+
+def write_tombstone(plan: dict, dest: Path, *, authority: str, ruling: str) -> dict:
+    """The tombstone manifest — written BEFORE anything is removed (#1330 execution
+    order). Records for every file leaving: path, size, SHA-256, the admissibility
+    rule applied, plus the epoch ruling and the approving authority.
+
+    A deletion that leaves no record is indistinguishable from data loss; this is
+    what makes the removal auditable after the fact."""
+    import hashlib
+
+    entries = []
+    for f in plan["to_delete"]:
+        p = Path(f["path"])
+        digest = None
+        if p.is_file():
+            h = hashlib.sha256()
+            h.update(p.read_bytes())
+            digest = h.hexdigest()
+        entries.append(
+            {
+                "file": f["file"],
+                "path": f["path"],
+                "size_bytes": p.stat().st_size if p.is_file() else None,
+                "sha256": digest,
+                "devices": f["devices"],
+                "rows": f["rows"],
+                "first": f["first"],
+                "last": f["last"],
+                "rule_applied": (
+                    "unwired -> delete (ADR-0037 §2): post-epoch output from a device "
+                    "never registered/wired to a plant is noise, not evidence"
+                ),
+            }
+        )
+    doc = {
+        "tombstone_utc": datetime.now(timezone.utc).isoformat(),
+        "issue": "#1330",
+        "epoch_ruling": {
+            "production_epoch": PRODUCTION_EPOCH.isoformat(),
+            "source": "ADR-0037 (maintainer-ratified)",
+        },
+        "approving_authority": authority,
+        "citation_ruling": ruling,
+        "removed": entries,
+        "n_removed": len(entries),
+    }
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
+    return doc
+
+
 def sweep_is_executable(plan: dict) -> bool:
     """The gate ``execute_sweep`` will not cross: every citation resolves, nothing
     straddles the epoch, and no delete candidate is cited."""
