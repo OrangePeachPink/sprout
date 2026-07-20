@@ -1,0 +1,419 @@
+<!doctype html>
+<!-- #1148 — the EVALUATION SURFACES (the trial route).
+
+     Maintainer ruling (2026-07-19 night): all three round-two concepts get built as live
+     surfaces on real fleet data, evaluated in functional use, and pruned by her keep/prune
+     verdicts. The evaluation-surface rule: these are born as CANDIDATES — a pruned loser
+     needs no confirmation cycle (the evaluation IS its cycle); a survivor graduates to a
+     product surface and only then earns the #1150 retirement protections.
+
+     Placement (Design-QA's call, per the routing): a dedicated /trial route, NOT the Home.
+     The Home stays the product — its three-question card grid is untouched. All three
+     candidates live here side by side, because side-by-side IS how a keep/prune verdict
+     gets formed. Pruning a loser deletes one block from one route: zero product blast radius.
+
+     Honesty posture carried from the concepts:
+       · Raw numerals stay off the candidate surfaces (Workbench-side, unchanged).
+       · Per-plant rows are NEVER comparable by line height — each is its own scale; the
+         caption says so and the y-axis stays unnumbered.
+       · The envelope index is a LABELED INDEX, not a reading, and it names the envelope
+         it is measured against (see the caption — a known limitation is flagged there).
+       · Absence is first-class: a plant with no detected watering says so, never 0 / never ∞.
+
+     Data seam: GET /trial/data.json — ONE payload behind all three candidates
+     (multiplant_history.build_payload, Data's half of the joint build): same window,
+     same plants, same numbers, so a prune verdict compares SURFACES rather than
+     accidental data differences. GET /data.json is read ONLY for the cal ladder's
+     band colours (a lookup). The band itself is the DEVICE-emitted one, passed
+     straight through — this surface never re-thresholds raw into a band, which
+     would author a second band truth able to disagree with the device's own.
+
+     Identity: plant names come pre-resolved from the payload — the plant-first
+     fallback chain lives only in plantLabel() (#925 guard), never re-implemented. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sprout — evaluation surfaces</title>
+<style>
+/*__SPROUT_TOKENS__*/
+</style>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--font-ui); }
+  a { color: inherit; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 18px 24px 64px; }
+
+  .mast { display: flex; align-items: center; gap: 14px; padding: 4px 0 14px; }
+  .mast .word { font-family: var(--font-display); font-weight: 800; font-size: 26px; line-height: 1; }
+  .mast .sub { color: var(--muted); font-size: 13.5px; margin-top: 3px; }
+  .mast nav { margin-left: auto; display: flex; gap: 8px; }
+  .mast nav a { color: var(--muted); text-decoration: none; font-size: 13.5px;
+    border: 1px solid var(--border); border-radius: 999px; padding: 6px 13px;
+    background: var(--surface); }
+  .mast nav a:hover { color: var(--ink); border-color: var(--muted); }
+
+  /* the evaluation register — what is on trial, and how a verdict is rendered */
+  .register { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px 16px 12px; margin: 0 0 20px; }
+  .register h2 { font-family: var(--font-display); font-size: 16px; margin: 0 0 4px; }
+  .register p { margin: 0 0 10px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .register .rows { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 10px; }
+  .rcard { border: 1px solid var(--border); border-radius: 11px; padding: 10px 12px;
+    background: var(--surface-2); }
+  .rcard .rt { font-weight: 700; font-size: 13.5px; margin-bottom: 2px; }
+  .rcard .rj { font-size: 11.5px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: .06em; font-weight: 700; }
+  .rcard .rc { font-size: 12.5px; color: var(--ink); margin-top: 5px; line-height: 1.45; }
+  .cand { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .12em;
+    color: var(--st-predicted); border: 1px solid var(--st-predicted); border-radius: 4px;
+    padding: 1px 6px; vertical-align: 2px; margin-left: 8px; }
+
+  section.surf { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px 18px 14px; margin: 0 0 20px; }
+  section.surf h2 { font-family: var(--font-display); font-size: 17px; margin: 0 0 2px; }
+  section.surf .cap { color: var(--muted); font-size: 12.5px; margin: 0 0 14px;
+    display: block; line-height: 1.5; }
+  .empty { color: var(--muted); font-size: 13px; padding: 18px 2px; }
+
+  /* B — the triage header */
+  .triage { display: flex; gap: 26px; align-items: flex-end; padding: 12px 14px;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 11px;
+    margin: 0 0 14px; flex-wrap: wrap; }
+  .triage .big { font-family: var(--font-display); font-size: 22px; font-weight: 800;
+    line-height: 1.15; }
+  .triage .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: .06em; }
+  .triage .fact { font-size: 12px; color: var(--muted); }
+  .triage .fact b { display: block; font-size: 14.5px; color: var(--ink); font-weight: 700;
+    margin-top: 2px; }
+  .triage .spacer { flex: 1 1 auto; }
+
+  .rowlab { font-size: 12px; font-weight: 600; }
+  svg { display: block; }
+  .foot { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+  .scroller { overflow-x: auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mast">
+    <div>
+      <div class="word">Sprout</div>
+      <div class="sub">evaluation surfaces — three candidates on live fleet data</div>
+    </div>
+    <nav><a href="/">← Home</a><a href="/classic">Workbench →</a></nav>
+  </div>
+
+  <div class="register">
+    <h2>The evaluation register</h2>
+    <p>Three candidate surfaces for the multi-plant history (#1148), built from the round-two
+      concepts and running on real readings. They live here — not on the Home — while you use
+      them. <b>They are candidates, not product:</b> a pruned surface is simply deleted from this
+      route (no confirmation cycle owed — this trial is its cycle); a surface you keep graduates
+      to a product placement and only then earns the #1150 retirement protections.
+      Verdicts go on issue #1148 — keep, prune, or change.</p>
+    <div class="rows">
+      <div class="rcard">
+        <div class="rj">per-plant · diagnosis</div>
+        <div class="rt">A · Rows — line over day-band</div>
+        <div class="rc">Claims: the shape (how fast, how deep, did it plateau) on top of the
+          mood-at-a-glance bar, without decoding.</div>
+      </div>
+      <div class="rcard">
+        <div class="rj">across-plants · act or ignore</div>
+        <div class="rt">B · Everyone's envelope</div>
+        <div class="rc">Claims: one look answers whether the windowsill needs you at all, and
+          bounds the fleet (most recent · longest cycle).</div>
+      </div>
+      <div class="rcard">
+        <div class="rj">per-plant · discrete step-truth</div>
+        <div class="rt">C · The band ledger</div>
+        <div class="rc">Claims: which band, which day, as counted steps — no interpolation
+          between readings.</div>
+      </div>
+    </div>
+  </div>
+
+  <section class="surf">
+    <h2>B · Everyone's envelope<span class="cand">CANDIDATE</span></h2>
+    <span class="cap" id="capB"></span>
+    <div id="triageB"></div>
+    <div class="scroller"><div id="surfB"></div></div>
+    <div class="foot" id="footB"></div>
+  </section>
+
+  <section class="surf">
+    <h2>A · Per-plant rows — the line over its day-band bar<span class="cand">CANDIDATE</span></h2>
+    <span class="cap" id="capA"></span>
+    <div class="scroller"><div id="surfA"></div></div>
+    <div class="foot" id="footA"></div>
+  </section>
+
+  <section class="surf">
+    <h2>C · The band ledger<span class="cand">CANDIDATE</span></h2>
+    <span class="cap" id="capC"></span>
+    <div class="scroller"><div id="surfC"></div></div>
+    <div class="foot" id="footC"></div>
+  </section>
+</div>
+
+<script>
+/* ---- shared helpers -------------------------------------------------------- */
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function el(t,c,h){ var e=document.createElement(t); if(c)e.className=c;
+  if(h!==undefined)e.innerHTML=h; return e; }
+function svgEl(h,w,vb){ return '<svg width="'+w+'" height="'+h+'" viewBox="'+vb+'">'; }
+
+/* Band COLOUR lookup only — fw level -> the ratified band's colour, from the
+   served cal ladder. This is a lookup, never a derivation: the band itself comes
+   from the payload as the DEVICE emitted it (multiplant_history passes band_fw
+   straight through). Deriving a band from raw here would author a second band
+   truth able to disagree with the device's own (which carries the #678 anti-flap
+   hysteresis) — that is exactly the defect this rewire removes. */
+var BANDCOL = {}, BANDUI = {};
+function indexBands(bands){
+  (bands||[]).forEach(function(b){ BANDCOL[b.fw]=b.color; BANDUI[b.fw]=b.ui; });
+}
+function colOf(fw){ return BANDCOL[fw] || "var(--border)"; }
+
+/* the labeled envelope index: 0 = wettest calibrated edge, 1 = the air-dry edge.
+   NOT a reading — a bounded index against the calibrated in-soil ladder. */
+function envIndex(raw, bands){
+  if(raw==null || !bands.length) return null;
+  var dryCeil = bands[0].lo, wetFloor = bands[bands.length-1].lo;
+  if(!(dryCeil>wetFloor)) return null;
+  var v=(raw-wetFloor)/(dryCeil-wetFloor);
+  return Math.max(0, Math.min(1, v));
+}
+function hoursSince(iso){
+  var t=new Date(String(iso||"").replace(" ","T")).getTime();
+  if(!isFinite(t)) return null;
+  var h=(Date.now()-t)/3600000; return h>=0?h:null;
+}
+function elapsed(h){
+  if(h==null) return "—";
+  if(h<1) return Math.max(1,Math.round(h*60))+"m ago";
+  if(h<48) return Math.round(h)+"h ago";
+  return Math.round(h/24)+"d ago";
+}
+
+/* ---- data: ONE payload behind all three (Data's multiplant_history, #1318) ----
+   /data.json is fetched only for the cal ladder's band COLOURS. Every band, every
+   day, every step comes from /trial/data.json exactly as the device emitted it. */
+Promise.all([
+  fetch("/trial/data.json").then(function(r){return r.json();}),
+  fetch("/data.json?range=7d").then(function(r){return r.json();}).catch(function(){return {};})
+]).then(function(res){
+  var pay=res[0], ctx=res[1]||{};
+  indexBands((ctx.cal&&ctx.cal.bands)||[]);
+  var bands=(ctx.cal&&ctx.cal.bands)||[];
+
+  var plants=(pay.plants||[]).map(function(pl){
+    return {
+      pid: pl.plant_id,
+      label: pl.plant_name || pl.plant_id,       /* server-resolved (#925) */
+      n: pl.n_readings,
+      days: (pay.rows||{})[pl.plant_id] || [],
+      steps: (pay.ledger||{})[pl.plant_id] || []
+    };
+  });
+  var withData = plants.filter(function(p){ return p.days.length || p.steps.length; });
+
+  /* the render guarantee Data ships: if any live band lacks a mood mapping, say so
+     rather than rendering a moodless bar and hoping nobody notices. */
+  if(pay.moods_resolved === false){
+    var w=el("div","empty","Heads up: "+(pay.unmapped_bands||[]).join(", ")+
+      " has no mood mapping yet — those segments render neutral until mood-band-map.json covers them.");
+    document.querySelector(".register").appendChild(w);
+  }
+
+  if(!withData.length){
+    ["surfA","surfB","surfC"].forEach(function(id){
+      document.getElementById(id).appendChild(
+        el("div","empty","No band-bearing readings in this window yet — nothing to compare. "+
+           "These surfaces fill in as the fleet reports."));
+    });
+    return;
+  }
+  renderB(withData, pay, bands);
+  renderA(withData);
+  renderC(withData, bands);
+});
+
+/* ============================ B · everyone's envelope ======================== */
+function renderB(plants, pay, bands){
+  var env=pay.envelope||{}, W=1180, H=200, L=64, R=W-16, T=14, Bt=H-30;
+  document.getElementById("capB").textContent =
+    "the collective sawtooth — every plant on one labeled index (drier ↑), detected "+
+    "waterings ticking the baseline. The index is bounded by the calibrated in-soil ladder, not a reading.";
+
+  /* the triage line. by_need leads: the glance is about who needs you NEXT, not who
+     you touched last. by_recency rides the same payload if her verdict flips it. */
+  var order = env.by_need || [];
+  var lastW = env.last_watering, longest = env.longest_cycle;
+  var needy = plants.filter(function(p){
+    var last = p.days.length ? p.days[p.days.length-1] : null;
+    return last && (last.band==="needs water" || last.band==="DRY" || last.band==="air-dry");
+  });
+  var tri=el("div","triage"), head=el("div");
+  head.appendChild(el("div","lbl","TODAY"));
+  head.appendChild(el("div","big", needy.length===0 ? "Nothing needs you."
+    : needy.length+" "+(needy.length===1?"plant wants":"plants want")+" water."));
+  tri.appendChild(head); tri.appendChild(el("div","spacer"));
+  tri.appendChild(el("div","fact","last watering<b>"+
+    (lastW ? esc(days_ago(lastW.days_ago)) : "none detected")+"</b>"));
+  /* the desert-dweller. One record cannot bound a fleet — say so rather than
+     echoing the same plant as both bounds. */
+  tri.appendChild(el("div","fact","longest cycle<b>"+
+    (longest && (env.by_recency||[]).length>1
+      ? esc(days_ago(longest.days_ago))+" · "+esc(longest.plant_name)
+      : "needs 2+ detected")+"</b>"));
+  tri.appendChild(el("div","fact","next up<b>"+
+    (order.length ? esc(order[0].plant_name) : "—")+"</b>"));
+  document.getElementById("triageB").appendChild(tri);
+
+  /* the sawtooths: each plant's day points concatenated on the window's clock */
+  var t0=new Date(pay.t0).getTime(), t1=new Date(pay.t1).getTime(), span=(t1-t0)||1;
+  var sx=function(ms){ return L+((ms-t0)/span)*(R-L); };
+  var sy=function(idx){ return Bt-(1-idx)*(Bt-T); };
+  var s=svgEl(H,W,"0 0 "+W+" "+H);
+  s+='<rect x="'+L+'" y="'+T+'" width="'+(R-L)+'" height="'+(Bt-T)+'" fill="var(--surface-2)" stroke="var(--border)"/>';
+  var thirsty=null;
+  for(var i=0;i<bands.length;i++) if(bands[i].fw==="needs water") thirsty=bands[i];
+  if(thirsty){
+    var ty=sy(envIndex(thirsty.lo,bands));
+    s+='<line x1="'+L+'" y1="'+ty+'" x2="'+R+'" y2="'+ty+'" stroke="var(--band-drying)" stroke-width="1" stroke-dasharray="4 4"/>';
+    s+='<text x="'+(L+6)+'" y="'+(ty-5)+'" font-size="9.5" fill="var(--band-drying)">thirsty edge</text>';
+  }
+  s+='<text x="8" y="'+(T+12)+'" font-size="10" fill="var(--muted)">drier ↑</text>';
+  s+='<text x="8" y="'+Bt+'" font-size="10" fill="var(--muted)">wetter ↓</text>';
+  var PAL=["#8FA3B0","#7E9B6B","#6E7B86","#B98F6F","#9AA6A0","#A59E93","#C08A6A","#7C6A4E"];
+  plants.forEach(function(p,pi){
+    var dd="", any=false;
+    p.days.forEach(function(day){
+      var mid=new Date(day.date+"T00:00:00Z").getTime();
+      (day.points||[]).forEach(function(pt){
+        var idx=envIndex(pt.raw,bands); if(idx==null) return;
+        var ms=mid+pt.h*3600000;
+        dd+=(any?" L":"M")+sx(ms).toFixed(1)+" "+sy(idx).toFixed(1); any=true;
+      });
+    });
+    if(any) s+='<path d="'+dd+'" fill="none" stroke="'+PAL[pi%PAL.length]+'" stroke-width="1.6" opacity="0.62"/>';
+  });
+  /* every detected pass — the household's rhythm, not just the latest per plant */
+  (env.passes||[]).forEach(function(t){
+    var ms=new Date(t.t||t).getTime(); if(!isFinite(ms)) return;
+    var x=sx(ms);
+    s+='<line x1="'+x.toFixed(1)+'" y1="'+(Bt+4)+'" x2="'+x.toFixed(1)+'" y2="'+(Bt+12)+'" stroke="var(--st-watering)" stroke-width="2.5"/>';
+  });
+  s+='<text x="'+L+'" y="'+(H-6)+'" font-size="9.5" fill="var(--muted)">every detected watering, all plants ('+
+     ((env.n_passes!=null)?env.n_passes:0)+' in this window) — clusters are a watering round; gaps are a quiet stretch</text>';
+  s+='</svg>';
+  document.getElementById("surfB").innerHTML=s;
+  document.getElementById("footB").innerHTML =
+    "Ink order: <b>by need</b> (who needs you next). The payload also carries <code>by_recency</code> — "+
+    "a render switch, not a rebuild, if you'd rather the glance lead with what you touched last. "+
+    "Index bounded by the shared calibrated ladder; per-board envelopes sharpen it when those bounds land.";
+}
+function days_ago(d){
+  if(d==null) return "—";
+  if(d<1) return Math.max(1,Math.round(d*24))+"h ago";
+  return (d<10?(Math.round(d*10)/10):Math.round(d))+"d ago";
+}
+
+/* ============================ A · per-plant rows ============================= */
+function renderA(plants){
+  document.getElementById("capA").textContent =
+    "one row per plant: the moisture line (drier ↑) over its own day-band bar. "+
+    "The bar is the day's dwell-dominant band — the band the plant actually spent the day in.";
+  var W=1180, L=140, R=W-16, CH=42, BARH=10, GAP=3, PITCH=CH+GAP+BARH+24;
+  var H=26+plants.length*PITCH;
+  var s=svgEl(H,W,"0 0 "+W+" "+H);
+
+  plants.forEach(function(p,r){
+    var T=22+r*PITCH, barY=T+CH+GAP, days=p.days;
+    s+='<rect x="'+L+'" y="'+T+'" width="'+(R-L)+'" height="'+CH+'" fill="var(--surface-2)"/>';
+    s+='<text x="'+(L-8)+'" y="'+(T+CH/2+4)+'" font-size="12" font-weight="600" text-anchor="end" fill="var(--ink)">'+esc(p.label)+'</text>';
+    if(!days.length){
+      s+='<text x="'+(L+10)+'" y="'+(T+CH/2+4)+'" font-size="11.5" fill="var(--muted)">no readings in this window</text>';
+      return;
+    }
+    var n=days.length, dw=(R-L)/n;
+    days.forEach(function(day,i){
+      /* the DEVICE-emitted dwell-dominant band; a dayless band renders neutral,
+         never a guessed colour */
+      s+='<rect x="'+(L+i*dw).toFixed(1)+'" y="'+barY+'" width="'+dw.toFixed(1)+'" height="'+BARH+'" fill="'+esc(colOf(day.band))+'"/>';
+      if(i>0) s+='<line x1="'+(L+i*dw).toFixed(1)+'" y1="'+T+'" x2="'+(L+i*dw).toFixed(1)+'" y2="'+(T+CH)+'" stroke="var(--border)" opacity="0.5"/>';
+    });
+    /* the shape lane — this row's OWN scale, never comparable across rows */
+    var raws=[];
+    days.forEach(function(day){ (day.points||[]).forEach(function(pt){ if(pt.raw!=null) raws.push(pt.raw); }); });
+    if(!raws.length) return;
+    var lo=Math.min.apply(null,raws), hi=Math.max.apply(null,raws);
+    if(!(hi>lo)) hi=lo+1;
+    var dd="", any=false;
+    days.forEach(function(day,i){
+      (day.points||[]).forEach(function(pt){
+        if(pt.raw==null) return;
+        var x=L+(i+Math.min(1,pt.h/24))*dw;
+        var y=(T+CH-3)-((pt.raw-lo)/(hi-lo))*(CH-6);   /* drier (higher raw) = up */
+        dd+=(any?" L":"M")+x.toFixed(1)+" "+y.toFixed(1); any=true;
+      });
+    });
+    if(any) s+='<path d="'+dd+'" fill="none" stroke="var(--ink)" stroke-width="1.8"/>';
+  });
+  s+='</svg>';
+  document.getElementById("surfA").innerHTML=s;
+  document.getElementById("footA").innerHTML =
+    "↑ drier · each row is drawn on its OWN scale — rows are never comparable by line height, "+
+    "and the axis stays unnumbered on purpose (raw numbers live on the Workbench). "+
+    "Each bar segment is the day's <b>dwell-dominant</b> band, so one late blip can't rename a day.";
+}
+
+/* ============================ C · the band ledger =========================== */
+function renderC(plants, bands){
+  document.getElementById("capC").textContent =
+    "one mini-ladder per plant, wet at the bottom · a dot per band step the plant actually "+
+    "walked, in that band's full colour on the desaturated ladder · the last step is ringed.";
+  var perW=176, gap=14, H=210, top=26, rung=(H-top-40)/(bands.length||7);
+  var W=Math.max(1180, plants.length*(perW+gap));
+  var s=svgEl(H,W,"0 0 "+W+" "+H);
+  var idxOf={}; bands.forEach(function(b,i){ idxOf[b.fw]=i; });
+
+  plants.forEach(function(p,i){
+    var x0=i*(perW+gap)+8;
+    s+='<text x="'+(x0+perW/2)+'" y="16" font-size="11.5" font-weight="600" text-anchor="middle" fill="var(--ink)">'+esc(p.label)+'</text>';
+    s+='<g opacity="0.18">';
+    bands.forEach(function(b,bi){
+      s+='<rect x="'+x0+'" y="'+(top+bi*rung).toFixed(1)+'" width="'+perW+'" height="'+rung.toFixed(1)+'" fill="'+esc(b.color)+'"/>';
+    });
+    s+='</g>';
+    /* the ordered steps the plant actually walked — exact transition timestamps
+       from the event table, never day-bucketed and never interpolated */
+    var steps=p.steps||[];
+    if(!steps.length){
+      s+='<text x="'+(x0+perW/2)+'" y="'+(top+rung*3.5)+'" font-size="10.5" fill="var(--muted)" text-anchor="middle">no band steps yet</text>';
+      return;
+    }
+    var n=steps.length, step=perW/(n+1);
+    steps.forEach(function(st,si){
+      var bi=idxOf[st.band]; if(bi==null) return;
+      var cx=x0+step*(si+1), cy=top+bi*rung+rung/2, last=(si===n-1);
+      s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(last?5.4:4.5)+'" fill="'+esc(colOf(st.band))+'"'+
+         (last?' stroke="var(--ink)" stroke-width="1.6"':'')+'/>';
+    });
+  });
+  s+='</svg>';
+  document.getElementById("surfC").innerHTML=s;
+  document.getElementById("footC").innerHTML =
+    "wet at the bottom (the #1263 vertical convention) · the dot IS the mood colour, the ground "+
+    "is only the ladder it sits on · ringed = the most recent step. Steps come from the event "+
+    "table at their exact transition times — no interpolation between readings.";
+}
+</script>
+</body>
+</html>

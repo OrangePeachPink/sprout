@@ -59,6 +59,7 @@ from dashboard import (  # noqa: E402  (sibling import)
     gather_inputs,
     render,
     render_home,
+    render_trial,
 )
 from device_registry import load_registry  # noqa: E402  (the fleet config, #486)
 from experiments_catalog import (  # noqa: E402  (Lab #154; #444 combined source)
@@ -734,6 +735,17 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self._send(_empty_state_html(False), "text/html; charset=utf-8")
                 else:
                     self._send(render_home(), "text/html; charset=utf-8")
+            elif parsed.path == "/trial/data.json":  # #1148 the evaluation substrate
+                # ONE payload behind all three candidates (multiplant_history,
+                # Data's half): same window, same plants, same numbers — so a prune
+                # verdict compares SURFACES, not accidental data differences.
+                import multiplant_history
+
+                self._send_json(multiplant_history.build_payload())
+            elif parsed.path == "/trial":  # #1148 the evaluation surfaces
+                # Shell-only like /classic (#1018): the page hydrates itself from
+                # /data.json + /cards.json, so no pipeline run to hand back HTML.
+                self._send(render_trial(), "text/html; charset=utf-8")
             elif parsed.path == "/classic":
                 # The Workbench — "Classic Sprout" (ADR-0033): the numeric
                 # instrument behind Home, retired piece-by-piece as the new design
