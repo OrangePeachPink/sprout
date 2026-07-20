@@ -1197,7 +1197,7 @@ def build_context(
         # #577 (ADR-0023 §3): pressure is the EXTERIOR-family exception - a
         # separate quantity with its own per-quantity tag, kept distinct from
         # the interior ambient block above so the UI can mark it as exterior.
-        # Same value+tag-together honesty; honest-empty when the cache ages out
+        # Same value+tag-together rule; calm-empty when the cache ages out
         # (the fill layer #567 writes nothing when stale -> this stays None).
         pressure = None
         if last.pressure_context_source and last.pressure_context_hpa is not None:

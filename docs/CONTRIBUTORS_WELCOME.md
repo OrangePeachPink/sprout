@@ -16,8 +16,11 @@ community than owned by a small team.
 **We promise only what we can test.** Everything here is explicitly contributor territory, not a core-team
 deliverable — which is exactly why your PR matters.
 
-> **Status:** seeded pre-release. At public launch, each item becomes a labeled **`help wanted`** /
-> **`good first issue`** issue. Until then, this is the durable idea list.
+> **Status:** the repo is public and open to contributions **right now** — outside contributors have
+> already landed merged PRs here. What's still ahead is the public *launch push*, not your ability to
+> take part. These live as a durable idea list rather than a wall of labeled issues because the list
+> outlives any one milestone — but if you want one turned into a real, grabbable issue, say so on it
+> and we'll label it.
 
 ## How it works
 
@@ -54,7 +57,7 @@ deliverable — which is exactly why your PR matters.
 
 Surfaced a "designed-for, not core-committed" idea in a discussion? **Add a bullet here and sign it** — name the
 seam if you know it, plus a one-line "how to start." This page is meant to *grow*: the ideas that escaped memory
-belong here too. At launch, each becomes a labeled `help wanted` issue you can grab.
+belong here too. Ask and we'll label one `help wanted` so you can grab it — no need to wait for launch.
 
 ## Wear the badge
 

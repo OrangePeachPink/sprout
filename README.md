@@ -79,8 +79,9 @@ index.
 
 **Today — the live dashboard.** One command (`just start`) serves this: a functional **Monitor · Capture ·
 Lab** view — raw ADC and the calibrated band for every probe, plus the calibration ladder. Plain and
-unpolished on purpose, and it shows exactly what it reads: probes in dry air show **Parched**, probes sitting
-in water show **Drowning**, because the dashboard shows what the capture actually contains.
+unpolished on purpose, and it shows exactly what it reads: a probe sitting in open air or in a glass of water
+is called out as an **instrument condition**, not handed a plant's mood — those aren't soil readings, and the
+seven moods are reserved for probes actually in a pot.
 
 <p align="center">
   <img src="docs/design/brand/readme-dashboard.png"
