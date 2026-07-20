@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" />
+    href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono&display=swap" />
   <!-- Sprout design tokens (same-origin) — one brand vocabulary with the front-door hub (#271). -->
   <link rel="stylesheet" href="../design/tokens/sprout-tokens.css" />
   <script
@@ -64,11 +64,12 @@
     }
     dl.prov { display: grid; grid-template-columns: auto 1fr; gap: .25rem .75rem; margin: .5rem 0 0; }
     dl.prov dt { font-weight: 600; color: var(--muted); }
-    dl.prov dd { margin: 0; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; word-break: break-all; }
+    /* --font-data: the token that exists for exactly this — version, git sha, SHA-256, size. */
+    dl.prov dd { margin: 0; font-family: var(--font-data); word-break: break-all; }
     .muted { color: var(--muted); font-size: .92rem; }
     ol { padding-left: 1.2rem; }
     a { color: var(--leaf); }
-    code { font-family: ui-monospace, Consolas, monospace; }
+    code { font-family: var(--font-data); }
   </style>
 </head>
 <body>
