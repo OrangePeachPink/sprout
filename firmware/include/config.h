@@ -35,7 +35,14 @@ const int SENSOR_PINS[NUM_SENSORS] = {
 // All four go in the ONE original recovering plant for now -> a cross-probe
 // agreement test (how much do 4 probes in the same soil disagree over a run).
 // Per-channel name = the physical sensor id (short, space-free).
-constexpr const char *SENSOR_NAMES[NUM_SENSORS] = {"s3", "s4", "s1", "s2"};
+// ADR-0036 (ratified 2026-07-19, Fork A): these are the FIRMWARE CHANNEL layer -
+// a board port / ADC lane - and they are what the wire `sensor_id` carries. They
+// are NOT probe stickers. The old {s3,s4,s1,s2} encoded a MUTABLE probe<->channel
+// binding in an IMMUTABLE flashed constant, so moving a probe silently mislabelled
+// the wire until reflash, and per-board s1..s4 collided fleet-wide. Probe identity
+// now lives in the registry (a probe move is a registry event); a reading stays
+// unique as (device_id, sensor_id), exactly as before.
+constexpr const char *SENSOR_NAMES[NUM_SENSORS] = {"ch0", "ch1", "ch2", "ch3"};
 // Throwaway reads after switching the ADC mux to a channel (S/H settle).
 constexpr int ADC_DISCARD = 4;
 // Free-text run label for the log header - set per deployment.
@@ -55,7 +62,11 @@ constexpr const char *RUN_LABEL = "4probe-coloc-origplant";
 //   SENSOR_FAULT quality_flag value + fault= reason (#670). v4 is a strict superset
 //   of v3 - all additive payload/header, ZERO new CANONICAL_COLUMNS (the companion
 //   shared-core stays byte-identical); parse_v1 branches once at >=4, never stitches.
-constexpr int PLANTS_SCHEMA_VERSION = 4;
+// v5 (#1042 / ADR-0036): the `sensor_id` rename is a SCHEMA BOUNDARY, not an
+// in-place edit (never-stitch, ADR-0006 / ADR-0021). v4 rows carry the old
+// port-as-sticker token; v5 rows carry the channel. Old rows are never rewritten,
+// and a parser can tell from the version which contract a row was written under.
+constexpr int PLANTS_SCHEMA_VERSION = 5;
 constexpr const char *RECORD_TYPE_SOIL = "plants.soil";       // namespaced record_type
 constexpr const char *SENSOR_MODEL     = "UMLIFE_v2_TLC555";  // probe family
 constexpr const char *SENSOR_POSITION  = "origplant";        // all four co-located now; per-channel at repot

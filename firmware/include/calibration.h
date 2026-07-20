@@ -10,7 +10,9 @@
  * (Firmware owns this FORMAT + the g_mcfg[ch].boundary wiring + the pinning
  * native test; Data owns the values + their provenance — see #170.)
  *
- * Per-channel-as-installed: ch0=s3 ch1=s4 ch2=s1 ch3=s2 (config.h SENSOR_NAMES).
+ * Per-channel-as-installed, keyed by CHANNEL. ADR-0036: the probe<->channel
+ * binding (which physical sticker sits in which port) lives in the REGISTRY, not
+ * here - a probe move is a registry event, never a reflash.
  * A probe<->channel swap INVALIDATES this table -> re-measure (run_meta
  * sensor_position, #321, records which probe sits on which channel).
  *

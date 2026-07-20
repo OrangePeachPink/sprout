@@ -1015,7 +1015,7 @@ void t_soil_row_time_provenance(void)
         "0.7.0",
         123456ULL,
         "UMLIFE_v2_TLC555",
-        "s3",
+        "ch0",
         "origplant",
         "soil_moisture",
         36,
@@ -1048,7 +1048,7 @@ void t_soil_row_time_provenance(void)
         "0.7.0",
         123456ULL,
         "UMLIFE_v2_TLC555",
-        "s3",
+        "ch0",
         "origplant",
         "soil_moisture",
         36,
@@ -1325,18 +1325,18 @@ void t_cal_ch_line(void)
 
     /* full line, ch0 values straight from calibration.h */
     int n = telemetry_format_cal_ch(
-        buf, sizeof(buf), "s3", SENSOR_CAL_BOUNDARY[0], MOISTURE_BOUNDARY_COUNT,
-        SENSOR_CAL_SRC, SENSOR_CAL_DATE, SENSOR_CAL_CONFIDENCE,
-        SENSOR_CAL_SCOPE);
+        buf, sizeof(buf), "ch0", SENSOR_CAL_BOUNDARY[0],
+        MOISTURE_BOUNDARY_COUNT, SENSOR_CAL_SRC, SENSOR_CAL_DATE,
+        SENSOR_CAL_CONFIDENCE, SENSOR_CAL_SCOPE);
     TEST_ASSERT_TRUE_MESSAGE(n > 0, "cal_ch line formatted");
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
-        "# cal_ch s3: bounds=2293,2086,1879,1636,1393,1150 "
+        "# cal_ch ch0: bounds=2293,2086,1879,1636,1393,1150 "
         "src=wet_rederive_1236 date=2026-07-19 confidence=provisional "
         "scope=channel",
         buf, "exact wire format the #507 parser reads");
 
     /* absent date: key omitted entirely, not printed empty */
-    n = telemetry_format_cal_ch(buf, sizeof(buf), "s2", SENSOR_CAL_BOUNDARY[3],
+    n = telemetry_format_cal_ch(buf, sizeof(buf), "ch3", SENSOR_CAL_BOUNDARY[3],
                                 MOISTURE_BOUNDARY_COUNT, "manual", NULL,
                                 "provisional", "channel");
     TEST_ASSERT_TRUE_MESSAGE(n > 0, "dateless cal_ch line formatted");
@@ -1348,7 +1348,7 @@ void t_cal_ch_line(void)
     /* truncation is reported, never a silently-clipped line */
     char tiny[24];
     TEST_ASSERT_EQUAL_MESSAGE(-1,
-                              telemetry_format_cal_ch(tiny, sizeof(tiny), "s3",
+                              telemetry_format_cal_ch(tiny, sizeof(tiny), "ch0",
                                                       SENSOR_CAL_BOUNDARY[0],
                                                       MOISTURE_BOUNDARY_COUNT,
                                                       "x", "y", "z", "w"),
@@ -1557,7 +1557,7 @@ void t_soil_row_v4(void)
         "0.7.0",
         123456ULL,
         "UMLIFE_v2_TLC555",
-        "s3",
+        "ch0",
         "origplant",
         "soil_moisture",
         36,

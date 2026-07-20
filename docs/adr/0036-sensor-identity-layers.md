@@ -1,10 +1,11 @@
 # ADR-0036 — Sensor-identity layers: sticker · channel · wire `sensor_id` · display
 
-**Status:** Proposed — *the layer model and the "wire carries the channel, not the probe" rule are decidable from
-[ADR-0027](0027-identity-model.md) §5 and ruled here (Trellis). The **naming scheme** for the wire channel + the
-migration (§"The one maintainer ruling") await the maintainer's word per #1042 ("maintainer decides the rename").
-A wire rename is a `schema_version` boundary (never-stitch, ADR-0006 / ADR-0021), so **nothing changes on the wire
-until she rules.** V1 (ADR/doctrine + wire contract).*
+**Status:** Accepted — *the layer model and the "wire carries the channel, not the probe" rule are decidable from
+[ADR-0027](0027-identity-model.md) §5 and ruled here (Trellis). **The naming scheme is RULED (maintainer,
+2026-07-19, #1042): Fork A — `chN`.** The wire `sensor_id` carries `ch0..ch3` per board. A wire rename is a
+`schema_version` boundary (never-stitch, ADR-0006 / ADR-0021), so the rename lands at **`schema_version=5`**:
+v4 rows keep the old port-as-sticker token and are **never rewritten**, v5 rows carry the channel. V1
+(ADR/doctrine + wire contract).*
 **Date:** 2026-07-19
 **Owner:** Trellis (the ADR + the layer model). Cross-lane at build: **Firmware** (`SENSOR_NAMES` emission +
 parser), **Data** (parser + registry `channels{}` keys), **Design-QA** (display resolution).
@@ -75,11 +76,15 @@ ADR-0021). Old rows keep their old meaning under their old `schema_version`; the
 version, and `parse_v1` handles both (ADR-0021's versioned dispatch — already the pattern). No historical rows are
 rewritten.
 
-## The one maintainer ruling (📌 — the naming scheme; queued, non-blocking)
+## The naming ruling — RULED (maintainer, 2026-07-19, #1042): **Fork A — `chN`**
 
-The *layer model* above is ruled. What is **hers** per #1042 ("maintainer decides the rename") is the **wire
-channel's naming + the migration**, because it touches her operational model and the wire contract. Three forks —
-Trellis recommends **A**:
+**Decided.** The wire `sensor_id` carries the **channel** as `ch0..ch3` per board, fleet-unique as
+`(device_id, sensor_id)`. Sticker↔channel lives in the registry; the display resolves it; a probe move is a
+registry event, never a reflash. Landed at **`schema_version=5`** (never-stitch: v4 rows keep the old
+port-as-sticker token and are never rewritten).
+
+The forks below are retained as the **rationale that produced the ruling**, not as an open question — a
+living-doc record of what was weighed. Trellis recommended **A**; the maintainer confirmed it explicitly.
 
 - **Fork A — channel-explicit (recommended).** `sensor_id` = the channel, named `ch0..ch3` (fleet-unique as
   `device_id` + `sensor_id`). Sticker↔channel lives in the registry; display resolves. **Ends the overload
@@ -97,7 +102,8 @@ Trellis recommends **A**:
 **Trellis recommendation: A** — it is the literal realization of ADR-0027 §5 (*"the pin is a lookup; the
 maintainer thinks in probes"*), it turns a probe-move into a registry event instead of a reflash, and it is the
 only fork that *ends* the overload rather than managing it. B keeps the reflash-on-move fragility; C buys
-convenience at the cost of a second identity to reconcile. **No wire changes until this is ruled.**
+convenience at the cost of a second identity to reconcile. ~~No wire changes until this is ruled.~~ —
+**ruled 2026-07-19 (Fork A); the wire change shipped under `schema_version=5` (#1042).**
 
 ## Consequences
 
@@ -119,9 +125,9 @@ convenience at the cost of a second identity to reconcile. **No wire changes unt
 
 ## Open (routed)
 
-- **Maintainer** — rule the naming scheme (Fork A / B / C) + the migration timing (📌 above). One line, or a
-  short v0.8.0-session question; the build waits on it.
-- **`for:firmware`** — on ruling: `SENSOR_NAMES` emission + parser under a bumped `schema_version`.
+- ~~**Maintainer** — rule the naming scheme + migration timing.~~ **CLOSED — ruled 2026-07-19 (Fork A, `chN`).**
+- ~~**`for:firmware`** — on ruling: `SENSOR_NAMES` emission under a bumped `schema_version`.~~ **DONE (#1042):**
+  `SENSOR_NAMES` → `{ch0..ch3}`, `PLANTS_SCHEMA_VERSION` 4 → 5.
 - **`for:data`** — the parser + registry `channels{}` keys align to the ruled scheme; never-stitch at the boundary.
 - **`for:design`** — the display resolves channel → sticker/plant via the registry (the #921 display half already
   does the label side).
