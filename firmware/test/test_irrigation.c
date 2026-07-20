@@ -16,6 +16,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <unity.h>
+#include "fw_verify.h"
+#include "monocypher-ed25519.h"
 #include "irrigation.h"
 #include "serial_cmd.h"
 #include "pump_pulse.h"
@@ -347,6 +349,100 @@ static moisture_level_t band_of(uint16_t raw)
     moisture_state_t st;
     moisture_init(&st, &cfg, raw);
     return st.committed;
+}
+
+/* ===== #302 S1: the ed25519 firmware-signature primitive (#1282) ============
+ * Vectors are REAL: generated with openssl ed25519 over the domain-separated
+ * message the CI signer produces ("sprout-fw\x00" || image). Throwaway key. */
+/* GENERATED KAT (openssl ed25519). Throwaway test key - NOT the release key. */
+static const uint8_t KAT_PUBKEY[32] = {
+    0xca, 0x3a, 0x30, 0x07, 0x09, 0x03, 0x4a, 0xb1, 0xa0, 0xe5, 0xbb,
+    0x29, 0x95, 0x62, 0xb3, 0x46, 0xa3, 0x61, 0x5b, 0xe1, 0x75, 0x22,
+    0xd4, 0xdc, 0x16, 0x16, 0x5f, 0xbc, 0x61, 0x07, 0x0e, 0x2d};
+static const uint8_t KAT_IMAGE[] = {0x53, 0x50, 0x52, 0x4f, 0x55, 0x54, 0x2d,
+                                    0x4b, 0x41, 0x54, 0x2d, 0x49, 0x4d, 0x41,
+                                    0x47, 0x45, 0x2d, 0x76, 0x31};
+static const uint8_t KAT_SIG[64] = {
+    0xa9, 0x3b, 0x79, 0xa4, 0xec, 0xe3, 0xcb, 0xd7, 0x16, 0xdc, 0x32,
+    0x00, 0xd0, 0xdb, 0xc4, 0xdb, 0x6e, 0x4d, 0x10, 0x00, 0x5d, 0x0e,
+    0xc2, 0x8a, 0x04, 0x2d, 0x4c, 0x85, 0xb2, 0xf4, 0x53, 0x7d, 0xd5,
+    0x4b, 0x1f, 0x05, 0xc9, 0x77, 0xfc, 0xa0, 0xc1, 0x71, 0xcd, 0x4f,
+    0x54, 0xd7, 0xdb, 0xf2, 0xc8, 0xab, 0x17, 0x6e, 0x35, 0x61, 0x69,
+    0xe7, 0x9a, 0x74, 0x3c, 0x01, 0x27, 0xfd, 0xb8, 0x01};
+static const uint8_t KAT_SIG_BARE[64] = {
+    0xa4, 0x62, 0xdb, 0xcb, 0xd5, 0x66, 0x21, 0x2e, 0x84, 0xed, 0x74,
+    0x4e, 0x91, 0xa0, 0x85, 0xef, 0xf7, 0xa4, 0xb5, 0xad, 0xd9, 0x45,
+    0xde, 0x26, 0x21, 0xea, 0x04, 0x3f, 0x00, 0x90, 0x96, 0xed, 0xbb,
+    0x0d, 0x84, 0xeb, 0x07, 0xcc, 0xf0, 0xcb, 0xf7, 0x2b, 0x07, 0xf6,
+    0x39, 0x0d, 0xb3, 0x52, 0xb8, 0xb6, 0x62, 0xe2, 0xdc, 0x06, 0x0f,
+    0x82, 0xdc, 0x56, 0x47, 0x11, 0x6f, 0xe9, 0x37, 0x02};
+
+void t_fw_verify_ed25519(void)
+{
+    const size_t n = sizeof(KAT_IMAGE);
+
+    /* 1. the happy path - a genuine release signature */
+    TEST_ASSERT_TRUE_MESSAGE(
+        sprout_fw_verify(KAT_IMAGE, n, KAT_SIG, KAT_PUBKEY),
+        "a valid domain-separated signature verifies");
+
+    /* 2. DOMAIN SEPARATION - Trellis's explicit KAT. A signature made over the
+     * BARE image (what CI produced before #1314) must NOT verify. */
+    TEST_ASSERT_FALSE_MESSAGE(
+        sprout_fw_verify(KAT_IMAGE, n, KAT_SIG_BARE, KAT_PUBKEY),
+        "a signature over the BARE image must be rejected");
+
+    /* 3. one flipped IMAGE byte */
+    {
+        uint8_t tampered[sizeof(KAT_IMAGE)];
+        memcpy(tampered, KAT_IMAGE, n);
+        tampered[n / 2] ^= 0x01u;
+        TEST_ASSERT_FALSE_MESSAGE(
+            sprout_fw_verify(tampered, n, KAT_SIG, KAT_PUBKEY),
+            "one flipped image byte must fail");
+    }
+
+    /* 4. one flipped SIGNATURE byte */
+    {
+        uint8_t badsig[64];
+        memcpy(badsig, KAT_SIG, 64);
+        badsig[10] ^= 0x01u;
+        TEST_ASSERT_FALSE_MESSAGE(
+            sprout_fw_verify(KAT_IMAGE, n, badsig, KAT_PUBKEY),
+            "one flipped signature byte must fail");
+    }
+
+    /* 5. wrong key */
+    {
+        uint8_t wrongkey[32];
+        memcpy(wrongkey, KAT_PUBKEY, 32);
+        wrongkey[0] ^= 0x01u;
+        TEST_ASSERT_FALSE_MESSAGE(
+            sprout_fw_verify(KAT_IMAGE, n, KAT_SIG, wrongkey),
+            "the wrong public key must fail");
+    }
+
+    /* 6. EQUIVALENCE. We feed the tag and the image as two chunks of the
+     * SHA-512 stream rather than concatenating (so a mapped multi-MB partition
+     * needs no copy). Prove that is identical to monocypher's own one-shot call
+     * on a concatenated buffer - the chunked form is not a re-implementation. */
+    {
+        uint8_t joined[SPROUT_FW_DOMAIN_TAG_LEN + sizeof(KAT_IMAGE)];
+        memcpy(joined, SPROUT_FW_DOMAIN_TAG, SPROUT_FW_DOMAIN_TAG_LEN);
+        memcpy(joined + SPROUT_FW_DOMAIN_TAG_LEN, KAT_IMAGE, n);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(
+            0,
+            crypto_ed25519_check(KAT_SIG, KAT_PUBKEY, joined, sizeof(joined)),
+            "monocypher one-shot accepts the same vector");
+        TEST_ASSERT_TRUE_MESSAGE(
+            sprout_fw_verify(KAT_IMAGE, n, KAT_SIG, KAT_PUBKEY),
+            "...and the chunked form agrees with it");
+    }
+
+    /* 7. defensive: NULL image is only legal at len 0 */
+    TEST_ASSERT_FALSE_MESSAGE(
+        sprout_fw_verify(NULL, 4, KAT_SIG, KAT_PUBKEY),
+        "NULL image with non-zero len is rejected, not dereferenced");
 }
 
 void t_band_anchors(void)
@@ -2108,6 +2204,7 @@ int main(void)
     RUN_TEST(t_no_improvement_fault);
     RUN_TEST(t_overrun_failsafe);
     RUN_TEST(t_last_water_ms);
+    RUN_TEST(t_fw_verify_ed25519);
     RUN_TEST(t_band_anchors);
     RUN_TEST(t_board_capability);
     RUN_TEST(t_sensor_type_resistive);
