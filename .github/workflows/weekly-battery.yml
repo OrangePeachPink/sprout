@@ -15,6 +15,12 @@ on:
 permissions:
   contents: read
 
+# #1346 (maintainer ruling: 6.1.19 everywhere) — must match ci.yml, pages.yml and
+# sign-release.yml. This is the scheduled backstop, so an unpinned PlatformIO here would
+# report a *different* toolchain's result than the one the release actually ships with.
+env:
+  PIO_VERSION: "6.1.19"
+
 concurrency:
   group: weekly-battery
   cancel-in-progress: true
@@ -74,7 +80,7 @@ jobs:
         run: uv sync --locked
 
       - name: Install PlatformIO
-        run: pip install platformio
+        run: pip install --quiet "platformio==${PIO_VERSION}"
 
       - name: Cache PlatformIO packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -115,7 +121,7 @@ jobs:
         run: uv sync --locked
 
       - name: Install PlatformIO
-        run: pip install platformio
+        run: pip install --quiet "platformio==${PIO_VERSION}"
 
       - name: Cache PlatformIO packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

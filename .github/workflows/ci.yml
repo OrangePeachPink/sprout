@@ -26,6 +26,13 @@ concurrency:
 permissions:
   contents: read
 
+# #1346 (maintainer ruling: 6.1.19 everywhere): pin PlatformIO so CI compiles with the
+# SAME toolchain the release and Pages paths use. A release built with a different
+# PlatformIO than the one CI proved is a gap the pinned ref can't close on its own.
+# Must match sign-release.yml and pages.yml.
+env:
+  PIO_VERSION: "6.1.19"
+
 jobs:
   # Host lint/format/hygiene + the changed-lines firmware format check — no PlatformIO,
   # so this stays fast (~1 min with warm caches).
@@ -161,7 +168,7 @@ jobs:
       # ESP32 compile-verify (pio run -e esp32dev). Cached by platformio.ini hash
       # so re-installs only when the toolchain config changes.
       - name: Install PlatformIO
-        run: pip install platformio
+        run: pip install --quiet "platformio==${PIO_VERSION}"
 
       - name: Cache PlatformIO packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -219,7 +226,7 @@ jobs:
         run: uv sync --locked   # assert uv.lock is current; fail loud, never rewrite it (#254)
 
       - name: Install PlatformIO
-        run: pip install platformio
+        run: pip install --quiet "platformio==${PIO_VERSION}"
 
       - name: Cache PlatformIO packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
