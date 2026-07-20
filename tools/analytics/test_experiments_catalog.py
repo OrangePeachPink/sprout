@@ -121,3 +121,89 @@ if __name__ == "__main__":
         fn()
         print(f"  PASS  {fn.__name__}")
     print("All checks passed.")
+
+
+# --------------------------------------------------------------------------- #
+# #545 item 1 — planned records appear in the catalog
+# --------------------------------------------------------------------------- #
+
+
+def _planned(docs: Path, eid: str, **extra) -> None:
+    doc = {"experiment_id": eid, "status": "planned", "title": f"plan {eid}"}
+    doc.update(extra)
+    docs.mkdir(parents=True, exist_ok=True)
+    (docs / f"{eid}.json").write_text(json.dumps(doc), encoding="utf-8")
+
+
+def _captured(root: Path, eid: str, started: str) -> None:
+    d = root / eid
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "manifest.json").write_text(
+        json.dumps({"experiment_id": eid, "title": eid, "started_utc": started}),
+        encoding="utf-8",
+    )
+
+
+def test_a_planned_record_reaches_the_catalog(tmp_path: Path) -> None:
+    from experiments_catalog import load_planned
+
+    docs, exp = tmp_path / "docs", tmp_path / "exp"
+    _planned(docs, "plan-a", saved_at="2026-07-19T10:00:00Z")
+    got = load_planned(docs, exp)
+    assert [e["experiment_id"] for e in got] == ["plan-a"]
+    e = got[0]
+    assert e["kind"] == "planned"
+    assert e["started_utc"] is None  # a plan never fakes a run window
+    assert e["planned_at"] == "2026-07-19T10:00:00Z"
+
+
+def test_a_landed_capture_supersedes_its_own_plan(tmp_path: Path) -> None:
+    from experiments_catalog import load_planned
+
+    docs, exp = tmp_path / "docs", tmp_path / "exp"
+    _planned(docs, "run-1")
+    _captured(exp, "run-1", "2026-07-19T12:00:00Z")
+    # the capture landed under the same id -> the plan drops out (no double-count)
+    assert load_planned(docs, exp) == []
+
+
+def test_only_planned_status_qualifies_and_junk_never_breaks_it(tmp_path: Path) -> None:
+    from experiments_catalog import load_planned
+
+    docs, exp = tmp_path / "docs", tmp_path / "exp"
+    _planned(docs, "plan-ok")
+    (docs / "complete.json").write_text(
+        json.dumps({"experiment_id": "complete", "status": "complete"}),
+        encoding="utf-8",
+    )
+    (docs / "unset.json").write_text(json.dumps({"notes": "legacy"}), encoding="utf-8")
+    (docs / "torn.json").write_text("{not json", encoding="utf-8")
+    assert [e["experiment_id"] for e in load_planned(docs, exp)] == ["plan-ok"]
+
+
+def test_combined_orders_plans_by_when_they_were_written(tmp_path: Path) -> None:
+    from experiments_catalog import load_combined
+
+    docs, exp, bench = tmp_path / "docs", tmp_path / "exp", tmp_path / "bench"
+    _captured(exp, "old-run", "2026-07-01T00:00:00Z")
+    _captured(exp, "new-run", "2026-07-20T00:00:00Z")
+    _planned(docs, "mid-plan", saved_at="2026-07-10T00:00:00Z")
+    ids = [e["experiment_id"] for e in load_combined(exp, bench, docs)]
+    assert ids == ["new-run", "mid-plan", "old-run"]  # the plan sits by planned_at
+
+
+def test_the_planned_card_says_planned_and_shows_no_fake_figures() -> None:
+    from experiments_catalog import planned_card
+
+    html_out = planned_card(
+        {
+            "kind": "planned",
+            "experiment_id": "plan-a",
+            "title": "dry-down #2",
+            "planned_at": "2026-07-19T10:00:00Z",
+            "labels": {"board": "classic"},
+        }
+    )
+    assert "planned — not yet run" in html_out
+    assert 'href="/lab/plan-a"' in html_out
+    assert "sweeps" not in html_out and "rows" not in html_out  # no empty run stats
