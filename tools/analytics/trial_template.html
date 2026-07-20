@@ -20,9 +20,16 @@
          it is measured against (see the caption — a known limitation is flagged there).
        · Absence is first-class: a plant with no detected watering says so, never 0 / never ∞.
 
-     Identity: labels come pre-resolved from the server (cards.json identity.name,
-     band_history[].label) — the plant-first fallback chain lives only in plantLabel()
-     (#925 guard), never re-implemented here. -->
+     Data seam: GET /trial/data.json — ONE payload behind all three candidates
+     (multiplant_history.build_payload, Data's half of the joint build): same window,
+     same plants, same numbers, so a prune verdict compares SURFACES rather than
+     accidental data differences. GET /data.json is read ONLY for the cal ladder's
+     band colours (a lookup). The band itself is the DEVICE-emitted one, passed
+     straight through — this surface never re-thresholds raw into a band, which
+     would author a second band truth able to disagree with the device's own.
+
+     Identity: plant names come pre-resolved from the payload — the plant-first
+     fallback chain lives only in plantLabel() (#925 guard), never re-implemented. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -161,15 +168,17 @@ function el(t,c,h){ var e=document.createElement(t); if(c)e.className=c;
   if(h!==undefined)e.innerHTML=h; return e; }
 function svgEl(h,w,vb){ return '<svg width="'+w+'" height="'+h+'" viewBox="'+vb+'">'; }
 
-/* the band a raw reading sits in — cal.bands is dry→wet with lo/hi from the ratified
-   ladder; out-of-range clamps to the end bands rather than rendering nothing. */
-function bandOf(raw, bands){
-  if(raw==null || !bands.length) return null;
-  for(var i=0;i<bands.length;i++){ if(raw>=bands[i].lo && raw<bands[i].hi) return bands[i]; }
-  return raw>=bands[0].hi ? bands[0] : bands[bands.length-1];
+/* Band COLOUR lookup only — fw level -> the ratified band's colour, from the
+   served cal ladder. This is a lookup, never a derivation: the band itself comes
+   from the payload as the DEVICE emitted it (multiplant_history passes band_fw
+   straight through). Deriving a band from raw here would author a second band
+   truth able to disagree with the device's own (which carries the #678 anti-flap
+   hysteresis) — that is exactly the defect this rewire removes. */
+var BANDCOL = {}, BANDUI = {};
+function indexBands(bands){
+  (bands||[]).forEach(function(b){ BANDCOL[b.fw]=b.color; BANDUI[b.fw]=b.ui; });
 }
-/* day key from the server's local timestamp string ("07-16 03:00:00") */
-function dayOf(localStr){ return String(localStr||"").slice(0,5); }
+function colOf(fw){ return BANDCOL[fw] || "var(--border)"; }
 
 /* the labeled envelope index: 0 = wettest calibrated edge, 1 = the air-dry edge.
    NOT a reading — a bounded index against the calibrated in-soil ladder. */
@@ -192,54 +201,37 @@ function elapsed(h){
   return Math.round(h/24)+"d ago";
 }
 
-/* per-plant day series: the day's LAST reading is that day's band (where it ended) */
-function daySeries(ds, bands){
-  var byDay={}, order=[];
-  for(var i=0;i<ds.points.length;i++){
-    var d=dayOf(ds.local[i]);
-    if(!(d in byDay)){ byDay[d]={day:d,raw:null}; order.push(d); }
-    byDay[d].raw=ds.points[i].y;              /* last write wins = the day's last reading */
-  }
-  return order.map(function(d){
-    var r=byDay[d].raw, b=bandOf(r,bands);
-    return { day:d, raw:r, band:b };
-  });
-}
-
-/* ---- data ------------------------------------------------------------------ */
+/* ---- data: ONE payload behind all three (Data's multiplant_history, #1318) ----
+   /data.json is fetched only for the cal ladder's band COLOURS. Every band, every
+   day, every step comes from /trial/data.json exactly as the device emitted it. */
 Promise.all([
-  fetch("/data.json?range=7d").then(function(r){return r.json();}),
-  fetch("/cards.json").then(function(r){return r.json();}).catch(function(){return null;})
+  fetch("/trial/data.json").then(function(r){return r.json();}),
+  fetch("/data.json?range=7d").then(function(r){return r.json();}).catch(function(){return {};})
 ]).then(function(res){
-  var ctx=res[0], cardsRaw=res[1];
-  var cards=(cardsRaw && (cardsRaw.cards||cardsRaw)) || [];
+  var pay=res[0], ctx=res[1]||{};
+  indexBands((ctx.cal&&ctx.cal.bands)||[]);
   var bands=(ctx.cal&&ctx.cal.bands)||[];
-  var datasets=(ctx.trajectory&&ctx.trajectory.datasets)||[];
-  var bh=ctx.band_history||[];
 
-  /* server-resolved identity only (#925): card identity name, else the band_history
-     label the server already computed. Never the raw fallback chain. */
-  function labelFor(sid){
-    for(var i=0;i<cards.length;i++){
-      if(cards[i].sensor_id===sid && cards[i].identity && cards[i].identity.name)
-        return cards[i].identity.name;
-    }
-    for(var j=0;j<bh.length;j++){ if(bh[j].sensor_id===sid && bh[j].label) return bh[j].label; }
-    return sid;
+  var plants=(pay.plants||[]).map(function(pl){
+    return {
+      pid: pl.plant_id,
+      label: pl.plant_name || pl.plant_id,       /* server-resolved (#925) */
+      n: pl.n_readings,
+      days: (pay.rows||{})[pl.plant_id] || [],
+      steps: (pay.ledger||{})[pl.plant_id] || []
+    };
+  });
+  var withData = plants.filter(function(p){ return p.days.length || p.steps.length; });
+
+  /* the render guarantee Data ships: if any live band lacks a mood mapping, say so
+     rather than rendering a moodless bar and hoping nobody notices. */
+  if(pay.moods_resolved === false){
+    var w=el("div","empty","Heads up: "+(pay.unmapped_bands||[]).join(", ")+
+      " has no mood mapping yet — those segments render neutral until mood-band-map.json covers them.");
+    document.querySelector(".register").appendChild(w);
   }
-  function bhFor(sid){
-    for(var j=0;j<bh.length;j++){ if(bh[j].sensor_id===sid) return bh[j]; }
-    return null;
-  }
 
-  var plants=datasets.filter(function(d){ return d.points && d.points.length; })
-    .map(function(d){
-      var e=bhFor(d.id);
-      return { sid:d.id, ds:d, label:labelFor(d.id), bh:e,
-               rewaterH: e&&e.rewater ? hoursSince(e.rewater.ts) : null };
-    });
-
-  if(!plants.length){
+  if(!withData.length){
     ["surfA","surfB","surfC"].forEach(function(id){
       document.getElementById(id).appendChild(
         el("div","empty","No band-bearing readings in this window yet — nothing to compare. "+
@@ -247,171 +239,171 @@ Promise.all([
     });
     return;
   }
-  renderB(plants, bands, cards);
-  renderA(plants, bands);
-  renderC(plants, bands);
+  renderB(withData, pay, bands);
+  renderA(withData);
+  renderC(withData, bands);
 });
 
 /* ============================ B · everyone's envelope ======================== */
-function renderB(plants, bands, cards){
-  var W=1180, H=200, L=64, R=W-16, T=14, Bt=H-30;
+function renderB(plants, pay, bands){
+  var env=pay.envelope||{}, W=1180, H=200, L=64, R=W-16, T=14, Bt=H-30;
   document.getElementById("capB").textContent =
-    "the collective sawtooth — every plant on one labeled index (drier ↑), watering events "+
-    "ticking the baseline. The index is bounded by the calibrated in-soil ladder, not a reading.";
+    "the collective sawtooth — every plant on one labeled index (drier ↑), detected "+
+    "waterings ticking the baseline. The index is bounded by the calibrated in-soil ladder, not a reading.";
 
-  /* the triage header: act or ignore, and the two fleet bounds */
-  var needy=[], withRw=[], withoutRw=[];
-  plants.forEach(function(p){
-    var b=p.bh&&p.bh.current&&p.bh.current.band;
-    if(b==="needs water"||b==="DRY"||b==="air-dry") needy.push(p);
-    if(p.rewaterH!=null) withRw.push(p); else withoutRw.push(p);
+  /* the triage line. by_need leads: the glance is about who needs you NEXT, not who
+     you touched last. by_recency rides the same payload if her verdict flips it. */
+  var order = env.by_need || [];
+  var lastW = env.last_watering, longest = env.longest_cycle;
+  var needy = plants.filter(function(p){
+    var last = p.days.length ? p.days[p.days.length-1] : null;
+    return last && (last.band==="needs water" || last.band==="DRY" || last.band==="air-dry");
   });
-  var mostRecent=null, longest=null;
-  withRw.forEach(function(p){
-    if(mostRecent===null||p.rewaterH<mostRecent.rewaterH) mostRecent=p;
-    if(longest===null||p.rewaterH>longest.rewaterH) longest=p;
-  });
-  var tri=el("div","triage");
-  var head=el("div");
+  var tri=el("div","triage"), head=el("div");
   head.appendChild(el("div","lbl","TODAY"));
   head.appendChild(el("div","big", needy.length===0 ? "Nothing needs you."
     : needy.length+" "+(needy.length===1?"plant wants":"plants want")+" water."));
-  tri.appendChild(head);
-  tri.appendChild(el("div","spacer"));
+  tri.appendChild(head); tri.appendChild(el("div","spacer"));
   tri.appendChild(el("div","fact","last watering<b>"+
-    (mostRecent ? esc(elapsed(mostRecent.rewaterH))+" · "+esc(mostRecent.label) : "none detected")+
-    "</b>"));
-  /* one detected watering cannot bound a fleet — showing the same plant as both
-     "most recent" and "longest" would read as two facts where there is one. */
-  var bounded = withRw.length > 1;
+    (lastW ? esc(days_ago(lastW.days_ago)) : "none detected")+"</b>"));
+  /* the desert-dweller. One record cannot bound a fleet — say so rather than
+     echoing the same plant as both bounds. */
   tri.appendChild(el("div","fact","longest cycle<b>"+
-    (bounded ? esc(elapsed(longest.rewaterH))+" · "+esc(longest.label)
-             : "needs 2+ detected")+"</b>"));
-  /* first-class absence: plants the detector has not seen watered in this window */
-  tri.appendChild(el("div","fact","no watering seen<b>"+
-    (withoutRw.length ? withoutRw.length+" of "+plants.length : "none")+"</b>"));
+    (longest && (env.by_recency||[]).length>1
+      ? esc(days_ago(longest.days_ago))+" · "+esc(longest.plant_name)
+      : "needs 2+ detected")+"</b>"));
+  tri.appendChild(el("div","fact","next up<b>"+
+    (order.length ? esc(order[0].plant_name) : "—")+"</b>"));
   document.getElementById("triageB").appendChild(tri);
 
-  /* the sawtooths */
-  var maxX=0;
-  plants.forEach(function(p){ p.ds.points.forEach(function(pt){ if(pt.x>maxX) maxX=pt.x; }); });
-  if(maxX<=0) maxX=1;
-  var sx=function(x){ return L+(x/maxX)*(R-L); };
-  var sy=function(idx){ return Bt-(1-idx)*(Bt-T); };   /* idx 1 = driest = top */
-
+  /* the sawtooths: each plant's day points concatenated on the window's clock */
+  var t0=new Date(pay.t0).getTime(), t1=new Date(pay.t1).getTime(), span=(t1-t0)||1;
+  var sx=function(ms){ return L+((ms-t0)/span)*(R-L); };
+  var sy=function(idx){ return Bt-(1-idx)*(Bt-T); };
   var s=svgEl(H,W,"0 0 "+W+" "+H);
   s+='<rect x="'+L+'" y="'+T+'" width="'+(R-L)+'" height="'+(Bt-T)+'" fill="var(--surface-2)" stroke="var(--border)"/>';
-  /* the thirsty edge — where a plant starts wanting you */
-  var thirstyBand=null;
-  for(var i=0;i<bands.length;i++) if(bands[i].fw==="needs water") thirstyBand=bands[i];
-  if(thirstyBand){
-    var ty=sy(envIndex(thirstyBand.lo,bands));
+  var thirsty=null;
+  for(var i=0;i<bands.length;i++) if(bands[i].fw==="needs water") thirsty=bands[i];
+  if(thirsty){
+    var ty=sy(envIndex(thirsty.lo,bands));
     s+='<line x1="'+L+'" y1="'+ty+'" x2="'+R+'" y2="'+ty+'" stroke="var(--band-drying)" stroke-width="1" stroke-dasharray="4 4"/>';
     s+='<text x="'+(L+6)+'" y="'+(ty-5)+'" font-size="9.5" fill="var(--band-drying)">thirsty edge</text>';
   }
   s+='<text x="8" y="'+(T+12)+'" font-size="10" fill="var(--muted)">drier ↑</text>';
   s+='<text x="8" y="'+Bt+'" font-size="10" fill="var(--muted)">wetter ↓</text>';
-
-  plants.forEach(function(p){
-    var d="", any=false;
-    p.ds.points.forEach(function(pt,i){
-      var idx=envIndex(pt.y,bands); if(idx==null) return;
-      d+=(any?" L":"M")+sx(pt.x).toFixed(1)+" "+sy(idx).toFixed(1); any=true;
+  var PAL=["#8FA3B0","#7E9B6B","#6E7B86","#B98F6F","#9AA6A0","#A59E93","#C08A6A","#7C6A4E"];
+  plants.forEach(function(p,pi){
+    var dd="", any=false;
+    p.days.forEach(function(day){
+      var mid=new Date(day.date+"T00:00:00Z").getTime();
+      (day.points||[]).forEach(function(pt){
+        var idx=envIndex(pt.raw,bands); if(idx==null) return;
+        var ms=mid+pt.h*3600000;
+        dd+=(any?" L":"M")+sx(ms).toFixed(1)+" "+sy(idx).toFixed(1); any=true;
+      });
     });
-    if(any) s+='<path d="'+d+'" fill="none" stroke="'+esc(p.ds.color)+'" stroke-width="1.6" opacity="0.62"/>';
+    if(any) s+='<path d="'+dd+'" fill="none" stroke="'+PAL[pi%PAL.length]+'" stroke-width="1.6" opacity="0.62"/>';
   });
-  /* watering ticks — the household's rhythm */
-  plants.forEach(function(p){
-    if(p.rewaterH==null) return;
-    var hoursAgo=p.rewaterH, x=sx(Math.max(0,maxX-hoursAgo));
+  /* every detected pass — the household's rhythm, not just the latest per plant */
+  (env.passes||[]).forEach(function(t){
+    var ms=new Date(t.t||t).getTime(); if(!isFinite(ms)) return;
+    var x=sx(ms);
     s+='<line x1="'+x.toFixed(1)+'" y1="'+(Bt+4)+'" x2="'+x.toFixed(1)+'" y2="'+(Bt+12)+'" stroke="var(--st-watering)" stroke-width="2.5"/>';
   });
-  s+='<text x="'+L+'" y="'+(H-6)+'" font-size="9.5" fill="var(--muted)">every detected watering, all plants — clusters are a watering round; gaps are a quiet stretch</text>';
+  s+='<text x="'+L+'" y="'+(H-6)+'" font-size="9.5" fill="var(--muted)">every detected watering, all plants ('+
+     ((env.n_passes!=null)?env.n_passes:0)+' in this window) — clusters are a watering round; gaps are a quiet stretch</text>';
   s+='</svg>';
   document.getElementById("surfB").innerHTML=s;
-
   document.getElementById("footB").innerHTML =
-    "Index bounded by the shared calibrated ladder (air-dry edge → wettest edge). "+
-    "Per-board envelopes would sharpen this once per-board cal bounds reach the payload — "+
-    "until then this is one honest shared scale, never per-plant raw on a common axis.";
+    "Ink order: <b>by need</b> (who needs you next). The payload also carries <code>by_recency</code> — "+
+    "a render switch, not a rebuild, if you'd rather the glance lead with what you touched last. "+
+    "Index bounded by the shared calibrated ladder; per-board envelopes sharpen it when those bounds land.";
+}
+function days_ago(d){
+  if(d==null) return "—";
+  if(d<1) return Math.max(1,Math.round(d*24))+"h ago";
+  return (d<10?(Math.round(d*10)/10):Math.round(d))+"d ago";
 }
 
 /* ============================ A · per-plant rows ============================= */
-function renderA(plants, bands){
+function renderA(plants){
   document.getElementById("capA").textContent =
     "one row per plant: the moisture line (drier ↑) over its own day-band bar. "+
-    "The bar is the mood at a glance; the line is the detail.";
+    "The bar is the day's dwell-dominant band — the band the plant actually spent the day in.";
   var W=1180, L=140, R=W-16, CH=42, BARH=10, GAP=3, PITCH=CH+GAP+BARH+24;
   var H=26+plants.length*PITCH;
   var s=svgEl(H,W,"0 0 "+W+" "+H);
 
   plants.forEach(function(p,r){
-    var T=22+r*PITCH, barY=T+CH+GAP;
-    var days=daySeries(p.ds, bands);
-    /* the lane */
+    var T=22+r*PITCH, barY=T+CH+GAP, days=p.days;
     s+='<rect x="'+L+'" y="'+T+'" width="'+(R-L)+'" height="'+CH+'" fill="var(--surface-2)"/>';
     s+='<text x="'+(L-8)+'" y="'+(T+CH/2+4)+'" font-size="12" font-weight="600" text-anchor="end" fill="var(--ink)">'+esc(p.label)+'</text>';
-    /* the day-band bar + day dividers */
-    var n=days.length||1, dw=(R-L)/n;
-    days.forEach(function(d,i){
-      var c=d.band?d.band.color:"var(--border)";
-      s+='<rect x="'+(L+i*dw).toFixed(1)+'" y="'+barY+'" width="'+dw.toFixed(1)+'" height="'+BARH+'" fill="'+esc(c)+'"/>';
+    if(!days.length){
+      s+='<text x="'+(L+10)+'" y="'+(T+CH/2+4)+'" font-size="11.5" fill="var(--muted)">no readings in this window</text>';
+      return;
+    }
+    var n=days.length, dw=(R-L)/n;
+    days.forEach(function(day,i){
+      /* the DEVICE-emitted dwell-dominant band; a dayless band renders neutral,
+         never a guessed colour */
+      s+='<rect x="'+(L+i*dw).toFixed(1)+'" y="'+barY+'" width="'+dw.toFixed(1)+'" height="'+BARH+'" fill="'+esc(colOf(day.band))+'"/>';
       if(i>0) s+='<line x1="'+(L+i*dw).toFixed(1)+'" y1="'+T+'" x2="'+(L+i*dw).toFixed(1)+'" y2="'+(T+CH)+'" stroke="var(--border)" opacity="0.5"/>';
     });
-    /* the line — this row's OWN scale (never comparable across rows) */
-    var ys=p.ds.points.map(function(pt){return pt.y;}).filter(function(v){return v!=null;});
-    var lo=Math.min.apply(null,ys), hi=Math.max.apply(null,ys);
-    if(!(hi>lo)){ hi=lo+1; }
-    var maxX=0; p.ds.points.forEach(function(pt){ if(pt.x>maxX) maxX=pt.x; });
-    if(maxX<=0) maxX=1;
-    var d="", any=false;
-    p.ds.points.forEach(function(pt){
-      if(pt.y==null) return;
-      var x=L+(pt.x/maxX)*(R-L);
-      var y=(T+CH-3)-((pt.y-lo)/(hi-lo))*(CH-6);   /* drier (higher raw) = up */
-      d+=(any?" L":"M")+x.toFixed(1)+" "+y.toFixed(1); any=true;
+    /* the shape lane — this row's OWN scale, never comparable across rows */
+    var raws=[];
+    days.forEach(function(day){ (day.points||[]).forEach(function(pt){ if(pt.raw!=null) raws.push(pt.raw); }); });
+    if(!raws.length) return;
+    var lo=Math.min.apply(null,raws), hi=Math.max.apply(null,raws);
+    if(!(hi>lo)) hi=lo+1;
+    var dd="", any=false;
+    days.forEach(function(day,i){
+      (day.points||[]).forEach(function(pt){
+        if(pt.raw==null) return;
+        var x=L+(i+Math.min(1,pt.h/24))*dw;
+        var y=(T+CH-3)-((pt.raw-lo)/(hi-lo))*(CH-6);   /* drier (higher raw) = up */
+        dd+=(any?" L":"M")+x.toFixed(1)+" "+y.toFixed(1); any=true;
+      });
     });
-    if(any) s+='<path d="'+d+'" fill="none" stroke="var(--ink)" stroke-width="1.8"/>';
-    /* the detected watering, marked where it happened */
-    if(p.rewaterH!=null){
-      var rx=L+(Math.max(0,maxX-p.rewaterH)/maxX)*(R-L);
-      s+='<circle cx="'+rx.toFixed(1)+'" cy="'+(T+CH-6)+'" r="3.4" fill="var(--surface)" stroke="var(--st-watering)" stroke-width="2.2"/>';
-    }
+    if(any) s+='<path d="'+dd+'" fill="none" stroke="var(--ink)" stroke-width="1.8"/>';
   });
   s+='</svg>';
   document.getElementById("surfA").innerHTML=s;
   document.getElementById("footA").innerHTML =
     "↑ drier · each row is drawn on its OWN scale — rows are never comparable by line height, "+
     "and the axis stays unnumbered on purpose (raw numbers live on the Workbench). "+
-    "○ = a detected watering. Each bar segment is that day's ending band.";
+    "Each bar segment is the day's <b>dwell-dominant</b> band, so one late blip can't rename a day.";
 }
 
 /* ============================ C · the band ledger =========================== */
 function renderC(plants, bands){
   document.getElementById("capC").textContent =
-    "one mini-ladder per plant, wet at the bottom · a dot per day in that day's full band "+
-    "colour, on the desaturated ladder it sits on · today's dot is ringed.";
-  var perW=176, gap=14, H=210, top=26, rung=(H-top-40)/bands.length;
+    "one mini-ladder per plant, wet at the bottom · a dot per band step the plant actually "+
+    "walked, in that band's full colour on the desaturated ladder · the last step is ringed.";
+  var perW=176, gap=14, H=210, top=26, rung=(H-top-40)/(bands.length||7);
   var W=Math.max(1180, plants.length*(perW+gap));
   var s=svgEl(H,W,"0 0 "+W+" "+H);
+  var idxOf={}; bands.forEach(function(b,i){ idxOf[b.fw]=i; });
 
   plants.forEach(function(p,i){
-    var x0=i*(perW+gap)+8, days=daySeries(p.ds,bands);
+    var x0=i*(perW+gap)+8;
     s+='<text x="'+(x0+perW/2)+'" y="16" font-size="11.5" font-weight="600" text-anchor="middle" fill="var(--ink)">'+esc(p.label)+'</text>';
-    /* the desaturated ground: bands run dry(top) → wet(bottom) */
     s+='<g opacity="0.18">';
     bands.forEach(function(b,bi){
       s+='<rect x="'+x0+'" y="'+(top+bi*rung).toFixed(1)+'" width="'+perW+'" height="'+rung.toFixed(1)+'" fill="'+esc(b.color)+'"/>';
     });
     s+='</g>';
-    /* the dots: FULL band saturation — the dot carries the state */
-    var n=days.length||1, step=perW/(n+1);
-    days.forEach(function(d,di){
-      if(!d.band) return;
-      var bi=bands.indexOf(d.band);
-      var cx=x0+step*(di+1), cy=top+bi*rung+rung/2;
-      var last=(di===days.length-1);
-      s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(last?5.4:4.5)+'" fill="'+esc(d.band.color)+'"'+
+    /* the ordered steps the plant actually walked — exact transition timestamps
+       from the event table, never day-bucketed and never interpolated */
+    var steps=p.steps||[];
+    if(!steps.length){
+      s+='<text x="'+(x0+perW/2)+'" y="'+(top+rung*3.5)+'" font-size="10.5" fill="var(--muted)" text-anchor="middle">no band steps yet</text>';
+      return;
+    }
+    var n=steps.length, step=perW/(n+1);
+    steps.forEach(function(st,si){
+      var bi=idxOf[st.band]; if(bi==null) return;
+      var cx=x0+step*(si+1), cy=top+bi*rung+rung/2, last=(si===n-1);
+      s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(last?5.4:4.5)+'" fill="'+esc(colOf(st.band))+'"'+
          (last?' stroke="var(--ink)" stroke-width="1.6"':'')+'/>';
     });
   });
@@ -419,7 +411,8 @@ function renderC(plants, bands){
   document.getElementById("surfC").innerHTML=s;
   document.getElementById("footC").innerHTML =
     "wet at the bottom (the #1263 vertical convention) · the dot IS the mood colour, the ground "+
-    "is only the ladder it sits on · ringed = the most recent day.";
+    "is only the ladder it sits on · ringed = the most recent step. Steps come from the event "+
+    "table at their exact transition times — no interpolation between readings.";
 }
 </script>
 </body>
