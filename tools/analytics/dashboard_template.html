@@ -83,6 +83,45 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .cyclenote { font-size: 11.5px; color: var(--muted); margin-left: 8px; }
 .cyclenote b { color: var(--ink); font-weight: 600; }
 .cyclenote .declined { color: var(--st-dry, #E8703A); }
+/* #963 the owner-cal wizard — an INSTRUMENT flow. Plain, warm, chrome register;
+   never the plant character. No plant is talking while you calibrate. */
+.calmask { position: fixed; inset: 0; background: rgba(12,18,14,.55); z-index: 60;
+  display: flex; align-items: center; justify-content: center; padding: 20px; }
+.calwiz { background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  width: min(560px, 100%); max-height: 90vh; overflow: auto; padding: 20px 22px 18px; }
+.calwiz h3 { font-family: var(--font-display); font-size: 19px; margin: 0 0 4px; }
+.calwiz .sub { color: var(--muted); font-size: 13px; line-height: 1.5; margin: 0 0 14px; }
+.calwiz .step { font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted); font-weight: 700; margin-bottom: 6px; }
+.calreadout { font-family: var(--font-data); font-size: 30px; font-weight: 600;
+  color: var(--ink); }
+.calreadout small { font-size: 12px; color: var(--muted); font-weight: 400; }
+.calsettle { font-size: 12px; margin-top: 6px; }
+.calsettle.settling { color: var(--muted); }
+.calsettle.ready { color: var(--leaf); font-weight: 600; }
+.calbar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden;
+  margin-top: 8px; }
+.calbar i { display: block; height: 100%; background: var(--leaf); width: 0; }
+.calrow { display: flex; gap: 10px; align-items: center; margin-top: 16px; }
+.calrow .spacer { flex: 1 1 auto; }
+.calwiz .btn.primary { background: var(--leaf); color: #fff; border-color: var(--leaf); }
+.calwiz .btn[disabled] { opacity: .45; cursor: not-allowed; }
+.calfail { border: 1px solid var(--st-dry); border-radius: 10px; padding: 12px 14px;
+  background: color-mix(in srgb, var(--st-dry) 8%, var(--surface)); font-size: 13px;
+  line-height: 1.55; }
+.calfail b { color: var(--st-dry); }
+/* the result: stored CELEBRATES (#963 ruled UX). The board line is a separate calm
+   channel in chrome — nothing here needs her action, so nothing earns amber. */
+.calwin { font-family: var(--font-display); font-size: 22px; font-weight: 800;
+  color: var(--leaf); margin: 2px 0 4px; }
+.calboard { font-size: 13px; color: var(--muted); line-height: 1.55; margin-top: 10px;
+  padding-top: 10px; border-top: 1px solid var(--border); }
+.calboard b { color: var(--ink); font-weight: 600; }
+.calanchors { font-family: var(--font-data); font-size: 12.5px; color: var(--muted);
+  margin-top: 6px; }
+/* the standing offer sits quietly at the card's foot — a door, never a nag */
+.calofferwrap { margin-top: 8px; display: flex; }
+.caloffer { margin-left: 0; }
 /* #832 cross-board comparison */
 .cmpbar { margin: 4px 0 10px; }
 .cmprow { display: grid; grid-template-columns: minmax(110px,170px) 1fr auto; align-items: center;
@@ -989,6 +1028,21 @@ function renderCards(){
   }
 }
 
+/* #963/#1335 §5.4: the standing calibrate offer — visible on any channel without an
+   owner cal, styled as a quiet door rather than a warning. Requiredness is a tunable
+   we can promote later; today it never blocks anything. */
+function calOffer(s){
+  const dev = (DASH.devices||[]).find(d=>d.device_id===s.device_id);
+  const tier = (dev && (dev.cal_tier || (dev.cal_provisional ? 'uncalibrated' : 'channel-cal')))
+    || 'uncalibrated';
+  if(tier === 'channel-cal') return null;          // top state: no offer needed
+  const b = el('button','glug caloffer','calibrate');
+  b.type = 'button';
+  b.title = 'Give this probe its own measured range (about a minute)';
+  b.addEventListener('click', e=>{ e.stopPropagation(); openCalWizard(s.id); });
+  return b;
+}
+
 function cardFor(s){
   const c = el('div','scard'); c.title = `Open the ${plantLabel(s)} single-plant view`;
   c.addEventListener('click', () => showDetail(s.id));
@@ -1068,6 +1122,8 @@ function cardFor(s){
     add('pressure', `${s.pressure.hpa} hPa <span class="muted">(${s.pressure.source} · exterior)</span>`);
   }
   c.appendChild(meta);
+  const offer = calOffer(s);           // #963: the standing calibrate door
+  if(offer){ const w = el('div','calofferwrap'); w.appendChild(offer); c.appendChild(w); }
   return c;
 }
 
@@ -1660,6 +1716,7 @@ function renderOverview(){
   destroyCharts();
   renderHeader(); renderCards(); renderLadder(); renderBandHistory(); renderCalRef();
   renderCycleNote(); renderDetectorPrecision(); renderCompare();
+  calTick();   // #963: the wizard's live readout rides the same refresh
   renderTraj(); renderSpread(); renderDist();
   renderQuality(); renderIntegrity(); renderProvenance(); renderProv();
   if(!LIVE) applyStaticChannels();
@@ -1953,6 +2010,212 @@ function regSpell(id, word){   // "s03" -> "Sensor 03" (prose form); empty -> em
   const n = String(id || '').replace(/^[a-z]+/i, '');
   return n ? (word + ' ' + n) : (id || '—');
 }
+/* ================= #963 — the owner-cal wizard ==============================
+   Ratified spec: docs/design/specs/963-cal-wizard-surface.md
+
+   Register: an INSTRUMENT flow. Plain, warm, chrome — never the plant character;
+   no plant is talking while you calibrate.
+
+   The ruled UX this implements: `stored` CELEBRATES. The wizard's job is to capture
+   an envelope and make it durable, and stored completes that job — it works with no
+   board present at all. Push and confirmation are enrichment of a finished thing, so
+   the headline never withholds completion pending a board.
+
+   The sanity gate is deliberately BEFORE anything is written, and the host refuses
+   inverted anchors atomically too (apply_operations) — two layers, because a probe
+   dipped in the cup before the air reading produces a well-formed record that makes
+   every downstream band wrong and is detectable nowhere else.
+   ============================================================================ */
+var __cal = null;   // {sid, air, water, step, samples, receipt}
+
+function calSensor(sid){ return (DASH.sensors||[]).find(function(s){return s.id===sid;}) || null; }
+
+function openCalWizard(sid){
+  var s = calSensor(sid); if(!s) return;
+  __cal = { sid: sid, air: null, water: null, step: 'intro', samples: [] };
+  calRender();
+}
+function closeCalWizard(){
+  var m = document.getElementById('calmask'); if(m) m.remove();
+  __cal = null;
+}
+function calShell(inner){
+  var m = document.getElementById('calmask');
+  if(!m){
+    m = el('div','calmask'); m.id = 'calmask';
+    m.addEventListener('click', function(e){ if(e.target===m) closeCalWizard(); });
+    document.body.appendChild(m);
+  }
+  m.innerHTML = '<div class="calwiz" role="dialog" aria-modal="true"></div>';
+  m.firstChild.innerHTML = inner;
+  return m.firstChild;
+}
+
+/* live raw + a VISIBLE settle indicator: N consecutive samples inside a tight band.
+   Counted and shown — never a spinner that only means "wait". */
+var CAL_SETTLE_N = 5, CAL_SETTLE_SPREAD = 25;
+function calSettled(){
+  var v = __cal.samples;
+  if(v.length < CAL_SETTLE_N) return false;
+  var last = v.slice(-CAL_SETTLE_N);
+  return (Math.max.apply(null,last) - Math.min.apply(null,last)) <= CAL_SETTLE_SPREAD;
+}
+function calTick(){
+  if(!__cal || (__cal.step!=='air' && __cal.step!=='water')) return;
+  var s = calSensor(__cal.sid); if(!s || s.raw_last==null) return;
+  __cal.samples.push(s.raw_last);
+  if(__cal.samples.length > 40) __cal.samples.shift();
+  var box = document.getElementById('calLive');
+  if(!box) return;
+  var ok = calSettled(), n = Math.min(__cal.samples.length, CAL_SETTLE_N);
+  box.innerHTML =
+    '<div class="calreadout">' + fmt(s.raw_last) + ' <small>raw</small></div>' +
+    '<div class="calsettle ' + (ok?'ready':'settling') + '">' +
+      (ok ? 'steady — ready to capture'
+          : 'settling… ' + n + ' of ' + CAL_SETTLE_N + ' steady readings') +
+    '</div>' +
+    '<div class="calbar"><i style="width:' + Math.round(n/CAL_SETTLE_N*100) + '%"></i></div>';
+  var b = document.getElementById('calCapture');
+  if(b) b.disabled = !ok;
+}
+
+function calRender(){
+  if(!__cal) return;
+  var s = calSensor(__cal.sid), who = s ? plantLabel(s) : __cal.sid;
+
+  if(__cal.step === 'intro'){
+    calShell(
+      '<div class="step">Calibrate · step 1 of 4</div>' +
+      '<h3>Give ' + esc(who) + '’s probe its own range</h3>' +
+      '<p class="sub">Two readings — one in dry air, one in a cup of water — and this ' +
+      'sensor gets its own honest range on this board. It takes about a minute.</p>' +
+      '<p class="sub">What this gives you: a <b>measured envelope</b> for this probe. ' +
+      'What it does not: bench-grade validation — the dry-down checks can promote it later.</p>' +
+      '<div class="calrow"><span class="spacer"></span>' +
+      '<button class="btn" type="button" onclick="closeCalWizard()">Not now</button>' +
+      '<button class="btn primary" type="button" onclick="calStep(\'air\')">Start</button></div>');
+    return;
+  }
+
+  if(__cal.step === 'air' || __cal.step === 'water'){
+    var air = __cal.step === 'air';
+    calShell(
+      '<div class="step">Calibrate · step ' + (air?2:3) + ' of 4</div>' +
+      '<h3>' + (air ? 'Hold the probe in dry air' : 'Now stand it in a cup of water') + '</h3>' +
+      '<p class="sub">' + (air
+        ? 'Out of the soil, dry, not touching anything. Wait for the reading to settle.'
+        : 'To the waterline mark only — water never touches the electronics. ' +
+          'Wait for it to settle again.') + '</p>' +
+      '<div id="calLive"></div>' +
+      '<div class="calrow"><span class="spacer"></span>' +
+      '<button class="btn" type="button" onclick="closeCalWizard()">Cancel</button>' +
+      '<button class="btn primary" id="calCapture" type="button" disabled ' +
+        'onclick="calCapture()">Capture</button></div>');
+    calTick();
+    return;
+  }
+
+  if(__cal.step === 'refused'){
+    calShell(
+      '<div class="step">Calibrate</div>' +
+      '<h3>These two readings can’t both be right</h3>' +
+      '<div class="calfail"><b>Air read wetter than water.</b> On a capacitive probe the ' +
+      'air reading should be the higher number. <b>Nothing has been saved.</b><br><br>' +
+      'Usually one of: the probe went into the cup before the air reading, the wrong ' +
+      'channel is selected, or the probe is damaged. (A resistive-type sensor also reads ' +
+      'the other way round — those aren’t supported yet.)</div>' +
+      '<div class="calanchors">air ' + fmt(__cal.air) + ' · water ' + fmt(__cal.water) + '</div>' +
+      '<div class="calrow"><span class="spacer"></span>' +
+      '<button class="btn" type="button" onclick="closeCalWizard()">Close</button>' +
+      '<button class="btn primary" type="button" onclick="calStep(\'air\')">Start over</button></div>');
+    return;
+  }
+
+  if(__cal.step === 'saving'){
+    calShell('<div class="step">Calibrate · step 4 of 4</div><h3>Saving…</h3>');
+    return;
+  }
+
+  if(__cal.step === 'error'){
+    calShell(
+      '<div class="step">Calibrate</div><h3>That didn’t save</h3>' +
+      '<div class="calfail">' + esc(__cal.error || 'The host refused the record.') +
+      '<br><br>Nothing was written, so nothing is half-done.</div>' +
+      '<div class="calrow"><span class="spacer"></span>' +
+      '<button class="btn" type="button" onclick="closeCalWizard()">Close</button>' +
+      '<button class="btn primary" type="button" onclick="calSave()">Try again</button></div>');
+    return;
+  }
+
+  /* the result — stored CELEBRATES; the board line is a separate calm channel */
+  calShell(
+    '<div class="step">Calibrate · done</div>' +
+    '<div class="calwin">Saved.</div>' +
+    '<p class="sub">' + esc(who) + '’s probe has its own envelope now.</p>' +
+    '<div class="calanchors">air ' + fmt(__cal.air) + ' · water ' + fmt(__cal.water) + '</div>' +
+    '<div class="calboard">' + calBoardLine(__cal.receipt) + '</div>' +
+    '<div class="calrow"><span class="spacer"></span>' +
+    '<button class="btn primary" type="button" onclick="closeCalWizard()">Done</button></div>');
+}
+
+/* The five renderings (ratified spec). All chrome register: nothing on this screen
+   needs her action, so nothing earns amber or red. No spinner on a state that can
+   never resolve — implying "pending" when it is terminal is the same lie as
+   implying failure when it is merely pending. */
+function calBoardLine(r){
+  if(!r || r.state === 'stored')
+    return 'Living on this computer. Your board keeps using bench calibration until ' +
+           'this reaches it.';
+  if(r.state === 'confirmed')
+    return '<b>Your board is using it.</b>';
+  if(r.expected_cal_src === null || r.expected_cal_src === undefined)
+    return 'Sent. There’s no provenance recorded for this calibration, so there’s ' +
+           'nothing to match against — it won’t report back as confirmed.';
+  return 'Sent to the board — waiting for it to report back. You can close this; the ' +
+         'channel row shows it when it lands.';
+}
+
+function calStep(step){ __cal.step = step; __cal.samples = []; calRender(); }
+
+function calCapture(){
+  var s = calSensor(__cal.sid); if(!s) return;
+  if(__cal.step === 'air'){ __cal.air = s.raw_last; calStep('water'); return; }
+  __cal.water = s.raw_last;
+  /* the sanity gate — BEFORE anything is written */
+  if(!(__cal.air > __cal.water)){ __cal.step = 'refused'; calRender(); return; }
+  calSave();
+}
+
+function calSave(){
+  __cal.step = 'saving'; calRender();
+  var pid = 'cal-' + __cal.sid + '-' + Date.now().toString(36);
+  var body = { profiles: { create: [{
+    profile_id: pid, name: 'probe ' + __cal.sid + ' (owner)', sensor_type: 'capacitive',
+    anchors: { air: __cal.air, water: __cal.water },
+    provenance: { who: 'owner-field', date: new Date().toISOString().slice(0,10) },
+    tier: 'board-cal'
+  }]}};
+  fetch('/registry/apply', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body) })
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if(!res || res.ok === false){
+        __cal.error = (res && res.errors && res.errors[0] && res.errors[0].message)
+          || 'The host refused the record.';
+        __cal.step = 'error'; calRender(); return;
+      }
+      /* stored is the wizard's terminal success. A push receipt, when the server
+         reports one, only enriches the board line. */
+      __cal.receipt = res.receipt || { state: 'stored' };
+      __cal.step = 'done'; calRender();
+      if(LIVE) refresh();
+    })
+    .catch(function(e){
+      __cal.error = String((e && e.message) || e);
+      __cal.step = 'error'; calRender();
+    });
+}
+
 function regDeviceName(d){ return (d && (d.name || d.friendly_name || d.device_id)) || '—'; }  // #1038: `name` is the mutable label
 function regCalChip(profile){   // reuse the #951/#957 three-tier honesty (channel-cal is unlabeled)
   if(!profile) return null;
