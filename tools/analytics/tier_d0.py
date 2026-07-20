@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """#1238 — D0 TRACER: one CSV device-day → one Parquet file → one DuckDB answer.
 
+Status: legacy — superseded by ``docs/TIER_STORE_CONTRACT.md`` (#1239), which names
+this module as the historical evidence it cites. Kept rather than deleted so that
+citation resolves; not a maintained path (ADR-0038 §7).
+
 The thinnest end-to-end proof of the ADR-0031 tier pipe (Accepted; DuckDB/Parquet ruled
 #915): map one real device-day of schema-v3/v4 rows into ONE Parquet file in the
 candidate layout, then answer ONE Predict-shaped question in DuckDB — **hours-per-band
