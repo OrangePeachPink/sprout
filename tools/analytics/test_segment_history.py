@@ -101,8 +101,11 @@ def test_metrics_exact_us_cap_flagged_unmapped_sensorless(tmp_path: Path) -> Non
     assert m["observed_us"] == steady_us + flagged_us
     assert m["span_us"] == 3_780_999_200
     assert m["pct_valid"] == steady_us / (steady_us + flagged_us)
+    # #1331: THREE steady runs, not two — the 1 h outage in this fixture now ends a
+    # segment instead of being silently bridged. The old expectation of 2 encoded the
+    # pre-#1331 behaviour, where a trend could fit straight across unobserved time.
     assert m["segment_counts"] == {
-        "steady-drying": 2,
+        "steady-drying": 3,
         "watering-transient": 0,
         "rebound": 0,
         "flagged": 1,

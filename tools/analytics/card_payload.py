@@ -34,6 +34,8 @@ import zlib
 from datetime import datetime, timezone
 from pathlib import Path
 
+import watering_log
+
 _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
 _COMPONENTS = _REPO / "docs" / "design" / "components"
@@ -143,13 +145,26 @@ def _last_watered_field(ts_str: str, source: str, now: datetime) -> dict | None:
     }
 
 
-def last_watered_from_rewater(rewater: dict | None, now: datetime) -> dict | None:
+def last_watered_from_rewater(
+    rewater: dict | None, now: datetime, *, plant_id: str | None = None
+) -> dict | None:
     """Turn a band_movement DETECTED re-water (``{ts, source:'detected'}``) into a
     last_watered field (#875 Q2). Always labelled with the re-water's own source
-    (``detected``). Returns None when there's no detected re-water (absence)."""
+    (``detected``). Returns None when there's no detected re-water (absence).
+
+    #1203: a DETECTED event also carries the verdict seam — the rebuild-stable
+    ``event_id`` (``watering_log.event_id_for``, Data's own derived id, never invented
+    here) and its ``detection_state``. The state is ``proposed`` until she rules on it;
+    it is never silently ``confirmed``, because an unreviewed detection is not ground
+    truth. A manual watering has no verdict seam — it IS the ground truth."""
     if not isinstance(rewater, dict) or not rewater.get("ts"):
         return None
-    return _last_watered_field(rewater["ts"], rewater.get("source", "detected"), now)
+    field = _last_watered_field(rewater["ts"], rewater.get("source", "detected"), now)
+    if field is not None and plant_id:
+        eid = watering_log.event_id_for(plant_id, rewater["ts"])
+        field["event_id"] = eid
+        field["detection_state"] = watering_log.detection_state(eid)
+    return field
 
 
 def last_watered_from_manual(event: dict | None, now: datetime) -> dict | None:
@@ -161,7 +176,11 @@ def last_watered_from_manual(event: dict | None, now: datetime) -> dict | None:
 
 
 def resolve_last_watered(
-    rewater: dict | None, manual: dict | None, now: datetime
+    rewater: dict | None,
+    manual: dict | None,
+    now: datetime,
+    *,
+    plant_id: str | None = None,
 ) -> dict | None:
     """#1137: reconcile the DETECTED re-water (a soil-change — an accurate TIME)
     with a LOGGED manual watering (the operator's ground-truth FACT).
@@ -175,7 +194,7 @@ def resolve_last_watered(
     - **Different waterings** (far apart — e.g. a glug for a plant the detector never
       caught): the more-recent event wins, the manual keeping its tie-break authority.
     - Either absent: return whichever exists, or None."""
-    detected = last_watered_from_rewater(rewater, now)
+    detected = last_watered_from_rewater(rewater, now, plant_id=plant_id)
     logged = last_watered_from_manual(manual, now)
     if not (logged and detected):
         return logged or detected
@@ -462,7 +481,9 @@ def cards_from_context(
             surface, band = None, None  # a no-signal / unassigned frame, not a mood
         else:
             surface, band = None, s.get("band_fw")
-        lw = resolve_last_watered(rewater.get(pid), manual_by_plant.get(pid), now)
+        lw = resolve_last_watered(
+            rewater.get(pid), manual_by_plant.get(pid), now, plant_id=pid
+        )
         card = build_card(
             _plant_for(pid, s, plants_by_id),
             band=band,

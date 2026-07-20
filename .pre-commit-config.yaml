@@ -172,6 +172,18 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      # nul-byte-guard (#1327) — a tracked text file holding a raw 0x00 is BINARY to git,
+      # so every line-oriented hook below silently inspects nothing and still reports
+      # green (cal_resolver.c did exactly this for weeks, CI green throughout). BLOCKING,
+      # and the reason is the PII sweep specifically: identifier-guard going quiet on a
+      # file is indistinguishable from it passing. Exemption key is .gitattributes
+      # (binary / -text), so a new binary asset type is declared once, not twice.
+      - id: nul-byte-guard
+        name: nul-byte-guard (#1327 — raw NUL makes a file invisible to the text hooks)
+        entry: uv run python tools/dx/nul_byte_guard.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
   # link-check (#913) — internal-link gate: every relative / GitHub-self link in md+html
   # resolves to a tracked file, and no self-link carries a broken ref (the /blob/HEAD/ class
   # that produced #908's error/404 pages). BLOCKING. uv-native (identifier-guard pattern) not

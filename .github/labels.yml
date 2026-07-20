@@ -4,6 +4,12 @@
 # board reads as a system. Compatible with label-sync actions (e.g. crazy-max/ghaction-github-labeler or
 # github-label-sync). The Workflow lane applies these when standing labels up, so they're on-brand from creation.
 #
+# SCOPE: this file is the brand-coloured palette, NOT the complete live label set. Namespaces added
+# since (for:*, velocity:*, needs:*, blocks:*, epic, parked, area:design, migration:classic) plus the
+# bot-managed ones (dependencies, github_actions, python:uv) exist on the repo without palette entries.
+# `gh label list` is the live source of truth; extending the palette to cover them is a Design-lane call
+# (the colours carry the namespace logic below).
+#
 # Naming + set per ADR-0003 §5. Descriptions are clear and lightly warm — NOT Sprout's first-person voice:
 # labels are contributor tooling, which sits outside the character boundary (ADR-0007 §6). Color = hex sans '#'.
 #
@@ -68,6 +74,6 @@
 - name: "blocked"
   color: "B23B32"   # deep fault — stop
   description: "Waiting on something before it can move."
-- name: "needs-verification"
-  color: "F5A623"   # --st-dry amber — pending a reviewer
-  description: "Built — awaiting the reviewer's verification gate."
+# NOTE: there is deliberately no "needs-verification" label. Verification state lives on the
+# project board's Status field (Needs Verification -> Done), which the maintainer/gate moves —
+# a label would be a second, drifting copy of the same state.

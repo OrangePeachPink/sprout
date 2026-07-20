@@ -804,6 +804,19 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 from registry_model import load_registry_model, registry_payload
 
                 self._send_json(registry_payload(load_registry_model()))
+            elif parsed.path == "/watering/precision":  # #1203 detector QA readout
+                # Workbench-Diagnostics only: how the detector is doing against HER
+                # rulings. Both numerals ship (never a bare %), and precision is None
+                # until something is ruled — an unreviewed detection is not a miss.
+                from watering_log import event_id_for, precision_so_far
+
+                ctx = _context(self.inputs, hours, channels)
+                ids = [
+                    event_id_for(e["plant_id"], (e.get("rewater") or {})["ts"])
+                    for e in ctx.get("band_history", [])
+                    if e.get("plant_id") and (e.get("rewater") or {}).get("ts")
+                ]
+                self._send_json(precision_so_far(ids))
             elif parsed.path == "/sensor/health":  # #995 per-sensor QA/health readout
                 from registry_model import load_registry_model
                 from sensor_health import fleet_health
@@ -1014,6 +1027,23 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         b.get("plant_id", ""), ml=b.get("ml"), note=b.get("note")
                     )
                     self._send_json({"ok": True, "event": event})
+                except (ValueError, TypeError) as exc:
+                    self._send_json({"ok": False, "error": str(exc)}, status=400)
+            elif parsed.path == "/watering/verdict":  # #1203: rule on a detection
+                # The operator's confirm/reject on a DETECTED watering. Append-only
+                # (a rejection is kept, never erased — the rejection IS the detector's
+                # training signal). Localhost-only, like the rest of the write plane.
+                if not self._is_local():
+                    self._send_json(
+                        {"error": "verdicts are localhost-only"}, status=403
+                    )
+                    return
+                from watering_log import log_verdict
+
+                b = self._body()
+                try:
+                    rec = log_verdict(b.get("event_id", ""), b.get("state", ""))
+                    self._send_json({"ok": True, "verdict": rec})
                 except (ValueError, TypeError) as exc:
                     self._send_json({"ok": False, "error": str(exc)}, status=400)
             elif parsed.path.startswith("/photo/"):  # #875 Q4: ingest a plant avatar

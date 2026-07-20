@@ -61,7 +61,7 @@ body:
     attributes:
       label: Environment (optional)
       description: Firmware version (`firmware/include/config.h`), host OS, Python version, board — whatever's relevant.
-      placeholder: "firmware 0.7.0 · Windows 11 · Python 3.14 · ESP32-D0WD"
+      placeholder: "firmware 0.7.3 · Windows 11 · Python 3.14 · ESP32-D0WD"
     validations:
       required: false
   - type: textarea

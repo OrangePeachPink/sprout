@@ -28,12 +28,12 @@ just ota <device_id> <board> <host_ip>   # e.g.  just ota n3jhsp esp32c5 192.168
 > `PLATFORMIO_UPLOAD_FLAGS` **replaces** the ini's `upload_flags` — it does not merge, so you must repeat
 > `--auth=…` yourself — and PlatformIO splits multi-value env vars on **newlines, not spaces**, so a
 > space-joined value reaches espota as *one* argv token and the board ends up checking the literal password
-> `sprout-phase0 --host_ip=…` — flag, space and all. **Fingerprint:** the invitation succeeds, then auth fails
+> `<yourpassword> --host_ip=…` — flag, space and all. **Fingerprint:** the invitation succeeds, then auth fails
 > deterministically on *both* PBKDF2-HMAC-SHA256 and MD5 — which reads like a rejecting board when the
 > board is healthy. Correct form, or just use the recipe above:
 >
 > ```sh
-> PLATFORMIO_UPLOAD_FLAGS=$'--auth=sprout-phase0\n--host_ip=192.168.1.42'
+> PLATFORMIO_UPLOAD_FLAGS=$'--auth=<yourpassword>\n--host_ip=192.168.1.42'
 > ```
 
 **The recipe trusts the board, not espota's exit code.** After every upload it polls
@@ -42,16 +42,35 @@ when the board is back on the expected commit (even if espota timed out), or a f
 never returns. An ack-timeout on a healthy flash therefore reads **VERIFIED**; a genuine half-flash still
 reads **FAILED**.
 
-## Password
+## Password — provisioned, or the receiver does not exist (#1333)
 
 The OTA upload is password-gated, and the password lives in two places that **must match**:
 
 - **Firmware:** `OTA_PASSWORD` — compiled into the image (what the board will accept).
 - **Uploader:** `--auth=…` — what espota presents.
 
-The committed value, `sprout-phase0`, is a **published placeholder — an example, not a secret**. It is
-in a public repo on purpose; it is LAN-scoped and interim, and it is *not* the security fence (that's
-ADR-0026: signed images + verified-marker + key management).
+**There is no default.** A build with no provisioned password has **no push receiver at all** — the code
+compiles out, so there is nothing listening to authenticate against. That is the point: the old committed
+placeholder (`sprout-phase0`) shipped a *known* credential in every public artifact, so anyone who flashed
+Sprout from the web flasher was running a receiver whose password is printed in this repo, on their own
+LAN, without knowing it.
+
+So:
+
+| Build | Push receiver | How to update over WiFi |
+| --- | --- | --- |
+| **Public** (CI, release, web-flasher) | **absent** | not available — reflash over USB |
+| **Bench** (provisioned via `platformio_local.ini`) | armed | `just ota …` as below |
+
+A public-build board says so on the serial log at WiFi connect:
+
+```text
+# OTA: push receiver OFF - no password provisioned at build time (#1333). USB flashing unaffected.
+```
+
+This is still **not** the security fence — that is ADR-0026 (signed images + verified marker + key
+management), landing as signed **pull** in 0.8.0. The push mechanism itself retires in 0.8.1 (#1340) once
+signed pull is proven on the live fleet; the USB door stays, always.
 
 ### Running a real password (#1252)
 
@@ -64,9 +83,10 @@ cp platformio_local.example.ini platformio_local.ini   # gitignored
 # edit platformio_local.ini and replace CHANGE-ME-LOCALLY with your value
 ```
 
-The file is **optional**: absent, PlatformIO skips it and the build falls back to the placeholder, so a
-fresh clone needs zero setup. Present, it supplies the firmware's `-D OTA_PASSWORD` *and* the uploader's
-`--auth` together. Never put a real value in this doc, the example file, or any tracked file.
+The file is **optional**: absent, PlatformIO skips it and the build simply has **no push receiver** (#1333)
+— a fresh clone still builds and USB-flashes with zero setup, it just can't be pushed to over WiFi.
+Present, it supplies the firmware's `-D OTA_PASSWORD` *and* the uploader's `--auth` together. Never put a
+real value in this doc, the example file, or any tracked file.
 
 > **Why one file for both:** if the two sides disagree, the flash fails `Authentication Failed` on
 > **both** hash schemes while the espota invitation still succeeds — a signature that reads like a
@@ -92,6 +112,9 @@ keeps the OLD password and will refuse the NEW `--auth` — with the both-hash-s
 
 ## Honest limits (when OTA does NOT apply — flash wired)
 
+- **A board flashed from a PUBLIC build** (CI artifact, release asset, or the web flasher) has **no push
+  receiver compiled in at all** (#1333) — this is by design, not a fault. Reflash it over USB. Signed
+  **pull**-OTA (0.8.0, ADR-0026) is the path that will work here without a password.
 - **A dead / bricked board** has no running receiver — recover it wired (download mode).
 - **A brand-new / unprovisioned board** has no OTA firmware and no WiFi creds yet — its **first**
   flash is always wired; OTA works from then on.

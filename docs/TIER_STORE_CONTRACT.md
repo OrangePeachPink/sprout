@@ -59,8 +59,17 @@ Rules that bind the schema:
 
 - **No legacy `value` %** (ADR-0031 §2 / ADR-0006 §4) — the tier never resurrects the index.
 - **No plant identity in the store.** Identity resolves at **read time** via the
-  registry (open assignments) — the store stays board-true and the never-stitch line
-  clean (ADR-0027).
+  registry **assignment interval that covers the reading's own timestamp** —
+  `start_ts <= reading_ts < end_ts`, with a null `start_ts` covering grandfathered
+  history and a null `end_ts` meaning still-open. The store stays board-true and the
+  never-stitch line stays clean (ADR-0027).
+  **Never the open assignment.** Resolving every row against *today's* assignment is
+  exactly how history gets stitched onto the present: move a probe from `p01` to `p02`
+  and every reading it ever took is retroactively relabelled `p02`. The join must be
+  temporal or the never-stitch guarantee is inverted rather than upheld.
+  *(Corrected 2026-07-20, #1331 — the original text said "(open assignments)" and
+  called that the guarantee. It was the opposite, and the implementation and its
+  verification oracle both faithfully inherited the error from this sentence.)*
 - **The provenance trio is the auditable-rebuild guarantee** (#1239 fold 2): which raw
   file + when ingested + which wire schema = recoverable lineage. Chosen as **columns**
   (not a per-partition manifest): per-row lineage survives partial rebuilds and is

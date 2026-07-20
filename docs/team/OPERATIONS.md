@@ -424,3 +424,18 @@ know GitHub, so every bit of bespoke machinery we *don't* build is friction a fu
   label are retired — one signal, no drift.
 
 [board]: https://github.com/users/OrangePeachPink/projects/2
+
+## Deliberately-not-at-our-scale ledger (ratified 2026-07-20)
+
+Things we have considered and **decline at our current scale** — each with the written trigger that reopens it.
+These are decisions, not oversights; the maintainer defends them. Do not file issues for these; revisit only when
+a trigger fires.
+
+| Declined | Reopen when |
+| --- | --- |
+| Build attestations / SLSA provenance (signing + immutable releases + exact-tag builds already give the property that matters) | a supply-chain incident, or we distribute through a channel where users can't read the source |
+| Dashboard authn / authz / CSRF / threat-model redesign (it's a localhost operator tool; non-loopback rejection covers it) | we intentionally support remote access — an ADR-0014 revisit, not a defect fix |
+| Governance / maintainers / decision-rights document (the lane model + this file already record decision rights) | a second maintainer gets merge rights; a contributor disputes a decision; regular contributors exceed ~10 |
+| One-approval branch-protection rule | a second trusted maintainer exists |
+| Per-device OTA onboarding credentials (signed pull-updates already route this) | we ship push-OTA to devices we don't own |
+| Parquet WAL / staging / atomic publication | — already scoped in #1241; it's that issue's own design work |

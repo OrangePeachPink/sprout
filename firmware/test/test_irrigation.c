@@ -16,6 +16,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <unity.h>
+#include "fw_verify.h"
+#include "ota_gate.h"
+#include "monocypher-ed25519.h"
 #include "irrigation.h"
 #include "serial_cmd.h"
 #include "pump_pulse.h"
@@ -347,6 +350,205 @@ static moisture_level_t band_of(uint16_t raw)
     moisture_state_t st;
     moisture_init(&st, &cfg, raw);
     return st.committed;
+}
+
+/* ===== #302 S1: the ed25519 firmware-signature primitive (#1282) ============
+ * Vectors are REAL: generated with openssl ed25519 over the domain-separated
+ * message the CI signer produces ("sprout-fw\x00" || image). Throwaway key. */
+/* GENERATED KAT (openssl ed25519). Throwaway test key - NOT the release key. */
+static const uint8_t KAT_PUBKEY[32] = {
+    0xca, 0x3a, 0x30, 0x07, 0x09, 0x03, 0x4a, 0xb1, 0xa0, 0xe5, 0xbb,
+    0x29, 0x95, 0x62, 0xb3, 0x46, 0xa3, 0x61, 0x5b, 0xe1, 0x75, 0x22,
+    0xd4, 0xdc, 0x16, 0x16, 0x5f, 0xbc, 0x61, 0x07, 0x0e, 0x2d};
+static const uint8_t KAT_IMAGE[] = {0x53, 0x50, 0x52, 0x4f, 0x55, 0x54, 0x2d,
+                                    0x4b, 0x41, 0x54, 0x2d, 0x49, 0x4d, 0x41,
+                                    0x47, 0x45, 0x2d, 0x76, 0x31};
+static const uint8_t KAT_SIG[64] = {
+    0xa9, 0x3b, 0x79, 0xa4, 0xec, 0xe3, 0xcb, 0xd7, 0x16, 0xdc, 0x32,
+    0x00, 0xd0, 0xdb, 0xc4, 0xdb, 0x6e, 0x4d, 0x10, 0x00, 0x5d, 0x0e,
+    0xc2, 0x8a, 0x04, 0x2d, 0x4c, 0x85, 0xb2, 0xf4, 0x53, 0x7d, 0xd5,
+    0x4b, 0x1f, 0x05, 0xc9, 0x77, 0xfc, 0xa0, 0xc1, 0x71, 0xcd, 0x4f,
+    0x54, 0xd7, 0xdb, 0xf2, 0xc8, 0xab, 0x17, 0x6e, 0x35, 0x61, 0x69,
+    0xe7, 0x9a, 0x74, 0x3c, 0x01, 0x27, 0xfd, 0xb8, 0x01};
+static const uint8_t KAT_SIG_BARE[64] = {
+    0xa4, 0x62, 0xdb, 0xcb, 0xd5, 0x66, 0x21, 0x2e, 0x84, 0xed, 0x74,
+    0x4e, 0x91, 0xa0, 0x85, 0xef, 0xf7, 0xa4, 0xb5, 0xad, 0xd9, 0x45,
+    0xde, 0x26, 0x21, 0xea, 0x04, 0x3f, 0x00, 0x90, 0x96, 0xed, 0xbb,
+    0x0d, 0x84, 0xeb, 0x07, 0xcc, 0xf0, 0xcb, 0xf7, 0x2b, 0x07, 0xf6,
+    0x39, 0x0d, 0xb3, 0x52, 0xb8, 0xb6, 0x62, 0xe2, 0xdc, 0x06, 0x0f,
+    0x82, 0xdc, 0x56, 0x47, 0x11, 0x6f, 0xe9, 0x37, 0x02};
+
+void t_fw_verify_ed25519(void)
+{
+    const size_t n = sizeof(KAT_IMAGE);
+
+    /* 1. the happy path - a genuine release signature */
+    TEST_ASSERT_TRUE_MESSAGE(
+        sprout_fw_verify(KAT_IMAGE, n, KAT_SIG, KAT_PUBKEY),
+        "a valid domain-separated signature verifies");
+
+    /* 2. DOMAIN SEPARATION - Trellis's explicit KAT. A signature made over the
+     * BARE image (what CI produced before #1314) must NOT verify. */
+    TEST_ASSERT_FALSE_MESSAGE(
+        sprout_fw_verify(KAT_IMAGE, n, KAT_SIG_BARE, KAT_PUBKEY),
+        "a signature over the BARE image must be rejected");
+
+    /* 3. one flipped IMAGE byte */
+    {
+        uint8_t tampered[sizeof(KAT_IMAGE)];
+        memcpy(tampered, KAT_IMAGE, n);
+        tampered[n / 2] ^= 0x01u;
+        TEST_ASSERT_FALSE_MESSAGE(
+            sprout_fw_verify(tampered, n, KAT_SIG, KAT_PUBKEY),
+            "one flipped image byte must fail");
+    }
+
+    /* 4. one flipped SIGNATURE byte */
+    {
+        uint8_t badsig[64];
+        memcpy(badsig, KAT_SIG, 64);
+        badsig[10] ^= 0x01u;
+        TEST_ASSERT_FALSE_MESSAGE(
+            sprout_fw_verify(KAT_IMAGE, n, badsig, KAT_PUBKEY),
+            "one flipped signature byte must fail");
+    }
+
+    /* 5. wrong key */
+    {
+        uint8_t wrongkey[32];
+        memcpy(wrongkey, KAT_PUBKEY, 32);
+        wrongkey[0] ^= 0x01u;
+        TEST_ASSERT_FALSE_MESSAGE(
+            sprout_fw_verify(KAT_IMAGE, n, KAT_SIG, wrongkey),
+            "the wrong public key must fail");
+    }
+
+    /* 6. EQUIVALENCE. We feed the tag and the image as two chunks of the
+     * SHA-512 stream rather than concatenating (so a mapped multi-MB partition
+     * needs no copy). Prove that is identical to monocypher's own one-shot call
+     * on a concatenated buffer - the chunked form is not a re-implementation. */
+    {
+        uint8_t joined[SPROUT_FW_DOMAIN_TAG_LEN + sizeof(KAT_IMAGE)];
+        memcpy(joined, SPROUT_FW_DOMAIN_TAG, SPROUT_FW_DOMAIN_TAG_LEN);
+        memcpy(joined + SPROUT_FW_DOMAIN_TAG_LEN, KAT_IMAGE, n);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(
+            0,
+            crypto_ed25519_check(KAT_SIG, KAT_PUBKEY, joined, sizeof(joined)),
+            "monocypher one-shot accepts the same vector");
+        TEST_ASSERT_TRUE_MESSAGE(
+            sprout_fw_verify(KAT_IMAGE, n, KAT_SIG, KAT_PUBKEY),
+            "...and the chunked form agrees with it");
+    }
+
+    /* 7. defensive: NULL image is only legal at len 0 */
+    TEST_ASSERT_FALSE_MESSAGE(
+        sprout_fw_verify(NULL, 4, KAT_SIG, KAT_PUBKEY),
+        "NULL image with non-zero len is rejected, not dereferenced");
+}
+
+/* ===== #302 S2: the OTA gate — verify BEFORE the boot slot switches ========
+ * The fence. What matters is not just the verdict but the EFFECT: the commit
+ * callback (on-device: esp_ota_set_boot_partition) must be unreachable on every
+ * rejection path. These tests assert the call COUNT, not only the return. */
+static int s_commit_calls;
+static bool s_commit_result;
+static bool test_commit(void *ctx)
+{
+    (void)ctx;
+    s_commit_calls++;
+    return s_commit_result;
+}
+
+void t_ota_gate_fence(void)
+{
+    const size_t n = sizeof(KAT_IMAGE);
+    ota_verdict_t v;
+
+#define GATE_RESET()                                                           \
+    do {                                                                       \
+        s_commit_calls = 0;                                                    \
+        s_commit_result = true;                                                \
+    } while (0)
+
+    /* 1. genuinely signed -> accepted, and the slot switch happens exactly once */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG, 64, KAT_PUBKEY, test_commit,
+                       NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_ACCEPT, v, "valid signature -> accept");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, s_commit_calls,
+                                  "the boot slot switches exactly once");
+
+    /* 2. THE FENCE: a signature over the BARE image (no domain tag) is refused,
+     * and the slot is never switched. This is the pre-#1314 CI shape. */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG_BARE, 64, KAT_PUBKEY, test_commit,
+                       NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_BAD_SIG, v,
+                                  "bare-image signature -> rejected");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls,
+                                  "NO slot switch on a bad signature");
+
+    /* 3. tampered image */
+    GATE_RESET();
+    {
+        uint8_t bad[sizeof(KAT_IMAGE)];
+        memcpy(bad, KAT_IMAGE, n);
+        bad[0] ^= 0x01u;
+        v = ota_gate_apply(bad, n, KAT_SIG, 64, KAT_PUBKEY, test_commit, NULL);
+    }
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_BAD_SIG, v,
+                                  "tampered -> rejected");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "NO slot switch");
+
+    /* 4. FAIL-CLOSED: an ABSENT signature is a rejection, never "nothing to
+     * check, proceed" - the classic way a verify gate rots into a no-op. */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, NULL, 0, KAT_PUBKEY, test_commit, NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_NO_SIG, v,
+                                  "absent signature -> rejected, not skipped");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "NO slot switch");
+
+    /* 5. truncated / wrong-length signature */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG, 63, KAT_PUBKEY, test_commit,
+                       NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_SIG_LEN, v,
+                                  "short sig -> rejected");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "NO slot switch");
+
+    /* 6. no key available */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG, 64, NULL, test_commit, NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_NO_KEY, v, "no key -> rejected");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "NO slot switch");
+
+    /* 7. empty / absent image */
+    GATE_RESET();
+    v = ota_gate_apply(NULL, 0, KAT_SIG, 64, KAT_PUBKEY, test_commit, NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_NO_IMAGE, v,
+                                  "no image -> rejected");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "NO slot switch");
+
+    /* 8. verified, but the switch itself fails -> reported, not silently OK */
+    GATE_RESET();
+    s_commit_result = false;
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG, 64, KAT_PUBKEY, test_commit,
+                       NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_COMMIT_FAILED, v,
+                                  "a failed slot switch is surfaced");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, s_commit_calls, "it was attempted once");
+
+    /* 9. dry run: verify with no effect (commit == NULL) */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG, 64, KAT_PUBKEY, NULL, NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_ACCEPT, v, "dry verify still accepts");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "and changes nothing");
+
+    /* 10. the verdict tokens are stable for logs */
+    TEST_ASSERT_EQUAL_STRING("accept", ota_verdict_name(OTA_ACCEPT));
+    TEST_ASSERT_EQUAL_STRING("reject_bad_sig",
+                             ota_verdict_name(OTA_REJECT_BAD_SIG));
+#undef GATE_RESET
 }
 
 void t_band_anchors(void)
@@ -1746,6 +1948,260 @@ void t_owner_cal_instance_slot(void)
         "clearing the owner slot restores the class default");
 }
 
+/* An INDEPENDENT CRC-16/CCITT-FALSE, deliberately not shared with the codec:
+ * a test that reuses the implementation's own checksum proves only that the
+ * function is self-consistent. This one lets a hand-forged blob carry a VALID
+ * crc, so the semantic checks below (descending anchors, channel count) are
+ * exercised on their own merits rather than being masked by a crc reject. */
+static uint16_t test_crc16(const uint8_t *d, size_t n)
+{
+    uint16_t crc = 0xFFFFu;
+    for (size_t i = 0; i < n; i++) {
+        crc ^= (uint16_t)((uint16_t)d[i] << 8);
+        for (int b = 0; b < 8; b++)
+            crc = (crc & 0x8000u) ? (uint16_t)((crc << 1) ^ 0x1021u)
+                                  : (uint16_t)(crc << 1);
+    }
+    return crc;
+}
+
+static void test_reseal(uint8_t *b, size_t len) /* re-stamp a mutated blob */
+{
+    uint16_t c = test_crc16(b, len - 2u);
+    b[len - 2u] = (uint8_t)(c & 0xFFu);
+    b[len - 1u] = (uint8_t)(c >> 8);
+}
+
+void t_owner_cal_blob_roundtrip(void)
+{
+    /* #963: the owner slot survives a reboot. WHERE the bytes rest (device NVS
+     * vs host registry) is still open, so this is the storage-AGNOSTIC codec -
+     * both destinations need the same encoding. */
+    cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
+    for (int ch = 0; ch < CAL_MAX_CHANNELS; ch++)
+        cal_instance_clear(ch);
+
+    uint8_t blob[CAL_BLOB_MAX];
+
+    /* an EMPTY store is still a valid blob - "the owner has calibrated nothing"
+     * is a real state that must round-trip, not a special case. */
+    size_t n0 = cal_instance_serialize(blob, sizeof(blob));
+    TEST_ASSERT_GREATER_THAN_UINT32(0, n0);
+    TEST_ASSERT_TRUE(cal_instance_deserialize(blob, n0));
+    for (int ch = 0; ch < CAL_MAX_CHANNELS; ch++)
+        TEST_ASSERT_FALSE_MESSAGE(cal_instance_present(ch),
+                                  "empty blob restores an empty store");
+
+    /* two channels calibrated, two not - the sparse case is the realistic one */
+    uint16_t a0[MOISTURE_BOUNDARY_COUNT] = {2000, 1800, 1600, 1400, 1200, 1000};
+    uint16_t a2[MOISTURE_BOUNDARY_COUNT] = {1990, 1770, 1550, 1330, 1110, 900};
+    {
+        char board[16], prov[24];
+        strcpy(board, "esp32-classic");
+        strcpy(prov, "owner_wizard_a");
+        cal_record_t r = {
+            board, SENSOR_CLASS_CAPACITIVE_V2, {0}, prov, CAL_TIER_CHANNEL};
+        memcpy(r.anchors, a0, sizeof(a0));
+        cal_instance_set(0, &r);
+        strcpy(prov, "owner_wizard_c");
+        memcpy(r.anchors, a2, sizeof(a2));
+        cal_instance_set(2, &r);
+    }
+
+    size_t n = cal_instance_serialize(blob, sizeof(blob));
+    TEST_ASSERT_GREATER_THAN_UINT32(0, n);
+    TEST_ASSERT_LESS_OR_EQUAL_UINT32(CAL_BLOB_MAX, n);
+
+    /* the reboot: RAM is gone */
+    for (int ch = 0; ch < CAL_MAX_CHANNELS; ch++)
+        cal_instance_clear(ch);
+    TEST_ASSERT_FALSE(cal_instance_present(0));
+
+    TEST_ASSERT_TRUE_MESSAGE(cal_instance_deserialize(blob, n),
+                             "a blob we just wrote must restore");
+    TEST_ASSERT_TRUE(cal_instance_present(0));
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_present(1), "ch1 was never set");
+    TEST_ASSERT_TRUE(cal_instance_present(2));
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_present(3), "ch3 was never set");
+
+    /* restored records must RESOLVE, not merely exist - the chain is the point */
+    const cal_record_t *r0 =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_NOT_NULL(r0);
+    TEST_ASSERT_EQUAL_UINT16_ARRAY_MESSAGE(
+        a0, r0->anchors, MOISTURE_BOUNDARY_COUNT,
+        "ch0 owner anchors survive the round-trip and win the chain");
+    TEST_ASSERT_EQUAL_STRING("owner_wizard_a", r0->provenance);
+    TEST_ASSERT_EQUAL_STRING("esp32-classic", r0->board_class);
+    const cal_record_t *r2 =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 2);
+    TEST_ASSERT_EQUAL_UINT16_ARRAY(a2, r2->anchors, MOISTURE_BOUNDARY_COUNT);
+    TEST_ASSERT_EQUAL_STRING("owner_wizard_c", r2->provenance);
+
+    /* a restore STATES the whole store: ch1 falls back to the class default,
+     * it does not keep a stale owner record from before the restore. */
+    const cal_record_t *r1 =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 1);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CAL_TIER_CHANNEL, r1->tier,
+                                  "ch1 resolves to the class default");
+
+    /* a buffer that cannot hold the max NEVER gets a partial write */
+    uint8_t small[8];
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(
+        0, cal_instance_serialize(small, sizeof(small)),
+        "too-small buffer -> 0, never a prefix");
+}
+
+void t_owner_cal_blob_fail_closed(void)
+{
+    /* A BAD calibration is worse than NO calibration: it shifts every band edge,
+     * therefore every watering decision, and nothing looks broken while it does.
+     * So every malformed blob must restore NOTHING and leave the good store
+     * standing. Each case below re-asserts the SURVIVING state, not just the
+     * false return - "it rejected" and "it rejected without damage" are
+     * different claims, and only the second one is safe. */
+    cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
+    for (int ch = 0; ch < CAL_MAX_CHANNELS; ch++)
+        cal_instance_clear(ch);
+
+    uint16_t good[MOISTURE_BOUNDARY_COUNT] = {2000, 1800, 1600,
+                                              1400, 1200, 1000};
+    {
+        char board[16], prov[24];
+        strcpy(board, "esp32-classic");
+        strcpy(prov, "owner_good");
+        cal_record_t r = {
+            board, SENSOR_CLASS_CAPACITIVE_V2, {0}, prov, CAL_TIER_CHANNEL};
+        memcpy(r.anchors, good, sizeof(good));
+        cal_instance_set(0, &r);
+    }
+    uint8_t ref[CAL_BLOB_MAX];
+    size_t n = cal_instance_serialize(ref, sizeof(ref));
+    TEST_ASSERT_GREATER_THAN_UINT32(0, n);
+
+    uint8_t bad[CAL_BLOB_MAX];
+#define ASSERT_STORE_INTACT(msg)                                               \
+    do {                                                                       \
+        TEST_ASSERT_TRUE_MESSAGE(cal_instance_present(0), msg);                \
+        TEST_ASSERT_EQUAL_UINT16_ARRAY_MESSAGE(                                \
+            good,                                                              \
+            cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 0)        \
+                ->anchors,                                                     \
+            MOISTURE_BOUNDARY_COUNT, msg);                                     \
+    } while (0)
+
+    /* 1. TRUNCATED - the power-loss-mid-NVS-write case */
+    memcpy(bad, ref, n);
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_deserialize(bad, n - 5u),
+                              "a truncated blob must be rejected");
+    ASSERT_STORE_INTACT("truncated blob left the good store standing");
+
+    /* 2. SINGLE BIT FLIP that ONLY the crc can catch. Offset 9 is anchor[0]'s
+     * low byte, so this reads 2000 -> 2001: still strictly descending, still a
+     * plausible calibration, semantically invisible. Deliberately NOT a flip
+     * that breaks the ordering - that one is caught by the descending check
+     * even with the crc removed, which would make this case prove nothing about
+     * the crc. (Found by mutation: dropping the crc left the earlier version of
+     * this assertion green.) */
+    memcpy(bad, ref, n);
+    bad[9] ^= 0x01u;
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_deserialize(bad, n),
+                              "an order-preserving bit flip must fail the crc");
+    ASSERT_STORE_INTACT("bit-flipped blob left the good store standing");
+
+    /* 2b. a bit flip in the PROVENANCE text - no numeric check can see this one,
+     * so it is crc-or-nothing. Provenance is what tells the owner where a
+     * calibration came from; silently corrupting it is a lie about lineage. */
+    memcpy(bad, ref, n);
+    bad[n - 3u] ^= 0x01u;
+    TEST_ASSERT_FALSE_MESSAGE(
+        cal_instance_deserialize(bad, n),
+        "a corrupted provenance string must fail the crc");
+    ASSERT_STORE_INTACT("provenance-flipped blob left the good store standing");
+
+    /* 3. WRONG MAGIC - some other NVS key's bytes handed to us */
+    memcpy(bad, ref, n);
+    bad[0] = 'X';
+    test_reseal(bad, n); /* valid crc, still not our format */
+    TEST_ASSERT_FALSE_MESSAGE(
+        cal_instance_deserialize(bad, n),
+        "foreign bytes with a good crc are still foreign");
+    ASSERT_STORE_INTACT("wrong-magic blob left the good store standing");
+
+    /* 4. WRONG VERSION - an OTA changed the layout; ADR-0026 section 5 preserves
+     * NVS, so the NEW build is handed the OLD blob. Reject, never reinterpret. */
+    memcpy(bad, ref, n);
+    bad[4] = (uint8_t)(CAL_BLOB_VERSION + 1u);
+    test_reseal(bad, n);
+    TEST_ASSERT_FALSE_MESSAGE(
+        cal_instance_deserialize(bad, n),
+        "a future-version blob must not be reinterpreted");
+    ASSERT_STORE_INTACT("version-bumped blob left the good store standing");
+
+    /* 5. MORE CHANNELS THAN THIS BUILD HAS - a wider board's blob. Two reasons
+     * this guard is load-bearing: reading the first four and dropping the rest
+     * is an INVISIBLE cal loss on the channels we ignored, and the slot index
+     * runs to `channels`, so an unchecked count indexes past a CAL_MAX_CHANNELS
+     * array.
+     *
+     * The blob must genuinely CARRY the fifth slot, or the parse simply runs out
+     * of bytes and the length check rejects it - which looks identical from the
+     * outside and tests nothing. (Found by mutation: with the count check
+     * removed, the earlier version of this case still passed.) So: splice in a
+     * real fifth slot byte before the crc and re-seal. */
+    memcpy(bad, ref, n - 2u); /* header + payload, without the crc */
+    bad[5] = (uint8_t)(CAL_MAX_CHANNELS + 1u);
+    bad[n - 2u] = 0u; /* the fifth slot: present = 0, fully parseable */
+    test_reseal(bad, n + 1u);
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_deserialize(bad, n + 1u),
+                              "a wider board's blob must be rejected whole");
+    ASSERT_STORE_INTACT("wide-channel blob left the good store standing");
+
+    /* 6. NON-DESCENDING ANCHORS - would break the moisture_classifier contract
+     * (boundary[] strictly descending). Carries a VALID crc, so only the
+     * semantic check can catch it. */
+    memcpy(bad, ref, n);
+    {
+        /* anchors start after magic(4)+ver(1)+chan(1)+present(1)+sc(1)+tier(1) */
+        size_t at = 9;
+        uint16_t asc[MOISTURE_BOUNDARY_COUNT] = {1000, 1200, 1400,
+                                                 1600, 1800, 2000};
+        for (size_t i = 0; i < MOISTURE_BOUNDARY_COUNT; i++) {
+            bad[at++] = (uint8_t)(asc[i] & 0xFFu);
+            bad[at++] = (uint8_t)(asc[i] >> 8);
+        }
+    }
+    test_reseal(bad, n);
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_deserialize(bad, n),
+                              "ascending anchors violate the classifier "
+                              "contract - reject, not repair");
+    ASSERT_STORE_INTACT("non-descending blob left the good store standing");
+
+    /* 7. TRAILING GARBAGE - a prefix that parses is not a blob that validates */
+    memcpy(bad, ref, n);
+    bad[n] = 0xAAu;
+    bad[n + 1u] = 0xBBu;
+    test_reseal(bad, n + 2u);
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_deserialize(bad, n + 2u),
+                              "trailing bytes must be rejected");
+    ASSERT_STORE_INTACT("trailing-garbage blob left the good store standing");
+
+    /* 8. NULL / absurd length */
+    TEST_ASSERT_FALSE(cal_instance_deserialize(NULL, n));
+    TEST_ASSERT_FALSE(cal_instance_deserialize(ref, 0));
+    TEST_ASSERT_FALSE(cal_instance_deserialize(ref, CAL_BLOB_MAX + 1u));
+    ASSERT_STORE_INTACT("degenerate inputs left the good store standing");
+#undef ASSERT_STORE_INTACT
+
+    /* and the reference blob STILL restores - none of the above corrupted it */
+    for (int ch = 0; ch < CAL_MAX_CHANNELS; ch++)
+        cal_instance_clear(ch);
+    TEST_ASSERT_TRUE(cal_instance_deserialize(ref, n));
+    TEST_ASSERT_TRUE(cal_instance_present(0));
+    for (int ch = 0; ch < CAL_MAX_CHANNELS; ch++)
+        cal_instance_clear(ch);
+}
+
 void t_cal_resolver_chain_order(void)
 {
     cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
@@ -2108,6 +2564,8 @@ int main(void)
     RUN_TEST(t_no_improvement_fault);
     RUN_TEST(t_overrun_failsafe);
     RUN_TEST(t_last_water_ms);
+    RUN_TEST(t_fw_verify_ed25519);
+    RUN_TEST(t_ota_gate_fence);
     RUN_TEST(t_band_anchors);
     RUN_TEST(t_board_capability);
     RUN_TEST(t_sensor_type_resistive);
@@ -2132,6 +2590,8 @@ int main(void)
     RUN_TEST(t_device_hostname);
     RUN_TEST(t_cal_resolver_chain_order);
     RUN_TEST(t_owner_cal_instance_slot);
+    RUN_TEST(t_owner_cal_blob_roundtrip);
+    RUN_TEST(t_owner_cal_blob_fail_closed);
     RUN_TEST(t_cal_resolver_classic_byte_preserved);
     RUN_TEST(t_cal_resolver_c5_board_envelope);
     RUN_TEST(t_cal_tier_label);
