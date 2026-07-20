@@ -1,7 +1,7 @@
 # ADR-0038 — Module boundaries and the import rule
 
-**Status:** Proposed — the layer table and the two rules need maintainer ratification; everything downstream is
-scheduling. V1 (doctrine).
+**Status:** Accepted — the layer table (§1), the import rule (§2), and the companion one-implementation rule (§3)
+were maintainer-ratified 2026-07-20 (#1336, PR #1362). Everything downstream is scheduling. V1 (doctrine).
 **Date:** 2026-07-20
 **Owner:** Trellis (the boundaries + the rules). Build: **Data** (host modules), **DX** (the lint).
 **Lane:** architecture
