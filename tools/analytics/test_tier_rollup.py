@@ -16,6 +16,7 @@ from tier_rollup import (
     pick_tier,
     read_envelope,
     read_events,
+    trajectory_series,
 )
 
 
@@ -150,3 +151,62 @@ def test_rebuild_is_idempotent_and_pick_tier_maps_ranges(tmp_path: Path) -> None
     assert pick_tier(7 * 24) == "t1"
     assert pick_tier(14 * 24) == "t2"
     assert pick_tier(365 * 24) == "t3"
+
+
+def test_trajectory_carries_the_envelope_and_never_smooths(tmp_path: Path) -> None:
+    # #978: a long-range read must keep min/max + n per point — a mean-only line
+    # would erase the spike the operator is looking for.
+    raw = tmp_path / "raw"
+    rows = []
+    for i in range(120):  # 2 h at 1-min spacing -> hourly buckets
+        v = 1500 + i
+        if i == 30:
+            v = 2600  # a spike inside bucket 0
+        rows.append(_r(f"2026-07-01 {i // 60:02d}:{i % 60:02d}:00", v))
+    _fixture_raw(raw, rows)
+    out = tmp_path / "rollup"
+    build_rollups(raw, out)
+    t0 = datetime(2026, 7, 1, tzinfo=timezone.utc)
+    t1 = datetime(2026, 7, 2, tzinfo=timezone.utc)
+    tj = trajectory_series("devA", "s1", t0, t1, tier="t3", root=out)
+    assert tj["tier"] == "t3" and tj["bucket_seconds"] == 3600
+    assert tj["n_readings"] == 120  # every reading accounted for
+    assert tj["n_points"] == 2  # ...in 2 points: sub-linear by construction
+    first = tj["points"][0]
+    assert first["max"] == 2600  # the spike SURVIVES the rollup
+    assert first["min"] == 1500 and first["n"] == 60
+    assert first["mean"] < first["max"]  # a mean alone would have hidden it
+
+
+def test_trajectory_breaks_across_a_gap_never_draws_through_it(tmp_path: Path) -> None:
+    raw = tmp_path / "raw"
+    early = [_r(f"2026-07-01 0{h}:00:00", 1500 + h) for h in range(3)]
+    late = [_r(f"2026-07-01 1{h}:00:00", 1600 + h) for h in range(3)]  # 7 h outage
+    _fixture_raw(raw, early + late)
+    out = tmp_path / "rollup"
+    build_rollups(raw, out)
+    tj = trajectory_series(
+        "devA",
+        "s1",
+        datetime(2026, 7, 1, tzinfo=timezone.utc),
+        datetime(2026, 7, 2, tzinfo=timezone.utc),
+        tier="t3",
+        root=out,
+    )
+    breaks = [p for p in tj["points"] if p["mean"] is None]
+    assert len(breaks) == 1  # the outage is surfaced as an explicit break
+    xs = [p["x"] for p in tj["points"]]
+    assert xs == sorted(xs)  # the break sits between the two runs, in order
+
+
+def test_trajectory_refuses_the_raw_range(tmp_path: Path) -> None:
+    import pytest
+
+    with pytest.raises(ValueError):
+        trajectory_series(
+            "devA",
+            "s1",
+            datetime(2026, 7, 1, tzinfo=timezone.utc),
+            datetime(2026, 7, 1, 6, tzinfo=timezone.utc),  # 6 h -> "raw"
+            root=tmp_path,
+        )

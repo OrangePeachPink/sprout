@@ -278,3 +278,74 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+# --------------------------------------------------------------------------- #
+# #978 — the long-range trajectory reader (the tier's answer to O(window rows))
+# --------------------------------------------------------------------------- #
+
+# A bucket gap wider than this many bucket-widths is a real logging interruption,
+# not sampling noise — the series BREAKS there rather than drawing across it.
+GAP_BUCKETS = 2
+
+
+def trajectory_series(
+    device_id: str,
+    sensor_id: str,
+    t0,
+    t1,
+    tier: str | None = None,
+    root: Path | None = None,
+) -> dict:
+    """One channel's long-range trajectory read from the rollup tier — the #978
+    substitute for re-parsing every raw row in the window.
+
+    Returns a **labeled envelope**, never a smoothed line (ADR-0031 §4 / ADR-0006 §4):
+
+        {tier, bucket_seconds, n_points, n_readings, points: [
+            {x, mean, min, max, n, flagged} | {x, mean: None}  # a gap BREAK
+        ]}
+
+    Honesty fence, inherited and enforced here:
+
+    - **min/max ride every point** — a spike is truth; a mean-only long-range line
+      would erase exactly the events the operator is looking for.
+    - **Gaps are surfaced, never bridged** — a run of missing buckets emits an
+      explicit break point (``mean: None``), so the chart cannot draw a straight
+      line across an outage (E9's rule, on the bucket axis).
+    - **``n`` per point** — a 2-sample bucket is not a 60-sample bucket, and the
+      render is required to be able to say so.
+    - **`flagged`** carries the bucket's non-OK count; quality is never averaged
+      away (contract §2).
+    """
+    if tier is None:
+        tier = pick_tier((t1 - t0).total_seconds() / 3600.0)
+    if tier == "raw":
+        raise ValueError("short windows ride the raw path (#827 cache), not the tier")
+    buckets = read_envelope(device_id, sensor_id, t0, t1, tier=tier, root=root)
+    secs = GRANULARITIES.get(tier, 3600)
+    gap_us = GAP_BUCKETS * secs * 1_000_000
+    points: list[dict] = []
+    prev_us = None
+    for b in buckets:
+        if prev_us is not None and (b["bucket_us"] - prev_us) > gap_us:
+            # an outage: an explicit break so no line is drawn across it
+            points.append({"x": (prev_us + b["bucket_us"]) / 2e6, "mean": None})
+        points.append(
+            {
+                "x": b["bucket_us"] / 1e6,
+                "mean": b["mean"],
+                "min": b["min"],
+                "max": b["max"],
+                "n": b["n"],
+                "flagged": b["n_flagged"],
+            }
+        )
+        prev_us = b["bucket_us"]
+    return {
+        "tier": tier,
+        "bucket_seconds": secs,
+        "n_points": len(points),
+        "n_readings": sum(b["n"] for b in buckets),
+        "points": points,
+    }
