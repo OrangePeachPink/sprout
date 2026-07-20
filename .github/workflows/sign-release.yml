@@ -1,14 +1,37 @@
 name: sign release firmware (#302)
 
 # On a published release (vX.Y.Z), build the board-aware factory bins (classic + C5,
-# firmware/scripts/factory_bin.py) and SIGN each with the release signing key (ed25519,
-# ADR-0026 Decision 2), then attach <bin> + <bin>.sig to the release. A future pull-OTA
-# (#302) + the web-flasher verify against the committed public key (firmware/keys/).
+# firmware/scripts/factory_bin.py) from the EXACT released ref, SIGN each with the
+# release signing key (ed25519, ADR-0026 Decision 2), and attach <bin> + <bin>.sig
+# + a SHA256SUMS receipt to the release. A future pull-OTA (#302) + the web-flasher
+# verify against the committed public key (firmware/keys/).
 #
-# GATED on the SPROUT_SIGNING_KEY secret: until the key ceremony runs
-# (docs/process/signing-key-ceremony.md) the sign step SKIPS with a warning - the workflow
-# does NOT fail, so releases still cut (unsigned) in the interim. Once the secret is set,
-# every release is signed.
+# #1346 - THE RELEASE TELLS THE TRUTH, OR IT FAILS. Four properties, each of which
+# was previously assumed rather than enforced:
+#
+#   1. EXACT-REF BUILD. checkout pins the release tag. The `workflow_dispatch`
+#      path took a `tag` input, labelled artifacts with it, and then built
+#      whatever the DEFAULT BRANCH happened to be - so re-running the job for
+#      v0.7.2 would have published rolling `main` under a v0.7.2 name. The
+#      version string is now true by construction, and the resolved commit is
+#      printed and written into the receipt so the claim is checkable after the
+#      fact, not merely asserted here.
+#   2. FAIL CLOSED ON MISSING KEYS. This job used to WARN and publish unsigned.
+#      That is the worst of both: the release exists, looks normal, and cannot be
+#      verified by anything downstream - and nobody finds out until a device
+#      rejects it or, worse, doesn't. No key -> no release.
+#   3. WRITE ONCE. `--clobber` is gone. A release artifact that can be silently
+#      replaced is not evidence of anything; a second upload must fail loudly so
+#      the difference gets explained rather than overwritten.
+#   4. PINNED SUPPLY CHAIN. Actions are pinned to full commit SHAs (a tag is
+#      mutable - `@v7` can point somewhere else tomorrow, and this job holds the
+#      signing key) and PlatformIO is pinned to an exact version so the bytes are
+#      reproducible from the same ref.
+#
+# THE KEY CEREMONY (docs/process/signing-key-ceremony.md) is the maintainer's, and
+# it gates the first RUN of this job, not the merge of this file. Landing it with
+# the fail-closed flag on is deliberate: the alternative is discovering the missing
+# key AT the cut, which is the worst possible moment.
 
 on:
   release:
@@ -16,30 +39,83 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to build + sign (e.g. v0.7.2)"
+        description: "Release tag to build + sign (e.g. v0.8.0)"
         required: true
         type: string
 
 permissions:
   contents: write # attach release assets
 
+env:
+  # Pin PlatformIO so the same ref produces the same bytes. Matches the bench
+  # (#1346); bump deliberately, never floating.
+  PIO_VERSION: "6.1.19"
+
 jobs:
   sign:
     name: build + sign factory bins
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      # Resolve the ref BEFORE checkout - the whole point is that we check out
+      # what we are about to claim, not the default branch.
+      - name: Resolve the release ref
+        id: ref
+        run: |
+          tag="${{ github.event.release.tag_name || inputs.tag }}"
+          if [ -z "$tag" ]; then
+            echo "::error title=No release ref::neither release.tag_name nor the tag input was set; refusing to build an unlabelled artifact."
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Building and signing exactly: $tag"
 
-      - name: Detect signing key
-        id: sk
-        run: echo "present=${{ secrets.SPROUT_SIGNING_KEY != '' }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ steps.ref.outputs.tag }}
+          fetch-depth: 0 # factory_bin.py stamps the short git rev into the manifest
 
-      - uses: actions/setup-python@v6
+      - name: Confirm the checkout IS the released ref
+        id: prov
+        env:
+          TAG: ${{ steps.ref.outputs.tag }}
+        run: |
+          # Fetch tags explicitly first. Without this the check's most likely
+          # failure is "the tag object isn't local", which would block a perfectly
+          # good release at the worst possible moment - and a gate that fires on
+          # its own plumbing teaches people to disable it.
+          git fetch --tags --force --quiet || true
+          sha="$(git rev-parse HEAD)"
+          tag_sha="$(git rev-list -n1 "$TAG" 2>/dev/null || true)"
+          echo "resolved commit: $sha"
+          if [ -z "$tag_sha" ]; then
+            echo "::error title=Cannot prove the ref::$TAG did not resolve to a commit locally, so the build cannot be shown to match the tag it will be published under. Refusing rather than assuming."
+            exit 1
+          fi
+          if [ "$sha" != "$tag_sha" ]; then
+            echo "::error title=Ref mismatch::HEAD ($sha) is not $TAG ($tag_sha)."
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      # #1346: fail closed. Checked BEFORE the build so a keyless run costs
+      # seconds and reports the reason, rather than building for minutes and
+      # then quietly publishing something unverifiable.
+      - name: Require the signing key (no key -> no release)
+        env:
+          SIGNING_KEY: ${{ secrets.SPROUT_SIGNING_KEY }}
+        run: |
+          if [ -z "$SIGNING_KEY" ]; then
+            echo "::error title=Release BLOCKED - no signing key::SPROUT_SIGNING_KEY is not set, so this release cannot be signed. Run the key ceremony (docs/process/signing-key-ceremony.md, ~5 min, maintainer-only) and re-dispatch. Publishing an UNSIGNED artifact is no longer allowed (#1346): a release nothing can verify still looks normal to everyone downstream."
+            exit 1
+          fi
+          echo "signing key present"
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
 
-      - name: Install PlatformIO
-        run: pip install --quiet platformio
+      - name: Install PlatformIO (pinned)
+        run: pip install --quiet "platformio==${PIO_VERSION}"
 
       - name: Build board-aware factory bins (classic + C5)
         working-directory: firmware
@@ -64,13 +140,12 @@ jobs:
           ls -l dist
 
       - name: Sign factory bins (ed25519) + verify against the committed public key
-        if: steps.sk.outputs.present == 'true'
         env:
           SIGNING_KEY: ${{ secrets.SPROUT_SIGNING_KEY }}
         run: |
           umask 077
           printf '%s' "$SIGNING_KEY" > signing.key
-          # #1282 / ADR-0026 Decision 2 — sign a DOMAIN-SEPARATED message, never the
+          # #1282 / ADR-0026 Decision 2 - sign a DOMAIN-SEPARATED message, never the
           # bare image. The 10-byte tag "sprout-fw\0" means a firmware signature can
           # never be replayed as a signature over a different artifact class (a
           # config, a manifest, a future signed asset). The device-side verify
@@ -90,17 +165,25 @@ jobs:
           rm -f domain.tag
           shred -u signing.key 2>/dev/null || rm -f signing.key
 
-      - name: Warn if unsigned
-        if: steps.sk.outputs.present != 'true'
+      # #1346 EXACT-BYTES RECEIPT. The digest of what was actually published, tied
+      # to the ref it came from. This is what lets the web-flasher serve the
+      # RELEASED bytes and prove it (a rebuild from the same tag is not the same
+      # claim - it is a second build that is merely expected to match).
+      - name: Write the SHA256SUMS receipt
+        working-directory: dist
         run: |
-          echo "::warning title=Release UNSIGNED::SPROUT_SIGNING_KEY not set - run the key ceremony (docs/process/signing-key-ceremony.md) to enable #302 signing. Artifacts built but not signed."
+          sha256sum sprout-*-factory.bin *.sig > SHA256SUMS
+          {
+            echo "# Sprout release artifact receipt (#1346)"
+            echo "# tag:    ${{ steps.ref.outputs.tag }}"
+            echo "# commit: ${{ steps.prov.outputs.sha }}"
+            echo "# built:  pinned platformio==${PIO_VERSION}, SHA-pinned actions"
+          } | cat - SHA256SUMS > SHA256SUMS.tmp && mv SHA256SUMS.tmp SHA256SUMS
+          cat SHA256SUMS
 
-      - name: Resolve tag
-        id: tag
-        run: echo "tag=${{ github.event.release.tag_name || inputs.tag }}" >> "$GITHUB_OUTPUT"
-
-      - name: Attach artifacts to the release
-        if: steps.tag.outputs.tag != ''
+      # #1346: NO --clobber. A release artifact is written once; a second upload
+      # must fail loudly rather than silently replace evidence.
+      - name: Attach artifacts to the release (write-once)
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ steps.tag.outputs.tag }}" dist/* --clobber
+        run: gh release upload "${{ steps.ref.outputs.tag }}" dist/*
