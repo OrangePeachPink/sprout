@@ -17,6 +17,7 @@
 #include <stdbool.h>
 #include <unity.h>
 #include "fw_verify.h"
+#include "ota_gate.h"
 #include "monocypher-ed25519.h"
 #include "irrigation.h"
 #include "serial_cmd.h"
@@ -443,6 +444,111 @@ void t_fw_verify_ed25519(void)
     TEST_ASSERT_FALSE_MESSAGE(
         sprout_fw_verify(NULL, 4, KAT_SIG, KAT_PUBKEY),
         "NULL image with non-zero len is rejected, not dereferenced");
+}
+
+/* ===== #302 S2: the OTA gate — verify BEFORE the boot slot switches ========
+ * The fence. What matters is not just the verdict but the EFFECT: the commit
+ * callback (on-device: esp_ota_set_boot_partition) must be unreachable on every
+ * rejection path. These tests assert the call COUNT, not only the return. */
+static int s_commit_calls;
+static bool s_commit_result;
+static bool test_commit(void *ctx)
+{
+    (void)ctx;
+    s_commit_calls++;
+    return s_commit_result;
+}
+
+void t_ota_gate_fence(void)
+{
+    const size_t n = sizeof(KAT_IMAGE);
+    ota_verdict_t v;
+
+#define GATE_RESET()                                                           \
+    do {                                                                       \
+        s_commit_calls = 0;                                                    \
+        s_commit_result = true;                                                \
+    } while (0)
+
+    /* 1. genuinely signed -> accepted, and the slot switch happens exactly once */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG, 64, KAT_PUBKEY, test_commit,
+                       NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_ACCEPT, v, "valid signature -> accept");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, s_commit_calls,
+                                  "the boot slot switches exactly once");
+
+    /* 2. THE FENCE: a signature over the BARE image (no domain tag) is refused,
+     * and the slot is never switched. This is the pre-#1314 CI shape. */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG_BARE, 64, KAT_PUBKEY, test_commit,
+                       NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_BAD_SIG, v,
+                                  "bare-image signature -> rejected");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls,
+                                  "NO slot switch on a bad signature");
+
+    /* 3. tampered image */
+    GATE_RESET();
+    {
+        uint8_t bad[sizeof(KAT_IMAGE)];
+        memcpy(bad, KAT_IMAGE, n);
+        bad[0] ^= 0x01u;
+        v = ota_gate_apply(bad, n, KAT_SIG, 64, KAT_PUBKEY, test_commit, NULL);
+    }
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_BAD_SIG, v,
+                                  "tampered -> rejected");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "NO slot switch");
+
+    /* 4. FAIL-CLOSED: an ABSENT signature is a rejection, never "nothing to
+     * check, proceed" - the classic way a verify gate rots into a no-op. */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, NULL, 0, KAT_PUBKEY, test_commit, NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_NO_SIG, v,
+                                  "absent signature -> rejected, not skipped");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "NO slot switch");
+
+    /* 5. truncated / wrong-length signature */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG, 63, KAT_PUBKEY, test_commit,
+                       NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_SIG_LEN, v,
+                                  "short sig -> rejected");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "NO slot switch");
+
+    /* 6. no key available */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG, 64, NULL, test_commit, NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_NO_KEY, v, "no key -> rejected");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "NO slot switch");
+
+    /* 7. empty / absent image */
+    GATE_RESET();
+    v = ota_gate_apply(NULL, 0, KAT_SIG, 64, KAT_PUBKEY, test_commit, NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_NO_IMAGE, v,
+                                  "no image -> rejected");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "NO slot switch");
+
+    /* 8. verified, but the switch itself fails -> reported, not silently OK */
+    GATE_RESET();
+    s_commit_result = false;
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG, 64, KAT_PUBKEY, test_commit,
+                       NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_COMMIT_FAILED, v,
+                                  "a failed slot switch is surfaced");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, s_commit_calls, "it was attempted once");
+
+    /* 9. dry run: verify with no effect (commit == NULL) */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG, 64, KAT_PUBKEY, NULL, NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_ACCEPT, v, "dry verify still accepts");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "and changes nothing");
+
+    /* 10. the verdict tokens are stable for logs */
+    TEST_ASSERT_EQUAL_STRING("accept", ota_verdict_name(OTA_ACCEPT));
+    TEST_ASSERT_EQUAL_STRING("reject_bad_sig",
+                             ota_verdict_name(OTA_REJECT_BAD_SIG));
+#undef GATE_RESET
 }
 
 void t_band_anchors(void)
@@ -2205,6 +2311,7 @@ int main(void)
     RUN_TEST(t_overrun_failsafe);
     RUN_TEST(t_last_water_ms);
     RUN_TEST(t_fw_verify_ed25519);
+    RUN_TEST(t_ota_gate_fence);
     RUN_TEST(t_band_anchors);
     RUN_TEST(t_board_capability);
     RUN_TEST(t_sensor_type_resistive);
