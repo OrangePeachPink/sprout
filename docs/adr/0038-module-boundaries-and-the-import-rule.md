@@ -124,6 +124,35 @@ no-go** — that is what makes it a gate and not a formality.
   failure — two components disagreeing across a contract — and gating extraction on that epic would serialize
   0.8.2 behind one piece of infrastructure. **Different failure, different instrument.**
 
+### 7. Module status — absence means production
+
+*(Added 2026-07-20, #1388 — the alive-or-dead audit found 21 host modules with zero production
+dependents and no way to tell which were dead.)*
+
+Layers say where a module sits. **Status says whether it is live**, and the import graph cannot
+answer that: a tool invoked from the justfile is never imported, and a module built ahead of its
+consumers looks identical to one abandoned by them.
+
+A module declares status as a `Status:` line in its docstring (firmware: in the lib's README row),
+mirroring the ADR header convention already in use:
+
+| status | meaning |
+|---|---|
+| *(absent)* | **production** — the default, so only exceptions carry a marker |
+| `pending` | built, consumers land in a **named issue**. Protects in-flight work from being read as dead |
+| `legacy` | superseded, kept for a **stated reason** |
+| `research` | reference or experiment, never intended for production |
+
+**`pending` is the load-bearing one.** Without it, `fw_verify` and `ota_gate` — the signing
+primitive and the OTA gate — are indistinguishable from `pump_pulse` under any import analysis,
+because none of the three is consumed by production `main.cpp`. A convention that cannot tell
+new work from abandoned work will eventually get the security work deleted.
+
+Every non-production status **must name its reason and its issue**. "legacy" alone restates the
+problem; *"legacy — superseded by TIER_STORE_CONTRACT.md (#1239)"* ends it.
+
+Vendored third-party directories are out of scope: they carry their own provenance record.
+
 ## Consequences
 
 - Bad reaches become mechanically visible, then mechanically blocked.
