@@ -23,7 +23,8 @@ the relay path is **bench-unverified** (#191) and autonomous watering is gated (
   rotating, self-describing CSV under `logs/` per the shared telemetry schema.
 - **Dashboard** (`tools/analytics/serve.py`) — serves the live soil view; binds to localhost.
 - **One-command run** — `just start` brings Sprout up and opens the dashboard; `just check` runs the
-  same lint + tests as CI. The dev environment is locked via `uv` (`uv sync`).
+  compiler-free local gate (`just check-firmware` adds the native C tests). The dev environment is
+  locked via `uv` (`uv sync`).
 - **Experiment capture** — a guided capture mode with live in-mode feedback (epic complete).
 - **Lab Notebook** — past experiments are cataloged at `/lab`; the notebook epic (#153) is complete.
 - **CI** — the `lint + tests` gate runs on every PR and is green.

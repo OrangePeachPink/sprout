@@ -46,7 +46,8 @@ bar is the same either way: clear, tested, and kind.
 ## Quick start
 
 ```text
-git clone https://github.com/OrangePeachPink/sprout && cd sprout
+git clone https://github.com/OrangePeachPink/sprout
+cd sprout
 uv sync                     # reproduce the exact, locked dev environment
 uv run pre-commit install   # the conventions auto-apply on every commit
 just start                  # run Sprout — opens the dashboard in your browser
@@ -54,8 +55,9 @@ just start                  # run Sprout — opens the dashboard in your browser
 
 New here? You need only two tools — **[uv](https://docs.astral.sh/uv/)** (env + runner) and
 **[just](https://github.com/casey/just)** (the command menu) — or click **Open in Codespaces** for a
-ready-made env in the browser. Then `just` lists every command, and `just check` runs the same lint + format +
-tests that CI does.
+ready-made env in the browser. Then `just` lists every command, and `just check` runs your local gate — lint,
+format, and the host test suites. Those two tools are genuinely all you need: `just check` never asks for a
+compiler. Only firmware work needs more, and it says so on its own path (`just check-firmware`).
 
 Once the dashboard is up, click **▶ Start logging** — that single action begins logging every connected
 sensor at once, whether it's plugged in over USB or reporting over Wi-Fi. On a brand-new install with no data yet,
@@ -173,7 +175,8 @@ One command sets up, one command checks — the conventions help you instead of 
 ```text
 uv sync                     # the exact, locked dev env (Python, ruff, pytest, pre-commit)
 uv run pre-commit install   # auto-format + lint + hygiene on every commit
-just check                  # the full gate: pre-commit + tests — exactly what CI runs
+just check                  # your local gate: pre-commit + host/DX/analytics tests (uv + just only)
+just check-firmware         # the above PLUS the native C tests — needs PlatformIO (firmware work only)
 just                        # list every command
 ```
 
