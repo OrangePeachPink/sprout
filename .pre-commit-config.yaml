@@ -7,7 +7,7 @@
 # (deliberately out of scope per ADR-0002 #10/#12). Frozen design provenance
 # (docs/design/_archive) and the retired BACKLOG are left untouched.
 
-exclude: '^(docs/design/_archive/|BACKLOG\.md$)'
+exclude: '^(docs/design/_archive/|BACKLOG\.md$|firmware/lib/monocypher/)'
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
