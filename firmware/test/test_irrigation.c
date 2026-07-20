@@ -353,7 +353,7 @@ static moisture_level_t band_of(uint16_t raw)
 
 /* ===== #302 S1: the ed25519 firmware-signature primitive (#1282) ============
  * Vectors are REAL: generated with openssl ed25519 over the domain-separated
- * message the CI signer produces ("sprout-fw " || image). Throwaway key. */
+ * message the CI signer produces ("sprout-fw\x00" || image). Throwaway key. */
 /* GENERATED KAT (openssl ed25519). Throwaway test key - NOT the release key. */
 static const uint8_t KAT_PUBKEY[32] = {
     0xca, 0x3a, 0x30, 0x07, 0x09, 0x03, 0x4a, 0xb1, 0xa0, 0xe5, 0xbb,
