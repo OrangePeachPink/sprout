@@ -83,6 +83,22 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .cyclenote { font-size: 11.5px; color: var(--muted); margin-left: 8px; }
 .cyclenote b { color: var(--ink); font-weight: 600; }
 .cyclenote .declined { color: var(--st-dry, #E8703A); }
+/* #832 cross-board comparison */
+.cmpbar { margin: 4px 0 10px; }
+.cmprow { display: grid; grid-template-columns: minmax(110px,170px) 1fr auto; align-items: center;
+  gap: 12px; padding: 4px 2px; }
+.cmpname { font-family: var(--font-ui); font-weight: 600; font-size: 13px; }
+.cmpname .brd { color: var(--muted); font-weight: 400; font-size: 11px; }
+.cmplane { display: flex; height: 16px; border-radius: 4px; overflow: hidden;
+  border: 1px solid var(--border); }
+.cmpseg { flex: 1 1 0; min-width: 0; opacity: .26; }
+.cmpseg.on { opacity: 1; }
+.cmpseg.cur { outline: 2px solid var(--ink); outline-offset: -2px; z-index: 1; }
+.cmptrack { position: relative; height: 16px; border-radius: 4px; border: 1px solid var(--border);
+  background: linear-gradient(to right, var(--band-saturated), var(--band-ideal), var(--band-parched)); }
+.cmptrack .pin { position: absolute; top: -3px; bottom: -3px; width: 3px; background: var(--ink); }
+.cmpval { font-family: var(--font-data); font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.cmpabsent { color: var(--st-dry, #E8703A); font-size: 11.5px; }
 .chansel { display: inline-flex; gap: 4px; }
 .chanchip { font-family: var(--font-data); font-size: 11px; font-weight: 600; cursor: pointer; color: #fff;
   border-radius: var(--r-pill); padding: 3px 9px; border: 1px solid transparent; user-select: none; }
@@ -640,6 +656,23 @@ footer.prov code { font-family: var(--font-data); }
            events, which is instrument detail, never a Home-face number. -->
       <div class="panel-h"><h2>Detector precision</h2><span class="cap">confirm/reject rulings you have made on detected waterings — both numerals always shown; a bare percentage over a few events would read like a measurement it is not</span></div>
       <div id="detPrecision" class="small muted">loading…</div>
+
+      <!-- #832: cross-board comparison, BOTH ruled renderings as coexisting options.
+           A = band lanes (the ruled translation layer — zero derived numbers).
+           B = envelope position, each probe against ITS OWN anchors, labeled as an
+           index. Never a fleet 0-100 (ADR-0035); `dryness` is deliberately NOT used
+           here because it normalizes against one fleet-wide range — the very
+           dishonesty this issue opened on, which cross_board.py fences. -->
+      <div class="panel-h"><h2>Compare across boards</h2><span class="cap" id="cmpCap"></span></div>
+      <div class="cmpbar">
+        <div class="rangesel" id="cmpsel">
+          <button class="rangebtn active" data-c="bands" type="button"
+            title="Every plant on the seven shared mood lanes — bands are the ruled cross-board translation layer">band lanes</button>
+          <button class="rangebtn" data-c="envelope" type="button"
+            title="Each probe's position within its OWN wet-dry envelope — a labeled index, never a shared 0-100">envelope position</button>
+        </div>
+      </div>
+      <div id="cmpView"></div>
 
       <div class="panel-h"><h2>Sensor health</h2><span class="cap">per physical probe — out-of-envelope reads, stuck/stale runs, baseline drift, dropouts, and honest inspect-for-corrosion prompts (the bench SENSOR_QA discipline, on the running rig · #995)</span></div>
       <div id="sensorHealth" class="healthgrid"><span class="muted">Loading sensor health…</span></div>
@@ -1626,7 +1659,7 @@ function renderProvenance(){  // #324 bench-evidence panel
 function renderOverview(){
   destroyCharts();
   renderHeader(); renderCards(); renderLadder(); renderBandHistory(); renderCalRef();
-  renderCycleNote(); renderDetectorPrecision();
+  renderCycleNote(); renderDetectorPrecision(); renderCompare();
   renderTraj(); renderSpread(); renderDist();
   renderQuality(); renderIntegrity(); renderProvenance(); renderProv();
   if(!LIVE) applyStaticChannels();
@@ -2347,6 +2380,99 @@ function _healthMetrics(h){
   if(h.faults) bits.push(`<b>${h.faults}</b> fault${h.faults===1?'':'s'}`);
   return bits.join(' · ');
 }
+/* ---- #832: cross-board comparison — BOTH ruled renderings ------------------
+   Maintainer ruling: build both as coexisting options; neither is the sole truth.
+   Trellis owns the normalization semantics, confirmed ADR-0035-conformant:
+     A  band lanes      — bands ARE the ruled cross-board translation layer, so this
+                          view derives nothing at all.
+     B  envelope pos    — each probe 0..1 against ITS OWN anchors (ctx.anchors: the
+                          profiled per-channel anchor, else the per-board-class rails),
+                          axis labeled as a position, never as water content.
+   What this view deliberately does NOT use: `dryness`. It is computed against a single
+   fleet-wide moist_range, which is precisely the cross-board dishonesty this issue
+   opened on and which cross_board.py fences. A probe with no resolvable anchors is
+   named as such and drawn nowhere — honest absence beats a fabricated position. */
+var __cmpMode = 'bands';
+
+function cmpSensors(){
+  const retired = new Set((DASH.devices||[]).filter(d=>d.retired).map(d=>d.device_id));
+  return (DASH.sensors||[]).filter(s=>!retired.has(s.device_id));
+}
+function boardLabel(s){
+  const d = (DASH.devices||[]).find(x=>x.device_id===s.device_id);
+  return (d && (d.name || d.device_id)) || s.device_id || '';
+}
+
+function renderCompare(){
+  const box = document.getElementById('cmpView'); if(!box) return;
+  const cap = document.getElementById('cmpCap');
+  const rows = cmpSensors();
+  box.innerHTML = '';
+  if(!rows.length){ box.innerHTML = '<span class="muted">No live probes to compare.</span>'; return; }
+
+  if(__cmpMode === 'bands'){
+    if(cap) cap.textContent = 'every plant on the seven shared mood lanes — bands are the ruled '
+      + 'cross-board translation layer, so nothing here is derived or normalized';
+    const bands = (DASH.cal.bands||[]).slice().reverse();   // #1263: wet-LEFT -> drier-RIGHT
+    rows.forEach(s=>{
+      const row = el('div','cmprow');
+      row.appendChild(el('div','cmpname',
+        `${plantLabel(s)} <span class="brd">${boardLabel(s)}</span>`));
+      const lane = el('div','cmplane');
+      lane.setAttribute('role','img');
+      lane.setAttribute('aria-label', `${plantLabel(s)}: ${s.band_ui}`);
+      bands.forEach(b=>{
+        const seg = el('div','cmpseg'); seg.style.background = b.color;
+        if(b.fw === s.band_fw){ seg.classList.add('on'); seg.classList.add('cur'); }
+        seg.title = b.ui + (b.fw===s.band_fw ? ' · now' : '');
+        lane.appendChild(seg);
+      });
+      row.appendChild(lane);
+      row.appendChild(el('span','cmpval', s.band_ui));
+      box.appendChild(row);
+    });
+    return;
+  }
+
+  /* B — envelope position, per probe, against its own anchors */
+  if(cap) cap.textContent = 'position in each probe’s own wet↔dry envelope — '
+    + 'a labeled index, not water content, and never a shared 0–100';
+  const anchors = DASH.anchors || {};
+  let absent = 0;
+  rows.forEach(s=>{
+    const a = anchors[s.id];
+    const row = el('div','cmprow');
+    row.appendChild(el('div','cmpname',
+      `${plantLabel(s)} <span class="brd">${boardLabel(s)}</span>`));
+    if(!a || a.air==null || a.water==null || a.air===a.water){
+      /* honest absence: no own-envelope anchors -> no position is claimed for it */
+      absent++;
+      row.appendChild(el('div','cmpabsent','no anchors for this probe — position not shown'));
+      row.appendChild(el('span','cmpval','—'));
+      box.appendChild(row);
+      return;
+    }
+    const f = Math.max(0, Math.min(1, (s.raw_last - a.water) / (a.air - a.water)));
+    const track = el('div','cmptrack');
+    const pin = el('div','pin'); pin.style.left = (f*100).toFixed(1)+'%';
+    track.appendChild(pin);
+    track.setAttribute('role','img');
+    track.setAttribute('aria-label', `${plantLabel(s)}: ${Math.round(f*100)} percent toward its own dry anchor`);
+    row.appendChild(track);
+    row.appendChild(el('span','cmpval', Math.round(f*100)+' / 100'));
+    box.appendChild(row);
+  });
+  const note = el('div','small muted');
+  note.style.marginTop = '8px';
+  note.innerHTML = 'Each probe is measured against <b>its own</b> air/water anchors '
+    + '(profiled per-channel where present, else its board-class rails) — so two probes at '
+    + '“60” are each 60% of the way across <i>their own</i> envelope, not the same wetness. '
+    + 'Raw counts stay board-true and are never compared here.'
+    + (absent ? ` <span class="cmpabsent">${absent} probe${absent===1?'':'s'} without anchors `
+        + 'shown without a position.</span>' : '');
+  box.appendChild(note);
+}
+
 function renderHealthRow(h){
   const reasons = (h.reasons||[]).length
     ? `<ul class="hreasons">${h.reasons.map(r=>`<li>${_hesc(r)}</li>`).join('')}</ul>` : '';
@@ -3107,6 +3233,12 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
   if(LIVE){ autoTimer = setInterval(refresh, AUTO_MS); }
 
   document.querySelectorAll('.rangebtn').forEach(b=> b.addEventListener('click', ()=> setRange(b.dataset.r)));
+  // #832: the comparison toggle — its own buttons carry data-c, not data-r
+  document.querySelectorAll('#cmpsel .rangebtn').forEach(b=> b.addEventListener('click', ()=>{
+    __cmpMode = b.dataset.c;
+    document.querySelectorAll('#cmpsel .rangebtn').forEach(x=> x.classList.toggle('active', x===b));
+    renderCompare();
+  }));
 
   // #725: keyboard nav in the single-plant view — ←/→ move between plants,
   // Esc goes back to the wall. Ignored while typing in a field or picker.
