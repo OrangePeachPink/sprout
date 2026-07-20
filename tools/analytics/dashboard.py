@@ -490,10 +490,25 @@ def filter_channels(
 
 
 def _channel_idx(sid: str) -> int:
-    """Stable colour index from a sensor id ('s2' -> 1), so colours don't shuffle
-    when a channel is excluded (E10)."""
+    """Stable colour index from a sensor id, so colours don't shuffle when a channel
+    is excluded (E10).
+
+    #1042 / ADR-0036: the id carries TWO vocabularies across the v5 boundary and both
+    stay readable forever (v4 rows are never rewritten):
+
+    - ``s1``..``s4`` — the retired port sticker, **1-based** -> 0..3
+    - ``ch0``..``ch3`` — the firmware channel, **0-based** -> 0..3
+
+    Reading the digits alone would map ``ch0`` to **-1** and shift every channel by
+    one, so a fleet would silently re-colour the day it flashes v5. The prefix picks
+    the base."""
     digits = "".join(ch for ch in sid if ch.isdigit())
-    return (int(digits) - 1) if digits else 0
+    if not digits:
+        return 0
+    n = int(digits)
+    if str(sid).lower().startswith("ch"):
+        return n  # channels are 0-based
+    return n - 1  # the legacy sticker is 1-based
 
 
 def _dec_idx(n: int, cap: int) -> list[int]:

@@ -148,6 +148,15 @@ IMPLAUSIBLE_WET_FLOOR = 500
 # `device_id`=name, so reusing it would misclassify every shipped experiment row.
 STABLE_ID_SCHEMA_VERSION = 3
 
+# #1042 / ADR-0036 (Fork A, maintainer-ruled 2026-07-19): the schema_version at which
+# the wire's `sensor_id` stops being a PORT STICKER (s1..s4) and becomes the firmware
+# CHANNEL (ch0..ch3). Same version-gated shape as STABLE_ID_SCHEMA_VERSION above: the
+# column stays a string and only its MEANING moves, so a parser can tell from the
+# version which contract a row was written under. v4-and-earlier rows keep their old
+# token and are NEVER rewritten (never-stitch, ADR-0006/ADR-0021) — the boundary is
+# the point, not a side effect.
+CHANNEL_ID_SCHEMA_VERSION = 5
+
 _KV_RE = re.compile(r"(\w+)=(.*?)(?=\s+\w+=|$)")
 _SENSOR_RE = re.compile(r"ch(\d+)=GPIO(\d+)/(\S+)")
 
@@ -504,6 +513,18 @@ class Reading:
         the #602 map bridges. A row with no schema_version at all is treated as
         legacy (name), never guessed as stable."""
         return (self.schema_version or 0) >= STABLE_ID_SCHEMA_VERSION
+
+    @property
+    def sensor_id_is_channel(self) -> bool:
+        """#1042 / ADR-0036: does this row's ``sensor_id`` mean the firmware CHANNEL
+        (``ch0``..``ch3``) rather than the retired port sticker (``s1``..``s4``)?
+
+        The same version-gated pattern as ``has_stable_device_id`` (the v3
+        precedent): the column stays a string, only its meaning is gated.
+        ``schema_version >= 5`` ⇒ channel; below (or absent) ⇒ the legacy sticker,
+        treated as legacy and never guessed as a channel. v4 rows are never
+        rewritten — a probe move is now a registry event, not a reflash."""
+        return (self.schema_version or 0) >= CHANNEL_ID_SCHEMA_VERSION
 
     @property
     def device_name(self) -> str | None:
