@@ -13,6 +13,9 @@
     // Frozen design provenance: prior generations + delivered handoffs are kept
     // verbatim (per ADR-0010 supersede-don't-delete); reformatting would corrupt
     // the snapshots, so they are not linted.
-    "docs/design/_archive/**"
+    "docs/design/_archive/**",
+    // Vendored code ships its docs byte-identical to upstream (provenance);
+    // never lint or reformat (same rule as the pre-commit global exclude).
+    "firmware/lib/monocypher/**"
   ]
 }
