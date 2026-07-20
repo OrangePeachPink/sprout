@@ -55,7 +55,7 @@ surface. **All diagnostics and instrument conditions are off-ladder** (Decision 
 moisture only. The card's *state* element (ADR-0033) is one of these seven bands; the mark's seven poses map
 1:1 to them.
 
-### 2. The instrument-exceptions taxonomy — one family, open, four sub-families *so far*
+### 2. The instrument-exceptions taxonomy — one family, open, five sub-families *so far*
 
 Readings that leave the in-soil envelope are **not moods** — they are **instrument conditions**, surfaced in a
 separate **exceptions lane** (off the normal display, click-to-see on an extended chart), and they **never lead
@@ -67,6 +67,7 @@ the thirst sort.** One family — *how the reading leaves the envelope* — with
 | **physics** | impossible readings — below the water anchor while in water, above the air anchor while in air |
 | **kinematics** | too-fast rate spikes; wrong-direction reversals mid-watering |
 | **comms** | no-signal, stale |
+| **range** *(added 2026-07-20, #1339)* | **`drier-than-calibrated`** — an in-soil reading above the board's Faint-ceiling. Distinct from **physics**: physics is *impossible* (above the air anchor while in air); range is entirely *possible*, just **beyond what we have characterized** |
 
 **The taxonomy is open by design.** The maintainer's caveat is binding: **"four" is a floor, not the design** —
 more families are expected once the data is examined. A new observed condition is added as a sub-family, not
@@ -105,6 +106,18 @@ where a plant is at the edge of harm. The dry ceiling is the **Faint-ceiling**:
 - **Humane-calibration doctrine (binding):** **wilt-onset is the only capture target. No plant is ever pushed
   to find a sensor maximum.** The dry ceiling is where care begins, calibrated from the gentlest signal of
   distress — not from harm.
+- **Above the ceiling, the band is withheld — never clamped** *(amended 2026-07-20, #1339).* A reading above the
+  Faint-ceiling is **`drier-than-calibrated`**: an off-ladder **range** exception (§2), not an eighth mood.
+  The raw value is shown; **the band is withheld**; the surface says we are past what we have characterized
+  rather than inventing a mood for it. Silently collapsing these into Faint makes *the instrument's limit* look
+  like *a plant state* — the category error the exception taxonomy exists to prevent. Instrument exceptions take
+  precedence over band assignment, as everywhere else in this ADR.
+  **This does not move the ceiling.** Humane calibration means the ceiling is deliberately set at wilt-onset, so
+  readings past it are expected, not anomalous — the envelope stops there on purpose. Concretely: p02
+  (Pothos XXL) ran **2,847–2,971 across 07-04 → 07-06** while the maintainer deliberately explored its recovery
+  limit, an experiment it survived at the cost of leaves. The 6/26 common-cup anchors were correct for their
+  range; **the range was exceeded on purpose.** This amendment defines the behavior above the ceiling; it does
+  not reopen the ceiling, which stays measured, fleet-level, and wilt-onset-derived.
 
 ### 5. Re-partition onto the in-soil envelope, per board class — ratified against a fresh dry-down
 
