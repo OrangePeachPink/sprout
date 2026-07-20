@@ -282,9 +282,17 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
 
-    from device_registry import load_registry
+    from device_registry import load_registry, resolve_registry_path
 
-    registry = load_registry(args.registry) if args.registry else load_registry()
+    # #1315 rider: the dry-run path tolerated a missing --registry (discovery finds the
+    # file), but --apply then did Path(None) -> TypeError. Resolve the path ONCE, up
+    # front, and use that same file for both reading and writing — so what the dry-run
+    # showed is provably the file the write lands on, not a second discovery result.
+    registry_path = Path(args.registry) if args.registry else resolve_registry_path()
+    if registry_path is None:
+        print("  no registry found (pass --registry explicitly)")
+        return 1
+    registry = load_registry(str(registry_path))
     logs = sorted(Path(args.logs).glob("*.csv")) if args.logs else []
     observed = observed_token_gpio(logs)
     plan = plan_migration(registry)
@@ -292,9 +300,7 @@ def main(argv: list[str] | None = None) -> int:
     print(render_dry_run(plan, findings))
     if not args.apply:
         return 0
-    result = apply_migration(
-        Path(args.registry), plan, findings, approved=args.approved
-    )
+    result = apply_migration(registry_path, plan, findings, approved=args.approved)
     print(f"\n  apply: {result}")
     return 0 if result.get("written") else 1
 
