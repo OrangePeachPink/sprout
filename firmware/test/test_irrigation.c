@@ -18,6 +18,7 @@
 #include <unity.h>
 #include "fw_verify.h"
 #include "ota_gate.h"
+#include "ota_pull.h"
 #include "monocypher-ed25519.h"
 #include "irrigation.h"
 #include "serial_cmd.h"
@@ -2271,6 +2272,166 @@ void t_cal_tier_label(void)
 }
 
 /* ============================================================================
+ * #302 S3a - the pull DECISION core (ADR-0026 D1/D4).
+ * ==========================================================================*/
+
+static ota_pull_artifact_t mk_art(const char *board, const char *ver,
+                                  const char *img, const char *sig)
+{
+    ota_pull_artifact_t a;
+    memset(&a, 0, sizeof(a));
+    if (board) snprintf(a.board_class, sizeof(a.board_class), "%s", board);
+    if (ver) snprintf(a.version, sizeof(a.version), "%s", ver);
+    if (img) snprintf(a.image_url, sizeof(a.image_url), "%s", img);
+    if (sig) snprintf(a.sig_url, sizeof(a.sig_url), "%s", sig);
+    return a;
+}
+
+void t_ota_pull_board_match(void)
+{
+    /* The feed carries one artifact per board class. Flashing a C5 image onto a
+     * classic is a brick that only USB recovers, so the match is EXACT and
+     * absence is refusal - never "take the first one". */
+    ota_pull_artifact_t feed[2] = {
+        mk_art("esp32-classic", "0.8.1", "https://x/classic.bin",
+               "https://x/classic.bin.sig"),
+        mk_art("esp32-c5", "0.8.1", "https://x/c5.bin", "https://x/c5.bin.sig"),
+    };
+    const ota_pull_artifact_t *pick = NULL;
+
+    TEST_ASSERT_EQUAL_INT(OTA_PULL_UPDATE,
+                          ota_pull_decide(feed, 2, "esp32-c5", "0.7.3", &pick));
+    TEST_ASSERT_NOT_NULL(pick);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("https://x/c5.bin", pick->image_url,
+                                     "must pick THIS board's artifact");
+
+    /* a board the feed does not carry gets nothing - not the other one */
+    pick = NULL;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_NO_ARTIFACT_FOR_BOARD,
+        ota_pull_decide(feed, 2, "esp32-s3", "0.7.3", &pick),
+        "an unlisted board must be refused, never given a sibling image");
+    TEST_ASSERT_NULL(pick);
+
+    /* prefix similarity must NOT match: "esp32-c" is not "esp32-c5" */
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_NO_ARTIFACT_FOR_BOARD,
+        ota_pull_decide(feed, 2, "esp32-c", "0.7.3", NULL),
+        "a prefix is not a match - different silicon");
+
+    /* the same board listed twice is ambiguous; picking either is a guess */
+    ota_pull_artifact_t dup[2] = {
+        mk_art("esp32-c5", "0.8.1", "https://x/a.bin", "https://x/a.sig"),
+        mk_art("esp32-c5", "0.8.2", "https://x/b.bin", "https://x/b.sig"),
+    };
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_FEED_INVALID,
+        ota_pull_decide(dup, 2, "esp32-c5", "0.7.3", NULL),
+        "a duplicated board class must reject the feed, not pick one");
+}
+
+void t_ota_pull_downgrade_is_allowed(void)
+{
+    /* THE POINT OF THIS MODULE. ADR-0026 D4 declined anti-rollback and named
+     * feed curation as the remediation for a bad release: pull it, serve the
+     * fixed one. That only works if devices APPLY what the feed offers.
+     *
+     * An "if (newer) update;" would silently disable it - curate a bad 0.9.1
+     * away, re-serve 0.9.0, and every device refuses the fix because the fix is
+     * older than what it runs. So the rule is DIFFERENT, not NEWER, and this
+     * test is what stops a future reviewer tidying it into a > comparison. */
+    ota_pull_artifact_t feed[1] = {mk_art("esp32-classic", "0.9.0",
+                                          "https://x/fixed.bin",
+                                          "https://x/fixed.bin.sig")};
+    const ota_pull_artifact_t *pick = NULL;
+
+    /* running the WITHDRAWN 0.9.1; the feed now serves 0.9.0 */
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_UPDATE,
+        ota_pull_decide(feed, 1, "esp32-classic", "0.9.1", &pick),
+        "a curated DOWNGRADE must be applied - it is ADR-0026 D4 remediation");
+    TEST_ASSERT_NOT_NULL(pick);
+    TEST_ASSERT_EQUAL_STRING("https://x/fixed.bin", pick->image_url);
+
+    /* the ordinary upgrade direction still works */
+    TEST_ASSERT_EQUAL_INT(
+        OTA_PULL_UPDATE,
+        ota_pull_decide(feed, 1, "esp32-classic", "0.8.1", NULL));
+
+    /* and the same version is a no-op, so a device does not reflash on a loop */
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_UP_TO_DATE,
+        ota_pull_decide(feed, 1, "esp32-classic", "0.9.0", NULL),
+        "same version must not re-apply");
+
+    /* non-semver strings are handled because nothing is PARSED - equality only */
+    ota_pull_artifact_t odd[1] = {mk_art(
+        "esp32-classic", "0.9.0-rc2", "https://x/rc.bin", "https://x/rc.sig")};
+    TEST_ASSERT_EQUAL_INT(
+        OTA_PULL_UPDATE,
+        ota_pull_decide(odd, 1, "esp32-classic", "0.9.0", NULL));
+    TEST_ASSERT_EQUAL_INT(
+        OTA_PULL_UP_TO_DATE,
+        ota_pull_decide(odd, 1, "esp32-classic", "0.9.0-rc2", NULL));
+}
+
+void t_ota_pull_fail_closed(void)
+{
+    /* Absence and malformation are refusals, never defaults. */
+    ota_pull_artifact_t good[1] = {
+        mk_art("esp32-classic", "0.8.1", "https://x/a.bin", "https://x/a.sig")};
+
+    TEST_ASSERT_EQUAL_INT(
+        OTA_PULL_FEED_INVALID,
+        ota_pull_decide(NULL, 0, "esp32-classic", "0.7.3", NULL));
+    TEST_ASSERT_EQUAL_INT(
+        OTA_PULL_FEED_INVALID,
+        ota_pull_decide(good, 0, "esp32-classic", "0.7.3", NULL));
+
+    /* not knowing what we are is a refusal, not a guess */
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_SELF_UNKNOWN, ota_pull_decide(good, 1, NULL, "0.7.3", NULL),
+        "unknown board identity must refuse, never default");
+    TEST_ASSERT_EQUAL_INT(OTA_PULL_SELF_UNKNOWN,
+                          ota_pull_decide(good, 1, "esp32-classic", "", NULL));
+
+    /* an image with NO SIGNATURE is not offerable. ota_gate would reject it
+     * anyway - but only after a multi-megabyte download. */
+    ota_pull_artifact_t nosig[1] = {
+        mk_art("esp32-classic", "0.8.1", "https://x/a.bin", NULL)};
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_FEED_INVALID,
+        ota_pull_decide(nosig, 1, "esp32-classic", "0.7.3", NULL),
+        "no .sig -> not offerable, cheaper to refuse before the download");
+
+    /* ONE malformed entry rejects the WHOLE feed - acting on the half we happen
+     * to parse is how partial-trust bugs start. Ours here is valid. */
+    ota_pull_artifact_t mixed[2] = {
+        mk_art("esp32-classic", "0.8.1", "https://x/a.bin", "https://x/a.sig"),
+        mk_art("esp32-c5", "0.8.1", NULL, "https://x/b.sig"), /* no image url */
+    };
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_FEED_INVALID,
+        ota_pull_decide(mixed, 2, "esp32-classic", "0.7.3", NULL),
+        "a feed we only partly understand is a feed we do not act on");
+
+    /* an UNTERMINATED field must reject, not read past its buffer */
+    ota_pull_artifact_t raw;
+    memset(&raw, 0, sizeof(raw));
+    memset(raw.board_class, 'x', sizeof(raw.board_class)); /* no NUL */
+    snprintf(raw.version, sizeof(raw.version), "0.8.1");
+    snprintf(raw.image_url, sizeof(raw.image_url), "https://x/a.bin");
+    snprintf(raw.sig_url, sizeof(raw.sig_url), "https://x/a.sig");
+    TEST_ASSERT_FALSE_MESSAGE(ota_pull_artifact_valid(&raw),
+                              "an unterminated field is a reject");
+
+    TEST_ASSERT_EQUAL_STRING("update",
+                             ota_pull_decision_label(OTA_PULL_UPDATE));
+    TEST_ASSERT_EQUAL_STRING("up-to-date",
+                             ota_pull_decision_label(OTA_PULL_UP_TO_DATE));
+}
+
+/* ============================================================================
  * #1153 - parameterized band re-partition invariant suite
  * ----------------------------------------------------------------------------
  * The grill (#1039) locked the ladder = 7 in-soil mood bands (Soaked -> Faint),
@@ -2566,6 +2727,9 @@ int main(void)
     RUN_TEST(t_last_water_ms);
     RUN_TEST(t_fw_verify_ed25519);
     RUN_TEST(t_ota_gate_fence);
+    RUN_TEST(t_ota_pull_board_match);
+    RUN_TEST(t_ota_pull_downgrade_is_allowed);
+    RUN_TEST(t_ota_pull_fail_closed);
     RUN_TEST(t_band_anchors);
     RUN_TEST(t_board_capability);
     RUN_TEST(t_sensor_type_resistive);
