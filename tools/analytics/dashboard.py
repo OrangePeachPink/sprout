@@ -5,9 +5,9 @@ HTML dashboard styled with the Sprout design system (``docs/design/``). It
 injects a JSON context + the inlined Sprout tokens into
 ``dashboard_template.html``.
 
-Honesty rules baked in:
+Reading rules baked in (#1039 canon):
 
-* **raw + band are the truth.** The legacy moist% ``value`` column is never
+* **raw + band = the reading.** The legacy moist% ``value`` column is never
   plotted (B2/C2).
 * **bands are the ratified seven-in-soil ladder.** Endpoints from the
   common-cup anchors; interior boundaries measured + ratified per board class
@@ -100,7 +100,7 @@ RETIRE_AFTER_H = 12.0
 # documented GAP_THRESHOLD_S. A gap = a poll-to-poll delta over
 # max(GAP_THRESHOLD_S, GAP_CADENCE_MULT x median interval) - so a slow 60 s WiFi
 # poller isn't spammed with false gaps and a fast 5 s serial log still surfaces a
-# real 2-minute dropout. Same honest-data law as the aggregate: surfaced, never
+# real 2-minute dropout. Same rule as the aggregate: a gap is surfaced, never
 # bridged.
 GAP_CADENCE_MULT = 3
 # #839 Fix B: a logging gap this long (default 1.5 days) is a *window boundary*, not
@@ -1053,8 +1053,8 @@ def build_context(
         ] or pairs
         # #919: the trend + forecast FITS use CLEAN readings only. A fault / sub-rail /
         # OOB row (excluded by the #670/#697 gate) must never pull the least-squares fit
-        # — that is the all-window "wetting on a drying plant" inversion. Raw stays on
-        # the plot (truth, #575); only the fits drop these rows, and the count is
+        # — that is the all-window "wetting on a drying plant" inversion. Every reading
+        # stays plotted (#575); only the fits drop these rows, and the count is
         # surfaced (`fit_excluded`) so nothing is silently dropped.
         plot_settled = _settled_readings(plot_rs)
         fit_pairs = [
