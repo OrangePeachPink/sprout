@@ -237,6 +237,7 @@ check: pre-commit test-host test-dx test-analytics
     @echo "  NOT run: test-native (the native C firmware tests; they need PlatformIO + a compiler)."
     @echo "  Touched firmware/ ? run:  just check-firmware"
     @echo "  Either way CI runs the full battery on every PR - this is your local gate, not the gate."
+    @{{py}} tools/dx/untracked_notice.py
 
 # THE FIRMWARE GATE (#1337): the default gate PLUS the native C tests. Needs PlatformIO and a
 # host compiler on top of uv + just — named honestly on its own path rather than hidden inside

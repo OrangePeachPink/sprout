@@ -23,6 +23,8 @@ display name goes here instead).
   ([#1117](https://github.com/OrangePeachPink/sprout/pull/1117)), and the FD-3 indexing package: `sitemap.xml`,
   `robots.txt`, `llms.txt`, and the alt-text register
   ([#1129](https://github.com/OrangePeachPink/sprout/pull/1129)).
+- **[@SAY-5](https://github.com/SAY-5)** — `just check` now names the untracked files it never inspected, so a
+  green gate no longer hides a brand-new file ([#1386](https://github.com/OrangePeachPink/sprout/issues/1386)).
 
 <!-- New contributors are added here as their first PR merges (handle-only default; name on request). -->
 
