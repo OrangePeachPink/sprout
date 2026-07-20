@@ -569,6 +569,11 @@ footer.prov code { font-family: var(--font-data); }
       <div class="cards" id="cards"></div>
     </section>
 
+    <section class="card">
+      <div class="panel-h"><h2>Watering status</h2><span class="cap">each plant's current band · raw ADC, higher = drier · the band lags raw by ~1 reading on a fast change (anti-flap hysteresis, #678) — read raw for live transients</span></div>
+      <div class="ladder" id="ladder"></div>
+    </section>
+
     <!-- #627/#717: band movement — which way each plant is heading + how far it
          has swung across the 7 bands over the window. The human-legible "time
          dimension" of watering status: position now + discrete trail + trend. -->
@@ -592,10 +597,7 @@ footer.prov code { font-family: var(--font-data); }
        live in Diagnostics & Logs, off Monitor so they stop crowding the bench
        working view. Split: spread + distribution (mid-tier, Design-QA's call) →
        here; quality timeline, data integrity, bench provenance, segment listing →
-       here; fleet groups + cards + ladder + trajectory stay on Monitor.
-       #1142: the watering-status ladder is retired — the Home grid is its
-       replacement (band-at-a-glance, who's-where, urgency lead); raw stays on
-       the Channels cards, boundaries on the Diagnostics cal reference. -->
+       here; fleet groups + cards + ladder + trajectory stay on Monitor. -->
   <div id="diagnostics" style="display:none">
     <!-- #995: the per-physical-sensor health/QA readout (grill Q8) — extends the bench
          SENSOR_QA discipline into the running rig. NOT a plant life-story; a probe QA
@@ -818,7 +820,7 @@ function deviceState(d){
 /* ---- summary cards, grouped per device (#583 / #575's eight rules) ---- */
 function renderCards(){
   const wrap = document.getElementById('cards'); wrap.innerHTML = '';
-  document.getElementById('cardsCap').textContent = 'the reading is raw + band · the band lags raw by ~1 reading on a fast change (anti-flap hysteresis, #678) — read raw for live transients · click a card for the single-plant view';
+  document.getElementById('cardsCap').textContent = 'the reading is raw + band · click a card for the single-plant view';
   const devices = (DASH.devices && DASH.devices.length) ? DASH.devices
     : [{device_id:null, name:'Sprout', sensors: DASH.sensors.map(s=>s.id)}];
   const multi = devices.length > 1;                    // COLLAPSE: one device = today's flat wall
@@ -1039,6 +1041,28 @@ setInterval(() => {
     if(d){ const st = deviceState(d); chip.textContent = st.label; chip.style.color = st.color; chip.style.borderColor = st.color; }
   });
 }, 5000);
+
+/* ---- calibration ladder ---- */
+function renderLadder(){
+  const wrap = document.getElementById('ladder'); wrap.innerHTML = '';
+  // #803: plant-first chips (never sN@deviceid), and exclude retired-device sensors — they live in
+  // Diagnostics now (#683), so the live watering-status ladder shows only the active plants.
+  const _retired = new Set((DASH.devices||[]).filter(d=>d.retired).map(d=>d.device_id));
+  DASH.cal.bands.forEach(b => {
+    const row = el('div','ladrow');
+    row.style.background = hexA(b.color, 0.10);
+    const sw = el('div','sw'); sw.style.background = b.color; row.appendChild(sw);
+    row.appendChild(el('div', null, `<span class="nm">${b.ui}</span> <span class="uin">${b.fw}</span>`));
+    row.appendChild(el('div','rg', `${fmt(b.lo)} – ${fmt(b.hi)}`));
+    const here = el('div','here');
+    DASH.sensors.filter(s => s.raw_last>=b.lo && s.raw_last<b.hi && !_retired.has(s.device_id)).forEach(s => {
+      const chip = el('span','chip', `${plantLabel(s, {side:true})} ${fmt(s.raw_last)}`); chip.style.background = s.color;
+      here.appendChild(chip);
+    });
+    row.appendChild(here);
+    wrap.appendChild(row);
+  });
+}
 
 // #627/#717: band-movement view — per plant, a 7-segment lane (drier ⟶ wetter)
 // with the TOUCHED-band span lit, a marker at the current band, and a net-trend
@@ -1550,7 +1574,7 @@ function renderProvenance(){  // #324 bench-evidence panel
 
 function renderOverview(){
   destroyCharts();
-  renderHeader(); renderCards(); renderBandHistory(); renderCalRef();
+  renderHeader(); renderCards(); renderLadder(); renderBandHistory(); renderCalRef();
   renderTraj(); renderSpread(); renderDist();
   renderQuality(); renderIntegrity(); renderProvenance(); renderProv();
   if(!LIVE) applyStaticChannels();
