@@ -69,6 +69,7 @@ TEMPLATE = _HERE / "dashboard_template.html"
 # tokens/fonts injected here, data hydrated client-side from /cards.json — so
 # serving it never runs the analytics pipeline (the #1018 fast-shell rule).
 HOME_TEMPLATE = _HERE / "home_template.html"
+TRIAL_TEMPLATE = _HERE / "trial_template.html"  # #1148 the evaluation surfaces
 DEFAULT_OUT = _REPO / "reports" / "plants_dashboard.html"
 # Vendored Chart.js -> inlined for a self-contained, offline dashboard. Falls
 # back to CDN only if the vendored copy is missing.
@@ -2002,6 +2003,17 @@ def render_home() -> str:
     tokens = TOKENS_CSS.read_text(encoding="utf-8") if TOKENS_CSS.exists() else ""
     fonts = FONTS_CSS.read_text(encoding="utf-8") if FONTS_CSS.exists() else ""
     template = HOME_TEMPLATE.read_text(encoding="utf-8")
+    return template.replace("/*__SPROUT_TOKENS__*/", fonts + "\n" + tokens)
+
+
+def render_trial() -> str:
+    """#1148: the evaluation-surface shell (the /trial route). Same token/font
+    injection as Home and the Workbench — no context blob; the page hydrates from
+    ``/data.json`` + ``/cards.json``. The three candidates live here, off the Home,
+    until her keep/prune verdicts land."""
+    tokens = TOKENS_CSS.read_text(encoding="utf-8") if TOKENS_CSS.exists() else ""
+    fonts = FONTS_CSS.read_text(encoding="utf-8") if FONTS_CSS.exists() else ""
+    template = TRIAL_TEMPLATE.read_text(encoding="utf-8")
     return template.replace("/*__SPROUT_TOKENS__*/", fonts + "\n" + tokens)
 
 

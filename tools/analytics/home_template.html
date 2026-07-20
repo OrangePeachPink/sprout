@@ -47,7 +47,7 @@
   .mast .word { font-family: var(--font-display); font-weight: 800; font-size: 30px;
     line-height: 1; }
   .mast .tagline { color: var(--muted); font-size: 14.5px; margin-top: 3px; }
-  .mast nav { margin-left: auto; }
+  .mast nav { margin-left: auto; display: flex; gap: 8px; }
   .mast nav a { color: var(--muted); text-decoration: none; font-size: 14px;
     border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px;
     background: var(--surface); }
@@ -222,7 +222,11 @@
       <div class="word">Sprout</div>
       <div class="tagline">Plants with a pulse.</div>
     </div>
-    <nav><a href="/classic" title="the Workbench — Classic Sprout, raw numbers and all">Workbench &rarr;</a></nav>
+    <!-- #1148: a quiet chrome link to the evaluation surfaces while the three
+         multi-plant-history candidates are on trial. The Home stays the product —
+         its three-question grid is untouched; this is one nav pill, and it goes
+         away with the trial. -->
+    <nav><a href="/trial" title="the multi-plant history candidates, on trial (#1148)">Trial</a><a href="/classic" title="the Workbench — Classic Sprout, raw numbers and all">Workbench &rarr;</a></nav>
   </header>
   <main id="main" aria-live="polite"></main>
 </div>
