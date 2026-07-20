@@ -106,7 +106,19 @@ subsystem.
 
 ## 3. `quality_flag` extension — the schema seam (Data owns TELEMETRY_SCHEMA)
 
-**Proposed, for Data's review — this spec does NOT edit `TELEMETRY_SCHEMA.md`:**
+**STATUS (2026-07-19): partly RATIFIED and SHIPPED.** `TELEMETRY_SCHEMA` S4 already carries the two
+source-detectable rows — `SENSOR_FAULT` + `fault=open_adc` (above the air rail) and `SUSPECT` +
+`fault=rate_spike` (implausible step) — and firmware emits both as of PR #1277. The rest below stays
+proposal. This spec still does **not** edit `TELEMETRY_SCHEMA.md`; Data owns it.
+
+> **Correction that came out of the build.** An earlier draft of §4 mapped **probe-in-water →
+> `SATURATED`**. That contradicts the owning contract: schema §4 defines `SATURATED` as the ADC
+> railed **high** (the *dry* rail). The v4 #670 fix exists precisely because a **low** rail used to be
+> mislabelled `SATURATED`, masking a dead board as four drowning plants. The row is corrected in §4.
+>
+> **`probe_air` was deliberately NOT minted.** It is not in the schema table, so per shared-vocabulary
+> discipline it remains a *proposal for Data* rather than firmware-authored vocabulary. Firmware emits
+> only tokens the owning contract already defines.
 
 - **Keep the enum small** (Trellis #739). Prefer extending the **payload `fault=<reason>`
   vocabulary** over adding enum values. Recommended reason additions (all additive, opaque tokens):
@@ -162,10 +174,13 @@ subsystem.
 
 ## 6. Non-goals / next
 
-- **No firmware behavior change in this issue.** The build — adding the above-air check, the
-  rate-spike gate, and the reason tokens — is a later delivery-channel (V1) item.
-- The kinematics ceiling is **empirical**: it calibrates against the fresh current-fleet dry-down
-  and the dose-response corpus, alongside the #995 anchor ratification.
+- ~~No firmware behavior change in this issue.~~ **SUPERSEDED — the emit shipped** (2026-07-19,
+  PR #1277): the above-air check and the rate-spike gate are live, with their reason tokens. This
+  document is now a **record of what ships**, not a proposal for what might.
+- The kinematics ceiling is **empirical**, and now has a shipped provisional value:
+  `SENSOR_MAX_DELTA_RAW = 1200`, derived with margin from the #1174 dry-down — a *full* watering
+  moved a channel ~900 counts across **many** 30 s steps, so a single step that large is instrument
+  motion, not soil. **Data owns cal values**: ratify or retune there. `0` disables the check.
 - Taxonomy is **open** (#1039): more families may land; the payload-reason vocabulary is the
   low-friction place to grow.
 
