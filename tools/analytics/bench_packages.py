@@ -32,7 +32,7 @@ _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")  # no path traversal from t
 
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
-from dashboard import FONTS_CSS, TOKENS_CSS  # noqa: E402  (the one token/font source)
+from design_assets import FONTS_CSS, TOKENS_CSS  # noqa: E402  (layer-0 leaf)
 from lab_notes import load_notes  # noqa: E402  (back-fill notes on packages, #450 s3)
 
 

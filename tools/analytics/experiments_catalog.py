@@ -33,7 +33,7 @@ from bench_packages import (  # noqa: E402  (landed bench packages, #444)
     load_bench_packages,
     soft_wrap,
 )
-from dashboard import FONTS_CSS, TOKENS_CSS  # noqa: E402  (reuse the one token source)
+from design_assets import FONTS_CSS, TOKENS_CSS  # noqa: E402  (layer-0 leaf)
 from timefmt import local_first_system  # noqa: E402  (local-first lab labels, #328)
 
 

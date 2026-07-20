@@ -32,7 +32,7 @@ _FIELDS = ("name", "subject", "thesis", "conclusion")
 
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
-from dashboard import FONTS_CSS, TOKENS_CSS  # noqa: E402  (one token source)
+from design_assets import FONTS_CSS, TOKENS_CSS  # noqa: E402  (layer-0 leaf)
 from lab_notes import load_notes  # noqa: E402  (per-experiment conclusions, #158)
 from parse_v1 import parse_files  # noqa: E402
 

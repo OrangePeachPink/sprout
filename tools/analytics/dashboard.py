@@ -59,11 +59,15 @@ from timefmt import (  # noqa: E402  (local-time-first display labels, #328/#840
 _REPO = _HERE.parents[1]
 
 
-TOKENS_CSS = _REPO / "docs" / "design" / "tokens" / "sprout-tokens.css"
-# Brand fonts, base64-embedded (latin subsets, SIL OFL) so the dashboard renders
+# #1336 (ADR-0038 §5.1): these live in the layer-0 `design_assets` leaf now. Four
+# modules used to import THIS ~2,000-line module to obtain them; three wanted nothing
+# else. Re-exported here so dashboard's own readers are unaffected — the leaf is the
+# definition, this is a name.
+# Brand fonts are base64-embedded (latin subsets, SIL OFL) so the dashboard renders
 # in-brand fully offline - no Google-Fonts CDN. Vendored beside Chart.js;
 # regenerate via tools/analytics/embed_fonts.py.
-FONTS_CSS = _HERE / "vendor" / "sprout-fonts.css"
+from design_assets import FONTS_CSS, TOKENS_CSS  # noqa: E402  (layer-0 leaf)
+
 TEMPLATE = _HERE / "dashboard_template.html"
 # #875: the Home surface (the Sprout Voice UI's landing page). A pure shell —
 # tokens/fonts injected here, data hydrated client-side from /cards.json — so
