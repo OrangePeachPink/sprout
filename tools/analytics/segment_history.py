@@ -62,8 +62,10 @@ def plant_series(root: Path | None = None, registry=None) -> tuple[dict, dict]:
                 pair_to_plant[(dev.device_id, channel)] = p["plant_id"]
     con = duckdb.connect()
     rows = con.execute(
+        # *.parquet, not part.parquet: a partition may hold D3 live-ingest
+        # append-*.parquet siblings between compactions (store contract §8)
         "SELECT device_id, sensor_id, timestamp_utc, raw_value, quality_flag "
-        f"FROM read_parquet('{root.as_posix()}/*/*/part.parquet', "
+        f"FROM read_parquet('{root.as_posix()}/*/*/*.parquet', "
         "hive_partitioning=false) ORDER BY timestamp_utc"
     ).fetchall()
     series: dict[str, list[TierRow]] = {}

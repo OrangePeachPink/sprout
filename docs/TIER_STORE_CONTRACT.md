@@ -104,3 +104,33 @@ Data's tuning knob; changing it re-materializes derived answers, never the raw t
 - Rollup tiers (1-min → 15-min → hourly; ADR-0031's granularity map) build **on top**
   of this raw tier and inherit §3's carried-never-averaged `quality` rule and §4's µs
   invariant. Events are never downsampled (ADR-0031 §3).
+
+## 8. Live ingest, compaction, and freshness (D3, #1241)
+
+- **Appends.** Between compactions a partition directory may hold
+  `append-*.parquet` siblings beside (or before) its canonical `part.parquet` —
+  same §3 schema, written through the same one schema path (`build_partition`),
+  same §6 gate per append. **Readers therefore glob `*.parquet` within a
+  partition, never `part.parquet` alone.**
+- **The store is its own watermark.** How much of a source segment is already
+  ingested is *derived* — COUNT of stored rows grouped by the `source_file`
+  lineage column. No side-car state exists to lose, drift, or contradict the
+  store. Appends are **at-least-once** (a crash between an append landing and
+  anything else converges next cycle); the canonical part is **exactly-once**
+  (gate-checked whole rebuild). Transient duplicate rows after an ingest crash
+  are possible in appends only, and heal at the next compaction.
+- **Append-only source assumption.** A log segment only ever grows; the first N
+  parsed rows of a segment are the N already stored. A segment that *shrank*
+  (rotation, recovery, rewrite) is detected (stored > parsed) and healed by
+  rebuilding every partition it feeds, whole, from source — §1
+  delete-and-rebuild, never patch.
+- **Compaction = the D2 path.** A partition's feeder segments are read from its
+  own lineage column; the partition is rebuilt whole from source
+  (fidelity-gated, §6) and only a **passing** gate deletes its appends. Default
+  cadence: daily, compacting **closed** (pre-today UTC) days; the open day
+  compacts on its first cycle after UTC midnight.
+- **Freshness bound.** With an ingest cycle of **I**, the store lags the CSVs by
+  at most I for the open day; a closed day reaches its canonical single
+  `part.parquet` by the first compaction after UTC midnight. The live probe
+  (`tier_ingest.py status`) reports pending rows per segment, the oldest pending
+  row's age, and the append-file compaction debt.

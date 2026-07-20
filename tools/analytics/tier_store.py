@@ -75,10 +75,18 @@ def tagged_day_rows(files, device_id: str, day: date_t) -> list[tuple]:
     return out
 
 
-def build_partition(tagged, device_id: str, day: date_t, out_root: Path | None = None):
+def build_partition(
+    tagged,
+    device_id: str,
+    day: date_t,
+    out_root: Path | None = None,
+    filename: str = "part.parquet",
+):
     """Write one (day, device) partition per the contract; return ``(path, stats)``
     with the §6 fidelity gate computed FROM the written Parquet (rows, raw checksum,
-    distinct sensors). ``ingest_ts`` is one instant for the whole batch."""
+    distinct sensors). ``ingest_ts`` is one instant for the whole batch. ``filename``
+    lets D3 live ingest write ``append-*.parquet`` siblings through this same schema
+    path (contract §8) — the default stays the canonical ``part.parquet``."""
     import duckdb
 
     ingest = datetime.now(timezone.utc).replace(tzinfo=None)  # µs, UTC-naive (§3)
@@ -88,7 +96,7 @@ def build_partition(tagged, device_id: str, day: date_t, out_root: Path | None =
         / f"device={device_id}"
     )
     out_dir.mkdir(parents=True, exist_ok=True)
-    out = out_dir / "part.parquet"
+    out = out_dir / filename
     con = duckdb.connect()
     con.execute(
         """
