@@ -137,13 +137,34 @@ def citations(docs_dir: Path, logs_dir: Path, archive_dir: Path) -> list[dict]:
             text = doc.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
+        lines = text.splitlines()
         for name in sorted(set(_LOG_CITE.findall(text))):
             here = (logs_dir / name).is_file() or (archive_dir / name).is_file()
+            # Ruling A (#1330): a citation is ALSO resolved when the doc itself
+            # states the slice is unavailable. The ratified order is resolve-then-
+            # delete, and "resolve" means the reference is no longer dangling —
+            # either the file is there, or the record honestly says it is not.
+            # Without this, an amended doc still reads as unresolved forever and the
+            # sweep can never unblock.
+            amended = False
+            for i, line in enumerate(lines):
+                if name in line:
+                    window = " ".join(lines[i : i + 6]).lower()
+                    amended = "slice unavailable" in window or (
+                        "unavailable" in window and "cannot be resolved" in window
+                    )
+                    if amended:
+                        break
             out.append(
                 {
                     "doc": str(doc.relative_to(docs_dir.parent)),
                     "cites": name,
-                    "resolves": here,
+                    "resolves": here or amended,
+                    "resolution": (
+                        "file-present"
+                        if here
+                        else ("amended-unavailable" if amended else "dangling")
+                    ),
                 }
             )
     return out
@@ -198,7 +219,28 @@ def plan_sweep(
     files = [classify_file(p, wired, known) for p in sources]
     cites = citations(docs_dir, logs_dir, archive_dir)
     unresolved = [c for c in cites if not c["resolves"]]
-    to_delete = [f for f in files if f["class"] == DELETE_UNWIRED]
+    # A file that ALREADY LIVES IN THE ARCHIVE is not a delete candidate: the archive
+    # IS the preservation destination, so "archive then delete" on it would mean
+    # copying it onto itself and then removing the only copy. The sweep's job is to
+    # clear the LIVE surfaces (logs/, and through them the tier); the archived record
+    # stays. Caught in the live #1330 run, where the self-copy failed loudly on
+    # Windows rather than quietly destroying the preserved rows.
+    archived_names = (
+        {p.name for p in archive_dir.glob("*")} if archive_dir.is_dir() else set()
+    )
+    to_delete = [
+        f
+        for f in files
+        if f["class"] == DELETE_UNWIRED
+        and Path(f["path"]).parent.resolve() != archive_dir.resolve()
+    ]
+    already_archived = [
+        f
+        for f in files
+        if f["class"] == DELETE_UNWIRED
+        and f["file"] in archived_names
+        and Path(f["path"]).parent.resolve() == archive_dir.resolve()
+    ]
     # A cited file is never deleted, whatever its class — the citation outranks it.
     cited_names = {c["cites"] for c in cites}
     blocked_by_citation = [f for f in to_delete if f["file"] in cited_names]
@@ -208,11 +250,110 @@ def plan_sweep(
         "citations": cites,
         "unresolved_citations": unresolved,
         "to_archive": [f for f in to_delete if f["file"] not in cited_names],
+        "already_archived": already_archived,
         "to_delete": [f for f in to_delete if f["file"] not in cited_names],
         "blocked_by_citation": blocked_by_citation,
         "straddling": [f for f in files if f["straddles_epoch"]],
         "pre_epoch_wired": [f for f in files if f["class"] == KEEP_LAB_RECORD],
     }
+
+
+def apply_epoch_stamps(
+    registry_path: Path, stamp_plan: dict, *, approved: bool = False
+) -> dict:
+    """Write the ratified epoch as real ``start_ts`` on the open assignments.
+
+    Additive by construction: it only fills assignments whose ``start_ts`` is null,
+    and touches no other field — so an already-stamped or differently-stamped
+    assignment is left exactly as found rather than overwritten. Backs the registry
+    up first (same restore path as #1315). Refuses without ``approved=True``."""
+    if not approved:
+        return {"written": False, "reason": "not approved — the dry-run is the gate"}
+    if not stamp_plan.get("ok"):
+        return {"written": False, "reason": stamp_plan.get("reason", "plan not ok")}
+    if not stamp_plan["stamps"]:
+        return {"written": False, "reason": "nothing to stamp"}
+    path = Path(registry_path)
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    # The stamp MUST land on the temporal `assignments[]` — that is the record the
+    # interval join reads (#1331 / contract §3). Writing it onto the static
+    # `devices[].channels[]` shape instead produces an INERT stamp: the file looks
+    # stamped, `open_assignments()` still reports null, and every reading keeps
+    # resolving against an unbounded assignment exactly as before. Caught in the live
+    # #1330 run by the Home-verify gate — hence the refusal rather than a silent
+    # best-effort write.
+    if not isinstance(doc.get("assignments"), list):
+        return {
+            "written": False,
+            "reason": (
+                "refused: this config has no temporal `assignments[]`, so a stamp "
+                "would be inert — migrate it to the temporal shape first"
+            ),
+        }
+    want = {(s["device_id"], s["channel"]): s["start_ts"] for s in stamp_plan["stamps"]}
+    stamped = 0
+    for a in doc["assignments"]:
+        if not isinstance(a, dict) or a.get("end_ts"):
+            continue  # closed assignments are history — never re-stamped
+        key = (a.get("device_id"), a.get("channel"))
+        if key in want and not a.get("start_ts"):
+            a["start_ts"] = want[key]
+            stamped += 1
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    backup = path.with_suffix(path.suffix + f".bak-epoch-{ts}")
+    shutil.copy2(path, backup)
+    path.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
+    return {"written": True, "stamped": stamped, "backup": str(backup)}
+
+
+def write_tombstone(plan: dict, dest: Path, *, authority: str, ruling: str) -> dict:
+    """The tombstone manifest — written BEFORE anything is removed (#1330 execution
+    order). Records for every file leaving: path, size, SHA-256, the admissibility
+    rule applied, plus the epoch ruling and the approving authority.
+
+    A deletion that leaves no record is indistinguishable from data loss; this is
+    what makes the removal auditable after the fact."""
+    import hashlib
+
+    entries = []
+    for f in plan["to_delete"]:
+        p = Path(f["path"])
+        digest = None
+        if p.is_file():
+            h = hashlib.sha256()
+            h.update(p.read_bytes())
+            digest = h.hexdigest()
+        entries.append(
+            {
+                "file": f["file"],
+                "path": f["path"],
+                "size_bytes": p.stat().st_size if p.is_file() else None,
+                "sha256": digest,
+                "devices": f["devices"],
+                "rows": f["rows"],
+                "first": f["first"],
+                "last": f["last"],
+                "rule_applied": (
+                    "unwired -> delete (ADR-0037 §2): post-epoch output from a device "
+                    "never registered/wired to a plant is noise, not evidence"
+                ),
+            }
+        )
+    doc = {
+        "tombstone_utc": datetime.now(timezone.utc).isoformat(),
+        "issue": "#1330",
+        "epoch_ruling": {
+            "production_epoch": PRODUCTION_EPOCH.isoformat(),
+            "source": "ADR-0037 (maintainer-ratified)",
+        },
+        "approving_authority": authority,
+        "citation_ruling": ruling,
+        "removed": entries,
+        "n_removed": len(entries),
+    }
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
+    return doc
 
 
 def sweep_is_executable(plan: dict) -> bool:

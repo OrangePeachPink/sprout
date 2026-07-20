@@ -236,7 +236,12 @@ prove active ESP32 shading accelerated recovery relative to prior days.
 
 ## Passive Monitor Observation: long shaded water hold
 
-- Log file: `logs/plants_esp32_f4e9d4_20260628_183018.csv`
+- Log file: `logs/plants_esp32_f4e9d4_20260628_183018.csv` — **slice unavailable**
+  (maintainer ruling A, #1330, 2026-07-20): this file is present in neither `logs/`
+  nor the archive, so the citation cannot be resolved. It predates the production
+  epoch (`2026-07-06T00:00:06Z`, ADR-0037) and therefore predates the archive
+  boundary this record was written against. The observations below stand on their
+  own narrative; the raw slice behind them is not recoverable.
 - Log type: monitor log, not isolated experiment capture
 - Local time covered so far: 2026-06-28 13:30:18 to 17:02:18 CDT
 - Human context:
