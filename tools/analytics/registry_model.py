@@ -613,6 +613,37 @@ def next_sensor_id(model: RegistryModel) -> str:
     return _next_numbered({s.sensor_id for s in model.sensors}, "s")
 
 
+def _validate_profile_fields(rec: dict, tag: str, err) -> None:
+    """Shared profile validation for add/edit (#963).
+
+    The anchor check is the load-bearing one. Higher raw = drier, so a capacitive
+    probe's AIR anchor must read higher than its WATER anchor. A wizard that captures
+    them in the wrong order — probe into the cup before the air reading — would
+    otherwise store an inverted calibration that looks perfectly well-formed and makes
+    every downstream band wrong in a way nothing else detects. Refusing here is the
+    only place that catches it before it becomes the plant's truth."""
+    tier = rec.get("tier")
+    if tier is not None and tier not in CAL_TIERS:
+        err(tag, f"tier {tier!r} not in {CAL_TIERS}", "tier")
+    anchors = rec.get("anchors")
+    if anchors is None:
+        return
+    if not isinstance(anchors, dict):
+        err(tag, "anchors must be an object with air/water", "anchors")
+        return
+    air, water = anchors.get("air"), anchors.get("water")
+    for name, val in (("air", air), ("water", water)):
+        if val is not None and not isinstance(val, int):
+            err(tag, f"anchors.{name} must be a whole raw count", f"anchors.{name}")
+    if isinstance(air, int) and isinstance(water, int) and air <= water:
+        err(
+            tag,
+            f"anchors inverted: air {air} must read DRIER (higher raw) than "
+            f"water {water} — captured in the wrong order?",
+            "anchors",
+        )
+
+
 def apply_operations(
     model: RegistryModel, ops: dict, *, now: str | None = None
 ) -> dict:
@@ -644,8 +675,11 @@ def apply_operations(
     sensors = ops.get("sensors") or {}
     devices = ops.get("devices") or {}
     mappings = ops.get("mappings") or {}
+    profiles_ops = ops.get("profiles") or {}  # #963: the owner-cal write path
     lifecycle = ops.get("lifecycle") or []
 
+    existing_prof = {p.profile_id for p in model.profiles}
+    staged_prof: set[str] = set()
     existing_p = {p.plant_id for p in model.plants}
     existing_s = {s.sensor_id for s in model.sensors}
     existing_d = {d.get("device_id") for d in model.devices}
@@ -723,6 +757,27 @@ def apply_operations(
                 "device_id",
             )
 
+    # ---- validate: profiles (#963 — the owner-cal record, ratified option 1) -----
+    # The host owns cal VALUES; the device NVS slot is the projection (Trellis, #963;
+    # Firmware ack). A profile is a first-class reusable object: channels reference it
+    # by profile_id and never hold a private copy, so re-characterizing a probe moves
+    # every channel that references it together.
+    for i, rec in enumerate(profiles_ops.get("add") or []):
+        tag = f"profiles.add[{i}]"
+        pid = (rec.get("profile_id") or "").strip()
+        if not pid:
+            err(tag, "profile_id is required", "profile_id")
+        elif pid in existing_prof or pid in staged_prof:
+            err(tag, f"profile {pid} already exists", "profile_id")
+        else:
+            staged_prof.add(pid)
+        _validate_profile_fields(rec, tag, err)
+    for i, rec in enumerate(profiles_ops.get("edit") or []):
+        tag = f"profiles.edit[{i}]"
+        if (rec.get("profile_id") or "") not in existing_prof:
+            err(tag, f"no such profile {rec.get('profile_id')!r}", "profile_id")
+        _validate_profile_fields(rec, tag, err)
+
     # ---- validate: assign refs resolve (a channel already held is a remap, not error)
     for i, mp in enumerate(mappings.get("assign") or []):
         tag = f"mappings.assign[{i}]"
@@ -769,6 +824,7 @@ def apply_operations(
         "plants_added": 0,
         "sensors_added": 0,
         "devices_added": 0,
+        "profiles_added": 0,
         "edited": 0,
         "mapped": 0,
         "closed": 0,
@@ -802,6 +858,24 @@ def apply_operations(
             )
         )
         applied["sensors_added"] += 1
+    for rec in profiles_ops.get("add") or []:
+        model.profiles.append(
+            Profile(
+                profile_id=rec["profile_id"],
+                name=rec.get("name") or rec["profile_id"],
+                sensor_type=rec.get("sensor_type"),
+                anchors=rec.get("anchors"),
+                provenance=rec.get("provenance"),
+                tier=rec.get("tier") or "uncalibrated",
+            )
+        )
+        applied["profiles_added"] += 1
+    for rec in profiles_ops.get("edit") or []:
+        prof = next(p for p in model.profiles if p.profile_id == rec["profile_id"])
+        for k in ("name", "sensor_type", "anchors", "provenance", "tier"):
+            if k in rec:
+                setattr(prof, k, rec[k])
+        applied["edited"] += 1
     for rec in plants.get("edit") or []:
         p = next(x for x in model.plants if x.plant_id == rec.get("plant_id"))
         for k in _PLANT_FIELDS:
