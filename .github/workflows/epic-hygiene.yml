@@ -39,7 +39,7 @@ jobs:
       contents: read
       issues: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # stdlib + `gh` only (no third-party deps) — runs on the runner's Python directly,
       # deliberately independent of the uv/PlatformIO toolchain so it stays fast.
       - name: Sweep all open epics (ADR-0003 §2) — warn-only
@@ -57,7 +57,7 @@ jobs:
       contents: read
       issues: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Idempotent hygiene comment on the edited epic (ADR-0003 §2)
         env:
           GH_TOKEN: ${{ github.token }}
