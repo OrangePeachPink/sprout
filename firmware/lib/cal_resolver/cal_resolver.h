@@ -97,6 +97,30 @@ const cal_record_t *cal_instance_lookup(const char *board_class,
  * Never NULL. */
 const char *cal_tier_label(cal_tier_t tier);
 
+/* ---- Layer 1: the runtime-writable OWNER slot (#963) ---------------------- */
+/* Channel bound for the owner slot. Mirrors BOARD_MAX_CHANNELS (ADR-0019) but is
+ * defined locally so this lib stays dependency-free / host-testable. */
+#define CAL_MAX_CHANNELS 4
+/*
+ * The owner-cal write path. A user flashes a SIGNED PREBUILT binary (#271/#302)
+ * and therefore cannot rebuild firmware to bake in a calibration for a sensor
+ * Sprout has never seen - so the owner slot is the only mechanism compatible
+ * with our own supply chain (#963).
+ *
+ * This store is IN-RAM and deliberately NOT persisted yet: whether owner cal
+ * lives in device NVS or the host registry is an open design decision on #963
+ * (ADR-0016 wants cal where actuation decides; ADR-0026 §5 preserves NVS).
+ * Persistence drops in behind this same API once that is ruled - callers and
+ * the resolution chain do not change either way.
+ *
+ * Strings are COPIED into the slot: a runtime record arrives from a parsed
+ * command whose buffer does not outlive the call, so storing the caller's
+ * pointers would dangle.
+ */
+void cal_instance_set(int channel, const cal_record_t *rec);
+void cal_instance_clear(int channel);
+bool cal_instance_present(int channel);
+
 #ifdef __cplusplus
 }
 #endif

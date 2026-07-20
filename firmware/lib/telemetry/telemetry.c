@@ -22,7 +22,7 @@ uint32_t telemetry_fnv1a32(uint32_t h, const void *data, size_t len)
 }
 
 const char *telemetry_quality_flag(const moisture_state_t *st,
-                                   uint16_t wet_rail_raw)
+                                   uint16_t wet_rail_raw, uint16_t air_dry_raw)
 {
     uint16_t raw = st->last_raw;
     /* #670: a raw below the physical wet rail is impossible - a fault (short /
@@ -31,19 +31,36 @@ const char *telemetry_quality_flag(const moisture_state_t *st,
      * `raw <= 5 -> SATURATED`, which masked dead boards as drowning plants (the
      * live s3-1 0/7/4/1 case). wet_rail_raw==0 disables the check (unknown rail). */
     if (wet_rail_raw > 0 && raw < wet_rail_raw) return "SENSOR_FAULT";
-    if (raw >= 4090) return "SATURATED"; /* dry-rail: ADC railed high */
+    if (raw >= 4090) return "SATURATED"; /* dry-rail: ADC railed high (clamp) */
+    /* #1152: the SYMMETRIC MIRROR of the sub-wet-rail fault. Above the board's
+     * air rail (but not pegged) is impossibly dry for soil - an open circuit or
+     * a disconnected lead, not a very thirsty plant. Ordered AFTER the peg check
+     * so the pegged-clamp condition keeps its own distinct SATURATED value. */
+    if (air_dry_raw > 0 && raw > air_dry_raw) return "SENSOR_FAULT";
     if (st->last_spread >= 2000)
         return "NO_SIGNAL"; /* floating / disconnected */
+    if (st->rate_spike)
+        return "SUSPECT"; /* #1152 kinematics: implausible step */
     if (st->health_warn) return "SUSPECT"; /* noisy / poor contact */
     return "OK";
 }
 
-const char *telemetry_fault_reason(uint16_t raw, uint16_t wet_rail_raw)
+const char *telemetry_fault_reason(const moisture_state_t *st,
+                                   uint16_t wet_rail_raw, uint16_t air_dry_raw)
 {
-    if (wet_rail_raw == 0 || raw >= wet_rail_raw) return NULL; /* not a fault */
-    if (raw <= TELEMETRY_DEAD_ADC_MAX)
-        return "dead_adc"; /* floating to ~0: disconnected / dead ADC */
-    return "stuck_wet"; /* below the rail but not near-zero: short / contamination */
+    uint16_t raw = st->last_raw;
+    /* Hard (physically impossible) faults first - they outrank a kinematics
+     * hint, which only says the STEP was implausible, not the reading. */
+    if (wet_rail_raw > 0 && raw < wet_rail_raw) {
+        if (raw <= TELEMETRY_DEAD_ADC_MAX)
+            return "dead_adc"; /* floating to ~0: disconnected / dead ADC */
+        return "stuck_wet"; /* below rail, not near-zero: short / contamination */
+    }
+    /* #1152 physics mirror: impossibly dry -> open circuit / disconnected lead */
+    if (air_dry_raw > 0 && raw > air_dry_raw && raw < 4090) return "open_adc";
+    /* #1152 kinematics: the reading may be real but the jump is not trustable */
+    if (st->rate_spike) return "rate_spike";
+    return NULL; /* not a fault */
 }
 
 int telemetry_format_soil_row(char *buf, size_t buflen,
@@ -84,7 +101,8 @@ int telemetry_format_soil_row(char *buf, size_t buflen,
     }
     /* #670: the specific fault reason rides payload; the coarse SENSOR_FAULT token
      * is in quality_flag (below). NULL when the raw is not a fault. */
-    const char *fault = telemetry_fault_reason(r->raw, r->wet_rail_raw);
+    const char *fault =
+        telemetry_fault_reason(r->state, r->wet_rail_raw, r->air_dry_raw);
     if (fault && len > 0 && (size_t)len < sizeof(payload)) {
         len += snprintf(payload + len, sizeof(payload) - (size_t)len,
                         ";fault=%s", fault);
@@ -126,7 +144,8 @@ int telemetry_format_soil_row(char *buf, size_t buflen,
         buf, buflen, "%s,%s,%s,%s,%llu,%s,%s,%s,%s,%u,,,%s,%s", r->record_type,
         r->session_id, r->device_id, r->fw_version, r->up_ms, r->sensor_model,
         r->sensor_name, r->sensor_position, r->channel_str, (unsigned)r->raw,
-        telemetry_quality_flag(r->state, r->wet_rail_raw), payload);
+        telemetry_quality_flag(r->state, r->wet_rail_raw, r->air_dry_raw),
+        payload);
     return (n >= 0 && (size_t)n < buflen) ? n : -1;
 }
 

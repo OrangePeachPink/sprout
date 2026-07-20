@@ -329,23 +329,6 @@ details.wiring > summary { cursor: pointer; color: var(--muted); font-size: 12px
 .ladrow .here { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip { font-family: var(--font-data); font-size: 11px; font-weight: 600; color: #fff;
   border-radius: var(--r-pill); padding: 1px 8px; }
-/* #627/#717: band-movement row — plant · 7-segment lane · trend · meta. */
-.bmrow { display: grid; grid-template-columns: minmax(90px,150px) 1fr auto auto; align-items: center; gap: 12px; padding: 5px 2px; }
-.bmname { font-family: var(--font-ui); font-weight: 600; font-size: 13px; }
-.bmlane { display: flex; height: 15px; border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
-.bmseg { flex: 1 1 0; min-width: 0; }
-.bmseg.cur { outline: 2px solid var(--ink); outline-offset: -2px; z-index: 1; }
-.bmtrend { font-size: 11px; font-weight: 700; padding: 1px 9px; border-radius: var(--r-pill); border: 1px solid var(--border); white-space: nowrap; }
-.bmtrend.drying { color: var(--st-dry, #E8703A); }
-.bmtrend.wetting { color: var(--leaf); }
-.bmtrend.steady { color: var(--muted); }
-/* #627 phone/icon reduction: collapse to the glyph — name + lane + trend — and
-   drop the prose meta; the 7-seg lane + marker + arrow stays legible small. */
-@media (max-width: 560px){
-  .bmrow { grid-template-columns: 1fr auto; gap: 8px; }
-  .bmrow .bmlane { grid-column: 1 / -1; order: 3; }
-  .bmmeta { display: none; }
-}
 
 /* charts */
 .chartbox { position: relative; height: 340px; }
@@ -385,7 +368,6 @@ table.grid tr:last-child td { border-bottom: none; }
 .dhead .raw { font-family: var(--font-data); font-weight: 600; font-size: 40px; line-height: 1; }
 .dhead .rawu { color: var(--muted); font-size: 12px; }
 .dgrid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg); }
-.dgrid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: var(--space-md); }
 @media (max-width: 820px){ .dgrid2 { grid-template-columns: 1fr; } }
 
 /* headroom gauge */
@@ -398,14 +380,8 @@ table.grid tr:last-child td { border-bottom: none; }
   font-family: var(--font-data); margin-top: 2px; white-space: nowrap; }
 .gauge .row2 { position: relative; height: 18px; margin-top: 2px; }
 
-/* forecast cards */
-.fcard { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-tile); padding: var(--space-md); }
-.fcard .ft { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
-.fcard .fv { font-family: var(--font-data); font-weight: 600; font-size: 22px; margin: 4px 0 2px; }
-.fcard .fsub { font-size: 12px; color: var(--muted); }
-.fcard.gated { border-style: dashed; }
-.fcard .gate { display: inline-block; font-size: 10px; font-weight: 700; color: var(--muted);
-  border: 1px solid var(--border); border-radius: var(--r-pill); padding: 0 7px; }
+/* #1147: the reconciled forecast line — quiet chrome under the gauge */
+.fcline { margin-top: 8px; }
 
 /* #922: env-overlay toggle on the detail trajectory (opt-in, faint, context-not-cause) */
 .envctl { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
@@ -569,14 +545,6 @@ footer.prov code { font-family: var(--font-data); }
       <div class="cards" id="cards"></div>
     </section>
 
-    <!-- #627/#717: band movement — which way each plant is heading + how far it
-         has swung across the 7 bands over the window. The human-legible "time
-         dimension" of watering status: position now + discrete trail + trend. -->
-    <section class="card" id="bandMoveCard">
-      <div class="panel-h"><h2>Band movement</h2><span class="cap">which way each plant is heading across the 7 bands — drier ⟶ wetter · discrete steps, not a slope</span></div>
-      <div id="bandMove"></div>
-    </section>
-
     <section class="card">
       <!-- #718: plain-language title + a one-line "what am I looking at". It's a
            HISTORY view over the header's selected window; the range buttons up top
@@ -680,7 +648,7 @@ footer.prov code { font-family: var(--font-data); }
     <!-- #716: the calibration REFERENCE lives here (Diagnostics), split off the Monitor "Watering status"
          live view — band definitions + ratification state, the two-jobs split (live -> Monitor, cal -> here). -->
     <section class="card">
-      <div class="panel-h"><h2>Calibration reference</h2><span class="cap">the band definitions readings are scored against · endpoints ratified · interior boundaries pending A2 · per-channel cal pending (#170)</span></div>
+      <div class="panel-h"><h2>Calibration reference</h2><span class="cap">the band definitions readings are scored against · the ratified seven-in-soil ladder (#1218/#1220, per board class) · per-channel cal pending (#170)</span></div>
       <div class="ladder" id="calref"></div>
     </section>
 
@@ -1040,48 +1008,8 @@ setInterval(() => {
   });
 }, 5000);
 
-// #627/#717: band-movement view — per plant, a 7-segment lane (drier ⟶ wetter)
-// with the TOUCHED-band span lit, a marker at the current band, and a net-trend
-// chip. The human-legible time dimension of watering status: which way is each
-// plant heading + how far has it swung. Discrete + honest — no %, only the bands
-// the plant actually reached. Sorted driest-first so "who's heading to dry" leads.
-function renderBandHistory(){
-  const wrap = document.getElementById('bandMove'); if(!wrap) return; wrap.innerHTML = '';
-  const bh = DASH.band_history || [];
-  const bands = DASH.cal.bands || [];   // dry -> wet, 7 entries with .color/.ui
-  if(!bh.length){
-    wrap.appendChild(el('div','small muted', 'No band-bearing readings yet — nothing to trail (a channel with no plant band is honestly absent here).'));
-    return;
-  }
-  const rows = bh.slice().sort((a,b)=> ((a.current_index==null?9:a.current_index)-(b.current_index==null?9:b.current_index)));
-  rows.forEach(e=>{
-    const row = el('div','bmrow');
-    row.appendChild(el('div','bmname', e.label));
-    const lane = el('div','bmlane'); lane.setAttribute('role','img');
-    lane.setAttribute('aria-label', `${e.label}: now ${e.current.band}, ${(e.trend&&e.trend.dir)||'steady'}`);
-    bands.forEach((b,i)=>{
-      const seg = el('div','bmseg'); seg.style.background = b.color;
-      const inSpan = (i>=e.driest_index && i<=e.wettest_index);
-      seg.style.opacity = inSpan ? '1' : '.26';     // only the touched bands are lit
-      if(i===e.current_index) seg.classList.add('cur');
-      seg.title = b.ui + (i===e.current_index ? ' · now' : '');
-      lane.appendChild(seg);
-    });
-    row.appendChild(lane);
-    const t = e.trend || {};
-    const arrow = t.dir==='drying' ? '↓ drier' : t.dir==='wetting' ? '↑ wetter' : '→ steady';
-    row.appendChild(el('span','bmtrend '+(t.dir||'steady'), arrow));
-    const curUi = (bands[e.current_index] && bands[e.current_index].ui) || e.current.band;
-    const meta = [curUi];
-    if(e.span>0) meta.push(`swung ${e.span} band${e.span===1?'':'s'}`);
-    if(e.rewater) meta.push('since a detected watering');
-    row.appendChild(el('span','small muted bmmeta', meta.join(' · ')));
-    wrap.appendChild(row);
-  });
-}
-
-// #716: the calibration REFERENCE — band definitions + ratification state, on Diagnostics & Logs. Same
-// band lanes as the Monitor watering-status view, minus the live chips (definition, not live reading).
+// #716: the calibration REFERENCE — band definitions + ratification state, on Diagnostics & Logs. The
+// same band lanes the retired Monitor watering-status view used (#1142), minus live chips (definition, not reading).
 function renderCalRef(){
   const wrap = document.getElementById('calref'); if(!wrap) return; wrap.innerHTML = '';
   DASH.cal.bands.forEach(b => {
@@ -1168,6 +1096,49 @@ const gapShade = {  // E9: shade the span of a logging interruption (min-width s
     });
   }
 };
+/* #1247 C3 (Design-QA ruled): a masked segment is not a gap — "measured, but not
+   counted." Diagonal hatch (chrome grey, ~12%, 45°, ~6px pitch) marks excluded-from-
+   trend windows; visually distinct from the solid gap-shade and every band tint.
+   Chrome register only: no ramp hue, no fault red — an exclusion is routine. */
+let _hatchPat = null;
+function hatchPattern(ctx){
+  if(_hatchPat) return _hatchPat;
+  const t = document.createElement('canvas'); t.width = 8; t.height = 8;
+  const tc = t.getContext('2d');
+  tc.strokeStyle = hexA('#9A8480', 0.12); tc.lineWidth = 1.4;  /* --muted @ ~12% */
+  tc.beginPath();                                   /* 45° lines, seamless 8px tile */
+  tc.moveTo(-2, 6); tc.lineTo(6, -2);
+  tc.moveTo(2, 10); tc.lineTo(10, 2);
+  tc.stroke();
+  _hatchPat = ctx.createPattern(t, 'repeat');
+  return _hatchPat;
+}
+const maskHatch = {
+  id:'maskHatch',
+  beforeDatasetsDraw(chart, args, opts){
+    const x = chart.scales.x, area = chart.chartArea, c = chart.ctx;
+    if(!x) return;
+    (opts.windows||[]).forEach(w=>{
+      let l = x.getPixelForValue(w.x0), r = x.getPixelForValue(w.x1);
+      if(r < area.left || l > area.right) return;
+      l = Math.max(l, area.left); r = Math.min(r, area.right);
+      c.save(); c.fillStyle = hatchPattern(c);
+      c.fillRect(l, area.top, Math.max(4, r-l), area.bottom-area.top);
+      c.restore();
+    });
+  }
+};
+const MASK_KIND_LABELS = { 'watering-transient':'watering transient', 'rebound':'rebound', 'flagged':'flagged readings' };
+function maskCaption(wins){  /* name the reason CLASS the mask carries, not a code */
+  const kinds = [...new Set((wins||[]).map(w=>MASK_KIND_LABELS[w.kind]||w.kind))];
+  return kinds.length ? `hatched = excluded from trends (${kinds.join(' · ')})` : '';
+}
+function maskSegColor(base, wins){  /* the points inside stay PLOTTED, at faint alpha —
+  the exclusion is visible, the evidence is never erased (Design-QA #1247) */
+  if(!wins || !wins.length) return undefined;
+  return (ctx)=>{ const mx = (ctx.p0.parsed.x + ctx.p1.parsed.x) / 2;
+    return wins.some(w=>mx >= w.x0 && mx <= w.x1) ? hexA(base, 0.3) : undefined; };
+}
 const nightShade = {  // #198: real night windows from computed solar geometry (#365/#366) -
   id:'nightShade',    // never a fabricated light cycle; omitted entirely with no location config.
   beforeDatasetsDraw(chart, args, opts){
@@ -1202,8 +1173,14 @@ function renderTraj(){
     const _dash = _multiDev ? _dashFor(_s && _s.device_id) : [];
     return { label:(d.label||d.id), data:g.points, parsing:false, borderColor:d.color, backgroundColor:d.color,
       borderWidth:1.6, borderDash:_dash, pointRadius:0, tension:0.25, spanGaps:false, _local:g.locals,
+      // #1247: this series' excluded stretch renders faint — visible, never erased
+      segment:{ borderColor: maskSegColor(d.color, d.mask_windows) },
       _sid:d.id, _base:d.color };  // #1186: focus-tap join key + restore color
   });
+  // #1247 C3: the overview hatches the UNION of every channel's masked windows (a
+  // fleet watering IS a fleet-wide exclusion zone); the per-series faint stretch
+  // says which channel, the hatch says a trend exclusion happened here.
+  const _maskWins = DASH.trajectory.datasets.flatMap(d=>d.mask_windows||[]);
   charts.traj = new Chart(document.getElementById('trajChart'), {
     type:'line', data:{ datasets },
     options:{
@@ -1221,6 +1198,7 @@ function renderTraj(){
         legend:{ display:false },
         bandShade:{ bands: DASH.cal.bands },
         gapShade:{ gaps: DASH.gaps },
+        maskHatch:{ windows: _maskWins },  // #1247: the visible receipt of exclusion
         // #198: real night windows (computed solar geometry, #365/#366) - [] when no
         // location is configured, so the chart is unaffected (R9 offline-first).
         nightShade:{ bands: (DASH.env && DASH.env.available) ? DASH.env.night_bands : [] },
@@ -1230,8 +1208,15 @@ function renderTraj(){
         }}
       }
     },
-    plugins:[nightShade, bandShade, gapShade]
+    plugins:[nightShade, bandShade, gapShade, maskHatch]
   });
+  // #1247: one quiet chrome-register line naming the reason class — only when the
+  // window actually carries exclusions (calm-empty otherwise, never a stale label).
+  (()=>{ let cap = document.getElementById('trajMaskCap');
+    const txt = maskCaption(_maskWins);
+    if(!cap){ cap = el('div','small muted'); cap.id='trajMaskCap'; cap.style.marginTop='4px';
+      const lgEl = document.getElementById('trajLegend'); lgEl.parentElement.insertBefore(cap, lgEl.nextSibling); }
+    cap.textContent = txt; cap.style.display = txt ? '' : 'none'; })();
   const lg = document.getElementById('trajLegend'); lg.innerHTML = '';
   DASH.sensors.forEach(s=>{
     const it=el('div','it'); const d=el('span','dot'); d.style.background=s.color; it.appendChild(d);
@@ -1493,32 +1478,33 @@ function renderProvenance(){  // #324 bench-evidence panel
 
 function renderOverview(){
   destroyCharts();
-  renderHeader(); renderCards(); renderBandHistory(); renderCalRef();
+  renderHeader(); renderCards(); renderCalRef();
   renderTraj(); renderSpread(); renderDist();
   renderQuality(); renderIntegrity(); renderProvenance(); renderProv();
   if(!LIVE) applyStaticChannels();
 }
 
 /* ---- single-plant detail view ---- */
-function etaLine(eta, label, caveat){
-  const card = el('div','fcard');
-  card.appendChild(el('div','ft', label));
-  if(!eta){ card.appendChild(el('div','fv','—')); return card; }
-  const band = bandByLo(eta.target);
+function _etaBit(eta, label){
+  if(!eta) return label + ' —';
   if(eta.reachable && eta.hours!=null && eta.hours>0){
-    let rng = (eta.hours_lo!=null && eta.hours_hi!=null) ? ` <span class="fsub">[${fmtHours(eta.hours_lo)}–${fmtHours(eta.hours_hi)}]</span>` : '';
-    card.appendChild(el('div','fv', fmtHours(eta.hours)+rng));
-    card.appendChild(el('div','fsub', `to raw ${fmt(eta.target)}${band? ' ('+band.ui+')':''} · +${fmt(eta.headroom)} counts`));
-  } else if(eta.reason==='already past'){
-    card.appendChild(el('div','fv', 'now'));
-    card.appendChild(el('div','fsub', `already at/past raw ${fmt(eta.target)}${band? ' ('+band.ui+')':''}`));
-  } else {
-    card.classList.add('gated');
-    card.appendChild(el('div','fv', '<span class="gate">no estimate yet</span>'));
-    card.appendChild(el('div','fsub', `${eta.reason} · +${fmt(eta.headroom)} counts to raw ${fmt(eta.target)}${band? ' ('+band.ui+')':''}`));
+    const rng = (eta.hours_lo!=null && eta.hours_hi!=null) ? ` [${fmtHours(eta.hours_lo)}–${fmtHours(eta.hours_hi)}]` : '';
+    return `${label} ~${fmtHours(eta.hours)}${rng}`;
   }
-  if(caveat) card.appendChild(el('div','fsub tiny', caveat));
-  return card;
+  if(eta.reason==='already past') return label + ' now';
+  return `${label} — no estimate yet (${eta.reason})`;
+}
+/* #1147: one honest line where three tiles stood. Targets live on the gauge ticks;
+   this line carries only the time estimates + the diurnal readiness word. */
+function forecastLine(f){
+  const bits = [
+    _etaBit(f.next_band, 'next band'),
+    _etaBit(f.thirsty, 'thirsty'),
+    f.diurnal && f.diurnal.ready ? `diurnal ready (${f.diurnal.days}d)` : `diurnal collecting`
+  ];
+  const line = el('div','small muted fcline', bits.join(' · '));
+  line.title = 'extrapolated from the current drying rate, within the active segment · thirsty threshold = the ratified needs-water edge (#1218, per board class)';
+  return line;
 }
 
 // #725: a plant-first label for the detail nav (prev/next tooltips + picker).
@@ -1584,6 +1570,11 @@ function renderDetail(sid){
   head.appendChild(dh);
   /* headroom gauge */
   head.appendChild(buildGauge(s, f));
+  /* #1147: the reconciled forecast line — the retired tiles' unique content joins the
+     gauge (whose ticks already mark the same targets); the thirsty tile's headline job
+     lives on the Home card's next-need chip + the hero's plain answer. Gates stay
+     honest: no estimate renders as the reason, never a number. */
+  head.appendChild(forecastLine(f));
   /* #714: the wiring map (probe -> GPIO/channel -> board) lives behind an explicit expand — never on the
      glance card, never in the detail header. */
   const wiring = el('details','wiring');
@@ -1592,18 +1583,12 @@ function renderDetail(sid){
   head.appendChild(wiring);
   det.appendChild(head);
 
-  /* forecasts */
-  const fc = el('section','card');
-  fc.appendChild((()=>{ const h=el('div','panel-h'); h.appendChild(el('h2',null,'Forecasts')); h.appendChild(el('span','cap','extrapolated from the current drying rate — gated until drying is statistically real')); return h; })());
-  const grid = el('div','dgrid3');
-  grid.appendChild(etaLine(f.next_band, 'enters next drier band', null));
-  grid.appendChild(etaLine(f.thirsty, 'thirsty (needs water)', 'threshold = A2 needs-water edge (un-validated)'));
-  grid.appendChild(diurnalCard(f.diurnal));
-  fc.appendChild(grid); det.appendChild(fc);
-
   /* trajectory + trend */
   const tj = el('section','card');
-  tj.appendChild((()=>{ const h=el('div','panel-h'); h.appendChild(el('h2',null,'Trajectory + trend')); h.appendChild(el('span','cap','this probe only · band shading · dashed = least-squares trend')); return h; })());
+  tj.appendChild((()=>{ const h=el('div','panel-h'); h.appendChild(el('h2',null,'Trajectory + trend'));
+    // #1247: append the reason-class caption only when this probe carries exclusions
+    const _mc = maskCaption((DASH.trajectory.datasets.find(d=>d.id===sid)||{}).mask_windows);
+    h.appendChild(el('span','cap','this probe only · band shading · dashed = least-squares trend' + (_mc ? ' · ' + _mc : ''))); return h; })());
   const box = el('div','chartbox tall'); const cv = el('canvas'); cv.id='detailChart'; box.appendChild(cv); tj.appendChild(box);
   /* #922: opt-in environment overlay — only when this plant HAS context (honest-empty else);
      default off, a quiet toggle; the label states "context, not cause" so it never reads as a
@@ -1654,28 +1639,17 @@ function buildGauge(s, f){
   return wrap;
 }
 
-function diurnalCard(d){
-  const card = el('div','fcard');
-  card.appendChild(el('div','ft','diurnal cycle / next-day'));
-  if(d.ready){
-    card.appendChild(el('div','fv','ready'));
-    card.appendChild(el('div','fsub', `${d.days} d captured · daily wet/dry shape available`));
-  } else {
-    card.classList.add('gated');
-    card.appendChild(el('div','fv','<span class="gate">collecting</span>'));
-    card.appendChild(el('div','fsub', `${d.reason} · next-day start/end unlocks at ≥2 days`));
-  }
-  return card;
-}
-
 function ratesCard(rates){
   const card = el('section','card');
-  card.appendChild(el('h3', null, 'Drying rate ("angle") · positive = drying'));
+  /* #1145: windows clip to the active inter-watering segment (#1133 — a fit never
+     bridges a watering); the payload's legacy 'all' key IS the segment window now,
+     so the rendered label tells that truth. */
+  card.appendChild(el('h3', null, 'Drying rate ("angle") · positive = drying · windowed within the current segment'));
   const t = el('table','grid ratetbl');
   t.appendChild((()=>{ const tr=el('tr'); ['window','c/h','±se','r²','n','trend'].forEach((h,i)=>tr.appendChild(el('th', (i>=1&&i<=4)?'num':null, h))); return tr; })());
   ['1h','6h','24h','all'].forEach(w=>{
     const r = rates[w]; const tr = el('tr');
-    tr.appendChild(el('td','mono', w));
+    tr.appendChild(el('td','mono', w==='all' ? 'segment' : w));
     if(!r){ tr.appendChild(el('td','num muted','—')); tr.appendChild(el('td','num muted','—')); tr.appendChild(el('td','num muted','—')); tr.appendChild(el('td','num muted','—')); tr.appendChild(el('td',null,'')); }
     else {
       tr.appendChild(el('td','num', (r.slope>=0?'+':'')+r.slope));
@@ -1687,7 +1661,7 @@ function ratesCard(rates){
     t.appendChild(tr);
   });
   card.appendChild(t);
-  card.appendChild(el('div','small muted', 'a trend is only "drying"/"wetting" when |slope| beats noise (>2·se) and ≥4 c/h; otherwise stable.'));
+  card.appendChild(el('div','small muted', 'a trend is only "drying"/"wetting" when |slope| beats noise (>2·se) and ≥4 c/h; otherwise stable. "segment" = since the last detected watering (the whole window when none is detected) — the cross-event "all" row retired (#1145, grill-ruled).'));
   return card;
 }
 
@@ -1722,7 +1696,9 @@ function buildDetailChart(s){
   const gb = withGapBreaks(dset.points, dset.local);
   const datasets = [{
     label:s.id, data:gb.points, parsing:false, borderColor:s.color, backgroundColor:s.color,
-    borderWidth:1.8, pointRadius:0, tension:0.25, spanGaps:false, _local:gb.locals
+    borderWidth:1.8, pointRadius:0, tension:0.25, spanGaps:false, _local:gb.locals,
+    // #1247: the masked stretch stays plotted, faint — excluded, never erased
+    segment:{ borderColor: maskSegColor(s.color, dset.mask_windows) }
   }];
   if(dset.trend){
     datasets.push({ label:'trend', data:[{x:dset.trend.x0,y:dset.trend.y0},{x:dset.trend.x1,y:dset.trend.y1}],
@@ -1752,6 +1728,7 @@ function buildDetailChart(s){
           ticks:{ color:css('--muted'), font:{size:10} },
           title:{ display:true, text:'air temp °C · RH %  (context)', color:css('--muted'), font:{size:10} } } } : {}) },
       plugins:{ legend:{display:false}, bandShade:{ bands: DASH.cal.bands }, gapShade:{ gaps: DASH.gaps },
+        maskHatch:{ windows: dset.mask_windows || [] },  // #1247: exact, this probe only
         tooltip:{ callbacks:{
           title:(items)=>{ const it=items[0]; if(it.dataset._trend) return 'trend'; if(it.dataset._env) return it.dataset.label; const loc=it.dataset._local[it.dataIndex]; return loc; },
           label:(it)=>it.dataset._trend? `trend ${fmt(Math.round(it.parsed.y))}` : (it.dataset._env? `${fmt(Math.round(it.parsed.y*10)/10)}${it.dataset._env} · context` : `raw ${fmt(it.parsed.y)}`) } } } },

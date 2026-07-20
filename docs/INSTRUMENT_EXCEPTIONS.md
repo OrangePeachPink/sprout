@@ -106,7 +106,19 @@ subsystem.
 
 ## 3. `quality_flag` extension — the schema seam (Data owns TELEMETRY_SCHEMA)
 
-**Proposed, for Data's review — this spec does NOT edit `TELEMETRY_SCHEMA.md`:**
+**STATUS (2026-07-19): partly RATIFIED and SHIPPED.** `TELEMETRY_SCHEMA` S4 already carries the two
+source-detectable rows — `SENSOR_FAULT` + `fault=open_adc` (above the air rail) and `SUSPECT` +
+`fault=rate_spike` (implausible step) — and firmware emits both as of PR #1277. The rest below stays
+proposal. This spec still does **not** edit `TELEMETRY_SCHEMA.md`; Data owns it.
+
+> **Correction that came out of the build.** An earlier draft of §4 mapped **probe-in-water →
+> `SATURATED`**. That contradicts the owning contract: schema §4 defines `SATURATED` as the ADC
+> railed **high** (the *dry* rail). The v4 #670 fix exists precisely because a **low** rail used to be
+> mislabelled `SATURATED`, masking a dead board as four drowning plants. The row is corrected in §4.
+>
+> **`probe_air` was deliberately NOT minted.** It is not in the schema table, so per shared-vocabulary
+> discipline it remains a *proposal for Data* rather than firmware-authored vocabulary. Firmware emits
+> only tokens the owning contract already defines.
 
 - **Keep the enum small** (Trellis #739). Prefer extending the **payload `fault=<reason>`
   vocabulary** over adding enum values. Recommended reason additions (all additive, opaque tokens):
@@ -124,13 +136,28 @@ subsystem.
 | Family | Sub-type | At source? | Threshold basis | Wire (proposed) |
 | --- | --- | --- | --- | --- |
 | placement | probe-in-air | yes | `air_dry_raw` ≥ raw > Faint-top | `SUSPECT` + `fault=probe_air` |
-| placement | probe-in-water | yes | Soaked-floor > raw ≥ `wet_rail_raw` | `SATURATED` (exists) |
-| physics | above-air-in-air | yes (add) | raw > `air_dry_raw` | `SENSOR_FAULT` + `fault=open_adc` |
+| placement | probe-in-water | yes | Soaked-floor > raw ≥ `wet_rail_raw` | ~~`SATURATED`~~ **CORRECTION** — see note |
+| physics | above-air-in-air | **SHIPS (#1152 emit)** | raw > `air_dry_raw` | `SENSOR_FAULT` + `fault=open_adc` |
 | physics | below-water-in-water | **ships** | raw < `wet_rail_raw` | `SENSOR_FAULT` + `fault=dead_adc` |
-| kinematics | too-fast spike | partial | Δraw > physical max per `dt` | `SUSPECT` + `fault=rate_spike` |
+| kinematics | too-fast spike | **SHIPS (#1152 emit)** | Δraw > `max_delta_raw` per step | `SUSPECT` + `fault=rate_spike` |
 | kinematics | wrong-dir mid-watering | host | needs watering-event ctx | host-qualified |
 | comms | no-signal / stale | host | row absence / last-seen age | host-derived `NO_SIGNAL` |
 | comms | sensor-disconnect | yes | floating / railed ADC | `SENSOR_FAULT` + `fault=dead_adc` |
+
+> **CORRECTION (2026-07-19, during the emit build).** This table originally mapped
+> **probe-in-water → `SATURATED`**. That is **wrong against the owning contract**:
+> `TELEMETRY_SCHEMA` §4 defines `SATURATED` as the ADC railed **high** (the *dry*
+> rail, "pegged at ~4095") — the opposite end of the scale. The v4 `#670` fix exists
+> precisely because a **low**-rail reading used to be mislabelled `SATURATED`, which
+> masked a dead board as four drowning plants. Probe-in-water below the wet rail is
+> already `SENSOR_FAULT` + `fault=stuck_wet`/`dead_adc`; the band **between** the wet
+> rail and the Soaked floor is ordinary wet soil and is deliberately **not** flagged.
+> No second vocabulary was introduced — the schema wins.
+>
+> **Emit status:** the two rows the schema ratified for #1152 (`open_adc`,
+> `rate_spike`) now **ship**. `probe_air` (a SUSPECT band between the Faint-ceiling
+> and the air rail) is **not** in the schema table and was **not** minted — it stays
+> a proposal for Data, not firmware-authored vocabulary.
 
 ## 5. The split argument (why source-vs-host lands where it does)
 
@@ -147,10 +174,13 @@ subsystem.
 
 ## 6. Non-goals / next
 
-- **No firmware behavior change in this issue.** The build — adding the above-air check, the
-  rate-spike gate, and the reason tokens — is a later delivery-channel (V1) item.
-- The kinematics ceiling is **empirical**: it calibrates against the fresh current-fleet dry-down
-  and the dose-response corpus, alongside the #995 anchor ratification.
+- ~~No firmware behavior change in this issue.~~ **SUPERSEDED — the emit shipped** (2026-07-19,
+  PR #1277): the above-air check and the rate-spike gate are live, with their reason tokens. This
+  document is now a **record of what ships**, not a proposal for what might.
+- The kinematics ceiling is **empirical**, and now has a shipped provisional value:
+  `SENSOR_MAX_DELTA_RAW = 1200`, derived with margin from the #1174 dry-down — a *full* watering
+  moved a channel ~900 counts across **many** 30 s steps, so a single step that large is instrument
+  motion, not soil. **Data owns cal values**: ratify or retune there. `0` disables the check.
 - Taxonomy is **open** (#1039): more families may land; the payload-reason vocabulary is the
   low-friction place to grow.
 

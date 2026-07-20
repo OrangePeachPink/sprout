@@ -220,6 +220,22 @@ and gives a safe clean-reset runbook.
 > ([#387](https://github.com/OrangePeachPink/sprout/issues/387)) — it hands back the tunable constants and
 > shared terms, then graduates you to this VS Code / Codespaces project.
 
+## The analysis store (analytics tier)
+
+Analytics work runs against a local **DuckDB/Parquet store** derived from the raw logs — the #828 tier,
+whose contract is [`docs/TIER_STORE_CONTRACT.md`](../docs/TIER_STORE_CONTRACT.md). Three one-liners, and
+**no firmware toolchain** — this is the analytics-only path (pairs with `just check-host`):
+
+| Do | Command |
+|---|---|
+| **Build / refresh** the store from `logs/` | `just store-rebuild` (idempotent; `--skip-existing` resumes) |
+| **Verify** it (µs-exact fidelity + provenance) | `just store-verify` |
+| **Query** it ad-hoc | `just store-query "SELECT device, band, COUNT(*) FROM store GROUP BY 1, 2"` |
+
+The store lives under **`reports/tier/` — gitignored and regenerable**: never commit it; delete it and
+`just store-rebuild` to rebuild clean. The tier tests self-build fixtures, so `just check-host` stays green
+with no store present. Raw `logs/` live on the `data` branch (also gitignored here).
+
 ## How a change gets reviewed and merged
 
 **In one line:** you open a PR; someone *other than the author* checks it against the issue's acceptance

@@ -239,7 +239,7 @@ void t_withheld_diverges_from_quality(void)
 
     /* measurement trust: the CURRENT read is fine */
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
-        "OK", telemetry_quality_flag(&CTRL.mstate[0], 900),
+        "OK", telemetry_quality_flag(&CTRL.mstate[0], 900, 3400),
         "clean read -> quality_flag says OK");
     /* actuation policy: the supervisor is STILL holding this channel */
     TEST_ASSERT_TRUE_MESSAGE(irrig_health_warn(&CTRL, 0),
@@ -250,7 +250,7 @@ void t_withheld_diverges_from_quality(void)
     /* the two axes must be independently reportable - that is the whole fix */
     TEST_ASSERT_TRUE_MESSAGE(
         irrig_health_warn(&CTRL, 0) &&
-            telemetry_quality_flag(&CTRL.mstate[0], 900)[0] == 'O',
+            telemetry_quality_flag(&CTRL.mstate[0], 900, 3400)[0] == 'O',
         "withheld=true WITH quality=OK is reachable -> display needs both");
 }
 
@@ -1413,6 +1413,86 @@ void t_config_id_hash(void)
 /* #670: a raw STRICTLY below the board's physical wet rail is a fault, not moisture
  * and not "saturated" (the old raw<=5 bug that masked the dead s3-1 board). Coarse
  * SENSOR_FAULT in quality_flag; specific reason (dead_adc/stuck_wet) in payload. */
+/* #1152 emit: the two source-detectable exception rows TELEMETRY_SCHEMA S4
+ * ratified - open_adc (physics, the symmetric mirror of the sub-wet-rail fault)
+ * and rate_spike (kinematics). Raw is preserved in every case (ADR-0006); only
+ * the trust flag and the payload reason change. */
+void t_exceptions_open_adc_and_rate_spike(void)
+{
+    moisture_cfg_t cfg = (moisture_cfg_t)MOISTURE_CFG_DEFAULT;
+    moisture_state_t st;
+    const uint16_t rail = 900, air = 3400;
+
+    /* --- physics: impossibly DRY -> open circuit / disconnected lead --------- */
+    moisture_init(&st, &cfg, 1300);
+    st.last_raw = 3600; /* above the air rail, below the peg */
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "SENSOR_FAULT", telemetry_quality_flag(&st, rail, air),
+        "above the air rail = SENSOR_FAULT (mirror of the sub-wet-rail fault)");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("open_adc",
+                                     telemetry_fault_reason(&st, rail, air),
+                                     "impossibly dry -> open_adc reason");
+
+    /* the PEG keeps its own distinct value - open_adc must not swallow it */
+    st.last_raw = 4095;
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "SATURATED", telemetry_quality_flag(&st, rail, air),
+        "pegged high stays SATURATED (clamp), not open_adc");
+
+    /* a genuinely dry-but-plausible soil reading is NOT a fault */
+    st.last_raw = 3000;
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "OK", telemetry_quality_flag(&st, rail, air),
+        "dry but below the air rail = real soil, never flagged");
+    TEST_ASSERT_NULL_MESSAGE(telemetry_fault_reason(&st, rail, air),
+                             "plausible dry raw -> no fault reason");
+
+    /* air==0 disables the check (unknown rail -> never self-flag) */
+    st.last_raw = 3600;
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("OK", telemetry_quality_flag(&st, rail, 0),
+                                     "air rail 0 disables the open_adc check");
+
+    /* --- kinematics: a step soil cannot physically make ---------------------- */
+    moisture_init(&st, &cfg, 1500);
+    moisture_update(&st, &cfg, 1560); /* 60 counts: ordinary drift */
+    TEST_ASSERT_FALSE_MESSAGE(st.rate_spike, "ordinary step is not a spike");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "OK", telemetry_quality_flag(&st, rail, air), "ordinary step stays OK");
+
+    moisture_update(&st, &cfg, 3000); /* +1440 in one step */
+    TEST_ASSERT_TRUE_MESSAGE(st.rate_spike,
+                             "implausible step flags rate_spike");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "SUSPECT", telemetry_quality_flag(&st, rail, air),
+        "rate_spike -> SUSPECT (the reading may be real; the JUMP is not)");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("rate_spike",
+                                     telemetry_fault_reason(&st, rail, air),
+                                     "kinematics reason on the payload");
+    TEST_ASSERT_EQUAL_UINT16_MESSAGE(
+        3000, st.last_raw, "raw is PRESERVED (ADR-0006), never masked");
+
+    /* the flag is per-step: a settled step clears it */
+    moisture_update(&st, &cfg, 3010);
+    TEST_ASSERT_FALSE_MESSAGE(st.rate_spike, "spike clears once steps settle");
+
+    /* a HARD fault outranks a kinematics hint */
+    moisture_update(&st, &cfg, 100); /* huge step AND below the wet rail */
+    TEST_ASSERT_TRUE_MESSAGE(st.rate_spike, "precondition: also a spike");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "stuck_wet", telemetry_fault_reason(&st, rail, air),
+        "physically-impossible fault outranks the rate_spike hint (raw 100 is "
+        "sub-rail but not near-zero, so stuck_wet - not dead_adc)");
+}
+
+/* set the raw on the state, then ask for the reason - the reason now reads the
+ * state (it needs rate_spike as well as raw). */
+static const char *fault_of(moisture_state_t *st, uint16_t raw, uint16_t rail,
+                            uint16_t air)
+{
+    st->last_raw = raw;
+    return telemetry_fault_reason(st, rail, air);
+}
+
 void t_sensor_fault(void)
 {
     moisture_cfg_t cfg = (moisture_cfg_t)MOISTURE_CFG_DEFAULT;
@@ -1420,43 +1500,43 @@ void t_sensor_fault(void)
     moisture_init(&st, &cfg,
                   1300); /* neutral spread/health; raw set per case */
     const uint16_t rail = 900; /* classic wet rail (BOARD_CAP.wet_rail_raw) */
+    const uint16_t air = 3400; /* classic air rail  (BOARD_CAP.air_dry_raw)  */
 
     /* dead ADC floating to ~0 (the live s3-1 0/7/4/1 case). */
     st.last_raw = 4;
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
-        "SENSOR_FAULT", telemetry_quality_flag(&st, rail),
+        "SENSOR_FAULT", telemetry_quality_flag(&st, rail, air),
         "raw 4 (dead ADC) below the wet rail = SENSOR_FAULT, not SATURATED");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("dead_adc",
-                                     telemetry_fault_reason(4, rail),
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("dead_adc", fault_of(&st, 4, rail, air),
                                      "near-zero raw -> dead_adc reason");
 
     /* shorted / contaminated probe reading impossibly wet (the P11 s3 ~420). */
     st.last_raw = 420;
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
-        "SENSOR_FAULT", telemetry_quality_flag(&st, rail),
+        "SENSOR_FAULT", telemetry_quality_flag(&st, rail, air),
         "raw 420 below the wet rail = SENSOR_FAULT");
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
-        "stuck_wet", telemetry_fault_reason(420, rail),
+        "stuck_wet", fault_of(&st, 420, rail, air),
         "sub-rail but not near-zero -> stuck_wet reason");
 
     /* genuine full saturation (>= the rail) is NOT a fault (acceptance: no false
      * flag of real saturation). */
     st.last_raw = 930;
     TEST_ASSERT_TRUE_MESSAGE(
-        strcmp("SENSOR_FAULT", telemetry_quality_flag(&st, rail)) != 0,
+        strcmp("SENSOR_FAULT", telemetry_quality_flag(&st, rail, air)) != 0,
         "raw 930 (genuine saturation) is NOT a fault");
-    TEST_ASSERT_NULL_MESSAGE(telemetry_fault_reason(930, rail),
+    TEST_ASSERT_NULL_MESSAGE(fault_of(&st, 930, rail, air),
                              "genuine saturation has no fault reason");
     TEST_ASSERT_NULL_MESSAGE(
-        telemetry_fault_reason(900, rail),
+        fault_of(&st, 900, rail, air),
         "exactly at the rail is not a fault (strict below)");
 
     /* wet_rail==0 disables self-flagging (unknown rail -> never claim a fault). */
     st.last_raw = 4;
     TEST_ASSERT_TRUE_MESSAGE(
-        strcmp("SENSOR_FAULT", telemetry_quality_flag(&st, 0)) != 0,
+        strcmp("SENSOR_FAULT", telemetry_quality_flag(&st, 0, air)) != 0,
         "wet_rail=0 disables the fault check");
-    TEST_ASSERT_NULL_MESSAGE(telemetry_fault_reason(4, 0),
+    TEST_ASSERT_NULL_MESSAGE(fault_of(&st, 4, 0, air),
                              "wet_rail=0 -> no fault reason");
 }
 
@@ -1489,6 +1569,7 @@ void t_soil_row_v4(void)
         "",
         "classic",
         /* v4: */ 900 /*wet_rail*/,
+        3400 /*air_dry_raw (#1152)*/,
         "a1b2c3d4" /*config_id*/,
         true /*rssi_present*/,
         -57 /*rssi_dbm*/,
@@ -1584,6 +1665,86 @@ void t_device_hostname(void)
 /* -------------------------------------------------------------------------- */
 
 /* --- #952 cal_resolver: the resolution chain + byte-preservation ---------- */
+
+/* #963 Layer 1: the runtime-writable OWNER slot. A user flashes a SIGNED
+ * PREBUILT binary and cannot rebuild firmware to bake in a cal for a sensor
+ * Sprout has never seen - so this slot is the only mechanism compatible with our
+ * own supply chain. Pins the RESOLUTION CONTRACT (instance > class > factory)
+ * and the two safety properties the store must have. */
+void t_owner_cal_instance_slot(void)
+{
+    cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
+    for (int ch = 0; ch < 4; ch++)
+        cal_instance_clear(ch);
+
+    /* baseline: with no owner record, ch0 resolves to the class default */
+    const cal_record_t *base =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_NOT_NULL(base);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CAL_TIER_CHANNEL, base->tier,
+                                  "no owner cal -> class default resolves");
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_present(0), "slot starts empty");
+
+    /* the owner runs the wizard: a record for a sensor we have never seen */
+    uint16_t owner_anchors[MOISTURE_BOUNDARY_COUNT] = {2000, 1800, 1600,
+                                                       1400, 1200, 1000};
+    {
+        /* deliberately SCOPED so the source buffers die before we read back -
+         * the slot must own copies, not the caller's pointers. */
+        char board[16];
+        char prov[24];
+        strcpy(board, "esp32-classic");
+        strcpy(prov, "owner_wizard_x");
+        cal_record_t rec = {
+            board, SENSOR_CLASS_CAPACITIVE_V2, {0}, prov, CAL_TIER_CHANNEL};
+        memcpy(rec.anchors, owner_anchors, sizeof(owner_anchors));
+        cal_instance_set(0, &rec);
+        memset(board, 'X', sizeof(board)); /* scribble the caller's buffers */
+        memset(prov, 'X', sizeof(prov));
+    }
+
+    /* PRECEDENCE: the owner record now wins over the class default */
+    const cal_record_t *r =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_NOT_NULL(r);
+    TEST_ASSERT_EQUAL_UINT16_ARRAY_MESSAGE(
+        owner_anchors, r->anchors, MOISTURE_BOUNDARY_COUNT,
+        "owner cal outranks the class table");
+    /* STRING OWNERSHIP: survives the caller's buffers being destroyed */
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "owner_wizard_x", r->provenance,
+        "the slot COPIED provenance - caller's buffer is gone");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("esp32-classic", r->board_class,
+                                     "the slot COPIED board_class too");
+
+    /* ISOLATION: only ch0 was written */
+    TEST_ASSERT_TRUE_MESSAGE(cal_instance_present(0),
+                             "ch0 has an owner record");
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_present(1), "ch1 untouched");
+    const cal_record_t *r1 =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 1);
+    TEST_ASSERT_TRUE_MESSAGE(r1->anchors[0] != owner_anchors[0],
+                             "ch1 still resolves its own record");
+
+    /* BOARD-CLASS GUARD: a probe moved to a different board must NOT silently
+     * inherit the old board's owner calibration - raw scales differ per board. */
+    const cal_record_t *other =
+        cal_resolve("esp32-c5", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_NOT_NULL(other);
+    TEST_ASSERT_TRUE_MESSAGE(
+        other->anchors[0] != owner_anchors[0],
+        "a classic owner record must not leak onto a C5 channel");
+
+    /* CLEAR: falls back down the chain, never to NULL */
+    cal_instance_clear(0);
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_present(0), "cleared");
+    const cal_record_t *after =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_NOT_NULL_MESSAGE(after, "chain always returns a record");
+    TEST_ASSERT_EQUAL_UINT16_ARRAY_MESSAGE(
+        base->anchors, after->anchors, MOISTURE_BOUNDARY_COUNT,
+        "clearing the owner slot restores the class default");
+}
 
 void t_cal_resolver_chain_order(void)
 {
@@ -1962,6 +2123,7 @@ int main(void)
     RUN_TEST(t_soil_row_time_provenance);
     RUN_TEST(t_config_id_hash);
     RUN_TEST(t_sensor_fault);
+    RUN_TEST(t_exceptions_open_adc_and_rate_spike);
     RUN_TEST(t_soil_row_v4);
     RUN_TEST(t_per_channel_cal);
     RUN_TEST(t_cal_ch_line);
@@ -1969,6 +2131,7 @@ int main(void)
     RUN_TEST(t_device_uid_encode);
     RUN_TEST(t_device_hostname);
     RUN_TEST(t_cal_resolver_chain_order);
+    RUN_TEST(t_owner_cal_instance_slot);
     RUN_TEST(t_cal_resolver_classic_byte_preserved);
     RUN_TEST(t_cal_resolver_c5_board_envelope);
     RUN_TEST(t_cal_tier_label);

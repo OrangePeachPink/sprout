@@ -5,13 +5,13 @@ HTML dashboard styled with the Sprout design system (``docs/design/``). It
 injects a JSON context + the inlined Sprout tokens into
 ``dashboard_template.html``.
 
-Honesty rules baked in:
+Reading rules baked in (#1039 canon):
 
-* **raw + band are the truth.** The legacy moist% ``value`` column is never
+* **raw + band = the reading.** The legacy moist% ``value`` column is never
   plotted (B2/C2).
-* **interior bands are proposed, not validated.** The endpoints (saturated +
-  air-dry) are firmware-ratified from the common-cup anchors; the interior
-  boundaries are the un-reconciled A2 spec, and the UI labels them as such.
+* **bands are the ratified seven-in-soil ladder.** Endpoints from the
+  common-cup anchors; interior boundaries measured + ratified per board class
+  (#995 -> #1218/#1220, ADR-0035). Per-channel cal remains the #170 tail.
 * **no fabricated light cycle.** Day/night shading (#198) uses the real,
   computed solar geometry (``env_solar``, #365/#366) - never a guessed
   schedule. Absent entirely with no rig location configured (R9).
@@ -45,7 +45,10 @@ from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
     DEFAULT_CAL_BOUNDS,
     LogData,
 )
-from segment_classifier import valid_for_trend  # noqa: E402  (#1244 C0 trend mask)
+from segment_classifier import (  # noqa: E402  (#1244 trend mask · #1247 windows)
+    classify,
+    valid_for_trend,
+)
 from source_adapter import (  # noqa: E402  (the source-adapter seam, #277)
     TetheredAdapter,
 )
@@ -97,7 +100,7 @@ RETIRE_AFTER_H = 12.0
 # documented GAP_THRESHOLD_S. A gap = a poll-to-poll delta over
 # max(GAP_THRESHOLD_S, GAP_CADENCE_MULT x median interval) - so a slow 60 s WiFi
 # poller isn't spammed with false gaps and a fast 5 s serial log still surfaces a
-# real 2-minute dropout. Same honest-data law as the aggregate: surfaced, never
+# real 2-minute dropout. Same rule as the aggregate: a gap is surfaced, never
 # bridged.
 GAP_CADENCE_MULT = 3
 # #839 Fix B: a logging gap this long (default 1.5 days) is a *window boundary*, not
@@ -1050,8 +1053,8 @@ def build_context(
         ] or pairs
         # #919: the trend + forecast FITS use CLEAN readings only. A fault / sub-rail /
         # OOB row (excluded by the #670/#697 gate) must never pull the least-squares fit
-        # — that is the all-window "wetting on a drying plant" inversion. Raw stays on
-        # the plot (truth, #575); only the fits drop these rows, and the count is
+        # — that is the all-window "wetting on a drying plant" inversion. Every reading
+        # stays plotted (#575); only the fits drop these rows, and the count is
         # surfaced (`fit_excluded`) so nothing is silently dropped.
         plot_settled = _settled_readings(plot_rs)
         fit_pairs = [
@@ -1083,6 +1086,32 @@ def build_context(
         ]
         _seg_fit_pairs = [pair for pair, ok in _in_seg if ok]
         _mask_dropped = len(_in_seg) - len(_seg_fit_pairs)
+        # #1247 C3: the masked WINDOWS, per reason class, in the same hours-x the
+        # points use — the render's receipt for what the fit refused ("measured,
+        # but not counted", never a gap). Consecutive same-kind invalid rows fold
+        # into one window; every kind here comes from the taxonomy contract.
+        _kinds = classify(plot_settled)
+        _mask_windows: list[dict] = []
+        _mw: tuple | None = None  # (kind, x0, x1)
+        for (h, _y), kind, ok in zip(fit_pairs, _kinds, _valid):
+            if ok:
+                if _mw is not None:
+                    _mask_windows.append(
+                        {"x0": round(_mw[1], 4), "x1": round(_mw[2], 4), "kind": _mw[0]}
+                    )
+                    _mw = None
+            elif _mw is not None and _mw[0] == kind:
+                _mw = (kind, _mw[1], h)
+            else:
+                if _mw is not None:
+                    _mask_windows.append(
+                        {"x0": round(_mw[1], 4), "x1": round(_mw[2], 4), "kind": _mw[0]}
+                    )
+                _mw = (kind, h, h)
+        if _mw is not None:
+            _mask_windows.append(
+                {"x0": round(_mw[1], 4), "x1": round(_mw[2], 4), "kind": _mw[0]}
+            )
         locals_ = [
             r.timestamp_local.strftime("%m-%d %H:%M:%S") if r.timestamp_local else ""
             for r in plot_rs
@@ -1272,6 +1301,9 @@ def build_context(
                 "segment_x": (
                     round(_hours_since(_seg_start, start), 4) if _seg_start else None
                 ),
+                # #1247 C3: excluded-from-trend windows for the hatch render —
+                # [{x0, x1, kind}] in points-x hours; [] when everything counted.
+                "mask_windows": _mask_windows,
                 "env_points": env_points,  # #922 opt-in context overlay (temp/RH)
                 "has_env": has_env,  # #922: offer the toggle only when context exists
             }

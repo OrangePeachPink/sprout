@@ -65,6 +65,18 @@ typedef struct {
      * boards carry the classic placeholder until #443 measures their real rail -
      * same provisional stance as their placeholder cal_boundary (cal_verified=false). */
     uint16_t wet_rail_raw;
+    /* #1152 (TELEMETRY_SCHEMA S4, Data-ratified): the SYMMETRIC MIRROR of
+     * wet_rail_raw at the dry end. A capacitive probe in air cannot read ABOVE
+     * this - a higher raw means an open circuit / disconnected lead, not
+     * "very dry soil". Firmware self-declares SENSOR_FAULT + fault=open_adc
+     * from it, exactly as it does below wet_rail_raw.
+     * NOT the same thing as the ADR-0035 air ANCHOR (classic 3137 / C5 2754):
+     * the anchor is the measured air-dry READING, this is the impossible-above
+     * RAIL, which must sit above the anchor's per-probe spread with margin.
+     * PROVISIONAL, same stance as the unverified boards' wet rails: derived
+     * with margin over the measured anchor spread, pending a bench measurement
+     * (Data owns cal values; #443 measures the real rails). 0 disables. */
+    uint16_t air_dry_raw;
 } board_capability_t;
 
 /* --- the capability matrix (add a board = add a #elif) -------------------- */
@@ -87,7 +99,8 @@ typedef struct {
      22,                                                                       \
      {2293, 2086, 1879, 1636, 1393, 1150},                                     \
      true,                                                                     \
-     900}
+     900,                                                                      \
+     3400}
 #elif defined(CONFIG_IDF_TARGET_ESP32S3)
 /* ANTICIPATED map (docs/hardware/BOARDS.md) - all VALID S3 GPIOs, continuity
  * NOT yet meter-verified (B1) so cal_verified=false. Refined 2026-07-03: the
@@ -112,7 +125,8 @@ typedef struct {
      9,                                                                        \
      {2293, 2086, 1879, 1636, 1393, 1150},                                     \
      false,                                                                    \
-     900}
+     900,                                                                      \
+     3400}
 #elif defined(CONFIG_IDF_TARGET_ESP32C5)
 /* ANTICIPATED map - C5 datasheet + DevKitC-1 v1.2 user guide (#443 candidates).
  * VALID existent GPIOs (C5 = GPIO0-28). Replaces the classic placeholder
@@ -147,7 +161,8 @@ typedef struct {
      24,                                                                       \
      {2037, 1861, 1685, 1478, 1272, 1065},                                     \
      false,                                                                    \
-     900}
+     900,                                                                      \
+     3000}
 #else
 /* host / native tests / an unknown target: assume the Tier-0 floor - tethered
  * monitor, no WiFi, no persistence. A real no-WiFi board (e.g. an AVR) adds its
@@ -165,7 +180,8 @@ typedef struct {
      22,                                                                       \
      {2293, 2086, 1879, 1636, 1393, 1150},                                     \
      false,                                                                    \
-     900}
+     900,                                                                      \
+     3400}
 #endif
 
 static const board_capability_t BOARD_CAP = BOARD_CAPABILITY;
