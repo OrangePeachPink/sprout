@@ -49,9 +49,6 @@ static_assert(SENSOR_CAL_CHANNELS == NUM_SENSORS,
 #include <WebServer.h> /* core-bundled, no lib_deps entry needed */
 #include <DNSServer.h> /* captive-portal catch-all DNS (#275, core-bundled) */
 #include <ESPmDNS.h> /* #676: sprout-<device_id>.local advertisement (core-bundled) */
-#if OTA_PUSH_ARMED
-#include <ArduinoOTA.h> /* #302 Phase-0: LAN OTA receiver (core-bundled) */
-#endif /* #1333: unprovisioned build -> not even linked in */
 #include <time.h> /* NTP-on-connect (#278): configTime/gmtime_r/strftime */
 #include <sys/time.h> /* gettimeofday - ms precision for device_timestamp_utc */
 
@@ -1242,45 +1239,9 @@ void loop()
                     "# mDNS: begin failed - reach me by IP/subnet-scan "
                     "this session");
             }
-#if OTA_PUSH_ARMED
-            /* #302 Phase-0 OTA (maintainer-ruled interim; NOT the ADR-0026 fence).
-             * Standard ArduinoOTA receiver: LAN-only (espota over the local net),
-             * password-gated (OTA_PASSWORD), armed ONLY here on the WiFi-connected
-             * edge. Hostname reuses the mDNS nonce so the fleet OTA-targets by name.
-             * An OTA update reboots the chip -> boot re-runs allRelaysOff() (#93), so
-             * a mid-update reset can never strand a relay; OTA stays outside the
-             * safety loop. Re-armed on each association edge.
-             *
-             * #1333: this whole block compiles out unless a password was PROVISIONED
-             * at build time (config.h). A public build has no OTA_PASSWORD, so it
-             * never reaches ArduinoOTA.begin() - the receiver is absent from the
-             * binary's runtime path, not merely holding a weak credential. */
-            ArduinoOTA.setHostname(host);
-            ArduinoOTA.setPassword(OTA_PASSWORD);
-            ArduinoOTA.onStart([]() {
-                Serial.println("# OTA: update start (rebooting after)");
-            });
-            /* #302 menu-2: an OTA write blocks the loop for 10-30 s; without feeding
-             * it here the 8 s task-WDT (#599) would fire mid-transfer and reset
-             * the board. onProgress runs per chunk, so resetting the WDT here keeps it
-             * fed for the write - the WDT stays a real backstop, OTA still finishes.
-             * (Benign either way: an interrupted write only touches the INACTIVE slot.) */
-            ArduinoOTA.onProgress(
-                [](unsigned int, unsigned int) { esp_task_wdt_reset(); });
-            ArduinoOTA.onError([](ota_error_t e) {
-                Serial.printf("# OTA: error %u\n", (unsigned)e);
-            });
-            ArduinoOTA.begin();
-            Serial.printf("# OTA: armed on %s.local (LAN, password-gated)\n",
-                          host);
-#else
-            /* Absence is stated, never silent (ADR-0028). Two builds of the same
-             * version differ in whether a WiFi push receiver exists at all; the
-             * serial log has to answer "which one am I holding?" without a
-             * disassembler. This line IS the answer for a web-flashed board. */
-            Serial.println("# OTA: push receiver OFF - no password provisioned "
-                           "at build time (#1333). USB flashing unaffected.");
-#endif
+            /* #1340: the espota PUSH receiver was retired here. WiFi updates are
+             * signed PULL only (#302 S3, ADR-0026 Decision 2); the USB maker
+             * door is unchanged and always open. Nothing arms on this edge. */
         }
         if (g_wifi.state == WIFI_NET_PORTAL &&
             prevWifiState != WIFI_NET_PORTAL) {
@@ -1291,10 +1252,6 @@ void loop()
             g_dns.processNextRequest(); /* captive-detection DNS catch-all */
         g_http
             .handleClient(); /* cheap no-op until a client actually connects */
-#if OTA_PUSH_ARMED
-        if (g_wifi.state == WIFI_NET_CONNECTED)
-            ArduinoOTA.handle(); /* #302: service OTA only while associated */
-#endif
     }
 
     /* The supervisor is the single sample & actuation authority (ADR-0016): tick it
