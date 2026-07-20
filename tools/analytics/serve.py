@@ -1273,6 +1273,16 @@ def _auto_start_collection(
         )
 
 
+def _compaction_tick() -> None:
+    """#1292: the launcher owns the daily tier compaction - no Windows scheduled task,
+    no operator command (the one-click doctrine). The POLICY (throttle + failure
+    isolation) lives in ``compaction_hook``; this is only the call site. Imported lazily
+    so the dashboard's startup path never pays for DuckDB."""
+    from compaction_hook import maybe_compact
+
+    maybe_compact()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Serve the live plants dashboard.")
     ap.add_argument(
@@ -1382,6 +1392,11 @@ def main(argv: list[str] | None = None) -> int:
         # daemon thread) so the dashboard is reachable immediately even while collection
         # spins up. The off state becomes a deliberate Stop, not a silent default.
         threading.Thread(target=_auto_start_collection, daemon=True).start()
+        # #1292: same launch, same daemon-thread shape - keep store I/O off the startup
+        # path. maybe_compact self-throttles (once an hour) and swallows its own
+        # failures, so it is safe on every launch; a separate thread from collection so
+        # neither can take the other down.
+        threading.Thread(target=_compaction_tick, daemon=True).start()
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

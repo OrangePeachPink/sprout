@@ -65,3 +65,28 @@ def test_error_is_isolated_not_raised(tmp_path: Path) -> None:
     )
     assert r["ran"] is False
     assert r["reason"] == "error"  # logged + swallowed; live collection unaffected
+
+
+def test_launcher_call_site_invokes_the_hook(monkeypatch) -> None:
+    """The wire itself (#1292): a hook nobody calls is the failure mode this guards."""
+    import serve
+
+    calls: list = []
+    monkeypatch.setattr(
+        compaction_hook, "maybe_compact", lambda *a, **k: calls.append(1)
+    )
+    serve._compaction_tick()
+    assert calls == [1]
+
+
+def test_hook_matches_d3_compact_signature() -> None:
+    """Contract test against Data's real `tier_ingest.compact` (#1241 D3).
+
+    `maybe_compact` isolates failures, so a signature drift would otherwise degrade to a
+    permanently silent "skipped" instead of a red test. Bind the call shape the hook
+    actually uses — positional (files, root) + keyword log — against the live D3."""
+    import inspect
+
+    import tier_ingest
+
+    inspect.signature(tier_ingest.compact).bind(["a.csv"], Path("root"), log=print)
