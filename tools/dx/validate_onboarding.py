@@ -19,10 +19,15 @@ check carried over from the #512/#493 manual precedent):
 
   1. uv sync                    - PASS: exit 0
   2. uv run pre-commit install  - PASS: exit 0
-  3. just start (headless)      - PASS: GET / on :8765 returns HTTP 200 within 30s
-  4. POST /quit                 - PASS: server process exits within 10s
-  5. just processes             - PASS: reports zero live Sprout-spawned processes
-  6. just check                 - PASS: exit 0 (needs PlatformIO + a C compiler on
+  3. port :8765 free            - PASS: nothing already listening (#1337; `just start`
+                                   is --serve-or-focus, so a live server would make
+                                   this script grade one it did not start)
+  4. just start                 - PASS: GET / on :8765 returns HTTP 200 within 30s.
+                                   Runs the LITERAL command (#1337), not serve.py
+                                   directly; BROWSER=true keeps --open headless
+  5. POST /quit                 - PASS: server process exits within 10s
+  6. just processes             - PASS: reports zero live Sprout-spawned processes
+  7. just check                 - PASS: exit 0 (needs PlatformIO + a C compiler on
                                    PATH - the documented honest-note gap from #512;
                                    this step's failure for THAT reason is a real
                                    result, not a script bug - see CONTRIBUTING.md)
@@ -31,6 +36,7 @@ check carried over from the #512/#493 manual precedent):
 from __future__ import annotations
 
 import contextlib
+import os
 import subprocess
 import time
 import urllib.error
@@ -73,15 +79,61 @@ def step_pre_commit_install() -> StepResult:
     return StepResult("uv run pre-commit install", ok, detail)
 
 
+def step_preflight_port() -> StepResult:
+    """The port must be free BEFORE we test `just start` (#1337).
+
+    `just start` is `--serve-or-focus`: if a server already holds :8765 it focuses
+    that one and exits 0 — correct behaviour, but it means the validator would be
+    grading a server it did not start. Without this step that shows up as the
+    baffling "server exited early (code 0)".
+
+    Rather than adapt around it, this reports the precondition. A port answering
+    503 is the specific tell that a previous server accepted /quit and then hung
+    without releasing it — worth naming, because it is invisible to
+    `just processes`."""
+    try:
+        with urllib.request.urlopen(BASE_URL, timeout=2) as resp:
+            status = resp.status
+    except urllib.error.HTTPError as exc:
+        status = exc.code
+    except (urllib.error.URLError, ConnectionError, TimeoutError):
+        return StepResult("port :8765 free (clean start)", True, "nothing listening")
+    hint = (
+        " — a 503 means a previous server accepted /quit but never exited and is "
+        "still holding the port; `just processes` does not see it"
+        if status == 503
+        else ""
+    )
+    return StepResult(
+        "port :8765 free (clean start)",
+        False,
+        f"something is already serving on :8765 (HTTP {status}){hint}. "
+        "Stop it, then re-run — the validator must start the server it grades.",
+    )
+
+
 def step_start_and_check(proc_holder: dict) -> StepResult:
-    """Launch serve.py headless (no --open - a clean/CI machine has no browser to
-    open) and poll for HTTP 200, matching #512's manual fresh-clone test."""
+    """Run the LITERAL `just start` a newcomer types, then poll for HTTP 200.
+
+    #1337: this step used to shell out to `uv run python tools/analytics/serve.py`
+    while *labelling* itself "just start". That is a validator that cannot fail the
+    way a newcomer fails — it skipped `just` entirely, skipped the recipe's
+    `@just serve --serve-or-focus --open` indirection, and skipped both flags. A
+    broken justfile, a renamed recipe, or a broken single-instance path would all
+    have sailed through green while the documented command was dead.
+
+    Headless without lying about the command: `BROWSER` makes Python's `webbrowser`
+    resolve to a GenericBrowser running a no-op, so `--open` executes its real code
+    path and opens nothing. The command under test stays byte-identical to the
+    README's; only what counts as "a browser" changes."""
+    env = {**os.environ, "BROWSER": "true"}  # no-op "browser" — see docstring
     server = subprocess.Popen(
-        ["uv", "run", "python", "tools/analytics/serve.py"],
+        ["just", "start"],
         cwd=REPO_ROOT,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        env=env,
     )
     proc_holder["proc"] = server
 
@@ -163,7 +215,7 @@ def main() -> int:
     proc_holder: dict = {}
 
     try:
-        for step in (step_uv_sync, step_pre_commit_install):
+        for step in (step_uv_sync, step_pre_commit_install, step_preflight_port):
             result = step()
             results.append(result)
             if not result.ok:
