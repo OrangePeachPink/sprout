@@ -88,19 +88,32 @@ and #1335's mapping UI. Doing it three times separately is how it stays broken.
 
 ### 5. Staging — the package flip is last, not first
 
-1. **0.8.1 — leaves out.** Layer 0 into zero-import modules. Kills the import-a-module-for-a-constant pathology;
+*(Release labels amended 2026-07-20 — 0.8.x collapsed to two releases and v0.8.2 was closed; #1336 and #1338
+ride v0.8.1 whole. **The sequence below is unchanged**: it was always dependency order, and the release labels
+were only ever where those dependencies happened to fall. What was four release-separated steps is now four
+ordered steps inside one release.)*
+
+All four land in **v0.8.1**, in this order, each gated on the one before:
+
+1. **Leaves out.** Layer 0 into zero-import modules. Kills the import-a-module-for-a-constant pathology;
    changes nobody's workflow; near-zero risk.
-2. **0.8.1 — the lint lands**, advisory then enforcing.
-3. **0.8.2 — priority extractions**, ranked by risk of becoming unfixable:
+2. **The lint lands**, advisory then enforcing — enforcing only once step 1 has made the tree satisfiable.
+3. **Priority extractions**, ranked by risk of becoming unfixable:
    **identity resolution** (§4) · **`build_context`** (the card-payload path, mid-migration, where features keep
    landing) · **`serve.py` route table with one central policy** — which also carries the **Host/Origin check on
    state-changing routes**, since the inconsistent `_is_local()` means this module currently hides a *security*
    inconsistency, not merely a maintainability one.
-4. **0.8.2 cut — package flip go/no-go**, an explicit decision rather than a drift. By then the leaves are out
-   and identity is single-sourced, so `package = true` and removing path surgery is mechanical.
+4. **Package flip go/no-go at the v0.8.1 cut**, an explicit decision rather than a drift. By then the leaves are
+   out and identity is single-sourced, so `package = true` and removing path surgery is mechanical.
 
 **The ordering deliberately inverts the obvious one.** Migrating to a package while two identity paths still
 exist would package the confusion and call it progress.
+
+**Why the collapse doesn't loosen anything.** A single release is where staging usually rots, because nothing
+external forces step 3 to wait for step 2. Here the gates are internal and mechanical rather than calendar-based:
+step 2 cannot enforce until step 1 lands, step 3's identity extraction is checked by #1338's seam-1 suite, and
+step 4 is a decision with written preconditions. **If step 4 arrives and steps 1–3 have not, the answer is
+no-go** — that is what makes it a gate and not a formality.
 
 ### 6. Two guardrails on the work itself
 
