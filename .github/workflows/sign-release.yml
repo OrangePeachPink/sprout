@@ -70,13 +70,24 @@ jobs:
         run: |
           umask 077
           printf '%s' "$SIGNING_KEY" > signing.key
+          # #1282 / ADR-0026 Decision 2 — sign a DOMAIN-SEPARATED message, never the
+          # bare image. The 10-byte tag "sprout-fw\0" means a firmware signature can
+          # never be replayed as a signature over a different artifact class (a
+          # config, a manifest, a future signed asset). The device-side verify
+          # (#1282 S1) prepends the SAME tag, and its KAT asserts that a signature
+          # over the bare image FAILS - so signer and verifier must agree here or
+          # every real release is rejected on-device.
+          printf 'sprout-fw\0' > domain.tag
           for bin in dist/*.bin; do
-            openssl pkeyutl -sign -inkey signing.key -rawin -in "$bin" -out "$bin.sig"
+            cat domain.tag "$bin" > "$bin.signme"
+            openssl pkeyutl -sign -inkey signing.key -rawin -in "$bin.signme" -out "$bin.sig"
             openssl pkeyutl -verify -pubin \
               -inkey firmware/keys/sprout-signing-ed25519.pub.pem \
-              -rawin -in "$bin" -sigfile "$bin.sig"
-            echo "signed + verified $(basename "$bin")"
+              -rawin -in "$bin.signme" -sigfile "$bin.sig"
+            rm -f "$bin.signme"   # never shipped - the signed BYTES are the bin itself
+            echo "signed + verified $(basename "$bin") (domain-separated)"
           done
+          rm -f domain.tag
           shred -u signing.key 2>/dev/null || rm -f signing.key
 
       - name: Warn if unsigned
