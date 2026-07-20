@@ -49,6 +49,15 @@ def _registry() -> Registry:
                 label="B",
                 channels={"s1": {"plant_id": "pB", "plant_name": "b"}},
             ),
+            # #1027: a known-but-retired bench board with no channel assignments —
+            # its rows must read "retired bench board", never "unknown device".
+            Device(
+                device_id="devR",
+                board="esp32c5",
+                label="bench",
+                channels={},
+                retired=True,
+            ),
         ],
         sensorless=[{"plant_id": "pS", "plant_name": "windowsill cactus"}],
     )
@@ -77,6 +86,9 @@ def test_metrics_exact_us_cap_flagged_unmapped_sensorless(tmp_path: Path) -> Non
         # devA/s2 carries no plant_id → the unmapped bucket, never dropped
         ("2026-07-01", "devA", "s2", "2026-07-01 00:00:00", 1500.0, "OK"),
         ("2026-07-01", "devA", "s2", "2026-07-01 00:00:30", 1501.0, "OK"),
+        # #1027 honesty classes: a retired bench board + a truly unknown device
+        ("2026-07-01", "devR", "s1", "2026-07-01 00:00:00", 900.0, "OK"),
+        ("2026-07-01", "devX", "s1", "2026-07-01 00:00:00", 901.0, "OK"),
     ]
     _fixture_tier(tmp_path, rows)
     report = full_history(tmp_path, registry=_registry())
@@ -95,7 +107,13 @@ def test_metrics_exact_us_cap_flagged_unmapped_sensorless(tmp_path: Path) -> Non
         "rebound": 0,
         "flagged": 1,
     }
-    assert report["unmapped"] == {"devA/s2": 2}
+    # #1027: the unmapped bucket carries the honesty CLASS — only unknown-device
+    # is adopt-flow material; a retired bench board's rows stay, honestly labeled.
+    assert report["unmapped"] == {
+        "devA/s2": {"rows": 2, "class": "unassigned-channel", "board": "esp32dev"},
+        "devR/s1": {"rows": 1, "class": "retired-unassigned", "board": "esp32c5"},
+        "devX/s1": {"rows": 1, "class": "unknown-device", "board": None},
+    }
     s = report["plants"]["pS"]  # sensorless: first-class absence, honest zeros
     assert s["source"] == "sensorless" and s["n_obs"] == 0 and s["coverage"] is None
 

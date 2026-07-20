@@ -159,6 +159,23 @@ def full_history(
         if pid and pid not in plants:
             plants[pid] = summarize([])
             plants[pid]["source"] = "sensorless"
+    # #1027 (the data taxonomy under the adopt flow): an unmapped (device, channel)
+    # is NOT one thing. Classify against the registry's device list so the readout
+    # tells the truth the adopt trigger needs: `unknown-device` (not registered —
+    # the adopt case) vs `retired-unassigned` (a known bench/retired board; its
+    # rows stay, honestly labeled) vs `unassigned-channel` (a live board's spare
+    # port). Only `unknown-device` is adopt-flow material.
+    dev_index = {d.device_id: d for d in registry.devices}
+    unmapped_classed: dict[str, dict] = {}
+    for (dev, ch), n in sorted(unmapped.items()):
+        d = dev_index.get(dev)
+        if d is None:
+            klass, board = "unknown-device", None
+        elif getattr(d, "retired", False):
+            klass, board = "retired-unassigned", d.board
+        else:
+            klass, board = "unassigned-channel", d.board
+        unmapped_classed[f"{dev}/{ch}"] = {"rows": n, "class": klass, "board": board}
     events = [
         (seg.t0, "soil", pid)
         for pid, rows in series.items()
@@ -171,7 +188,7 @@ def full_history(
     return {
         "generated_from": "reports/tier/raw (derived-only; tier + journal read-only)",
         "plants": plants,
-        "unmapped": {f"{d}/{c}": n for (d, c), n in sorted(unmapped.items())},
+        "unmapped": unmapped_classed,
         "passes": [
             {
                 "pass_id": p.pass_id,
@@ -228,9 +245,14 @@ def main(argv: list[str] | None = None) -> int:
             f"  {c['rebound']:>5}  {c['flagged']:>4}   {m['pct_valid']:.3f}"
         )
         print(left + "  " + right)
-    for pair, n in report["unmapped"].items():
-        why = "(no static-registry assignment — kept, not dropped)"
-        print(f"unmapped  {pair}: {n} rows " + why)
+    _WHY = {  # #1027: say WHICH honesty class — only unknown-device is adopt material
+        "unknown-device": "UNKNOWN device — the #1027 adopt case",
+        "retired-unassigned": "retired bench board — rows kept, honestly unassigned",
+        "unassigned-channel": "live board, spare port — no plant on this channel",
+    }
+    for pair, m in report["unmapped"].items():
+        board = f" [{m['board']}]" if m.get("board") else ""
+        print(f"unmapped  {pair}: {m['rows']} rows ({_WHY[m['class']]}{board})")
     print(f"fleet watering passes: {len(report['passes'])}")
     for p in report["passes"]:
         print(
