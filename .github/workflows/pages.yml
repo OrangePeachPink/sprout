@@ -76,13 +76,38 @@ jobs:
           site="_site"
           mkdir -p "$site"
           cp -r docs/. "$site/"   # the design library (+ .nojekyll) serves byte-identically
-          # the CI-built factory bins ride next to the flasher page (never committed to git)
-          cp firmware/.pio/build/esp32dev/sprout-esp32-factory.bin   "$site/flash/"
-          cp firmware/.pio/build/esp32c5/sprout-esp32c5-factory.bin  "$site/flash/"
-          # classic is --primary: its provenance is the page's pre-connect panel; C5 rides builds[]
+          # ADR-0026 §6 forward-gate (#1012): the VERIFIED MARKER is the single source
+          # of offer-truth - never "a build happened". factory_bin.py emits
+          # manifest-<mcu>.json ONLY for boards in its WEB_FLASH_VERIFIED set, so both
+          # the payload and the combine are driven from the manifests that EXIST.
+          # Consequence: a board that compiles but is not marker-verified cannot appear
+          # in the flasher even if someone adds its build to this workflow - the offer
+          # follows verification, not the build matrix.
+          shopt -s nullglob
+          manifests=(firmware/.pio/build/*/manifest-*.json)
+          if [ ${#manifests[@]} -eq 0 ]; then
+            echo "::error title=No verified boards::factory_bin emitted no manifest; nothing may be offered from the flasher."
+            exit 1
+          fi
+          # ship only the bins that sit beside a verified board's manifest
+          for m in "${manifests[@]}"; do
+            for b in "$(dirname "$m")"/sprout-*-factory.bin; do
+              cp "$b" "$site/flash/"
+            done
+          done
+          # classic stays --primary: its provenance is the page's pre-connect panel
+          primary="firmware/.pio/build/esp32dev/manifest-esp32.json"
+          if [ ! -f "$primary" ]; then
+            echo "::error title=Classic not verified::the primary board has no manifest; refusing to publish a flasher without it."
+            exit 1
+          fi
+          extra=()
+          for m in "${manifests[@]}"; do
+            [ "$m" = "$primary" ] || extra+=("$m")
+          done
+          echo "verified boards offered: ${#manifests[@]}"
           python3 tools/pages/build_flash_manifest.py \
-            --primary firmware/.pio/build/esp32dev/manifest-esp32.json \
-            firmware/.pio/build/esp32c5/manifest-esp32c5.json \
+            --primary "$primary" "${extra[@]}" \
             --out "$site/flash/manifest.json"
           echo "== flasher payload ==" && ls -l "$site/flash/"
 
