@@ -798,9 +798,10 @@ function drawPulse(card) {
   }).catch(function () { /* silent — the hero stands without its chart */ });
 }
 
-/* the segment sparkline. y = the in-soil envelope (wetter top -> drier bottom, so a
-   dry-down descends); x = time across the current segment. Absent-safe: a segment with
-   too few points, or none at all, renders a calm-empty caption, never a fabricated line. */
+/* the segment sparkline. y = the in-soil envelope, DRIER AT TOP / wetter at the bottom
+   (#1263 ratified vertical convention, fleet-wide) — so a dry-down climbs. x = time across
+   the current segment. Absent-safe: a segment with too few points, or none at all, renders
+   a calm-empty caption, never a fabricated line. */
 function drawSparkline(box, ds, lo, hi, inner, tok) {
   var sec = document.createElement("div");
   sec.className = "pulse spark";
@@ -822,22 +823,24 @@ function drawSparkline(box, ds, lo, hi, inner, tok) {
     return;
   }
   sec.innerHTML =
-    "<h4>Since last watering <small>the current dry-down, wetter &darr; drier</small></h4>" +
+    "<h4>Since last watering <small>the current dry-down, drier &uarr;</small></h4>" +
     '<canvas id="pulseSpark" aria-label="moisture trajectory since the last watering"></canvas>';
   var cv = document.getElementById("pulseSpark");
   var W = (cv.width = cv.clientWidth * 2), H = (cv.height = 192);
   var g = cv.getContext("2d");
   var x0 = seg[0].x, x1 = seg[seg.length - 1].x, xspan = x1 - x0 || 1;
   function px(p) { return ((p.x - x0) / xspan) * W; }
-  /* wetter at top: fraction 0 (wettest, lo) -> y 0; 1 (driest, hi) -> y H */
-  function py(p) { var f = (p.y - lo) / (hi - lo); if (f < 0) f = 0; if (f > 1) f = 1; return f * H; }
+  /* #1263: DRIER AT TOP — fraction 0 (wettest, lo) -> y H (bottom); 1 (driest, hi) -> y 0. */
+  function py(p) { var f = (p.y - lo) / (hi - lo); if (f < 0) f = 0; if (f > 1) f = 1; return (1 - f) * H; }
 
-  /* band-tinted ground: the envelope's own hues as horizontal stripes, wet(top)->dry */
+  /* band-tinted ground: the envelope's own hues as horizontal stripes, dry(top)->wet */
   var zones = [lo].concat(inner, [hi]);
   g.globalAlpha = 0.16;
   for (var z = 0; z + 1 < zones.length; z++) {
-    var y0 = ((zones[z] - lo) / (hi - lo)) * H;
-    var y1 = ((zones[z + 1] - lo) / (hi - lo)) * H;
+    /* #1263: flipped with the line — the wettest zone sits at the BOTTOM. The
+       ladder index still runs wettest->driest with z, only the y placement inverts. */
+    var y0 = (1 - (zones[z + 1] - lo) / (hi - lo)) * H;
+    var y1 = (1 - (zones[z] - lo) / (hi - lo)) * H;
     var li = Math.min(z, LADDER.length - 1);
     g.fillStyle = tok(LADDER[li].token, "#ccc");
     g.fillRect(0, y0, W, y1 - y0);
