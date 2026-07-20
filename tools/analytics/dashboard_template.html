@@ -1691,7 +1691,7 @@ function renderDetail(sid){
     const _mc = maskCaption((DASH.trajectory.datasets.find(d=>d.id===sid)||{}).mask_windows);
     h.appendChild(el('span','cap','this probe only · band shading · dashed = least-squares trend' + (_mc ? ' · ' + _mc : ''))); return h; })());
   const box = el('div','chartbox tall'); const cv = el('canvas'); cv.id='detailChart'; box.appendChild(cv); tj.appendChild(box);
-  /* #922: opt-in environment overlay — only when this plant HAS context (honest-empty else);
+  /* #922: opt-in environment overlay — only when this plant HAS context (calm-empty else);
      default off, a quiet toggle; the label states "context, not cause" so it never reads as a
      watering input. Design-QA: env is a faint second layer, moisture the hero. */
   const _tset = (DASH.trajectory.datasets||[]).find(d=>d.id===sid);

@@ -450,7 +450,7 @@ def _only(cls, raw: dict) -> dict:
 
 def load_model(path: str | Path) -> RegistryModel:
     """Load the registry model from JSON, migrating a static (v1) config on the way.
-    Never raises — a missing/malformed file yields an empty model (honest-empty, the
+    Never raises — a missing/malformed file yields an empty model (calm-empty, the
     first-run signal slice 2 lands on)."""
     try:
         doc = json.loads(Path(path).read_text(encoding="utf-8"))

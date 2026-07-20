@@ -25,4 +25,7 @@ What you ran or saw that shows it works — the evidence the reviewer checks at 
 - [ ] Commits follow Conventional Commits (`type(scope): subject`)
 - [ ] Ran the relevant checks (ruff / clang / markdownlint — see the README)
 - [ ] Updated docs if behavior or setup changed
-- [ ] The linked issue is in **Needs Verification** with evidence posted
+- [ ] Evidence a reviewer can check is in **How I verified it** above
+
+<!-- Board state (Needs Verification → Done) is moved by the maintainer/gate, not by you —
+     it needs project access you aren't expected to have. Posting the evidence is your half. -->
