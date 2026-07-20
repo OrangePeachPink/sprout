@@ -58,6 +58,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from device_registry import load_registry  # noqa: E402
+from parse_v1 import canonical_channel  # noqa: E402  (#1315 read translation)
 from plant_profiles import load_profiles  # noqa: E402
 from segment_classifier import segments  # noqa: E402
 from segment_history import TierRow  # noqa: E402
@@ -118,7 +119,7 @@ def resolve_identity(
         for channel in dev.channels or {}:
             p = dev.plant_for(channel)
             if p:
-                pairs[(dev.device_id, channel)] = p["plant_id"]
+                pairs[(dev.device_id, canonical_channel(channel))] = p["plant_id"]
     return pairs, "static"
 
 
@@ -158,7 +159,7 @@ def series_from_pairs(pairs: dict, root: Path | None = None) -> dict:
 
     series: dict[str, list[TierRow]] = {}
     for device_id, sensor_id, ts, raw, flag in rows:
-        pid = pairs.get((device_id, sensor_id))
+        pid = pairs.get((device_id, canonical_channel(sensor_id)))
         if pid is None:
             continue  # unmapped rows are C2's readout job, not the bridge's
         if ts.tzinfo is None:

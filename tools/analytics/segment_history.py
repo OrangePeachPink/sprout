@@ -36,6 +36,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from device_registry import load_registry  # noqa: E402
+from parse_v1 import canonical_channel  # noqa: E402  (#1315 read translation)
 from segment_classifier import KINDS, classify, passes, segments  # noqa: E402
 from tier_store import CAP_US  # noqa: E402
 
@@ -59,7 +60,11 @@ def plant_series(root: Path | None = None, registry=None) -> tuple[dict, dict]:
         for channel in dev.channels or {}:
             p = dev.plant_for(channel)
             if p:
-                pair_to_plant[(dev.device_id, channel)] = p["plant_id"]
+                # #1315: key on the CANONICAL channel so v4 sN rows and v5 chN
+                # rows both resolve, whether or not the registry has migrated
+                pair_to_plant[(dev.device_id, canonical_channel(channel))] = p[
+                    "plant_id"
+                ]
     con = duckdb.connect()
     rows = con.execute(
         # *.parquet, not part.parquet: a partition may hold D3 live-ingest
@@ -71,7 +76,7 @@ def plant_series(root: Path | None = None, registry=None) -> tuple[dict, dict]:
     series: dict[str, list[TierRow]] = {}
     unmapped: dict[tuple[str, str], int] = {}
     for device_id, sensor_id, ts, raw, flag in rows:
-        pid = pair_to_plant.get((device_id, sensor_id))
+        pid = pair_to_plant.get((device_id, canonical_channel(sensor_id)))
         if pid is None:
             unmapped[(device_id, sensor_id)] = (
                 unmapped.get((device_id, sensor_id), 0) + 1

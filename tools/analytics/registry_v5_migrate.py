@@ -45,10 +45,15 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from parse_v1 import board_class, parse_file  # noqa: E402
+from parse_v1 import (  # noqa: E402
+    LEGACY_CHANNEL_TOKENS,
+    board_class,
+    parse_file,
+)
 
-# The stated constant (#1315) — channel index -> the token that channel emitted.
-SENSOR_NAMES: tuple[str, ...] = ("s3", "s4", "s1", "s2")
+# The stated constant (#1315) lives in parse_v1 as the wire-vocabulary boundary —
+# consumed here, never a second copy (the read path folds through the same table).
+SENSOR_NAMES: tuple[str, ...] = LEGACY_CHANNEL_TOKENS
 
 # The derived rename: registry key (on-wire token) -> the v5 channel token.
 KEY_TO_CHANNEL: dict[str, str] = {tok: f"ch{i}" for i, tok in enumerate(SENSOR_NAMES)}

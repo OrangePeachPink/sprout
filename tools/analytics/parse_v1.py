@@ -157,6 +157,45 @@ STABLE_ID_SCHEMA_VERSION = 3
 # the point, not a side effect.
 CHANNEL_ID_SCHEMA_VERSION = 5
 
+# #1315 read-path translation. The pre-rename firmware constant, stated by Firmware
+# from source (`config.h` at the rename commit's parent) and NOT inferred:
+#
+#     constexpr const char *SENSOR_NAMES[NUM_SENSORS] = {"s3", "s4", "s1", "s2"};
+#
+# One global constexpr with no board guard, so both boards emitted this identical,
+# NON-SEQUENTIAL order. Index i is the channel; the value is the token that channel
+# emitted under v4. This is the single source for the mapping — the migration tool
+# consumes it rather than keeping a second copy.
+LEGACY_CHANNEL_TOKENS: tuple[str, ...] = ("s3", "s4", "s1", "s2")
+_LEGACY_TO_CHANNEL: dict[str, str] = {
+    tok: f"ch{i}" for i, tok in enumerate(LEGACY_CHANNEL_TOKENS)
+}
+
+
+def canonical_channel(token: str | None) -> str | None:
+    """Fold a channel token into the canonical ``chN`` namespace (ADR-0036).
+
+    **The read-path translation (#1315).** A v5 flash bisects the analysis store: the
+    raw tier holds v4 ``sN`` rows beside v5 ``chN`` rows, and ADR-0036 §4 forbids
+    rewriting the old ones. A join keyed on the raw token therefore matches only half
+    the history — pre-flash readings silently stop resolving to their plant.
+
+    Folding at JOIN time fixes that without touching a single stored row: the rows
+    stay exactly as the boards reported them (never-stitch intact), and the
+    translation is retroactively correct because ``s1`` always meant *"the port that
+    emitted s1"* — which IS ``ch2``. Normalising both the registry key and the wire
+    token through this function makes the join correct in all four combinations
+    (registry migrated or not) x (row v4 or v5).
+
+    Unknown tokens pass through unchanged — honest, never guessed into a channel."""
+    if not token:
+        return token
+    t = str(token).strip()
+    if t.lower().startswith("ch"):
+        return t  # already canonical
+    return _LEGACY_TO_CHANNEL.get(t, t)
+
+
 _KV_RE = re.compile(r"(\w+)=(.*?)(?=\s+\w+=|$)")
 _SENSOR_RE = re.compile(r"ch(\d+)=GPIO(\d+)/(\S+)")
 
