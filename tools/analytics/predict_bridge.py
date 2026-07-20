@@ -167,6 +167,17 @@ def series_from_pairs(pairs: dict, root: Path | None = None) -> dict:
     return series
 
 
+def _naive_utc(v):
+    """Persist timestamps as TIMESTAMP (µs, UTC-naive) — the store contract §3 shape,
+    the same coercion ``tier_store.build_partition`` applies.
+
+    Why not TIMESTAMPTZ: the one clock is UTC (§3/§4), so a stored offset carries no
+    information — it only drags DuckDB's timezone catalogue (and a `pytz` dependency)
+    into a path whose whole invariant is exact integer µs. The in-memory rows stay
+    tz-aware for the classifier; only the persisted view is naive."""
+    return v.replace(tzinfo=None) if getattr(v, "tzinfo", None) is not None else v
+
+
 def _slope_c_per_h(rows) -> float | None:
     """Least-squares counts/hour over exact integer µs offsets (§4). None when the
     run is too thin or degenerate — an honest absence, never a fabricated 0.0."""
@@ -267,22 +278,22 @@ def build_views(
 
     con = duckdb.connect()
     con.execute(
-        "CREATE TABLE seg (plant_id VARCHAR, kind VARCHAR, t0 TIMESTAMPTZ,"
-        " t1 TIMESTAMPTZ, n INTEGER, raw_first DOUBLE, raw_last DOUBLE,"
+        "CREATE TABLE seg (plant_id VARCHAR, kind VARCHAR, t0 TIMESTAMP,"
+        " t1 TIMESTAMP, n INTEGER, raw_first DOUBLE, raw_last DOUBLE,"
         " duration_us BIGINT, rate_c_per_h DOUBLE, valid_for_trend BOOLEAN,"
         " identity_source VARCHAR, caveat VARCHAR)"
     )
     if rows:
         con.executemany(
             "INSERT INTO seg VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [tuple(r[c] for c in COLUMNS) for r in rows],
+            [tuple(_naive_utc(r[c]) for c in COLUMNS) for r in rows],
         )
     con.execute(
         f"COPY (SELECT * FROM seg ORDER BY plant_id, t0) "
         f"TO '{(out / 'segments.parquet').as_posix()}' (FORMAT PARQUET)"
     )
     con.execute(
-        "CREATE TABLE arc (plant_id VARCHAR, t0 TIMESTAMPTZ, t1 TIMESTAMPTZ,"
+        "CREATE TABLE arc (plant_id VARCHAR, t0 TIMESTAMP, t1 TIMESTAMP,"
         " n INTEGER, raw_last DOUBLE, rate_c_per_h DOUBLE,"
         " identity_source VARCHAR, caveat VARCHAR)"
     )
@@ -292,8 +303,8 @@ def build_views(
             [
                 (
                     a["plant_id"],
-                    a["t0"],
-                    a["t1"],
+                    _naive_utc(a["t0"]),
+                    _naive_utc(a["t1"]),
                     a["n"],
                     a["raw_last"],
                     a["rate_c_per_h"],
