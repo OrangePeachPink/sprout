@@ -17,6 +17,11 @@ privately:
 Please include what you found, how to reproduce it, and the potential impact.
 We'll acknowledge your report, investigate, and keep you posted on a fix.
 
+**This channel is for software vulnerabilities only.** For a **conduct** concern,
+see the [Code of Conduct](CODE_OF_CONDUCT.md) — it goes to the maintainer
+directly, not through here. Different purpose, different handling; routing one
+through the other serves neither.
+
 ## Scope
 
 The host logger / dashboard binds to `127.0.0.1` (localhost only).
