@@ -139,23 +139,34 @@ def build_partition(
     return out, {"rows": n, "raw_sum": raw_sum, "sensors": sensors}
 
 
-def hours_per_band_duckdb(parquet: Path, plant_map: dict, cap_us: int = CAP_US) -> dict:
+def hours_per_band_duckdb(
+    parquet: Path, assignments: list[tuple], cap_us: int = CAP_US
+) -> dict:
     """The duration-shaped answer from the STORE via DuckDB, under the §4 µs invariant:
-    {(plant_id, band): dwell_us}. ``plant_map``: (device_id, port) -> plant_id."""
+    ``{(plant_id, band): dwell_us}``.
+
+    ``assignments``: the temporal intervals from ``registry_assignments`` —
+    ``(device_id, port, plant_id, start_ts, end_ts)``. **The join is temporal**
+    (#1331, §3): a reading resolves to the assignment whose interval COVERS its own
+    timestamp, so a probe move relabels only the readings taken after it."""
     import duckdb
 
     con = duckdb.connect()
     con.execute(
-        "CREATE TABLE plant_map (device_id VARCHAR, port VARCHAR, plant_id VARCHAR)"
+        "CREATE TABLE plant_map (device_id VARCHAR, port VARCHAR, plant_id VARCHAR,"
+        " start_ts TIMESTAMP, end_ts TIMESTAMP)"
     )
     con.executemany(
-        "INSERT INTO plant_map VALUES (?, ?, ?)",
-        [(d, s, p) for (d, s), p in plant_map.items()],
+        "INSERT INTO plant_map VALUES (?, ?, ?, ?, ?)",
+        [
+            (d, s, p, _as_naive_utc(st), _as_naive_utc(en))
+            for d, s, p, st, en in assignments
+        ],
     )
     got = con.execute(
         f"""
         WITH seq AS (
-            SELECT device_id, sensor_id, band, quality_flag,
+            SELECT device_id, sensor_id, band, quality_flag, timestamp_utc,
                    epoch_us(timestamp_utc) AS us,
                    lead(epoch_us(timestamp_utc)) OVER (
                        PARTITION BY device_id, sensor_id ORDER BY timestamp_utc
@@ -166,7 +177,13 @@ def hours_per_band_duckdb(parquet: Path, plant_map: dict, cap_us: int = CAP_US) 
                CAST(SUM(CASE WHEN s.next_us IS NULL THEN 0
                              ELSE LEAST(s.next_us - s.us, {cap_us}) END) AS BIGINT)
         FROM seq s
-        JOIN plant_map m ON m.device_id = s.device_id AND m.port = s.sensor_id
+        JOIN plant_map m
+          ON m.device_id = s.device_id
+         AND m.port = s.sensor_id
+         -- the covering interval, never the open one (§3): a null start_ts covers
+         -- grandfathered history, a null end_ts is still-open
+         AND (m.start_ts IS NULL OR m.start_ts <= s.timestamp_utc)
+         AND (m.end_ts   IS NULL OR s.timestamp_utc <  m.end_ts)
         WHERE s.band IS NOT NULL AND s.quality_flag <> 'NO_SIGNAL'
         GROUP BY m.plant_id, s.band
         """
@@ -175,15 +192,47 @@ def hours_per_band_duckdb(parquet: Path, plant_map: dict, cap_us: int = CAP_US) 
     return {(p, b): int(us) for p, b, us in got}
 
 
-def hours_per_band_truth(tagged, plant_map: dict, cap_us: int = CAP_US) -> dict:
+def _as_naive_utc(ts):
+    """An ISO string or datetime -> UTC-naive datetime (the §3 stored shape). None
+    stays None: a null bound is 'unbounded on that side', not a moment."""
+    if ts in (None, ""):
+        return None
+    if isinstance(ts, str):
+        ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    return ts.replace(tzinfo=None) if ts.tzinfo is not None else ts
+
+
+def resolve_plant_at(assignments: list[tuple], device_id, port, when) -> str | None:
+    """The plant on ``(device_id, port)`` **at the reading's own instant** — the
+    covering interval, never the open one (§3).
+
+    This is the oracle's resolution, and it is deliberately a DIFFERENT
+    implementation from the SQL join it verifies: a linear scan per row rather than a
+    relational join. An independent verifier must not share the premise it verifies —
+    the whole reason #1331 existed is that the oracle inherited the flat-map premise
+    from the same helper the implementation used, so both were wrong in agreement and
+    the fidelity gate still passed."""
+    when = _as_naive_utc(when)
+    for dev, prt, plant, start, end in assignments:
+        if dev != device_id or prt != port:
+            continue
+        start, end = _as_naive_utc(start), _as_naive_utc(end)
+        if (start is None or start <= when) and (end is None or when < end):
+            return plant
+    return None
+
+
+def hours_per_band_truth(
+    tagged, assignments: list[tuple], cap_us: int = CAP_US
+) -> dict:
     """The independent pure recompute (§4's other half) — Python over the parsed rows,
-    exact integer µs. The store answer must equal this EXACTLY."""
+    exact integer µs, resolving identity **per row at that row's own timestamp**
+    (#1331). The store answer must equal this EXACTLY."""
     by_sensor: dict = defaultdict(list)
     for r, _src in tagged:
         by_sensor[(r.device_id, r.sensor_id)].append(r)
     tally: dict = defaultdict(int)
-    for key, rs in by_sensor.items():
-        plant = plant_map.get(key)
+    for (device_id, port), rs in by_sensor.items():
         rs.sort(key=lambda r: r.timestamp_utc)
         for i, r in enumerate(rs):
             if i + 1 < len(rs):
@@ -191,14 +240,38 @@ def hours_per_band_truth(tagged, plant_map: dict, cap_us: int = CAP_US) -> dict:
                 dwell = min(gap // timedelta(microseconds=1), cap_us)  # exact int µs
             else:
                 dwell = 0
+            # per ROW, at that row's instant — not once per channel (#1331)
+            plant = resolve_plant_at(assignments, device_id, port, r.timestamp_utc)
             if plant and r.band is not None and r.quality_flag != "NO_SIGNAL":
                 tally[(plant, r.band)] += dwell
     return dict(tally)
 
 
+def registry_assignments(registry_path: str | None = None) -> list[tuple]:
+    """Every assignment as a temporal INTERVAL — ``(device_id, port, plant_id,
+    start_ts, end_ts)``, closed and open alike (#1331, contract §3).
+
+    Not "the open assignments". Resolving every row against *today's* assignment is
+    exactly how history gets stitched onto the present: move a probe from ``p01`` to
+    ``p02`` and every reading it ever took is retroactively relabelled ``p02``. The
+    join must be temporal, or the never-stitch guarantee is inverted rather than
+    upheld. ``start_ts=None`` covers grandfathered history; ``end_ts=None`` is
+    still-open."""
+    from registry_model import load_model, load_registry_model
+
+    model = load_model(registry_path) if registry_path else load_registry_model()
+    return [
+        (a.device_id, a.channel, a.plant_id, a.start_ts, a.end_ts)
+        for a in model.assignments
+    ]
+
+
 def registry_plant_map(registry_path: str | None = None) -> dict:
-    """(device_id, port) -> plant_id from the temporal registry's open assignments —
-    identity resolves at READ time (§3); the store stays board-true."""
+    """(device_id, port) -> plant_id for the CURRENT moment only.
+
+    **Not for resolving stored readings** — use ``registry_assignments`` and join on
+    the interval (§3). Kept for callers that legitimately ask "what is on this channel
+    right now" (a live card, a fleet glance), where today's answer IS the question."""
     from registry_model import load_model, load_registry_model
 
     model = load_model(registry_path) if registry_path else load_registry_model()
