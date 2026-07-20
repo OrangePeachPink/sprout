@@ -22,7 +22,8 @@ _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")  # no traversal from the UR
 
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
-from dashboard import FONTS_CSS, TOKENS_CSS, build_context  # noqa: E402
+from dashboard import build_context  # noqa: E402  (extraction pending, #1336)
+from design_assets import FONTS_CSS, TOKENS_CSS  # noqa: E402  (layer-0 leaf)
 from experiments_catalog import _fmt_dur, _fmt_when  # noqa: E402
 from lab_notes import load_notes  # noqa: E402  (Lab notes #158)
 from parse_v1 import parse_files  # noqa: E402
