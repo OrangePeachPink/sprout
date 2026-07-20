@@ -24,24 +24,24 @@ jobs:
     name: lint + hygiene (full)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Set up uv (+ the locked Python)
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
         with:
           enable-cache: true
           version: "0.11.14"
 
       - name: Set up just
-        uses: extractions/setup-just@v4
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
 
       - name: Sync the locked environment
         run: uv sync --locked
 
       - name: Cache npx tooling (markdownlint / cspell)
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.npm
           key: npx-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
@@ -57,18 +57,18 @@ jobs:
     name: firmware (native tests + compile)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Set up uv (+ the locked Python)
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
         with:
           enable-cache: true
           version: "0.11.14"
 
       - name: Set up just
-        uses: extractions/setup-just@v4
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
 
       - name: Sync the locked environment
         run: uv sync --locked
@@ -77,7 +77,7 @@ jobs:
         run: pip install platformio
 
       - name: Cache PlatformIO packages
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.platformio
           key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
@@ -100,16 +100,16 @@ jobs:
       matrix:
         env: [esp32s3, esp32c5]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up uv (+ the locked Python)
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
         with:
           enable-cache: true
           version: "0.11.14"
 
       - name: Set up just
-        uses: extractions/setup-just@v4
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
 
       - name: Sync the locked environment
         run: uv sync --locked
@@ -118,7 +118,7 @@ jobs:
         run: pip install platformio
 
       - name: Cache PlatformIO packages
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.platformio
           key: pio-experimental-${{ matrix.env }}-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
@@ -143,12 +143,12 @@ jobs:
     name: external links (lychee) — non-blocking
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check external links (lychee — config in lychee.toml)
         id: lychee
         continue-on-error: true
-        uses: lycheeverse/lychee-action@v2
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
         with:
           args: "--config lychee.toml --no-progress ./**/*.md ./**/*.html"
           fail: true
