@@ -48,7 +48,7 @@ These were decided in cross-lane review and govern every downstream slice. Do no
 
 ## 3. Positioning (voice-led)
 
-> **Sprout is the plant that talks back.** Four plants, four moods, one voice — local-first on an ESP32. It
+> **The plant that talks back.** Four plants, four moods, one voice — local-first on an ESP32. It
 > tells you how it's doing in its own words, and it's honest enough to say when it isn't sure.
 
 The honesty clause points **inward** ("when *it* isn't sure") — character, not comparison. It can be cut

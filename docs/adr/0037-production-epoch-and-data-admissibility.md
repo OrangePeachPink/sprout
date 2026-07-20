@@ -115,9 +115,10 @@ someone would create it.
 
 ## Open (routed)
 
-- 📌 **Maintainer** — `n3jhsp` (5 captures, 07-07 and 07-12, absent from the registry): **wired or bare?**
-  Wired → archive under rule 2; bare → delete under rule 1. The last unclassified device; the sweep plan can be
-  rendered without it and executed after.
+- **`n3jhsp` — RULED BARE (maintainer, 2026-07-20): delete under rule 1.** Nothing but the classic ESP32 and
+  the official C5 was ever wired, so its 5 captures (07-07, 07-12) are unwired-pin noise, not evidence. The
+  tombstone manifest still records what was removed — the ruling decides the disposition, not whether the
+  deletion is auditable.
 - **`for:data`** (#1330) — stamp the eight `start_ts` values; run the sweep in the §3 order behind the dry-run
   gate.
 
