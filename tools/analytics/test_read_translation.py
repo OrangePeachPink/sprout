@@ -106,3 +106,46 @@ def test_an_unknown_channel_still_reports_unmapped(tmp_path: Path) -> None:
     _tier(root, "s9")
     series, unmapped = plant_series(root, _reg("ch2"))
     assert series == {} and unmapped == {("devA", "s9"): 2}
+
+
+def test_the_2026_07_20_home_incident_cannot_recur() -> None:
+    """ADR-0038's opening incident, as a permanent regression.
+
+    The v5 migration re-keyed the registry to `chN` while boards still emitted v4
+    `sN`; the live Home lost all eight probed plants because THIS lookup missed.
+    The analysis paths had been folded — the registry lookup had not.
+    """
+    migrated = Device(
+        device_id="y9d41p",
+        board="esp32dev",
+        label="classic",
+        channels={"ch2": {"plant_id": "p11", "plant_name": "Corn"}},
+    )
+    got = migrated.plant_for("s1")  # a v4 board's token against a migrated registry
+    assert got and got["plant_id"] == "p11"
+
+    # the mirror: flashed to v5 before the registry migrated
+    unmigrated = Device(
+        device_id="y9d41p",
+        board="esp32dev",
+        label="classic",
+        channels={"s1": {"plant_id": "p11", "plant_name": "Corn"}},
+    )
+    got2 = unmigrated.plant_for("ch2")
+    assert got2 and got2["plant_id"] == "p11"
+
+    # and the unchanged case still works, with no behaviour change
+    assert unmigrated.plant_for("s1")["plant_id"] == "p11"
+    # an unknown channel stays honestly unresolved — the fold never invents
+    assert unmigrated.plant_for("s9") is None
+
+
+def test_probe_lookup_folds_the_same_way() -> None:
+    dev = Device(
+        device_id="d1",
+        board="esp32dev",
+        label="d",
+        channels={"ch0": {"plant_id": "pA", "probe": "s7"}},
+    )
+    assert dev.probe_for("s3") == "s7"  # s3 IS ch0
+    assert dev.probe_for("ch0") == "s7"
