@@ -63,3 +63,65 @@ def test_a_torn_line_is_skipped_not_fatal(tmp_path: Path) -> None:
         fh.write("\n")  # a blank line
     events = load_events(j)
     assert len(events) == 1 and events[0]["plant_id"] == "p05"
+
+
+# --------------------------------------------------------------------------- #
+# #1203 glug phase 2 — the verdict layer
+# --------------------------------------------------------------------------- #
+
+
+def test_event_id_is_derived_so_it_survives_a_detector_rebuild() -> None:
+    from datetime import datetime, timezone
+
+    from watering_log import event_id_for
+
+    onset = datetime(2026, 7, 19, 18, 5, 40, tzinfo=timezone.utc)
+    eid = event_id_for("p02", onset)
+    assert eid == "p02@2026-07-19T18:05"  # minute granularity, no allocated serial
+    # a rebuild recomputes the SAME id from the same event — verdicts stay bound
+    assert event_id_for("p02", onset.replace(second=59)) == eid
+    assert event_id_for("p02", "2026-07-19T18:05:40Z") == eid  # ISO string too
+
+
+def test_a_verdict_appends_and_never_erases_the_rejection(tmp_path) -> None:
+    from watering_log import detection_state, log_verdict, verdicts
+
+    j = tmp_path / "j.jsonl"
+    eid = "p02@2026-07-08T00:21"
+    assert detection_state(eid, j) == "proposed"  # unreviewed is never 'confirmed'
+    log_verdict(eid, "rejected", path=j)
+    assert detection_state(eid, j) == "rejected"
+    log_verdict(eid, "confirmed", path=j)  # she changes her mind
+    assert detection_state(eid, j) == "confirmed"  # newest wins
+    # but the rejection is STILL on disk — it is the detector's training signal
+    body = j.read_text(encoding="utf-8")
+    assert '"state": "rejected"' in body and '"state": "confirmed"' in body
+    assert len(verdicts(j)) == 1  # one event, one current state
+
+
+def test_verdicts_and_manual_waterings_share_the_journal_without_collision(tmp_path):
+    from watering_log import load_events, log_manual, log_verdict, verdicts
+
+    j = tmp_path / "j.jsonl"
+    log_manual("p01", path=j)
+    log_verdict("p01@2026-07-19T18:05", "confirmed", path=j)
+    log_manual("p02", path=j)
+    # the manual reader ignores verdicts; the verdict reader ignores waterings
+    assert [e["plant_id"] for e in load_events(j)] == ["p01", "p02"]
+    assert list(verdicts(j)) == ["p01@2026-07-19T18:05"]
+
+
+def test_precision_reports_both_numerals_and_abstains_before_any_ruling(tmp_path):
+    from watering_log import log_verdict, precision_so_far
+
+    j = tmp_path / "j.jsonl"
+    detected = ["a@1", "b@2", "c@3", "d@4"]
+    p0 = precision_so_far(detected, j)
+    assert p0["detected"] == 4 and p0["proposed"] == 4
+    assert p0["precision"] is None  # nothing ruled -> no invented ratio
+    log_verdict("a@1", "confirmed", path=j)
+    log_verdict("b@2", "confirmed", path=j)
+    log_verdict("c@3", "rejected", path=j)
+    p = precision_so_far(detected, j)
+    assert (p["confirmed"], p["rejected"], p["ruled"], p["proposed"]) == (2, 1, 3, 1)
+    assert abs(p["precision"] - 2 / 3) < 1e-9  # over RULED events only
