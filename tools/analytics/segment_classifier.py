@@ -55,6 +55,16 @@ REBOUND_MAX_H = 6.0  # hard cap — nothing equilibrates longer than this
 # (a naive 30 min splits her 07-10 dose session) — a calibrated contract parameter.
 PASS_GAP_MIN = 75.0
 
+# #1331: a sampling hole ends a segment. The threshold is the SHIPPED gap rule, not
+# a new opinion: the dashboard already defines a logging gap as a delta over
+# max(GAP_THRESHOLD_S, GAP_CADENCE_MULT x the series' own median interval) — E9. That
+# is cadence-relative on purpose, because a series may be raw 30 s or decimated to
+# 30 min and a fixed threshold would either miss every hole or break every row.
+# Consume one definition of "a hole"; a second would drift from the shading the
+# operator actually sees.
+GAP_THRESHOLD_S = 120
+GAP_CADENCE_MULT = 3
+
 KINDS = ("watering-transient", "rebound", "steady-drying", "flagged")
 
 
@@ -147,18 +157,69 @@ def classify(rows) -> list[str]:
     return kinds
 
 
+def gap_break_seconds(rows) -> float:
+    """The hole threshold for THIS series: ``max(GAP_THRESHOLD_S, GAP_CADENCE_MULT x
+    median interval)`` — the shipped E9 gap rule, applied to the series' own cadence
+    so a raw 30 s stream and a decimated 30 min one are both judged fairly."""
+    rows = list(rows)
+    if len(rows) < 3:
+        return float(GAP_THRESHOLD_S)
+    deltas = sorted(
+        (rows[i + 1].timestamp_utc - rows[i].timestamp_utc).total_seconds()
+        for i in range(len(rows) - 1)
+    )
+    median = deltas[len(deltas) // 2]
+    return max(float(GAP_THRESHOLD_S), GAP_CADENCE_MULT * median)
+
+
 def segments(rows) -> list[Segment]:
-    """Consecutive same-kind runs, in order — the golden-fixture surface."""
+    """Consecutive same-kind runs, in order — the golden-fixture surface.
+
+    **A sampling hole ends a run** (#1331). Same-kind adjacency is not enough: two
+    steady arcs either side of a 26-hour outage are not one segment, and treating them
+    as one lets a trend fit draw a slope straight through time nobody observed —
+    a phantom rate, in the exact column the predictor trains on.
+
+    The break threshold is ``GAP_BREAK_US`` — the store contract §5 dwell cap reused
+    deliberately: that cap already encodes "beyond this, an outage is not observed
+    time", so a gap that stops counting toward dwell is the same gap that stops a
+    segment. One rule, one constant, no second opinion about what a hole is."""
     rows = list(rows)
     kinds = classify(rows)
+    break_s = gap_break_seconds(rows)
     out: list[Segment] = []
     for i, kind in enumerate(kinds):
-        if out and out[-1].kind == kind and out[-1].i1 == i - 1:
+        contiguous = out and out[-1].kind == kind and out[-1].i1 == i - 1
+        if contiguous:
+            gap_s = (rows[i].timestamp_utc - rows[i - 1].timestamp_utc).total_seconds()
+            if gap_s > break_s:
+                contiguous = False  # a hole: the previous run ends here
+        if contiguous:
             last = out.pop()
             out.append(Segment(kind, last.i0, i, last.t0, rows[i].timestamp_utc))
         else:
             t = rows[i].timestamp_utc
             out.append(Segment(kind, i, i, t, t))
+    return out
+
+
+def valid_trend_runs(rows) -> list[tuple[int, int]]:
+    """Contiguous ``steady-drying`` runs as ``(i0, i1)`` index pairs — **the surface a
+    trend fit should consume** (#1331).
+
+    ``valid_for_trend`` is a flat per-row mask, and a flat mask cannot express
+    discontinuity: the last row before a 26-hour hole and the first row after it are
+    BOTH honestly steady-drying, so a consumer pairing consecutive True rows fits a
+    slope across time nobody observed — a phantom rate, in the exact column the
+    predictor trains on. Marking either row invalid would be a lie about that row;
+    the truth is about the JOIN between them, so the runs carry it.
+
+    Each returned run is same-kind AND hole-free, so any fit over one run is a fit
+    over continuously observed time."""
+    out: list[tuple[int, int]] = []
+    for seg in segments(rows):
+        if seg.kind == "steady-drying":
+            out.append((seg.i0, seg.i1))
     return out
 
 

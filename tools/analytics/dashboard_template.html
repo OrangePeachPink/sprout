@@ -635,6 +635,12 @@ footer.prov code { font-family: var(--font-data); }
       .hreasons li{margin:2px 0}
     </style>
     <section class="card" id="healthCard">
+      <!-- #1203: the detector's own QA — how it is doing against HER rulings.
+           Diagnostics-side by design: this is a labeled ratio over a handful of
+           events, which is instrument detail, never a Home-face number. -->
+      <div class="panel-h"><h2>Detector precision</h2><span class="cap">confirm/reject rulings you have made on detected waterings — both numerals always shown; a bare percentage over a few events would read like a measurement it is not</span></div>
+      <div id="detPrecision" class="small muted">loading…</div>
+
       <div class="panel-h"><h2>Sensor health</h2><span class="cap">per physical probe — out-of-envelope reads, stuck/stale runs, baseline drift, dropouts, and honest inspect-for-corrosion prompts (the bench SENSOR_QA discipline, on the running rig · #995)</span></div>
       <div id="sensorHealth" class="healthgrid"><span class="muted">Loading sensor health…</span></div>
     </section>
@@ -1124,6 +1130,27 @@ function renderBandHistory(){
 
 // #716: the calibration REFERENCE — band definitions + ratification state, on Diagnostics & Logs. Same
 // band lanes as the Monitor watering-status view, minus the live chips (definition, not live reading).
+/* #1203: the detector-precision readout. Honest by construction — precision is
+   null until she has ruled on something, and unreviewed detections are reported
+   separately rather than counted against the detector (absence of a verdict is
+   not evidence of a wrong call). */
+function renderDetectorPrecision(){
+  const box = document.getElementById('detPrecision'); if(!box) return;
+  fetch('/watering/precision').then(r=>r.json()).then(p=>{
+    if(!p || !p.detected){
+      box.textContent = 'No detected waterings yet — nothing to rule on.';
+      return;
+    }
+    const pct = p.precision==null ? null : Math.round(p.precision*100);
+    box.innerHTML =
+      `<b>${p.confirmed}</b> confirmed / <b>${p.ruled}</b> ruled` +
+      (pct==null ? ' · <span class="muted">no rulings yet — no precision to report</span>'
+                 : ` · <b>${pct}%</b> precision`) +
+      ` · <span class="muted">${p.rejected} rejected · ${p.proposed} still unreviewed ` +
+      `(of ${p.detected} detected)</span>`;
+  }).catch(()=>{ box.textContent = 'precision unavailable'; });
+}
+
 function renderCalRef(){
   const wrap = document.getElementById('calref'); if(!wrap) return; wrap.innerHTML = '';
   DASH.cal.bands.forEach(b => {
@@ -1593,7 +1620,7 @@ function renderProvenance(){  // #324 bench-evidence panel
 function renderOverview(){
   destroyCharts();
   renderHeader(); renderCards(); renderLadder(); renderBandHistory(); renderCalRef();
-  renderCycleNote();
+  renderCycleNote(); renderDetectorPrecision();
   renderTraj(); renderSpread(); renderDist();
   renderQuality(); renderIntegrity(); renderProvenance(); renderProv();
   if(!LIVE) applyStaticChannels();

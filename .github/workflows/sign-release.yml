@@ -5,10 +5,17 @@ name: sign release firmware (#302)
 # ADR-0026 Decision 2), then attach <bin> + <bin>.sig to the release. A future pull-OTA
 # (#302) + the web-flasher verify against the committed public key (firmware/keys/).
 #
-# GATED on the SPROUT_SIGNING_KEY secret: until the key ceremony runs
-# (docs/process/signing-key-ceremony.md) the sign step SKIPS with a warning - the workflow
-# does NOT fail, so releases still cut (unsigned) in the interim. Once the secret is set,
-# every release is signed.
+# FAILS CLOSED on the SPROUT_SIGNING_KEY secret (#1346): no key -> no release. The interim
+# behaviour (skip signing with a warning, publish unsigned anyway) is retired - a release
+# that quietly ships unsigned bytes is the failure this job exists to prevent, and a warning
+# in a green log is not a gate. Run the key ceremony first: docs/process/signing-key-ceremony.md
+#
+# INTEGRITY INVARIANTS (#1346), each one load-bearing:
+#   * builds the EXACT released ref, never rolling main - the version label is true by
+#     construction rather than by whatever HEAD happened to be at publish time;
+#   * uploads WITHOUT --clobber - a release artifact is written once and never overwritten;
+#   * actions are pinned to full commit SHAs and PlatformIO to an exact version, so a
+#     re-run of an old release builds the same way it did the first time.
 
 on:
   release:
@@ -28,18 +35,41 @@ jobs:
     name: build + sign factory bins
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      # Resolved BEFORE checkout - the tag is what we build, so it has to exist first.
+      - name: Resolve tag
+        id: tag
+        run: |
+          tag="${{ github.event.release.tag_name || inputs.tag }}"
+          [ -n "$tag" ] || { echo "::error title=No tag::nothing to build - no release tag and no dispatch input."; exit 1; }
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
-      - name: Detect signing key
-        id: sk
-        run: echo "present=${{ secrets.SPROUT_SIGNING_KEY != '' }}" >> "$GITHUB_OUTPUT"
+      # Fail closed BEFORE the build, not after: no key means no release, so spending ~5
+      # minutes compiling first would only delay the same answer.
+      - name: Require the signing key
+        # Via env, never inlined into the command: `${{ secrets.X }}` in a run: line puts the
+        # key itself in the shell command. Presence is all we test here.
+        env:
+          SIGNING_KEY: ${{ secrets.SPROUT_SIGNING_KEY }}
+        run: |
+          if [ -z "$SIGNING_KEY" ]; then
+            echo "::error title=No signing key::SPROUT_SIGNING_KEY is not set, so this release cannot be signed - and an unsigned release is not one we publish (#1346). Run docs/process/signing-key-ceremony.md, add the secret, then re-run this job."
+            exit 1
+          fi
 
-      - uses: actions/setup-python@v6
+      # The exact released ref - NOT rolling main. This is the defect #1346 exists to close:
+      # without `ref:`, a release published from tag vX.Y.Z built whatever main happened to
+      # be, then wore the tag's version label.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
 
+      # Pinned so a re-run of an old tag builds with the same toolchain it shipped with.
       - name: Install PlatformIO
-        run: pip install --quiet platformio
+        run: pip install --quiet platformio==6.1.19
 
       - name: Build board-aware factory bins (classic + C5)
         working-directory: firmware
@@ -64,7 +94,6 @@ jobs:
           ls -l dist
 
       - name: Sign factory bins (ed25519) + verify against the committed public key
-        if: steps.sk.outputs.present == 'true'
         env:
           SIGNING_KEY: ${{ secrets.SPROUT_SIGNING_KEY }}
         run: |
@@ -90,17 +119,11 @@ jobs:
           rm -f domain.tag
           shred -u signing.key 2>/dev/null || rm -f signing.key
 
-      - name: Warn if unsigned
-        if: steps.sk.outputs.present != 'true'
-        run: |
-          echo "::warning title=Release UNSIGNED::SPROUT_SIGNING_KEY not set - run the key ceremony (docs/process/signing-key-ceremony.md) to enable #302 signing. Artifacts built but not signed."
-
-      - name: Resolve tag
-        id: tag
-        run: echo "tag=${{ github.event.release.tag_name || inputs.tag }}" >> "$GITHUB_OUTPUT"
-
       - name: Attach artifacts to the release
-        if: steps.tag.outputs.tag != ''
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ steps.tag.outputs.tag }}" dist/* --clobber
+        # No --clobber (#1346): a release artifact is written ONCE. If an asset of this name
+        # already exists the upload fails loudly, which is the correct outcome - it means
+        # something is trying to replace bytes that were already published and possibly
+        # already downloaded, verified, or flashed.
+        run: gh release upload "${{ steps.tag.outputs.tag }}" dist/*

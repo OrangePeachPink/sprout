@@ -248,6 +248,17 @@ def _device_from_dict(raw: dict) -> Device | None:
     )
 
 
+def resolve_registry_path(path: str | Path | None = None) -> Path | None:
+    """WHICH file ``load_registry`` would read — the same discovery ladder, exposed.
+
+    A tool that both reads and WRITES the registry (the #1315 migration) must operate
+    on one resolved path: reading via discovery and then writing via a second, separate
+    resolution can silently target a different file than the one the dry-run showed.
+    Returns None when no registry exists (`load_registry` yields an empty one)."""
+    candidates = [Path(path)] if path is not None else [_LOCAL, _EXAMPLE]
+    return next((p for p in candidates if p.exists()), None)
+
+
 def load_registry(path: str | Path | None = None) -> Registry:
     """The fleet registry, preferring the local config, then the example template.
 

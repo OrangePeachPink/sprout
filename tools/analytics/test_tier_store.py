@@ -60,7 +60,12 @@ def _files(tmp_path: Path) -> list[str]:
     return [str(a), str(b)]
 
 
-_MAP = {("dev1", "s1"): "p01", ("dev1", "s2"): "p02"}
+# #1331: identity is resolved on INTERVALS now — (device, port, plant, start, end).
+# Null bounds = grandfathered start / still-open end, which is this fixture's case.
+_MAP = [
+    ("dev1", "s1", "p01", None, None),
+    ("dev1", "s2", "p02", None, None),
+]
 
 
 def test_day_slice_is_by_parsed_timestamp_with_lineage(tmp_path: Path) -> None:

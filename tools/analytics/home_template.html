@@ -118,6 +118,19 @@
   .glug:hover, .glug:focus-visible { color: var(--ink); border-color: var(--muted); }
   .glug:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
   .hero .glug { font-size: 12.5px; padding: 5px 13px; }
+  /* #1203 the verdict pair — an UNCONFIRMED detection asks; it never asserts.
+     Chrome register on purpose: these are affordances, not states. Nothing here
+     touches the frame, the mood, or the voice line — an unreviewed detection is
+     not ground truth, so it must not colour the plant's face. */
+  .verdict { display: inline-flex; gap: 6px; margin-left: auto; align-items: center; }
+  .vbtn { font-size: 11px; font-weight: 600; color: var(--muted); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 999px; padding: 3px 9px;
+    cursor: pointer; user-select: none; white-space: nowrap; }
+  .vbtn:hover, .vbtn:focus-visible { color: var(--ink); border-color: var(--muted); }
+  .vbtn:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .vask { font-size: 10.5px; letter-spacing: .04em; color: var(--muted); }
+  .hero .vbtn { font-size: 12px; padding: 4px 11px; }
+
   /* #1229: the RETAINED logged state — unmistakable, not a flash; replaces the
      button so a double-tap is impossible. Leaf-tinted: a completed good thing. */
   .glugged { margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
@@ -330,6 +343,18 @@ function waterHTML(card) {
     h += '<span class="glugged">✓ logged just now</span>';
     return h;
   }
+  /* #1203: a DETECTED event she hasn't ruled on asks for a verdict, on the water
+     row where the chip already lives — never near the mood. Present-or-silent:
+     nothing renders unless there is an unruled detection with a stable event id. */
+  if (lw.known && lw.source === "detected" && lw.event_id &&
+      lw.detection_state === "proposed" && !_ruled.has(lw.event_id)) {
+    h += '<span class="verdict"><span class="vask">DID YOU?</span>' +
+      '<span class="vbtn" role="button" tabindex="0" data-vid="' + esc(lw.event_id) +
+      '" data-vstate="confirmed">✓ I watered</span>' +
+      '<span class="vbtn" role="button" tabindex="0" data-vid="' + esc(lw.event_id) +
+      '" data-vstate="rejected">✗ not a watering</span></span>';
+    return h;
+  }
   /* #1137 the "glug glug" one-tap: log a manual watering against Data's journal
      (POST /watering/log). span[role=button] because the card itself is a <button>
      (nested buttons are invalid); needs a plant_id to post against. */
@@ -361,14 +386,36 @@ function glugPost(el) {
     label.nodeValue = was; delete el.dataset.busy;
   });
 }
+/* #1203: record her ruling on a detected event. A REJECT is an append, never an
+   erase — the rejection is the detector's training signal, so the journal keeps it.
+   The event leaves the card face either way (it has been ruled), which is why the
+   session set is keyed by event_id rather than plant. */
+function verdictPost(el) {
+  if (el.dataset.busy) return;
+  var eid = el.dataset.vid, state = el.dataset.vstate;
+  if (!eid || !state) return;
+  el.dataset.busy = "1";
+  var was = el.firstChild;
+  fetch("/watering/verdict", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event_id: eid, state: state })
+  }).then(function (r) { return r.json(); }).then(function (j) {
+    if (j && j.ok) { _ruled.add(eid); refresh(); }
+    else { delete el.dataset.busy; }
+  }).catch(function () { delete el.dataset.busy; if (was) {} });
+}
 document.addEventListener("click", function (e) {
   var g = e.target.closest ? e.target.closest(".glug") : null;
-  if (g) { e.stopPropagation(); e.preventDefault(); glugPost(g); }
+  if (g) { e.stopPropagation(); e.preventDefault(); glugPost(g); return; }
+  var v = e.target.closest ? e.target.closest(".vbtn") : null;
+  if (v) { e.stopPropagation(); e.preventDefault(); verdictPost(v); }
 }, true);
 document.addEventListener("keydown", function (e) {
-  if ((e.key === "Enter" || e.key === " ") && e.target.classList &&
-      e.target.classList.contains("glug")) {
+  if (!(e.key === "Enter" || e.key === " ") || !e.target.classList) return;
+  if (e.target.classList.contains("glug")) {
     e.stopPropagation(); e.preventDefault(); glugPost(e.target);
+  } else if (e.target.classList.contains("vbtn")) {
+    e.stopPropagation(); e.preventDefault(); verdictPost(e.target);
   }
 }, true);
 
@@ -426,7 +473,7 @@ function renderCard(card, opts) {
 /* ---- first paint ---- */
 var _cards = null;
 /* #1229: the glugs logged THIS SESSION — drives the retained confirmed chip. */
-var _glugged = new Set();
+var _glugged = new Set(), _ruled = new Set();
 /* #1229 fix 2: cards NEVER move mid-session. The order is captured at first paint
    and held; a served-order drift surfaces an EXPLICIT re-sort chip instead of a
    silent reshuffle (the operator, live: cards moved out from under her watering
