@@ -38,29 +38,35 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+# #1346: pin PlatformIO so the flasher bins are reproducible from a given ref.
+# Must match sign-release.yml - the release path and the Pages path building the
+# same commit with different toolchains is exactly the drift this closes.
+env:
+  PIO_VERSION: "6.1.19"
+
 jobs:
   build:
     name: build site (design library + flasher + factory bins)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0 # factory_bin.py stamps the short git rev into the manifest provenance
 
       - name: Set up uv (+ the locked Python)
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
         with:
           enable-cache: true
           version: "0.11.14" # pin uv (#254), matching the firmware CI job
 
       - name: Set up just
-        uses: extractions/setup-just@v4
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
       - name: Install PlatformIO
-        run: pip install platformio
+        run: pip install --quiet "platformio==${PIO_VERSION}"
 
       - name: Cache PlatformIO packages
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.platformio
           key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
@@ -112,7 +118,7 @@ jobs:
           echo "== flasher payload ==" && ls -l "$site/flash/"
 
       - name: Upload the Pages artifact
-        uses: actions/upload-pages-artifact@v5
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
           path: _site
 
@@ -125,4 +131,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
