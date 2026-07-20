@@ -121,6 +121,16 @@ BOARD_CLASS_ANCHORS = {
     "c5": {"air": 2754, "water": 982},
 }
 
+# #1339 / ADR-0035 §4 (amended 2026-07-20): the measured Faint-CEILING per board class
+# — the top of the in-soil envelope, ratified 2026-07-19 (#1174) from the dual-envelope
+# dry-down. NOT a sensor maximum: humane calibration sets the ceiling at wilt-onset, so
+# readings past it are EXPECTED rather than anomalous. Consumed here, never re-derived.
+BOARD_CLASS_CEILING = {"classic": 2500, "c5": 2213}
+
+# The §2 `range` exception token. An in-soil reading above the ceiling is possible but
+# beyond what we have characterized — distinct from `physics`, which is impossible.
+DRIER_THAN_CALIBRATED = "drier-than-calibrated"
+
 
 def board_class(board: str | None) -> str:
     """Board string -> anchor class. Anything self-describing as a C5 is ``c5``;
@@ -309,8 +319,21 @@ def parse_payload(s: str | None) -> dict[str, str]:
     return out
 
 
+def range_exception(raw: int | None, ceiling: int | None) -> str | None:
+    """#1339: the §2 ``range`` exception for a reading past the characterized envelope.
+
+    Returns ``DRIER_THAN_CALIBRATED`` when ``raw`` is above the board's Faint-ceiling,
+    else ``None``. Separate from the band so a caller can surface the exception while
+    still showing the raw — the reading is real, it is the *meaning* we lack."""
+    if raw is None or ceiling is None:
+        return None
+    return DRIER_THAN_CALIBRATED if raw > ceiling else None
+
+
 def band_for_raw(
-    raw: int | None, bounds: tuple[int, ...] = DEFAULT_CAL_BOUNDS
+    raw: int | None,
+    bounds: tuple[int, ...] = DEFAULT_CAL_BOUNDS,
+    ceiling: int | None = None,
 ) -> str | None:
     """Naive band for a raw ADC count using descending (dry>wet) boundaries.
 
@@ -319,9 +342,23 @@ def band_for_raw(
     ``payload.level`` (which carries hysteresis state). Use the per-row
     ``Reading.band`` for ground truth; use this only for drawing the band
     ladder / shading a chart from the file's own cal bounds.
+
+    **Above the ceiling the band is WITHHELD, never clamped** (#1339, ADR-0035 §4
+    amended). Passing a ``ceiling`` makes a reading past it return ``None`` rather
+    than the driest band: "drier than anything we have measured" and "at the dry
+    ceiling" must not render identically, because silently collapsing them makes the
+    INSTRUMENT'S LIMIT look like A PLANT STATE. The caller pairs this with
+    ``range_exception`` to say what it is instead. Absence is the withholding — no
+    eighth band is minted, and the reserved `withheld` token (the #1152 actuation
+    axis) is deliberately not spent here.
+
+    ``ceiling=None`` keeps the historical clamping behaviour for callers that have not
+    opted in, so this is additive.
     """
     if raw is None:
         return None
+    if ceiling is not None and raw > ceiling:
+        return None  # withheld: past what we have characterized
     for name, edge in zip(BANDS_DRY_TO_WET, bounds):
         if raw >= edge:
             return name
