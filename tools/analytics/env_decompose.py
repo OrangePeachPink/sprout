@@ -1,5 +1,10 @@
 """H1/H2 drying-rate decomposition — the Data half of PRD-0002 R5 (#199).
 
+Status: pending — consumers land in #199 (environmental analysis, PRD-0002 R5).
+Ruled kept on #1388: this is the module the retained SHT/weather streams exist for.
+Built ahead of its consumer, which under import analysis is indistinguishable from
+abandoned — the exact case §7 exists to mark.
+
 Splits a probe's drying behaviour into the two candidate drivers so they can be
 *plotted* against each other (Design owns the viz, R5):
 

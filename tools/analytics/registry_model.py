@@ -123,6 +123,55 @@ class LocationEvent:
         return self.end_ts is None
 
 
+#: How a channel's pin came to be recorded (#1027 §5.2, Design-QA's sixth need).
+#: ``stated`` — she told us this pin. ``recommended`` — she accepted Sprout's default
+#: for the board class. The distinction is the same one the cal receipt draws between
+#: ``stored`` and ``confirmed``: **a default we assumed and a fact she stated are
+#: different claims**, and a record that flattens them makes the surface either
+#: overclaim ("your board is wired to GPIO 34") or nag (re-asking what she already told
+#: us). Flattening is the easy mistake here because both produce the same integer.
+DECLARATION_SOURCES = ("stated", "recommended")
+
+
+@dataclass
+class ChannelDeclaration:
+    """What a board declares it *has* — a channel and the pin it is wired to.
+
+    **Trellis's ruling (#1027, Option A), and why it is a regression fix rather than a
+    new feature.** ADR-0036 §1 already names *channel* as ``(device_id, port/GPIO)``,
+    firmware-owned: the board lane the firmware actually reads. The firmware declares
+    channels on **every telemetry row** — a board with zero plants mapped still emits
+    ``ch0..ch3``, because a channel is a pin with a probe on it, not a relationship to
+    a plant. The static registry's ``devices[].channels{}`` got this right; the temporal
+    model replaced it with derived assignments and dropped the declaration on the way.
+
+    **Different owners, different lifetimes.** A channel lives from adoption until the
+    board is rewired or retired; an assignment lives from mapping until the probe moves.
+    Modelling the longer-lived thing as a by-product of the shorter-lived one is
+    backwards, and it is what made the empty-channel teaching state (§5.3)
+    *structurally* unrepresentable: you cannot render "this channel has no plant yet"
+    if the channel exists only because a plant is on it.
+
+    **Temporal, like every other fact here.** A rewire — *"I took two of the sensors
+    off and moved them to my esp32"* — is an **edit event**, not a re-adoption: it
+    closes the old declaration and opens a new one, so the wiring reads as history. Same
+    machinery as an assignment boundary or a location event, deliberately: one temporal
+    pattern in this model, not three.
+    """
+
+    device_id: str
+    # canonical chN (ADR-0036) — consumed via canonical_channel, never minted here
+    channel: str
+    pin: int | None = None  # the GPIO; None = declared but pin unknown
+    source: str = "stated"
+    start_ts: str | None = None
+    end_ts: str | None = None
+
+    @property
+    def is_open(self) -> bool:
+        return self.end_ts is None
+
+
 @dataclass
 class RegistryModel:
     """The editable registry: entities + the append-only temporal logs. The *current*
@@ -137,6 +186,7 @@ class RegistryModel:
     profiles: list[Profile] = field(default_factory=list)
     assignments: list[Assignment] = field(default_factory=list)
     location_events: list[LocationEvent] = field(default_factory=list)
+    channel_declarations: list[ChannelDeclaration] = field(default_factory=list)
 
     # --------------------------- derivation (read) --------------------------- #
     def open_assignments(self) -> list[Assignment]:
@@ -158,6 +208,96 @@ class RegistryModel:
             if a.device_id == device_id and a.channel == channel:
                 return a
         return None
+
+    # ------------------------ channel declarations (#1027) ------------------------ #
+    def declared_channels(
+        self, device_id: str, at_time: str | None = None
+    ) -> list[ChannelDeclaration]:
+        """This board's declared channels — the open set, or the set in force at
+        ``at_time``.
+
+        Resolved on the **covering interval** (``start_ts <= t < end_ts``), the same
+        rule identity resolution uses, so a question about the past gets the wiring
+        the board actually had then. Answering a historical question with today's
+        wiring is the #1331 mistake in another field; no reason to make it twice.
+        """
+        out = [d for d in self.channel_declarations if d.device_id == device_id]
+        if at_time is None:
+            out = [d for d in out if d.is_open]
+        else:
+            out = [
+                d
+                for d in out
+                if (d.start_ts is None or d.start_ts <= at_time)
+                and (d.end_ts is None or at_time < d.end_ts)
+            ]
+        return sorted(out, key=lambda d: d.channel)
+
+    def declared_channel_count(self, device_id: str) -> int:
+        """§5.2's gate in one number: *"could have one sensor, could have 4, could have
+        6"*. Zero means the board has declared nothing — which is not an adoptable
+        board, not a board with no plants."""
+        return len(self.declared_channels(device_id))
+
+    def unassigned_channels(self, device_id: str) -> list[ChannelDeclaration]:
+        """Declared channels carrying no open assignment — §5.3's calm-empty set.
+
+        **A real query, deliberately.** Design-QA's fourth need: if this were only
+        derivable by diffing declared-against-assigned in a template, it would be a
+        policy living in a template — the exact thing ADR-0038 §3 forbids and slice 2
+        spent its effort removing. The surface asks a question; it does not compute an
+        answer.
+        """
+        return [
+            d
+            for d in self.declared_channels(device_id)
+            if self.current_for_channel(device_id, d.channel) is None
+        ]
+
+    def declaration_history(self, device_id: str) -> list[ChannelDeclaration]:
+        """Every declaration this board has carried, oldest first — the rewire record.
+        A grandfathered first entry has ``start_ts=None`` (it was wired that way; we
+        don't know since when) rather than an invented start date."""
+        evs = [d for d in self.channel_declarations if d.device_id == device_id]
+        return sorted(evs, key=lambda d: (d.start_ts or "", d.channel, d.end_ts or "~"))
+
+    def declare_channels(
+        self,
+        device_id: str,
+        pins: list[int | None],
+        *,
+        source: str = "stated",
+        now: str | None = None,
+    ) -> list[ChannelDeclaration]:
+        """Declare (or re-declare) this board's channels — the adopt and rewire path.
+
+        ``pins`` is positional: index *i* is channel ``ch{i}``, which is ADR-0036's own
+        ordering and the order the firmware emits. The count is therefore implicit in
+        the list, exactly as §5.2 frames it — *"could have one sensor, could have 4,
+        could have 6"*.
+
+        **A re-declaration is a rewire, not a re-adoption.** Every open declaration is
+        closed at ``now`` and a fresh set opened, so the board's wiring reads as history
+        and the two-probes-moved-to-the-esp32 case is an edit event. Nothing is
+        overwritten and nothing is deleted — the same close-and-open shape as
+        :meth:`move_plant` and an assignment boundary.
+        """
+        ts = now or _utc_now()
+        for d in self.channel_declarations:
+            if d.device_id == device_id and d.is_open:
+                d.end_ts = ts
+        fresh = [
+            ChannelDeclaration(
+                device_id=device_id,
+                channel=f"ch{i}",
+                pin=pin,
+                source=source,
+                start_ts=ts,
+            )
+            for i, pin in enumerate(pins)
+        ]
+        self.channel_declarations.extend(fresh)
+        return fresh
 
     def location_history(self, plant_id: str) -> list[LocationEvent]:
         """#1188: every spot this plant has occupied, oldest first — the move record
@@ -312,6 +452,11 @@ class RegistryModel:
         self.location_events = [
             e for e in self.location_events if e.plant_id not in pset
         ]
+        # A purged board's wiring history goes with it — the declaration is the
+        # board's own fact, so it cannot outlive the board (#1027).
+        self.channel_declarations = [
+            d for d in self.channel_declarations if d.device_id not in dset
+        ]
         n_dev = sum(1 for d in self.devices if d.get("device_id") in dset)
         n_pl = sum(1 for p in self.plants if p.plant_id in pset)
         n_se = sum(1 for s in self.sensors if s.sensor_id in sset)
@@ -335,6 +480,7 @@ class RegistryModel:
             "profiles": [asdict(p) for p in self.profiles],
             "assignments": [asdict(a) for a in self.assignments],
             "location_events": [asdict(e) for e in self.location_events],
+            "channel_declarations": [asdict(d) for d in self.channel_declarations],
         }
 
     @classmethod
@@ -369,6 +515,11 @@ class RegistryModel:
                     LocationEvent(**_only(LocationEvent, e))
                     for e in doc.get("location_events", [])
                     if isinstance(e, dict)
+                ],
+                channel_declarations=[
+                    ChannelDeclaration(**_only(ChannelDeclaration, d))
+                    for d in doc.get("channel_declarations", [])
+                    if isinstance(d, dict)
                 ],
             )
         # the static (v1) shape -> migrate (grandfather in, start_ts unknown)
@@ -531,6 +682,14 @@ def _channel_view(model: RegistryModel, device: dict) -> list[dict]:
     dev_id = device.get("device_id")
     static = device.get("channels")
     ports = list(static.keys()) if isinstance(static, dict) else []
+    # #1027: declared channels are ports in their own right — that is the whole point
+    # of the declaration. Without this a board that has declared four channels and
+    # mapped none would render as having no ports at all, which is exactly the
+    # empty-channel state (§5.3) failing to be representable.
+    declared = {d.channel: d for d in model.declared_channels(dev_id)}
+    for ch in declared:
+        if ch not in ports:
+            ports.append(ch)
     for a in model.assignments:
         if a.device_id == dev_id and a.channel not in ports:
             ports.append(a.channel)
@@ -547,6 +706,13 @@ def _channel_view(model: RegistryModel, device: dict) -> list[dict]:
                 else None,  # None = free port (3b candidate)
                 "cal_tier": prof.tier if prof else "uncalibrated",
                 "provenance": prof.provenance if prof else None,
+                # #1027 — the board's own facts, beside the registry's meaning.
+                # `declared` False on a port that carries an assignment but no
+                # declaration is a legitimate reading (a grandfathered board that
+                # predates the declaration), not an error: absence stays first-class.
+                "declared": ch in declared,
+                "pin": declared[ch].pin if ch in declared else None,
+                "pin_source": declared[ch].source if ch in declared else None,
             }
         )
     return view
@@ -579,6 +745,7 @@ _MODEL_KEYS = {
     "profiles",
     "assignments",
     "location_events",
+    "channel_declarations",
 }
 _PLANT_ID_RE = re.compile(r"p\d{2,}")
 _SENSOR_ID_RE = re.compile(r"s\d{2,}")
@@ -611,6 +778,57 @@ def next_plant_id(model: RegistryModel) -> str:
 def next_sensor_id(model: RegistryModel) -> str:
     """The next free ``s0N`` (never reuses a retired number)."""
     return _next_numbered({s.sensor_id for s in model.sensors}, "s")
+
+
+def _validate_channel_declaration(rec: dict, tag: str, err) -> None:
+    """The §5.2 gate: a board must declare its channels to be adoptable (#1027).
+
+    Accepts ``channels: [pin, ...]`` — positional, index *i* being ``ch{i}`` per
+    ADR-0036 — or the same list of ``{"pin": int}`` dicts, whichever the surface finds
+    natural. A pin may be ``None`` (declared, pin not known yet); the *count* is the
+    part §5.2 gates on, because the count is what makes the board a known config.
+
+    Rejects an empty or absent declaration by design. A board that answers but has
+    declared nothing is precisely the state the ruling calls non-adoptable, and
+    accepting it here would let the record exist in a shape the surface then has to
+    apologise for.
+    """
+    raw = rec.get("channels")
+    if raw is None:
+        err(
+            tag,
+            "a board must declare its channels to be adopted — how many probes and "
+            "what pins they are wired to (#1027 §5.2). No plants yet is fine; no "
+            "pin config is not an adoptable board.",
+            "channels",
+        )
+        return
+    if not isinstance(raw, list) or not raw:
+        err(tag, "channels must be a non-empty list of pins", "channels")
+        return
+    source = rec.get("channel_source", "stated")
+    if source not in DECLARATION_SOURCES:
+        err(
+            tag,
+            f"channel_source must be one of {DECLARATION_SOURCES} — a default we "
+            "assumed and a pin she stated are different claims, and the record has "
+            "to keep them apart",
+            "channel_source",
+        )
+    for j, entry in enumerate(raw):
+        pin = entry.get("pin") if isinstance(entry, dict) else entry
+        if pin is None:
+            continue  # declared, pin unknown — legitimate
+        if not isinstance(pin, int) or isinstance(pin, bool) or pin < 0:
+            err(tag, f"channel {j} pin must be a non-negative GPIO number", "channels")
+
+
+def _declared_pins(rec: dict) -> list[int | None]:
+    """The pin list from an accepted declaration, in channel order."""
+    return [
+        (entry.get("pin") if isinstance(entry, dict) else entry)
+        for entry in (rec.get("channels") or [])
+    ]
 
 
 def _validate_profile_fields(rec: dict, tag: str, err) -> None:
@@ -653,7 +871,10 @@ def apply_operations(
 
         {"plants":  {"add": [...], "edit": [...]},
          "sensors": {"add": [...], "edit": [...]},
-         "devices": {"add": [{device_id, base_url, name?}], "edit": [...]},
+         "devices": {"add": [{device_id, base_url, channels: [pin,...],
+                             channel_source?, board?, name?}],
+                     "edit": [...],
+                     "rewire": [{device_id, channels: [pin,...], channel_source?}]},
          "mappings":{"assign": [{plant_id, sensor_id, device_id, channel, profile_id?}],
                      "close":  [{device_id, channel}]},
          "lifecycle":[{kind, entity_id, state}]}
@@ -728,6 +949,14 @@ def apply_operations(
         elif not (rec.get("base_url") or "").strip():
             err(tag, "a base_url (the board's address) is required", "base_url")
         else:
+            # #1027 §5.2, ruled: **adoption REQUIRES a physical-config declaration.**
+            # "a new board needs to declare how many probes and what pins they are
+            # wired to, or else it isn't a known board config." No-plants-yet is
+            # legitimate; no-pin-config is not an adoptable board — so this is a hard
+            # gate at the seam, not a nudge on the surface. Enforced here because a
+            # surface-only check leaves the API able to mint the unadoptable board
+            # the ruling exists to forbid.
+            _validate_channel_declaration(rec, tag, err)
             staged_d.add(did)
 
     known_p = existing_p | staged_p
@@ -756,6 +985,17 @@ def apply_operations(
                 f"no such device {rec.get('device_id')!r}",
                 "device_id",
             )
+    # #1027 §5.2: a rewire is an EDIT EVENT, not a re-adoption — "I took two of the
+    # sensors off and moved them to my esp32" changes what the board has, and must read
+    # as that board's history rather than as a new board. Same declaration gate as
+    # adoption: a rewire that declares nothing would leave a board in the very state the
+    # ruling forbids, reached by a different door.
+    for i, rec in enumerate(devices.get("rewire") or []):
+        tag = f"devices.rewire[{i}]"
+        if (rec.get("device_id") or "") not in existing_d | staged_d:
+            err(tag, f"no such device {rec.get('device_id')!r}", "device_id")
+        else:
+            _validate_channel_declaration(rec, tag, err)
 
     # ---- validate: profiles (#963 — the owner-cal record, ratified option 1) -----
     # The host owns cal VALUES; the device NVS slot is the projection (Trellis, #963;
@@ -824,6 +1064,8 @@ def apply_operations(
         "plants_added": 0,
         "sensors_added": 0,
         "devices_added": 0,
+        "channels_declared": 0,
+        "rewired": 0,
         "profiles_added": 0,
         "edited": 0,
         "mapped": 0,
@@ -839,8 +1081,26 @@ def apply_operations(
         }
         if rec.get("name"):
             entry["name"] = rec["name"]  # the mutable human label (#583), optional
+        if rec.get("board"):
+            entry["board"] = rec["board"]  # board class — what the pinout keys off
         model.devices.append(entry)
+        model.declare_channels(  # #1027: the board declares what it HAS, at adoption
+            entry["device_id"],
+            _declared_pins(rec),
+            source=rec.get("channel_source", "stated"),
+            now=now,
+        )
         applied["devices_added"] += 1
+        applied["channels_declared"] += len(rec.get("channels") or [])
+    for rec in devices.get("rewire") or []:  # #1027 — close the old set, open the new
+        model.declare_channels(
+            (rec.get("device_id") or "").strip(),
+            _declared_pins(rec),
+            source=rec.get("channel_source", "stated"),
+            now=now,
+        )
+        applied["rewired"] += 1
+        applied["channels_declared"] += len(rec.get("channels") or [])
     for rec in plants.get("add") or []:
         pid = (rec.get("plant_id") or "").strip() or next_plant_id(model)
         model.plants.append(

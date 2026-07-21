@@ -45,6 +45,7 @@ _HOST = _REPO / "tools" / "analytics"
 # ADR-0038 §1. Assignments are added as the owning lane makes them — deliberately,
 # one at a time. Every name here has been verified against the tree; see the tests.
 _LAYERS: dict[str, int] = {
+    "board_pinouts": 0,  # #1027 — the recommended soil pinout, mirrored from firmware
     "design_assets": 0,  # §5.1 leaf extraction (#1336 / PR #1387)
     "host_paths": 0,  # §5.1 leaf extraction (#1336) — the data paths
     "parse_v1": 1,  # §1 "telemetry parsing (parse_v1)"

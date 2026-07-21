@@ -2,6 +2,10 @@
 """Per-plant dose->response arc over the 2026-07-06/07 watering session (#836, child of
 #834; the #379/#423 honest-arc form applied to a watering session).
 
+Status: pending — consumers land with the pump era (#477, autonomous watering).
+Dose->response arcs are pump-era analytics; the pumps are on the bench, not yet
+wired (#1388).
+
 Each dosed plant gets a column on the shared 7-band calibration ladder, and its
 immediate dose->response as a **baseline -> wettest -> settle** arc read from the
 plant's base-dose capture (one probe, so this is the *actual* trajectory, not a

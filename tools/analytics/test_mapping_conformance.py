@@ -46,7 +46,16 @@ def _seeded() -> RegistryModel:
         {
             "plants": {"add": [{"plant_id": "p01", "pet_name": "Big Green"}]},
             "sensors": {"add": [{"sensor_id": "s01"}]},
-            "devices": {"add": [{"device_id": "dev", "base_url": "http://d"}]},
+            "devices": {
+                "add": [
+                    {
+                        "device_id": "dev",
+                        "base_url": "http://d",
+                        # #1027 §5.2: a board declares its channels to be adoptable
+                        "channels": [36, 39, 34, 35],
+                    }
+                ]
+            },
         },
         now=BEFORE,
     )
