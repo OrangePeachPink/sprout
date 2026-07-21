@@ -28,11 +28,21 @@ jobs:
         id: v
         env:
           MS_TITLE: ${{ github.event.milestone.title }}
+          MS_CLOSED: ${{ github.event.milestone.closed_issues }}
           INPUT_V: ${{ inputs.version }}
         run: |
           v="${INPUT_V:-$MS_TITLE}"
           if ! echo "$v" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "not a version milestone ('$v') — nothing to draft"; echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif [ -z "$INPUT_V" ] && [ "${MS_CLOSED:-0}" -eq 0 ]; then
+            # #1346 — a milestone closed with ZERO completed issues was COLLAPSED or
+            # abandoned, not shipped. v0.8.2 was emptied into v0.8.1 and closed; drafting
+            # a release for it produces a ghost: notes for a version that will never exist,
+            # sitting in the releases list looking like a real cut someone forgot to
+            # publish. Manual dispatch is never skipped by this — passing a version IS the
+            # decision to draft it.
+            echo "milestone '$v' closed with 0 completed issues — collapsed, not shipped; nothing to draft"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "version=$v" >> "$GITHUB_OUTPUT"; echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
