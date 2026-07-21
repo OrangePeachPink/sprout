@@ -79,9 +79,11 @@ DEFAULT_OUT = _REPO / "reports" / "plants_dashboard.html"
 # back to CDN only if the vendored copy is missing.
 VENDOR_CHARTJS = _HERE / "vendor" / "chart.umd.min.js"
 CDN_CHARTJS = "https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"
-# B8 gzip archive of closed segments (read for deep history once they leave logs/).
-ARCHIVE_DIR = _REPO / ".data-worktree" / "data" / "archive"
-LOGS_DIR = _REPO / "logs"
+# #1336 (ADR-0038 §5.1): the data paths live in the layer-0 `host_paths` leaf now —
+# serve.py imported THIS module for exactly these two constants. Re-exported here so
+# dashboard's own readers are unaffected; the leaf is the definition, this is a name.
+from host_paths import ARCHIVE_DIR, LOGS_DIR  # noqa: E402  (layer-0 leaf)
+
 # #977: schema_version at/above which the raw-only value/unit contract (ADR-0030)
 # holds. Below it (or version-less) a row predates the contract and may legitimately
 # carry the legacy moist% `value` column (B2/C2, not plotted). v2 (experiment_capture)

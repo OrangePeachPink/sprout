@@ -48,9 +48,7 @@ if str(_HERE) not in sys.path:
 
 from bench_packages import render_bench_detail  # noqa: E402  (bench detail #444)
 from dashboard import (  # noqa: E402  (sibling import)
-    ARCHIVE_DIR,
     FONTS_CSS,
-    LOGS_DIR,
     RANGE_HOURS,
     TOKENS_CSS,
     build_context,
@@ -66,6 +64,7 @@ from experiments_catalog import (  # noqa: E402  (Lab #154; #444 combined source
     load_combined,
     render_catalog,
 )
+from host_paths import ARCHIVE_DIR, LOGS_DIR  # noqa: E402  (layer-0 leaf, #1336)
 from lab_detail import render_detail  # noqa: E402  (Lab detail #157)
 from lab_drafts import list_drafts, load_draft  # noqa: E402  (agent drafts #326)
 from lab_notes import (  # noqa: E402  (Lab notes #158; path for save resilience #327)
