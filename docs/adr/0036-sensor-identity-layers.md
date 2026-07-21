@@ -76,6 +76,55 @@ ADR-0021). Old rows keep their old meaning under their old `schema_version`; the
 version, and `parse_v1` handles both (ADR-0021's versioned dispatch — already the pattern). No historical rows are
 rewritten.
 
+### 5. A channel is a first-class board **declaration**, not an artifact of assignment
+
+*(Added 2026-07-20, #1027 — the temporal registry dropped the static model's `devices[].channels{}`
+and left channels existing only because a plant was assigned to one. That inverts §1 and had a
+visible cost: the empty-channel state could not be rendered, because the channel did not exist.)*
+
+**A channel exists because a pin has a probe on it. Not because a plant is mapped to it.**
+
+§1 already names the channel as `(device_id, port/GPIO)`, **firmware-owned** — and the boards prove
+it continuously: a board with zero plants mapped still emits `ch0..ch3` on every telemetry row. A
+model in which channels are derived from assignments therefore **contradicts the wire contract**,
+leaving the registry unable to represent something the fleet is actively reporting.
+
+So a board **declares its channel set and pin map at adoption**, independently of any assignment:
+
+- **Channel lifetime** — from adoption until the board is rewired or retired.
+- **Assignment lifetime** — from a plant being mapped until the probe moves.
+
+Modelling the longer-lived thing as a by-product of the shorter-lived one is backwards, and that
+inversion is the whole defect. It also makes the maintainer's adoption rule expressible —
+*"no-plants-yet is legitimate; no-pin-config is not an adoptable board"* — which is unstatable if a
+channel cannot exist before a plant does.
+
+### 6. Board class is a firmware-emitted token; the registry's board string is a display label
+
+*(Added 2026-07-20 — ruled for #302 S3b's artifact matching. Same shape as §2, one layer up.)*
+
+The overload §1 ended for `s#` existed again for the board itself: **five namespaces** described one
+concept — PlatformIO env names, the registry's free-text `board` field, `BOARDS.md` nicknames, ESP
+Web Tools' `chipFamily`, and the OTA feed's `board_class` — with none authoritative and one of them
+prose (`'esp32-c5-devkitc-1 (official)'`) that nothing could match.
+
+- **`board_class` is emitted by the firmware, derived at compile time.** The board knows what it was
+  built as; nothing downstream can know it authoritatively. §2's rule, one layer up.
+- **The token set is qualified and mutually non-prefixing:** `esp32-classic` · `esp32-c5` ·
+  `esp32-s3`. **Not bare `esp32`** — it is simultaneously a specific chip *and* the family prefix of
+  every other token, which would make the classic board's identity a substring of every other
+  board's. Exact matching makes that safe; a single careless `startswith` anywhere would make it a
+  brick. Seven characters buy structural impossibility instead of disciplined correctness.
+- **Board class is hardware, never build variant.** `esp32dev_ota` and `esp32dev_recover` are the
+  same silicon. An OTA-variant build of a classic is still a classic.
+- **The registry's `board` string is a display label and must never be parsed** — exactly the
+  probe-sticker relationship in §3. Humans get the prose; machines get the token.
+- **Firmware owns the enumeration; every host consumes it** — one set, one place, never a second
+  list and never prose mapped to a class.
+
+`chipFamily` and the `BOARDS.md` nicknames remain useful **renderings** of the token. They stop
+being candidates for a match.
+
 ## The naming ruling — RULED (maintainer, 2026-07-19, #1042): **Fork A — `chN`**
 
 **Decided.** The wire `sensor_id` carries the **channel** as `ch0..ch3` per board, fleet-unique as
