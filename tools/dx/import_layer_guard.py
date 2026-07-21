@@ -46,6 +46,7 @@ _HOST = _REPO / "tools" / "analytics"
 # one at a time. Every name here has been verified against the tree; see the tests.
 _LAYERS: dict[str, int] = {
     "design_assets": 0,  # §5.1 leaf extraction (#1336 / PR #1387)
+    "host_paths": 0,  # §5.1 leaf extraction (#1336) — the data paths
     "parse_v1": 1,  # §1 "telemetry parsing (parse_v1)"
     "serve": 4,  # §1 "HTTP routes, CLI entry points"
 }
