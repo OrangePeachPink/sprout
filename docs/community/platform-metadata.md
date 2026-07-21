@@ -23,7 +23,7 @@ now used** — a future addition means dropping something.
 ```text
 esp32                 arduino               embedded
 platformio            soil-moisture-sensor  moisture-sensor
-capacitive-sensor     datalogger            plant-monitoring
+capacitive-sensors    datalogger            plant-monitoring
 plant-care            smart-garden          smart-irrigation
 gardening             indoor-gardening      houseplants
 plants                home-automation       local-first
@@ -69,7 +69,7 @@ Topic pages rank by **stars**, so a 3-star repo only *surfaces* on small topics.
 
 | Topic | Repos | What it buys |
 |---|---|---|
-| `indoor-gardening` · `capacitive-sensor` | 4 · 4 | **Carried as label, not as a doorway** — see below |
+| `indoor-gardening` · `capacitive-sensors` | 4 · 15 | **Carried as label, not as a doorway** — see below |
 | `houseplants` | 27 | Page one, and the least technical audience we reach |
 | `smart-garden` · `plant-care` · `plant-monitoring` · `moisture-sensor` | 53 · 83 · 96 · 99 | **The working band** — confirmed live on the topic pages |
 | `soil-moisture-sensor` · `datalogger` | 204 · 200 | Findable |
@@ -81,8 +81,8 @@ slot count.
 
 **A tag has a second job, and it is not sizing.** Topics render as chips **on the repo
 card**, wherever that card appears — so a visitor who arrived via `houseplants` reads the
-whole list. `capacitive-sensor` and `indoor-gardening` are carried for exactly that
-(maintainer's ruling): `capacitive-sensor` tells a hardware reader precisely which sensor
+whole list. `capacitive-sensors` and `indoor-gardening` are carried for exactly that
+(maintainer's ruling): `capacitive-sensors` tells a hardware reader precisely which sensor
 class this is, sitting next to the vaguer `soil-moisture-sensor`, and `indoor-gardening`
 qualifies the context as windowsill rather than farm. Both do their work **at the moment of
 reading**, independent of whether anyone browses a 4-repo topic page.
@@ -90,13 +90,35 @@ reading**, independent of whether anyone browses a 4-repo topic page.
 So do not prune a tag on repo-count alone — ask which job it holds. Sizing governs
 *doorways*; a small precise word can still earn its slot as a *label*.
 
+### Check the variants before claiming a slot
+
+GitHub treats singular, plural and near-synonym forms as **separate topics**, and the split
+can be large — `capacitive-sensors` (15) is nearly 4x `capacitive-sensor` (4). Measured
+2026-07-20; the carried form is bold:
+
+| Concept | Forms |
+|---|---|
+| capacitive | `capacitive-sensor` 4 · **`capacitive-sensors` 15** |
+| soil moisture | **`soil-moisture-sensor` 204** · `soil-moisture` 183 · `soil-moisture-sensors` 3 |
+| moisture | **`moisture-sensor` 99** · `moisture-sensors` 0 |
+| plant monitoring | **`plant-monitoring` 96** · `plant-monitor` 11 · `plant-monitors` 0 |
+| smart garden | **`smart-garden` 53** · `smart-gardening` 15 |
+| logging | **`datalogger` 200** · `data-logging` 166 · `data-logger` 103 |
+| houseplants | **`houseplants` 27** · `houseplant` 1 |
+| indoor | `indoor-gardening` 4 (carried) · `indoor-plants` 6 · `indoor-garden` 0 |
+
+Six of the seven carried forms were already the larger one; `capacitive-sensor` was the
+single miss, caught by the maintainer. `indoor-plants` remains a marginal available swap
+(+2 repos, and arguably the truer label — Sprout monitors indoor plants rather than
+supporting a growing hobby).
+
 **Deliberately not carried:**
 
 | Not a topic | Why |
 |---|---|
 | `python`, `dashboard` | Implementation detail, and both are oceans — Sprout will never surface in either. A topic that cannot be found through is a slot spent on nothing. |
 | `iot` | 28k repos: unreachable by browsing, and **pointing the wrong way** — `iot` connotes cloud-connected devices, which is precisely what Sprout is not. Re-adding it for filter-match was considered and declined: topics are visible brand text on the card, `local-first` and `iot` side by side read as a contradiction, and four hardware tags already cover any plausible hardware filter. |
-| `irrigation` (292) | Right size, but it doubles down on the not-yet-shipped watering capability — see the `smart-irrigation` ruling below. |
+| `irrigation` (292) | Right size, but it doubles down on the not-yet-shipped watering capability — see the `smart-irrigation` ruling below. (`smart-irrigation` itself is 65 — inside the surfacing band, so the kept tag earns real placement.) |
 | `offline-first` | Dropped in favour of keeping `platformio` — near-synonymous with `local-first`, so it was the cheapest of the two to lose. |
 
 **Two maintainer rulings on this set**, recorded so they are not re-litigated:
