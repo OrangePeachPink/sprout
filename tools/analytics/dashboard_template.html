@@ -83,6 +83,18 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .cyclenote { font-size: 11.5px; color: var(--muted); margin-left: 8px; }
 .cyclenote b { color: var(--ink); font-weight: 600; }
 .cyclenote .declined { color: var(--st-dry, #E8703A); }
+/* #1150: the sticky way home — only rendered once the masthead scrolls off, so the
+   two never appear at once. Deliberately bottom-LEFT: bottom-right is where the
+   Stop-server control lives, and a way-out button should never sit beside a
+   shut-it-down button. */
+.homedock { position: fixed; left: 16px; bottom: 16px; z-index: 50;
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600; text-decoration: none;
+  color: var(--ink); background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-pill); padding: 8px 14px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.28); }
+.homedock:hover { border-color: var(--muted); }
+.homedock:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media print { .homedock { display: none; } }
 /* #963 the owner-cal wizard — an INSTRUMENT flow. Plain, warm, chrome register;
    never the plant character. No plant is talking while you calibrate. */
 .calmask { position: fixed; inset: 0; background: rgba(12,18,14,.55); z-index: 60;
@@ -502,11 +514,17 @@ footer.prov code { font-family: var(--font-data); }
 </head>
 <body>
 <div class="wrap">
+  <!-- #1150: the persistent way home. The in-flow "← Home" scrolls away, and the
+       Workbench is a LONG page — she was stranded on it. This pill appears only once
+       the masthead has left the viewport, so it never doubles the link when both would
+       be visible. Chrome register, bottom-left, out of the content's way. -->
+  <a href="/" class="homedock" id="homeDock" hidden>&larr; Home</a>
+
   <header class="top">
     <div>
       <!-- #875: the Workbench is "Classic Sprout" behind the Home card grid — a
            quiet way back to the front door, styled to the muted chrome register. -->
-      <a href="/" style="font-size:12.5px;color:var(--muted);text-decoration:none">&larr; Home</a>
+      <a href="/" id="homeLink" style="font-size:12.5px;color:var(--muted);text-decoration:none">&larr; Home</a>
       <h1>🌱 Sprout — soil moisture</h1>
       <div class="orient" id="orient" style="color:var(--ink);font-size:13px;margin-top:5px;max-width:64ch"></div>
       <div class="sub" id="subline"></div>
@@ -3497,6 +3515,26 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
 
   document.querySelectorAll('.rangebtn').forEach(b=> b.addEventListener('click', ()=> setRange(b.dataset.r)));
   // #832: the comparison toggle — its own buttons carry data-c, not data-r
+  // #1150: reveal the sticky Home once the in-flow one has scrolled away.
+  // A plain scroll/resize handler on purpose, NOT IntersectionObserver: this affordance
+  // exists to rescue someone already stranded on a long page, so it must not depend on
+  // an API that can silently never fire (it didn't, under test). getBoundingClientRect
+  // on scroll is unglamorous and always works.
+  (function(){
+    // elements are looked up INSIDE sync, not captured once: this block runs before the
+    // body exists, so a cached lookup returns null and the whole affordance silently
+    // never binds (it did — caught under test, not in review).
+    function sync(){
+      var link = document.getElementById('homeLink'), dock = document.getElementById('homeDock');
+      if(!link || !dock) return;
+      var want = !(link.getBoundingClientRect().bottom < 0);   // link visible -> hide dock
+      if(dock.hidden !== want) dock.hidden = want;             // touch the DOM only on a change
+    }
+    window.addEventListener('scroll', sync, {passive: true});
+    window.addEventListener('resize', sync, {passive: true});
+    document.addEventListener('DOMContentLoaded', sync);
+    sync();
+  })();
   document.querySelectorAll('#cmpsel .rangebtn').forEach(b=> b.addEventListener('click', ()=>{
     __cmpMode = b.dataset.c;
     document.querySelectorAll('#cmpsel .rangebtn').forEach(x=> x.classList.toggle('active', x===b));
