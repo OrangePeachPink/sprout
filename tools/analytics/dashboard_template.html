@@ -299,6 +299,20 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .reglist { display: flex; flex-direction: column; }
 .regrow { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
 .regrow:last-child { border-bottom: 0; }
+/* #1027 §5.3 — the channel strip. An empty channel is CHROME, never state: it is not
+   a soil reading, and state owns saturation (colour-roles charter). Colouring a waiting
+   channel would say the soil is telling us something while no probe is in any soil. */
+.regchans { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 0 10px 0; }
+.regchan { display: flex; flex-direction: column; gap: 2px; min-width: 104px;
+           padding: 6px 9px; border: 1px solid var(--border); border-radius: 6px; }
+.regchan.free { border-style: dashed; background: transparent; }
+.regchan-id { font-family: var(--font-data); font-size: 12px; color: var(--muted); }
+.regchan-on { font-size: 13px; }
+.regchan-wait { font-size: 13px; font-style: italic; }
+/* Sits beside the channels when there is room and drops to its own line when there is
+   not — chosen, not the accident of a 100% basis being shrunk by default flex rules. */
+.regchan-teach { flex: 1 1 26ch; min-width: 26ch; align-self: center;
+                 font-size: 12.5px; line-height: 1.5; max-width: 62ch; }
 .regcode { font-family: var(--font-data); font-size: 12px; font-weight: 600; }
 .regto { margin-left: auto; font-size: 12px; }
 .pausedchip { font-family: var(--font-data); font-size: 11px; font-weight: 600; color: var(--muted);
@@ -2408,6 +2422,36 @@ function regSensorPicker(plant, V, dById){
   return wrap;
 }
 
+// ===== #1027 / #1335 §5.3: the empty channel is calm, waiting, and TEACHING =====
+// A declared channel with nothing plugged into it is not a fault and not a gap in the
+// data — it is a board that is ready. ADR-0028 makes absence first-class, so this
+// renders it as a real thing with a real state rather than as a missing row.
+// The declaration (#1424) is what makes it representable at all: without declared
+// channels a board with four ports and no probes has nothing to draw.
+// Teaching copy is placeholder-real pending the ruled `for:dx` content on #1335 §5.3.
+function regChannelStrip(d){
+  const chans = d.channels || [];
+  if(!chans.length) return null;
+  const wrap = el('div', 'regchans');
+  chans.forEach(c => {
+    const free = !c.sensor_id;
+    const cell = el('div', 'regchan' + (free ? ' free' : ''));
+    // ADR-0036: on v4 rows the channel token is still `s1..s4`, which is character-for-
+    // character a sensor sticker. Rendering it bare next to "Sensor 1" would put the
+    // exact `s#` overload the ADR exists to end on screen, in one card. The word
+    // carries the layer until the v5 `chN` rename makes the token self-describing.
+    cell.appendChild(el('span', 'regchan-id', 'channel ' + esc(c.channel)));
+    cell.appendChild(el('span', free ? 'regchan-wait muted' : 'regchan-on',
+      free ? 'waiting for a probe' : esc(regSpell(c.sensor_id, 'Sensor'))));
+    wrap.appendChild(cell);
+  });
+  const free = chans.filter(c => !c.sensor_id).length;
+  if(free) wrap.appendChild(el('div', 'regchan-teach muted',
+    free === chans.length
+      ? 'This board is ready and listening. Push a probe into a pot, plug it into one of these channels, then assign it to a plant above — Sprout starts reading the moment it has something to read.'
+      : 'Room for ' + free + ' more probe' + (free === 1 ? '' : 's') + ' on this board.'));
+  return wrap;
+}
 function renderRegistry(reg){
   if(reg) __registry = reg;
   const host = document.getElementById('plants'); if(!host) return;
@@ -2498,6 +2542,7 @@ function renderRegistry(reg){
     row.appendChild(regEditPencil('device', d.device_id));   // #1038: rename the board (#600 UI half)
     row.appendChild(regLifeCtl('device', d.device_id, regDeviceName(d)));
     blist.appendChild(row);
+    const strip = regChannelStrip(d); if(strip) blist.appendChild(strip);   // #1027 §5.3
     if(__regEditing === 'device:' + d.device_id) blist.appendChild(regEditForm('device', d));
   });
   if(!V.devices.length) blist.appendChild(el('div', 'muted', 'No boards yet — flash one with the web flasher and it shows up here.'));
