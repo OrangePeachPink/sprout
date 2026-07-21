@@ -100,3 +100,127 @@ const char *ota_pull_decision_label(ota_pull_decision_t d)
     }
     return "unknown";
 }
+
+/* ---- S3b: the feed parser ------------------------------------------------ */
+
+/* Copy a value into a fixed field. Returns false if it would not FIT - a
+ * truncated URL fetches the wrong thing, and a truncated board class could
+ * collide with a different board's name. Never silently shortens. */
+static bool set_field(char *dst, size_t cap, const char *src, size_t n)
+{
+    if (n == 0u || n >= cap) return false;
+    memcpy(dst, src, n);
+    dst[n] = '\0';
+    return true;
+}
+
+/* One "key=value" token. `end` is one past the token's last byte. */
+static bool apply_token(ota_pull_artifact_t *a, const char *tok,
+                        const char *end)
+{
+    const char *eq = tok;
+    while (eq < end && *eq != '=')
+        eq++;
+    if (eq == end || eq == tok) return false; /* no '=', or an empty key */
+
+    size_t klen = (size_t)(eq - tok);
+    const char *val = eq + 1;
+    size_t vlen = (size_t)(end - val);
+
+    /* UNKNOWN KEYS ARE IGNORED (see the header): the feed must be able to gain a
+     * field without stranding deployed boards. A key we do not know is not an
+     * error - it is a newer generator talking to an older device, which is the
+     * case additive evolution exists to make survivable. */
+    if (klen == 5u && strncmp(tok, "board", 5) == 0)
+        return set_field(a->board_class, OTA_PULL_BOARD_MAX, val, vlen);
+    if (klen == 7u && strncmp(tok, "version", 7) == 0)
+        return set_field(a->version, OTA_PULL_VERSION_MAX, val, vlen);
+    if (klen == 5u && strncmp(tok, "image", 5) == 0)
+        return set_field(a->image_url, OTA_PULL_URL_MAX, val, vlen);
+    if (klen == 3u && strncmp(tok, "sig", 3) == 0)
+        return set_field(a->sig_url, OTA_PULL_URL_MAX, val, vlen);
+    return true;
+}
+
+ota_pull_parse_t ota_pull_parse_feed(const char *text, size_t len,
+                                     ota_pull_artifact_t *out, size_t cap,
+                                     size_t *n)
+{
+    if (n) *n = 0;
+    if (text == NULL || out == NULL || cap == 0u || n == NULL)
+        return OTA_PULL_PARSE_MALFORMED;
+
+    size_t count = 0;
+    bool banner_seen = false;
+    size_t i = 0;
+
+    while (i < len) {
+        size_t ls = i;
+        while (i < len && text[i] != '\n')
+            i++;
+        size_t le = i; /* one past the line's last byte */
+        if (i < len) i++; /* step over the newline */
+        if (le > ls && text[le - 1] == '\r') le--; /* tolerate CRLF */
+
+        /* trim */
+        while (ls < le && (text[ls] == ' ' || text[ls] == '\t'))
+            ls++;
+        while (le > ls && (text[le - 1] == ' ' || text[le - 1] == '\t'))
+            le--;
+        if (ls == le) continue; /* blank */
+
+        size_t llen = le - ls;
+        if (!banner_seen) {
+            /* The FIRST non-blank line must be the banner. It is the format's own
+             * schema boundary: a v2 feed is refused whole rather than read as a
+             * v1 feed that happens to parse. */
+            size_t blen = strlen(OTA_PULL_FEED_BANNER);
+            if (llen != blen ||
+                strncmp(&text[ls], OTA_PULL_FEED_BANNER, blen) != 0)
+                return OTA_PULL_PARSE_NO_BANNER;
+            banner_seen = true;
+            continue;
+        }
+        if (text[ls] == '#') continue; /* comment */
+
+        if (count >= cap) return OTA_PULL_PARSE_TOO_MANY;
+
+        ota_pull_artifact_t a;
+        memset(&a, 0, sizeof(a));
+        size_t p = ls;
+        while (p < le) {
+            while (p < le && (text[p] == ' ' || text[p] == '\t'))
+                p++;
+            if (p >= le) break;
+            size_t ts = p;
+            while (p < le && text[p] != ' ' && text[p] != '\t')
+                p++;
+            if (!apply_token(&a, &text[ts], &text[p]))
+                return OTA_PULL_PARSE_MALFORMED;
+        }
+
+        /* MISSING KEYS ARE FATAL - the mirror of ignoring unknown ones. A device
+         * must never fill in a default for something the feed failed to say. */
+        if (!ota_pull_artifact_valid(&a)) return OTA_PULL_PARSE_MALFORMED;
+        out[count++] = a;
+    }
+
+    if (!banner_seen) return OTA_PULL_PARSE_NO_BANNER;
+    *n = count;
+    return OTA_PULL_PARSE_OK;
+}
+
+const char *ota_pull_parse_label(ota_pull_parse_t p)
+{
+    switch (p) {
+    case OTA_PULL_PARSE_OK:
+        return "ok";
+    case OTA_PULL_PARSE_NO_BANNER:
+        return "no-banner";
+    case OTA_PULL_PARSE_MALFORMED:
+        return "malformed";
+    case OTA_PULL_PARSE_TOO_MANY:
+        return "too-many";
+    }
+    return "unknown";
+}

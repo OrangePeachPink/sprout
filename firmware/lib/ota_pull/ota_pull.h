@@ -108,6 +108,63 @@ ota_pull_decision_t ota_pull_decide(const ota_pull_artifact_t *artifacts,
                                     const char *self_version,
                                     const ota_pull_artifact_t **chosen);
 
+/* ---- S3b: the feed PARSER (ruled 2026-07-21) ------------------------------
+ *
+ * The feed is LINE-ORIENTED, Pages-served, distinct from the web-flasher manifest
+ * but emitted by the same generator, and deliberately UNSIGNED. Each ruling has a
+ * consequence this parser has to honour:
+ *
+ *   line-oriented  -> no JSON parser in C, so no hand-rolled grammar to get subtly
+ *                     wrong. The whole format is "key=value, space-separated, one
+ *                     board per line".
+ *   Pages-served   -> curatable WITHOUT cutting a release, which is what makes
+ *                     ADR-0026 D4's remediation (pull the bad release, serve the
+ *                     fixed one) an action rather than an aspiration.
+ *   unsigned       -> the feed is a POINTER, never an authority. Nothing it says is
+ *                     trusted except as "where to look"; the IMAGE's detached
+ *                     signature is the only thing that authorises code to run
+ *                     (ota_gate, S2). A hostile feed can waste a download. It
+ *                     cannot make unsigned code boot.
+ *
+ * FORMAT (v1):
+ *
+ *     # sprout-ota-feed v1
+ *     board=esp32-classic version=0.8.0 image=https://... sig=https://...
+ *     board=esp32-c5      version=0.8.0 image=https://... sig=https://...
+ *
+ * The first non-blank line MUST be the version banner - it is the format's own
+ * schema boundary, so a v2 feed is refused by a v1 device rather than
+ * half-understood. Blank lines and #-comments are skipped anywhere else.
+ *
+ * UNKNOWN KEYS ARE IGNORED, MISSING KEYS ARE FATAL. That asymmetry is deliberate
+ * and mirrors the wire contract's additive-never-stitch discipline: the feed must
+ * be able to GAIN a field without stranding every deployed board, but it must never
+ * be able to LOSE one and have a device quietly fill in a default.
+ */
+#define OTA_PULL_FEED_BANNER "# sprout-ota-feed v1"
+
+typedef enum {
+    OTA_PULL_PARSE_OK = 0,
+    OTA_PULL_PARSE_NO_BANNER, /* missing/wrong banner - not our format, or v2 */
+    OTA_PULL_PARSE_MALFORMED, /* a line we cannot read, or a missing key      */
+    OTA_PULL_PARSE_TOO_MANY /* more boards than the caller's array holds    */
+} ota_pull_parse_t;
+
+/*
+ * Parse a feed document into `out` (capacity `cap`), writing the count to `*n`.
+ *
+ * ALL-OR-NOTHING: on any non-OK result `*n` is 0 and `out` is not to be read. A
+ * partially-parsed feed is the one thing worse than an unreadable one - it looks
+ * like a smaller feed, and "this board isn't listed" is indistinguishable from
+ * "the line for this board was garbled".
+ */
+ota_pull_parse_t ota_pull_parse_feed(const char *text, size_t len,
+                                     ota_pull_artifact_t *out, size_t cap,
+                                     size_t *n);
+
+/* Stable short token for logs. Never NULL. */
+const char *ota_pull_parse_label(ota_pull_parse_t p);
+
 /* Stable short token for logs / the update banner. Never NULL, never a secret
  * (ADR-0026 D5: an update log names the VERSION, never a credential). */
 const char *ota_pull_decision_label(ota_pull_decision_t d);

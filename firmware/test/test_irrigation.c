@@ -2432,6 +2432,202 @@ void t_ota_pull_fail_closed(void)
 }
 
 /* ============================================================================
+ * #302 S3b - the feed PARSER (format ruled 2026-07-21: line-oriented,
+ * Pages-served, unsigned pointer).
+ * ==========================================================================*/
+
+static const char *k_feed_ok =
+    "# sprout-ota-feed v1\n"
+    "board=esp32-classic version=0.8.0 image=https://x/c.bin "
+    "sig=https://x/c.sig\n"
+    "board=esp32-c5 version=0.8.0 image=https://x/5.bin sig=https://x/5.sig\n";
+
+void t_ota_pull_feed_parse(void)
+{
+    ota_pull_artifact_t a[4];
+    size_t n = 99;
+
+    TEST_ASSERT_EQUAL_INT(
+        OTA_PULL_PARSE_OK,
+        ota_pull_parse_feed(k_feed_ok, strlen(k_feed_ok), a, 4, &n));
+    TEST_ASSERT_EQUAL_UINT32(2, n);
+    TEST_ASSERT_EQUAL_STRING("esp32-classic", a[0].board_class);
+    TEST_ASSERT_EQUAL_STRING("0.8.0", a[0].version);
+    TEST_ASSERT_EQUAL_STRING("https://x/c.bin", a[0].image_url);
+    TEST_ASSERT_EQUAL_STRING("https://x/c.sig", a[0].sig_url);
+    TEST_ASSERT_EQUAL_STRING("esp32-c5", a[1].board_class);
+
+    /* the ruled board token is the FIRMWARE vocabulary, and it feeds decide()
+     * straight through - this is the join the vocabulary ruling was about */
+    const ota_pull_artifact_t *pick = NULL;
+    TEST_ASSERT_EQUAL_INT(
+        OTA_PULL_UPDATE,
+        ota_pull_decide(a, n, "esp32-classic", "0.7.3", &pick));
+    TEST_ASSERT_EQUAL_STRING("https://x/c.bin", pick->image_url);
+
+    /* blank lines, comments, CRLF, and extra whitespace are all tolerated -
+     * the feed is hand-curatable by design (that is what makes D4's
+     * pull-the-bad-release remediation an action rather than an aspiration) */
+    const char *messy = "# sprout-ota-feed v1\r\n"
+                        "\r\n"
+                        "# the classic, re-served after 0.8.1 was withdrawn\r\n"
+                        "  board=esp32-classic   version=0.8.0   "
+                        "image=https://x/c.bin   sig=https://x/c.sig  \r\n"
+                        "\n";
+    n = 99;
+    TEST_ASSERT_EQUAL_INT(OTA_PULL_PARSE_OK,
+                          ota_pull_parse_feed(messy, strlen(messy), a, 4, &n));
+    TEST_ASSERT_EQUAL_UINT32(1, n);
+    TEST_ASSERT_EQUAL_STRING("esp32-classic", a[0].board_class);
+    TEST_ASSERT_EQUAL_STRING("https://x/c.bin", a[0].image_url);
+}
+
+void t_ota_pull_feed_evolution(void)
+{
+    /* THE ASYMMETRY, and it is deliberate.
+     *
+     * UNKNOWN KEYS ARE IGNORED: a newer generator must be able to add a field
+     * without stranding every deployed board. That is the additive-never-stitch
+     * discipline the wire contract already runs on.
+     *
+     * MISSING KEYS ARE FATAL: a device must never fill in a default for something
+     * the feed failed to say. Silence is not consent. */
+    ota_pull_artifact_t a[4];
+    size_t n = 99;
+
+    const char *future = "# sprout-ota-feed v1\n"
+                         "board=esp32-classic version=0.8.0 "
+                         "image=https://x/c.bin sig=https://x/c.sig "
+                         "size=1175728 notes=security-fix\n";
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_OK,
+        ota_pull_parse_feed(future, strlen(future), a, 4, &n),
+        "an unknown key must not strand an older device");
+    TEST_ASSERT_EQUAL_UINT32(1, n);
+    TEST_ASSERT_EQUAL_STRING("https://x/c.bin", a[0].image_url);
+
+    /* every required key, dropped one at a time, must be fatal */
+    static const char *missing[] = {
+        "# sprout-ota-feed v1\nversion=0.8.0 image=https://x/c.bin "
+        "sig=https://x/c.sig\n",
+        "# sprout-ota-feed v1\nboard=esp32-classic image=https://x/c.bin "
+        "sig=https://x/c.sig\n",
+        "# sprout-ota-feed v1\nboard=esp32-classic version=0.8.0 "
+        "sig=https://x/c.sig\n",
+        "# sprout-ota-feed v1\nboard=esp32-classic version=0.8.0 "
+        "image=https://x/c.bin\n",
+    };
+    for (size_t i = 0; i < sizeof(missing) / sizeof(missing[0]); i++) {
+        n = 99;
+        TEST_ASSERT_EQUAL_INT_MESSAGE(
+            OTA_PULL_PARSE_MALFORMED,
+            ota_pull_parse_feed(missing[i], strlen(missing[i]), a, 4, &n),
+            "a missing required key must be fatal, never defaulted");
+        TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, n,
+                                         "a rejected feed yields NOTHING");
+    }
+}
+
+void t_ota_pull_feed_fail_closed(void)
+{
+    ota_pull_artifact_t a[4];
+    size_t n = 99;
+
+    /* the banner is the format's own schema boundary: a v2 feed is refused
+     * WHOLE rather than read as a v1 feed that happens to parse */
+    const char *v2 = "# sprout-ota-feed v2\n"
+                     "board=esp32-classic version=0.8.0 image=https://x/c.bin "
+                     "sig=https://x/c.sig\n";
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_NO_BANNER, ota_pull_parse_feed(v2, strlen(v2), a, 4, &n),
+        "a future format version must be refused, not half-understood");
+    TEST_ASSERT_EQUAL_UINT32(0, n);
+
+    /* someone else's document that happens to be line-oriented */
+    const char *foreign = "board=esp32-classic version=0.8.0\n";
+    n = 99;
+    TEST_ASSERT_EQUAL_INT(
+        OTA_PULL_PARSE_NO_BANNER,
+        ota_pull_parse_feed(foreign, strlen(foreign), a, 4, &n));
+
+    /* an empty document is not an empty feed - it is no feed */
+    n = 99;
+    TEST_ASSERT_EQUAL_INT(OTA_PULL_PARSE_NO_BANNER,
+                          ota_pull_parse_feed("", 0, a, 4, &n));
+
+    /* MORE BOARDS THAN THE CALLER CAN HOLD is a refusal, not a truncation. A
+     * silently-shortened feed reads as "this board isn't offered an update",
+     * which is indistinguishable from a real up-to-date state. */
+    const char *many =
+        "# sprout-ota-feed v1\n"
+        "board=b1 version=1 image=https://x/1 sig=https://x/1s\n"
+        "board=b2 version=1 image=https://x/2 sig=https://x/2s\n"
+        "board=b3 version=1 image=https://x/3 sig=https://x/3s\n";
+    ota_pull_artifact_t small[2];
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_TOO_MANY,
+        ota_pull_parse_feed(many, strlen(many), small, 2, &n),
+        "an over-long feed must refuse, never truncate");
+    TEST_ASSERT_EQUAL_UINT32(0, n);
+
+    /* an over-long VALUE must reject rather than truncate - a shortened URL
+     * fetches the wrong thing, and a shortened board class could collide */
+    char big[OTA_PULL_URL_MAX + 64];
+    int w = snprintf(big, sizeof(big),
+                     "# sprout-ota-feed v1\nboard=esp32-classic version=0.8.0 "
+                     "sig=https://x/c.sig image=https://x/");
+    for (size_t i = 0; i < OTA_PULL_URL_MAX; i++)
+        big[w + i] = 'a';
+    big[w + OTA_PULL_URL_MAX] = '\n';
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_MALFORMED,
+        ota_pull_parse_feed(big, (size_t)w + OTA_PULL_URL_MAX + 1u, a, 4, &n),
+        "an over-long url must reject, never truncate");
+
+    /* a malformed line poisons the WHOLE feed - a partially-parsed feed looks
+     * like a smaller feed, and "not listed" would be indistinguishable from
+     * "the line for this board was garbled" */
+    const char *partial = "# sprout-ota-feed v1\n"
+                          "board=esp32-classic version=0.8.0 "
+                          "image=https://x/c.bin sig=https://x/c.sig\n"
+                          "this-line-has-no-equals-sign\n";
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_MALFORMED,
+        ota_pull_parse_feed(partial, strlen(partial), a, 4, &n),
+        "one bad line rejects the whole feed");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, n, "never a partial parse");
+
+    /* A BARE TOKEN alongside valid ones. Found by mutation: making a no-'='
+     * token silently ignorable left the suite green, because my no-equals case
+     * above was a line with NOTHING else on it - the artifact then failed
+     * validation anyway and the reject came from the wrong check. This is the
+     * input that separates them.
+     *
+     * The distinction is real: "unknown keys are ignored" means `foo=bar` with an
+     * unrecognised `foo`. A token with no '=' is not a key-value at all, so it
+     * means we are misreading the line's STRUCTURE - and a line we are misreading
+     * must not yield an artifact we then act on. */
+    const char *junk_tail = "# sprout-ota-feed v1\n"
+                            "board=esp32-classic version=0.8.0 "
+                            "image=https://x/c.bin sig=https://x/c.sig "
+                            "GARBAGE\n";
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_MALFORMED,
+        ota_pull_parse_feed(junk_tail, strlen(junk_tail), a, 4, &n),
+        "a bare token means we are misreading the line - reject, do not "
+        "ignore");
+    TEST_ASSERT_EQUAL_UINT32(0, n);
+
+    TEST_ASSERT_EQUAL_STRING("ok", ota_pull_parse_label(OTA_PULL_PARSE_OK));
+    TEST_ASSERT_EQUAL_STRING("no-banner",
+                             ota_pull_parse_label(OTA_PULL_PARSE_NO_BANNER));
+}
+
+/* ============================================================================
  * #1153 - parameterized band re-partition invariant suite
  * ----------------------------------------------------------------------------
  * The grill (#1039) locked the ladder = 7 in-soil mood bands (Soaked -> Faint),
@@ -2730,6 +2926,9 @@ int main(void)
     RUN_TEST(t_ota_pull_board_match);
     RUN_TEST(t_ota_pull_downgrade_is_allowed);
     RUN_TEST(t_ota_pull_fail_closed);
+    RUN_TEST(t_ota_pull_feed_parse);
+    RUN_TEST(t_ota_pull_feed_evolution);
+    RUN_TEST(t_ota_pull_feed_fail_closed);
     RUN_TEST(t_band_anchors);
     RUN_TEST(t_board_capability);
     RUN_TEST(t_sensor_type_resistive);
