@@ -29,10 +29,28 @@ no auto-stop" design (monitor_control.py) - see the PR/issue for that open quest
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 
 _MARKERS = ("plants_logger", "experiment_capture", "fleet_logger")
+
+# #1392: the dashboard server is NOT a spawned child, so it was correctly absent from
+# the collector list above - and that correctness read as a false all-clear. DX hit a
+# server stuck in the #972 stopping state (port bound, answering 503) and asked the
+# documented diagnostic what was live; it answered "no live Sprout-spawned processes
+# found", which is true of children and reads as "nothing of Sprout's is running".
+#
+# Reported through a SEPARATE function rather than by widening the collector list, for
+# two reasons. The server is not a collector, and #691's false "4 zombie collectors"
+# came from exactly this kind of category blur. And `collection.py` (DX's surface)
+# consumes list_sprout_processes() treating every row as a collector - widening it here
+# would push a server row into another lane's output as a side effect of a bug fix.
+#
+# Matched as a path component, never as a substring: this directory holds test_serve.py,
+# test_serve_stop.py and six more, so a plain "serve.py" in the command line would
+# report a running pytest as the live server.
+_SERVER_RE = re.compile(r"(?:^|[\\/\s])serve\.py(?:\s|$)")
 
 
 def _classify(command: str) -> str | None:
@@ -124,6 +142,26 @@ def list_sprout_processes(raw_query=None) -> list[dict]:
     return found
 
 
+def list_sprout_servers(raw_query=None) -> list[dict]:
+    """Live dashboard servers - ``{pid, ppid, command}`` each (#1392).
+
+    Deliberately a peer of :func:`list_sprout_processes`, not part of it: a server is
+    not a collector, and this list's consumers must not be forced to re-sort the two
+    kinds apart. Same never-raises posture - a diagnostic that throws is worse than one
+    that under-reports, because the operator is already mid-incident when they run it.
+    """
+    query = raw_query or (_windows_raw if sys.platform == "win32" else _posix_raw)
+    try:
+        raw = query()
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return []
+    return [
+        {"pid": r["pid"], "ppid": r.get("ppid"), "command": r.get("command") or ""}
+        for r in raw
+        if _SERVER_RE.search(r.get("command") or "")
+    ]
+
+
 def group_launch_trees(procs: list[dict]) -> list[dict]:
     """Collapse launch-tree members into one logical collector each (#811).
 
@@ -172,14 +210,31 @@ def format_collector_line(tree: dict) -> str:
     return f"  {tree['role']:<8} {label} {pids}"
 
 
-def _report(procs: list[dict]) -> str:
+def _report(procs: list[dict], servers: list[dict] | None = None) -> str:
+    servers = servers or []
+    if not procs and not servers:
+        # #1392: the old wording here was "no live Sprout-spawned processes found." -
+        # true of children, and read by an operator whose *server* was stuck as "nothing
+        # of Sprout's is running". Name what was actually checked, so a clean result
+        # can't be mistaken for a clean bill of health it never claimed.
+        return "no live Sprout collectors or dashboard servers found."
+    lines: list[str] = []
+    if servers:
+        lines.append(f"{len(servers)} live dashboard server(s):")
+        lines.extend(f"  server   pid  {s['pid']}" for s in servers)
+        lines.append(
+            "  A server that answers 503 accepted Stop but had not exited yet; since "
+            "#1392 it force-exits rather than holding the port forever."
+        )
+        lines.append("")
     if not procs:
-        return "no live Sprout-spawned processes found."
+        lines.append("no live Sprout collectors found.")
+        return "\n".join(lines)
     trees = group_launch_trees(procs)
     header = f"{len(trees)} live Sprout collector(s)"
     if len(procs) != len(trees):
         header += f" ({len(procs)} processes incl. launch-tree children)"
-    lines = [header + ":"]
+    lines.append(header + ":")  # append, never reassign - the server block is above
     lines.extend(format_collector_line(t) for t in trees)
     lines.append("")
     lines.append(
@@ -191,7 +246,7 @@ def _report(procs: list[dict]) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     del argv  # no arguments today; kept for a future --json/--kill
-    print(_report(list_sprout_processes()))
+    print(_report(list_sprout_processes(), list_sprout_servers()))
     return 0
 
 

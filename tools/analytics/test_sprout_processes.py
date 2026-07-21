@@ -123,3 +123,60 @@ def test_group_without_ppid_each_stands_alone() -> None:
     ]
     procs = sp.list_sprout_processes(raw_query=lambda: rows)
     assert len(sp.group_launch_trees(procs)) == 2
+
+
+# --------------------------------------------------------------------------- #
+# #1392 — the dashboard server, and the false all-clear it produced
+# --------------------------------------------------------------------------- #
+def test_a_live_server_is_reported() -> None:
+    """DX's incident: a stuck server, and a diagnostic that said nothing was live."""
+    rows = [
+        _row(39824, r"python.exe C:\dev\plants\tools\analytics\serve.py --port 8765")
+    ]
+    servers = sp.list_sprout_servers(raw_query=lambda: rows)
+    assert [s["pid"] for s in servers] == [39824]
+
+
+def test_a_pytest_run_is_not_mistaken_for_the_server() -> None:
+    """This directory holds test_serve.py and seven siblings, so a substring match
+    would report a test run as the live server — a false positive replacing a false
+    negative is not a fix."""
+    rows = [
+        _row(1, "python.exe -m pytest test_serve.py"),
+        _row(2, "python.exe -m pytest test_serve_stop.py -q"),
+        _row(3, "python.exe test_served_cal_state.py"),
+    ]
+    assert sp.list_sprout_servers(raw_query=lambda: rows) == []
+
+
+def test_the_server_never_leaks_into_the_collector_list() -> None:
+    """collection.py consumes list_sprout_processes() treating every row as a
+    collector; a server appearing there would corrupt another lane's surface."""
+    rows = [_row(39824, "python.exe serve.py")]
+    assert sp.list_sprout_processes(raw_query=lambda: rows) == []
+
+
+def test_the_empty_report_no_longer_overclaims() -> None:
+    assert "collectors or dashboard servers" in sp._report([], [])
+
+
+def test_a_stuck_server_with_no_collectors_is_still_reported() -> None:
+    """The exact reported shape: children all gone, server immortal. The old report
+    said 'no live Sprout-spawned processes found' and sent the operator away."""
+    report = sp._report([], [{"pid": 39824, "ppid": 1, "command": "python serve.py"}])
+    assert "1 live dashboard server" in report
+    assert "39824" in report
+    assert "no live Sprout collectors found." in report
+
+
+def test_servers_and_collectors_both_survive_the_same_report() -> None:
+    """Regression: the collector header used to reassign the line list, silently
+    dropping the server block above it."""
+    procs = sp.list_sprout_processes(
+        raw_query=lambda: [_row(100, "python.exe fleet_logger.py")]
+    )
+    report = sp._report(
+        procs, [{"pid": 39824, "ppid": 1, "command": "python serve.py"}]
+    )
+    assert "39824" in report  # the server
+    assert "fleet" in report  # and the collector
