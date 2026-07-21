@@ -17,14 +17,15 @@ proposal until she does.
 
 GitHub allows **20**; lowercase, digits and hyphens only.
 
-**Canonical set — 15 topics** (proposed 2026-07-20, #1403; pending the maintainer's apply):
+**Canonical set — 16 topics** (maintainer-ruled 2026-07-20, #1403):
 
 ```text
 esp32                 arduino               embedded
-soil-moisture-sensor  plant-monitoring      plant-care
-smart-garden          home-automation       gardening
-houseplants           plants                local-first
-self-hosted           offline-first         diy-electronics
+platformio            soil-moisture-sensor  plant-monitoring
+plant-care            smart-garden          smart-irrigation
+home-automation       gardening             houseplants
+plants                local-first           self-hosted
+diy-electronics
 ```
 
 ### How to check the live set against this list
@@ -51,7 +52,7 @@ who would like Sprout actually type this?"*, not *"is this technically true of t
   `houseplants`, `plants`) — the audience that would love this and **will never type
   `esp32`**. Six of the twenty slots is a deliberate bet on them, not redundancy: someone
   browsing `houseplants` and someone browsing `smart-garden` are different people.
-- **The differentiator** (`local-first`, `self-hosted`, `offline-first`) — what actually makes
+- **The differentiator** (`local-first`, `self-hosted`) — what actually makes
   Sprout unusual now that the honesty framing is retired. <!-- voice-guard: allow --> `self-hosted` in particular is a
   large, active topic community whose values are exactly ours.
 - **Adjacent** (`home-automation`, `diy-electronics`) — the Home Assistant and maker crowds.
@@ -61,12 +62,21 @@ who would like Sprout actually type this?"*, not *"is this technically true of t
 | Not a topic | Why |
 |---|---|
 | `python`, `dashboard` | Implementation detail, and both are oceans — Sprout will never surface in either. A topic that cannot be found through is a slot spent on nothing. |
-| `platformio` | A build system, not an audience. Anyone searching it arrives via `esp32` anyway. |
 | `iot` | Generic, enormous, and **pointing the wrong way**: `iot` connotes cloud-connected devices, which is precisely what Sprout is not. Swapping it for `local-first` is a positioning fix, not just a tidy-up. |
-| `smart-irrigation` | **Held until pumps ship** (v0.9.0). Autonomous watering is gated behind calibration and the safety bench, so the tag would claim a capability the project deliberately refuses to claim anywhere else. Re-add it the day it becomes true. |
+| `offline-first` | Dropped in favour of keeping `platformio` — near-synonymous with `local-first`, so it was the cheapest of the two to lose. |
 
-Five slots stay free — headroom for `smart-irrigation`'s return and whatever the next real
-audience turns out to be. Empty slots cost nothing; a tag nobody searches costs credibility.
+**Two maintainer rulings on this set**, recorded so they are not re-litigated:
+
+- **`platformio` stays.** DX proposed dropping it as "a build system, not an audience"; the
+  maintainer kept it. It is true, it is a real if smaller topic community, and it costs one slot
+  of twenty. `offline-first` was dropped instead — near-synonymous with `local-first`, so it was
+  the cheaper of the two to lose.
+- **`smart-irrigation` stays.** DX flagged it as claiming a capability gated behind calibration
+  and the safety bench, and recommended holding it until pumps ship. **Ruled the other way:**
+  topics are loose by convention and it is genuinely where the project is going. Not an
+  oversight — a decision.
+
+Four slots stay free. Empty slots cost nothing; a tag nobody searches costs credibility.
 
 ## Other platform-uploaded surfaces
 
