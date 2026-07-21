@@ -5,7 +5,7 @@ the website field, and the social preview live as *uploaded platform state*: inv
 `grep`, unreachable by CI, and — in the social preview's case — with no API at all.
 
 That is the blind-spot class [#1403](https://github.com/OrangePeachPink/sprout/issues/1403)
-names: the retired "refuses to lie" preview card survived every voice sweep because the sweeps
+names: the retired "refuses to lie" preview card survived every voice sweep because the sweeps <!-- voice-guard: allow -->
 could only see files. **This file is the fix**: the canonical values live here, in the repo, so
 the checklist has something to diff the live platform against.
 
@@ -52,7 +52,7 @@ who would like Sprout actually type this?"*, not *"is this technically true of t
   `esp32`**. Six of the twenty slots is a deliberate bet on them, not redundancy: someone
   browsing `houseplants` and someone browsing `smart-garden` are different people.
 - **The differentiator** (`local-first`, `self-hosted`, `offline-first`) — what actually makes
-  Sprout unusual now that the honesty framing is retired. `self-hosted` in particular is a
+  Sprout unusual now that the honesty framing is retired. <!-- voice-guard: allow --> `self-hosted` in particular is a
   large, active topic community whose values are exactly ours.
 - **Adjacent** (`home-automation`, `diy-electronics`) — the Home Assistant and maker crowds.
 
