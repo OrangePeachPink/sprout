@@ -284,7 +284,11 @@ def test_c3_a_generation_mismatch_never_vanishes_in_one_path_alone() -> None:
 # correct today only because the fleet has recorded zero probe moves (ADR-0037) — the
 # same "accidentally right" condition that hid #1331 until it was looked for.
 KNOWN_RESOLVERS = {
-    "dashboard.py",  # :933, :1140 — the live read path
+    # The live read path. Moved out of dashboard.py by the #1336 §5.3 extraction —
+    # the same resolver in a new home, not a new one. The ledger neither grew nor
+    # shrank here, which is the honest bookkeeping: an extraction relocates a defect,
+    # it does not retire it. Retiring this entry is the identity slice's job (#1335).
+    "card_context.py",  # :933, :1140 relative to the moved cluster
     "multiplant_history.py",  # :109, :292 — history attribution
     "segment_history.py",  # :61 — segment attribution
     "predict_bridge.py",  # :120 — STATIC FALLBACK feeding the predictor

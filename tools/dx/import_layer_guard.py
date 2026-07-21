@@ -48,6 +48,14 @@ _LAYERS: dict[str, int] = {
     "design_assets": 0,  # §5.1 leaf extraction (#1336 / PR #1387)
     "host_paths": 0,  # §5.1 leaf extraction (#1336) — the data paths
     "parse_v1": 1,  # §1 "telemetry parsing (parse_v1)"
+    "card_context": 3,  # §5.3 extraction (#1336) — "dashboard context assembly" (§1)
+    # `dashboard` is layer 4 by §1 and is deliberately NOT assigned yet. Assigning it
+    # makes this enforcing lint fail the whole tree on a REAL pre-existing violation:
+    # serve.py (4) imports dashboard (4) for render/filter_*/gather_inputs — sideways,
+    # which §2 forbids by name. That import is what the §5.3 `serve.py` route-table
+    # extraction exists to remove, and it is not this extraction. Assigned there, with
+    # the violation reported on #1336 rather than silently deferred — an unassigned
+    # module is reported as unassigned, never treated as compliant.
     "serve": 4,  # §1 "HTTP routes, CLI entry points"
 }
 

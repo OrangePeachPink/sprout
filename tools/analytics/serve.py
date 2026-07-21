@@ -47,11 +47,11 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from bench_packages import render_bench_detail  # noqa: E402  (bench detail #444)
+from card_context import build_context  # noqa: E402  (layer-3 composition, #1336)
 from dashboard import (  # noqa: E402  (sibling import)
     FONTS_CSS,
     RANGE_HOURS,
     TOKENS_CSS,
-    build_context,
     filter_channels,
     filter_since,
     gather_inputs,
