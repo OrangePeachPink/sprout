@@ -50,17 +50,17 @@ working loop — is [`docs/process/ADOPTION.md`](../process/ADOPTION.md).
 | **Trellis** | Senior technical architect — cross-cutting architecture, ADR authorship + review, gap analysis, "does this decision merit an ADR?" | the ADR register's health; architecture reviews |
 | **Data** | Host logger, analytics, ML / predictive analysis, and the served dashboard + front-end | ADR-0005, ADR-0006 |
 | **DX** | Developer, user & consumer experience; **documentation maintainer** (docs stay consistent + current — a real consumer-facing concern); community & awareness, the go-public **marketing/visibility strategy**, social engagement, and onboarding the maintainer's contributor identity + graph | the contributor front door, onboarding, `docs/contributing/` |
-| **DesignQA** | **All design work** — design system, brand, voice, *and* design-QA of the running app | ADR-0004, ADR-0007, ADR-0008 |
+| **Design** (formerly DesignQA) | **All design work** — design system, brand, voice, *and* design-QA of the running app | ADR-0004, ADR-0007, ADR-0008 |
 | **Firmware** | ESP32 control, sensing, actuators (`firmware/`) **+ the physical bench** — flash, probe serial, characterize sensors, capture calibration evidence | ADR-0001, the native C test harness, bench evidence + the capability-stage vocabulary (below) |
 | **Workflow** | Issues, board, milestones/releases, process; the **GitHub-native** guide; the **PR validation gate** before the maintainer reviews | `.github/CONTRIBUTING.md`, `AGENTS.md`, this file, the release train |
 | **Veronica** | *Human* maintainer — vision, ideation, product direction, merges, hardware approvals | the repo; the final call |
 
 **Escalation, not a lane:** *Claude Design (Web)* is a creative-brainstorming / prototyping resource
-DesignQA or the maintainer can pull in when a design need wants divergent exploration — its output lands
-through DesignQA.
+Design or the maintainer can pull in when a design need wants divergent exploration — its output lands
+through Design.
 
 **Retired lanes:** *Sage* (bench work folded into **Firmware**) and *Ingest* (design intake folded into
-**DesignQA**). Don't route new work to either — it will not get done.
+**Design**). Don't route new work to either — it will not get done.
 
 ## Lane attribution (internal lanes only)
 
@@ -200,7 +200,7 @@ stalling until the next relay.
 
 When an issue comes up mid-lane and can't route through Workflow first, tag it `for:<lane>` to flag a
 **first-approximate recipient** — a best-guess owner so it doesn't sit without one. The family:
-`for:firmware` (incl. bench) · `for:data` · `for:design` (→ DesignQA) · `for:dx` · `for:trellis` ·
+`for:firmware` (incl. bench) · `for:data` · `for:design` (→ Design) · `for:dx` · `for:trellis` ·
 `for:workflow` · `for:maintainer`.
 
 - It's a routing **hint**, not an assignment or a commitment — Workflow still triages, slices, and gates.
