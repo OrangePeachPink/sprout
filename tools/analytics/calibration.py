@@ -2,6 +2,11 @@
 """Calibration workbench - propose band boundaries from captured experiments and export
 a candidate config (#192, epic #153). Sits on the #155 analysis store.
 
+Status: legacy - kept pending a revisit in ~2 releases (#192, ruled on #1388). The
+calibration labs may be superseded by the #963 owner-cal record, but that is not
+settled, and removing a workbench before its replacement is proven is how you lose
+the ability to re-derive a boundary.
+
 The seven moisture bands are separated by six raw-ADC boundaries (firmware:
 ``cal bounds(dry>wet)``). Given experiments that sampled known states, this proposes
 refined boundaries from the *observed* per-band raw centres (the midpoint between
