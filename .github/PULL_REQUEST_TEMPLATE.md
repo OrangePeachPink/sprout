@@ -16,6 +16,17 @@ Refs #<!-- issue number -->
 <!-- Use `Refs #N` / `Part of #N`, NOT `Closes #N` — the reviewer closes the issue after verifying it
      (see CONTRIBUTING.md → "The verification gate"). -->
 
+## If this PR adds or changes an ADR
+
+Which existing ADR did you consider amending, and why didn't you?
+<!-- Amend/append is the default (ADR-0003 §10); a new number needs a genuinely new decision. -->
+
+## If this PR touches a contract or schema file
+
+Which seams does this change cross, and are they in the seam register?
+<!-- Wire tokens, registry joins, release pipeline — cross-seam claims are never fast-path
+     certified (ADR-0003 §8a). Naming the seams here is what keeps the register current. -->
+
 ## How I verified it
 
 What you ran or saw that shows it works — the evidence the reviewer checks at the gate.

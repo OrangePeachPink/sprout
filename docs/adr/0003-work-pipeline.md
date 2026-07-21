@@ -1,6 +1,8 @@
 # ADR-0003 — Work pipeline: from idea to release
 
-**Status:** Accepted (2026-06-24)
+**Status:** Accepted (2026-06-24) · **Amended 2026-07-21** (the v0.8.0 retrospective
+standardization — label taxonomy, planning fields, readiness gate, discovery rule,
+certification paths; see §5, §8, §11 and [the retro](../team/retros/2026-07-21-v0.8.0.md))
 **Date:** 2026-06-24
 **Owner:** Workflow lane
 **Lane:** work intake, specs/PRDs, backlog, issues, the team workflow, releases & insights
@@ -98,21 +100,46 @@ which is mutable and multi-writer and therefore belongs in Issues, §5.)
 **Primitives:** Issues (the ledger; IDs are `#N`) · Labels · Milestones (= builds) · Project v2 (the
 board + fields) · Releases (auto notes) · Insights (velocity/cycle-time).
 
-**Labels — colon-namespaced (~16).** `type:` mirrors the project's Conventional-Commits vocabulary so
-issue → commit → release-note stays one thread:
+**Labels — colon-namespaced.** `type:` mirrors the project's Conventional-Commits vocabulary so
+issue → commit → release-note stays one thread. *(Taxonomy revised 2026-07-21 — the v0.8.0 retro
+found `area:`/`layer:` vestigial (~22 applications vs ~113 `for:` across 74 shipped issues) and
+`for:` silently carrying two meanings, owner and consulted.)*
 
 - `type:` (one): `type:feat` · `type:fix` · `type:docs` · `type:refactor` · `type:chore`
-- `area:` (one+): `area:control` · `area:logging` · `area:sensing` · `area:actuators` · `area:analytics`
-- `layer:` (one+): `layer:firmware` (flash-gated) · `layer:host` (build anytime)
-- community: `good first issue` · `help wanted` · meta: `blocked` · `needs-verification`
+- `for:<lane>` = **consulted**, zero or more — you owe the owner an input. A consulted ask carries
+  an explicit response window or an explicit non-blocking marker; never an expiring default.
+- `needs:maintainer` = **awaiting the maintainer's click or decision now** — nothing else. Work
+  that is simply *hers to do* is `owner = maintainer` (a field, §below), not this label.
+- `needs:hardware` (bench-gated) · `blocks:*` gate labels (kept — a different purpose from
+  dependencies) · community: `good first issue` · `help wanted`
+- **Retired 2026-07-21:** `area:*`, `layer:*`, `for:maintainer` (→ `owner = maintainer` +
+  `needs:maintainer` when a click is due). Retired labels survive on closed issues — history is
+  never relabeled. `for:firmware` + `needs:hardware` cover the old flash-gated meaning.
+- **Review is never labeled.** Review is a fixed pipeline stage (Workflow certifies everything;
+  the maintainer merges V1), not a per-issue routing decision.
 
-**Project fields** (Priority & Size are fields, not labels — they sort and feed Insights):
+**Project fields** — the four planning attributes are **fields, not labels** (ruled 2026-07-21:
+the readiness view can only express emptiness on fields — `no:owner` filters; "missing a label
+from a namespace" is inexpressible — and one surface beats a split taxonomy):
 
 - **Status:** `Backlog → In Progress → Needs Verification → Ready to Merge → Done`, + `Won't Do`
   *(Evolved from the lean start: `Ready to Merge` added with the two-stage gate (#369); `In Review`
   removed as ambiguous — it had no owner or trigger, and the two review phases that matter each have
   one: **Needs Verification** = Workflow, **Ready to Merge** = maintainer.)*
+- **Owner:** exactly one lane (maintainer is a lane), accountable for finishing the issue.
+- **Velocity:** `V1` / `V2` — set at planning; **escalation = the lane flips the field** (build
+  reveals a V1-triggering property) — same surface, no second vocabulary.
 - **Priority:** `P0`–`P3` · **Size:** `XS`–`XL` (feeds velocity) · **Milestone** (built-in)
+- Lanes read/write fields via `just` wrappers (`just owner N <lane>` · `just velocity N v1` ·
+  `just size N M`) — one line, the same cost a label ever had, so no attribute is skipped because
+  writing it was annoying (how `velocity:` drifted to 7-of-69).
+
+**The readiness gate (2026-07-21):** an issue is **release-plan-ready** when it has
+**owner + velocity + size + priority + complete AC**. AC are complete and correct *before work
+starts*: the release-planning pass writes AC for the GO-order head; later-sequenced items may
+complete AC just-in-time, but **the owner writes them before starting** (never the moment before
+passing them), and certification checks AC *quality*, not just presence. Enforcement is one saved
+Project view — in-milestone AND any attribute empty — not documentation.
 
 **Templates:** YAML Issue Forms under `.github/ISSUE_TEMPLATE/` (`feature`, `bug`, `task` + chooser);
 a `.github/PULL_REQUEST_TEMPLATE.md` carrying the linking convention.
@@ -123,7 +150,7 @@ An issue is **one independently shippable, reviewable unit** — about one focus
 person. **No lower-bound ceremony** (a typo sweep is a fine one-line issue). The concern is
 **over-large** issues — **split when any "epic smell" appears:**
 
-- the title needs an **"and"** · sized **L or XL** · spans multiple `area:`/`layer:` · several
+- the title needs an **"and"** · sized **L or XL** · spans multiple owners' domains · several
   independent acceptance criteria · "done" needs more than a sentence · it'd be more than one PR.
 
 ## 7. Decomposition (idea → slices)
@@ -169,11 +196,59 @@ trailer so attribution survives in `git log`/`git blame`. The operative conventi
 [`docs/team/OPERATIONS.md`](../team/OPERATIONS.md) § Lane attribution (internal lanes only) — relocated there
 from `AGENTS.md` by the #1125 doc split.
 
+### 8a. Evidence, certification paths, and the seam register (2026-07-21)
+
+- **Each AC is individually marked complete with posted evidence showing how it was met.**
+  Complete + all AC evidenced → **Needs Verification**. Workflow re-certifies against AC and
+  design intent (sourced objectively from AC + plan-of-record + governing ADR).
+- **Fast path** (XS/S, low risk, complete AC + evidence): Workflow confirms the AC list is
+  complete and each has evidence — it does not re-derive the claims. **Cross-seam claims are
+  never fast-pathed** — size is not a proxy for blast radius (#1315: one sentence in a small
+  change took the Home down).
+- **The seam register** (gate-maintained, in the Workflow lane's process home): the enumerable
+  list of surfaces that join across wire-token / registry / release-pipeline boundaries. Any
+  certification claim touching a registered seam requires walking the actual surface. The
+  register updates **event-driven**: a required question on every PR touching a contract or
+  schema file. Until the register matures (one release), anything touching a contract/schema
+  file defaults to no-fast-path, registered or not — a dial the retro metric (§11) watches and
+  loosens deliberately.
+- **V2:** Workflow verifies, merges/closes directly from Needs Verification, one digest line.
+- **V1:** Workflow certifies → **the PR** goes to the maintainer's lane for review + merge →
+  Workflow closes the issue. **Only PRs enter the maintainer's lane — never issues.**
+- **Pre-approved scope:** an amendment within the scope and intent of something already ruled is
+  **V2**; anything that changes the ruling, its scope, or its public surface is **V1**. Doubt = V1.
+- **Who certifies Workflow — a capability boundary, not a rubber stamp:** *reversible mechanics
+  vs. durable decisions.* Board mechanics and GitHub design (labels, fields, views, sub-issue
+  restructure) are Workflow-self-certified — mechanical, reversible, and Workflow's expert
+  domain. Anything doctrine-shaped Workflow authors is a standing V1 class and routes to the
+  maintainer as ever. Trellis advises on request (`for:trellis`), advisory not gate.
+
+### 8b. The three-way discovery rule (mid-flight, 2026-07-21)
+
+An epic closes on its AC being met; **no scope growth inside an in-flight epic.**
+
+| Discovery | Where it goes |
+|---|---|
+| **Defect against an existing AC** | The epic's own work — it isn't done. Deferring it ships a known-broken promise. |
+| **New capability** | **Leaves the epic immediately**; triaged like any new issue (readiness gate included) to whichever milestone triage says. Entering the *current* release is a triage decision, never a default — an idle lane with the context loaded may be the cheapest that work will ever be, and Workflow triages; if it changes the release's shape or GO order, that's the maintainer's call. |
+| **An existing AC found to be *wrong*** (mis-specified, not unmet) | **Maintainer decision — never silently rewritten.** Correcting AC changes what "done" means. |
+
 ## 9. Milestones, releases, insights
 
 - **Milestones = builds**, SemVer (`v0.4.0`). Closing a milestone + cutting a **Release** generates
   notes from its merged work; a `.github/release.yml` categorizes them by `type:` label.
 - **Insights** gives velocity (via Size) and status-flow charts. Deeper cycle-time is deferred (below).
+- **Commit types (approved set = the observed set, 2026-07-21):** `feat` · `fix` · `docs` ·
+  `refactor` · `chore` · `test` · `ci` · `design` · `brand` · `release` · `perf` · `migrate` ·
+  `data`. `adr-NNNN` is a valid scope; scope is otherwise free-form. Enforcement is **types only**
+  — commitlint in the existing pre-commit (#118) plus a PR-title check action (squash titles are
+  what reach `main`).
+- **The kickoff relay is the coordination artifact** — one paste per lane at release start:
+  assignment list · GO order · unblock obligations ("what you must deliver to unblock whom") ·
+  plan-ready confirmation. No dependency feature is adopted; the relay carries the critical path.
+- **Relay-load rules:** chat replies are **receipts, not content** — substance lands on the issue,
+  the reply is links + one-line summaries. **Idle is declared, never silent**: queue drained →
+  re-scan the board → report *"idle, ready for assignment."*
 
 ## 10. When a decision merits an ADR
 
@@ -221,6 +296,24 @@ under the same numbered series + [register](0000-record-architecture-decisions.m
 
 Rule of thumb: *if you'll edit it often, it's a doc; if you'll defend it later, it's an ADR.*
 
+**Minting discipline (2026-07-21 — the sprawl correction at ADR-0038):** **amend or append by
+default; mint a new ADR only for a genuinely new decision.** The PR template asks every ADR PR:
+*"Which existing ADR did you consider amending, and why didn't you?"* This amendment is itself the
+worked example — the v0.8.0 process standardization lands here, in the pipeline ADR it revises,
+not as ADR-0039.
+
+## 11. The retro metric (2026-07-21)
+
+Each release closes with a short retro in `docs/team/retros/` (the v0.8.0 entry is the first),
+and every closeout produces the **friction gauge** by query, never impression: *issues that hit
+the maintainer's merge queue* vs. *issues that required a genuine decision or change from her*.
+The ratio is the acceptance test for this pipeline: if merge-queue volume stays high while
+true-input stays low, the fast path is miscalibrated and the next retro tightens it — including
+deliberately loosening the conservative seam-register start as the register matures. Operational
+definitions are fixed at the first closeout so the number is comparable release over release.
+**All closeout ledger figures come from audit queries** (runs API, digest entries, `git log`) —
+the retro that proposed this rule misreported its own PR count from a `--limit` ceiling.
+
 ## Consequences
 
 - Every altitude of work has a home — a loose idea isn't forced into the tracker, and a shippable slice
@@ -235,7 +328,9 @@ Rule of thumb: *if you'll edit it often, it's a doc; if you'll defend it later, 
 - The Project board starts taxing the planning you enjoy → consider a dedicated tracker (new ADR).
 - Manual review proves reliable → earn auto-merge (merge-when-green) + branch protection.
 - Velocity needs true cycle-time → add `Started` / `Verified` / `Released` date fields.
-- Epics become frequent → add an `epic` label + a Project "type" view.
+- ~~Epics become frequent → add an `epic` label~~ *(2026-07-21: reversed — the `epic` label
+  retires if the Epics view rebuilds cleanly on the native parent-issue field; an epic = "has
+  sub-issues," verified during the board reshape).*
 - Approaching first public release → add a `CONTRIBUTORS` / `AUTHORS` file naming the maintainers.
 
 ## Setup dependencies
