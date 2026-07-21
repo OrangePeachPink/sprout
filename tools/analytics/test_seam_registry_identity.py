@@ -324,7 +324,11 @@ def test_c4_no_unregistered_identity_resolver_appears() -> None:
 # Templates that join identity on a raw wire token. `home_template.html` is the #1315
 # site itself, still live: "join like the pulse: plant_id when registered, else the
 # card's sensor_id". A template may CONSUME a resolved plant; it must never COMPUTE one.
-KNOWN_TEMPLATE_JOINS = {"home_template.html"}
+# #1315's original site. Emptied by the slice-2 migration (#1335): home_template.html
+# now consumes the plant the payload already resolved, so the raw-token join is gone.
+# The set can only ever SHRINK — an addition means a new template started joining on a
+# wire token, which is the #1315 mechanism returning.
+KNOWN_TEMPLATE_JOINS: set[str] = set()
 
 
 def test_c4_templates_are_covered_by_the_rule_too() -> None:
