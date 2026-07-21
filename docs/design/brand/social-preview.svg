@@ -1,18 +1,50 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="Sprout — plants that finally have a voice: a glowing seedling in a sensor ring on a dark ground, with the seven-band mood spectrum along the bottom">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-label="Sprout — plants that finally have a voice: a glowing seedling in a sensor ring above the wordmark, on a dark ground, with the seven-band mood spectrum along the bottom">
   <!--
-    Sprout social-preview card (og:image) — 1200x630, universal social ratio.
-    Voice-clean per the pivot: no honesty hook, no overclaim. Keeps the brand line
-    ("plants that finally have a voice") as the image line; the og:title carries the "pulse" hook
-    (image = brand line, title = hook — an intentional split). Simplified for thumbnail legibility:
-    the character is the scroll-stopper, so the seedling is big and bright; no descriptive sentence,
-    no signature. Master for social-preview.png. Light sibling: social-preview-light.svg/png.
+    Sprout social-preview card (og:image) — 1280x640, CROP-SAFE recomposition (#1403).
+
+    The safe area is a BOX, not a horizontal band — both axes crop, and the vertical
+    one is the surface she actually complained about.
+
+    HORIZONTAL
+      GitHub 2:1           x    0 .. 1280   (the master itself, no crop)
+      OG / LinkedIn 1.91:1 x   29 .. 1251   (wider source, so it crops the sides)
+      hard square 1:1      x  320 ..  960   (some unfurlers centre-crop hard)
+      -> intersection      x  320 ..  960
+
+    VERTICAL — measured live on github.com/topics/plant-care, not assumed:
+      the card renders 725x363 (full 2:1, object-fit:fill — the IMAGE is not cropped),
+      but its anchor is `.overflow-hidden` with max-height:275px. 275/363 = 75.8%,
+      centred, so the topic page shows a middle band and slices the rest:
+      -> visible           y   78 ..  562   (78 px gone off the top AND the bottom)
+
+    TRUE SAFE BOX: x 320..960, y 78..562. Every load-bearing element — mark, eyebrow,
+    wordmark, brand line — lives inside x 340..940, y 98..542 (a 20 px inset).
+
+    The first pass at this (#1403) fixed only the horizontal axis and left the brand
+    line at baseline y=576, which the topic page cut in half — the exact symptom that
+    opened the issue. Assuming the crop axis instead of measuring it is what cost the
+    round trip.
+
+    Everything outside the safe box is DECORATIVE and expected to be cropped — the
+    gradient ground and the particles. Losing those costs atmosphere, never meaning.
+
+    The seven-band mood ramp is NOT in that category, and calling it decorative was a
+    mistake in the first pass. It is the one element that says *measurement instrument*
+    rather than *another plant app* — the differentiator on a topic page where the card
+    sits inches from Botanica, Gardening-Planner and opensprout at identical size. So it
+    moved INSIDE the safe box, as a rule beneath the brand line, and the full-bleed edge
+    band was dropped rather than duplicated. One ramp, on every surface: the card now
+    renders identically everywhere, which is the whole point of this issue.
+
+    Master for social-preview.png. Upload is web-UI only (no API) — see #1403.
+    Light sibling: social-preview-light.svg/png.
   -->
   <defs>
-    <radialGradient id="bg" cx="24%" cy="34%" r="95%">
+    <radialGradient id="bg" cx="50%" cy="38%" r="82%">
       <stop offset="0" stop-color="#16281f"/><stop offset="0.55" stop-color="#0c1712"/><stop offset="1" stop-color="#070f0b"/>
     </radialGradient>
     <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0" stop-color="#8BD24F" stop-opacity="0.45"/><stop offset="0.6" stop-color="#8BD24F" stop-opacity="0.11"/><stop offset="1" stop-color="#8BD24F" stop-opacity="0"/>
+      <stop offset="0" stop-color="#8BD24F" stop-opacity="0.42"/><stop offset="0.6" stop-color="#8BD24F" stop-opacity="0.10"/><stop offset="1" stop-color="#8BD24F" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="leafA" x1="0" y1="1" x2="0.35" y2="0"><stop offset="0" stop-color="#4a9a3f"/><stop offset="1" stop-color="#C7F07E"/></linearGradient>
     <linearGradient id="leafB" x1="0" y1="1" x2="0.35" y2="0"><stop offset="0" stop-color="#2f8a44"/><stop offset="1" stop-color="#8BD24F"/></linearGradient>
@@ -25,40 +57,41 @@
     </style>
   </defs>
 
-  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1280" height="640" fill="url(#bg)"/>
 
-  <g fill="#8BD24F" opacity="0.5">
-    <circle cx="126" cy="200" r="2.4"/><circle cx="406" cy="250" r="2"/><circle cx="176" cy="430" r="2.2"/>
+  <!-- DECORATIVE (croppable): particles, balanced into both wings -->
+  <g fill="#8BD24F" opacity="0.45">
+    <circle cx="120" cy="150" r="2.4"/><circle cx="232" cy="470" r="2"/><circle cx="86" cy="330" r="2.2"/>
+    <circle cx="1160" cy="180" r="2.4"/><circle cx="1048" cy="470" r="2"/><circle cx="1196" cy="352" r="2.2"/>
   </g>
 
-  <!-- sensor ring: dark base + a bright gauge arc -->
-  <circle cx="288" cy="300" r="192" fill="none" stroke="#2b563a" stroke-width="8" opacity="0.85"/>
-  <circle cx="288" cy="300" r="192" fill="none" stroke="#8BD24F" stroke-width="8" stroke-linecap="round"
-          stroke-dasharray="330 876" transform="rotate(-125 288 300)" opacity="0.9"/>
+  <!-- ================= the safe stack — all inside x 340..940 ================= -->
 
-  <!-- glow + the seedling (big, bright — the scroll-stopper) -->
-  <circle cx="288" cy="312" r="185" fill="url(#glow)"/>
-  <ellipse cx="288" cy="476" rx="150" ry="24" fill="url(#soil)"/>
-  <g transform="translate(132,142) scale(13)" fill="none" stroke="#2f8a44" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="640" cy="215" r="168" fill="url(#glow)"/>
+  <circle cx="640" cy="210" r="104" fill="none" stroke="#2b563a" stroke-width="7" opacity="0.85"/>
+  <circle cx="640" cy="210" r="104" fill="none" stroke="#8BD24F" stroke-width="7" stroke-linecap="round"
+          stroke-dasharray="179 474" transform="rotate(-125 640 210)" opacity="0.9"/>
+  <ellipse cx="640" cy="306" rx="86" ry="13" fill="url(#soil)"/>
+  <g transform="translate(556,123) scale(7)" fill="none" stroke="#2f8a44" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
     <path d="M12 26 V12"/>
     <path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="url(#leafA)"/>
     <path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="url(#leafB)"/>
     <path d="M12 11 C9 6 11 3 12 1 C14 4 14 8 12 11 Z" fill="#C7F07E"/>
   </g>
 
-  <!-- right: category · wordmark · brand line (no sentence, no signature) -->
-  <text class="cat" x="520" y="240" font-size="18" fill="#93c96a">SOIL · MOISTURE · CARE</text>
-  <text class="wm" x="516" y="362" font-size="112" fill="#F1F6EC">Sprout</text>
-  <text class="tag" x="520" y="436" font-size="42" fill="#8BD24F">Plants that finally have a voice.</text>
+  <text class="cat" x="640" y="362" font-size="17" fill="#93c96a" text-anchor="middle">SOIL · MOISTURE · CARE</text>
+  <text class="wm"  x="640" y="446" font-size="82" fill="#F1F6EC" text-anchor="middle">Sprout</text>
+  <text class="tag" x="640" y="498" font-size="29" fill="#8BD24F" text-anchor="middle">Plants that finally have a voice.</text>
 
-  <!-- seven-band mood spectrum -->
+  <!-- the seven-band ramp, INSIDE the safe box so it survives the topic-page crop -->
   <g>
-    <rect x="0" y="616" width="171.5" height="14" fill="#17B6C4"/>
-    <rect x="171.5" y="616" width="171.5" height="14" fill="#34A853"/>
-    <rect x="343" y="616" width="171.5" height="14" fill="#8BD24F"/>
-    <rect x="514.5" y="616" width="171.5" height="14" fill="#C6D84A"/>
-    <rect x="686" y="616" width="171.5" height="14" fill="#F5A623"/>
-    <rect x="857.5" y="616" width="171.5" height="14" fill="#E8703A"/>
-    <rect x="1029" y="616" width="171" height="14" fill="#E0483D"/>
+    <rect x="440" y="524" width="57.1" height="9" rx="1" fill="#17B6C4"/>
+    <rect x="497.1" y="524" width="57.1" height="9" fill="#34A853"/>
+    <rect x="554.2" y="524" width="57.1" height="9" fill="#8BD24F"/>
+    <rect x="611.3" y="524" width="57.1" height="9" fill="#C6D84A"/>
+    <rect x="668.4" y="524" width="57.1" height="9" fill="#F5A623"/>
+    <rect x="725.5" y="524" width="57.1" height="9" fill="#E8703A"/>
+    <rect x="782.6" y="524" width="57.4" height="9" rx="1" fill="#E0483D"/>
   </g>
+
 </svg>
