@@ -209,6 +209,49 @@ _CLIENT_GONE = (ConnectionAbortedError, BrokenPipeError, ConnectionResetError)
 _STOPPING = threading.Event()
 _STOP_GRACE_S = 2.5
 
+# #1392: the #972 design above is bounded only where it remembered to be. Every wait on
+# the stop path carries a timeout EXCEPT the lock acquisitions inside the controllers'
+# stop() - `with self._lock:` has no deadline - so a controller lock held by any
+# concurrent request parks the shutdown thread before it ever reaches os._exit. The
+# process then lives forever in the _STOPPING state, answering 503 on a bound port:
+# Stop didn't stop, `just processes` reports nothing (the children really are gone), and
+# the next `just start` sees the bound port and cheerfully opens a tab to a dead server.
+#
+# The fix is structural rather than a patch on the one blocker I found. A watchdog armed
+# BEFORE any blocking work guarantees the exit against every unbounded step, including
+# ones nobody has hit yet - "the operator pressed Stop" must not depend on which lock is
+# free. The deadline sits just past the cooperative path's own worst case (three
+# controllers at their 5s + 2s fallback, plus the grace), so it can never preempt a
+# legitimately-draining stop; it only ever fires on a genuine hang.
+_SHUTDOWN_DEADLINE_S = 25.0
+
+
+def _arm_shutdown_watchdog(
+    deadline_s: float = _SHUTDOWN_DEADLINE_S,
+) -> threading.Thread:
+    """Guarantee the process dies once Stop is pressed, whatever blocks (#1392).
+
+    Exits 0: the operator asked the server to stop, and it stopped - a hard exit after
+    a hang is still the outcome they requested, so it is not a failure code. The stderr
+    line is loud and names the cause, because a silent hard exit would trade one
+    mystery for another.
+    """
+
+    def _watchdog() -> None:
+        time.sleep(deadline_s)
+        sys.stderr.write(
+            f"Sprout server: shutdown exceeded {deadline_s:g}s - forcing exit. "
+            "Something on the stop path blocked; the port is released either way.\n"
+        )
+        sys.stderr.flush()
+        os._exit(0)
+
+    thread = threading.Thread(
+        target=_watchdog, daemon=True, name="sprout-stop-watchdog"
+    )
+    thread.start()
+    return thread
+
 
 class NoDataYet(Exception):
     """Discovery found zero readings (#543) - not a parse error. ``had_any_logged``
@@ -1199,6 +1242,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json({"stopped": True})
 
                 def _shutdown() -> None:
+                    # #1392: arm the deadline FIRST - before the ack sleep, the
+                    # controller stops, and server.shutdown(). Anything armed later is
+                    # unprotected against exactly the steps most likely to block.
+                    _arm_shutdown_watchdog()
                     time.sleep(0.25)  # let the {stopped:true} ack flush to the browser
                     # #972: refuse new work NOW, so a live-view poll can't replenish the
                     # in-flight pile and starve the stop. The console entry is loud -
