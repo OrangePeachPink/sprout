@@ -2,18 +2,28 @@
   <!--
     Sprout social-preview card (og:image) — 1280x640, CROP-SAFE recomposition (#1403).
 
-    Why centred, rather than the previous left-mark / right-text layout — the crop math:
+    The safe area is a BOX, not a horizontal band — both axes crop, and the vertical
+    one is the surface she actually complained about.
 
+    HORIZONTAL
       GitHub 2:1           x    0 .. 1280   (the master itself, no crop)
       OG / LinkedIn 1.91:1 x   29 .. 1251   (wider source, so it crops the sides)
       hard square 1:1      x  320 ..  960   (some unfurlers centre-crop hard)
-      ---------------------------------------------------------------------------
-      INTERSECTION         x  320 ..  960   -> the middle 640 px. Half the card.
+      -> intersection      x  320 ..  960
 
-    Every load-bearing element — mark, eyebrow, wordmark, brand line — therefore lives
-    inside x 340..940 (the intersection with a 20 px inset). The old composition put the
-    wordmark and brand line out at x 516..1130, which a square crop removes entirely:
-    the framing that was served was never the framing that was composed (#1403).
+    VERTICAL — measured live on github.com/topics/plant-care, not assumed:
+      the card renders 725x363 (full 2:1, object-fit:fill — the IMAGE is not cropped),
+      but its anchor is `.overflow-hidden` with max-height:275px. 275/363 = 75.8%,
+      centred, so the topic page shows a middle band and slices the rest:
+      -> visible           y   78 ..  562   (78 px gone off the top AND the bottom)
+
+    TRUE SAFE BOX: x 320..960, y 78..562. Every load-bearing element — mark, eyebrow,
+    wordmark, brand line — lives inside x 340..940, y 98..542 (a 20 px inset).
+
+    The first pass at this (#1403) fixed only the horizontal axis and left the brand
+    line at baseline y=576, which the topic page cut in half — the exact symptom that
+    opened the issue. Assuming the crop axis instead of measuring it is what cost the
+    round trip.
 
     Everything outside the safe box is DECORATIVE and expected to be cropped — the
     gradient ground, the particles, the mood spectrum. Losing any of it costs
@@ -50,21 +60,21 @@
 
   <!-- ================= the safe stack — all inside x 340..940 ================= -->
 
-  <circle cx="640" cy="222" r="196" fill="url(#glow)"/>
-  <circle cx="640" cy="215" r="140" fill="none" stroke="#2b563a" stroke-width="8" opacity="0.85"/>
-  <circle cx="640" cy="215" r="140" fill="none" stroke="#8BD24F" stroke-width="8" stroke-linecap="round"
-          stroke-dasharray="241 638" transform="rotate(-125 640 215)" opacity="0.9"/>
-  <ellipse cx="640" cy="336" rx="114" ry="17" fill="url(#soil)"/>
-  <g transform="translate(526,105) scale(9.5)" fill="none" stroke="#2f8a44" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="640" cy="215" r="168" fill="url(#glow)"/>
+  <circle cx="640" cy="210" r="104" fill="none" stroke="#2b563a" stroke-width="7" opacity="0.85"/>
+  <circle cx="640" cy="210" r="104" fill="none" stroke="#8BD24F" stroke-width="7" stroke-linecap="round"
+          stroke-dasharray="179 474" transform="rotate(-125 640 210)" opacity="0.9"/>
+  <ellipse cx="640" cy="306" rx="86" ry="13" fill="url(#soil)"/>
+  <g transform="translate(556,123) scale(7)" fill="none" stroke="#2f8a44" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
     <path d="M12 26 V12"/>
     <path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="url(#leafA)"/>
     <path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="url(#leafB)"/>
     <path d="M12 11 C9 6 11 3 12 1 C14 4 14 8 12 11 Z" fill="#C7F07E"/>
   </g>
 
-  <text class="cat" x="640" y="406" font-size="18" fill="#93c96a" text-anchor="middle">SOIL · MOISTURE · CARE</text>
-  <text class="wm"  x="640" y="516" font-size="104" fill="#F1F6EC" text-anchor="middle">Sprout</text>
-  <text class="tag" x="640" y="576" font-size="36" fill="#8BD24F" text-anchor="middle">Plants that finally have a voice.</text>
+  <text class="cat" x="640" y="362" font-size="17" fill="#93c96a" text-anchor="middle">SOIL · MOISTURE · CARE</text>
+  <text class="wm"  x="640" y="446" font-size="82" fill="#F1F6EC" text-anchor="middle">Sprout</text>
+  <text class="tag" x="640" y="498" font-size="29" fill="#8BD24F" text-anchor="middle">Plants that finally have a voice.</text>
 
   <!-- DECORATIVE (croppable): the seven-band mood spectrum -->
   <g>
