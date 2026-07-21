@@ -114,9 +114,25 @@ static bool set_field(char *dst, size_t cap, const char *src, size_t n)
     return true;
 }
 
+/* Which known keys a line has already supplied - a repeat is a REJECT, never a
+ * last-one-wins overwrite. Same reasoning as ota_pull_decide()'s duplicate-board
+ * rule: picking either value is a guess.
+ *
+ * It matters more here than symmetry suggests, because of what this feed IS FOR.
+ * ADR-0026 D4 made hand-curation the remediation for a bad release: pull it, serve
+ * the fixed one. So the realistic duplicate is a maintainer editing this file under
+ * time pressure during an incident - adding a corrected `image=` and leaving the
+ * stale one on the line. Last-one-wins would then silently serve whichever came
+ * second, which may be the very build being withdrawn. That is the wrong moment for
+ * a document to quietly mean something other than what its author sees. */
+#define TOK_BOARD 1u
+#define TOK_VERSION 2u
+#define TOK_IMAGE 4u
+#define TOK_SIG 8u
+
 /* One "key=value" token. `end` is one past the token's last byte. */
 static bool apply_token(ota_pull_artifact_t *a, const char *tok,
-                        const char *end)
+                        const char *end, unsigned *seen)
 {
     const char *eq = tok;
     while (eq < end && *eq != '=')
@@ -131,14 +147,26 @@ static bool apply_token(ota_pull_artifact_t *a, const char *tok,
      * field without stranding deployed boards. A key we do not know is not an
      * error - it is a newer generator talking to an older device, which is the
      * case additive evolution exists to make survivable. */
-    if (klen == 5u && strncmp(tok, "board", 5) == 0)
+    if (klen == 5u && strncmp(tok, "board", 5) == 0) {
+        if (*seen & TOK_BOARD) return false;
+        *seen |= TOK_BOARD;
         return set_field(a->board_class, OTA_PULL_BOARD_MAX, val, vlen);
-    if (klen == 7u && strncmp(tok, "version", 7) == 0)
+    }
+    if (klen == 7u && strncmp(tok, "version", 7) == 0) {
+        if (*seen & TOK_VERSION) return false;
+        *seen |= TOK_VERSION;
         return set_field(a->version, OTA_PULL_VERSION_MAX, val, vlen);
-    if (klen == 5u && strncmp(tok, "image", 5) == 0)
+    }
+    if (klen == 5u && strncmp(tok, "image", 5) == 0) {
+        if (*seen & TOK_IMAGE) return false;
+        *seen |= TOK_IMAGE;
         return set_field(a->image_url, OTA_PULL_URL_MAX, val, vlen);
-    if (klen == 3u && strncmp(tok, "sig", 3) == 0)
+    }
+    if (klen == 3u && strncmp(tok, "sig", 3) == 0) {
+        if (*seen & TOK_SIG) return false;
+        *seen |= TOK_SIG;
         return set_field(a->sig_url, OTA_PULL_URL_MAX, val, vlen);
+    }
     return true;
 }
 
@@ -187,6 +215,7 @@ ota_pull_parse_t ota_pull_parse_feed(const char *text, size_t len,
 
         ota_pull_artifact_t a;
         memset(&a, 0, sizeof(a));
+        unsigned seen = 0u; /* per LINE - each board's line starts fresh */
         size_t p = ls;
         while (p < le) {
             while (p < le && (text[p] == ' ' || text[p] == '\t'))
@@ -195,7 +224,7 @@ ota_pull_parse_t ota_pull_parse_feed(const char *text, size_t len,
             size_t ts = p;
             while (p < le && text[p] != ' ' && text[p] != '\t')
                 p++;
-            if (!apply_token(&a, &text[ts], &text[p]))
+            if (!apply_token(&a, &text[ts], &text[p], &seen))
                 return OTA_PULL_PARSE_MALFORMED;
         }
 

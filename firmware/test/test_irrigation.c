@@ -2631,6 +2631,53 @@ void t_ota_pull_feed_fail_closed(void)
         "ignore");
     TEST_ASSERT_EQUAL_UINT32(0, n);
 
+    /* A REPEATED KEY on one line is a reject, not last-one-wins - the same rule
+     * as decide()'s duplicate-board case, and for the same reason: picking either
+     * value is a guess.
+     *
+     * The realistic instance is not a broken generator. ADR-0026 D4 made hand
+     * curation the remediation for a bad release, so the likely duplicate is a
+     * maintainer editing this file under time pressure during an incident: adding
+     * a corrected `image=` and leaving the withdrawn one on the line. Last-wins
+     * would silently serve whichever came second - possibly the very build being
+     * pulled. */
+    const char *dup_key =
+        "# sprout-ota-feed v1\n"
+        "board=esp32-classic version=0.8.0 image=https://x/WITHDRAWN.bin "
+        "image=https://x/fixed.bin sig=https://x/c.sig\n";
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_MALFORMED,
+        ota_pull_parse_feed(dup_key, strlen(dup_key), a, 4, &n),
+        "a repeated key must reject - serving 'whichever came second' is a "
+        "guess");
+    TEST_ASSERT_EQUAL_UINT32(0, n);
+
+    /* every required key, duplicated, must reject the same way */
+    static const char *dups[] = {
+        "# sprout-ota-feed v1\nboard=a board=b version=1 image=https://x/1 "
+        "sig=https://x/2\n",
+        "# sprout-ota-feed v1\nboard=a version=1 version=2 image=https://x/1 "
+        "sig=https://x/2\n",
+        "# sprout-ota-feed v1\nboard=a version=1 image=https://x/1 "
+        "sig=https://x/2 sig=https://x/3\n",
+    };
+    for (size_t i = 0; i < sizeof(dups) / sizeof(dups[0]); i++) {
+        n = 99;
+        TEST_ASSERT_EQUAL_INT_MESSAGE(
+            OTA_PULL_PARSE_MALFORMED,
+            ota_pull_parse_feed(dups[i], strlen(dups[i]), a, 4, &n),
+            "every repeated required key rejects");
+    }
+
+    /* but the mask is PER LINE - two boards each supplying `board=` is normal */
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_OK,
+        ota_pull_parse_feed(k_feed_ok, strlen(k_feed_ok), a, 4, &n),
+        "the duplicate rule must not fire across lines");
+    TEST_ASSERT_EQUAL_UINT32(2, n);
+
     TEST_ASSERT_EQUAL_STRING("ok", ota_pull_parse_label(OTA_PULL_PARSE_OK));
     TEST_ASSERT_EQUAL_STRING("no-banner",
                              ota_pull_parse_label(OTA_PULL_PARSE_NO_BANNER));
