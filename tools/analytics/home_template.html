@@ -620,6 +620,29 @@ document.getElementById("overlay").addEventListener("click", function (e) {
 });
 document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeHero(); });
 
+/* ---- #1335 slice 2 / ADR-0038 §3: the ONE place this surface matches a card to a
+   sibling record. Templates may CONSUME a resolved identity; they may never compute
+   one. Both keys here come already-resolved from the server — plant_id from the
+   registry projection, sensor_id as the canonical channel token after the #1366 fold
+   — so this is a lookup, not a second resolution.
+
+   The defect it closes (#1315): the same match was written inline twice, each with its
+   own two-key fallback. When the registry re-keyed to chN and the boards still emitted
+   s1..s4, those joins found nothing and the Home lost all eight plants — a second
+   identity path living where no import graph reaches. One helper means one place to
+   fix, and one place to delete when the payload carries an explicit join key.
+
+   Data ask (posted on #1335): a single server-computed `join_key` on both the card and
+   its sibling records would remove the last of the policy from this file entirely. */
+function sameEntity(card, rec) {
+  if (!card || !rec) return false;
+  if (card.plant_id && rec.plant_id) return card.plant_id === rec.plant_id;
+  /* unregistered channel: no plant exists yet, so the canonical channel token is the
+     only identity there is. Absent-safe — never matches null to null. */
+  var a = card.sensor_id, b = rec.sensor_id != null ? rec.sensor_id : rec.id;
+  return !!a && !!b && a === b;
+}
+
 /* #1136 the band-journey (maintainer-craved): since the last watering — where it
    started, where it is, which way it's pointed, how fast. Start ring + travel
    arrow ON the ladder; one sentence of counted facts ("2 bands in 3d") — the
@@ -642,12 +665,10 @@ function renderJourney(card, ctx) {
   var box = document.getElementById("journey");
   if (!box) return;
   box.innerHTML = "";
-  /* join like the pulse: plant_id when registered, else the card's sensor_id */
+  /* one consumption point (#1335 slice 2) — see sameEntity above */
   var bh = null, list = ctx.band_history || [];
   for (var i = 0; i < list.length; i++) {
-    var b = list[i];
-    if ((b.plant_id && b.plant_id === card.plant_id) ||
-        (card.sensor_id && b.sensor_id === card.sensor_id)) { bh = b; break; }
+    if (sameEntity(card, list[i])) { bh = list[i]; break; }
   }
   if (!bh || !bh.current || !(bh.transitions || []).length) return;  /* silent */
   /* the honest window: since the DETECTED re-water when there is one, else the
@@ -713,13 +734,12 @@ function drawPulse(card) {
   box.innerHTML = "";
   ctxFetch().then(function (ctx) {
     renderJourney(card, ctx);  /* #1136 — independent of the chart's own gates */
-    /* join on the payload's sensor_id (works registered or not); plant_id is the
-       fallback for older payload shapes. present-or-silent when neither binds. */
+    /* one consumption point (#1335 slice 2) — see sameEntity above.
+       present-or-silent when nothing binds. */
     var sensors = ctx.sensors || [];
     var s = null;
     for (var i = 0; i < sensors.length; i++) {
-      if (card.sensor_id ? sensors[i].id === card.sensor_id
-                         : sensors[i].plant_id === card.plant_id) { s = sensors[i]; break; }
+      if (sameEntity(card, sensors[i])) { s = sensors[i]; break; }
     }
     if (!s) return; /* present-or-silent: no series, no chart */
     var ds = null, sets = (ctx.trajectory || {}).datasets || [];
