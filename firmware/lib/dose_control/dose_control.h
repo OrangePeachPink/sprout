@@ -3,6 +3,11 @@
  * -----------------------------------------------------------------------------
  * Bounded re-wetting control + pass-through discrimination (#414, Epic #410-C).
  *
+ * Status: pending - consumer is #413 (Epic #410-B, remediation strategy), whose
+ * pass-through pulse-soak is specified around the ABSORBED/RAN_THROUGH call below.
+ * Built under #414 (now closed); #413 is the open issue that wires it. NOT legacy:
+ * nothing superseded it, it is ahead of its consumer.
+ *
  * Turns "this plant needs water" into a SAFE, BOUNDED sequence of pulses, and -
  * the load-bearing part - tells two dose outcomes apart:
  *
