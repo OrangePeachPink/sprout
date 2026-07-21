@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dashboard
+import card_context
 import provenance
 from dashboard import (
     _fw_masthead,
@@ -95,7 +95,7 @@ def test_retired_device_fw_excluded_from_the_cue() -> None:
 
 def test_retired_device_does_not_trigger_behind(monkeypatch) -> None:
     # a retired board below latest must not raise the restart cue — it's not live fw
-    monkeypatch.setattr(dashboard, "_declared_fw_version", lambda: "0.7.1")
+    monkeypatch.setattr(card_context, "_declared_fw_version", lambda: "0.7.1")
     v = _versions_block(
         [_dev("live", "0.7.1"), _dev("old-rig", "0.6.0", retired=True)],
         {"version": "0.7.1"},
@@ -108,7 +108,7 @@ def test_retired_device_does_not_trigger_behind(monkeypatch) -> None:
 # behind-latest + restart cue
 # --------------------------------------------------------------------------- #
 def test_device_behind_latest_firmware_is_flagged(monkeypatch) -> None:
-    monkeypatch.setattr(dashboard, "_declared_fw_version", lambda: "0.7.1")
+    monkeypatch.setattr(card_context, "_declared_fw_version", lambda: "0.7.1")
     v = _versions_block(
         [_dev("old", "0.7.0"), _dev("current", "0.7.1")], {"version": "0.7.1"}
     )
@@ -119,7 +119,7 @@ def test_device_behind_latest_firmware_is_flagged(monkeypatch) -> None:
 
 
 def test_stale_server_sets_restart_needed(monkeypatch) -> None:
-    monkeypatch.setattr(dashboard, "_declared_fw_version", lambda: "0.7.0")
+    monkeypatch.setattr(card_context, "_declared_fw_version", lambda: "0.7.0")
     v = _versions_block([_dev("A", "0.7.0")], {"version": "0.7.0", "stale": True})
     assert v["server_stale"] is True
     assert v["restart_needed"] is True  # a stale server alone triggers the cue
@@ -127,7 +127,7 @@ def test_stale_server_sets_restart_needed(monkeypatch) -> None:
 
 def test_no_false_behind_when_latest_unknown(monkeypatch) -> None:
     # firmware source absent in this checkout -> latest None -> never claim behind
-    monkeypatch.setattr(dashboard, "_declared_fw_version", lambda: None)
+    monkeypatch.setattr(card_context, "_declared_fw_version", lambda: None)
     v = _versions_block([_dev("A", "0.1.0")], {"version": "0.7.0", "stale": False})
     assert v["firmware"]["latest"] is None
     assert v["firmware"]["behind"] == []
