@@ -69,7 +69,7 @@ Topic pages rank by **stars**, so a 3-star repo only *surfaces* on small topics.
 
 | Topic | Repos | What it buys |
 |---|---|---|
-| `indoor-gardening` · `capacitive-sensor` | 4 · 4 | Page one guaranteed — but so small there may be little traffic to place in |
+| `indoor-gardening` · `capacitive-sensor` | 4 · 4 | **Carried as label, not as a doorway** — see below |
 | `houseplants` | 27 | Page one, and the least technical audience we reach |
 | `smart-garden` · `plant-care` · `plant-monitoring` · `moisture-sensor` | 53 · 83 · 96 · 99 | **The working band** — confirmed live on the topic pages |
 | `soil-moisture-sensor` · `datalogger` | 204 · 200 | Findable |
@@ -78,6 +78,17 @@ Topic pages rank by **stars**, so a 3-star repo only *surfaces* on small topics.
 
 Carrying a tag never hurts placement on any other tag, so the only scarce resource is the
 slot count.
+
+**A tag has a second job, and it is not sizing.** Topics render as chips **on the repo
+card**, wherever that card appears — so a visitor who arrived via `houseplants` reads the
+whole list. `capacitive-sensor` and `indoor-gardening` are carried for exactly that
+(maintainer's ruling): `capacitive-sensor` tells a hardware reader precisely which sensor
+class this is, sitting next to the vaguer `soil-moisture-sensor`, and `indoor-gardening`
+qualifies the context as windowsill rather than farm. Both do their work **at the moment of
+reading**, independent of whether anyone browses a 4-repo topic page.
+
+So do not prune a tag on repo-count alone — ask which job it holds. Sizing governs
+*doorways*; a small precise word can still earn its slot as a *label*.
 
 **Deliberately not carried:**
 
