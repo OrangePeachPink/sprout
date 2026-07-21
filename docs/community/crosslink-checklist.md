@@ -19,7 +19,7 @@ the character — never a generic gardening pitch.
 
 ## Tier 1 — repo crosslinks · FD-4 · SHIP FIRST (0.7.x)
 
-Additive backlinks; one small PR, ~5 lines across 3 files. Public-voice surfaces → DesignQA voice-check.
+Additive backlinks; one small PR, ~5 lines across 3 files. Public-voice surfaces → Design voice-check.
 
 **1A. `README.md` footer** (~L245) — link the name to the site, canonical spelling:
 
@@ -77,7 +77,7 @@ support destination (Ko-fi / GitHub Sponsors), then point the Sponsor button at 
 
 ## Tier 3 — Pages head metadata + identity graph · FD-2
 
-Goes in the front-door `<head>` (needs FD-1 to exist). OG strings → DesignQA voice-check; keep them
+Goes in the front-door `<head>` (needs FD-1 to exist). OG strings → Design voice-check; keep them
 voice-led, not a virtue claim.
 
 **3A. Share cards** — `title` / `description` / `canonical` / `og:*` / `twitter:card`; `og:image` a stable
@@ -118,7 +118,7 @@ canonical vkhogue.com Person, not here.
 - `llms.txt` at the site root (concise machine description + key URLs).
 - README first-paragraph plain-text-survivability pass — reads as one clean sentence after markup is
   stripped (what scrapers, snippets, and screen readers consume). Check the *current* intro first; rewrite
-  (if needed) is public voice → DesignQA.
+  (if needed) is public voice → Design.
 - Doc tables (sensor matrices, pin maps) with proper header rows.
 
 ---

@@ -282,7 +282,7 @@ less custom machinery you have to learn, the faster you can help — that's the 
 - `area:*` — the subsystem (control / logging / sensing / actuators / analytics)
 - `layer:*` — `firmware` (needs a reflash) vs `host` (build anytime)
 - `for:*` — routing hint to a lane (a best-guess owner, not a commitment — Workflow still triages):
-  `for:firmware` (incl. bench) · `for:data` · `for:design` (→ DesignQA) · `for:dx` · `for:trellis` ·
+  `for:firmware` (incl. bench) · `for:data` · `for:design` (→ Design) · `for:dx` · `for:trellis` ·
   `for:workflow` · `for:maintainer`. See the lane roster in [docs/team/OPERATIONS.md](../docs/team/OPERATIONS.md#the-lanes).
 - `blocks:*` — milestone **gates**, independent of Priority: `blocks:pumps`, `blocks:public-release`,
   `blocks:data-integrity`. Filter by these to see what stands between us and pumps / a public release /
