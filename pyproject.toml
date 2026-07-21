@@ -5,7 +5,7 @@
 
 [project]
 name = "sprout"
-version = "0.7.3"  # single product version line (ADR-0009 §1); synced repo-wide each release (§3)
+version = "0.8.0"  # single product version line (ADR-0009 §1); synced repo-wide each release (§3)
 description = "Sprout — an honest capacitive soil-moisture + small-pump auto-waterer (host tooling)."
 requires-python = ">=3.11"
 license = "MIT"  # SPDX; the authoritative text is the LICENSE file at the repo root
