@@ -2573,10 +2573,19 @@ void t_ota_pull_feed_fail_closed(void)
 
     /* an over-long VALUE must reject rather than truncate - a shortened URL
      * fetches the wrong thing, and a shortened board class could collide */
-    char big[OTA_PULL_URL_MAX + 64];
+    /* Sized from what is actually written: the header line + the longest line
+     * prefix + an OVER-length url + the newline. The first version of this sized
+     * the buffer OTA_PULL_URL_MAX + 64 and wrote prefix(91) + 256 + 1 into it -
+     * a 28-byte stack overflow that MinGW tolerated locally and glibc caught in
+     * CI as SIGABRT. Sized by arithmetic now, and asserted, rather than by a
+     * guess at how much slack "feels" like enough. */
+    char big[512];
     int w = snprintf(big, sizeof(big),
                      "# sprout-ota-feed v1\nboard=esp32-classic version=0.8.0 "
                      "sig=https://x/c.sig image=https://x/");
+    TEST_ASSERT_TRUE_MESSAGE(w > 0 && (size_t)w + OTA_PULL_URL_MAX + 1u <
+                                          sizeof(big),
+                             "the test's own buffer must hold what it writes");
     for (size_t i = 0; i < OTA_PULL_URL_MAX; i++)
         big[w + i] = 'a';
     big[w + OTA_PULL_URL_MAX] = '\n';
