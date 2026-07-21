@@ -26,8 +26,15 @@
     round trip.
 
     Everything outside the safe box is DECORATIVE and expected to be cropped — the
-    gradient ground, the particles, the mood spectrum. Losing any of it costs
-    atmosphere, never meaning.
+    gradient ground and the particles. Losing those costs atmosphere, never meaning.
+
+    The seven-band mood ramp is NOT in that category, and calling it decorative was a
+    mistake in the first pass. It is the one element that says *measurement instrument*
+    rather than *another plant app* — the differentiator on a topic page where the card
+    sits inches from Botanica, Gardening-Planner and opensprout at identical size. So it
+    moved INSIDE the safe box, as a rule beneath the brand line, and the full-bleed edge
+    band was dropped rather than duplicated. One ramp, on every surface: the card now
+    renders identically everywhere, which is the whole point of this issue.
 
     Master for social-preview.png. Upload is web-UI only (no API) — see #1403.
     Light sibling: social-preview-light.svg/png.
@@ -76,14 +83,15 @@
   <text class="wm"  x="640" y="446" font-size="82" fill="#F1F6EC" text-anchor="middle">Sprout</text>
   <text class="tag" x="640" y="498" font-size="29" fill="#8BD24F" text-anchor="middle">Plants that finally have a voice.</text>
 
-  <!-- DECORATIVE (croppable): the seven-band mood spectrum -->
+  <!-- the seven-band ramp, INSIDE the safe box so it survives the topic-page crop -->
   <g>
-    <rect x="0" y="626" width="182.9" height="14" fill="#17B6C4"/>
-    <rect x="182.9" y="626" width="182.9" height="14" fill="#34A853"/>
-    <rect x="365.8" y="626" width="182.9" height="14" fill="#8BD24F"/>
-    <rect x="548.7" y="626" width="182.9" height="14" fill="#C6D84A"/>
-    <rect x="731.6" y="626" width="182.9" height="14" fill="#F5A623"/>
-    <rect x="914.5" y="626" width="182.9" height="14" fill="#E8703A"/>
-    <rect x="1097.4" y="626" width="182.6" height="14" fill="#E0483D"/>
+    <rect x="440" y="524" width="57.1" height="9" rx="1" fill="#17B6C4"/>
+    <rect x="497.1" y="524" width="57.1" height="9" fill="#34A853"/>
+    <rect x="554.2" y="524" width="57.1" height="9" fill="#8BD24F"/>
+    <rect x="611.3" y="524" width="57.1" height="9" fill="#C6D84A"/>
+    <rect x="668.4" y="524" width="57.1" height="9" fill="#F5A623"/>
+    <rect x="725.5" y="524" width="57.1" height="9" fill="#E8703A"/>
+    <rect x="782.6" y="524" width="57.4" height="9" rx="1" fill="#E0483D"/>
   </g>
+
 </svg>
