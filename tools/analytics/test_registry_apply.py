@@ -140,6 +140,8 @@ def test_adopt_registers_an_answering_board() -> None:
                         "device_id": "n3jhsp",
                         "base_url": "http://192.168.1.89",
                         "name": "c5yellow2",
+                        "channels": [1, 4, 5, 6],  # #1027 §5.2 — the C5 soil map
+                        "board": "esp32c5",
                     }
                 ]
             }
@@ -150,6 +152,14 @@ def test_adopt_registers_an_answering_board() -> None:
     assert new["base_url"] == "http://192.168.1.89"
     assert new["name"] == "c5yellow2"  # the label the operator gave it
     assert new["lifecycle"] == "active"  # a freshly adopted board polls immediately
+    # #1027: adoption declares the board's channels — four, with their pins, in chN
+    # order. The count is the §5.2 gate; the pins are what the empty-channel state
+    # teaches ("connect a sensor to GPIO 4").
+    assert r["applied"]["channels_declared"] == 4
+    decl = m.declared_channels("n3jhsp")
+    assert [d.channel for d in decl] == ["ch0", "ch1", "ch2", "ch3"]
+    assert [d.pin for d in decl] == [1, 4, 5, 6]
+    assert {d.source for d in decl} == {"stated"}
 
 
 def test_adopt_requires_a_base_url() -> None:
@@ -163,7 +173,18 @@ def test_adopt_requires_a_base_url() -> None:
 def test_adopting_an_already_registered_id_is_an_error_not_a_dup() -> None:
     m = _model()  # y9d41p already registered
     r = apply_operations(
-        m, {"devices": {"add": [{"device_id": "y9d41p", "base_url": "http://x"}]}}
+        m,
+        {
+            "devices": {
+                "add": [
+                    {
+                        "device_id": "y9d41p",
+                        "base_url": "http://x",
+                        "channels": [36, 39, 34, 35],  # #1027 §5.2
+                    }
+                ]
+            }
+        },
     )
     assert not r["ok"]  # edit the label instead — never a silent duplicate device row
     assert r["errors"][0]["field"] == "device_id"
@@ -176,7 +197,15 @@ def test_adopt_then_map_in_one_batch_resolves() -> None:
     r = apply_operations(
         m,
         {
-            "devices": {"add": [{"device_id": "8gtt1h", "base_url": "http://y"}]},
+            "devices": {
+                "add": [
+                    {
+                        "device_id": "8gtt1h",
+                        "base_url": "http://y",
+                        "channels": [36, 39, 34, 35],  # #1027 §5.2
+                    }
+                ]
+            },
             "mappings": {
                 "assign": [
                     {
