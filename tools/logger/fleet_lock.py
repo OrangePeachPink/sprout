@@ -110,6 +110,14 @@ def _read_marker(fd: int) -> dict | None:
         return None
 
 
+# #1428: the process exit code a fleet_logger uses when it correctly DECLINED because
+# another poller already holds this lock — the deliberate, healthy outcome. Lives here,
+# beside the exception that signals it, so the worker (fleet_logger) and its supervisor
+# (fleet_control) share one definition instead of two magic numbers. Distinct from 0
+# (ran) and from 1 (an unhandled crash), so a decline is legible by exit code alone.
+REFUSED_EXIT = 3
+
+
 class FleetAlreadyRunning(RuntimeError):
     """Raised when a live fleet_logger already holds the singleton lock."""
 
