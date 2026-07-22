@@ -207,6 +207,20 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
   border: 1px solid color-mix(in srgb, var(--st-fault) 45%, transparent); }
 .mismatchbanner strong { color: var(--st-fault); }
 .mismatchbanner code { font-family: var(--font-data); }
+/* #1455: the stale-view marker — the charts say when they're frozen, so an old window
+   is never silently trusted as live. Two registers: a calm "between updates" note
+   (still connected, data just aged), and a warmer "disconnected — frozen" attention when
+   the fetch is failing. Connectivity state, not a soil reading — the warm tone reuses the
+   same disconnect cue the freshness line already uses (--st-dry), for one consistent
+   signal, never the fault alarm. */
+.stalebanner { margin-top: 7px; padding: 8px 12px; border-radius: 8px; font-size: 13px;
+  color: var(--ink); display: block;
+  background: color-mix(in srgb, var(--muted) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--muted) 30%, transparent); }
+.stalebanner.warn {
+  background: color-mix(in srgb, var(--st-dry) 12%, transparent);
+  border-color: color-mix(in srgb, var(--st-dry) 45%, transparent); }
+.stalebanner b { font-family: var(--font-data); font-weight: 600; }
 .caphint { font-family: var(--font-data); font-size: 10px; color: var(--muted); text-transform: none; min-height: 12px; }
 .capstatus.run { color: var(--leaf); font-weight: 600; }
 .capstatus.run::before { box-shadow: 0 0 8px currentColor;
@@ -558,6 +572,9 @@ footer.prov code { font-family: var(--font-data); }
       <!-- #1026: a board answering at a registered address with an id the registry never
            heard of — surfaced loudly (earned alarm, "currently true"), never a silent ghost. -->
       <div class="mismatchbanner" id="mismatchBanner" hidden></div>
+      <!-- #1455: the charts say when they're frozen (disconnected / stale) — never a
+           silently-old window trusted as live. -->
+      <div class="stalebanner" id="staleBanner" hidden></div>
     </div>
     <div class="controls">
       <div class="chansel" id="chansel"></div>
@@ -2959,9 +2976,19 @@ function flash(btn, msg, ok){
 // Freshness/connection line. Driven by a ticker AND every render, so the age
 // stays honest even when no new data arrives, and a dead backend is loud rather
 // than silently frozen as "just now" (issue #48).
+// #1455: the freshness line lives in the header; the stale BANNER names the charts as
+// frozen, where a viewer reading the chart will see it — so an old window is never
+// silently trusted. Shares this function's connOk/stale/age so the two never disagree.
+function setStaleBanner(html, warn){
+  const b = document.getElementById('staleBanner'); if(!b) return;
+  if(!html){ b.hidden = true; b.innerHTML = ''; return; }
+  b.className = 'stalebanner' + (warn ? ' warn' : '');
+  b.innerHTML = html; b.hidden = false;
+}
 function renderFreshness(){
   const span = document.getElementById('refreshed'); if(!span) return;
   const m = (typeof DASH !== 'undefined' && DASH.meta) || {};
+  const asOf = m.generated_display || m.generated_local || 'the last update';
   let ageTxt = '', stale = false;
   if(m.last_local){
     const last = new Date(m.last_local.replace(' ', 'T'));
@@ -2974,12 +3001,18 @@ function renderFreshness(){
     const downTxt = downMin < 1 ? '<1 min' : downMin < 60 ? `${Math.round(downMin)} min` : `${(downMin/60).toFixed(1)} h`;
     span.textContent = `⚠ disconnected · viewer not responding for ${downTxt} · data ${ageTxt||'?'} (is serve.py running?)`;
     span.style.color = 'var(--st-dry)';
+    setStaleBanner(`Live updates paused — the charts below are <b>frozen</b> at ${esc(asOf)}${ageTxt ? ` (${esc(ageTxt)})` : ''}. Reconnecting…`, true);
     return;
   }
   let txt = `data as of ${m.generated_display || m.generated_local || '?'}`;
   if(ageTxt) txt += ` · last reading ${ageTxt}${(stale && LIVE) ? ' · STALE' : ''}`;
   span.textContent = txt;
   span.style.color = (stale && LIVE) ? 'var(--st-dry)' : 'var(--muted)';
+  // connected + fresh: no marker. Connected but the reading has aged past cadence: a calm
+  // note that the charts show the last reading, not a live one — never silently current.
+  setStaleBanner((stale && LIVE)
+    ? `The charts show the last reading, from <b>${esc(ageTxt)}</b> — the fleet may be between updates.`
+    : '', false);
 }
 // #976: a monotonically-increasing request generation. Every /data.json fetch stamps its
 // generation; a later range-switch or poll bumps it. On arrival a response whose stamp is
