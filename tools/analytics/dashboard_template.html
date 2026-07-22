@@ -1662,7 +1662,7 @@ function renderIntegrity(){
   // #965: fleet-poll endpoints are their own kind of source — a labeled line, never
   // mangled into a file path. Only shown when the capture actually has WiFi sources.
   if(L.fleet_sources && L.fleet_sources.length){
-    locRows.push(['fleet source(s)', `<code>${L.fleet_sources.join('</code>, <code>')}</code>`]);
+    locRows.push(['greenhouse source(s)', `<code>${L.fleet_sources.join('</code>, <code>')}</code>`]);
   }
   locRows.forEach(([l,v])=>{ const tr=el('tr'); tr.appendChild(el('td',null,l)); const td=el('td','small'); td.innerHTML=v; tr.appendChild(td); lt.appendChild(tr); });
   wrap.appendChild(lt);
@@ -3016,7 +3016,7 @@ function renderFreshness(){
   // connected + fresh: no marker. Connected but the reading has aged past cadence: a calm
   // note that the charts show the last reading, not a live one — never silently current.
   setStaleBanner((stale && LIVE)
-    ? `The charts show the last reading, from <b>${esc(ageTxt)}</b> — the fleet may be between updates.`
+    ? `The charts show the last reading, from <b>${esc(ageTxt)}</b> — the greenhouse may be between updates.`
     : '', false);
 }
 // #976: a monotonically-increasing request generation. Every /data.json fetch stamps its

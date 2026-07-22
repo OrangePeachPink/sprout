@@ -149,7 +149,7 @@ two-register principle settles multi-series charts too. Per-plant *state-hue* li
 - **Focus-on-interaction**: selecting a plant (legend chip / hover) saturates that ONE series to
   `--series-focus` (ink) and drops the rest to `--series-faint` — one vivid line at a time, so the state
   channel stays uncontested.
-- **Never a fleet-wide 0–100 raw normalization** behind a cross-plant chart (#1039 ruling 3); cross-board
+- **Never a greenhouse-wide 0–100 raw normalization** behind a cross-plant chart (#1039 ruling 3); cross-board
   comparability rides the per-board-class anchor map, with a clearly-labeled envelope-position index where
   needed.
 

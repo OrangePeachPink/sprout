@@ -1,7 +1,7 @@
 # The orientation convention
 
 **Ratified:** 2026-07-20 (maintainer, #1263) · **Owner:** Design-QA 🔍
-**Status:** ratified and applied fleet-wide
+**Status:** ratified and applied greenhouse-wide
 
 ---
 
@@ -13,7 +13,7 @@ Three parts, in the order you'll need them:
 
 ### 1. Vertical axes: **wet = bottom, dry = top**
 
-Fleet-wide, no exceptions. A dry-down **climbs**. A watering **drops**.
+Greenhouse-wide, no exceptions. A dry-down **climbs**. A watering **drops**.
 
 This holds whatever the underlying number is doing. With capacitive probes, higher raw
 counts already mean drier — so plotting raw with the usual "bigger is higher" already puts
