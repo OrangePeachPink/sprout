@@ -13,6 +13,22 @@ The Sprout front-door and its sitemap:
 - Front door: `https://orangepeachpink.github.io/sprout/`
 - Sitemap: `https://orangepeachpink.github.io/sprout/sitemap.xml` (source: `docs/sitemap.xml`)
 
+## Which URL gets a console — only ONE can
+
+Sprout has three discovery URLs; the console steps (§A/§B) touch **exactly one** — the Pages site.
+The two `github.com` URLs cannot be search-console properties (GitHub owns the domain, so you can't
+add a verification tag/file — the same reason the old `github.com` GSC entries were dead). That is
+structural, not an oversight — do not try to add them.
+
+| URL | Console (GSC / Bing)? | How it's optimized |
+|---|---|---|
+| `orangepeachpink.github.io/sprout/` | ✅ **Yes — the only one** | this run sheet (verification tag + sitemap + JSON-LD `@id`) |
+| `github.com/OrangePeachPink/sprout` | ❌ No — GitHub's domain | content only: description, topics, social card, README, About→website (mostly done) |
+| `github.com/OrangePeachPink` | ❌ No — GitHub's domain | content only: profile README, pinned repos, bio, crosslinks (maker-identity hub) |
+
+All three still get a brand/voice pass — that content optimization (across every surface) is Design's
+coordinated review, **#1496**, not this console procedure. This sheet is only the console half.
+
 ## A. Google Search Console — add the Sprout Pages property
 
 1. Use the **same Google account** as `vkhogue.com` (one login = coherent reporting). GSC has no
