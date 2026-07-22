@@ -12,9 +12,12 @@ is the order to work them in, what each needs in hand, and where the public poin
 
 - **Logins in hand:** the Google account (same one as vkhogue.com), Bing Webmaster, Hackaday.io,
   Hackster.io. GitHub is already you.
-- **A board + a build to photograph**, if a maker log wants a fresh in-progress shot. The post
-  drafts stand on their own narrative, but a build session is the natural time to grab any missing
-  bench photo.
+- **A board + a build to photograph — and capture b-roll while you are at it.** A maker log may
+  want a fresh in-progress shot, but the bigger reason is the runway epic (#1202 tick T-7): **the
+  T-4 teaser is cut from footage that must already exist by v0.9.0, and nothing is captured yet.**
+  Any board-out moment (this session, the four-precondition fleet flash) is a capture window — even
+  cheap phone clips count. It is a wall-clock item: it cannot be filmed retroactively at launch, so
+  grabbing a few clips now is the cheapest insurance on the ladder.
 - **Brand assets** (avatar + header) are already live on the maker profiles (#1066) — nothing to
   re-upload.
 
