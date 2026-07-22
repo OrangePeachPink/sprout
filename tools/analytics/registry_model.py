@@ -717,6 +717,16 @@ def registry_payload(model: RegistryModel, undeclared: list | None = None) -> di
     doc["devices"] = [
         {**d, "channels": _channel_view(model, d)} for d in doc["devices"]
     ]
+    # #1027 5.2: recommended soil pinout per board class, so the adopt surface offers a
+    # one-tap default keyed on the operator's class pick (Trellis: stored token resolves
+    # the pins; unknown class -> operator picks). Consumed from board_pinouts, never
+    # re-authored; `verified` (only the classic today) tells the surface it may suggest.
+    from board_pinouts import PINOUT_VERIFIED, RECOMMENDED_SOIL_PINS
+
+    doc["board_pinouts"] = {
+        cls: {"pins": list(pins), "verified": PINOUT_VERIFIED.get(cls, False)}
+        for cls, pins in RECOMMENDED_SOIL_PINS.items()
+    }
     return doc
 
 
