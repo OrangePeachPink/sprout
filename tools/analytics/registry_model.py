@@ -919,7 +919,7 @@ def apply_operations(
 
         {"plants":  {"add": [...], "edit": [...]},
          "sensors": {"add": [...], "edit": [...]},
-         "devices": {"add": [{device_id, base_url, channels: [pin,...],
+         "devices": {"add": [{device_id, channels: [pin,...], base_url?,
                              channel_source?, board?, name?}],
                      "edit": [...],
                      "rewire": [{device_id, channels: [pin,...], channel_source?}]},
@@ -981,11 +981,18 @@ def apply_operations(
         else:
             staged_s.add(sid)
 
-    # ---- validate: device adds (#1027 adopt) — a board answering at an address with an
-    # id the registry never registered. Needs its self-reported id (free) + a base_url
-    # to poll. The id comes FROM the board (#1026 mismatch / discovery), so it's taken
-    # as-is, only checked non-empty + not-already-registered; adopting a known id is an
-    # error (edit the label instead), not a silent duplicate device row.
+    # ---- validate: device adds (#1027 adopt) — a board the registry never registered.
+    # The id comes FROM the board (#1026 mismatch / #1027 §5.1 telemetry discovery), so
+    # it's taken as-is, only checked non-empty + not-already-registered; adopting a
+    # known id is an error (edit the label instead), not a silent duplicate device row.
+    #
+    # base_url is OPTIONAL (#1027 ruling, 2026-07-22). It is the WiFi POLL ADDRESS, not
+    # the identity: a board from telemetry discovery has a device_id but no reachable
+    # address, and a serial/tethered board never has one. The poll path already gates on
+    # it — served_devices() = "has a base_url" — so an adopted board without one is not
+    # WiFi-polled (honest-absent, ADR-0028), never broken. Requiring it blocked adopting
+    # exactly the discovered boards §5.1 surfaces. What makes a board "known" is its
+    # physical config: the §5.2 channel declaration (below) stays the gate.
     staged_d: set[str] = set()
     for i, rec in enumerate(devices.get("add") or []):
         tag = f"devices.add[{i}]"
@@ -994,8 +1001,6 @@ def apply_operations(
             err(tag, "a device id is required to adopt a board", "device_id")
         elif did in existing_d or did in staged_d:
             err(tag, f"device {did} is already registered", "device_id")
-        elif not (rec.get("base_url") or "").strip():
-            err(tag, "a base_url (the board's address) is required", "base_url")
         else:
             # #1027 §5.2, ruled: **adoption REQUIRES a physical-config declaration.**
             # "a new board needs to declare how many probes and what pins they are
