@@ -162,11 +162,40 @@ def test_adopt_registers_an_answering_board() -> None:
     assert {d.source for d in decl} == {"stated"}
 
 
-def test_adopt_requires_a_base_url() -> None:
+def test_adopt_without_a_base_url_is_allowed() -> None:
+    # #1027 ruling (2026-07-22): base_url is OPTIONAL at adoption — it is the WiFi poll
+    # address, not the identity. A board from #1027 §5.1 telemetry discovery has a
+    # device_id (from the wire) and no reachable address; requiring base_url blocks
+    # adopting exactly those boards. It is stored empty and the poll path skips it
+    # (served_devices() = "has a base_url", covered in test_device_registry) — honest-
+    # absent, not broken. The §5.2 channel declaration is what makes it adoptable.
     m = _model()
-    r = apply_operations(m, {"devices": {"add": [{"device_id": "n3jhsp"}]}})
-    assert not r["ok"]  # no address to poll — rejected whole, nothing added
-    assert r["errors"][0]["field"] == "base_url"
+    r = apply_operations(
+        m,
+        {
+            "devices": {
+                "add": [
+                    {"device_id": "n3jhsp", "name": "discovered", "channels": [1, 4]}
+                ]
+            }
+        },
+    )
+    assert r["ok"] and r["applied"]["devices_added"] == 1
+    new = next(d for d in m.devices if d["device_id"] == "n3jhsp")
+    assert new["base_url"] == ""  # empty → device_registry loads it as not-WiFi-served
+    assert new["lifecycle"] == "active"
+    assert [d.channel for d in m.declared_channels("n3jhsp")] == ["ch0", "ch1"]
+
+
+def test_adopt_still_requires_a_channel_declaration() -> None:
+    # The relax loosened base_url ONLY. The §5.2 gate stands: a board that declares no
+    # channels is non-adoptable (#1027, ruled), even with a base_url.
+    m = _model()
+    r = apply_operations(
+        m, {"devices": {"add": [{"device_id": "n3jhsp", "base_url": "http://x"}]}}
+    )
+    assert not r["ok"]  # rejected whole, nothing added
+    assert r["errors"][0]["field"] == "channels"
     assert len(m.devices) == 1
 
 
