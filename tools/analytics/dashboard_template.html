@@ -296,6 +296,16 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .regmap { margin-top: 6px; font-size: 13px; }
 .regmap.unmapped { color: var(--muted); font-style: italic; }
 .regmeta, .regmeta { margin-top: 6px; font-size: 11px; }
+/* #1188: the move-aware location control + the card move marker. Chrome register
+   throughout — a move notice is not a soil reading, and state owns saturation. */
+.regmoved { margin-top: 4px; font-size: 11px; }
+.regmoved span { border-bottom: 1px dotted var(--border); cursor: help; }
+.regloc { margin-top: 8px; }
+.regloc-lbl { font-size: 12px; margin-bottom: 3px; }
+.regloc-note { margin-top: 6px; font-size: 12.5px; line-height: 1.5; max-width: 54ch;
+               padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px;
+               border-left: 3px dashed var(--muted); background: transparent; }
+.regloc-trail { margin-top: 5px; font-size: 11px; }
 .reglist { display: flex; flex-direction: column; }
 .regrow { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
 .regrow:last-child { border-bottom: 0; }
@@ -2488,6 +2498,15 @@ function renderRegistry(reg){
     }
     const meta = [p.location, p.pot_size, p.pot_description].filter(Boolean).map(esc).join(' · ');
     if(meta) card.appendChild(el('div', 'regmeta muted', meta));
+    // #1188: a plant that has moved shows its latest move — the record made visible,
+    // so history isn't lost AND isn't hidden behind opening the editor.
+    const moves = regLocEvents(p.plant_id).filter(e => e.end_ts);
+    if(moves.length){
+      const last = moves[moves.length - 1];
+      card.appendChild(el('div', 'regmoved muted',
+        'moved to ' + esc(p.location || 'here') + ' on ' + esc(fmtDay(last.end_ts))
+        + ' · <span title="Readings before and after a move are different environmental contexts (ADR-0023).">context boundary</span>'));
+    }
     // #921 3b: the map affordance (the anxiety) — a plant-first picker, never dropdown soup.
     const act = el('button', 'reglink', m ? 'Change sensor' : 'Assign a sensor');
     act.onclick = () => { __regPicking = (__regPicking === p.plant_id ? null : p.plant_id); __regPickPort = null; renderRegistry(); };
@@ -2609,6 +2628,58 @@ function regEditPencil(kind, id){
   b.onclick = () => { __regEditing = kind + ':' + id; __regAdding = null; __regPicking = null; renderRegistry(); };
   return b;
 }
+// ===== #1188: a location edit is a MOVE, not a text fix — surface the consequence =====
+// The backend already routes a location edit through move_plant() (#1308): the old spot
+// closes, a new one opens, and a context boundary is written that the trend/forecast
+// consumers re-evaluate across (ADR-0023). The gap this closes is that the UI gave zero
+// signal — she thought she was correcting a string. The ruled behaviour (#921 "c"): the
+// editor asks with the why stated, history is never lost. Consumes __registry
+// .location_history (Data's #1308 payload) — never authors a second move record.
+function regLocEvents(plantId){ return ((__registry && __registry.location_history) || {})[plantId] || []; }
+// #1188: move dates are day-level events — showing seconds implies a precision the
+// operator never means ("which spot", not "which second"). The exact instant still
+// lives in the backend for backdated attribution (§3); this is display only.
+function fmtDay(iso){ if(!iso) return ''; const d=new Date(iso);
+  return isNaN(d) ? iso : d.toLocaleDateString([], {month:'short', day:'numeric'}); }
+function regLocSince(plantId){
+  const evs = regLocEvents(plantId);
+  const open = evs.filter(e => !e.end_ts).slice(-1)[0] || evs.slice(-1)[0];
+  if(!open) return null;
+  return open.start_ts ? fmtDay(open.start_ts) : null;   // null start = grandfathered ("the start")
+}
+// A move-aware location control: current spot + since-when, an input, and a live
+// consequence note that appears only once the value actually changes.
+function regLocationControl(entity){
+  const wrap = el('div', 'regloc');
+  const cur = entity.location || '';
+  const since = regLocSince(entity.plant_id);
+  wrap.appendChild(el('div', 'regloc-lbl muted',
+    cur ? ('Location — here' + (since ? ' since ' + esc(since) : '') ) : 'Location'));
+  const l = el('label'); const i = el('input');
+  i.value = cur; i.dataset.k = 'location'; l.appendChild(i); wrap.appendChild(l);
+  // the consequence line — chrome register, never a state colour (colour-roles charter)
+  const note = el('div', 'regloc-note', '');
+  note.style.display = 'none'; wrap.appendChild(note);
+  i.oninput = () => {
+    const to = i.value.trim();
+    if(!to || to === cur){ note.style.display = 'none'; return; }
+    note.style.display = '';
+    note.innerHTML = (cur
+      ? 'This records a <strong>move</strong>: ' + esc(cur) + ' &rarr; ' + esc(to) + '. '
+      : 'This sets the first tracked spot. ')
+      + 'A move adjusts the environmental tracked data — Sprout follows each spot’s light, warmth and humidity on their own, so readings before and after the move aren’t the same situation. Nothing is deleted'
+      + (cur ? '; ' + esc(cur) + ' keeps its history.' : '.');
+  };
+  // the trail of prior spots, if this plant has moved before
+  const evs = regLocEvents(entity.plant_id);
+  const past = evs.filter(e => e.end_ts);
+  if(past.length){
+    wrap.appendChild(el('div', 'regloc-trail muted',
+      'Been here before: ' + past.map(e =>
+        esc(e.location) + ' until ' + esc(fmtDay(e.end_ts))).join(' · ')));
+  }
+  return wrap;
+}
 function regEditForm(kind, entity){
   const idKey = {plant: 'plant_id', sensor: 'sensor_id', device: 'device_id'}[kind];
   const id = entity[idKey];
@@ -2622,7 +2693,7 @@ function regEditForm(kind, entity){
     form.appendChild(mk('type', 'plant_type', entity.plant_type));
     form.appendChild(mk('pot', 'pot_description', entity.pot_description));
     form.appendChild(mk('pot size', 'pot_size', entity.pot_size));   // #833: was JSON-only
-    form.appendChild(mk('location', 'location', entity.location));   // #833: edit, not add-only
+    form.appendChild(regLocationControl(entity));                    // #1188: move-aware, not a flat field
   } else if(kind === 'sensor'){
     form.appendChild(mk('label', 'friendly_name', entity.friendly_name));
   } else {   // board — friendly_name is the client key; the server stores it as `name` (#583)

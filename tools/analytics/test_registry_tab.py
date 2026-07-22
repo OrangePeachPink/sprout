@@ -44,7 +44,14 @@ def test_pot_size_and_location_are_editable_in_app() -> None:
     assert "'pot_size'" in add and "'location'" in add  # both offered at add-time
     edit = _H[_H.index("function regEditForm(") : _H.index("function regStageEdit(")]
     assert "'pot_size'" in edit  # pot size now settable after creation
-    assert "mk('location', 'location'" in edit  # location now changeable, not add-only
+    # location stays editable after creation — #1188 replaced the flat field with the
+    # move-aware control (a location edit is a MOVE), so the guard follows it there and
+    # still checks it binds an editable `location` input, not just that it renders.
+    assert "regLocationControl(entity)" in edit  # the control is wired into the editor
+    ctrl = _H[
+        _H.index("function regLocationControl(") : _H.index("function regEditForm(")
+    ]
+    assert "i.dataset.k = 'location'" in ctrl  # and it binds an editable location input
 
 
 def test_first_run_landing_retires_the_launchpad() -> None:
