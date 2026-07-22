@@ -314,6 +314,26 @@ def band_ledger(series: dict, registry, root: Path | None = None) -> dict:
     return steps
 
 
+def tier_state(root: Path | None = None) -> str:
+    """Is the parquet tier BUILT yet? (#1435, the honesty half.)
+
+    ``"empty"`` — no parquet under the store root at all. The launcher fills it on
+    first run (#1466), so this is the "not built yet" window, NOT "no readings". A
+    surface must say *"still gathering…"* here, never *"nothing to compare"* — the
+    latter asserts a false empty over data that is simply not ingested. ``"ready"`` —
+    the store has partitions; an empty result now is a *genuine* calm-empty (the window
+    really holds nothing band-bearing), which the surface may state plainly.
+
+    This is the distinction the trial surfaces could not draw before: ``read_series``
+    returns ``{}`` for both, so "the store is dark" and "honestly nothing" rendered the
+    same — the exact falsehood #1435 is (Home lit, /trial says "no readings").
+    """
+    from segment_history import TIER_RAW
+
+    r = Path(root) if root is not None else TIER_RAW
+    return "ready" if any(r.glob("date=*/device=*/*.parquet")) else "empty"
+
+
 def build_payload(
     window_days: int = DEFAULT_WINDOW_DAYS,
     registry=None,
@@ -326,6 +346,7 @@ def build_payload(
     numbers, so her prune verdict compares SURFACES rather than accidental data
     differences."""
     registry = registry if registry is not None else load_registry()
+    state = tier_state(root)
     series = read_series(root, registry)
     now = now or datetime.now(timezone.utc)
     t1 = now
@@ -342,6 +363,10 @@ def build_payload(
     unmapped = [b for b in seen_bands if b.strip().lower() not in mapped]
     return {
         "generated_utc": now.isoformat(),
+        # #1435: the honesty guard. "empty" = the tier is not built yet (say "still
+        # gathering…"); "ready" = built, so an empty result is a genuine calm-empty.
+        # Design renders the branch (for:design); this is the signal it needs.
+        "tier_state": state,
         "bands_seen": seen_bands,
         # a render guarantee checked against LIVE data: every level present here has
         # a mood in mood-band-map.json, so no candidate can render a moodless bar
