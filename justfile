@@ -309,6 +309,32 @@ voice-guard *ARGS:
 board-hygiene *ARGS:
     {{py}} tools/dx/board_hygiene.py {{ARGS}}
 
+# ---- Board field self-service (#1443, ADR-0003 §5) -------------------------------------
+# Read/write the five Project-#2 planning fields in one line, so an attribute is never
+# skipped because writing it was annoying (how velocity: drifted to 7-of-69). Every WRITE
+# re-queries and prints what the board now reports — the mutation's "ok" is not trusted
+# (#519/#522). Needs the local gh login (ProjectV2 scope); works from any worktree.
+#   just board 1443                 # read all five fields for issue 1443
+#   just owner 1443 dx              # firmware|data|design|dx|trellis|workflow|maintainer
+#   just velocity 1443 v2           # v1|v2
+#   just size 1443 s                # xs|s|m|l|xl
+#   just priority 1443 p1           # p0|p1|p2|p3
+#   just status 1443 verify         # backlog|progress|verify|ready|done
+
+# Read all five board fields for issue N (owner/velocity/size/priority/status).
+board N:
+    {{py}} tools/dx/board_field.py read {{N}}
+owner N VALUE:
+    {{py}} tools/dx/board_field.py owner {{N}} {{VALUE}}
+velocity N VALUE:
+    {{py}} tools/dx/board_field.py velocity {{N}} {{VALUE}}
+size N VALUE:
+    {{py}} tools/dx/board_field.py size {{N}} {{VALUE}}
+priority N VALUE:
+    {{py}} tools/dx/board_field.py priority {{N}} {{VALUE}}
+status N VALUE:
+    {{py}} tools/dx/board_field.py status {{N}} {{VALUE}}
+
 # DX tool tests (pytest — identifier-guard + link-check suites; new DX suites land here too).
 test-dx:
     {{py}} -m pytest tools/dx/ -q
