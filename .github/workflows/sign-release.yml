@@ -1,34 +1,45 @@
 name: sign release firmware (#302)
 
-# On a published release (vX.Y.Z), build the board-aware factory bins (classic + C5,
-# firmware/scripts/factory_bin.py) and SIGN each with the release signing key (ed25519,
-# ADR-0026 Decision 2), then attach <bin> + <bin>.sig to the release. A future pull-OTA
-# (#302) + the web-flasher verify against the committed public key (firmware/keys/).
+# Build the board-aware factory bins (classic + C5, firmware/scripts/factory_bin.py) and
+# SIGN each with the release signing key (ed25519, ADR-0026 Decision 2), then attach
+# <bin> + <bin>.sig to the release WHILE IT IS STILL A DRAFT. A future pull-OTA (#302) +
+# the web-flasher verify against the committed public key (firmware/keys/).
 #
-# FAILS CLOSED on the SPROUT_SIGNING_KEY secret (#1346): no key -> no release. The interim
-# behaviour (skip signing with a warning, publish unsigned anyway) is retired - a release
-# that quietly ships unsigned bytes is the failure this job exists to prevent, and a warning
-# in a green log is not a gate. Run the key ceremony first: docs/process/signing-key-ceremony.md
+# ATTACH AT DRAFT TIME, NOT AFTER PUBLISH (#1438). Immutable releases (#1406) lock a
+# release's assets at publish, so `gh release upload` on a published release is refused
+# (HTTP 422 — it took v0.8.0 down live). The two protections are each correct alone; the
+# fix is sequence: sign into the draft, then the maintainer's Publish click seals it
+# immutable *with* its assets. Because the tag does not exist until publish, we build the
+# draft's `target_commitish` (the commit that becomes the tag), not the tag ref.
+#
+# CEREMONY (the automated path can't self-trigger — GITHUB_TOKEN-created drafts don't fire
+# `release: created`, the recursion guard): the drafter (release-draft.yml) prints the exact
+# dispatch command in its success notice. Run it on the draft BEFORE publishing:
+#   gh workflow run sign-release.yml -f tag=vX.Y.Z
+# A human-created draft DOES fire `release: created`, so that path auto-signs.
+#
+# FAILS CLOSED on the SPROUT_SIGNING_KEY secret (#1346): no key -> no release. A warning in
+# a green log is not a gate. Run the key ceremony first: docs/process/signing-key-ceremony.md
 #
 # INTEGRITY INVARIANTS (#1346), each one load-bearing:
-#   * builds the EXACT released ref, never rolling main - the version label is true by
-#     construction rather than by whatever HEAD happened to be at publish time;
+#   * builds the EXACT commit the tag will point at (the draft's target_commitish) - the
+#     version label is true by construction, not by whatever HEAD was at publish time;
 #   * uploads WITHOUT --clobber - a release artifact is written once and never overwritten;
-#   * actions are pinned to full commit SHAs and PlatformIO to an exact version, so a
-#     re-run of an old release builds the same way it did the first time.
+#   * actions pinned to full SHAs and PlatformIO to an exact version - a re-run builds the
+#     same way it did the first time.
 
 on:
   release:
-    types: [published]
+    types: [created] # a DRAFT firing point; published is too late to attach (#1438)
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to build + sign (e.g. v0.7.2)"
+        description: "Draft release tag to build + sign (e.g. v0.8.1)"
         required: true
         type: string
 
 permissions:
-  contents: write # attach release assets
+  contents: write # attach draft-release assets
 
 # #1346 (maintainer ruling: 6.1.19 everywhere) — same declaration shape as ci.yml,
 # pages.yml and weekly-battery.yml, so `grep PIO_VERSION .github/workflows/` shows the
@@ -41,17 +52,36 @@ jobs:
     name: build + sign factory bins
     runs-on: ubuntu-latest
     steps:
-      # Resolved BEFORE checkout - the tag is what we build, so it has to exist first.
-      - name: Resolve tag
-        id: tag
+      # Resolve the release BEFORE anything else, and gate on draft: only a draft can
+      # accept assets (#1438). A published release is immutable — skip loud, don't fail,
+      # because "already published" is a legitimate no-op, not a broken run.
+      - name: Resolve the draft release
+        id: rel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
         run: |
-          tag="${{ github.event.release.tag_name || inputs.tag }}"
+          tag="${EVENT_TAG:-$INPUT_TAG}"
           [ -n "$tag" ] || { echo "::error title=No tag::nothing to build - no release tag and no dispatch input."; exit 1; }
+          draft="$(gh release view "$tag" --json isDraft -q .isDraft 2>/dev/null || echo missing)"
+          if [ "$draft" = "missing" ]; then
+            echo "::error title=No such release::$tag has no release. Draft it first (release-draft.yml), then dispatch this."; exit 1
+          fi
+          if [ "$draft" != "true" ]; then
+            echo "::notice title=Already published::$tag is published and immutable - assets can only be attached while it is a draft (#1438). Nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          commitish="$(gh release view "$tag" --json targetCommitish -q .targetCommitish)"
+          [ -n "$commitish" ] || { echo "::error title=No target::$tag draft has no target_commitish to build."; exit 1; }
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "commitish=$commitish" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
 
       # Fail closed BEFORE the build, not after: no key means no release, so spending ~5
       # minutes compiling first would only delay the same answer.
       - name: Require the signing key
+        if: steps.rel.outputs.skip != 'true'
         # Via env, never inlined into the command: `${{ secrets.X }}` in a run: line puts the
         # key itself in the shell command. Presence is all we test here.
         env:
@@ -62,51 +92,54 @@ jobs:
             exit 1
           fi
 
-      # The exact released ref - NOT rolling main. This is the defect #1346 exists to close:
-      # without `ref:`, a release published from tag vX.Y.Z built whatever main happened to
-      # be, then wore the tag's version label.
+      # The commit the tag WILL point at (the draft's target_commitish), not the tag ref —
+      # the tag does not exist until publish (#1438). This preserves #1346's exact-ref
+      # promise: what we sign is exactly what the published tag will name.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.rel.outputs.skip != 'true'
         with:
-          ref: ${{ steps.tag.outputs.tag }}
+          ref: ${{ steps.rel.outputs.commitish }}
 
-      # Requesting the ref fixes the bug; PROVING it is what makes the claim checkable
-      # rather than trusted (Firmware's hunk, #1346). The explicit fetch --tags matters:
-      # without it the likeliest failure is "the tag object isn't local", which would
-      # block a GOOD release at the worst moment - and a gate that fires on its own
-      # plumbing teaches people to disable it.
-      - name: Confirm the checkout IS the released ref
+      # Requesting the ref fixes the bug; PROVING it keeps the claim checkable, not trusted
+      # (#1346). We compare HEAD to the independently-resolved target_commitish rather than
+      # to a tag (which is not created yet).
+      - name: Confirm the checkout IS the draft's target commit
         id: prov
+        if: steps.rel.outputs.skip != 'true'
         env:
-          TAG: ${{ steps.tag.outputs.tag }}
+          COMMITISH: ${{ steps.rel.outputs.commitish }}
         run: |
-          git fetch --tags --force --quiet || true
           sha="$(git rev-parse HEAD)"
-          tag_sha="$(git rev-list -n1 "$TAG" 2>/dev/null || true)"
-          if [ -z "$tag_sha" ]; then
-            echo "::error title=Cannot prove the ref::$TAG did not resolve to a commit locally. Refusing rather than assuming."
+          target="$(git rev-parse --verify --quiet "${COMMITISH}^{commit}" || true)"
+          if [ -z "$target" ]; then
+            echo "::error title=Cannot prove the ref::target_commitish '$COMMITISH' did not resolve to a commit. Refusing rather than assuming."
             exit 1
           fi
-          if [ "$sha" != "$tag_sha" ]; then
-            echo "::error title=Ref mismatch::HEAD ($sha) is not $TAG ($tag_sha)."
+          if [ "$sha" != "$target" ]; then
+            echo "::error title=Ref mismatch::HEAD ($sha) is not the draft target ($target)."
             exit 1
           fi
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        if: steps.rel.outputs.skip != 'true'
         with:
           python-version: "3.12"
 
       # Pinned so a re-run of an old tag builds with the same toolchain it shipped with.
       - name: Install PlatformIO
+        if: steps.rel.outputs.skip != 'true'
         run: pip install --quiet "platformio==${PIO_VERSION}"
 
       - name: Build board-aware factory bins (classic + C5)
+        if: steps.rel.outputs.skip != 'true'
         working-directory: firmware
         run: |
           pio run -e esp32dev
           pio run -e esp32c5
 
       - name: Collect artifacts
+        if: steps.rel.outputs.skip != 'true'
         # The .bin is the signed trust anchor (its .sig verifies against the committed
         # public key). The manifest-*.json ride along as release-provenance pointers,
         # attached UNSIGNED by design: the web-flasher's AUTHORITATIVE manifest is the
@@ -123,6 +156,7 @@ jobs:
           ls -l dist
 
       - name: Sign factory bins (ed25519) + verify against the committed public key
+        if: steps.rel.outputs.skip != 'true'
         env:
           SIGNING_KEY: ${{ secrets.SPROUT_SIGNING_KEY }}
         run: |
@@ -157,9 +191,10 @@ jobs:
       # The leading '#' line is a comment to `sha256sum -c` (GNU coreutils skips it), so
       # the file stays directly verifiable: `sha256sum -c SHA256SUMS`.
       - name: Write the exact-bytes receipt (SHA256SUMS)
+        if: steps.rel.outputs.skip != 'true'
         env:
           COMMIT: ${{ steps.prov.outputs.sha }}
-          TAG: ${{ steps.tag.outputs.tag }}
+          TAG: ${{ steps.rel.outputs.tag }}
         run: |
           cd dist
           # Capture BEFORE writing: `{ ...; } > SHA256SUMS` would create the (empty) file
@@ -170,11 +205,14 @@ jobs:
           sha256sum -c SHA256SUMS   # the receipt must describe what is actually here
           cat SHA256SUMS
 
-      - name: Attach artifacts to the release
+      - name: Attach artifacts to the draft release
+        if: steps.rel.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        # No --clobber (#1346): a release artifact is written ONCE. If an asset of this name
-        # already exists the upload fails loudly, which is the correct outcome - it means
-        # something is trying to replace bytes that were already published and possibly
-        # already downloaded, verified, or flashed.
-        run: gh release upload "${{ steps.tag.outputs.tag }}" dist/*
+          TAG: ${{ steps.rel.outputs.tag }}
+        # Attaches to the DRAFT — drafts accept uploads; publish then seals them immutable
+        # (#1438). No --clobber (#1346): an artifact is written ONCE; a name collision fails
+        # loud, which is correct - it means something is trying to replace bytes.
+        run: |
+          gh release upload "$TAG" dist/*
+          echo "::notice title=Signed + attached to the draft::$TAG carries its signed bins. Review the draft, then Publish - publishing seals these assets immutable (#1438)."

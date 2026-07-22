@@ -17,7 +17,8 @@ on:
         type: string
 
 permissions:
-  contents: write
+  contents: write # draft the release
+  actions: write # best-effort dispatch of sign-release.yml (#1438); notice is the fallback
 
 jobs:
   draft:
@@ -62,4 +63,12 @@ jobs:
             --generate-notes \
             --target "$GITHUB_SHA" \
             --title "$V"
-          echo "::notice title=Release drafted::$V drafted with generated notes — curate against the ADR-0009 quality bar, then publish (publishing creates the tag)."
+          # #1438 — the signing MUST attach while this is a draft; a published (immutable)
+          # release refuses assets. sign-release.yml can't self-trigger here: a draft
+          # created by GITHUB_TOKEN doesn't fire `release: created` (the recursion guard),
+          # so the ceremony is one explicit dispatch, run BEFORE publishing. Best-effort
+          # auto-dispatch below; the notice hands the maintainer the exact command in case
+          # the token can't trigger it (no PAT here — the honest fallback).
+          gh workflow run sign-release.yml -f tag="$V" 2>/dev/null \
+            && dispatched="auto-dispatched" || dispatched="NOT dispatched (run it yourself)"
+          echo "::notice title=Release drafted — sign it before publishing::$V drafted ($dispatched). Sign the draft's factory bins with:  gh workflow run sign-release.yml -f tag=$V  — then curate the notes (ADR-0009) and Publish. Publishing seals the signed assets immutable and creates the tag (#1438)."
