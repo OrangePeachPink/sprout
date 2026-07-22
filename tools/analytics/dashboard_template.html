@@ -852,6 +852,12 @@ let autoTimer = null;
 let currentDetail = null;
 let __envOverlay = false;  // #922: the per-plant env overlay is OFF by default (opt-in, never on the glance)
 let curRange = '7d';  // #30: default to the 7-day window (one-click zoom to 24h)
+// #1455: the range the chart is ACTUALLY showing, distinct from curRange (the range the
+// SELECTOR says). setRange highlights the new button optimistically, but a failed/dropped
+// fetch never repaints — so without this the selector says 30d while the chart is 7d, with
+// nothing saying so (the #1429 §3 falsehood). Set only on a real paint; the gap between the
+// two IS the stale-window signal renderFreshness surfaces.
+let renderedRange = curRange;
 let connOk = true;          // did the last /data.json fetch succeed? (live mode)
 let lastOkMs = Date.now();  // when we last had good data, for the disconnect notice
 let activeChannels = null;  // Set of active sensor ids; null = all (E10)
@@ -2976,6 +2982,18 @@ function renderFreshness(){
     span.style.color = 'var(--st-dry)';
     return;
   }
+  // #1455: the selector says one window, the chart is painted with another — a range
+  // switch was requested but its fetch has not landed (still loading, or it failed).
+  // Say so calmly instead of letting the highlighted button assert a window the chart
+  // isn't showing. Clears itself the moment a matching paint arrives (renderedRange
+  // catches up to curRange). Calm voice: it's loading/retrying, not a fault.
+  if(LIVE && renderedRange !== curRange){
+    const shown = renderedRange==='all' ? 'all history' : renderedRange;
+    const want  = curRange==='all' ? 'all history' : curRange;
+    span.textContent = `showing the ${shown} window — ${want} is still loading…`;
+    span.style.color = 'var(--muted)';
+    return;
+  }
   let txt = `data as of ${m.generated_display || m.generated_local || '?'}`;
   if(ageTxt) txt += ` · last reading ${ageTxt}${(stale && LIVE) ? ' · STALE' : ''}`;
   span.textContent = txt;
@@ -3010,6 +3028,7 @@ async function refresh(){
       console.info(`[boot] hydrated ${Math.round(window.__boot.hydratedMs)}ms — first /data.json paint (shell → data)`);
     }
     connOk = true; lastOkMs = Date.now();  // recovered / still healthy (latest request only)
+    renderedRange = curRange;  // #1455: the paint succeeded — the chart now IS this range
     renderAll();
   }catch(e){
     if(gen !== __reqGen) return;           // a superseded fetch's failure is not the live state
@@ -3034,7 +3053,10 @@ function applyStaticZoom(){  // file:// mode: zoom the chart x-axis (stats stay 
 function setRange(r){
   curRange = r;
   document.querySelectorAll('.rangebtn').forEach(b=> b.classList.toggle('active', b.dataset.r===r));
-  if(LIVE) refresh(); else applyStaticZoom();
+  // #1455: the button is now highlighted for r, but the chart is still the old window
+  // until refresh() paints. Surface that gap AT ONCE (not up to 15s later on the timer),
+  // so a slow/failing switch never looks like it silently succeeded.
+  if(LIVE){ renderFreshness(); refresh(); } else applyStaticZoom();
 }
 
 /* #822: say what the pass-anchored window actually served. Three honest states:
