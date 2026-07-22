@@ -191,18 +191,15 @@ jobs:
   # this class of break surfaces before hardware instead of only at someone's next
   # local `just build-s3`/`build-c5`.
   #
-  # continue-on-error is on the COMPILE STEP, not the job (#504): job-level
-  # continue-on-error still reports this job's own check-run conclusion as `failure`
-  # (a real red X in the PR checks list / PR list, verified against #499's actual
-  # first-commit check-run data — GitHub Actions docs confirm this is documented
-  # behavior, not a bug: "the job will get a red failure badge... but the job status
-  # will be considered success" for downstream/workflow-conclusion purposes only).
-  # Step-level continue-on-error makes the JOB ITSELF report success — a genuinely
-  # green check, matching what "non-blocking" is supposed to look like at a glance,
-  # not just what it structurally does. The trailing step below still surfaces a
-  # failure as a `::warning::` annotation (visible in the PR's Checks/Files-changed
-  # UI) so a real break isn't silently swallowed — de-escalated from "red X block",
-  # not hidden.
+  # NON-BLOCKING = EVERY STEP, not just the compile (#1439). The green-reporting design
+  # (#504/#546) uses step-level continue-on-error so the JOB's own check reports success
+  # (a green badge, matching the "non-blocking" name) rather than job-level, which shows a
+  # red X. The defect #1439 fixes: continue-on-error was on the COMPILE step ONLY, so any
+  # OTHER step failing (uv sync, pip install, a cache miss) still red the job — and reds
+  # main. The job name promised non-blocking; the wiring delivered it for one step. So
+  # EVERY step here is continue-on-error: the job can never fail whatever breaks, and
+  # test_experimental_nonblocking.py asserts that invariant so a newly-added step can't
+  # silently reintroduce the hole (it broke *because* nothing tested it — #546 regressed).
   experimental-boards:
     name: experimental board (${{ matrix.env }}) — non-blocking
     runs-on: ubuntu-latest
@@ -212,24 +209,30 @@ jobs:
         env: [esp32s3, esp32c5]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        continue-on-error: true
 
       - name: Set up uv (+ the locked Python)
         uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        continue-on-error: true
         with:
           enable-cache: true
           version: "0.11.14"   # pin uv (#254) — kills cross-version uv.lock re-serialization
 
       - name: Set up just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        continue-on-error: true
 
       - name: Sync the locked environment
+        continue-on-error: true
         run: uv sync --locked   # assert uv.lock is current; fail loud, never rewrite it (#254)
 
       - name: Install PlatformIO
+        continue-on-error: true
         run: pip install --quiet "platformio==${PIO_VERSION}"
 
       - name: Cache PlatformIO packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        continue-on-error: true
         with:
           path: ~/.platformio
           key: pio-experimental-${{ matrix.env }}-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
@@ -238,17 +241,18 @@ jobs:
       # Same underlying command as `just build-s3` / `just build-c5` locally (just
       # wraps `pio run -d firmware -e <env>`) — called directly here so the matrix
       # env name maps straight through without a fragile string transform in YAML.
-      # continue-on-error here (step-level, #504) is what makes the JOB's own
-      # check-run report success even when this fails — see the job comment above.
       - name: Compile-check (${{ matrix.env }})
         id: compile
         continue-on-error: true
         run: pio run -d firmware -e ${{ matrix.env }}
 
+      # always() so it reports even if an earlier step was the thing that broke; a
+      # non-success compile (failed OR skipped-because-env-broke) surfaces as a warning.
       - name: Surface a non-blocking failure
-        if: steps.compile.outcome == 'failure'
+        if: always() && steps.compile.outcome != 'success'
+        continue-on-error: true
         run: |
-          echo "::warning title=Experimental board compile failed (non-blocking)::${{ matrix.env }} failed to compile on the pinned toolchain. This never blocks merge (ADR-0024) - see the Compile-check step's log above for the real error, then fix or file it."
+          echo "::warning title=Experimental board build failed (non-blocking)::${{ matrix.env }} did not build clean on the pinned toolchain. This never blocks merge (ADR-0024) - see the steps above for the real error, then fix or file it."
 
   # The single required status check (#472/#466): passes only if BOTH upstream jobs
   # succeeded. Splitting into two jobs changes their names, so branch protection is
