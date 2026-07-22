@@ -262,3 +262,75 @@ def test_filter_channels_device_scoped_tokens(tmp_path: Path) -> None:
     assert scoped.readings[0].device_id == "sprout-s3-01"
     plain = filter_channels(data, ["s1"])  # plain token still matches all devices
     assert len(plain.readings) == 2
+
+
+# --------------------------------------------------------------------------- #
+# #1432 — the v5 token generations of one channel collapse to ONE card
+# --------------------------------------------------------------------------- #
+def _mixed_generation_rows() -> list[str]:
+    """One physical channel across the flash: v4 `s1` rows, then v5 `ch2` rows.
+    s1 folds to ch2 (parse_v1.canonical_channel), so these are the SAME channel."""
+    # contiguous (one run, no multi-day gap) so all four sit in the plot window —
+    # the flash lands mid-run: the first two rows are v4, the last two v5.
+    return [
+        _soil("2026-07-21T00:00:30.000Z", "sprout-classic-01", "s1", 1500),
+        _soil("2026-07-21T02:00:30.000Z", "sprout-classic-01", "s1", 1560),
+        _soil("2026-07-21T04:00:30.000Z", "sprout-classic-01", "ch2", 1620),
+        _soil("2026-07-21T06:00:30.000Z", "sprout-classic-01", "ch2", 1680),
+    ]
+
+
+def test_a_channel_spanning_the_flash_renders_one_card_not_two(tmp_path: Path) -> None:
+    """#1432: the Home claimed 19 plants for 11 because s1@dev and ch2@dev — the same
+    channel — each made a card. They must collapse to one."""
+    reg = Registry(
+        devices=[
+            Device(
+                device_id="sprout-classic-01",
+                board="esp32-classic",
+                label="the classic",
+                channels={"ch2": {"plant_id": "P11", "plant_name": "Fern"}},
+            ),
+            Device(
+                device_id="sprout-s3-01",
+                board="esp32-s3",
+                label="the S3",
+                channels={},
+                base_url="http://x",
+            ),
+        ]
+    )
+    data = parse_files([str(_write(tmp_path, _mixed_generation_rows()))])
+    ctx = build_context(data, registry=reg)
+    fern = [s for s in ctx["sensors"] if s.get("plant_id") == "P11"]
+    assert len(fern) == 1, (
+        f"one physical channel must be one card; got {len(fern)} "
+        f"({[s['sensor_id'] for s in fern]}) — the #1432 double"
+    )
+    # the survivor shows the CURRENT identity (the latest token, ch2 post-flash)
+    assert fern[0]["sensor_id"] == "ch2"
+    # and it carries BOTH generations' readings, not just the latest group's
+    (dataset,) = [d for d in ctx["trajectory"]["datasets"] if d["id"] == fern[0]["id"]]
+    assert len(dataset["points"]) == 4, "all four readings (both generations), one card"
+
+
+def test_a_single_generation_channel_is_unchanged(tmp_path: Path) -> None:
+    """The merge must fire ONLY when two generations coexist — a plain window keeps its
+    raw token and its exact prior shape (the #583 COLLAPSE rule intact)."""
+    rows = [
+        _soil("2026-07-21T00:00:30.000Z", "sprout-classic-01", "s1", 1500),
+        _soil("2026-07-21T06:00:30.000Z", "sprout-classic-01", "s1", 1560),
+    ]
+    reg = Registry(
+        devices=[
+            Device(
+                device_id="sprout-classic-01",
+                board="esp32-classic",
+                label="c",
+                channels={"s1": {"plant_id": "P01", "plant_name": "Monstera"}},
+            )
+        ]
+    )
+    ctx = build_context(parse_files([str(_write(tmp_path, rows))]), registry=reg)
+    (s,) = [s for s in ctx["sensors"] if s.get("plant_id") == "P01"]
+    assert s["sensor_id"] == "s1"  # untouched — no second generation to merge

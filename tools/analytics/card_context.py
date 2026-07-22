@@ -46,6 +46,7 @@ from forecast import fit_line, forecast_payload  # noqa: E402
 from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
     DEFAULT_CAL_BOUNDS,
     LogData,
+    canonical_channel,
 )
 from segment_classifier import (  # noqa: E402  (#1244 trend mask · #1247 windows)
     classify,
@@ -932,6 +933,37 @@ def build_context(
     by_sensor: dict[str, list] = {}
     for r in soil:
         by_sensor.setdefault(_key(r), []).append(r)
+
+    # #1432: collapse the two TOKEN GENERATIONS of one physical channel into one card.
+    # A v5 flash leaves v4 `sN` rows beside v5 `chN` rows in one window; the raw-token
+    # key above split one channel into two groups -> two cards for one plant (the Home
+    # claimed 19 for 11). Keys whose token folds to the same canonical channel (on the
+    # same device) are the same channel, so their readings merge. The survivor is the
+    # key carrying the LATEST reading, so a flash-spanning channel shows its CURRENT
+    # identity (`chN` post-flash) while a single-generation channel is byte-identical
+    # to before (one member -> no merge -> the #583 COLLAPSE rule intact). `_canon_ch`
+    # is the one #1315 fold, the same `channel_identity` (#1454) consumes.
+    def _canon_ch(key: str) -> tuple:
+        if multi:
+            tok, dev = key.rsplit("@", 1)
+            return (canonical_channel(tok), dev)
+        return (canonical_channel(key), None)
+
+    _by_identity: dict[tuple, list] = {}
+    for key, rs in by_sensor.items():
+        _by_identity.setdefault(_canon_ch(key), []).append((key, rs))
+    if any(len(members) > 1 for members in _by_identity.values()):
+        merged: dict[str, list] = {}
+        for members in _by_identity.values():
+            if len(members) == 1:
+                merged[members[0][0]] = members[0][1]
+                continue
+            all_rs = sorted(
+                (r for _k, rs in members for r in rs), key=lambda r: r.timestamp_utc
+            )
+            survivor = max(members, key=lambda m: m[1][-1].timestamp_utc)[0]
+            merged[survivor] = all_rs
+        by_sensor = merged
     sensor_ids = sorted(by_sensor)
     if multi:
         # enumeration order, not sid digits: two devices' s1 must not share a
