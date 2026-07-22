@@ -71,9 +71,23 @@
     color: var(--st-predicted); border: 1px solid var(--st-predicted); border-radius: 4px;
     padding: 1px 6px; vertical-align: 2px; margin-left: 8px; }
 
-  section.surf { background: var(--surface); border: 1px solid var(--border);
+  /* #1148: the ruled-hero subtitle beside the hero name (replaces the CANDIDATE badge) */
+  .hero { display: inline-block; font-size: 12.5px; font-weight: 400; letter-spacing: 0;
+    color: var(--muted); margin-left: 10px; vertical-align: 1px; }
+  section.surf, .surf.stash { background: var(--surface); border: 1px solid var(--border);
     border-radius: 14px; padding: 16px 18px 14px; margin: 0 0 20px; }
   section.surf h2 { font-family: var(--font-display); font-size: 17px; margin: 0 0 2px; }
+  /* #1148 ruling ④: the stashed band ledger — collapsed to an inline icon, chrome register,
+     never a loud surface. The render path lives inside; only the disclosure is closed. */
+  .surf.stash { padding: 0; }
+  .surf.stash > summary { cursor: pointer; list-style: none; padding: 13px 18px;
+    font-family: var(--font-display); font-size: 15px; display: flex; align-items: baseline; gap: 8px; }
+  .surf.stash > summary::-webkit-details-marker { display: none; }
+  .surf.stash .stashicon { color: var(--muted); transition: transform .15s; display: inline-block; }
+  .surf.stash[open] .stashicon { transform: rotate(90deg); }
+  .surf.stash .stashnote { font-size: 11.5px; color: var(--muted); font-family: var(--font-body); font-weight: 400; }
+  .surf.stash[open] { padding-bottom: 14px; }
+  .surf.stash .cap, .surf.stash .scroller, .surf.stash .foot { margin-left: 18px; margin-right: 18px; }
   section.surf .cap { color: var(--muted); font-size: 12.5px; margin: 0 0 14px;
     display: block; line-height: 1.5; }
   .empty { color: var(--muted); font-size: 13px; padding: 18px 2px; }
@@ -102,43 +116,43 @@
   <div class="mast">
     <div>
       <div class="word">Sprout</div>
-      <div class="sub">evaluation surfaces — three candidates on live greenhouse data</div>
+      <div class="sub">the greenhouse &amp; plant heroes — ruled, on live data</div>
     </div>
     <nav><a href="/">← Home</a><a href="/classic">Workbench →</a></nav>
   </div>
 
   <div class="register">
-    <h2>The evaluation register</h2>
-    <p>Three candidate surfaces for the multi-plant history (#1148), built from the round-two
-      concepts and running on real readings. They live here — not on the Home — while you use
-      them. <b>They are candidates, not product:</b> a pruned surface is simply deleted from this
-      route (no confirmation cycle owed — this trial is its cycle); a surface you keep graduates
-      to a product placement and only then earns the #1150 retirement protections.
-      Verdicts go on issue #1148 — keep, prune, or change.</p>
+    <h2>The multi-plant history — ruled</h2>
+    <p>The verdict landed (#1148, 2026-07-22). Two heroes graduated from the round-two
+      evaluation, on live data: <b>the Greenhouse Hero</b> (the envelope — does the windowsill
+      need you at all?) and <b>the Plant Hero</b> (per-plant rows — what has each plant been
+      doing?). The <b>band ledger</b> is <b>stashed</b> behind the icon below — kept, minimized,
+      waiting on lived use to decide whether it earns a standing home; its path is never deleted.
+      <b>#1144</b>'s hero pulse builds on these.</p>
     <div class="rows">
       <div class="rcard">
-        <div class="rj">per-plant · diagnosis</div>
-        <div class="rt">A · Rows — line over day-band</div>
-        <div class="rc">Claims: the shape (how fast, how deep, did it plateau) on top of the
+        <div class="rj">greenhouse level · act or ignore</div>
+        <div class="rt">The Greenhouse Hero — everyone's envelope</div>
+        <div class="rc">One look answers whether the windowsill needs you at all, and bounds
+          the greenhouse (most recent · longest cycle).</div>
+      </div>
+      <div class="rcard">
+        <div class="rj">plant level · diagnosis</div>
+        <div class="rt">The Plant Hero — per-plant rows</div>
+        <div class="rc">The shape (how fast, how deep, did it plateau) on top of the
           mood-at-a-glance bar, without decoding.</div>
       </div>
       <div class="rcard">
-        <div class="rj">across-plants · act or ignore</div>
-        <div class="rt">B · Everyone's envelope</div>
-        <div class="rc">Claims: one look answers whether the windowsill needs you at all, and
-          bounds the greenhouse (most recent · longest cycle).</div>
-      </div>
-      <div class="rcard">
-        <div class="rj">per-plant · discrete step-truth</div>
-        <div class="rt">C · The band ledger</div>
-        <div class="rc">Claims: which band, which day, as counted steps — no interpolation
-          between readings.</div>
+        <div class="rj">stashed · discrete step-truth</div>
+        <div class="rt">The band ledger — behind the icon</div>
+        <div class="rc">Which band, which day, as counted steps — no interpolation. Minimized
+          until lived use asks for it.</div>
       </div>
     </div>
   </div>
 
   <section class="surf">
-    <h2>B · Everyone's envelope<span class="cand">CANDIDATE</span></h2>
+    <h2>The Greenhouse Hero<span class="hero">everyone's envelope</span></h2>
     <span class="cap" id="capB"></span>
     <div id="triageB"></div>
     <div class="scroller"><div id="surfB"></div></div>
@@ -146,18 +160,22 @@
   </section>
 
   <section class="surf">
-    <h2>A · Per-plant rows — the line over its day-band bar<span class="cand">CANDIDATE</span></h2>
+    <h2>The Plant Hero<span class="hero">per-plant rows — the line over its day-band bar</span></h2>
     <span class="cap" id="capA"></span>
     <div class="scroller"><div id="surfA"></div></div>
     <div class="foot" id="footA"></div>
   </section>
 
-  <section class="surf">
-    <h2>C · The band ledger<span class="cand">CANDIDATE</span></h2>
+  <!-- #1148 ruling ④: C is STASHED, not pruned — minimized to an inline icon that expands to
+       the full ledger. Its render path is untouched (renderC still populates surfC inside the
+       collapsed details), so she can decide from lived use whether it earns a standing home. -->
+  <details class="surf stash">
+    <summary><span class="stashicon" aria-hidden="true">▸</span> The band ledger
+      <span class="stashnote">stashed — click to open</span></summary>
     <span class="cap" id="capC"></span>
     <div class="scroller"><div id="surfC"></div></div>
     <div class="foot" id="footC"></div>
-  </section>
+  </details>
 </div>
 
 <script>
