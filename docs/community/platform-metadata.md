@@ -153,4 +153,17 @@ Discord cache too. Any link shared before the change keeps rendering the old car
 expires. The one worth acting on is a **LinkedIn Featured** entry — removing and re-adding
 the link forces a fresh scrape, and that is a surface with a reader on the other end.
 
-— DX
+**Search-engine snippets & caches are a fifth kind of stale** — and the most public one.
+A Google or Bing result shows the crawler's *last cached copy* of your title + description,
+refreshed on **its** clock (days to weeks), not yours. Same blind-spot shape as the social
+card: invisible to `grep`, unreachable by CI, and positioning-relevant precisely when it
+matters most (a launch). The tell (#1485): googling the repo led with *"Sprout: **Honest**,
+local-first ESP32 plant care"* — a stale crawl of the pre-07-18 description — while the live
+description was already voice-first. **You do not edit the snippet; you fix the *source*
+(description, README `<h1>`, the Pages `<head>` meta) and wait for the recrawl.** To hasten
+it, request reindexing in Google Search Console (the run sheet's #1232 job) — which touches
+only the Pages site, the one URL the team controls a `<head>` on. Verify the source is
+clean *before* the recrawl settles, or the fresh index just re-caches the old copy.
+Escalate to sitemap/indexing options only if a stale title persists past ~2 weeks.
+
+— DX · Design (SERP class, #1485)
