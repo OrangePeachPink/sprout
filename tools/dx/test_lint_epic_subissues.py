@@ -14,19 +14,32 @@ from lint_epic_subissues import (
     body_has_checkboxes,
     comment_body,
     epic_findings,
+    is_epic,
     resolved_body,
     scope_section_refs,
 )
 
 
-def _epic(number=1, body="", subs=()):
+def _epic(number=1, body="", subs=(), title="Epic: a thing"):
     return {
         "number": number,
-        "title": "Epic: a thing",
+        "title": title,
         "body": body,
+        # labels retained in the fixture but NOT read for discovery (#1446) — the
+        # `epic` label is retiring; discovery is by sub-issue structure.
         "labels": {"nodes": [{"name": "epic"}]},
-        "subIssues": {"nodes": [{"number": n} for n in subs]},
+        "subIssues": {"totalCount": len(subs), "nodes": [{"number": n} for n in subs]},
     }
+
+
+# --- #1446: discovery is structural (sub-issue count), not the retiring label ---
+
+
+def test_is_epic_by_subissue_structure_not_label() -> None:
+    assert is_epic(_epic(subs=(9,))) is True  # has a child -> epic
+    assert is_epic(_epic(subs=())) is False  # no children -> not an epic yet
+    # even titled "Epic: …" with the label present, zero sub-issues => not discovered
+    assert is_epic(_epic(subs=(), title="Epic: aspirational")) is False
 
 
 # --- AC1: ANY body task-list checkbox is the second-tracker smell ----------
