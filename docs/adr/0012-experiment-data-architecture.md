@@ -1,7 +1,8 @@
 # ADR-0012 — Experiment data architecture
 
-**Status:** Proposed — *schema direction agreed (Firmware conditional approve, Discussion #57); detail
-co-authored when sub-issues are cut*
+**Status:** Accepted — implemented and in use; schema direction agreed (Firmware conditional approve,
+Discussion #57), detail settled at build. *(2026-07-22 truth-pass, #1460: `experiments/` isolation +
+`schema_version=2` experiment fields are live on `main`.)*
 **Date:** 2026-06-25
 **Owner:** Data lane
 **Lane:** data/analytics (experiment data lifecycle)
