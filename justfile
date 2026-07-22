@@ -101,6 +101,29 @@ build-c5:
 flash *ARGS:
     {{pio}} run -d firmware -t upload {{ARGS}}
 
+# Flash the ALPHA channel — the CLI counterpart of the web flasher's alpha (#1334): current main,
+# the dev-team build, unversioned and unproven. It flashes your CHECKED-OUT tree over USB, labeled
+# by exact COMMIT — never a release version string (that would be a lie about unreleased bytes,
+# the drift the channel split exists to end). It does NOT checkout/pull — that would mutate a lane
+# worktree (AGENTS §2.5); it fetches read-only and WARNS if you're behind origin/main or off it, so
+# "latest main" is a `git pull` you choose, not a surprise. Stable, by contrast, is a cut release:
+# flash that from the web flasher, or check out its tag and `just flash`. Firmware's bench byte-path;
+# same USB prereqs as `just flash` (board connected + your OK). Args pass through to the uploader.
+
+# Flash the alpha channel (current main, dev-team, commit-labeled) over USB — the CLI alpha (#1334).
+flash-alpha *ARGS:
+    #!/usr/bin/env sh
+    set -u
+    git fetch --quiet origin main 2>/dev/null || true
+    commit="$(git rev-parse --short HEAD)"
+    branch="$(git branch --show-current)"; [ -n "$branch" ] || branch="detached"
+    behind="$(git rev-list --count HEAD..origin/main 2>/dev/null || echo 0)"
+    printf '>> ALPHA channel - current build, NOT a release (commit=%s branch=%s)\n' "$commit" "$branch"
+    printf '>> Unversioned + unproven, the dev-team channel - expect the unexpected.\n'
+    [ "$branch" != "main" ] && printf '>> NOTE: alpha = current main; you are on "%s", so this flashes THAT.\n' "$branch"
+    [ "$behind" -gt 0 ] && printf '>> NOTE: origin/main is %s commit(s) ahead - `git pull` first for the latest alpha.\n' "$behind"
+    just flash {{ARGS}}
+
 # OTA-flash a board over WiFi by its mDNS device_id (#302 Phase-0, LAN-only). No USB.
 #   e.g.  just ota k7m2rt                       (classic esp32dev — targets sprout-k7m2rt.local)
 #         just ota n3jhsp esp32c5               (C5 board — uses the esp32c5_ota env)
