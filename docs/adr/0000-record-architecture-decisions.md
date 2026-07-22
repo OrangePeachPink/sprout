@@ -107,7 +107,78 @@ prototype's history faithfully. (Execution belongs to the architecture/firmware 
 | — | *(archived)* [Sprout v0 combined architecture record](archive/sprout-v0-architecture.md) | Superseded by ADR-0001 | history |
 
 *New ADRs append a row here when proposed. Any lane may author an ADR for an ADR-sized decision in its
-own area — see [ADR-0003 §10](0003-work-pipeline.md) "When a decision merits an ADR."*
+own area — the test for whether it earns one is below.*
+
+## When a decision earns an ADR
+
+*(Consolidated here 2026-07-21, #1462 — "how ADRs work" belongs in the ADR-about-ADRs, not split across the
+work-pipeline ADR. [ADR-0003 §10](0003-work-pipeline.md) keeps the decision-vehicle ladder; the ADR-specific
+test lives here.)*
+
+An ADR is the **top rung** of the change ladder (commit → issue + PR → ADR), reserved for decisions a future
+contributor will need the *why* for. **Write an ADR when** any of these is true:
+
+- **Hard or expensive to reverse** — architecture, data substrate, a public schema/API, repo structure, a
+  framework choice.
+- **Binds more than one lane** — a shared contract, interface, or cross-cutting policy.
+- **Chooses among real alternatives** where the rejected options matter ("why not X?").
+- **Establishes a convention everyone must follow** — naming, branching policy, the label taxonomy, the gate.
+- **Sets a foundational default/boundary** — born-correct things, cheap now and painful to retrofit (line
+  endings, env tool, data store, directory layout).
+- You'd otherwise **re-explain the same "why" repeatedly** to new contributors.
+
+**Good ADR material:** "GitHub Issues is the work ledger; IDs are `#N`" *(cross-lane convention)* · "Closed-loop
+on soil moisture only; environmental sensors are logging-only" *(architecture; alternatives rejected)* · "Raw
+CSV is immutable; the DuckDB tier is rebuildable" *(substrate; hard to reverse)*.
+
+### NOT an ADR — use the lighter rung instead
+
+- A bug fix or a single feature → an **issue + PR**.
+- A reversible, low-stakes tweak (rename a var, nudge a threshold) → just the change.
+- A routine choice with no real alternative → no record needed.
+- Restating a decision already in another ADR → **link it**, don't duplicate.
+- A how-to, runbook, or frequently-edited reference → **docs** (an ADR is a *decision*, not a living reference;
+  pre-1.0 the ADR text is editable in place, §4).
+- **An ADR that opens by restating another and extending it** → a **section of that ADR**, not a new one.
+  *(Harvested #1462 — 0012/0013 both opened "ADR-0006 defines the data architecture…" → folded into 0006.)*
+- **A stack of amendments on one ADR** → the reader should never reconstruct the current decision by applying
+  ten patches. **Fold into clean current-state text + a dated changelog** (§ maintaining the set, below).
+  *(Harvested #1462 — ADR-0035 carried ten.)*
+- **A second doc for a concept that already has a hub ADR** → extend the hub, or file a **named satellite** the
+  register groups under it — never a peer. *(Harvested #1462 — identity: 0027 is the hub; 0036/0019 satellites.)*
+
+Rule of thumb: *if you'll edit it often, it's a doc; if you'll defend it later, it's an ADR.*
+
+### The gate — prove you don't need a new ADR before you earn one
+
+The antipatterns are only useful if consulted *before* minting. So a new ADR **carries its own justification**
+— three lines near the top, answered honestly:
+
+1. **Why this needs a new ADR** — which "write an ADR when" trigger it hits.
+2. **Which existing ADRs you considered folding it under** — name them; the nearest-domain hub is first to check.
+3. **Why it can't go under one of them** — the specific reason a section of an existing ADR won't do.
+
+If you can't answer 3 convincingly, it's a section, an issue, or a doc — not a new ADR. **Certification checks
+the block exists and is answered; a new ADR without it goes back.** The pass that trims the set is one-time; this
+gate is permanent, and it is the only thing that keeps the set from re-sprawling.
+
+*(Applied to its own author: the consolidation doctrine did **not** mint ADR-0039. Its ADR-governance half lives
+here; the decision-vehicle ladder stays in ADR-0003 §10. Two existing homes, no new number — the gate
+demonstrated on the first thing it governed.)*
+
+## Maintaining the set — how the ADRs stay lean
+
+*(Consolidated here 2026-07-21, #1462.)*
+
+- **Fold-in-place, don't stack.** A material change rewrites the affected section to clean current-state text
+  and records the change in a **dated changelog** at the ADR's foot. The reader gets one coherent decision, not
+  a decision plus patches — history lives in the changelog and in git, never in the body's flow.
+- **One domain, one hub.** A concept has a single **hub** ADR; extensions are **named satellites** the register
+  groups under it, never peers. Identity: 0027 is the hub, 0036/0019 satellites.
+- **Supersede-and-retire.** A superseded ADR is marked `Superseded by ADR-NNNN` and moved to the archived rows;
+  it is never deleted (the citation must still resolve) and never left as a live-looking peer.
+- **The register answers a question, it doesn't just list files.** Grouped by domain, hub-first, one line per
+  ADR — the crawl to current truth is one hop.
 
 ## Consequences
 
