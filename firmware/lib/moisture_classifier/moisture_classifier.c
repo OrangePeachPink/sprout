@@ -116,9 +116,13 @@ moisture_level_t moisture_update(moisture_state_t *st, const moisture_cfg_t *cfg
     /* #1152 kinematics: compare against the PREVIOUS accepted raw before it is
      * overwritten. Soil cannot move this fast at the sampling cadence, so a
      * bigger step means the instrument moved, not the moisture. */
+    /* #1434 AC0: keep the SIGNED step so the check is auditable from the wire
+     * (telemetry step=), not inferred from logged rows. The magnitude drives
+     * rate_spike; the sign carries direction for the exception taxonomy. */
+    int signed_delta = (int)raw_filtered - (int)st->last_raw;
+    st->last_delta = (int16_t)signed_delta;
     if (cfg->max_delta_raw > 0) {
-        int delta = (int)raw_filtered - (int)st->last_raw;
-        if (delta < 0) delta = -delta;
+        int delta = signed_delta < 0 ? -signed_delta : signed_delta;
         st->rate_spike = (uint16_t)delta > cfg->max_delta_raw;
     } else {
         st->rate_spike = false;
@@ -166,6 +170,7 @@ void moisture_init(moisture_state_t *st, const moisture_cfg_t *cfg,
     st->last_spread   = 0;
     st->health_warn   = false;
     st->rate_spike = false; /* a seed has no previous step to compare */
+    st->last_delta = 0; /* #1434 AC0: no prior sample -> zero step */
 }
 
 moisture_level_t moisture_process(moisture_state_t *st, const moisture_cfg_t *cfg,
