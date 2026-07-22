@@ -50,7 +50,6 @@ from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
 )
 from segment_classifier import (  # noqa: E402  (#1244 trend mask · #1247 windows)
     classify,
-    valid_for_trend,
 )
 from timefmt import (  # noqa: E402  (local-time-first display labels, #328/#840)
     local_first_system,
@@ -1037,7 +1036,14 @@ def build_context(
         # fitting a different physical process (the live "+206 c/h drying while
         # Soaked" was the rebound). Freshly-watered segments with no steady arc yet
         # honestly fit NOTHING (the trend disappears rather than lying).
-        _valid = valid_for_trend(plot_settled)
+        # #1457: classify ONCE. valid_for_trend() internally calls classify(), and the
+        # mask-windows below called it a second time on the identical rows — two full
+        # O(n) segment passes per plant over the whole window. Classify once here and
+        # derive the boolean mask from the kinds (that is exactly what valid_for_trend
+        # does), halving the segment cost, which the profile put at ~2.9s of an 11s
+        # build on 700k rows.
+        _kinds = classify(plot_settled)
+        _valid = [k == "steady-drying" for k in _kinds]
         _in_seg = [
             ((h, y), ok)
             for (h, y), r, ok in zip(fit_pairs, plot_settled, _valid)
@@ -1049,7 +1055,7 @@ def build_context(
         # points use — the render's receipt for what the fit refused ("measured,
         # but not counted", never a gap). Consecutive same-kind invalid rows fold
         # into one window; every kind here comes from the taxonomy contract.
-        _kinds = classify(plot_settled)
+        # (#1457: `_kinds` computed once above — reused here, not re-classified.)
         _mask_windows: list[dict] = []
         _mw: tuple | None = None  # (kind, x0, x1)
         for (h, _y), kind, ok in zip(fit_pairs, _kinds, _valid):
