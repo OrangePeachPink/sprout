@@ -58,16 +58,58 @@ Then: add a 2–4 line human lede above the generated list (what this release *m
       Keep-a-Changelog form) — move items out of `[Unreleased]`, add the compare links. PR it (docs PR,
       normal gate).
 
-## 5. Publish
+## 5. Sign the draft — attach the assets BEFORE publishing (the #1438 guard)
 
+**This is the step whose absence shipped v0.8.0 asset-less.** GitHub *immutable releases* lock a
+release's assets at the Publish click; `sign-release.yml` therefore attaches to the **draft** and the
+maintainer's Publish then seals it immutable *with* its assets. **Publishing before this step seals an
+empty release, and it cannot be fixed after — only re-cut.** Never skip to §6 without a green draft here.
+
+- [ ] **Dispatch the signer against the draft tag.** The `release-draft` workflow's success notice
+      prints the exact command; it is:
+      `gh workflow run sign-release.yml -f tag=vX.Y.Z`
+      *(Why manual: a `GITHUB_TOKEN`-created draft does not fire `release: created` — the recursion
+      guard. A human-created draft auto-signs and this dispatch is a no-op. Either way, confirm the run.)*
+- [ ] **The signer must pass its own fail-closed gates** (watch the run): signing key present (no key →
+      it refuses, by design), builds the draft's `target_commitish` (the commit that becomes the tag —
+      the tag does not exist yet), both boards `[SUCCESS]`, `.sig` files produced.
+- [ ] **VERIFY the draft now carries assets — this is the gate, not a nicety:**
+      `gh release view vX.Y.Z --json isDraft,assets -q '"draft=\(.isDraft) assets=\(.assets|length)"'`
+      must print `draft=true` and a **non-zero** asset count (the per-board bins + their `.sig` + the
+      `SHA256SUMS`). **`assets=0` means STOP** — the signer failed or was never dispatched; do not publish.
+- [ ] **Record the receipt** on the release-cut evidence: the asset list and the `SHA256SUMS`, so the
+      flasher's stable channel (#1334) has verifiable bytes to point at.
+
+### 5.1 The dry-run seam walk — do this ONCE before a lane's first real cut, and any time the pipeline changes
+
+The asset-less cut happened because no one walked draft → sign → verify → publish end-to-end before it
+mattered. Walk it on a **throwaway pre-release tag** (e.g. `v0.0.0-cuttest`) so a mistake costs nothing:
+
+1. Draft a release on the test tag (Actions → release-draft, or `gh release create v0.0.0-cuttest --draft --notes test`).
+2. Dispatch `sign-release.yml -f tag=v0.0.0-cuttest`; watch every gate fire.
+3. Run the §5 verify — confirm `assets>0` on the draft.
+4. Publish the test draft; confirm it seals immutable **with** its assets (`assets>0`, `isDraft=false`).
+5. Point a local flasher build at the test release; confirm the stable manifest resolves the released
+   bytes' SHA (the #1334 seam).
+6. **Delete the test release + tag.** The walk's only output is the confidence that the real cut works.
+
+If any step surprises you, the real cut is not ready — fix the pipeline, re-walk, then cut for real.
+
+## 6. Publish
+
+- [ ] **Do not publish until §5 is green** — re-confirm the draft shows `assets>0`. Publishing seals
+      the release immutable *with whatever assets it has*; an empty draft becomes a permanent
+      asset-less release (the v0.8.0 failure, #1438).
 - [ ] **Publishing the release creates the tag** — final look, then Publish. Verify:
-      `git ls-remote origin refs/tags/vX.Y.Z` returns the ship commit.
+      `git ls-remote origin refs/tags/vX.Y.Z` returns the ship commit, **and**
+      `gh release view vX.Y.Z --json isDraft,assets -q '"published=\(.isDraft==false) assets=\(.assets|length)"'`
+      prints `published=true` with a non-zero asset count.
 - [ ] Card sweep, mechanized (#732): **`just board-hygiene`** must print *clean* (zero
       closed-not-Done) before the milestone closes; fix any findings, rerun to green. *(Fallback if
       the recipe or the ProjectV2 token is ever unavailable: eye-sweep the milestone's merged PRs
       and closed issues to Done.)*
 
-## 6. Open the next cycle
+## 7. Open the next cycle
 
 - [ ] Create the next milestone(s) per the version roadmap (ADR-0009 §5); triage carry-overs into them.
 - [ ] **Good-first shelf: intentional growth only** (maintainer's ruling, 2026-07-19 — supersedes the
@@ -80,7 +122,7 @@ Then: add a 2–4 line human lede above the generated list (what this release *m
 
 *Owned by Workflow (ADR-0009: "the Workflow lane cuts releases"). First exercised for v0.7.1.*
 
-## 7. If a shipped release goes bad — feed curation (ADR-0009 §7)
+## 8. If a shipped release goes bad — feed curation (ADR-0009 §7)
 
 *Not part of the normal cut — the break-glass step when the SBOM / dependency audit (or any
 confirmed report) names a shipped release as carrying a known-vulnerable package. Executes
