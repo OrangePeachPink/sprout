@@ -89,6 +89,45 @@ def test_missing_issue_is_a_clean_message(monkeypatch) -> None:
     assert "does not exist" in str(e.value)
 
 
+def test_read_renders_empty_fields_and_exits_zero(monkeypatch, capsys) -> None:
+    """#1447: an empty field is legal — read prints the marker and exits 0.
+    (An unset Size took `just board 1069` down before the fix.)"""
+    monkeypatch.setattr(
+        b,
+        "_item_and_values",
+        lambda n: (
+            "ITEM",
+            {
+                "owner": "dx",
+                "velocity": "V1",
+                "size": None,
+                "priority": "P1",
+                "status": "In Progress",
+            },
+        ),
+    )
+    rc = b.read(1069)
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert b.EMPTY in out  # the empty Size is rendered, not crashed on
+    assert "dx" in out and "In Progress" in out  # the set fields still print
+
+
+def test_the_empty_marker_encodes_on_a_legacy_console() -> None:
+    """The crash was an un-encodable glyph (U+2205 on cp1252). The marker must survive
+    the narrowest console we ship to, or the fix just moves the bug."""
+    b.EMPTY.encode("cp1252")  # raises UnicodeEncodeError if it regresses to U+2205
+
+
+def test_non_numeric_issue_is_named_accurately(monkeypatch) -> None:
+    """The old broad `except ValueError` mislabelled a UnicodeEncodeError.
+    Only a truly non-numeric arg should say so now."""
+    with pytest.raises(b.BoardError) as e:
+        b._issue_number("abc")
+    assert "must be a number" in str(e.value)
+    assert b._issue_number("1069") == 1069
+
+
 def test_issue_not_on_the_board_is_named(monkeypatch) -> None:
     monkeypatch.setattr(
         b,
