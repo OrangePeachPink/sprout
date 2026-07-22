@@ -2678,6 +2678,158 @@ void t_ota_pull_feed_fail_closed(void)
                              ota_pull_parse_label(OTA_PULL_PARSE_NO_BANNER));
 }
 
+/* ---- #1284 S3: the pull TRANSPORT orchestrator ---------------------------
+ * A scriptable transport: the test sets what fetch_feed returns and what the
+ * `apply` callback verdicts, and records whether apply was REACHED (and with
+ * which artifact). The property under test is the fail-closed sequencing -
+ * apply is reached iff the decision was UPDATE, and only OTA_ACCEPT updates. */
+typedef struct {
+    const char *feed_text; /* NULL => fetch_feed reports transport failure    */
+    int fetch_override; /* nonzero => force this fetch_feed return code       */
+    ota_verdict_t apply_verdict; /* what the mocked S2 gate returns           */
+    int apply_calls; /* times apply was REACHED (the fence witness)           */
+    char applied_board[OTA_PULL_BOARD_MAX]; /* which artifact apply saw       */
+    char applied_version[OTA_PULL_VERSION_MAX];
+} pull_harness_t;
+
+static int harness_fetch(void *ctx, char *buf, size_t cap)
+{
+    pull_harness_t *h = (pull_harness_t *)ctx;
+    if (h->fetch_override)
+        return h->fetch_override; /* forced fail / overflow */
+    if (!h->feed_text) return -1; /* transport failure, NOT an empty feed */
+    size_t len = strlen(h->feed_text);
+    if (len > cap) return -1;
+    memcpy(buf, h->feed_text, len);
+    return (int)len;
+}
+
+static ota_verdict_t harness_apply(void *ctx, const ota_pull_artifact_t *chosen,
+                                   const uint8_t *pubkey)
+{
+    pull_harness_t *h = (pull_harness_t *)ctx;
+    h->apply_calls++;
+    if (chosen) {
+        snprintf(h->applied_board, sizeof(h->applied_board), "%s",
+                 chosen->board_class);
+        snprintf(h->applied_version, sizeof(h->applied_version), "%s",
+                 chosen->version);
+    }
+    (void)pubkey; /* borrowed through; the real gate verifies against it */
+    return h->apply_verdict;
+}
+
+static void t_ota_pull_run_orchestrator(void)
+{
+    const uint8_t pk[32] = {0}; /* passed through; apply is mocked here */
+    char buf[512];
+    ota_pull_artifact_t scratch[4];
+    const char *feed = OTA_PULL_FEED_BANNER
+        "\n"
+        "board=esp32-classic version=0.8.1 image=https://x/c.bin "
+        "sig=https://x/c.sig\n"
+        "board=esp32-c5 version=0.8.1 image=https://x/5.bin "
+        "sig=https://x/5.sig\n";
+
+    /* UPDATE: a different version is offered and the gate accepts -> UPDATED,
+     * and apply was reached EXACTLY once with THIS board's artifact. */
+    {
+        pull_harness_t h = {.feed_text = feed, .apply_verdict = OTA_ACCEPT};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL(OTA_PULL_RUN_UPDATED,
+                          ota_pull_run(&t, "esp32-classic", "0.8.0", pk, buf,
+                                       sizeof(buf), scratch, 4));
+        TEST_ASSERT_EQUAL_INT(1, h.apply_calls);
+        TEST_ASSERT_EQUAL_STRING("esp32-classic", h.applied_board);
+        TEST_ASSERT_EQUAL_STRING("0.8.1", h.applied_version);
+    }
+
+    /* UP-TO-DATE: the feed offers the version we already run -> apply NEVER
+     * reached (the effect is gated, not merely the verdict). */
+    {
+        pull_harness_t h = {.feed_text = feed, .apply_verdict = OTA_ACCEPT};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL(OTA_PULL_RUN_UP_TO_DATE,
+                          ota_pull_run(&t, "esp32-classic", "0.8.1", pk, buf,
+                                       sizeof(buf), scratch, 4));
+        TEST_ASSERT_EQUAL_INT(0, h.apply_calls);
+    }
+
+    /* NO-ARTIFACT: our board class is not in the feed -> apply never reached. */
+    {
+        pull_harness_t h = {.feed_text = feed, .apply_verdict = OTA_ACCEPT};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL(OTA_PULL_RUN_NO_ARTIFACT,
+                          ota_pull_run(&t, "esp32-s3", "0.8.0", pk, buf,
+                                       sizeof(buf), scratch, 4));
+        TEST_ASSERT_EQUAL_INT(0, h.apply_calls);
+    }
+
+    /* THE #1227 SEAM: a fetch failure is NOT an empty feed. fetch returns -1 ->
+     * FEED_UNAVAILABLE (stay put), never NO_ARTIFACT, and apply never reached. */
+    {
+        pull_harness_t h = {.feed_text = NULL, .apply_verdict = OTA_ACCEPT};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL(OTA_PULL_RUN_FEED_UNAVAILABLE,
+                          ota_pull_run(&t, "esp32-classic", "0.8.0", pk, buf,
+                                       sizeof(buf), scratch, 4));
+        TEST_ASSERT_EQUAL_INT(0, h.apply_calls);
+    }
+
+    /* A fetch that OVERFLOWS the buffer is also unavailable, not parsed past. */
+    {
+        pull_harness_t h = {.feed_text = feed,
+                            .fetch_override = 99999,
+                            .apply_verdict = OTA_ACCEPT};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL(OTA_PULL_RUN_FEED_UNAVAILABLE,
+                          ota_pull_run(&t, "esp32-classic", "0.8.0", pk, buf,
+                                       sizeof(buf), scratch, 4));
+        TEST_ASSERT_EQUAL_INT(0, h.apply_calls);
+    }
+
+    /* INVALID FEED: no banner -> FEED_INVALID (S3b all-or-nothing), no apply. */
+    {
+        pull_harness_t h = {.feed_text = "garbage without a banner\n",
+                            .apply_verdict = OTA_ACCEPT};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL(OTA_PULL_RUN_FEED_INVALID,
+                          ota_pull_run(&t, "esp32-classic", "0.8.0", pk, buf,
+                                       sizeof(buf), scratch, 4));
+        TEST_ASSERT_EQUAL_INT(0, h.apply_calls);
+    }
+
+    /* REJECTED: UPDATE decided, but the S2 gate refuses (bad sig / wrong board /
+     * commit fail). apply IS reached; the running image is kept. */
+    {
+        pull_harness_t h = {.feed_text = feed,
+                            .apply_verdict = OTA_REJECT_BAD_SIG};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL(OTA_PULL_RUN_REJECTED,
+                          ota_pull_run(&t, "esp32-classic", "0.8.0", pk, buf,
+                                       sizeof(buf), scratch, 4));
+        TEST_ASSERT_EQUAL_INT(1, h.apply_calls);
+    }
+
+    /* SELF-UNKNOWN: an empty board identity is refused BEFORE any fetch. */
+    {
+        pull_harness_t h = {.feed_text = feed, .apply_verdict = OTA_ACCEPT};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL(
+            OTA_PULL_RUN_SELF_UNKNOWN,
+            ota_pull_run(&t, "", "0.8.0", pk, buf, sizeof(buf), scratch, 4));
+        TEST_ASSERT_EQUAL_INT(0, h.apply_calls);
+    }
+
+    /* Labels are total + stable (log/banner tokens, never a secret). */
+    TEST_ASSERT_EQUAL_STRING("updated",
+                             ota_pull_run_label(OTA_PULL_RUN_UPDATED));
+    TEST_ASSERT_EQUAL_STRING("feed-unavailable",
+                             ota_pull_run_label(OTA_PULL_RUN_FEED_UNAVAILABLE));
+    TEST_ASSERT_EQUAL_STRING("rejected",
+                             ota_pull_run_label(OTA_PULL_RUN_REJECTED));
+}
+
 /* ============================================================================
  * #1153 - parameterized band re-partition invariant suite
  * ----------------------------------------------------------------------------
@@ -2980,6 +3132,7 @@ int main(void)
     RUN_TEST(t_ota_pull_feed_parse);
     RUN_TEST(t_ota_pull_feed_evolution);
     RUN_TEST(t_ota_pull_feed_fail_closed);
+    RUN_TEST(t_ota_pull_run_orchestrator);
     RUN_TEST(t_band_anchors);
     RUN_TEST(t_board_capability);
     RUN_TEST(t_sensor_type_resistive);

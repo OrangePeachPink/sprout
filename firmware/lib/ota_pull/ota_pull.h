@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "ota_gate.h" /* S3 orchestrator returns/maps the S2 gate's verdict */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -168,6 +170,85 @@ const char *ota_pull_parse_label(ota_pull_parse_t p);
 /* Stable short token for logs / the update banner. Never NULL, never a secret
  * (ADR-0026 D5: an update log names the VERSION, never a credential). */
 const char *ota_pull_decision_label(ota_pull_decision_t d);
+
+/* ---- S3: the pull TRANSPORT orchestrator (#1284) --------------------------
+ *
+ * The composition that turns the pure pieces (parse S3b, decide S3a, gate S2,
+ * verify S1) into ONE act: "check the feed and, if it offers a trustworthy
+ * different image for this board, apply it." It owns the SEQUENCE and the
+ * fail-closed policy; it owns no network and no flash and allocates nothing.
+ *
+ * Two callbacks inject the hardware the pure core must not know about:
+ *
+ *   fetch_feed - pull the feed document into the caller's buffer. Returns the
+ *                byte count, or <0 on ANY transport failure (DNS, TLS, an HTTP
+ *                status that is not 200, a truncated body). A failed fetch is
+ *                NOT an empty feed - it is "unknown", and unknown means stay on
+ *                the running image. Conflating the two is how a network blip
+ *                turns into "the feed offers nothing, so do nothing" that looks
+ *                identical to a real curation - #1227's lesson, in a callback.
+ *
+ *   apply      - the hardware half: stream the chosen image to the inactive
+ *                slot, verify its detached signature against `pubkey` with the
+ *                S2 gate (ota_gate_apply), and switch the boot slot ONLY on
+ *                OTA_ACCEPT. Returns that verdict. Invoked at MOST once, and
+ *                ONLY on a clean OTA_PULL_UPDATE - the same "the effect is
+ *                gated, not merely the verdict" discipline ota_gate itself uses.
+ *
+ * Nothing here trusts the feed: it is a POINTER (S3b), never an authority. The
+ * signature the `apply` callback checks is the only thing that authorises code
+ * to run (ADR-0026 D2). The orchestrator's whole contribution to safety is that
+ * it NEVER reaches `apply` except on UPDATE, and maps every fetch / parse /
+ * decide failure to "do nothing, stay put".
+ */
+typedef struct {
+    /* fetch the feed text into buf (cap bytes); return length or <0 on failure */
+    int (*fetch_feed)(void *ctx, char *buf, size_t cap);
+    /* stream+verify+commit the chosen artifact; return the S2 gate verdict */
+    ota_verdict_t (*apply)(void *ctx, const ota_pull_artifact_t *chosen,
+                           const uint8_t *pubkey);
+    void *ctx; /* opaque, threaded to both callbacks (HTTP client, slot, ...) */
+} ota_pull_transport_t;
+
+typedef enum {
+    OTA_PULL_RUN_UPDATED =
+        0, /* verified + committed - a new slot will boot   */
+    OTA_PULL_RUN_UP_TO_DATE, /* feed names our board our version - no-op       */
+    OTA_PULL_RUN_NO_ARTIFACT, /* feed is fine, nothing for this board class    */
+    OTA_PULL_RUN_FEED_UNAVAILABLE, /* fetch failed - stay put (NOT "empty")     */
+    OTA_PULL_RUN_FEED_INVALID, /* feed unparseable, or decide rejected it       */
+    OTA_PULL_RUN_SELF_UNKNOWN, /* no usable self board/version, or bad args     */
+    OTA_PULL_RUN_REJECTED /* UPDATE chosen but apply refused it (bad sig /      */
+    /* wrong board / commit failed) - running image kept  */
+} ota_pull_run_t;
+
+/*
+ * Run one pull cycle, end to end, fail-closed.
+ *
+ * `buf`/`bufcap`      - caller-owned scratch for the feed text (nothing is
+ *                       allocated here; the orchestrator is pure like its parts).
+ * `scratch`/`scap`    - caller-owned artifact array the parser fills. Caller-
+ *                       owned on purpose: one ota_pull_artifact_t is ~560 bytes,
+ *                       so an internal array would put multiple KB on whatever
+ *                       stack calls this - honesty about the memory beats a
+ *                       hidden VLA (matches ota_gate / parse zero-alloc stance).
+ * `self_board`/`self_version` - this device's identity (board_capability +
+ *                       firmware version).
+ * `pubkey`            - the 32-byte release public key, borrowed, passed through
+ *                       to `apply` for the S2 verify.
+ *
+ * The ONLY path that boots a new image is: fetch OK -> parse OK -> decide
+ * UPDATE -> apply == OTA_ACCEPT. Every other outcome returns without staging
+ * anything, and any apply result other than OTA_ACCEPT is OTA_PULL_RUN_REJECTED
+ * with the running image untouched.
+ */
+ota_pull_run_t ota_pull_run(const ota_pull_transport_t *transport,
+                            const char *self_board, const char *self_version,
+                            const uint8_t *pubkey, char *buf, size_t bufcap,
+                            ota_pull_artifact_t *scratch, size_t scap);
+
+/* Stable short token for logs / the update banner. Never NULL, never a secret. */
+const char *ota_pull_run_label(ota_pull_run_t r);
 
 #ifdef __cplusplus
 }
