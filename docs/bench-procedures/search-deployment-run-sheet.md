@@ -49,14 +49,19 @@ Bing also powers DuckDuckGo + Ecosia — three engines for one action.
 Nothing for you to do in §C — it ships with the PR that carries this run sheet. Listed here so the
 picture is complete.
 
-## D. The stale "Honest" cached title — mostly not a live string (flag, not a bug)
+## D. The stale "Honest" cached title — stale cache, plus a brand-voice follow-up (#1496)
 
 - Live surfaces are already clean (description = "plants with a pulse", front-door title clean,
   README H1 clean). The "Honest, local-first ESP32 plant care" that Google shows is its
   pre-voice-clean **cache**; step A5 flushes it (allow a few days).
-- Optional voice-audit — your doctrine call, not an SEO one: two residual descriptive uses survive,
-  in `docs/process/ADOPTION.md` and `README.md` (the "a percentage is ... never VWC" line). These
-  read as in-voice description, not the retired hook, so DX left them. To rule on them yourself:
+- **Brand-voice follow-up — routed to Design (#1496).** Beyond the stale cache, a cluster of
+  *user-facing* copy still leads with "honest" (the README user-doc index, `docs/user/`,
+  `docs/process/ADOPTION.md`, the README data-principle bullet). Leading with honesty is a <!-- voice-guard: allow -->
+  non-differentiator — anyone reading a sensor reads it honestly; the moat is the plant's own
+  voice. Re-voicing that copy is Design's brand call, filed as #1496 and timed to land **before**
+  the §A5 recrawl settles, so the fresh index we just requested reflects the moat, not the retired
+  framing. Term-of-art uses (`honest-absent`, `raw-is-truth` in the schema / ADRs) stay — they are
+  precise engineering vocabulary, not copy.
   `git grep -niE 'honest|refuses to lie|never a fake'` surfaces the class. <!-- voice-guard: allow -->
   (That grep pattern names the retired hooks on purpose — it is the search, not the voice.)
 
