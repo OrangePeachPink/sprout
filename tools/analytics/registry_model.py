@@ -631,12 +631,19 @@ def load_registry_model(path: str | Path | None = None) -> RegistryModel:
     return RegistryModel()
 
 
-def registry_payload(model: RegistryModel) -> dict:
+def registry_payload(model: RegistryModel, undeclared: list | None = None) -> dict:
     """The /registry GET seam for the Plants & Sensors tab (#921 slice 2). The model as
     JSON, plus two derived conveniences the surface needs: the **current mapping** (the
     open assignments, resolved) and a **first_run** flag (an empty registry means this
-    tab is the fresh-install setup landing, Q9). DesignQA builds the tab on this."""
+    tab is the fresh-install setup landing, Q9). DesignQA builds the tab on this.
+
+    ``undeclared`` (#1027 §5.1): the calm discovery set - answering boards not yet
+    registered - computed from telemetry by the caller (:func:`device_discovery.
+    discover_undeclared`), since this serializer has no telemetry of its own. Optional
+    so every existing caller is unchanged; ``[]`` (or absent) is the honest empty state
+    the discovery card renders as "no new boards", never a fabricated candidate."""
     doc = model.to_dict()
+    doc["undeclared"] = undeclared or []
     doc["current_mappings"] = [
         {
             "plant_id": a.plant_id,

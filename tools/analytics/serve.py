@@ -95,6 +95,12 @@ _REPO = _HERE.parents[1]
 # the request cadence, never a frozen snapshot.
 _PARSE_CACHE = ParseCache()
 
+# #1027 §5.1: how far back a board counts as an "answering" adoption candidate. A board
+# that logged within this window is a live discovery; one last seen months ago is not
+# "new to adopt". 7 days = the default range, generous enough for an intermittently-on
+# board without resurfacing the long-dead.
+_DISCOVERY_WINDOW_H = 7 * 24
+
 # #808: the Diagnostics "Reference" front-door links (#758) point at docs/ files,
 # but serve.py had no /docs route so they 404'd live. A scoped, read-only,
 # traversal-guarded static route serves the repo docs/ tree (localhost only).
@@ -889,7 +895,30 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif parsed.path == "/registry":  # #921 the Plants & Sensors tab seam
                 from registry_model import load_registry_model, registry_payload
 
-                self._send_json(registry_payload(load_registry_model()))
+                model = load_registry_model()
+                # #1027 §5.1: the calm discovery set - answering boards not yet
+                # registered, distinct from #1026's alarm (excluded by identity below).
+                # Sourced from a bounded recent window so a currently-active-but-
+                # unadopted board surfaces and a long-dead one does not; the parse cache
+                # keeps the load cheap after the first dashboard hit. Never fatal - a
+                # discovery failure degrades to no candidates, never a broken tab.
+                undeclared: list = []
+                try:
+                    from device_discovery import discover_undeclared
+
+                    data = filter_since(
+                        _PARSE_CACHE.load(gather_inputs()), _DISCOVERY_WINDOW_H
+                    )
+                    undeclared = discover_undeclared(
+                        data.readings,
+                        {d.get("device_id") for d in model.devices},
+                        alarm_ids={
+                            m.get("got") for m in active_mismatches() if m.get("got")
+                        },
+                    )
+                except Exception:
+                    undeclared = []
+                self._send_json(registry_payload(model, undeclared))
             elif parsed.path == "/watering/precision":  # #1203 detector QA readout
                 # Workbench-Diagnostics only: how the detector is doing against HER
                 # rulings. Both numerals ship (never a bare %), and precision is None
