@@ -22,6 +22,7 @@ checked against the **live board** rather than trusted. Two ways that matters:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import subprocess
 import sys
@@ -87,6 +88,12 @@ FIELDS: dict[str, dict] = {
 
 # Read order = the board's mental model: who owns it, how fast, how big, how urgent.
 _READ_ORDER = ("owner", "velocity", "size", "priority", "status")
+
+# The empty-field marker. An unset field is a LEGAL, expected state (the readiness view
+# exists to find them), so a read renders it and exits 0 — it never errors (#1447). An
+# em-dash, not U+2205: the latter is not cp1252-encodable and crashed the tool on a
+# Windows console (and, a ValueError subclass, the crash masqueraded as a bad arg).
+EMPTY = "—"
 
 
 class BoardError(Exception):
@@ -175,7 +182,7 @@ def _assert_option_live(field: str, option_id: str) -> None:
 def read(issue: int) -> int:
     _, values = _item_and_values(issue)
     for k in _READ_ORDER:
-        print(f"  {k:9} {values[k] or '∅'}")
+        print(f"  {k:9} {values[k] or EMPTY}")
     return 0
 
 
@@ -200,12 +207,27 @@ def write(field: str, issue: int, word: str) -> int:
     # Never trust the mutation — re-query and print what the board reports (#519/#522).
     _, values = _item_and_values(issue)
     now = values[field]
-    print(f"  #{issue} {field} = {now or '∅'}")
+    print(f"  #{issue} {field} = {now or EMPTY}")
     return 0
+
+
+def _issue_number(s: str) -> int:
+    """Parse the issue arg, or fail with a clean message. Scoped tightly so ONLY a truly
+    non-numeric arg triggers it — a broad `except ValueError` once caught an unrelated
+    UnicodeEncodeError (a ValueError subclass) and mislabelled it (#1447)."""
+    try:
+        return int(s)
+    except ValueError:
+        raise BoardError(f"issue must be a number, got '{s}'.") from None
 
 
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
+    # Encoding-independent output: a glyph the console can't encode must never crash the
+    # tool (#1447 — U+2205 died on cp1252). errors="replace" degrades to '?' at worst.
+    with contextlib.suppress(AttributeError):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
     fields = " ".join(FIELDS)
     if not argv:
         print(
@@ -220,15 +242,12 @@ def main(argv: list[str] | None = None) -> int:
         if verb == "read":
             if len(argv) != 2:
                 raise BoardError("usage: board_field.py read <issue>")
-            return read(int(argv[1]))
+            return read(_issue_number(argv[1]))
         if verb in FIELDS:
             if len(argv) != 3:
                 raise BoardError(f"usage: board_field.py {verb} <issue> <value>")
-            return write(verb, int(argv[1]), argv[2])
+            return write(verb, _issue_number(argv[1]), argv[2])
         raise BoardError(f"unknown command '{verb}'. Use: read | {fields}")
-    except ValueError:
-        print("error: issue must be a number.", file=sys.stderr)
-        return 2
     except BoardError as e:
         print(f"board_field: {e}", file=sys.stderr)
         return 1
