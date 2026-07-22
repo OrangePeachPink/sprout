@@ -11,7 +11,7 @@ Sprout is on GitHub now — and the no-fly on repo writes is **lifted**.
 Thank you for holding the line while the scaffolding went in. You cleared the runway, paused your own
 work, and waited patiently for the process to land. That patience is exactly what let us build it *right*
 instead of *fast* — labels, board, the verification gate, and a clean idea-to-merge path that every lane
-shares. It's appreciated, genuinely. **Sprout welcomes you.** The watering's honest, the board's clean,
+shares. It's appreciated, genuinely. **Sprout welcomes you.** The watering's careful, the board's clean,
 and there's one path now. Let's grow it.
 
 ## What changed, in one breath

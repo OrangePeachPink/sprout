@@ -22,8 +22,8 @@ maintainer, and a curious community member each find their own path from one pag
 | --- | --- |
 | [What you need](user/what-you-need.md) | The parts + tools to get started. |
 | [Build & run](user/build-and-run.md) | Wire it, flash it, bring it up. |
-| [What Sprout is telling you](user/what-sprout-is-telling-you.md) | Reading the moods, bands, and honest numbers. |
-| [Trust your sensor](user/trust-your-sensor.md) | Why the readings are honest, and when to doubt one. |
+| [What Sprout is telling you](user/what-sprout-is-telling-you.md) | Reading the moods, bands, and the raw numbers behind them. |
+| [Trust your sensor](user/trust-your-sensor.md) | What your sensor is good at, and when to doubt a reading. |
 | [Friendly troubleshooting](user/friendly-troubleshooting.md) | It's acting up — plain-language fixes. |
 | [Operating collection](operating-collection.md) | Start/stop/reclaim collection headlessly, without the dashboard. |
 | [Wiring](WIRING.md) · [Sensor calibration](SENSOR_CALIBRATION.md) · [Sensor QA](SENSOR_QA.md) | The hardware specifics. |

@@ -121,7 +121,7 @@ guide:
 
 ## The reading rules
 
-A few principles the whole system is built to, so the data can always be trusted:
+A few principles behind how Sprout reads a plant:
 
 - **Raw + band are the reading;** a percentage is a labelled relative index, never VWC.
 - **Mood &amp; automation follow the calibrated band,** never the index.

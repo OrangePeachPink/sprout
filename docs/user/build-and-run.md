@@ -55,7 +55,7 @@ change as you touch the probe or move it between dry air and a cup of water.
 
 **What that number means (and what it doesn't):** the raw reading isn't a percentage — a soil
 sensor can't measure moisture as precisely as a number like "42%" implies. Sprout instead sorts
-readings into honest **bands** (dry, ideal, wet, and so on). Read
+readings into **bands** (dry, ideal, wet, and so on). Read
 **[What Sprout is telling you](what-sprout-is-telling-you.md)** to understand the bands and know
 when a reading means what it says.
 
@@ -65,7 +65,7 @@ Sprout can already take an **operator-commanded** watering action — you can te
 for a moment. But the automatic "water this plant when it's dry" loop is intentionally **not
 turned on yet**: the safety checks that make unattended watering trustworthy come first, in order
 (that's Sprout's rule — *make watering correct before it's possible*). This section grows as that
-work lands; for now, this guide gets you to a live, honest reading, which is the real foundation
+work lands; for now, this guide gets you to a live reading, which is the real foundation
 everything else builds on.
 
 ## If something looks off
