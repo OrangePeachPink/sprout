@@ -148,21 +148,27 @@ typedef struct {
  *          plain I/O on C5, not strapping - verify it isn't the boot button at B1).
  *   i2c  : NOMINAL - no env sensors planned on the C5 (the single SHT45/AS7263
  *          instance lives on the classic); set to valid pins for completeness. */
-#define BOARD_CAPABILITY                                                       \
-    {"esp32-c5",                                                               \
-     true,                                                                     \
-     4,                                                                        \
-     12,                                                                       \
-     "nvs",                                                                    \
-     {1, 4, 5, 6},                                                             \
-     {0, 8, 9, 10},                                                            \
-     BOARD_LED_NONE,                                                           \
-     23,                                                                       \
-     24,                                                                       \
-     {2037, 1861, 1685, 1478, 1272, 1065},                                     \
-     false,                                                                    \
-     900,                                                                      \
-     3000}
+#define BOARD_CAPABILITY                                                             \
+    {"esp32-c5",                                                                     \
+     true,                                                                           \
+     4,                                                                              \
+     12,                                                                             \
+     "nvs",                                                                          \
+     {1, 4, 5, 6},                                                                   \
+     {0, 8, 9, 10},                                                                  \
+     BOARD_LED_NONE,                                                                 \
+     23,                                                                             \
+     24,                                                                             \
+     {2037, 1861, 1685, 1478, 1272, 1065},                                           \
+     false, /* Rails from the measured C5 envelope, NOT placeholders (#1433,       \
+      * Data-ratified 2026-07-22; provenance bench_20260710, installed      \
+      * positions: air-dry 2742-2792, water-cup 934-1020). The old 3000     \
+      * put air_dry ABOVE the real air rail, so open_adc (raw>air_dry)      \
+      * could never fire; 2850 sits +58 past the max, 920 -14 below the     \
+      * min - normal reads can't false-fire, a real open/short does.        \
+      * Per-channel granularity is the owner-cal instance layer (#963). */ \
+     920,                                                                            \
+     2850}
 #else
 /* host / native tests / an unknown target: assume the Tier-0 floor - tethered
  * monitor, no WiFi, no persistence. A real no-WiFi board (e.g. an AVR) adds its
