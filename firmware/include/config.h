@@ -188,44 +188,14 @@ constexpr uint32_t WIFI_CONNECT_TIMEOUT_MS =
 constexpr uint32_t WIFI_RETRY_BACKOFF_MS =
     30000UL; // wait this long after a failed attempt
 constexpr int WIFI_HTTP_PORT = 80; // served-status skeleton (#21)
-// --- Phase-0 OTA (#302, maintainer-ruled interim; NOT the ADR-0026 fence) -----
-// ArduinoOTA is LAN-only (espota over the local net, mDNS-advertised) and armed only
-// while WiFi-connected. It is PASSWORD-gated: the espota password below. This is a
-// deliberately weak Phase-0 interim - a shared, LAN-scoped default. The real posture
-// (signed images + a verified-marker + key management) is ADR-0026, staged as a
-// follow-up amendment; do NOT treat this as the security fence.
+// --- WiFi firmware updates: signed PULL only (#1340 / #302 S3, ADR-0026) ------
+// The Phase-0 espota PUSH receiver and its OTA_PASSWORD lived here and are RETIRED.
+// Rationale is on #1340; the short version is that a listening receiver guarded by a
+// build-time shared secret was always an interim, and signed pull removes both the
+// listener and the secret rather than hardening them.
 //
-// PROVISIONED-OR-OFF (#1333, maintainer-approved). There is NO default password,
-// and that absence is the whole mechanism: the push receiver arms only when a
-// password was provisioned AT BUILD TIME.
-//
-// The retired placeholder ("sprout-phase0") was published on purpose as an example -
-// but a published credential compiled into every PUBLIC build (CI, release,
-// web-flasher) is a known-password receiver listening on a stranger's LAN, on a
-// board they flashed from our own front door. "You still have to be on the LAN"
-// is a real mitigation for a maintainer's own bench and a much weaker one for a
-// household that has guests, roommates, or a shared flat's WiFi. The person who
-// clicks Flash on the Pages site never opted into that, and cannot see it.
-//
-// So: no local override file -> no OTA_PASSWORD -> receiver never begins (see
-// OTA_PUSH_ARMED). Public builds are dark by construction, not by remembering to
-// set something. Bench builds are UNCHANGED - they already provision by copying
-// firmware/platformio_local.example.ini -> platformio_local.ini (gitignored), and
-// that one file supplies BOTH the -D OTA_PASSWORD compiled in here AND the
-// uploader's --auth, which must match. See docs/OTA_FLASH.md § Password.
-//
-// Do NOT reintroduce a default here to "make bench easier" - a default re-arms
-// every public build, which is the exact defect this closes.
-// A board keeps accepting its OLD password until it is re-flashed.
-//
-// TEMPORARY BY DESIGN: the push mechanism retires in v0.8.1 (#1340) once signed
-// pull (#302) is proven on the live fleet. This latch dies with the receiver -
-// there is nothing to unwind later.
-#ifdef OTA_PASSWORD
-#define OTA_PUSH_ARMED 1
-#else
-#define OTA_PUSH_ARMED 0
-#endif
+// The USB maker door is unchanged and always open (ADR-0026) - a board is never
+// un-reflashable.
 // NTP-on-connect (#278/#276, ADR-0018 §3): SNTP arms on WiFi association; rows
 // flip time_source=device_uptime -> device_synced once the clock is real.
 constexpr const char *WIFI_NTP_SERVER = "pool.ntp.org";

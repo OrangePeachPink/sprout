@@ -1,137 +1,43 @@
-# OTA firmware flash (Phase-0, LAN-only)
+# OTA firmware flash — RETIRED (#1340)
 
-Update a deployed Sprout board's firmware **over WiFi** — no USB, no moving the PC to the plant.
-This is **Phase 0** (#302): a standard ArduinoOTA receiver, LAN-only, password-gated. It is **not**
-the ADR-0026 security fence (signed images + verified-marker + pull-mode); that is Phase 1 (v0.8.0).
+> **This page documented the Phase-0 espota PUSH receiver, which no longer exists.**
+> It is kept as a pointer rather than deleted, because `just ota` and this filename are
+> in a year of commit messages, issues, and bench notes — a dead link is worse than a
+> short page that says what happened.
 
-## One-liner
+## What was retired
 
-```sh
-just ota <device_id>        # e.g.  just ota k7m2rt   -> targets sprout-k7m2rt.local
-```
+The board no longer runs a WiFi update **listener**. Removed in full:
 
-Find `<device_id>` on the board's card in the dashboard, the boot banner (`device_id=…`), or any
-telemetry row. The board announces itself as `sprout-<device_id>.local` on the LAN (#676 mDNS).
+- the `ArduinoOTA` receiver (gone from the binary, not merely disabled)
+- `OTA_PASSWORD` and the build-time provisioning that armed it
+- the `*_ota` PlatformIO upload environments
+- the `just ota` recipe
 
-### Multi-homed host? Pin the callback IP (#1227)
+**Why:** a listening receiver guarded by a build-time shared secret was always an interim
+(ADR-0026 named it as one). Signed **pull** removes both the listener and the secret rather
+than hardening them — there is nothing to authenticate *to*, because nothing is listening.
 
-If your PC has more than one network interface (LAN + VPN + WSL is the common trio), espota can finish the
-upload while the board's UDP result-callback goes to the wrong interface: the flash **succeeds**, but espota
-waits and then exits `No response from device after upload completion` — a **false FAILED**. Pass your LAN
-IP as the third argument to pin the callback interface:
+## How to update a board now
 
-```sh
-just ota <device_id> <board> <host_ip>   # e.g.  just ota n3jhsp esp32c5 192.168.1.42
-```
+| Situation | Path |
+| --- | --- |
+| Normal WiFi update | **signed pull** — the device fetches, verifies the signature, then switches slots (#302 S3) |
+| New, dead, or off-WiFi board | **USB** — `just flash`. The maker door is always open (ADR-0026) |
+| Web flasher | the Pages flasher, same signed artifact |
 
-> **Setting `--host_ip` by hand instead? Two traps bite together (#1225).**
-> `PLATFORMIO_UPLOAD_FLAGS` **replaces** the ini's `upload_flags` — it does not merge, so you must repeat
-> `--auth=…` yourself — and PlatformIO splits multi-value env vars on **newlines, not spaces**, so a
-> space-joined value reaches espota as *one* argv token and the board ends up checking the literal password
-> `<yourpassword> --host_ip=…` — flag, space and all. **Fingerprint:** the invitation succeeds, then auth fails
-> deterministically on *both* PBKDF2-HMAC-SHA256 and MD5 — which reads like a rejecting board when the
-> board is healthy. Correct form, or just use the recipe above:
->
-> ```sh
-> PLATFORMIO_UPLOAD_FLAGS=$'--auth=<yourpassword>\n--host_ip=192.168.1.42'
-> ```
+## One thing worth carrying forward
 
-**The recipe trusts the board, not espota's exit code.** After every upload it polls
-`http://sprout-<device_id>.local/` for the running `git=` short-sha and reports reality: `VERIFIED on <sha>`
-when the board is back on the expected commit (even if espota timed out), or a failure only if the board
-never returns. An ack-timeout on a healthy flash therefore reads **VERIFIED**; a genuine half-flash still
-reads **FAILED**.
+The retired `just ota` recipe did **not** trust espota's exit code. On a multi-homed host the
+UDP ack can time out after a perfectly healthy flash, so it polled the board's own status page
+for `git=` and reported what the **board** said (#1227).
 
-## Password — provisioned, or the receiver does not exist (#1333)
+That distinction outlives the mechanism: *what you sent* and *what is running* are different
+claims. Whatever verifies a pull update should verify from the **device**, not from the transfer.
 
-The OTA upload is password-gated, and the password lives in two places that **must match**:
+## History
 
-- **Firmware:** `OTA_PASSWORD` — compiled into the image (what the board will accept).
-- **Uploader:** `--auth=…` — what espota presents.
-
-**There is no default.** A build with no provisioned password has **no push receiver at all** — the code
-compiles out, so there is nothing listening to authenticate against. That is the point: the old committed
-placeholder (`sprout-phase0`) shipped a *known* credential in every public artifact, so anyone who flashed
-Sprout from the web flasher was running a receiver whose password is printed in this repo, on their own
-LAN, without knowing it.
-
-So:
-
-| Build | Push receiver | How to update over WiFi |
-| --- | --- | --- |
-| **Public** (CI, release, web-flasher) | **absent** | not available — reflash over USB |
-| **Bench** (provisioned via `platformio_local.ini`) | armed | `just ota …` as below |
-
-A public-build board says so on the serial log at WiFi connect:
-
-```text
-# OTA: push receiver OFF - no password provisioned at build time (#1333). USB flashing unaffected.
-```
-
-This is still **not** the security fence — that is ADR-0026 (signed images + verified marker + key
-management), landing as signed **pull** in 0.8.0. The push mechanism itself retires in 0.8.1 (#1340) once
-signed pull is proven on the live fleet; the USB door stays, always.
-
-### Running a real password (#1252)
-
-**Do not edit `config.h` or `platformio.ini`** — that would commit the secret. Use the gitignored local
-override, which sets **both sides from one file** so they cannot drift apart:
-
-```sh
-cd firmware
-cp platformio_local.example.ini platformio_local.ini   # gitignored
-# edit platformio_local.ini and replace CHANGE-ME-LOCALLY with your value
-```
-
-The file is **optional**: absent, PlatformIO skips it and the build simply has **no push receiver** (#1333)
-— a fresh clone still builds and USB-flashes with zero setup, it just can't be pushed to over WiFi.
-Present, it supplies the firmware's `-D OTA_PASSWORD` *and* the uploader's `--auth` together. Never put a
-real value in this doc, the example file, or any tracked file.
-
-> **Why one file for both:** if the two sides disagree, the flash fails `Authentication Failed` on
-> **both** hash schemes while the espota invitation still succeeds — a signature that reads like a
-> rejecting board when the board is healthy.
-
-**Rotation is a flash, not an edit.** Changing the local value only affects the *next build*: every board
-keeps accepting its **old** password until it is re-flashed with a new image. So rotate by flashing the
-whole fleet — ideally in one coordinated bundle (see #1236 / #1152) — then verify each board answers.
-
-**Rotating over OTA is chicken-and-egg.** The new password is *inside the image you are sending*, but the
-running board still authenticates with its **old** one — so for the rotation flash only, the two sides must
-briefly differ. Either flash over **USB** (no auth at all — simplest), or split the local file for one pass:
-
-```ini
-[env:esp32dev]
-build_flags = -D OTA_PASSWORD='"NEW"'   ; what goes INTO the image
-[env:esp32dev_ota]
-upload_flags = --auth=OLD               ; what the RUNNING board still expects
-```
-
-Once every board is flashed, set `--auth` to `NEW` as well and the two are back in sync. Any board you miss
-keeps the OLD password and will refuse the NEW `--auth` — with the both-hash-schemes-fail signature above.
-
-## Honest limits (when OTA does NOT apply — flash wired)
-
-- **A board flashed from a PUBLIC build** (CI artifact, release asset, or the web flasher) has **no push
-  receiver compiled in at all** (#1333) — this is by design, not a fault. Reflash it over USB. Signed
-  **pull**-OTA (0.8.0, ADR-0026) is the path that will work here without a password.
-- **A dead / bricked board** has no running receiver — recover it wired (download mode).
-- **A brand-new / unprovisioned board** has no OTA firmware and no WiFi creds yet — its **first**
-  flash is always wired; OTA works from then on.
-- **A board off WiFi** (no creds, out of range) is unreachable by OTA — reconnect it first.
-- Rollback safety: a bad push that boots but crashes reverts to the previous image on its own
-  (boot-validation rollback, #302) — but the *transfer* still needs a reachable, healthy receiver.
-
-## What happens on an OTA update
-
-1. `espota` pushes the new image to the board's **inactive** app slot (the running image is untouched).
-2. The board verifies the transfer, switches the boot slot, and reboots.
-3. On reboot, `allRelaysOff()` runs first (#93) — an OTA reset can never strand a relay.
-4. The new image boots **pending-verify**; once WiFi is up and a telemetry sweep emits, it marks
-   itself valid. If it crashes before that, the bootloader **reverts** to the previous image.
-
-## Manual fallback (no `just`)
-
-```sh
-pio run -d firmware -e esp32dev_ota -t upload --upload-port sprout-<device_id>.local
-```
+The bench evidence from the push era stays where it is — `docs/evidence/2026-07-06-…` and
+`2026-07-08-…` are records of what happened and are not rewritten (ADR-0006). The multi-homed
+`--host_ip` finding (#1227) and the `PLATFORMIO_UPLOAD_FLAGS` newline-splitting trap (#1225)
+are preserved there.

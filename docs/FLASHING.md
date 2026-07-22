@@ -120,8 +120,13 @@ cost — `pio run` pulls the full platform; cache `~/.platformio`).
 
 ## Updates after the first flash — OTA over WiFi
 
-The plan (PRD-0005): once the device is on WiFi, updates are **wireless** (ArduinoOTA / a web
-update) — the USB cable is a one-time onboarding step, not a living dependency.
+Once the device is on WiFi, updates are **wireless** — the USB cable is a one-time onboarding
+step, not a living dependency.
+
+The mechanism is **signed pull** (#302, ADR-0026): the device fetches the image, verifies its
+ed25519 signature against the public key baked into the firmware, and only then switches boot
+slots. Nothing listens on the board — an earlier interim used a password-gated ArduinoOTA push
+receiver, and #1340 retired it rather than hardening it.
 
 > **Status: not live yet.** OTA needs the firmware on WiFi, and the WiFi / captive-portal slice
 > isn't built. **Until WiFi lands, "update" = re-run the web-flasher** (plug USB, browser, Install).

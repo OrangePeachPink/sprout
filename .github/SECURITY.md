@@ -34,12 +34,12 @@ brings up:
 - **mDNS**, advertising `sprout-<device-id>.local` plus the HTTP service so boards
   stay reachable across DHCP churn (the hostname is a minted nonce, never a MAC or
   silicon id — ADR-0020);
-- **ArduinoOTA** (the interim Phase-0 path, #302): LAN-only, password-gated, armed
-  on the WiFi-connected edge. The in-tree default password is a **published
-  placeholder** — it is readable in this repository — so a board on a shared or
-  untrusted network should be flashed with your own (see
-  [docs/OTA_FLASH.md](../docs/OTA_FLASH.md));
 - **SNTP** time sync on association.
+
+Sprout runs **no firmware-update listener**. The interim ArduinoOTA push receiver was
+removed in v0.8.1 (#1340) — WiFi updates are **pull-only and signature-verified**, so the
+device initiates them and there is nothing on the board to authenticate to. USB flashing
+is always available (ADR-0026).
 
 A board that has **no stored credentials**, or that repeatedly fails to join,
 raises a temporary **`Sprout-Setup-…` access point** with a setup page — so an
