@@ -224,3 +224,81 @@ const char *ota_pull_parse_label(ota_pull_parse_t p)
     }
     return "unknown";
 }
+
+/* ---- S3: the pull TRANSPORT orchestrator (#1284) -------------------------- */
+
+ota_pull_run_t ota_pull_run(const ota_pull_transport_t *t,
+                            const char *self_board, const char *self_version,
+                            const uint8_t *pubkey, char *buf, size_t bufcap,
+                            ota_pull_artifact_t *scratch, size_t scap)
+{
+    /* A misconfigured caller is a fail-closed case, not a crash. Missing feed
+     * scratch is a "cannot even look" condition -> feed-unavailable, the same
+     * as a dead network, because that is exactly the operational meaning. */
+    if (!t || !t->fetch_feed || !t->apply || !buf || bufcap == 0 || !scratch ||
+        scap == 0)
+        return OTA_PULL_RUN_FEED_UNAVAILABLE;
+    if (!field_ok(self_board, OTA_PULL_BOARD_MAX) ||
+        !field_ok(self_version, OTA_PULL_VERSION_MAX))
+        return OTA_PULL_RUN_SELF_UNKNOWN;
+
+    /* 1. FETCH. A transport failure is "unknown", NEVER "empty feed" - the two
+     * must not collapse, or a network blip reads as a curation (#1227). An
+     * over-long return is treated as failure too: we will not parse past buf. */
+    int got = t->fetch_feed(t->ctx, buf, bufcap);
+    if (got < 0 || (size_t)got > bufcap) return OTA_PULL_RUN_FEED_UNAVAILABLE;
+
+    /* 2. PARSE. All-or-nothing (S3b): a garbled feed is refused whole, so a
+     * mangled line can never masquerade as a shorter feed. */
+    size_t n = 0;
+    if (ota_pull_parse_feed(buf, (size_t)got, scratch, scap, &n) !=
+        OTA_PULL_PARSE_OK)
+        return OTA_PULL_RUN_FEED_INVALID;
+
+    /* 3. DECIDE. Exact board match, DIFFERENT-not-newer (S3a) so a curated
+     * downgrade (ADR-0026 D4 remediation) still applies. */
+    const ota_pull_artifact_t *chosen = NULL;
+    switch (ota_pull_decide(scratch, n, self_board, self_version, &chosen)) {
+    case OTA_PULL_UP_TO_DATE:
+        return OTA_PULL_RUN_UP_TO_DATE;
+    case OTA_PULL_NO_ARTIFACT_FOR_BOARD:
+        return OTA_PULL_RUN_NO_ARTIFACT;
+    case OTA_PULL_SELF_UNKNOWN:
+        return OTA_PULL_RUN_SELF_UNKNOWN;
+    case OTA_PULL_FEED_INVALID:
+        return OTA_PULL_RUN_FEED_INVALID;
+    case OTA_PULL_UPDATE:
+        break; /* the only verdict that continues to apply */
+    }
+    /* decide returned UPDATE but no artifact - refuse rather than hand `apply`
+     * a NULL. Defends the one precondition the callback is allowed to assume. */
+    if (!chosen) return OTA_PULL_RUN_FEED_INVALID;
+
+    /* 4. APPLY - the hardware half (stream -> S2 verify -> boot-slot switch).
+     * The gate's verdict is decisive: ONLY OTA_ACCEPT stages a new image; every
+     * other verdict leaves the running image in place. */
+    return (t->apply(t->ctx, chosen, pubkey) == OTA_ACCEPT)
+               ? OTA_PULL_RUN_UPDATED
+               : OTA_PULL_RUN_REJECTED;
+}
+
+const char *ota_pull_run_label(ota_pull_run_t r)
+{
+    switch (r) {
+    case OTA_PULL_RUN_UPDATED:
+        return "updated";
+    case OTA_PULL_RUN_UP_TO_DATE:
+        return "up-to-date";
+    case OTA_PULL_RUN_NO_ARTIFACT:
+        return "no-artifact";
+    case OTA_PULL_RUN_FEED_UNAVAILABLE:
+        return "feed-unavailable";
+    case OTA_PULL_RUN_FEED_INVALID:
+        return "feed-invalid";
+    case OTA_PULL_RUN_SELF_UNKNOWN:
+        return "self-unknown";
+    case OTA_PULL_RUN_REJECTED:
+        return "rejected";
+    }
+    return "unknown";
+}
