@@ -548,10 +548,30 @@ class _PhaseTimer:
         self._t0 = now
 
     def snapshot(self, **counts: int) -> dict:
-        return {
+        snap = {
             "phases": {k: round(v * 1000) for k, v in self._phases.items()},
             **counts,
         }
+        # #1456: process RSS at the end of the build. Design asked for RSS-per-request
+        # to tell "the data got bigger" from "the process is leaking" — a session
+        # degradation shows as RSS that climbs and never falls across a fixed-window
+        # render loop. Sampled here so it rides the perf line the maintainer already
+        # watches; None (never a crash) if the measure is unavailable on the host.
+        rss = _rss_mb()
+        if rss is not None:
+            snap["rss_mb"] = rss
+        return snap
+
+
+def _rss_mb() -> int | None:
+    """Resident set size in MB, or None. Lazy + guarded: psutil is a convenience, not a
+    hard dependency of the serve path, so its absence must never break a request."""
+    try:
+        import psutil  # lazy by design — an optional diagnostic, never a hard dep
+
+        return round(psutil.Process().memory_info().rss / (1024 * 1024))
+    except Exception:
+        return None
 
 
 def _perf_log(ctx: dict, final_name: str, final_s: float, rng: str) -> None:
