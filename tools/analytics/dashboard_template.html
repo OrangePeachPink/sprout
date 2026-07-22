@@ -320,6 +320,14 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
                padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px;
                border-left: 3px dashed var(--muted); background: transparent; }
 .regloc-trail { margin-top: 5px; font-size: 11px; }
+/* #1188 part 2: the structured side picker (ADR-0029 placement.ledge) — chrome register */
+.regloc-side { margin-top: 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.regloc-sidelbl { font-size: 12px; margin-right: 4px; }
+.sidebtn { font-size: 12px; padding: 4px 12px; border: 1px solid var(--border); border-radius: 6px;
+           background: none; cursor: pointer; }
+.sidebtn:hover { background: var(--surface); }
+.sidebtn.on { border-color: var(--leaf); box-shadow: inset 0 0 0 1px var(--leaf); font-weight: 600; }
+.regloc-side .regloc-note { flex-basis: 100%; margin-top: 4px; }
 .reglist { display: flex; flex-direction: column; }
 .regrow { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
 .regrow:last-child { border-bottom: 0; }
@@ -2844,7 +2852,34 @@ function regLocationControl(entity){
       'Been here before: ' + past.map(e =>
         esc(e.location) + ' until ' + esc(fmtDay(e.end_ts))).join(' · ')));
   }
+  // #1188 part 2 (ADR-0029 placement.ledge): the STRUCTURED side — left/right — replacing the
+  // side semantics people used to bury in the free-text location ("… (right)"). It rides the
+  // move: when the location changes, move_plant validates it against the ledge vocabulary and
+  // writes `side` onto the boundary event. A hidden input carries only a valid value, never ''.
+  const curSide = regLocSide(entity.plant_id);
+  const sideBox = el('div', 'regloc-side');
+  sideBox.appendChild(el('span', 'regloc-sidelbl muted', 'Side of the windowsill'));
+  const sideInput = el('input'); sideInput.type = 'hidden'; sideInput.value = curSide || '';
+  if(curSide) sideInput.dataset.k = 'side';   // only ever stage left/right — never an empty string
+  ['left', 'right'].forEach(val => {
+    const b = el('button', 'sidebtn' + (curSide === val ? ' on' : ''), val.charAt(0).toUpperCase() + val.slice(1));
+    b.type = 'button';
+    b.onclick = () => {
+      sideInput.value = val; sideInput.dataset.k = 'side';
+      [...sideBox.querySelectorAll('.sidebtn')].forEach(x => x.classList.toggle('on', x.textContent.toLowerCase() === val));
+    };
+    sideBox.appendChild(b);
+  });
+  sideBox.appendChild(sideInput);
+  sideBox.appendChild(el('div', 'regloc-note muted',
+    'Which side of the windowsill this pot sits on — a structured field now, not text tucked into the location. It’s recorded with the next move.'));
+  wrap.appendChild(sideBox);
   return wrap;
+}
+function regLocSide(plantId){   // #1188 part 2: the current structured side (left/right), or ''
+  const evs = regLocEvents(plantId);
+  const open = evs.filter(e => !e.end_ts).slice(-1)[0] || evs.slice(-1)[0];
+  return (open && open.side) || '';
 }
 function regEditForm(kind, entity){
   const idKey = {plant: 'plant_id', sensor: 'sensor_id', device: 'device_id'}[kind];
@@ -2878,7 +2913,7 @@ function regStageEdit(kind, id, form){
   const sec = {plant: 'plants', sensor: 'sensors', device: 'devices'}[kind];
   const idKey = {plant: 'plant_id', sensor: 'sensor_id', device: 'device_id'}[kind];
   const rec = {[idKey]: id};
-  form.querySelectorAll('input').forEach(i => { rec[i.dataset.k] = i.value.trim(); });   // '' clears a field
+  form.querySelectorAll('input').forEach(i => { if(i.dataset.k) rec[i.dataset.k] = i.value.trim(); });   // '' clears a keyed field; keyless inputs (the #1188 side hidden when unset) are skipped
   const p = regPend();
   p[sec].edit = p[sec].edit.filter(e => e[idKey] !== id);   // one staged edit per entity
   p[sec].edit.push(rec);
