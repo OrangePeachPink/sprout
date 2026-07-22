@@ -1405,14 +1405,15 @@ def _auto_start_collection(
         )
 
 
-def _compaction_tick() -> None:
-    """#1292: the launcher owns the daily tier compaction - no Windows scheduled task,
-    no operator command (the one-click doctrine). The POLICY (throttle + failure
-    isolation) lives in ``compaction_hook``; this is only the call site. Imported lazily
-    so the dashboard's startup path never pays for DuckDB."""
-    from compaction_hook import maybe_compact
+def _tier_tick() -> None:
+    """#1292/#1466: the launcher owns tier maintenance - no Windows scheduled task, no
+    operator command (the one-click doctrine). The POLICY (fill-then-compact, throttle,
+    failure isolation) lives in ``compaction_hook``; this is only the call site.
+    Imported lazily so startup never pays for DuckDB. #1466: this ingests (fills) the
+    store as well as compacting - a compaction-only tick left it empty."""
+    from compaction_hook import maybe_ingest_and_compact
 
-    maybe_compact()
+    maybe_ingest_and_compact()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1528,7 +1529,7 @@ def main(argv: list[str] | None = None) -> int:
         # path. maybe_compact self-throttles (once an hour) and swallows its own
         # failures, so it is safe on every launch; a separate thread from collection so
         # neither can take the other down.
-        threading.Thread(target=_compaction_tick, daemon=True).start()
+        threading.Thread(target=_tier_tick, daemon=True).start()
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
