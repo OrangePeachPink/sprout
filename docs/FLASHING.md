@@ -133,3 +133,11 @@ update) — the USB cable is a one-time onboarding step, not a living dependency
 Contributors with PlatformIO can still flash directly over USB — `pio run -e esp32dev -t upload` —
 or the watchdog bench build `pio run -e esp32dev_wdttest -t upload` (#191). The web-flasher exists so
 a *user* never has to install any of that.
+
+**The alpha channel from the CLI (#1334):** `just flash-alpha` is the command-line counterpart of the
+web flasher's *alpha* — it flashes the **current build** (whatever you have checked out), labeled by
+its exact **commit**, never a release version. It's the dev-team channel: unversioned and unproven,
+"expect the unexpected." It fetches read-only and warns if you're behind `origin/main` or off it, so
+flashing *latest* main is a `git pull` you choose — it never mutates your worktree. The **stable**
+channel has no CLI shortcut by design: stable is a *cut release*, flashed from the web flasher or by
+checking out its tag and running `just flash`.
