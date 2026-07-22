@@ -59,10 +59,21 @@ taken mid-migration, by a small team. A plan that licenses unbounded restructuri
 
 ### 2. The import rule
 
-> **A module may import only from a strictly lower layer. Never upward, never sideways within layer 4.**
+> **A module may import from a lower layer, or from the same layer below layer 4. Never upward; never sideways
+> within layer 4.**
 
 Mechanically checkable, which is the point — a boundary that depends on remembering is not a boundary. **DX
 lands an import-graph lint in 0.8.1**, advisory first, enforcing once the tree satisfies it.
+
+*(Same-layer rule clarified 2026-07-22, #1452. The line first read "only from a strictly lower layer," which
+scanned as forbidding same-layer imports everywhere. But §1 co-locates "card payload" and "dashboard context
+assembly" both at layer 3 — a taxonomy that builds a same-layer dependency between them by design — and the
+sideways prohibition names layer 4 for a reason. Same-layer application composition below the delivery tier is
+legitimate: a layer-3 module composing another layer-3 module — `dashboard` importing `card_context` — is normal,
+not a tangle. The tangle the rule exists to prevent is upward imports, and sideways imports at layer 4, where
+routes and presentation would otherwise import each other into a god-module. **Layer 4 forbids same-layer;
+layers 0–3 permit it, provided it stays acyclic** — a same-layer cycle, A importing B and B importing A at one
+layer, is the tangle by another name, and the guard should reject it as usage grows.)*
 
 ### 3. The companion rule — one implementation, any language, any surface
 
