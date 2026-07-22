@@ -96,8 +96,10 @@ jobs:
         run: just build
 
   # Experimental boards (#436 S3, #442 C5) — still non-blocking-informational (ADR-0024);
-  # step-level continue-on-error keeps the job's own check green while a warning
-  # annotation surfaces a real break (#504).
+  # NON-BLOCKING = EVERY step, not just compile (#1439): a non-compile step (uv sync,
+  # pip install, cache) failing would otherwise red the job despite the name. Every step
+  # is continue-on-error; test_experimental_nonblocking.py asserts it so a new step can't
+  # reopen the hole.
   experimental-boards:
     name: experimental board (${{ matrix.env }}) — non-blocking
     runs-on: ubuntu-latest
@@ -107,24 +109,30 @@ jobs:
         env: [esp32s3, esp32c5]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        continue-on-error: true
 
       - name: Set up uv (+ the locked Python)
         uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        continue-on-error: true
         with:
           enable-cache: true
           version: "0.11.14"
 
       - name: Set up just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        continue-on-error: true
 
       - name: Sync the locked environment
+        continue-on-error: true
         run: uv sync --locked
 
       - name: Install PlatformIO
+        continue-on-error: true
         run: pip install --quiet "platformio==${PIO_VERSION}"
 
       - name: Cache PlatformIO packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        continue-on-error: true
         with:
           path: ~/.platformio
           key: pio-experimental-${{ matrix.env }}-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
@@ -136,9 +144,10 @@ jobs:
         run: pio run -d firmware -e ${{ matrix.env }}
 
       - name: Surface a non-blocking failure
-        if: steps.compile.outcome == 'failure'
+        if: always() && steps.compile.outcome != 'success'
+        continue-on-error: true
         run: |
-          echo "::warning title=Experimental board compile failed (non-blocking)::${{ matrix.env }} failed to compile on the pinned toolchain. Non-blocking (ADR-0024) - see the Compile-check log, then fix or file it."
+          echo "::warning title=Experimental board build failed (non-blocking)::${{ matrix.env }} did not build clean on the pinned toolchain. Non-blocking (ADR-0024) - see the steps above, then fix or file it."
 
   # External-link check (#913) — the ONE link job that goes online. Internal/relative links are
   # the per-PR gate (tools/dx/link_check.py, a uv-native pre-commit hook); EXTERNAL links rot on
