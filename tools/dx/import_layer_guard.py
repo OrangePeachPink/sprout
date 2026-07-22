@@ -49,6 +49,7 @@ _LAYERS: dict[str, int] = {
     "design_assets": 0,  # §5.1 leaf extraction (#1336 / PR #1387)
     "host_paths": 0,  # §5.1 leaf extraction (#1336) — the data paths
     "parse_v1": 1,  # §1 "telemetry parsing (parse_v1)"
+    "channel_identity": 2,  # #1454 — the S1-seam join (analysis; imports parse_v1 only)
     "card_context": 3,  # §5.3 extraction (#1336) — "dashboard context assembly" (§1)
     # `dashboard` is layer 4 by §1 and is deliberately NOT assigned yet. Assigning it
     # makes this enforcing lint fail the whole tree on a REAL pre-existing violation:

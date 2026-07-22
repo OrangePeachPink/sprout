@@ -56,8 +56,11 @@ if str(_HERE) not in sys.path:
 
 from collections import namedtuple  # noqa: E402
 
+from channel_identity import (  # noqa: E402  (#1454 — the one S1-seam join)
+    build_plant_index,
+    resolve_plant_id,
+)
 from device_registry import load_registry  # noqa: E402
-from parse_v1 import canonical_channel  # noqa: E402  (#1315 read translation)
 from segment_classifier import classify, passes  # noqa: E402
 from segment_history import _journal_events  # noqa: E402
 from tier_rollup import read_events  # noqa: E402
@@ -103,14 +106,7 @@ def read_series(root: Path | None = None, registry=None) -> dict:
     # calm-empty first-run the Home already handles (tier_ingest guards identically).
     if not any(root.glob("date=*/device=*/*.parquet")):
         return {}
-    pair_to_plant: dict = {}
-    for dev in registry.devices:
-        for channel in dev.channels or {}:
-            p = dev.plant_for(channel)
-            if p:
-                pair_to_plant[(dev.device_id, canonical_channel(channel))] = p[
-                    "plant_id"
-                ]
+    index = build_plant_index(registry)  # #1454 — the one S1-seam join
     con = duckdb.connect()
     rows = con.execute(
         "SELECT device_id, sensor_id, timestamp_utc, raw_value, quality_flag, band "
@@ -120,7 +116,7 @@ def read_series(root: Path | None = None, registry=None) -> dict:
     con.close()
     series: dict = {}
     for device_id, sensor_id, ts, raw, flag, band in rows:
-        pid = pair_to_plant.get((device_id, canonical_channel(sensor_id)))
+        pid = resolve_plant_id(index, device_id, sensor_id)
         if pid is None:
             continue
         if ts.tzinfo is None:
@@ -286,20 +282,11 @@ def band_ledger(series: dict, registry, root: Path | None = None) -> dict:
     never downsampled). Falls back to deriving steps from the plant's own rows when
     no event table has been materialized, so the surface is never blank-by-plumbing.
     """
-    pair_to_plant: dict = {}
-    for dev in registry.devices:
-        for channel in dev.channels or {}:
-            p = dev.plant_for(channel)
-            if p:
-                pair_to_plant[(dev.device_id, canonical_channel(channel))] = p[
-                    "plant_id"
-                ]
+    index = build_plant_index(registry)  # #1454 — the one S1-seam join
     steps: dict = {pid: [] for pid in series}
     try:
         for ev in read_events(kind="band", root=root):
-            pid = pair_to_plant.get(
-                (ev["device_id"], canonical_channel(ev["sensor_id"]))
-            )
+            pid = resolve_plant_id(index, ev["device_id"], ev["sensor_id"])
             if pid is None or pid not in steps:
                 continue
             detail = str(ev.get("detail") or "")

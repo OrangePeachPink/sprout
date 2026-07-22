@@ -289,9 +289,13 @@ KNOWN_RESOLVERS = {
     # shrank here, which is the honest bookkeeping: an extraction relocates a
     # defect, it does not retire it. Retiring it is the identity slice's job (#1335).
     "card_context.py",  # :933, :1140 relative to the moved cluster
-    "multiplant_history.py",  # :109, :292 — history attribution
-    "segment_history.py",  # :61 — segment attribution
-    "predict_bridge.py",  # :120 — STATIC FALLBACK feeding the predictor
+    # #1454: multiplant_history, segment_history and predict_bridge each built their
+    # own static resolver here; they now resolve THROUGH channel_identity, so the
+    # ledger shrank 5 → 3 — three independent static resolvers consolidated into one.
+    # channel_identity is that one, and it is the single place the S1 token-generation
+    # fold now lives (the register's closure). card_context still resolves independently
+    # until #1432 consumes the join; epoch_sweep is a presence check, not attribution.
+    "channel_identity.py",  # the one static resolver the analysis surfaces route via
     "epoch_sweep.py",  # :76 — presence check, not attribution; benign but counted
 }
 
