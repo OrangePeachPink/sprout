@@ -46,6 +46,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+import serve_routes  # noqa: E402  (#1452 — the extracted route table; a leaf, L0)
 from bench_packages import render_bench_detail  # noqa: E402  (bench detail #444)
 from card_context import build_context  # noqa: E402  (layer-3 composition, #1336)
 from dashboard import (  # noqa: E402  (sibling import)
@@ -828,7 +829,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send_json({"slept": True})
             return
         try:
-            if parsed.path in ("/", "/index.html"):
+            route = serve_routes.match("GET", parsed.path)  # #1452 extracted table
+            if route == "home":
                 # #875 (grill night 1, locked): HOME — the plant-card grid — is the
                 # app's landing surface; the Workbench tucks behind it at /classic.
                 # A genuinely fresh checkout keeps the install-day launchpad
@@ -840,18 +842,18 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self._send(_empty_state_html(False), "text/html; charset=utf-8")
                 else:
                     self._send(render_home(), "text/html; charset=utf-8")
-            elif parsed.path == "/trial/data.json":  # #1148 the evaluation substrate
+            elif route == "trial_data":  # #1148 the evaluation substrate
                 # ONE payload behind all three candidates (multiplant_history,
                 # Data's half): same window, same plants, same numbers — so a prune
                 # verdict compares SURFACES, not accidental data differences.
                 import multiplant_history
 
                 self._send_json(multiplant_history.build_payload())
-            elif parsed.path == "/trial":  # #1148 the evaluation surfaces
+            elif route == "trial":  # #1148 the evaluation surfaces
                 # Shell-only like /classic (#1018): the page hydrates itself from
                 # /data.json + /cards.json, so no pipeline run to hand back HTML.
                 self._send(render_trial(), "text/html; charset=utf-8")
-            elif parsed.path == "/classic":
+            elif route == "classic":
                 # The Workbench — "Classic Sprout" (ADR-0033): the numeric
                 # instrument behind Home, retired piece-by-piece as the new design
                 # subsumes its utility. #1018: serve the SHELL fast - do NOT run
@@ -871,7 +873,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         )
                         sys.stderr.flush()
                     self._send(html, "text/html; charset=utf-8")
-            elif parsed.path == "/data.json":
+            elif route == "data_json":
                 ctx = _context(self.inputs, hours, channels)
                 # #1235: the pulse envelope spans the profiled anchors (all 7 moods)
                 from registry_model import load_registry_model as _lrm
@@ -888,14 +890,14 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 blob = json.dumps(ctx, separators=(",", ":"), ensure_ascii=False)
                 _perf_log(ctx, "serialize", time.perf_counter() - _t, rng)  # #953
                 self._send(blob, "application/json; charset=utf-8")
-            elif parsed.path == "/capture/status":
+            elif route == "capture_status":
                 st = _CAPTURE.status()
                 if st.get("state") == "running":  # live trajectory for the panel (#161)
                     st = {**st, "trace": _live_trace(st.get("experiment_id"))}
                 self._send_json(st)
-            elif parsed.path == "/monitor/status":
+            elif route == "monitor_status":
                 self._send_json(_MONITOR.status())
-            elif parsed.path == "/fleet/status":  # the fleet poller (#588)
+            elif route == "fleet_status":  # the fleet poller (#588)
                 # #1026: count ghost identities alongside the poller status so the
                 # mismatch is visible without a screenshot.
                 mism = active_mismatches()
@@ -906,13 +908,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         "mismatch_count": len(mism),
                     }
                 )
-            elif parsed.path == "/collection/status":  # both paths, one view (#588)
+            elif route == "collection_status":  # both paths, one view (#588)
                 self._send_json(status_all(_MONITOR, _FLEET))
-            elif parsed.path == "/location/status":  # #966: name-only, never coords
+            elif route == "location_status":  # #966: name-only, never coords
                 import env_solar
 
                 self._send_json(env_solar.location_status())
-            elif parsed.path == "/registry":  # #921 the Plants & Sensors tab seam
+            elif route == "registry":  # #921 the Plants & Sensors tab seam
                 from registry_model import load_registry_model, registry_payload
 
                 model = load_registry_model()
@@ -939,7 +941,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 except Exception:
                     undeclared = []
                 self._send_json(registry_payload(model, undeclared))
-            elif parsed.path == "/watering/precision":  # #1203 detector QA readout
+            elif route == "watering_precision":  # #1203 detector QA readout
                 # Workbench-Diagnostics only: how the detector is doing against HER
                 # rulings. Both numerals ship (never a bare %), and precision is None
                 # until something is ruled — an unreviewed detection is not a miss.
@@ -952,7 +954,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     if e.get("plant_id") and (e.get("rewater") or {}).get("ts")
                 ]
                 self._send_json(precision_so_far(ids))
-            elif parsed.path == "/sensor/health":  # #995 per-sensor QA/health readout
+            elif route == "sensor_health":  # #995 per-sensor QA/health readout
                 from registry_model import load_registry_model
                 from sensor_health import fleet_health
 
@@ -971,7 +973,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         "any_calibrated": bool(anchors),
                     }
                 )
-            elif parsed.path == "/cards.json":  # #875 the Home plant-card payloads
+            elif route == "cards_json":  # #875 the Home plant-card payloads
                 from card_payload import (
                     cards_from_context,
                     load_mood_map,
@@ -1022,7 +1024,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         "cal_state": system_cal_state(),
                     }
                 )
-            elif parsed.path.startswith("/photo/"):  # #875 Q4: a plant's small avatar
+            elif route == "photo":  # #875 Q4: a plant's small avatar
                 pid = parsed.path[len("/photo/") :]
                 if not re.fullmatch(r"[A-Za-z0-9]+", pid):  # no traversal from the id
                     self._send("bad photo id", "text/plain", status=400)
@@ -1032,46 +1034,46 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         self._send_raw(f.read_bytes(), "image/jpeg")
                     else:
                         self._send("no photo", "text/plain", status=404)
-            elif parsed.path == "/serial/owner":  # who holds the port (#330)
+            elif route == "serial_owner":  # who holds the port (#330)
                 self._send_json(serial_lock.owner_status())
-            elif parsed.path.startswith("/docs/"):  # #808: front-door docs, guarded
+            elif route == "docs":  # #808: front-door docs, guarded
                 self._serve_docs(unquote(parsed.path[len("/docs/") :]))
-            elif parsed.path == "/lab":  # the Lab Notebook catalog (#154 + bench #444)
+            elif route == "lab":  # the Lab Notebook catalog (#154 + bench #444)
                 self._send(render_catalog(load_combined()), "text/html; charset=utf-8")
-            elif parsed.path == "/lab/experiments.json":
+            elif route == "lab_experiments":
                 self._send_json(load_combined())
-            elif parsed.path == "/lab/drafts":  # agent-prepared draft list (#326)
+            elif route == "lab_drafts":  # agent-prepared draft list (#326)
                 self._send_json({"drafts": list_drafts()})
-            elif parsed.path.startswith("/lab/draft/"):  # one draft, for prefill (#326)
+            elif route == "lab_draft":  # one draft, for prefill (#326)
                 name = unquote(parsed.path[len("/lab/draft/") :])
                 draft = load_draft(name)
                 if draft is None:
                     self._send_json({"error": "draft not found"}, status=404)
                 else:
                     self._send_json(draft)
-            elif parsed.path == "/lab/studies":  # the studies catalog (#159)
+            elif route == "lab_studies":  # the studies catalog (#159)
                 self._send(
                     render_studies_catalog(list_studies()),
                     "text/html; charset=utf-8",
                 )
-            elif parsed.path.startswith("/lab/study/"):  # a study detail (#159)
+            elif route == "lab_study":  # a study detail (#159)
                 sid = unquote(parsed.path[len("/lab/study/") :])
                 page = render_study_detail(sid)
                 if page is None:
                     self._send("study not found", "text/plain", status=404)
                 else:
                     self._send(page, "text/html; charset=utf-8")
-            elif parsed.path.startswith("/lab/") and parsed.path.endswith("/notes"):
+            elif route == "lab_notes":
                 eid = unquote(parsed.path[len("/lab/") : -len("/notes")])  # notes #158
                 self._send_json(load_notes(eid))
-            elif parsed.path.startswith("/lab/bench/"):  # a bench-package detail (#444)
+            elif route == "lab_bench":  # a bench-package detail (#444)
                 pkg = unquote(parsed.path[len("/lab/bench/") :])
                 page = render_bench_detail(pkg)
                 if page is None:
                     self._send("bench package not found", "text/plain", status=404)
                 else:
                     self._send(page, "text/html; charset=utf-8")
-            elif parsed.path.startswith("/lab/"):  # an experiment detail page (#157)
+            elif route == "lab_detail":  # an experiment detail page (#157)
                 eid = unquote(parsed.path[len("/lab/") :])
                 page = render_detail(eid)
                 if page is None:
@@ -1096,7 +1098,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
         parsed = urlparse(self.path)
         try:
-            if parsed.path == "/capture/start":
+            route = serve_routes.match("POST", parsed.path)  # #1452 extracted table
+            if route == "capture_start":
                 b = self._body()
                 # Route through the handoff (#129): a serial start auto-pauses the
                 # monitor (frees COM6) and resumes it when the experiment ends.
@@ -1113,26 +1116,26 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         port=b.get("port"),
                     )
                 )
-            elif parsed.path == "/capture/stop":
+            elif route == "capture_stop":
                 self._send_json(_CAPTURE.stop())
-            elif parsed.path == "/monitor/start":
+            elif route == "monitor_start":
                 self._send_json(_MONITOR.start(port=self._body().get("port")))
-            elif parsed.path == "/monitor/stop":
+            elif route == "monitor_stop":
                 self._send_json(_MONITOR.stop())
-            elif parsed.path == "/fleet/start":  # single-flight (#588)
+            elif route == "fleet_start":  # single-flight (#588)
                 self._send_json(_FLEET.start())
-            elif parsed.path == "/fleet/stop":
+            elif route == "fleet_stop":
                 self._send_json(_FLEET.stop())
-            elif parsed.path == "/collection/start":
+            elif route == "collection_start":
                 # ADR-0014: ONE operator action = all collection running; each
                 # absent path skips with a stated reason (policy lives in
                 # collection_control, not here - serve stays wiring, section 5)
                 self._send_json(
                     start_all(_MONITOR, _FLEET, port=self._body().get("port"))
                 )
-            elif parsed.path == "/collection/stop":
+            elif route == "collection_stop":
                 self._send_json(stop_all(_MONITOR, _FLEET))
-            elif parsed.path == "/location":  # #966: write the gitignored rig location
+            elif route == "location":  # #966: write the gitignored rig location
                 # Writes local config + involves coordinates; localhost-only (as /quit).
                 if not self._is_local():
                     self._send_json(
@@ -1146,7 +1149,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self._send_json(env_solar.save_location(self._body()))
                 except ValueError as exc:
                     self._send_json({"error": str(exc)}, status=400)
-            elif parsed.path == "/watering/log":  # #1137: log a manual watering
+            elif route == "watering_log":  # #1137: log a manual watering
                 # Appends to the local watering journal; localhost-only (as /quit). The
                 # logged event becomes the authoritative last_watered (beats detection).
                 if not self._is_local():
@@ -1164,7 +1167,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self._send_json({"ok": True, "event": event})
                 except (ValueError, TypeError) as exc:
                     self._send_json({"ok": False, "error": str(exc)}, status=400)
-            elif parsed.path == "/watering/verdict":  # #1203: rule on a detection
+            elif route == "watering_verdict":  # #1203: rule on a detection
                 # The operator's confirm/reject on a DETECTED watering. Append-only
                 # (a rejection is kept, never erased — the rejection IS the detector's
                 # training signal). Localhost-only, like the rest of the write plane.
@@ -1181,7 +1184,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self._send_json({"ok": True, "verdict": rec})
                 except (ValueError, TypeError) as exc:
                     self._send_json({"ok": False, "error": str(exc)}, status=400)
-            elif parsed.path.startswith("/photo/"):  # #875 Q4: ingest a plant avatar
+            elif route == "photo":  # #875 Q4: ingest a plant avatar
                 # Writes a local file + mutates the registry; localhost-only. The image
                 # is downsampled + EXIF-stripped before it ever lands (no home GPS).
                 if not self._is_local():
@@ -1210,9 +1213,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         )
                     else:
                         self._ingest_photo(pid, raw)
-            elif (
-                parsed.path == "/registry/apply"
-            ):  # #921 slice 3 — classic-save a batch
+            elif route == "registry_apply":  # #921 slice 3 — classic-save a batch
                 # Mutates the local registry config; localhost-only (as /quit).
                 if not self._is_local():
                     self._send_json(
@@ -1244,14 +1245,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     )
                 result["registry"] = registry_payload(model)  # fresh state, no 2nd GET
                 self._send_json(result)
-            elif parsed.path == "/serial/owner/clear":  # clear a STALE marker (#330)
+            elif route == "serial_owner_clear":  # clear a STALE marker (#330)
                 self._send_json(serial_lock.clear_if_stale())
-            elif parsed.path.startswith("/lab/study/"):  # save a study (#159)
+            elif route == "lab_study":  # save a study (#159)
                 sid = unquote(parsed.path[len("/lab/study/") :])
                 self._send_json(save_study(sid, self._body()))
-            elif parsed.path.startswith("/lab/bench/") and parsed.path.endswith(
-                "/notes"
-            ):
+            elif route == "lab_bench_notes":
                 # Back-fill notes onto a landed bench package (#450 slice 3). Must
                 # precede the generic /lab/*/notes route, which mis-reads "bench/<id>".
                 pkg = unquote(parsed.path[len("/lab/bench/") : -len("/notes")])
@@ -1263,7 +1262,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self._send_json(
                         {"error": str(exc), "path": notes_rel_path(pkg)}, status=500
                     )
-            elif parsed.path.startswith("/lab/") and parsed.path.endswith("/notes"):
+            elif route == "lab_notes":
                 eid = unquote(parsed.path[len("/lab/") : -len("/notes")])  # notes #158
                 try:
                     body = self._body()
@@ -1279,7 +1278,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self._send_json(
                         {"error": str(exc), "path": notes_rel_path(eid)}, status=500
                     )
-            elif parsed.path == "/quit":
+            elif route == "quit":
                 # In-UI stop (ADR-0005 §4): a localhost-gated shutdown so the operator
                 # stops the server from the browser (no terminal to Ctrl-C when it was
                 # launched by a double-click). Ack first, then shut down from a separate

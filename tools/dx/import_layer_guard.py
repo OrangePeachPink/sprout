@@ -48,16 +48,21 @@ _LAYERS: dict[str, int] = {
     "board_pinouts": 0,  # #1027 — the recommended soil pinout, mirrored from firmware
     "design_assets": 0,  # §5.1 leaf extraction (#1336 / PR #1387)
     "host_paths": 0,  # §5.1 leaf extraction (#1336) — the data paths
+    # #1452 — the extracted route table: a pure string-matching LEAF (no I/O, no
+    # import). serve (4) → serve_routes is a legal DOWNWARD edge. It is NOT layer 4: §2
+    # forbids "sideways within layer 4" and serve imports it, so a route table at 4
+    # would be exactly that. (The ruling's table said "4"; §2 forces it below 4. Flagged
+    # back to Trellis/DX.)
+    "serve_routes": 0,
     "parse_v1": 1,  # §1 "telemetry parsing (parse_v1)"
     "channel_identity": 2,  # #1454 — the S1-seam join (analysis; imports parse_v1 only)
     "card_context": 3,  # §5.3 extraction (#1336) — "dashboard context assembly" (§1)
-    # `dashboard` is layer 4 by §1 and is deliberately NOT assigned yet. Assigning it
-    # makes this enforcing lint fail the whole tree on a REAL pre-existing violation:
-    # serve.py (4) imports dashboard (4) for render/filter_*/gather_inputs — sideways,
-    # which §2 forbids by name. That import is what the §5.3 `serve.py` route-table
-    # extraction exists to remove, and it is not this extraction. Assigned there, with
-    # the violation reported on #1336 rather than silently deferred — an unassigned
-    # module is reported as unassigned, never treated as compliant.
+    # `dashboard` is CONCEPTUALLY layer 3 — ruled on #1452 (Trellis): zero HTTP I/O,
+    # imports only downward, so serve (4) → dashboard is a legal downward edge. It stays
+    # UNASSIGNED here on purpose: assigning dashboard=3 greenly needs card_context (also
+    # 3) strictly below it, OR the guard aligned to §2's exact "sideways WITHIN LAYER 4"
+    # wording (the guard currently forbids same-layer at every layer). A Trellis/DX call
+    # routed on #1452, not this extraction — whose own edges are all strictly downward.
     "serve": 4,  # §1 "HTTP routes, CLI entry points"
 }
 
