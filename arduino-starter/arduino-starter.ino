@@ -32,9 +32,11 @@ const int DRY_READING = 600;  // what you saw with the probe in dry AIR
 const int WET_READING = 260;  // what you saw with the probe in a CUP OF WATER
 
 // --- Where the 3 bands split (between your two numbers above) ---
-const int THIRSTY_ABOVE = 500;  // drier (bigger) than this  -> "thirsty"
-const int SOAKED_BELOW = 340;   // wetter (smaller) than this -> "just watered"
-//                        (anything in between -> "all good")
+// These are three of Sprout's real mood words — the same ladder you'll meet in
+// Sprout Full (Faint · Parched · Thirsty · Content · Thriving · Refreshed · Soaked).
+const int THIRSTY_ABOVE = 500;  // drier (bigger) than this  -> "Thirsty"
+const int SOAKED_BELOW = 340;   // wetter (smaller) than this -> "Soaked"
+//                        (anything in between -> "Content")
 
 const bool BLINK_WHEN_THIRSTY = true;  // light up the onboard LED (LED_BUILTIN) when it needs water
 // ===== end of the control panel — everything below just runs it =====
@@ -61,13 +63,14 @@ int readSensorRaw()
     return (int)(total / SAMPLES);
 }
 
-// Turn a raw reading into one of the three Sprout-voice bands.
+// Turn a raw reading into one of Sprout's real mood words — the mood leads, then a
+// friendly first-person line (the same shape Sprout Full speaks in).
 const __FlashStringHelper *bandFor(int raw)
 {
-    if (raw > THIRSTY_ABOVE) return F("HIGH AND DRY: I'm parched! Grab the watering can.");
-    if (raw < SOAKED_BELOW) return F("JUST WATERED: Ahh, just drank - let me soak it up. "
+    if (raw > THIRSTY_ABOVE) return F("Thirsty - I could really use a drink. Grab the watering can.");
+    if (raw < SOAKED_BELOW) return F("Soaked - ahh, just drank; let me soak it up. "
                                      "(If the outer pot's swimming, tip the extra out.)");
-    return F("ALL GOOD: Comfy. Nothing to do - I'm happy.");
+    return F("Content - comfy, nothing to do. I'm happy.");
 }
 
 void loop()
