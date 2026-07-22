@@ -115,12 +115,27 @@ class LocationEvent:
 
     plant_id: str
     location: str
+    # #1188 AC2 / ADR-0029: structured placement on the move, replacing free-text
+    # location's side semantics. `side` is the placement.ledge vocabulary (left/right),
+    # the SAME two values #806 put on the device and the ADR-0029 profile carries -
+    # see SIDE_VALUES. `window` is the structured spot. Both optional: a move may still
+    # carry only the free-text `location` (the interim PR #1179 shape), so an old event
+    # round-trips unchanged and a control can adopt the structured fields incrementally.
+    side: str | None = None
+    window: str | None = None
     start_ts: str | None = None
     end_ts: str | None = None
 
     @property
     def is_open(self) -> bool:
         return self.end_ts is None
+
+
+# #1188 / ADR-0029 placement.ledge: the one side vocabulary. #806 put `side` on the
+# device; plant_profiles.ENUMS["placement.ledge"] carries it for sensorless plants; this
+# is the same two values on the temporal move. A seam test pins these three to agree so
+# a fourth copy can never drift (test_placement_side.py) - consumed, never re-authored.
+SIDE_VALUES: tuple[str, ...] = ("left", "right")
 
 
 #: How a channel's pin came to be recorded (#1027 §5.2, Design-QA's sixth need).
@@ -375,9 +390,23 @@ class RegistryModel:
         return True
 
     def move_plant(
-        self, plant_id: str, location: str, *, now: str | None = None
+        self,
+        plant_id: str,
+        location: str,
+        *,
+        side: str | None = None,
+        window: str | None = None,
+        now: str | None = None,
     ) -> LocationEvent:
-        """Record a plant move as an event (Q7): close the open spot, open the new."""
+        """Record a plant move as an event (Q7): close the open spot, open the new.
+
+        #1188 AC2: the move may carry structured placement - ``side`` (left/right,
+        ADR-0029 placement.ledge) and ``window`` - alongside or instead of free-text
+        ``location``. ``side``, when given, must be a known ledge value; an unknown one
+        is a ``ValueError`` (a mis-typed side that silently persisted would put a plant
+        on the wrong ledge for its whole context history)."""
+        if side is not None and side not in SIDE_VALUES:
+            raise ValueError(f"side must be one of {SIDE_VALUES}, not {side!r}")
         ts = now or _utc_now()
         open_evs = [
             ev for ev in self.location_events if ev.plant_id == plant_id and ev.is_open
@@ -400,7 +429,13 @@ class RegistryModel:
                 )
         for ev in open_evs:
             ev.end_ts = ts
-        fresh = LocationEvent(plant_id=plant_id, location=location, start_ts=ts)
+        fresh = LocationEvent(
+            plant_id=plant_id,
+            location=location,
+            side=side,
+            window=window,
+            start_ts=ts,
+        )
         self.location_events.append(fresh)
         for p in self.plants:
             if p.plant_id == plant_id:
@@ -659,7 +694,13 @@ def registry_payload(model: RegistryModel, undeclared: list | None = None) -> di
     # and a mover's context boundaries are queryable without a second round trip.
     doc["location_history"] = {
         p.plant_id: [
-            {"location": ev.location, "start_ts": ev.start_ts, "end_ts": ev.end_ts}
+            {
+                "location": ev.location,
+                "side": ev.side,  # #1188 AC2: structured placement (ADR-0029)
+                "window": ev.window,
+                "start_ts": ev.start_ts,
+                "end_ts": ev.end_ts,
+            }
             for ev in model.location_history(p.plant_id)
         ]
         for p in model.plants
@@ -1155,7 +1196,16 @@ def apply_operations(
             # is in a different micro-climate; readings either side are not one
             # continuous context). Every other field is a plain edit.
             if k == "location" and (rec[k] or None) != (p.location or None):
-                model.move_plant(p.plant_id, rec[k], now=now)
+                # #1188 AC2: the edit may carry structured placement (ADR-0029) beside
+                # the free-text location; move_plant validates `side` against the ledge
+                # vocabulary and writes both onto the boundary event.
+                model.move_plant(
+                    p.plant_id,
+                    rec[k],
+                    side=rec.get("side"),
+                    window=rec.get("window"),
+                    now=now,
+                )
             else:
                 setattr(p, k, rec[k])
         applied["edited"] += 1
