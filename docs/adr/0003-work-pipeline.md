@@ -265,42 +265,13 @@ under the same numbered series + [register](0000-record-architecture-decisions.m
 - **PRD** (`docs/prd/`) — a feature's *what + why* (requirements + acceptance), before the *how*.
 - **ADR** (`docs/adr/`) — an architecturally-significant, durable, cross-cutting *decision of record*.
 
-**Write an ADR when any of these is true:**
-
-- **Hard or expensive to reverse** — architecture, data substrate, a public schema/API, repo
-  structure, a framework choice.
-- **Binds more than one lane** — a shared contract, interface, or cross-cutting policy.
-- **Chooses among real alternatives** where the rejected options matter ("why not X?").
-- **Establishes a convention everyone must follow** — naming, branching policy, the label taxonomy,
-  the verification gate.
-- **Sets a foundational default/boundary** — born-correct things, cheap now and painful to retrofit
-  (line endings, env tool, data store, directory layout).
-- You'd otherwise **re-explain the same "why" repeatedly** to new contributors.
-
-**Good ADR material (patterns):**
-
-- "GitHub Issues is the work ledger; IDs are `#N`." *(cross-lane convention)*
-- "Closed-loop on soil moisture only; environmental sensors are logging-only." *(architecture; alternatives rejected)*
-- "Raw CSV is immutable; the DuckDB tier is rebuildable." *(substrate; hard to reverse)*
-- "Host functionality presents as one application surface." *(cross-lane boundary)*
-
-**NOT an ADR (antipatterns) — use the lighter rung instead:**
-
-- A bug fix or a single feature → an **issue + PR**.
-- A reversible, low-stakes tweak (rename a var, nudge a threshold) → just the change.
-- A routine choice with no real alternative → no record needed.
-- Restating a decision already in another ADR → **link it**, don't duplicate.
-- A how-to, runbook, or frequently-edited reference → **docs**, not an ADR (an ADR is a *decision*,
-  not a living reference — though pre-1.0 the ADR text itself is editable in place; see
-  [ADR-0000 §4](0000-record-architecture-decisions.md)).
-
-Rule of thumb: *if you'll edit it often, it's a doc; if you'll defend it later, it's an ADR.*
-
-**Minting discipline (2026-07-21 — the sprawl correction at ADR-0038):** **amend or append by
-default; mint a new ADR only for a genuinely new decision.** The PR template asks every ADR PR:
-*"Which existing ADR did you consider amending, and why didn't you?"* This amendment is itself the
-worked example — the v0.8.0 process standardization lands here, in the pipeline ADR it revises,
-not as ADR-0039.
+**The ADR rung has its own test — and it lives in ADR-0000, not here.** *When* a decision earns an ADR,
+the good-vs-not-ADR patterns, and the **prove-you-don't-need-a-new-one gate** are all ADR governance, so
+they sit with the register in
+[ADR-0000 § When a decision earns an ADR](0000-record-architecture-decisions.md). This section keeps only
+the pipeline's own part — routing work to the lightest vehicle (the ladder above). *(Relocated per #1462 on
+2026-07-21: "how ADRs work" belongs in the ADR-about-ADRs, not split across the work-pipeline ADR — the
+consolidation applied to its own governance.)*
 
 ## 11. The retro metric (2026-07-21)
 
