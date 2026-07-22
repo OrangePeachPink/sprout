@@ -196,17 +196,25 @@ the message bus.** Keep the system moving by syncing yourself.
 A lane that self-syncs keeps the whole system advancing between the maintainer's check-ins — instead of
 stalling until the next relay.
 
-## Lane routing
+## Owner & consulted (revised 2026-07-21, ADR-0003 §5 — the label→field migration)
 
-When an issue comes up mid-lane and can't route through Workflow first, tag it `for:<lane>` to flag a
-**first-approximate recipient** — a best-guess owner so it doesn't sit without one. The family:
-`for:firmware` (incl. bench) · `for:data` · `for:design` (→ Design) · `for:dx` · `for:trellis` ·
-`for:workflow` · `for:maintainer`.
+**Accountability is the `Owner` board field — exactly one lane per issue** (the maintainer is a
+lane). Workflow sets it at triage; a lane that thinks an owner is wrong proposes a re-own, never
+silently takes work. Lanes find their queue in their one-word board view (`firmware`, `data`,
+`design`, `dx`, `trellis`, `workflow`; the maintainer's is `vmine`).
 
-- It's a routing **hint**, not an assignment or a commitment — Workflow still triages, slices, and gates.
-  (And per Lane attribution above: a routing label on an issue is never evidence of who authored a commit.)
-- Use `for:workflow` when you're unsure, or when an item explicitly needs the pipeline (e.g. "please slice
-  this"); `for:trellis` flags an architecture / gap review.
+**`for:<lane>` now means CONSULTED — zero or more per issue: you owe the owner an input.** A
+consulted ask carries an **explicit response window or an explicit non-blocking marker** — never
+an expiring default. Check your consult bookmark (`issues?q=is:open+label:for:<lane>`) each
+sweep so no owed input rots. Family: `for:firmware` · `for:data` · `for:design` · `for:dx` ·
+`for:trellis` · `for:workflow`. (`for:maintainer` is **retired** — work that is hers carries
+`owner = maintainer`; a decision/click due *now* is the `needs:maintainer` label, nothing else.)
+
+- A label is never evidence of who authored a commit (Lane attribution above governs).
+- Use `for:workflow` when unsure where something goes, or when an item needs the pipeline
+  ("please slice this"); `for:trellis` flags an architecture / gap review — advisory, not a gate.
+- **Review is never labeled** — it's a fixed pipeline stage (Workflow certifies everything; the
+  maintainer merges V1), not per-issue routing.
 
 ## Bench work (Firmware lane)
 
@@ -355,10 +363,24 @@ grill rulings, first renders of new user surfaces, ADRs, and hardware.
 
 - **V2 — accelerated (the default for internal-lane work).** The lane builds and posts AC-by-AC
   evidence exactly as always — nothing changes for the implementer — but **Workflow verifies AND
-  merges/closes**, without the maintainer in the loop. Untagged internal work is V2 unless it falls
-  in a standing V1 class below or the maintainer tags `velocity:v1` at scope time.
+  merges/closes**, without the maintainer in the loop.
 - **V1 — maintainer-merged.** The two-stage gate with the maintainer's click: Workflow certifies to
   **Ready to Merge** (label `needs:maintainer`), **the maintainer merges.**
+- **Velocity lives on the `Velocity` board field** (set at planning; the retired `velocity:*`
+  labels are gone — one basket). **Escalation = the lane flips the field**: if a build reveals a
+  V1-triggering property (public surface, doctrine, enforcement, hardware, PII), flip V2 → V1 —
+  same surface, no second vocabulary, no ask. The gate reads the field at certification.
+- **Record-sync refinement (maintainer-ruled 2026-07-20):** a PR that merely records an
+  **already-ratified** decision — a ratified ADR status-line flip, scribing a landed ruling into
+  its document, register-row sync — is **V2**: the decision already carried the maintainer's
+  click; the record catching up doesn't need a second look. Anything that *changes* a ruling, its
+  scope, or its public surface stays V1. **Pre-approved scope generally:** an amendment within
+  the scope and intent of something already ruled is V2; doubt = V1.
+- ***Proposed with this PR (the maintainer's merge ratifies):*** **AC-conformance corrections are
+  V2** — an AC correction that only brings an AC into conformance with an already-ratified rule
+  (e.g. decoupling retirement from build because the confirmation cycle forbids same-release
+  retirement) is gate-executable; only corrections that change *intent* route to the maintainer
+  (§8b). Born from the #1144 approval that needed no judgment.
 
 **Standing V1 classes (always V1, regardless of tags):**
 
@@ -422,14 +444,34 @@ know GitHub, so every bit of bespoke machinery we *don't* build is friction a fu
 - `BACKLOG.md` is **retired** — historical only, **do not add to it.** All work is in Issues.
 - Idea not ready to build → **Discussions.** Ready, assignable, "done" definable in a sentence
   → an **Issue** (use the forms).
-- Labels: `type:*` (work kind) · `area:*` (control/logging/sensing/actuators/analytics/design) ·
-  `layer:*` (firmware/host) · `blocks:*` (gates) · `needs:maintainer` (the maintainer's queue) ·
-  `good first issue` · `help wanted`. Priority / Size live on the **board**, not as labels.
+- **Labels (post-migration, 2026-07-21):** `type:*` (work kind) · `for:<lane>` (consulted — see
+  Owner & consulted) · `blocked` (wait-marker; see below) · `blocks:*` (gates) ·
+  `needs:maintainer` (a maintainer click/decision due **now** — nothing else) · `needs:hardware`
+  (bench-gated) · `good first issue` · `help wanted`. **Retired** (kept on closed issues —
+  history is never relabeled): `area:*`, `layer:*`, `for:maintainer`, `velocity:*` (the `epic`
+  label follows once #1446's structural lint discovery lands).
+- **The five planning fields live on the board** — Owner · Velocity · Size · Priority · Status —
+  written by lanes themselves, one line each: `just board N` reads all five; `just
+  owner|velocity|size|priority|status N <value>` writes one (each write re-queries and prints).
+  **The readiness gate (ADR-0003 §5):** an issue needs owner + velocity + size + priority +
+  complete AC *before work starts* — the `readiness` view shows the debt; nothing in-milestone
+  is picked up while it appears there.
+- **`blocked` — a wait-marker riding on the true stage, never a column** (maintainer-ruled
+  2026-07-21): an item can be blocked in Backlog or In Progress. **No naked blocks** — applying
+  `blocked` requires a comment naming *whom/what it waits on and the unblocking event*. Workflow
+  sweeps `label:blocked is:open` every cycle and strips the label when the named event fires —
+  jams clear by the gate noticing. Never idle silently on a block: label it, name it, keep moving.
+- **Epics: status = furthest-along child** (maintainer-ruled 2026-07-21): an epic's Status
+  mirrors its most-advanced sub-issue; the gate sweeps epic statuses at each digest merge, and
+  an epic whose children read 100%-closed gets flagged to its owner as close-or-name-scope.
 - **The verification signal is the Status column and nothing else** (#729, maintainer-ruled):
-  `Needs Verification` = evidence posted, awaiting review · `Ready to Merge` = certified GO.
-  The reviewer's disposition lives in the certification comment; changes-requested = the card
-  returns to In Progress with the reason. The old `Verification` field and `needs-verification`
-  label are retired — one signal, no drift.
+  `Needs Verification` = evidence posted (each AC individually marked met, with evidence),
+  awaiting review · `Ready to Merge` = certified GO. The reviewer's disposition lives in the
+  certification comment; changes-requested = the card returns to In Progress with the reason.
+  The old `Verification` field and `needs-verification` label are retired — one signal, no drift.
+- **A `Won't Do` close names its owner in the closing comment** — an item vanishing from a
+  lane's board is not a notification; the ruling comment is ("ruled Won't Do; owner was
+  `<lane>`, no action owed"). Push at event time, not absence-noticing.
 
 [board]: https://github.com/users/OrangePeachPink/projects/2
 
