@@ -208,7 +208,8 @@ Raw rows carry `event_id` (null when idle); one event-table row per event with: 
 `;`-separated `key=value`, **no commas** (so it sits in one unquoted CSV field). `;` separates pairs
 and the first `=` splits key/value, so values *may* contain spaces (e.g. `level=well watered`). Plants
 `plants.soil` keys: `level` (band name, e.g. `OK`/`well watered`), `role` (`disp`|`diag`),
-`spread` (raw spread of kept samples), `gpio`. Example: `level=well watered;role=disp;spread=48;gpio=36`.
+`spread` (raw spread of kept samples), `step` (the signed raw delta from the previous accepted
+sample, #1434), `gpio`. Example: `level=well watered;role=disp;spread=48;step=-12;gpio=36`.
 
 > **`level` lags `raw_value` by ~1 tick on fast transients (#678, intended).** The band label carries
 > **anti-flap hysteresis**: the classifier holds the committed band across a `deadband`-wide gap plus a ms
@@ -227,6 +228,7 @@ Host-appended keys (additive, never touching device keys): `host_monotonic_ms` (
 | --- | --- | --- |
 | `config_id=<8hex>` | every row (soil + env) | #576 / ADR-0025 — firmware-computed fingerprint of the active config snapshot (ADC/sampling/cal/cadence). Same id ⇒ rows are directly comparable; a change is a comparability boundary + the no-auto-adjust alarm. Header-authoritative (`# config_id=` line); **`parse_v1` reads it, never re-derives.** |
 | `fault=stuck_wet｜dead_adc｜open_adc｜rate_spike` | soil, on `SENSOR_FAULT` (physics: `stuck_wet`/`dead_adc`/`open_adc`) or `SUSPECT` (kinematics: `rate_spike`) | #670/#1152 — the specific non-OK reason (see §4). Opaque per #739; **additive → no `schema_version` bump** (a new reason token, never a new enum value). **No placement tokens** (`probe_air`/`probe_water`): placement is a band-layer fact (ADR-0035 air-dry/cup-wet), never a `quality_flag` reason (#1152 Placement A). |
+| `step=<signed int>` | **every soil row** | **#1434 AC0** — the SIGNED raw delta from the previous accepted classifier sample (`raw_filtered − prev`), in ADC counts. This is the exact quantity `rate_spike` compares to `max_delta_raw`, emitted so the check is **auditable from the wire**: a reader verifies `(\|step\| > max_delta_raw) ⇔ fault=rate_spike`, and reads **direction** (wetter = negative, drier = positive) for the exception taxonomy (#1434). Emitted (not reconstructed from logged rows) because logged rows differ from the classifier's accepted-sample sequence across any dropped row. `0` on the seed row (no prior sample). Additive → **no `schema_version` bump**. |
 | `rssi=<dBm>` | soil, **connected-only** | #669 — WiFi signal strength (a negative int). **Honest-absent** (ADR-0028): a serial/tethered or unassociated row **omits the key entirely** — never a fake `0`. Only the dBm value; **never SSID/BSSID/MAC** (privacy fence). |
 | `uptime_s=<s>` | every soil row | #669 — seconds since boot (board diagnostic; transport-independent). |
 | `heap=<bytes>` | every soil row | #669 — free heap bytes (board diagnostic). |
