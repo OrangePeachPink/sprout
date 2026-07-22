@@ -100,8 +100,8 @@ in each ADR. (First-cut grouping, #1462 — Workflow may re-slot a borderline ro
 | [0031](0031-read-path-rollup-tiers.md) | Read-path rollup tiers — materialized aggregates over immutable raw | **Accepted** | Trellis / Data |
 | [0025](0025-config-provenance.md) | Config provenance & no-auto-adjust — settings dialed-in-and-held, tagged on the data | **Accepted** | Trellis / Data |
 | [0037](0037-production-epoch-and-data-admissibility.md) | Production epoch, data admissibility & the archive boundary | **Accepted** | Trellis / Data |
-| [0012](0012-experiment-data-architecture.md) | Experiment data architecture — *folding into 0006 (#1462)* | **Proposed** | Data |
-| [0013](0013-environmental-data-architecture.md) | Environmental data architecture — *folding into 0006 (#1462)* | **Proposed** | Data |
+| [0012](0012-experiment-data-architecture.md) | Experiment data architecture — extends 0006 *(satellite of 0006)* | **Proposed** | Data |
+| [0013](0013-environmental-data-architecture.md) | Environmental data architecture — external context + location privacy *(satellite of 0006)* | **Proposed** | Data |
 
 ### Experiment & lab capture
 
