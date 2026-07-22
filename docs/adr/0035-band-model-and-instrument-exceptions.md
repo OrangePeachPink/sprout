@@ -87,8 +87,8 @@ where a plant is at the edge of harm. The dry ceiling is the **Faint-ceiling**:
 - **Faint-ceiling: classic = 2500, C5 = 2213** — the living / potentially-killing boundary, **measured** on each
   board's fresh dual-envelope dry-down (not one anchor-mapped from the other).
 - **Survivor-bias caveat (binding):** the measured fleet still skews hardy, so the ratified ceilings are
-  **fleet-level**. Fragile species fold lower; per-species / per-instance refinement comes later via the registry
-  - cal chain (ADR-0029 / ADR-0022), never by guessing now.
+  **fleet-level**. Fragile species fold lower; per-species / per-instance refinement comes later via the
+  registry and cal chain (ADR-0029 / ADR-0022), never by guessing now.
 - **Humane-calibration doctrine (binding): wilt-onset is the only capture target. No plant is ever pushed to
   find a sensor maximum.** The dry ceiling is where care begins, calibrated from the gentlest signal of distress
   — not from harm.
