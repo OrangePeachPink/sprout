@@ -27,11 +27,34 @@ def test_upward_import_is_caught(tmp_path: Path) -> None:
     assert "UPWARD" in f.detail and "high" in f.detail
 
 
-def test_sideways_import_is_caught(tmp_path: Path) -> None:
-    """The rule is strictly lower — equal layers are not a loophole."""
+def test_sideways_at_layer_4_is_caught(tmp_path: Path) -> None:
+    """The delivery tier keeps the no-sideways rule (§2): routes and presentation must
+    not import each other into a god-module. Same-layer is a loophole ONLY below 4."""
     host = _tree(tmp_path, a="import b", b="Z = 3")
     (f,) = g.check(host, {"a": 4, "b": 4})
-    assert "SIDEWAYS" in f.detail
+    assert "SIDEWAYS" in f.detail and "layer 4" in f.detail
+
+
+def test_same_layer_below_4_is_allowed(tmp_path: Path) -> None:
+    """§2 amended (#1452): a layer-3 module composing another layer-3 module — the
+    dashboard-imports-card_context pattern — is legitimate, not sideways."""
+    host = _tree(tmp_path, a="import b", b="Z = 3")
+    assert g.check(host, {"a": 3, "b": 3}) == []
+
+
+def test_same_layer_cycle_below_4_is_caught(tmp_path: Path) -> None:
+    """Same-layer below 4 is legal only while acyclic — A importing B and B importing A
+    at one layer is the tangle by another name (§2's acyclic proviso)."""
+    host = _tree(tmp_path, a="import b", b="import a")
+    findings = g.check(host, {"a": 3, "b": 3})
+    assert [f for f in findings if "SAME-LAYER CYCLE" in f.detail]
+    assert any("a" in f.detail and "b" in f.detail for f in findings)
+
+
+def test_same_layer_acyclic_chain_below_4_is_allowed(tmp_path: Path) -> None:
+    """A DAG of same-layer composition is fine — only a cycle is the tangle."""
+    host = _tree(tmp_path, a="import b", b="import c", c="X = 1")
+    assert g.check(host, {"a": 3, "b": 3, "c": 3}) == []
 
 
 def test_leaf_importing_ours_is_caught(tmp_path: Path) -> None:
