@@ -88,3 +88,95 @@ def test_every_live_band_resolves_to_a_mood(tmp_path: Path) -> None:
     reg = Registry(devices=[], sensorless=[{"plant_id": "pS", "plant_name": "C"}])
     payload = build_payload(registry=reg, root=tmp_path, events_root=tmp_path, now=T0)
     assert payload["moods_resolved"] is True and payload["unmapped_bands"] == []
+
+
+# --------------------------------------------------------------------------- #
+# #1435 — the trial must distinguish "tier not built" from "genuinely empty"
+# --------------------------------------------------------------------------- #
+def test_tier_state_empty_when_no_parquet(tmp_path: Path) -> None:
+    """An empty store root is "empty" — the launcher has not filled it yet (#1466).
+    A surface must say "still gathering", never "no readings"."""
+    from multiplant_history import tier_state
+
+    assert tier_state(tmp_path) == "empty"
+
+
+def test_the_payload_carries_the_tier_state(tmp_path: Path) -> None:
+    """The signal Design's render branch needs (#1435 pt 3): on an unbuilt store the
+    payload says so, so calm-empty can tell dark from genuinely-empty."""
+    reg = Registry(devices=[], sensorless=[{"plant_id": "pS", "plant_name": "C"}])
+    payload = build_payload(registry=reg, root=tmp_path, events_root=tmp_path, now=T0)
+    assert payload["tier_state"] == "empty"  # unbuilt, not "no readings"
+    assert payload["bands_seen"] == []  # and empty — but now DISTINGUISHABLE from ready
+
+
+def _fill_store(root: Path, rows: list[tuple[str, int]]) -> None:
+    """Write one real parquet partition of soil rows (device 'dev', 2026-07-10)."""
+    import pytest
+
+    pytest.importorskip("duckdb")
+    from parse_v1 import Reading
+    from tier_store import build_partition
+
+    tagged = [
+        (
+            Reading(
+                "plants.soil",
+                datetime(2026, 7, 10, 0, i, tzinfo=timezone.utc),
+                None,
+                None,
+                "sess1",
+                "dev",
+                "0.8.0",
+                "x",
+                None,
+                "UMLIFE_v2_TLC555",
+                sensor,
+                "",
+                sensor,
+                raw,
+                None,
+                "",
+                "OK",
+                {"level": "overwatered"},
+            ),
+            "seg.csv",
+        )
+        for i, (sensor, raw) in enumerate(rows)
+    ]
+    build_partition(tagged, "dev", datetime(2026, 7, 10).date(), out_root=root)
+
+
+def test_tier_state_ready_and_both_generations_resolve(tmp_path: Path) -> None:
+    """A built store is "ready"; and #1454's join means a window of v4 `s1` + v5 `ch2`
+    rows for one channel BOTH resolve to the plant — the join symptom Design's point 1
+    predicted is already cured, so the trial lights when the store is filled."""
+    import pytest
+
+    pytest.importorskip("duckdb")
+    from multiplant_history import tier_state
+
+    root = tmp_path / "tier"
+    _fill_store(root, [("s1", 1500), ("ch2", 1520)])  # both token generations
+    assert tier_state(root) == "ready"
+
+    reg = Registry(
+        devices=[
+            Device(
+                device_id="dev",
+                board="esp32-classic",
+                label="A",
+                channels={"ch2": {"plant_id": "p11", "plant_name": "Fern"}},
+            )
+        ]
+    )
+    payload = build_payload(
+        registry=reg,
+        root=root,
+        events_root=tmp_path,
+        now=datetime(2026, 7, 11, tzinfo=timezone.utc),
+    )
+    assert payload["tier_state"] == "ready"
+    assert "overwatered" in payload["bands_seen"]  # the band is live, not empty
+    p11 = next(p for p in payload["plants"] if p["plant_id"] == "p11")
+    assert p11["n_readings"] == 2  # BOTH s1 and ch2 resolved (the #1454 join)
