@@ -2,7 +2,7 @@
 
 **For:** the maintainer, at the bench session. **Prepared by:** DX.
 **Covers:** #1232 (search console) · #1076 (maker build posts) · #1508 (profile README) · #1069
-(epic closeout). **Milestone:** v0.8.1.
+(epic closeout) → **#1128** (post the write-up, end of session). **Milestone:** v0.8.1.
 
 This is the sit-down runbook for the front-door launch surfaces — the account actions and public
 posts that only you can do. Every desk-side dependency below is already built and merged; this sheet
@@ -93,6 +93,17 @@ only on Sprout's own surfaces (epic locked-decision 8). Per venue:
   for this session.
 - **Done when:** #1076 and #1232 close. The epic then has met its v0.8.1 obligations; it stays open
   only to carry FD-7 into v0.9.0 (note that on the epic so it isn't mistaken for stalled).
+
+### 5 · #1128 — Post the agent-instruction-split write-up (end of session)
+
+- **What:** create the Discussion (Announcements or Show & tell) from the approved draft —
+  you approved the final text on the issue; both voice passes are in; nothing else changes.
+- **Where the text lives:** the approved draft is in the private workspace
+  (`docs/posts/…` — the issue's trail names it); paste as-is, title as ratified.
+- **Why end-of-session:** it references the instruction-file mechanics the earlier steps
+  may touch; posting last means it describes the repo as the session leaves it.
+- **Done when:** the Discussion is live and its URL is commented on the issue — the gate
+  then stamps platform copy canonical and closes with the pointer record.
 
 ## One flag for the voice pass (not a blocker)
 
