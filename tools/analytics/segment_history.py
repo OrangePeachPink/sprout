@@ -35,8 +35,11 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+from channel_identity import (  # noqa: E402  (#1454 — the one S1-seam join)
+    build_plant_index,
+    resolve_plant_id,
+)
 from device_registry import load_registry  # noqa: E402
-from parse_v1 import canonical_channel  # noqa: E402  (#1315 read translation)
 from segment_classifier import KINDS, classify, passes, segments  # noqa: E402
 from tier_store import CAP_US  # noqa: E402
 
@@ -55,16 +58,9 @@ def plant_series(root: Path | None = None, registry=None) -> tuple[dict, dict]:
 
     root = Path(root) if root is not None else TIER_RAW
     registry = registry if registry is not None else load_registry()
-    pair_to_plant: dict[tuple[str, str], str] = {}
-    for dev in registry.devices:
-        for channel in dev.channels or {}:
-            p = dev.plant_for(channel)
-            if p:
-                # #1315: key on the CANONICAL channel so v4 sN rows and v5 chN
-                # rows both resolve, whether or not the registry has migrated
-                pair_to_plant[(dev.device_id, canonical_channel(channel))] = p[
-                    "plant_id"
-                ]
+    # #1454: the one S1-seam join — v4 sN rows and v5 chN rows both resolve, whether
+    # or not the registry has migrated (was an inline pair_to_plant here; #1315).
+    index = build_plant_index(registry)
     con = duckdb.connect()
     rows = con.execute(
         # *.parquet, not part.parquet: a partition may hold D3 live-ingest
@@ -76,7 +72,7 @@ def plant_series(root: Path | None = None, registry=None) -> tuple[dict, dict]:
     series: dict[str, list[TierRow]] = {}
     unmapped: dict[tuple[str, str], int] = {}
     for device_id, sensor_id, ts, raw, flag in rows:
-        pid = pair_to_plant.get((device_id, canonical_channel(sensor_id)))
+        pid = resolve_plant_id(index, device_id, sensor_id)
         if pid is None:
             unmapped[(device_id, sensor_id)] = (
                 unmapped.get((device_id, sensor_id), 0) + 1
