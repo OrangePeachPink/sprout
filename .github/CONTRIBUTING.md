@@ -90,9 +90,9 @@ a Size.
 
 ## Opening an issue
 
-Use the **issue forms** (New issue → Feature / Bug / Task). They capture the area, layer, and details a
-maintainer needs to triage. Don't worry about labels — the form applies the `type:` label, and a
-maintainer confirms `area:` / `layer:` at triage.
+Use the **issue forms** (New issue → Feature / Bug / Task). They capture the details a maintainer
+needs to triage. Don't worry about labels — the form applies the `type:` label, and the maintainer
+team routes ownership on its project board at triage.
 
 ## Claiming an issue
 
@@ -279,11 +279,9 @@ less custom machinery you have to learn, the faster you can help — that's the 
 ## Labels (quick reference)
 
 - `type:*` — the kind of work (mirrors the commit `type:` vocabulary)
-- `area:*` — the subsystem (control / logging / sensing / actuators / analytics)
-- `layer:*` — `firmware` (needs a reflash) vs `host` (build anytime)
-- `for:*` — routing hint to a lane (a best-guess owner, not a commitment — Workflow still triages):
-  `for:firmware` (incl. bench) · `for:data` · `for:design` (→ Design) · `for:dx` · `for:trellis` ·
-  `for:workflow` · `for:maintainer`. See the lane roster in [docs/team/OPERATIONS.md](../docs/team/OPERATIONS.md#the-lanes).
+- `for:*` — the maintainer team's internal consult-routing (a lane owes an input); contributors
+  never need to apply these. Ownership lives on the team's project board, not in labels.
+- `blocked` — waiting on a named party/event (the applying comment names the unblock)
 - `blocks:*` — milestone **gates**, independent of Priority: `blocks:pumps`, `blocks:public-release`,
   `blocks:data-integrity`. Filter by these to see what stands between us and pumps / a public release /
   trustworthy data.
