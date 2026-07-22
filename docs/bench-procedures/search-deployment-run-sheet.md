@@ -57,7 +57,8 @@ picture is complete.
 - Optional voice-audit — your doctrine call, not an SEO one: two residual descriptive uses survive,
   in `docs/process/ADOPTION.md` and `README.md` (the "a percentage is ... never VWC" line). These
   read as in-voice description, not the retired hook, so DX left them. To rule on them yourself:
-  `git grep -niE 'honest|refuses to lie|never a fake'` surfaces the class.
+  `git grep -niE 'honest|refuses to lie|never a fake'` surfaces the class. <!-- voice-guard: allow -->
+  (That grep pattern names the retired hooks on purpose — it is the search, not the voice.)
 
 ## Log
 
