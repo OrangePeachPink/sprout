@@ -293,8 +293,37 @@ under the same numbered series + [register](0000-record-architecture-decisions.m
 - A how-to, runbook, or frequently-edited reference → **docs**, not an ADR (an ADR is a *decision*,
   not a living reference — though pre-1.0 the ADR text itself is editable in place; see
   [ADR-0000 §4](0000-record-architecture-decisions.md)).
+- **An ADR that opens by restating another ADR and extending it** → it's a **section of that ADR**, not a
+  new one. *(Harvested 2026-07-21, #1462 — 0012/0013 both opened "ADR-0006 defines the data architecture…"
+  and were folded into 0006.)*
+- **A stack of amendments on one ADR** → the reader should never reconstruct the current decision by mentally
+  applying ten patches. **Fold amendments into clean current-state text + a dated changelog** (see
+  [ADR-0000](0000-record-architecture-decisions.md) § maintaining the set). *(Harvested 2026-07-21, #1462 —
+  ADR-0035 carried ten.)*
+- **A second doc for a concept that already has a hub ADR** → extend the hub, or file a **named satellite**
+  that the register groups under it — never a peer. *(Harvested 2026-07-21, #1462 — identity: 0027 is the hub;
+  0036/0019 are satellites.)*
 
 Rule of thumb: *if you'll edit it often, it's a doc; if you'll defend it later, it's an ADR.*
+
+### The new-ADR justification gate (#1462)
+
+The antipatterns above are only useful if someone consults them *before* minting. So a new ADR must
+**carry its own justification** — three lines near the top, answered honestly:
+
+1. **Why this needs a new ADR** — which "write an ADR when" trigger it hits.
+2. **Which existing ADRs you considered folding it under** — name them; the nearest-domain hub is the first
+   place to look.
+3. **Why it can't go under one of them** — the specific reason a section of an existing ADR won't do.
+
+If you can't answer 3 convincingly, it's a section, an issue, or a doc — not a new ADR. Certification checks
+this block exists and is answered; a new ADR without it goes back. This gate is the thing that keeps the set
+from re-sprawling after a consolidation pass — the pass is one-time, the gate is permanent.
+
+*(Applied to its own author: the consolidation doctrine did **not** mint ADR-0039. The new-ADR test lives here
+in §10 because "when a decision merits an ADR" is this section's domain; the set-maintenance conventions live
+in ADR-0000 because keeping the register is that ADR's domain. Two existing homes, no new number — the gate
+demonstrated on the first thing it governed.)*
 
 **Minting discipline (2026-07-21 — the sprawl correction at ADR-0038):** **amend or append by
 default; mint a new ADR only for a genuinely new decision.** The PR template asks every ADR PR:
