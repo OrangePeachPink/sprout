@@ -1657,14 +1657,27 @@ void t_exceptions_open_adc_and_rate_spike(void)
 
     /* --- kinematics: a step soil cannot physically make ---------------------- */
     moisture_init(&st, &cfg, 1500);
+    /* #1434 AC0: a fresh seed has no prior sample -> zero step */
+    TEST_ASSERT_EQUAL_INT16_MESSAGE(0, st.last_delta,
+                                    "seed has no previous step -> step=0");
     moisture_update(&st, &cfg, 1560); /* 60 counts: ordinary drift */
     TEST_ASSERT_FALSE_MESSAGE(st.rate_spike, "ordinary step is not a spike");
+    TEST_ASSERT_EQUAL_INT16_MESSAGE(
+        60, st.last_delta, "#1434 AC0: step is the SIGNED delta (+60 drier)");
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
         "OK", telemetry_quality_flag(&st, rail, air), "ordinary step stays OK");
 
     moisture_update(&st, &cfg, 3000); /* +1440 in one step */
     TEST_ASSERT_TRUE_MESSAGE(st.rate_spike,
                              "implausible step flags rate_spike");
+    /* #1434 AC0: the auditability contract - the emitted step IS the quantity the
+     * flag compares. (|step| > max_delta_raw) <=> rate_spike, verifiable on-wire. */
+    TEST_ASSERT_EQUAL_INT16_MESSAGE(
+        1440, st.last_delta, "step carries the exact compared magnitude");
+    TEST_ASSERT_TRUE_MESSAGE(
+        (uint16_t)(st.last_delta < 0 ? -st.last_delta : st.last_delta) >
+            cfg.max_delta_raw,
+        "|step| > threshold agrees with rate_spike being set");
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
         "SUSPECT", telemetry_quality_flag(&st, rail, air),
         "rate_spike -> SUSPECT (the reading may be real; the JUMP is not)");
@@ -1677,6 +1690,17 @@ void t_exceptions_open_adc_and_rate_spike(void)
     /* the flag is per-step: a settled step clears it */
     moisture_update(&st, &cfg, 3010);
     TEST_ASSERT_FALSE_MESSAGE(st.rate_spike, "spike clears once steps settle");
+    TEST_ASSERT_EQUAL_INT16_MESSAGE(10, st.last_delta, "settled step = +10");
+
+    /* #1434 AC0: SIGN carries direction - a wetter jump is NEGATIVE (the board-face
+     * vs connector-water discriminator, #1434 taxonomy). This one clears the
+     * threshold too, so it is a spike AND negative. */
+    moisture_update(&st, &cfg,
+                    1400); /* 3010 -> 1400: wetter by 1610 (> 1200) */
+    TEST_ASSERT_EQUAL_INT16_MESSAGE(-1610, st.last_delta,
+                                    "a wetter step is a NEGATIVE step");
+    TEST_ASSERT_TRUE_MESSAGE(st.rate_spike,
+                             "and, over threshold, still a spike");
 
     /* a HARD fault outranks a kinematics hint */
     moisture_update(&st, &cfg, 100); /* huge step AND below the wet rail */
@@ -1802,6 +1826,24 @@ void t_soil_row_v4(void)
                              "healthy row is not SENSOR_FAULT");
     TEST_ASSERT_NULL_MESSAGE(strstr(buf, ";fault="),
                              "healthy row has no fault key");
+    /* #1434 AC0: step= rides the base payload (always present) - seed row is 0. */
+    TEST_ASSERT_NOT_NULL_MESSAGE(
+        strstr(buf, ";step=0;"),
+        "#1434 step= present on every soil row; seed = 0");
+
+    /* a real signed step reaches the wire verbatim (auditability): drive one
+     * update and confirm the emitted token equals st.last_delta, sign and all. */
+    moisture_update(&st, &cfg, 1000); /* 1300 -> 1000: wetter by 300 */
+    row.raw = 1000;
+    TEST_ASSERT_EQUAL_INT16(-300, st.last_delta);
+    TEST_ASSERT_TRUE_MESSAGE(telemetry_format_soil_row(buf, sizeof(buf), &row) >
+                                 0,
+                             "stepped row formatted");
+    TEST_ASSERT_NOT_NULL_MESSAGE(
+        strstr(buf, ";step=-300;"),
+        "#1434 the emitted step is the signed classifier delta, on the wire");
+    st.last_raw = 1300; /* restore for the rest of the test */
+    row.raw = 1300;
 
     /* absent (ADR-0028): a serial/tethered row OMITS rssi= entirely. */
     row.rssi_present = false;

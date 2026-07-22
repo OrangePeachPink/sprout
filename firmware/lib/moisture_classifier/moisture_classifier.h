@@ -142,6 +142,14 @@ typedef struct {
     uint16_t         last_spread;   /* range of the kept (trimmed) samples     */
     bool             health_warn;   /* last measurement exceeded spread_warn   */
     bool rate_spike; /* #1152: last step exceeded max_delta_raw */
+    int16_t last_delta; /* #1434 AC0: SIGNED step from the previous accepted
+                         * sample (raw_filtered - prev). This is the exact
+                         * quantity rate_spike compares to max_delta_raw, kept so
+                         * the check is AUDITABLE from telemetry (step=) rather
+                         * than inferred from logged rows - which differ from the
+                         * accepted-sample sequence across a dropped row. Signed:
+                         * direction (wetter vs drier) is the primary exception
+                         * discriminator (#1434 taxonomy). 0 at seed. */
 } moisture_state_t;
 
 /* ---- lifecycle ---------------------------------------------------------- */

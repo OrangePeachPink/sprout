@@ -78,14 +78,22 @@ int telemetry_format_soil_row(char *buf, size_t buflen,
                   rows. Sized for the worst-case field combo (WiFi + SNTP-synced
                   device_timestamp_utc + a fault reason + cal provenance) so no
                   additive key is ever silently dropped from a full row. */
+    /* #1434 AC0: step= is the SIGNED raw delta from the previous accepted sample -
+     * the exact quantity rate_spike compares to max_delta_raw. It rides the base
+     * payload (always present, never a dropped tail key) next to its sibling
+     * spread=, so the kinematics check is auditable from the wire: a reader can
+     * verify (|step| > threshold) <=> fault=rate_spike, and read direction
+     * (wetter vs drier) for the exception taxonomy. Emitting it here - not
+     * reconstructing it from logged rows - is the point: logged rows differ from
+     * the classifier's accepted-sample sequence across any dropped row. */
     int len =
         snprintf(payload, sizeof(payload),
-                 "name=%s;level=%s;role=%s;spread=%u;gpio=%d;device_seq=%lu;"
-                 "time_source=%s",
+                 "name=%s;level=%s;role=%s;spread=%u;step=%d;gpio=%d;"
+                 "device_seq=%lu;time_source=%s",
                  r->name ? r->name : "", moisture_level_name(r->level),
                  moisture_level_is_display(r->level) ? "disp" : "diag",
-                 (unsigned)r->state->last_spread, r->gpio_pin,
-                 (unsigned long)r->device_seq, r->time_source);
+                 (unsigned)r->state->last_spread, (int)r->state->last_delta,
+                 r->gpio_pin, (unsigned long)r->device_seq, r->time_source);
     /* Each append is bounds-guarded; a would-be overflow just drops the tail key
      * (snprintf still NUL-terminates - never a partial-but-unterminated payload). */
     if (r->device_timestamp_utc && r->device_timestamp_utc[0] != '\0' &&
