@@ -464,6 +464,17 @@ class Reading:
         return _int(self.payload.get("spread"))
 
     @property
+    def step(self) -> int | None:
+        """The signed single-step raw delta from the previous ACCEPTED classifier
+        sample (#1463, rides the base payload next to ``spread=``). Positive =
+        drier jump (wetter is lower raw), negative = wetter jump, ``0`` on the seed
+        row. This is the EXACT quantity the firmware's ``rate_spike`` check compares
+        to ``max_delta_raw`` — emitted, not host-reconstructed, so it is the true
+        accepted-sample delta even across a dropped row (the host could never rebuild
+        it from logged rows). None on a pre-#1463 row that never emits it."""
+        return _int(self.payload.get("step"))
+
+    @property
     def gpio(self) -> int | None:
         return _int(self.payload.get("gpio"))
 
