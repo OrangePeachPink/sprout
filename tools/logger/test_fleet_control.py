@@ -17,6 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from collection_control import CollectionError, start_all, status_all, stop_all
 from fleet_control import FleetController, FleetError, count_answering
+from fleet_lock import REFUSED_EXIT
 
 # A tiny long-running stand-in for fleet_logger.py, so controller tests spawn a
 # real process without polling anything.
@@ -379,3 +380,113 @@ def test_stop_all_and_status_all() -> None:
     out = stop_all(mon, fleet)
     assert out["collecting"] is False
     assert status_all(mon, fleet)["collecting"] is False
+
+
+# --------------------------------------------------------------------------- #
+# #1428 — a refusal is not a crash, and its explanation survives
+# --------------------------------------------------------------------------- #
+def test_a_refusal_is_not_counted_as_a_crash(tmp_path: Path) -> None:
+    """The #493 double-writer refusal: the worker declines (another logger owns the
+    archive) and exits REFUSED_EXIT. That must NOT burn the restart budget into a
+    give-up — the crash-loop the maintainer watched while logging was in fact live.
+
+    (The bug report said the worker "exited 0"; the code returns REFUSED_EXIT, distinct
+    from both success and a crash — the exit code is what makes a decline legible.)"""
+    refuser = tmp_path / "refuse.py"
+    refuser.write_text(
+        "print('a fleet logger is already running (pid 2720); "
+        "refusing to start a second poller')\n"
+        f"raise SystemExit({REFUSED_EXIT})\n",
+        encoding="utf-8",
+    )
+    fc = _fast(refuser, logdir=tmp_path, max_restarts=2)
+    fc.start()
+    try:
+        stood_down = None
+        for _ in range(100):
+            st = fc.status()
+            if st.get("healthy_standdown"):
+                stood_down = st
+                break
+            assert not st.get("give_up_reason"), (
+                f"a refusal was mistaken for a crash: {st.get('give_up_reason')}"
+            )
+            time.sleep(0.05)
+        assert stood_down is not None, "a refusal must stand the supervisor down"
+        assert "benign_note" in stood_down
+        assert "give_up_reason" not in stood_down  # healthy, never a failure
+    finally:
+        fc.stop()
+
+
+def test_the_refusal_on_stdout_reaches_the_worker_log(tmp_path: Path) -> None:
+    """Bug 1: the refusal prints to STDOUT, which #968 routed to DEVNULL. Both streams
+    now land in the capped log, so the words that explain the stand-down survive."""
+    refuser = tmp_path / "refuse2.py"
+    refuser.write_text(
+        f"print('already running (pid 999)')\nraise SystemExit({REFUSED_EXIT})\n",
+        encoding="utf-8",
+    )
+    fc = _fast(refuser, logdir=tmp_path, max_restarts=2)
+    fc.start()
+    try:
+        log = tmp_path / "fleet_worker.log"
+        seen = False
+        for _ in range(80):
+            if log.is_file() and "already running (pid 999)" in log.read_text(
+                encoding="utf-8", errors="replace"
+            ):
+                seen = True
+                break
+            time.sleep(0.05)
+        assert seen, "the stdout refusal must reach fleet_worker.log (was DEVNULL)"
+    finally:
+        fc.stop()
+
+
+def test_a_real_crash_still_counts_and_gives_up(tmp_path: Path) -> None:
+    """A genuine crash (exit 1, not the refusal code) still exhausts the budget and
+    gives up — the refusal carve-out must not weaken the #1004 crash guard."""
+    crasher = tmp_path / "crash.py"
+    crasher.write_text("raise SystemExit(1)\n", encoding="utf-8")
+    fc = _fast(crasher, logdir=tmp_path, max_restarts=2)
+    fc.start()
+    try:
+        reason = None
+        for _ in range(120):
+            st = fc.status()
+            if st["state"] == "stopped" and st.get("give_up_reason"):
+                reason = st["give_up_reason"]
+                break
+            assert not st.get("healthy_standdown"), "a real crash is not a stand-down"
+            time.sleep(0.05)
+        assert reason is not None, "a repeatedly-crashing worker must give up"
+        assert "crashed" in reason
+    finally:
+        fc.stop()
+
+
+def test_a_crash_give_up_does_not_cite_an_empty_log(tmp_path: Path) -> None:
+    """Bug: the give-up named logs/fleet_worker.log even when 0 bytes — a diagnostic
+    pointing at a file that cannot hold the answer. A worker that dies WITHOUT writing
+    must not be sent there; the message says the log is empty instead."""
+    silent = tmp_path / "silent_crash.py"
+    silent.write_text("raise SystemExit(1)\n", encoding="utf-8")  # crash, no output
+    fc = _fast(silent, logdir=tmp_path, max_restarts=2)
+    fc.start()
+    try:
+        reason = None
+        for _ in range(120):
+            st = fc.status()
+            if st["state"] == "stopped" and st.get("give_up_reason"):
+                reason = st["give_up_reason"]
+                break
+            time.sleep(0.05)
+        assert reason is not None, "a repeatedly-crashing worker must give up"
+        log = tmp_path / "fleet_worker.log"
+        if not (log.is_file() and log.stat().st_size > 0):
+            assert "empty" in reason, (
+                f"the log is empty but the give-up sends the reader there: {reason!r}"
+            )
+    finally:
+        fc.stop()

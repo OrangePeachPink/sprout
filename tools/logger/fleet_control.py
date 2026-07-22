@@ -35,6 +35,10 @@ _DEFAULT_LOGDIR = _REPO / "logs"
 _ANALYTICS = _REPO / "tools" / "analytics"
 if str(_ANALYTICS) not in sys.path:
     sys.path.insert(0, str(_ANALYTICS))
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))  # sibling fleet_lock
+
+from fleet_lock import REFUSED_EXIT  # noqa: E402  (#1428 — the shared decline code)
 
 # Quiet child - no second console window on Windows (the no-terminal rule); 0
 # elsewhere (#183) - same posture as MonitorController.
@@ -158,6 +162,10 @@ class FleetController:
         self._want_running = False
         self._supervisor: threading.Thread | None = None
         self._give_up_reason: str | None = None
+        # #1428: a clean (exit-0) stand-down is a HEALTHY outcome, not a crash — the
+        # #493 double-writer refusal is the case. Held separately from give_up_reason
+        # so status can read calm ("another logger owns it") instead of a failure.
+        self._benign_note: str | None = None
         self._restarts: list[float] = []
         self._log_fh = None
         self._max_restarts = max_restarts
@@ -178,6 +186,24 @@ class FleetController:
         except OSError:
             return subprocess.DEVNULL
 
+    def _log_hint(self) -> str:
+        """#1428: point at the worker log ONLY when it can actually hold the answer.
+        The give-up message used to cite ``logs/fleet_worker.log`` unconditionally; on
+        the maintainer's machine that file was 0 bytes and ten days stale, so the
+        diagnostic confidently named a file structurally incapable of explaining the
+        failure. A diagnostic that names an empty file is worse than one that names
+        none — it sends the reader somewhere with nothing to find."""
+        p = Path(self._logdir or _DEFAULT_LOGDIR) / _WORKER_LOG
+        try:
+            if p.is_file() and p.stat().st_size > 0:
+                return f"see logs/{_WORKER_LOG}"
+        except OSError:
+            pass
+        return (
+            f"logs/{_WORKER_LOG} is empty — the worker died before writing; "
+            "check the server console"
+        )
+
     def _spawn_locked(self) -> None:
         argv = [self._python, str(self._fleet_py)]
         if self._logdir:
@@ -187,8 +213,12 @@ class FleetController:
         self._log_fh = self._open_log()
         self._proc = subprocess.Popen(
             argv,
-            stdout=subprocess.DEVNULL,
-            stderr=self._log_fh,  # #968: last words survive
+            # #1428: BOTH streams to the capped log. #968 sent only stderr here; the
+            # worker's double-writer refusal ("already running (pid N)") prints to
+            # STDOUT, so it went to DEVNULL and the give-up message then cited an empty
+            # file. Capturing stdout too is why the refusal now survives to be read.
+            stdout=self._log_fh,
+            stderr=self._log_fh,
             creationflags=_NO_WINDOW,
         )
 
@@ -209,6 +239,7 @@ class FleetController:
                 )
             self._want_running = True
             self._give_up_reason = None
+            self._benign_note = None  # #1428: a fresh start clears the stand-down
             self._restarts.clear()
             self._spawn_locked()
             self._devices = n
@@ -234,6 +265,27 @@ class FleetController:
                     return
                 if self._proc is not None and self._proc.poll() is None:
                     continue  # healthy — keep watching
+                # #1428: the worker has exited. A REFUSAL is not a crash. fleet_logger
+                # returns REFUSED_EXIT when it declined because another poller already
+                # owns the archive (#493) — the deliberate, healthy outcome. Restarting
+                # it just makes it decline again until the crash budget is spent: the
+                # "crashed 5x" loop the maintainer watched against an empty log while
+                # logging was in fact live. A refusal stands the supervisor down as
+                # HEALTHY, spends no restart budget, and never becomes a give-up. Any
+                # other exit (0 or a crash code) keeps #1004's "restart on any exit"
+                # law below — only the refusal is special.
+                rc = self._proc.returncode if self._proc is not None else None
+                if rc == REFUSED_EXIT:
+                    self._benign_note = (
+                        "fleet worker declined — another logger already owns the "
+                        f"archive (its pid is in logs/{_WORKER_LOG}). Not a crash; "
+                        "stood down. Logging continues via the existing one."
+                    )
+                    self._give_up_reason = None
+                    _loud(f"fleet supervision: {self._benign_note}")
+                    self._want_running = False
+                    self._proc = None
+                    return
                 now = time.monotonic()
                 self._restarts = [
                     t for t in self._restarts if now - t <= self._restart_window_s
@@ -241,7 +293,7 @@ class FleetController:
                 if len(self._restarts) >= self._max_restarts:
                     self._give_up_reason = (
                         f"fleet worker crashed {len(self._restarts)}x in "
-                        f"{int(self._restart_window_s)}s — see logs/{_WORKER_LOG}"
+                        f"{int(self._restart_window_s)}s — {self._log_hint()}"
                     )
                     _loud(f"fleet supervision: giving up — {self._give_up_reason}")
                     self._want_running = False
@@ -272,6 +324,7 @@ class FleetController:
             self._proc = None
             self._devices = 0
             self._give_up_reason = None
+            self._benign_note = None  # #1428
             if self._log_fh not in (None, subprocess.DEVNULL):
                 with contextlib.suppress(Exception):
                     self._log_fh.close()
@@ -303,6 +356,12 @@ class FleetController:
         # bare "stopped" — the fleet half was previously silent on death.
         if not running and self._give_up_reason:
             out["give_up_reason"] = self._give_up_reason
+        # #1428: a clean stand-down reads as healthy, never as a crash. It is NOT a
+        # give_up_reason (that renders as failure); a separate calm field the Monitor
+        # can show as "another logger active" rather than "stopped — crashed".
+        if not running and self._benign_note:
+            out["benign_note"] = self._benign_note
+            out["healthy_standdown"] = True
         return out
 
 
