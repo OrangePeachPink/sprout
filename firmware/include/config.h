@@ -226,6 +226,25 @@ constexpr int WIFI_HTTP_PORT = 80; // served-status skeleton (#21)
 #else
 #define OTA_PUSH_ARMED 0
 #endif
+
+// #302 S3 (#1284) — the SIGNED PULL path arms the same way the push path does:
+// PROVISIONED-OR-OFF, dark by construction. OTA_FEED_URL is the curated release
+// feed (ADR-0026 D1/D4, #1258) the device pulls from; there is NO default, so a
+// public/web-flashed build has no feed and the pull client is absent from the
+// runtime path — not merely idle. The bench provisions it the same one file the
+// push password rides (firmware/platformio_local.ini, gitignored):
+//     build_flags = -D OTA_FEED_URL='"https://<pages-host>/ota/feed.txt"'
+// The feed is UNSIGNED and only a POINTER; the IMAGE's ed25519 signature is the
+// sole authority for running code (ota_gate, S2). So a provisioned URL grants no
+// trust — a wrong or hostile feed can waste a download, never boot unsigned code.
+// TLS trust for the fetch is the Mozilla root bundle (esp_crt_bundle), not a
+// pinned cert — GitHub/Pages certs rotate, and the signature (not the transport)
+// is what makes an image safe. Pull RETIRES the push path once proven live (#1340).
+#ifdef OTA_FEED_URL
+#define OTA_PULL_ARMED 1
+#else
+#define OTA_PULL_ARMED 0
+#endif
 // NTP-on-connect (#278/#276, ADR-0018 §3): SNTP arms on WiFi association; rows
 // flip time_source=device_uptime -> device_synced once the clock is real.
 constexpr const char *WIFI_NTP_SERVER = "pool.ntp.org";

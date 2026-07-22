@@ -31,6 +31,7 @@
 #include "config.h"
 #include "moisture_classifier.h"
 #include "serial_cmd.h"
+#include "ota_pull_binding.h" /* #1284 AC4: signed-pull OTA hardware bindings */
 #include "irrigation.h"
 #include "telemetry.h"
 #include "commands.h"
@@ -1088,6 +1089,11 @@ void setup()
         &g_wifi_creds_dirty,
     };
     commands_init(&cmd_ctx);
+
+    /* #1284 AC4: register the signed-pull OTA command (no-op when no feed was
+     * provisioned) and state the armed/dark status once at boot (ADR-0028). */
+    ota_pull_binding_register();
+    ota_pull_binding_announce();
 
 #ifdef ENABLE_ENV_SENSORS
     /* Bring up the I2C/Qwiic contextual sensors (#373/#374). SHT45 is single-shot
