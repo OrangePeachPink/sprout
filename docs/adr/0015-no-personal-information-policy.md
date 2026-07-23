@@ -22,6 +22,13 @@ this repository.** Specifically:
 
 - **Identities** — no real personal names, emails, phone numbers, or addresses in tracked files. Use the
   GitHub handle or "the maintainer".
+- **Deliberate public attribution — the scoped exception.** *(Added 2026-07-22, #1460 AC3;
+  maintainer-ratified.)* The maintainer's name appearing **by her decision** on the attribution surfaces —
+  `LICENSE`, `CITATION.cff`, the README byline, `CONTRIBUTORS` — is **not** the PI this policy scrubs. That is
+  chosen public attribution, cross-linked with her public profile and site; the policy's target is **incidental
+  leakage** (a name in a log, a handoff doc, a path, a screenshot), never the chosen byline. The email posture
+  is unchanged — the noreply address everywhere, attribution surfaces included. Adding a **new** attribution
+  surface, or **any other person's** name, still requires the maintainer's explicit word per surface.
 - **Location** — the operator's real coordinates / address are PI. They live **only** in gitignored config
   (`config/location.local.json`), never in tracked files, code comments, or git history. Committed templates use
   **placeholder city-center** values; tools **hash coordinates out of any cached filename** so even filenames
@@ -53,6 +60,7 @@ this repository.** Specifically:
 ## Related
 
 `#166`, `#168`, `#169`, `#172`, `#173`, `#59`. Aligns with the workspace dev guidance on privacy
-(no personal name / email / identifiers in public repo content).
+(no personal name / email / identifiers in public repo content); the scoped attribution exception above is this
+repo's deliberate, maintainer-ruled deviation from that default — chosen byline, never incidental leakage.
 
 *Register in `docs/adr/0000-record-architecture-decisions.md` on acceptance.*
