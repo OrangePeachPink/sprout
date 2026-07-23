@@ -85,7 +85,9 @@ def test_pending_batch_matches_the_apply_seam_shape() -> None:
     for key in (
         "plants:{add:[],edit:[]}",
         "sensors:{add:[],edit:[]}",
-        "devices:{edit:[]}",
+        # #1027: devices grew `add` — adoption stages a devices.add, which
+        # apply_operations has accepted since the structural half (#1063/#1424).
+        "devices:{add:[],edit:[]}",
         "mappings:{assign:[],close:[]}",
         "lifecycle:[]",
     ):
