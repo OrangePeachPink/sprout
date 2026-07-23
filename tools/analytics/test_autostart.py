@@ -9,11 +9,7 @@ says so loudly either way. Never a silent DEVNULL death.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from serve import _auto_start_collection
+from tools.analytics.serve import _auto_start_collection
 
 
 class _FakeCtl:

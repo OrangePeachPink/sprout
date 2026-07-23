@@ -32,11 +32,9 @@ alone, which would re-hide exactly what it exists to surface.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import (
+from tools.analytics.parse_v1 import (
     BANDS_WET_TO_DRY,
     BOARD_CLASS_ANCHORS,
     BOARD_CLASS_CEILING,
@@ -46,7 +44,7 @@ from parse_v1 import (
     band_for_raw,
     range_exception,
 )
-from tier_store import COLUMNS
+from tools.analytics.tier_store import COLUMNS
 
 _DOCS = Path(__file__).resolve().parents[2] / "docs"
 _ADR = _DOCS / "adr"
@@ -154,7 +152,7 @@ def test_c6_the_us_invariant_is_still_stated_and_still_exact() -> None:
     """*"never ms-floored, never float-seconds"* — TIER_STORE_CONTRACT §4."""
     contract = _text(_DOCS / "TIER_STORE_CONTRACT.md")
     assert "microsecond" in contract.lower()
-    from tier_store import CAP_US
+    from tools.analytics.tier_store import CAP_US
 
     # the dwell cap is expressed in µs, so it is a whole number of them
     assert isinstance(CAP_US, int) and CAP_US % 1_000 == 0

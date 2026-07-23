@@ -7,13 +7,10 @@ the monitor, #691).
 from __future__ import annotations
 
 import itertools
-import sys
-from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import plants_logger as pl
+from tools.logger import plants_logger as pl
 
 
 class _Boom(Exception):

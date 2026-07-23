@@ -27,11 +27,9 @@ assertion, which restores the silence this seam exists to break.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import (
+from tools.analytics.parse_v1 import (
     CANONICAL_COLUMNS,
     CHANNEL_ID_SCHEMA_VERSION,
     STABLE_ID_SCHEMA_VERSION,

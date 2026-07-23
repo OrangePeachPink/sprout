@@ -9,12 +9,10 @@ permanent regression net).
 
 from __future__ import annotations
 
-import sys
 from datetime import date
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from tier_store import (
+from tools.analytics.tier_store import (
     COLUMNS,
     build_partition,
     hours_per_band_duckdb,

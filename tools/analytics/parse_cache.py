@@ -38,8 +38,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from parse_v1 import LogData, _consume_line, _ParseState, parse_file
-from parse_v1 import _resolve as _resolve_inputs
+from tools.analytics.parse_v1 import LogData, _consume_line, _ParseState, parse_file
+from tools.analytics.parse_v1 import _resolve as _resolve_inputs
 
 
 def _file_sig(path: Path) -> tuple[int, int] | None:

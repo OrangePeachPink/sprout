@@ -3,12 +3,10 @@ vocabularies indexed correctly, and v4 rows never rewritten."""
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import _channel_idx
-from parse_v1 import CHANNEL_ID_SCHEMA_VERSION, parse_file
+from tools.analytics.dashboard import _channel_idx
+from tools.analytics.parse_v1 import CHANNEL_ID_SCHEMA_VERSION, parse_file
 
 _COLS = (
     "record_type,timestamp_utc,timestamp_local,session_id,device_id,"

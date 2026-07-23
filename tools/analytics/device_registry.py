@@ -108,7 +108,9 @@ class Device:
 
         Exact match wins first, so a registry that uses raw keys keeps working with
         zero behaviour change; the canonical comparison is the fallback."""
-        from parse_v1 import canonical_channel  # local: keeps this module leaf-ish
+        from tools.analytics.parse_v1 import (
+            canonical_channel,  # local: keeps this module leaf-ish
+        )
 
         chans = self.channels or {}
         a = chans.get(channel)

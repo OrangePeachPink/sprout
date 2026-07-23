@@ -25,17 +25,14 @@ from __future__ import annotations
 import argparse
 import json
 import statistics
-import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
-from device_registry import load_registry  # noqa: E402
-from segment_classifier import classify, passes  # noqa: E402
-from segment_history import _journal_events, plant_series  # noqa: E402
+from tools.analytics.device_registry import load_registry  # noqa: E402
+from tools.analytics.segment_classifier import classify, passes  # noqa: E402
+from tools.analytics.segment_history import _journal_events, plant_series  # noqa: E402
 
 _US = timedelta(microseconds=1)
 

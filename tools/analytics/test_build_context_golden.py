@@ -32,14 +32,11 @@ interesting.
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context
-from device_registry import Device, Registry
-from parse_v1 import LogData, Reading
+from tools.analytics.dashboard import build_context
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.parse_v1 import LogData, Reading
 
 T0 = datetime(2026, 7, 10, tzinfo=timezone.utc)
 NOW = T0 + timedelta(minutes=600)

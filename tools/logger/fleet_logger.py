@@ -68,23 +68,19 @@ import sys
 import time
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-if _HERE not in sys.path:
-    sys.path.insert(0, _HERE)
 _ANALYTICS = os.path.normpath(os.path.join(_HERE, "..", "analytics"))
-if _ANALYTICS not in sys.path:
-    sys.path.insert(0, _ANALYTICS)
 
-from context_fill import ContextFiller  # noqa: E402
-from device_registry import load_registry  # noqa: E402
-from fleet_lock import (  # noqa: E402
+from tools.analytics.device_registry import load_registry  # noqa: E402
+from tools.analytics.ingest_store import Store  # noqa: E402
+from tools.analytics.parse_v1 import parse_file  # noqa: E402
+from tools.analytics.source_adapter import DeviceAdapter  # noqa: E402
+from tools.logger.context_fill import ContextFiller  # noqa: E402
+from tools.logger.fleet_lock import (  # noqa: E402
     REFUSED_EXIT,
     FleetAlreadyRunning,
     FleetLock,
 )
-from ingest_store import Store  # noqa: E402
-from parse_v1 import parse_file  # noqa: E402
-from plants_logger import RotatingCsv, _append_payload  # noqa: E402
-from source_adapter import DeviceAdapter  # noqa: E402
+from tools.logger.plants_logger import RotatingCsv, _append_payload  # noqa: E402
 
 
 def _apply_context(row: dict, context: dict) -> dict:
@@ -116,17 +112,15 @@ SEED_WINDOW_S = 24 * 3600.0
 
 # Optional B8 archive step (same best-effort posture as plants_logger).
 _ARCHIVE_DIR = os.path.normpath(os.path.join(_HERE, "..", "archive"))
-if _ARCHIVE_DIR not in sys.path:
-    sys.path.insert(0, _ARCHIVE_DIR)
 try:
-    import archive_logs
+    from tools.archive import archive_logs
 except Exception:
     archive_logs = None
 
 # The #567 pressure exception rides the persisted rows too (same cache-only
 # reader as the live view + the serial logger - never a fetch in this loop).
 try:
-    from weather_pressure import latest_pressure as _pressure_source
+    from tools.analytics.weather_pressure import latest_pressure as _pressure_source
 except Exception:
     _pressure_source = None
 

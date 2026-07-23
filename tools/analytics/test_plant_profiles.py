@@ -5,12 +5,10 @@ placement referenced-never-duplicated (§3), the example template conformant.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from device_registry import Device, Registry
-from plant_profiles import load_profiles, placement_for, profile_for
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.plant_profiles import load_profiles, placement_for, profile_for
 
 _EXAMPLE = (
     Path(__file__).resolve().parents[2] / "config" / "plant_profiles.example.json"

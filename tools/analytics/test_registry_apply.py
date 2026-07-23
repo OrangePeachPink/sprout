@@ -10,11 +10,9 @@ Proves the three answers to Design-QA's seam questions:
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from registry_model import (
+from tools.analytics.registry_model import (
     Plant,
     RegistryModel,
     Sensor,

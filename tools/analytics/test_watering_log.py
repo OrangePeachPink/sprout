@@ -5,14 +5,12 @@ breaks the read. Absence is first-class (no journal -> no events, never a crash)
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from watering_log import latest_by_plant, load_events, log_manual
+from tools.analytics.watering_log import latest_by_plant, load_events, log_manual
 
 
 def _journal(tmp_path: Path) -> Path:
@@ -73,7 +71,7 @@ def test_a_torn_line_is_skipped_not_fatal(tmp_path: Path) -> None:
 def test_event_id_is_derived_so_it_survives_a_detector_rebuild() -> None:
     from datetime import datetime, timezone
 
-    from watering_log import event_id_for
+    from tools.analytics.watering_log import event_id_for
 
     onset = datetime(2026, 7, 19, 18, 5, 40, tzinfo=timezone.utc)
     eid = event_id_for("p02", onset)
@@ -84,7 +82,7 @@ def test_event_id_is_derived_so_it_survives_a_detector_rebuild() -> None:
 
 
 def test_a_verdict_appends_and_never_erases_the_rejection(tmp_path) -> None:
-    from watering_log import detection_state, log_verdict, verdicts
+    from tools.analytics.watering_log import detection_state, log_verdict, verdicts
 
     j = tmp_path / "j.jsonl"
     eid = "p02@2026-07-08T00:21"
@@ -100,7 +98,12 @@ def test_a_verdict_appends_and_never_erases_the_rejection(tmp_path) -> None:
 
 
 def test_verdicts_and_manual_waterings_share_the_journal_without_collision(tmp_path):
-    from watering_log import load_events, log_manual, log_verdict, verdicts
+    from tools.analytics.watering_log import (
+        load_events,
+        log_manual,
+        log_verdict,
+        verdicts,
+    )
 
     j = tmp_path / "j.jsonl"
     log_manual("p01", path=j)
@@ -112,7 +115,7 @@ def test_verdicts_and_manual_waterings_share_the_journal_without_collision(tmp_p
 
 
 def test_precision_reports_both_numerals_and_abstains_before_any_ruling(tmp_path):
-    from watering_log import log_verdict, precision_so_far
+    from tools.analytics.watering_log import log_verdict, precision_so_far
 
     j = tmp_path / "j.jsonl"
     detected = ["a@1", "b@2", "c@3", "d@4"]

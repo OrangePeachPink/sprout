@@ -2,7 +2,7 @@
 
 import subprocess
 
-import untracked_notice as n
+from tools.dx import untracked_notice as n
 
 
 def _git(repo, *args):

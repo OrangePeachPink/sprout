@@ -32,15 +32,12 @@ The ruled contract, implemented:
 from __future__ import annotations
 
 import argparse
-import sys
 import time
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
-from tier_store import _TIER_ROOT  # noqa: E402
+from tools.analytics.tier_store import _TIER_ROOT  # noqa: E402
 
 _TIER_HOME = _TIER_ROOT.parent  # reports/tier
 ROLLUP_ROOT = _TIER_HOME / "rollup"

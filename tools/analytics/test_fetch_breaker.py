@@ -9,11 +9,7 @@ it surfaces as "not answering" (ADR-0028), never "no data by design".
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from source_adapter import DeviceAdapter, FetchBreaker
+from tools.analytics.source_adapter import DeviceAdapter, FetchBreaker
 
 
 def _dead_adapter(calls, br, mono):

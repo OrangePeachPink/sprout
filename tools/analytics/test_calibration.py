@@ -8,14 +8,11 @@ from __future__ import annotations
 
 import json
 import shutil
-import sys
 import tempfile
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-import calibration  # noqa: E402
+from tools.analytics import calibration  # noqa: E402
 
 
 def _store_with(rows: list[tuple]) -> Path:

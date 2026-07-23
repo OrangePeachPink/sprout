@@ -8,13 +8,8 @@ So the three versions must all resolve, and a behind/restart cue must show.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import card_context
-import provenance
-from dashboard import (
+from tools.analytics import card_context, provenance
+from tools.analytics.dashboard import (
     _fw_masthead,
     _ver_tuple,
     _versions_block,

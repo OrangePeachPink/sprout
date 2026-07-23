@@ -17,11 +17,9 @@ import sys
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
 # _TIER_ROOT = the ratified store layout (§1); consume it, don't copy it.
-from tier_store import _TIER_ROOT  # noqa: E402
+from tools.analytics.tier_store import _TIER_ROOT  # noqa: E402
 
 _STORE_GLOB = (_TIER_ROOT / "**" / "*.parquet").as_posix()
 

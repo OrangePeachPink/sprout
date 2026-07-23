@@ -10,14 +10,12 @@ JS-Date-parsed for freshness).
 from __future__ import annotations
 
 import re
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context
-from parse_v1 import parse_files
-from timefmt import local_first_system
+from tools.analytics.dashboard import build_context
+from tools.analytics.parse_v1 import parse_files
+from tools.analytics.timefmt import local_first_system
 
 # the two soil rows are stamped 18:14:30Z (start) and 18:15:00Z (last)
 _START_UTC = datetime(2026, 6, 28, 18, 14, 30, tzinfo=timezone.utc)

@@ -33,17 +33,14 @@ brand tokens; this is the honest functional render.
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
 _CAPTURES = _REPO / "docs" / "experiments" / "2026-07-07-watering-dose-response"
 _REPORTS = _REPO / "reports"
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 # The shared band ladder + geometry (#832: one ladder, never a second definition).
-from bench_arc_view import (  # noqa: E402
+from tools.analytics.bench_arc_view import (  # noqa: E402
     _BANDS,
     _PLOT_H,
     _Y_TOP,
@@ -54,7 +51,7 @@ from bench_arc_view import (  # noqa: E402
 
 # #909: share the capture parser + its dose helpers with watering_events — one parse of
 # the dose-capture header/rows, not a second inline copy (both views read one source).
-from watering_events import (  # noqa: E402
+from tools.analytics.watering_events import (  # noqa: E402
     _ML_PER_CUP,
     _SUSPECT_DOSES,
     _dose_n,

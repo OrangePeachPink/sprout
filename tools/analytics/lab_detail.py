@@ -11,22 +11,26 @@ from __future__ import annotations
 import html
 import json
 import re
-import sys
 from pathlib import Path
+
+from tools.analytics.card_context import (
+    build_context,
+)
+from tools.analytics.design_assets import (
+    FONTS_CSS,
+    TOKENS_CSS,
+)
+from tools.analytics.experiments_catalog import _fmt_dur, _fmt_when
+from tools.analytics.lab_notes import load_notes
+from tools.analytics.parse_v1 import parse_files
 
 _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
-_EXPERIMENTS = _REPO / "experiments"
 _TEMPLATE = _HERE / "lab_detail_template.html"
+
+_EXPERIMENTS = _REPO / "experiments"
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")  # no traversal from the URL
 
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-from card_context import build_context  # noqa: E402  (layer-3 composition, #1336)
-from design_assets import FONTS_CSS, TOKENS_CSS  # noqa: E402  (layer-0 leaf)
-from experiments_catalog import _fmt_dur, _fmt_when  # noqa: E402
-from lab_notes import load_notes  # noqa: E402  (Lab notes #158)
-from parse_v1 import parse_files  # noqa: E402
 
 _INTERVENTION_RE = re.compile(r"@t?\+?(\d+)\s*s?\b\s*[:\-]?\s*(.*)", re.IGNORECASE)
 

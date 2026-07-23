@@ -22,7 +22,6 @@ tolerance because wall-clock is noisy, but a 3.5x regression is far outside it.
 from __future__ import annotations
 
 import statistics
-import sys
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -34,11 +33,10 @@ try:
 except Exception:
     _psutil = None
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from card_context import build_context
-from dashboard import filter_since
-from device_registry import Device, Registry
-from parse_cache import ParseCache
+from tools.analytics.card_context import build_context
+from tools.analytics.dashboard import filter_since
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.parse_cache import ParseCache
 
 T0 = datetime(2026, 5, 1, tzinfo=timezone.utc)
 _HDR = (

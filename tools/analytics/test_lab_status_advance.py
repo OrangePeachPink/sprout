@@ -4,13 +4,16 @@ idempotent, machine-attributed, and never inventing a plan that isn't there."""
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from lab_notes import CONTROL_PLANE_AUTHOR, advance_status, load_notes, save_notes
+from tools.analytics.lab_notes import (
+    CONTROL_PLANE_AUTHOR,
+    advance_status,
+    load_notes,
+    save_notes,
+)
 
 EID = "2026-07-20-corn-drydown"
 

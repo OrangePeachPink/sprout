@@ -6,13 +6,10 @@ downsampling. These are the deep-history deliverables; they had no coverage.
 from __future__ import annotations
 
 import gzip
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import card_context
-import dashboard
-from parse_v1 import parse_files
+from tools.analytics import card_context, dashboard
+from tools.analytics.parse_v1 import parse_files
 
 _HEADER = (
     "# fw=0.7.0  git=t  run=h\n# device_id=d  schema_version=1\n"

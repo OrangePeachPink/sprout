@@ -14,13 +14,11 @@ resolve ``right`` from its device - the two-truths shape the register exists to 
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from registry_model import (
+from tools.analytics.registry_model import (
     SIDE_VALUES,
     Plant,
     RegistryModel,
@@ -114,7 +112,7 @@ def test_the_payload_carries_side_and_window_absent_safe() -> None:
 def test_side_vocabulary_is_the_one_shared_ledge_vocabulary() -> None:
     """The seam. The move's side, #806's device side, and ADR-0029's profile ledge are
     ONE vocabulary - pinned here so a fourth copy can never drift them apart."""
-    from plant_profiles import ENUMS
+    from tools.analytics.plant_profiles import ENUMS
 
     assert ENUMS["placement.ledge"] == SIDE_VALUES, (
         "the move's side vocabulary diverged from ADR-0029's placement.ledge - one "

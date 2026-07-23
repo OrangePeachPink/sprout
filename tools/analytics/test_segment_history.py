@@ -3,15 +3,13 @@ unmapped bucket, first-class sensorless absence, and the fleet pass wiring."""
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import duckdb
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from device_registry import Device, Registry
-from segment_history import full_history, summarize
-from tier_store import CAP_US
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.segment_history import full_history, summarize
+from tools.analytics.tier_store import CAP_US
 
 T0 = "2026-07-01 00:00:00"
 

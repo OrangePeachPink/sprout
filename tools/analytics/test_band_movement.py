@@ -6,12 +6,10 @@ band comes from the device-emitted ``payload.level`` exactly as it does live.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from band_movement import REWATER_WET_JUMP, as_dict, band_movements
-from parse_v1 import parse_files
+from tools.analytics.band_movement import REWATER_WET_JUMP, as_dict, band_movements
+from tools.analytics.parse_v1 import parse_files
 
 _HEADER = (
     "# fw=0.8.0  git=test  run=movement\n"

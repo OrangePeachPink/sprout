@@ -6,7 +6,7 @@ in the guard's own skip-list, so the strings live here without tripping it.
 
 from __future__ import annotations
 
-import voice_guard as vg
+from tools.dx import voice_guard as vg
 
 
 def _names(line: str) -> list[str]:

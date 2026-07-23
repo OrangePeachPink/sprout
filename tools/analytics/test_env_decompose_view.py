@@ -7,12 +7,8 @@ no-weather set renders H1 only with an explicit "no weather" note on H2.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import env_decompose as ed
-import env_decompose_view as view
+from tools.analytics import env_decompose as ed
+from tools.analytics import env_decompose_view as view
 
 # 12 h of steady drying: raw climbs +20/h from 1500 (higher raw = drier).
 _DRYING = [(float(h), 1500.0 + 20.0 * h) for h in range(13)]

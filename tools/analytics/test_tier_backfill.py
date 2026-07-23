@@ -7,11 +7,9 @@ PARSED timestamp), plus the resume path (--skip-existing) and the idempotence cl
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from tier_backfill import backfill, bucket_files
+from tools.analytics.tier_backfill import backfill, bucket_files
 
 _COLS = (
     "record_type,timestamp_utc,timestamp_local,session_id,device_id,"

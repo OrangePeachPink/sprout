@@ -15,13 +15,11 @@ cal_source the derivation swaps to read it and the tier→label mapping is uncha
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context
-from device_registry import Device, Registry
-from parse_v1 import parse_files
+from tools.analytics.dashboard import build_context
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.parse_v1 import parse_files
 
 # a verified per-channel cal line (#507) — the top, channel-cal state
 _CAL_LINE = (

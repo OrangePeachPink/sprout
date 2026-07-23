@@ -46,15 +46,16 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from tools.analytics.lab_notes import (
+    save_notes,
+)
+
 _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
+
 _DRAFTS_DIR = _REPO / "docs" / "experiments" / "drafts"
 _NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")  # no traversal from the URL
 _NOTE_FIELDS = ("hypothesis", "method", "findings", "conclusion")
-
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-from lab_notes import save_notes  # noqa: E402  (the draft->planned bridge, #450)
 
 
 def _draft_path(name: str, drafts_dir: str | Path | None) -> Path | None:

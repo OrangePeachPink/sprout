@@ -5,14 +5,12 @@ The comprehensive golden round-trip suite (plants_logger + parse_v1) lives in #2
 
 from __future__ import annotations
 
-import sys
 import textwrap
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import DEFAULT_CAL_BOUNDS, parse_file
+from tools.analytics.parse_v1 import DEFAULT_CAL_BOUNDS, parse_file
 
 # --------------------------------------------------------------------------- #
 # fixtures — minimal column set; parse_v1 maps by name so a subset CSV is valid

@@ -6,13 +6,10 @@ python tools/analytics/test_lab_drafts.py
 from __future__ import annotations
 
 import shutil
-import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import lab_drafts
-import lab_notes
+from tools.analytics import lab_drafts, lab_notes
 
 
 def _dirs() -> tuple[Path, Path, Path]:

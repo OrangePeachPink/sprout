@@ -35,11 +35,7 @@ only the fold, never the registry types — one downward dependency, no sideways
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import canonical_channel
+from tools.analytics.parse_v1 import canonical_channel
 
 # The join key type: a device plus its channel folded to the canonical chN namespace.
 # Both (device, "s1") and (device, "ch2") produce the SAME key — that identity is the

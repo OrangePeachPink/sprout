@@ -28,17 +28,17 @@ import threading
 import time
 from pathlib import Path
 
+from tools.logger.fleet_lock import (
+    REFUSED_EXIT,
+)
+
 _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
 _FLEET_PY = _HERE / "fleet_logger.py"
+
 _DEFAULT_LOGDIR = _REPO / "logs"
 _ANALYTICS = _REPO / "tools" / "analytics"
-if str(_ANALYTICS) not in sys.path:
-    sys.path.insert(0, str(_ANALYTICS))
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))  # sibling fleet_lock
 
-from fleet_lock import REFUSED_EXIT  # noqa: E402  (#1428 — the shared decline code)
 
 # Quiet child - no second console window on Windows (the no-terminal rule); 0
 # elsewhere (#183) - same posture as MonitorController.
@@ -55,7 +55,7 @@ def _active_served() -> list:
     be polled or counted as 'not answering' (grill Q2: off-by-choice is not a fault).
     Import-guarded: a broken registry reads as an empty fleet."""
     try:
-        from device_registry import load_registry
+        from tools.analytics.device_registry import load_registry
 
         return [
             d

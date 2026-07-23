@@ -8,11 +8,7 @@ single-responding-probe pick; (3) honest gaps stay null, never fabricated.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import bench_arc as ba
+from tools.analytics import bench_arc as ba
 
 
 def _by_id() -> dict[str, dict]:
@@ -87,7 +83,7 @@ def test_spread_surfaces_microzone_disagreement() -> None:
 
 
 def test_band_derives_from_raw_not_tag() -> None:
-    from parse_v1 import band_for_raw
+    from tools.analytics.parse_v1 import band_for_raw
 
     for r in ba.recompute_arc():
         if r.get("ending") is not None:

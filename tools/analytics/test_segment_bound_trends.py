@@ -5,14 +5,11 @@ event. A fit across the dry-down→rewater→dry-down sawtooth averages unrelate
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from band_movement import segment_start
-from dashboard import build_context
-from parse_v1 import LogData, Reading
+from tools.analytics.band_movement import segment_start
+from tools.analytics.dashboard import build_context
+from tools.analytics.parse_v1 import LogData, Reading
 
 _T0 = datetime(2026, 7, 1, tzinfo=timezone.utc)
 

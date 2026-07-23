@@ -50,17 +50,15 @@ to a live gate. Scaffolding that cannot be forgotten.
 from __future__ import annotations
 
 import re
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from device_registry import Device, Registry
-from identity import build_projection
-from registry_model import Assignment, Plant, RegistryModel
-from tier_store import resolve_plant_at
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.identity import build_projection
+from tools.analytics.registry_model import Assignment, Plant, RegistryModel
+from tools.analytics.tier_store import resolve_plant_at
 
 _HERE = Path(__file__).resolve().parent
 

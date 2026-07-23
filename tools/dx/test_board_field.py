@@ -6,8 +6,9 @@ proven against the live board without corrupting it: the declared-table drift ch
 that a write re-queries rather than trusting the mutation. The live read+write+revert is
 in the PR evidence, per the AC."""
 
-import board_field as b
 import pytest
+
+from tools.dx import board_field as b
 
 
 def test_the_declared_table_is_internally_consistent() -> None:

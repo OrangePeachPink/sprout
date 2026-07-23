@@ -721,7 +721,7 @@ def registry_payload(model: RegistryModel, undeclared: list | None = None) -> di
     # one-tap default keyed on the operator's class pick (Trellis: stored token resolves
     # the pins; unknown class -> operator picks). Consumed from board_pinouts, never
     # re-authored; `verified` (only the classic today) tells the surface it may suggest.
-    from board_pinouts import PINOUT_VERIFIED, RECOMMENDED_SOIL_PINS
+    from tools.analytics.board_pinouts import PINOUT_VERIFIED, RECOMMENDED_SOIL_PINS
 
     doc["board_pinouts"] = {
         cls: {"pins": list(pins), "verified": PINOUT_VERIFIED.get(cls, False)}

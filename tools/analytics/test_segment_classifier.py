@@ -8,13 +8,10 @@ that reverts is noise, not a watering).
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import Reading
-from segment_classifier import (
+from tools.analytics.parse_v1 import Reading
+from tools.analytics.segment_classifier import (
     CONFIRM_DROP_RAW,
     segments,
     valid_for_trend,
@@ -144,7 +141,7 @@ def test_c1_a_slow_recovery_extends_past_the_old_3h_box() -> None:
 
 
 def test_passes_reproduce_the_maintainer_session_truth_in_miniature() -> None:
-    from segment_classifier import passes
+    from tools.analytics.segment_classifier import passes
 
     def t(day, h, m):
         return datetime(2026, 7, day, h, m, tzinfo=timezone.utc)

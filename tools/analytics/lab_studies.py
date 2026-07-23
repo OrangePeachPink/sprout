@@ -18,23 +18,26 @@ import html
 import json
 import re
 import statistics
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from tools.analytics.design_assets import (
+    FONTS_CSS,
+    TOKENS_CSS,
+)
+from tools.analytics.lab_notes import (
+    load_notes,
+)
+from tools.analytics.parse_v1 import parse_files
+
 _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
+_TEMPLATE = _HERE / "lab_studies_template.html"
+
 _EXPERIMENTS = _REPO / "experiments"
 _STUDIES = _REPO / "docs" / "experiments" / "studies"
-_TEMPLATE = _HERE / "lab_studies_template.html"
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")  # no traversal from the URL
 _FIELDS = ("name", "subject", "thesis", "conclusion")
-
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-from design_assets import FONTS_CSS, TOKENS_CSS  # noqa: E402  (layer-0 leaf)
-from lab_notes import load_notes  # noqa: E402  (per-experiment conclusions, #158)
-from parse_v1 import parse_files  # noqa: E402
 
 
 def _study_path(sid: str, studies_dir: str | Path | None) -> Path | None:

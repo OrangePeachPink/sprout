@@ -7,11 +7,9 @@ annotated view are deterministic and decoupled from the live evidence.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import watering_events as we
+from tools.analytics import watering_events as we
 
 
 def _capture(path: Path, header: str, rows: list[tuple]) -> None:

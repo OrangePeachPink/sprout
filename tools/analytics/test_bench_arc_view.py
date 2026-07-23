@@ -6,12 +6,8 @@ the instant ghost only appears where a single probe out-dove the sustained media
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import bench_arc as ba
-import bench_arc_view as view
+from tools.analytics import bench_arc as ba
+from tools.analytics import bench_arc_view as view
 
 
 def test_renders_all_plants_and_bands() -> None:

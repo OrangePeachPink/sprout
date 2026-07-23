@@ -42,10 +42,8 @@ from datetime import timedelta
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
-from parse_v1 import parse_files  # noqa: E402
+from tools.analytics.parse_v1 import parse_files  # noqa: E402
 
 _REPO = _HERE.parents[1]
 _TIER_ROOT = _REPO / "reports" / "tier" / "raw"
@@ -197,7 +195,7 @@ def hours_per_band_truth(rows, plant_map: dict, cap_us: int = CAP_US) -> dict:
 def registry_plant_map(registry_path: str | None = None) -> dict:
     """(device_id, port) -> plant_id from the temporal registry's open assignments.
     Identity is resolved at read time — the Parquet stays wire truth."""
-    from registry_model import load_model, load_registry_model
+    from tools.analytics.registry_model import load_model, load_registry_model
 
     model = load_model(registry_path) if registry_path else load_registry_model()
     return {(a.device_id, a.channel): a.plant_id for a in model.open_assignments()}

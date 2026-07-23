@@ -12,13 +12,10 @@ declared (#1152: measurement is the wire's axis, analysis is the host's).
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import Reading
-from segment_classifier import (
+from tools.analytics.parse_v1 import Reading
+from tools.analytics.segment_classifier import (
     HOST_RATE_SPIKE_RAW,
     ExceptionLabel,
     exception_labels,
@@ -181,7 +178,7 @@ def test_exception_segments_collapses_the_single_step_spike_to_one_event() -> No
 def test_direction_reads_straight_off_the_signed_step() -> None:
     """The direction axis is exactly the sign of the #1463 wire step — auditable, not
     re-derived: positive (raw rose) = drier, negative = wetter, 0 = neither."""
-    from segment_classifier import _direction
+    from tools.analytics.segment_classifier import _direction
 
     assert _direction(991) == "drier"
     assert _direction(-300) == "wetter"

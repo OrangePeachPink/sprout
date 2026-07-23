@@ -14,19 +14,14 @@ monitor dashboard's ``gather_inputs()`` cannot auto-discover it.
 from __future__ import annotations
 
 import shutil
-import sys
 import tempfile
 import time
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-_REPO = _HERE.parents[1]
-for p in (_HERE, _REPO / "tools" / "analytics"):
-    if str(p) not in sys.path:
-        sys.path.insert(0, str(p))
+_REPO = Path(__file__).resolve().parents[2]
 
-import experiment_capture as ec  # noqa: E402
-from parse_v1 import parse_files  # noqa: E402
+from tools.analytics.parse_v1 import parse_files  # noqa: E402
+from tools.capture import experiment_capture as ec  # noqa: E402
 
 _FAILS: list[str] = []
 
@@ -100,7 +95,9 @@ def test_capture_and_schema() -> None:
 
 def test_never_stitch_gate() -> None:
     print("never-stitch gate — gather_inputs() cannot auto-discover experiments:")
-    from dashboard import gather_inputs  # local import: after sys.path is set
+    from tools.analytics.dashboard import (
+        gather_inputs,  # local import: after sys.path is set
+    )
 
     real_root = _REPO / "experiments"
     exp_id = "_nevstitch_gate_test"

@@ -7,7 +7,7 @@ around D3's compaction; the compaction is D3's own tested code, so these inject 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-import compaction_hook
+from tools.analytics import compaction_hook
 
 _NOW = datetime(2026, 7, 19, 12, 0, tzinfo=timezone.utc)
 
@@ -75,7 +75,7 @@ def test_error_is_isolated_not_raised(tmp_path: Path) -> None:
 
 def test_launcher_call_site_invokes_the_hook(monkeypatch) -> None:
     """The wire itself (#1292): a hook nobody calls is the failure mode this guards."""
-    import serve
+    from tools.analytics import serve
 
     calls: list = []
     monkeypatch.setattr(
@@ -93,7 +93,7 @@ def test_hook_matches_d3_compact_signature() -> None:
     actually uses — positional (files, root) + keyword log — against the live D3."""
     import inspect
 
-    import tier_ingest
+    from tools.analytics import tier_ingest
 
     inspect.signature(tier_ingest.compact).bind(["a.csv"], Path("root"), log=print)
 
@@ -212,11 +212,9 @@ def test_end_to_end_fill_lights_the_readers(tmp_path: Path) -> None:
     )
 
     # the reader resolves both tokens to the one plant via the #1454 join
-    import sys as _sys
 
-    _sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from device_registry import Device, Registry
-    from segment_history import plant_series
+    from tools.analytics.device_registry import Device, Registry
+    from tools.analytics.segment_history import plant_series
 
     reg = Registry(
         devices=[

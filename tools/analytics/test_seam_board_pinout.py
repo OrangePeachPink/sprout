@@ -22,11 +22,9 @@ a measurement.
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from board_pinouts import (
+from tools.analytics.board_pinouts import (
     PINOUT_VERIFIED,
     RECOMMENDED_SOIL_PINS,
     is_verified,

@@ -15,8 +15,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from serve import NoDataYet, _context, _empty_state_html
+from tools.analytics.serve import NoDataYet, _context, _empty_state_html
 
 _SERVE = Path(__file__).resolve().parent / "serve.py"
 

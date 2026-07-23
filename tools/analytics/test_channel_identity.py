@@ -14,17 +14,13 @@ the test builds exactly that ambiguity and asserts it collapses.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from channel_identity import (
+from tools.analytics.channel_identity import (
     build_plant_index,
     channel_key,
     resolve_plant,
     resolve_plant_id,
 )
-from device_registry import Device, Registry
+from tools.analytics.device_registry import Device, Registry
 
 # s1 is the port that emits ch2 (parse_v1.canonical_channel / the 2026-07-01 headers).
 # Written out because a fixture that guesses the pairing silently tests nothing.

@@ -3,14 +3,12 @@ gate-checked compaction that heals duplicates, shrink recovery, freshness."""
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from tier_ingest import compact, freshness, ingest_once
+from tools.analytics.tier_ingest import compact, freshness, ingest_once
 
 _COLS = (
     "record_type,timestamp_utc,timestamp_local,session_id,device_id,"

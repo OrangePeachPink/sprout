@@ -34,15 +34,13 @@ correction is what that looks like done properly.
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import parse_file
-from tier_store import COLUMNS, build_partition, tagged_day_rows
+from tools.analytics.parse_v1 import parse_file
+from tools.analytics.tier_store import COLUMNS, build_partition, tagged_day_rows
 
 _REPO = Path(__file__).resolve().parents[2]
 _CONTRACT = _REPO / "docs" / "TIER_STORE_CONTRACT.md"
@@ -299,7 +297,7 @@ def test_t6_parse_v1_is_the_only_reader_of_raw() -> None:
     source = (Path(__file__).resolve().parent / "tier_store.py").read_text(
         encoding="utf-8"
     )
-    assert "from parse_v1 import" in source
+    assert "from tools.analytics.parse_v1 import" in source
     for smell in ("csv.reader", "csv.DictReader", ".split(',')", '.split(",")'):
         assert smell not in source, (
             f"tier_store re-splits raw text ({smell}) — §6 says it must not"

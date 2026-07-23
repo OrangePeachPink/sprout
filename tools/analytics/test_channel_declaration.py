@@ -18,11 +18,9 @@ overclaims or nags.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from registry_model import (
+from tools.analytics.registry_model import (
     Assignment,
     Plant,
     RegistryModel,
@@ -285,7 +283,7 @@ def test_the_channel_view_reports_declared_ports_with_no_plant() -> None:
     """The read shape slice 4 renders. Before the declaration existed, a board with no
     assignments had NO ports in this view — §5.3's empty state was not merely unbuilt,
     it was unrepresentable."""
-    from registry_model import _channel_view
+    from tools.analytics.registry_model import _channel_view
 
     m = RegistryModel()
     _adopt(m)
@@ -299,7 +297,7 @@ def test_the_channel_view_reports_declared_ports_with_no_plant() -> None:
 def test_a_grandfathered_port_reads_as_undeclared_rather_than_as_an_error() -> None:
     """A board mapped before declarations existed has assignments and no declaration.
     That is history, not corruption — absence stays first-class (ADR-0028)."""
-    from registry_model import _channel_view
+    from tools.analytics.registry_model import _channel_view
 
     m = RegistryModel(
         plants=[Plant(plant_id="p01")],

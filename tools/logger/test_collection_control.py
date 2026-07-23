@@ -10,11 +10,7 @@ the old leak that made a portless host hunt (and name) a COM device.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from collection_control import CollectionError, start_all
+from tools.logger.collection_control import CollectionError, start_all
 
 
 class _FleetOk:

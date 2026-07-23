@@ -31,17 +31,17 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-_REPO = _HERE.parents[1]
-_CAPTURE_PY = _HERE / "experiment_capture.py"
+from tools.capture import (
+    serial_lock,
+)
 
 # Spawn the capture as a quiet child of serve.py - no extra console window on
 # Windows; 0 elsewhere (#183).
 _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-import serial_lock  # noqa: E402  (sibling leaf — the #64 advisory-lock contract)
+_HERE = Path(__file__).resolve().parent
+_REPO = _HERE.parents[1]
+_CAPTURE_PY = _HERE / "experiment_capture.py"
 
 # A safe path/identifier token — letters, digits, dot, dash, underscore; no "..",
 # no slashes. experiment_id / subject become a folder name, so this is the guard

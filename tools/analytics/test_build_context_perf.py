@@ -16,14 +16,12 @@ deterministic, and it is the specific regression that would quietly return the 2
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import segment_classifier
-from device_registry import Device, Registry
-from parse_v1 import LogData, Reading
+from tools.analytics import segment_classifier
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.parse_v1 import LogData, Reading
 
 T0 = datetime(2026, 6, 1, tzinfo=timezone.utc)
 
@@ -76,7 +74,9 @@ def test_classify_runs_once_per_plant_not_twice(monkeypatch) -> None:
         calls["n"] += 1
         return real(rows)
 
-    import card_context  # it did: from segment_classifier import classify
+    from tools.analytics import (
+        card_context,  # it did: from segment_classifier import classify
+    )
 
     monkeypatch.setattr(card_context, "classify", counting)
 

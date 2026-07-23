@@ -27,15 +27,12 @@ never silently shows a different window than the one it claims.
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
-from segment_classifier import classify, passes  # noqa: E402
+from tools.analytics.segment_classifier import classify, passes  # noqa: E402
 
 # Ruling A: the lead-in pad — how much pre-watering context rides ahead of the anchor.
 LEAD_IN_H = 2.0

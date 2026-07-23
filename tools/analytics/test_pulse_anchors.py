@@ -9,13 +9,11 @@ profile chain is still empty — a profile-only bridge would have shipped a no-o
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import BOARD_CLASS_ANCHORS, board_class
-from registry_model import Plant, Profile, RegistryModel, Sensor
-from serve import attach_pulse_anchors
+from tools.analytics.parse_v1 import BOARD_CLASS_ANCHORS, board_class
+from tools.analytics.registry_model import Plant, Profile, RegistryModel, Sensor
+from tools.analytics.serve import attach_pulse_anchors
 
 _H = (Path(__file__).resolve().parent / "home_template.html").read_text(
     encoding="utf-8"

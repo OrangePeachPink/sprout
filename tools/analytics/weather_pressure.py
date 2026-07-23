@@ -119,7 +119,7 @@ def refresh_if_stale(
             return False  # fresh enough - no network needed
     if location is _UNSET:
         try:
-            import env_solar
+            from tools.analytics import env_solar
 
             location = env_solar.load_location()
         except ImportError:

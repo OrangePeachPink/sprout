@@ -10,15 +10,13 @@ real HTTP server (the actual byte-level contract, no physical hardware needed).
 from __future__ import annotations
 
 import http.server
-import sys
 import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import parse_files
-from source_adapter import (
+from tools.analytics.parse_v1 import parse_files
+from tools.analytics.source_adapter import (
     DEVICE_ADAPTER_VERSION,
     DeviceAdapter,
     FleetAdapter,
@@ -325,7 +323,7 @@ def test_fleet_inputs_reach_only_the_first_adapter() -> None:
 
         def load(self, inputs=None):  # matches the SourceAdapter contract
             seen[self._name] = inputs
-            from parse_v1 import LogData
+            from tools.analytics.parse_v1 import LogData
 
             return LogData()
 

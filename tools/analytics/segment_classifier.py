@@ -33,14 +33,11 @@ Precedence per row: flagged > watering-transient > rebound > steady-drying.
 
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
 # ---- C0 first-pass constants (stated cuts; C1 refines) ---------------------- #
 ONSET_DROP_RAW = 60  # single-step fall that can start a transient (noise is ~±22)

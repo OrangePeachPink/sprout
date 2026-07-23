@@ -5,11 +5,7 @@ maintainer's "hone in on a pair" forensics: a Show-all reset, and double-click-t
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import TEMPLATE
+from tools.analytics.dashboard import TEMPLATE
 
 _H = TEMPLATE.read_text(encoding="utf-8")
 

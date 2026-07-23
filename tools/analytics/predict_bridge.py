@@ -49,23 +49,20 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from datetime import timedelta
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
-from channel_identity import (  # noqa: E402  (#1454 — the one S1-seam join)
+from tools.analytics.channel_identity import (  # noqa: E402  (#1454 — the one S1-seam join)
     build_plant_index,
     channel_key,
 )
-from device_registry import load_registry  # noqa: E402
-from plant_profiles import load_profiles  # noqa: E402
-from segment_classifier import segments  # noqa: E402
-from segment_history import TierRow  # noqa: E402
-from tier_store import _TIER_ROOT  # noqa: E402
+from tools.analytics.device_registry import load_registry  # noqa: E402
+from tools.analytics.plant_profiles import load_profiles  # noqa: E402
+from tools.analytics.segment_classifier import segments  # noqa: E402
+from tools.analytics.segment_history import TierRow  # noqa: E402
+from tools.analytics.tier_store import _TIER_ROOT  # noqa: E402
 
 VIEWS_ROOT = _TIER_ROOT.parent / "views"
 _US = timedelta(microseconds=1)
@@ -107,7 +104,7 @@ def resolve_identity(
     actually mapped — a provenance field that lies. So the test is intersection with
     ``devices_in_tier``, never mere presence."""
     try:
-        from tier_store import registry_plant_map
+        from tools.analytics.tier_store import registry_plant_map
 
         pairs = registry_plant_map(registry_path)
         if pairs and (

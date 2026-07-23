@@ -14,12 +14,10 @@ from __future__ import annotations
 import gzip
 import os
 import shutil
-import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import archive_logs
+from tools.archive import archive_logs
 
 
 def _mklogs(d: Path, names: list[str]) -> None:

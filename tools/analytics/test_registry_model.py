@@ -8,11 +8,9 @@ one atomic boundary (close old, open new) so history is never silently rewritten
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from registry_model import (
+from tools.analytics.registry_model import (
     Plant,
     Profile,
     RegistryModel,
@@ -282,7 +280,7 @@ if __name__ == "__main__":
 
 
 def test_a_location_edit_records_a_move_and_never_loses_the_old_spot() -> None:
-    from registry_model import Plant, RegistryModel, apply_operations
+    from tools.analytics.registry_model import Plant, RegistryModel, apply_operations
 
     m = RegistryModel(plants=[Plant(plant_id="p01", location="windowsill left")])
     apply_operations(
@@ -297,7 +295,7 @@ def test_a_location_edit_records_a_move_and_never_loses_the_old_spot() -> None:
 
 
 def test_a_second_move_chains_without_a_hole() -> None:
-    from registry_model import Plant, RegistryModel, apply_operations
+    from tools.analytics.registry_model import Plant, RegistryModel, apply_operations
 
     m = RegistryModel(plants=[Plant(plant_id="p01", location="left")])
     for spot in ("right", "office"):
@@ -312,7 +310,7 @@ def test_a_second_move_chains_without_a_hole() -> None:
 
 
 def test_move_boundaries_are_the_context_edges_consumers_gate_on() -> None:
-    from registry_model import Plant, RegistryModel, apply_operations
+    from tools.analytics.registry_model import Plant, RegistryModel, apply_operations
 
     m = RegistryModel(plants=[Plant(plant_id="p01", location="left")])
     assert m.move_boundaries("p01") == []  # never moved -> one continuous context
@@ -324,7 +322,7 @@ def test_move_boundaries_are_the_context_edges_consumers_gate_on() -> None:
 
 
 def test_a_non_location_edit_is_not_a_move() -> None:
-    from registry_model import Plant, RegistryModel, apply_operations
+    from tools.analytics.registry_model import Plant, RegistryModel, apply_operations
 
     m = RegistryModel(plants=[Plant(plant_id="p01", location="left")])
     apply_operations(
@@ -338,7 +336,12 @@ def test_a_non_location_edit_is_not_a_move() -> None:
 
 
 def test_the_payload_carries_the_move_record_for_movers_only() -> None:
-    from registry_model import Plant, RegistryModel, apply_operations, registry_payload
+    from tools.analytics.registry_model import (
+        Plant,
+        RegistryModel,
+        apply_operations,
+        registry_payload,
+    )
 
     m = RegistryModel(
         plants=[Plant(plant_id="p01", location="left"), Plant(plant_id="p02")]

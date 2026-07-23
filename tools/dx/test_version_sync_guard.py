@@ -7,7 +7,7 @@ itself switched off."""
 import re
 from pathlib import Path
 
-import version_sync_guard as g
+from tools.dx import version_sync_guard as g
 
 
 def _repo(tmp_path: Path, version="1.2.3", citation=None, fw=None, html=None) -> Path:

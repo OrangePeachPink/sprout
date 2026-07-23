@@ -34,7 +34,7 @@ import zlib
 from datetime import datetime, timezone
 from pathlib import Path
 
-import watering_log
+from tools.analytics import watering_log
 
 _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]

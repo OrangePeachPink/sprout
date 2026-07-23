@@ -21,12 +21,10 @@ census count alone would miss.
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import serve_routes
-from serve_routes import EXACT, NOTES, PREFIX, census, match
+from tools.analytics import serve_routes
+from tools.analytics.serve_routes import EXACT, NOTES, PREFIX, census, match
 
 _SERVE = (Path(__file__).resolve().parent / "serve.py").read_text(encoding="utf-8")
 
@@ -123,7 +121,7 @@ def test_every_post_route_is_dispatched_exactly_once() -> None:
 def test_serve_imports_the_extracted_table() -> None:
     """The extraction is real: serve.py imports serve_routes and no longer carries the
     route strings in its dispatch conditions (only ``route == …`` arms remain)."""
-    assert "import serve_routes" in _SERVE
+    assert re.search(r"from tools\.analytics import \([^)]*serve_routes", _SERVE)
     assert 'serve_routes.match("GET"' in _SERVE
     assert 'serve_routes.match("POST"' in _SERVE
     # the two legitimate parsed.path survivors: the /debug/slow test hook and the

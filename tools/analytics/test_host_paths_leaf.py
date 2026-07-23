@@ -11,11 +11,9 @@ the leaf existed.
 from __future__ import annotations
 
 import ast
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import host_paths
+from tools.analytics import host_paths
 
 _HERE = Path(__file__).resolve().parent
 
@@ -39,8 +37,7 @@ def test_the_paths_have_one_definition_not_two() -> None:
     """The re-export in dashboard is a *name*; the leaf is the definition. If either
     module ever computed its own copy, the two halves could disagree about where the
     data is — the failure a shared constant is supposed to make impossible."""
-    import dashboard
-    import serve
+    from tools.analytics import dashboard, serve
 
     assert dashboard.LOGS_DIR is host_paths.LOGS_DIR
     assert dashboard.ARCHIVE_DIR is host_paths.ARCHIVE_DIR
@@ -63,7 +60,8 @@ def test_serve_no_longer_imports_the_dashboard_for_a_path() -> None:
     obtain two constants. A refactor that leaves the old import in place has moved the
     code without removing the reason it mattered."""
     source = (_HERE / "serve.py").read_text(encoding="utf-8")
-    block = source.split("from dashboard import (", 1)[1].split(")", 1)[0]
+    head = "from tools.analytics.dashboard import ("
+    block = source.split(head, 1)[1].split(")", 1)[0]
     for path_const in ("ARCHIVE_DIR", "LOGS_DIR"):
         assert path_const not in block, (
             f"serve.py still pulls {path_const} through dashboard — the leaf exists "

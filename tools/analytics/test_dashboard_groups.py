@@ -8,13 +8,11 @@ band). NO % needs no new test - nothing here emits a percentage.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context, filter_channels
-from device_registry import Device, Registry
-from parse_v1 import parse_files
+from tools.analytics.dashboard import build_context, filter_channels
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.parse_v1 import parse_files
 
 _HEADER = (
     "# fw=0.8.0  git=test123  run=grouptest\n"

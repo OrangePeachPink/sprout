@@ -13,14 +13,11 @@ That loss is silent and unrecoverable — nothing in the data says it happened.
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-from identity import build_projection
-from registry_model import (
+from tools.analytics.identity import build_projection
+from tools.analytics.registry_model import (
     RegistryModel,
     apply_operations,
     load_registry_model,

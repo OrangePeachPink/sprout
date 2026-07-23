@@ -8,13 +8,10 @@ sensor is uncalibrated (envelope checks report None, never a false "clean").
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import Reading
-from sensor_health import STUCK_RUN, fleet_health, sensor_health
+from tools.analytics.parse_v1 import Reading
+from tools.analytics.sensor_health import STUCK_RUN, fleet_health, sensor_health
 
 _T0 = datetime(2026, 7, 12, tzinfo=timezone.utc)
 

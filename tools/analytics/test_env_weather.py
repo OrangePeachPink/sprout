@@ -7,14 +7,11 @@ python tools/analytics/test_env_weather.py
 from __future__ import annotations
 
 import shutil
-import sys
 import tempfile
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-import env_weather  # noqa: E402
+from tools.analytics import env_weather  # noqa: E402
 
 _LAT, _LON = 41.8781, -87.6298  # public reference, not anyone's home
 
