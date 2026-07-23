@@ -332,6 +332,15 @@ voice-guard *ARGS:
 board-hygiene *ARGS:
     {{py}} tools/dx/board_hygiene.py {{ARGS}}
 
+# OTA release feed (#1524 / #1284 AC5): emit docs/ota/feed.txt from a release's signed
+# assets (works on a DRAFT — section 5.1 dry-run). Fail-closed: every declared board
+# needs its .bin + .sig attached or nothing is emitted. Run at the cut (RELEASE_CUT §6),
+# then review + commit the diff; hand-curation (#1258) is guarded by ota-feed-guard.
+#   just ota-feed v0.8.1            # print the feed for that release
+#   just ota-feed v0.8.1 --write    # write docs/ota/feed.txt
+ota-feed TAG *ARGS:
+    {{py}} tools/dx/ota_feed.py generate --tag {{TAG}} {{ARGS}}
+
 # ---- Board field self-service (#1443, ADR-0003 §5) -------------------------------------
 # Read/write the five Project-#2 planning fields in one line, so an attribute is never
 # skipped because writing it was annoying (how velocity: drifted to 7-of-69). Every WRITE
