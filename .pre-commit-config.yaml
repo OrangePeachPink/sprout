@@ -229,6 +229,18 @@ repos:
         entry: uv run python tools/dx/import_layer_guard.py --check
         language: system
         pass_filenames: false
+
+      # ota-feed-guard (#1524 / #1284 AC5) — the committed OTA feed must satisfy the
+      # device parser's contract (firmware/lib/ota_pull/ota_pull.h): exact banner,
+      # required keys, char[24]/char[256] bounds, no duplicate board, https URLs,
+      # declared board classes only. Curation (#1258) edits the file by hand — this
+      # guard is what makes a hand-edit unable to strand the fleet.
+      - id: ota-feed-guard
+        name: ota-feed-guard (#1524 — the feed the fleet pulls parses on-device)
+        entry: uv run python tools/dx/ota_feed.py check
+        language: system
+        files: ^docs/ota/feed\.txt$
+        pass_filenames: false
         always_run: true
   # link-check (#913) — internal-link gate: every relative / GitHub-self link in md+html
   # resolves to a tracked file, and no self-link carries a broken ref (the /blob/HEAD/ class

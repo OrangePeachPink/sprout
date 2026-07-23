@@ -36,6 +36,7 @@ instance with no cross-test leakage.
 from __future__ import annotations
 
 import os
+import threading
 from pathlib import Path
 
 from tools.analytics.parse_v1 import LogData, _consume_line, _ParseState, parse_file
@@ -112,6 +113,15 @@ class ParseCache:
         self._parse_one = parse_one
         self._resolve = resolve
         self._entries: dict[Path, _Entry] = {}
+        # #1468 AC1: serve.py holds ONE cache and ThreadingHTTPServer runs every
+        # request on its own thread. The mutate-in-place paths (_tail's extend +
+        # offset advance, the entries dict, eviction) race without exclusion: two
+        # requests that both see a grown file both tail the SAME bytes and the corpus
+        # silently doubles its tail — poisoning every later request, not just the
+        # racing ones. One coarse lock over load() is the boring, provable fix: loads
+        # are cache-hits in the steady state (cheap), and serializing a cold parse is
+        # strictly better than two threads doing the same 20 s parse concurrently.
+        self._lock = threading.Lock()
 
     def _full(self, path: Path, sig: tuple[int, int]) -> _Entry:
         """Full (re)parse via the canonical parser, plus the tail anchor for later."""
@@ -149,6 +159,10 @@ class ParseCache:
         return ent
 
     def load(self, inputs: list | None = None) -> LogData:
+        with self._lock:  # #1468 AC1 — one loader mutates at a time, see __init__
+            return self._load_locked(inputs)
+
+    def _load_locked(self, inputs: list | None) -> LogData:
         resolved = self._resolve(inputs or [])
         out = LogData()
         seen: set[Path] = set()
@@ -183,8 +197,10 @@ class ParseCache:
         return out
 
     def stats(self) -> dict:
-        """Introspection for the warmup log / tests: how much is held in memory."""
-        return {
-            "files": len(self._entries),
-            "readings": sum(len(e.readings) for e in self._entries.values()),
-        }
+        """Introspection for the warmup log / tests: how much is held in memory.
+        Locked so a stat never reads a half-extended entry mid-append (#1468)."""
+        with self._lock:
+            return {
+                "files": len(self._entries),
+                "readings": sum(len(e.readings) for e in self._entries.values()),
+            }

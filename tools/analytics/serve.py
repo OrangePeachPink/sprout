@@ -198,9 +198,46 @@ _FLEET = FleetController()
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 
+
+# ---- #1468 AC2: the localhost floor (ADR-0014 / ADR-0038 §5 rung 3) ---------- #
+# ADR-0014 claims the control plane is localhost-only. Two things made that claim
+# soft: `--host` accepted any bind, and the loopback guard was a per-handler
+# `_is_local()` sprinkled over SOME state-changing routes. The floor here is
+# proportionate hardening, NOT authentication (that stays on the not-at-our-scale
+# ledger): refuse a non-loopback bind outright, and gate every control-plane POST on
+# one central check — loopback peer + loopback Host header (the DNS-rebinding fence:
+# a page on evil.com resolving to 127.0.0.1 still sends `Host: evil.com`) + a
+# loopback Origin when a browser sends one (the cross-site POST fence).
+
+
+def _is_loopback_host(host: str | None) -> bool:
+    """True for a loopback name/address: ``localhost``, ``::1``, or a literal dotted
+    quad in 127/8. Deliberately NOT a DNS resolve — a name like ``127.evil.com`` or a
+    rebinding domain must not pass on its spelling."""
+    h = (host or "").strip().strip("[]").lower()
+    if h in ("localhost", "::1"):
+        return True
+    parts = h.split(".")
+    return (
+        len(parts) == 4
+        and all(p.isdigit() and int(p) <= 255 for p in parts)
+        and parts[0] == "127"
+    )
+
+
+def _host_header_name(hostport: str | None) -> str:
+    """The name half of a ``Host`` header value: strips ``:port``, unwraps a bracketed
+    IPv6. A bare IPv6 with no brackets has >= 2 colons and passes through whole."""
+    v = (hostport or "").strip()
+    if v.startswith("["):
+        return v[1 : v.index("]")] if "]" in v else v
+    if v.count(":") == 1:
+        return v.split(":", 1)[0]
+    return v
+
+
 # #822: the pass-anchored range labels (Data's contract, consumed not re-authored)
 # and the fixed window served when no watering is on record.
-
 
 _CYCLE_FALLBACK = "7d"
 
@@ -1118,6 +1155,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
         if _STOPPING.is_set():  # #972: already stopping — refuse further control posts
             self._send_json({"stopping": True}, status=503)
             return
+        # #1468 AC2: EVERY control-plane POST passes the one central local-origin
+        # floor — no more per-route guards, no more unguarded write routes.
+        if not self._local_origin():
+            self._send_json({"error": "control plane is localhost-only"}, status=403)
+            return
         parsed = urlparse(self.path)
         try:
             route = serve_routes.match("POST", parsed.path)  # #1452 extracted table
@@ -1159,11 +1201,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json(stop_all(_MONITOR, _FLEET))
             elif route == "location":  # #966: write the gitignored rig location
                 # Writes local config + involves coordinates; localhost-only (as /quit).
-                if not self._is_local():
-                    self._send_json(
-                        {"error": "location setup is localhost-only"}, status=403
-                    )
-                    return
                 from tools.analytics import env_solar
 
                 try:
@@ -1174,11 +1211,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif route == "watering_log":  # #1137: log a manual watering
                 # Appends to the local watering journal; localhost-only (as /quit). The
                 # logged event becomes the authoritative last_watered (beats detection).
-                if not self._is_local():
-                    self._send_json(
-                        {"error": "watering log is localhost-only"}, status=403
-                    )
-                    return
                 from tools.analytics.watering_log import log_manual
 
                 b = self._body()
@@ -1193,11 +1225,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 # The operator's confirm/reject on a DETECTED watering. Append-only
                 # (a rejection is kept, never erased — the rejection IS the detector's
                 # training signal). Localhost-only, like the rest of the write plane.
-                if not self._is_local():
-                    self._send_json(
-                        {"error": "verdicts are localhost-only"}, status=403
-                    )
-                    return
                 from tools.analytics.watering_log import log_verdict
 
                 b = self._body()
@@ -1209,11 +1236,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif route == "photo":  # #875 Q4: ingest a plant avatar
                 # Writes a local file + mutates the registry; localhost-only. The image
                 # is downsampled + EXIF-stripped before it ever lands (no home GPS).
-                if not self._is_local():
-                    self._send_json(
-                        {"error": "photo upload is localhost-only"}, status=403
-                    )
-                    return
                 from tools.analytics.photo_intake import MAX_UPLOAD_BYTES
 
                 pid = parsed.path[len("/photo/") :]
@@ -1237,11 +1259,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         self._ingest_photo(pid, raw)
             elif route == "registry_apply":  # #921 slice 3 — classic-save a batch
                 # Mutates the local registry config; localhost-only (as /quit).
-                if not self._is_local():
-                    self._send_json(
-                        {"error": "registry edits are localhost-only"}, status=403
-                    )
-                    return
                 from tools.analytics.registry_model import (
                     apply_operations,
                     load_registry_model,
@@ -1305,9 +1322,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 # stops the server from the browser (no terminal to Ctrl-C when it was
                 # launched by a double-click). Ack first, then shut down from a separate
                 # thread - serve_forever can't be stopped from its own request thread.
-                if not self._is_local():
-                    self._send_json({"error": "shutdown is localhost-only"}, status=403)
-                    return
                 self._send_json({"stopped": True})
 
                 def _shutdown() -> None:
@@ -1398,9 +1412,28 @@ class DashboardHandler(BaseHTTPRequestHandler):
             # file serves from /photo/<pid>; the surface links it once the plant exists.
             self._send_json({"ok": True, "photo": rel, "not_linked": result})
 
-    def _is_local(self) -> bool:  # loopback-only guard for the shutdown endpoint
+    def _is_local(self) -> bool:  # the PEER half of the #1468 central gate
         host = self.client_address[0] if self.client_address else ""
         return host in ("127.0.0.1", "::1", "::ffff:127.0.0.1")
+
+    def _local_origin(self) -> bool:
+        """#1468 AC2 — the ONE control-plane gate, replacing the per-route
+        ``_is_local()`` sprinkle (six routes had it, the rest of the write plane did
+        not — a security inconsistency, not merely maintainability). Three floors,
+        all local: the TCP peer is loopback; the ``Host`` header names loopback (a
+        rebinding page reaches 127.0.0.1 but still says ``Host: evil.com``); and any
+        ``Origin`` a browser attaches is a loopback origin (a cross-site form POST
+        carries its own site's Origin — refused; ``Origin: null`` likewise)."""
+        if not self._is_local():
+            return False
+        if not _is_loopback_host(_host_header_name(self.headers.get("Host"))):
+            return False
+        origin = self.headers.get("Origin")
+        if origin:
+            o = urlparse(origin)
+            if o.scheme not in ("http", "https") or not _is_loopback_host(o.hostname):
+                return False
+        return True
 
     def log_message(self, *args: object) -> None:  # quiet the per-request log
         return
@@ -1534,6 +1567,18 @@ def main(argv: list[str] | None = None) -> int:
         help="do NOT auto-start collection on launch (#872); serve read-only",
     )
     args = ap.parse_args(argv)
+
+    # #1468 AC2: refuse a non-loopback bind OUTRIGHT — this makes ADR-0014's
+    # "localhost-only" a property of the process, not a default someone can flip with
+    # a flag. Exposing the control plane beyond the machine is the authn redesign the
+    # not-at-our-scale ledger declines, so the bind that would need it is refused.
+    if not _is_loopback_host(args.host):
+        sys.stderr.write(
+            f"serve: refusing non-loopback bind {args.host!r} — the Sprout control "
+            "plane is localhost-only (ADR-0014 / #1468). Use 127.0.0.1, localhost, "
+            "or ::1.\n"
+        )
+        return 2
 
     url = f"http://{args.host}:{args.port}/"
     if args.print_port:  # the launcher reads this; never retypes the port literal
