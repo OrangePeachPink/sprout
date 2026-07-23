@@ -1,0 +1,4 @@
+# sprout-ota-feed v1
+# No release carries signed assets yet - the first pullable release is v0.8.1.
+# At the cut: just ota-feed vX.Y.Z --write  (docs/process/RELEASE_CUT.md, section 6).
+# Devices skip #-comments; a banner-only feed offers nothing and boards stay put.

@@ -104,6 +104,11 @@ If any step surprises you, the real cut is not ready — fix the pipeline, re-wa
       `git ls-remote origin refs/tags/vX.Y.Z` returns the ship commit, **and**
       `gh release view vX.Y.Z --json isDraft,assets -q '"published=\(.isDraft==false) assets=\(.assets|length)"'`
       prints `published=true` with a non-zero asset count.
+- [ ] **OTA feed (#1524 / #1284 AC5): `just ota-feed vX.Y.Z --write`** → review the diff
+      (`docs/ota/feed.txt` now points every board class at this release's signed assets) → commit.
+      The feed is the Pages-served pointer fielded boards poll — **this commit, not the release,
+      is what makes the fleet see the update**. It refuses to emit if any board's `.bin`/`.sig`
+      is missing (fail-closed); later hand-edits (curation, #1258) are checked by ota-feed-guard.
 - [ ] Card sweep, mechanized (#732): **`just board-hygiene`** must print *clean* (zero
       closed-not-Done) before the milestone closes; fix any findings, rerun to green. *(Fallback if
       the recipe or the ProjectV2 token is ever unavailable: eye-sweep the milestone's merged PRs
