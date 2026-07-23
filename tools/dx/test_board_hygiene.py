@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 
-from board_hygiene import (
+from tools.dx.board_hygiene import (
     classify_closed_not_done,
     classify_stale_in_progress,
     milestone_counts,

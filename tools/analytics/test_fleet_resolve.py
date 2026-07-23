@@ -7,19 +7,17 @@ hand-edit; discovery keys on stable identity (the device_id-derived name).
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from device_registry import Device
-from fleet_resolve import (
+from tools.analytics.device_registry import Device
+from tools.analytics.fleet_resolve import (
     candidate_base_urls,
     heal_base_url,
     make_healer,
     mdns_host,
     resolve_ip,
 )
-from source_adapter import DeviceAdapter
+from tools.analytics.source_adapter import DeviceAdapter
 
 _TELEM = (
     "plants.soil,sess1,y9d41p,0.7.0,30000,UMLIFE_v2_TLC555,s1,origplant,"

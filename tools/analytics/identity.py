@@ -42,16 +42,15 @@ surface that wants "who is on this channel now" gets an answer, not a log to sca
 
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
+from tools.analytics.parse_v1 import (
+    canonical_channel,
+)
 
-from parse_v1 import canonical_channel  # noqa: E402  (layer 0, the token fold)
+_HERE = Path(__file__).resolve().parent
 
 
 @dataclass(frozen=True)
@@ -224,8 +223,8 @@ def load_projection(
 ) -> Projection:
     """Load both registries from the same path and project them. Absent-safe: a
     missing config yields an empty projection (first-run), never a crash."""
-    from device_registry import load_registry
-    from registry_model import load_model, load_registry_model
+    from tools.analytics.device_registry import load_registry
+    from tools.analytics.registry_model import load_model, load_registry_model
 
     if registry_path:
         model = load_model(str(registry_path))

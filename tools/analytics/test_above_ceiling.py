@@ -3,11 +3,7 @@ never clamped. At-ceiling and above-ceiling must render distinctly."""
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import (
+from tools.analytics.parse_v1 import (
     BOARD_CLASS_CEILING,
     DEFAULT_CAL_BOUNDS,
     DRIER_THAN_CALIBRATED,
@@ -40,7 +36,7 @@ def test_the_exception_is_the_range_family_token_not_an_eighth_band() -> None:
     assert range_exception(CLASSIC + 1, CLASSIC) == DRIER_THAN_CALIBRATED
     assert range_exception(CLASSIC, CLASSIC) is None  # at ceiling is IN the envelope
     # the token is off-ladder: it never appears among the seven band names
-    from parse_v1 import BANDS_WET_TO_DRY
+    from tools.analytics.parse_v1 import BANDS_WET_TO_DRY
 
     assert DRIER_THAN_CALIBRATED not in BANDS_WET_TO_DRY
     assert len(BANDS_WET_TO_DRY) == 7  # no eighth mood was minted

@@ -8,14 +8,11 @@ from __future__ import annotations
 
 import json
 import shutil
-import sys
 import tempfile
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-import lab_notes  # noqa: E402
+from tools.analytics import lab_notes  # noqa: E402
 
 
 def test_empty_when_missing() -> None:

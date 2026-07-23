@@ -14,8 +14,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from registry_model import (
+from tools.analytics.registry_model import (
     Plant,
     Profile,
     RegistryModel,
@@ -95,8 +94,8 @@ def test_config_discovery_matches_device_registry_exactly() -> None:
     # fully-mapped fleet ("No boards yet" over 3 logging boards) and a Save would have
     # written a shadow config. Pin the docstring's promise ("SAME discovery as
     # device_registry") mechanically so the path can never drift off the repo root.
-    import device_registry as dr
-    import registry_model as rm
+    from tools.analytics import device_registry as dr
+    from tools.analytics import registry_model as rm
 
     assert rm._LOCAL == dr._LOCAL
     assert rm._EXAMPLE == dr._EXAMPLE

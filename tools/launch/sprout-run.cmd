@@ -18,7 +18,9 @@ if %errorlevel%==0 (
   echo [sprout] 'just' is not on your PATH - using the Python entrypoint directly.
   echo [sprout] For the full runner library, install just:  winget install --id Casey.Just -e
   echo.
-  python tools\analytics\serve.py --serve-or-focus --open
+  REM #1528 package flip: -m from the repo root resolves the tools package with no
+  REM install step - the caller's CWD is the repo root (see the header note).
+  python -m tools.analytics.serve --serve-or-focus --open
 )
 
 REM If we reach here the server stopped (the in-UI Stop button, or Ctrl-C).

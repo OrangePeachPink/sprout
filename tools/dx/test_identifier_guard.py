@@ -11,8 +11,8 @@ import struct
 import subprocess
 from pathlib import Path
 
-import identifier_guard
-from identifier_guard import (
+from tools.dx import identifier_guard
+from tools.dx.identifier_guard import (
     HOST_REDACTED,
     MAC_RE,
     USB_INSTANCE_RE,

@@ -42,14 +42,19 @@ from pathlib import Path
 from typing import ClassVar
 from urllib.parse import parse_qs, unquote, urlparse
 
-_HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-
-import serve_routes  # noqa: E402  (#1452 — the extracted route table; a leaf, L0)
-from bench_packages import render_bench_detail  # noqa: E402  (bench detail #444)
-from card_context import build_context  # noqa: E402  (layer-3 composition, #1336)
-from dashboard import (  # noqa: E402  (sibling import)
+from tools.analytics import (
+    serve_routes,
+)
+from tools.analytics.bench_packages import (
+    render_bench_detail,
+)
+from tools.analytics.card_context import (
+    build_context,
+)
+from tools.analytics.cycle_range import (
+    CYCLE_RANGES,
+)
+from tools.analytics.dashboard import (
     FONTS_CSS,
     RANGE_HOURS,
     TOKENS_CSS,
@@ -60,33 +65,63 @@ from dashboard import (  # noqa: E402  (sibling import)
     render_home,
     render_trial,
 )
-from device_registry import load_registry  # noqa: E402  (the fleet config, #486)
-from experiments_catalog import (  # noqa: E402  (Lab #154; #444 combined source)
+from tools.analytics.device_registry import (
+    load_registry,
+)
+from tools.analytics.experiments_catalog import (
     load_combined,
     render_catalog,
 )
-from host_paths import ARCHIVE_DIR, LOGS_DIR  # noqa: E402  (layer-0 leaf, #1336)
-from lab_detail import render_detail  # noqa: E402  (Lab detail #157)
-from lab_drafts import list_drafts, load_draft  # noqa: E402  (agent drafts #326)
-from lab_notes import (  # noqa: E402  (Lab notes #158; path for save resilience #327)
+from tools.analytics.host_paths import (
+    ARCHIVE_DIR,
+    LOGS_DIR,
+)
+from tools.analytics.lab_detail import render_detail
+from tools.analytics.lab_drafts import (
+    list_drafts,
+    load_draft,
+)
+from tools.analytics.lab_notes import (
     load_notes,
     notes_rel_path,
     save_notes,
 )
-from lab_studies import (  # noqa: E402  (Lab studies #159)
+from tools.analytics.lab_studies import (
     list_studies,
     render_studies_catalog,
     render_study_detail,
     save_study,
 )
-from parse_cache import ParseCache  # noqa: E402  (parse-once corpus cache, #827)
-from source_adapter import (  # noqa: E402  (the source-adapter seam, #277/#486)
+from tools.analytics.parse_cache import (
+    ParseCache,
+)
+from tools.analytics.source_adapter import (
     DeviceAdapter,
     FleetAdapter,
     TetheredAdapter,
     active_mismatches,
 )
+from tools.capture import (
+    handoff,
+    serial_lock,
+)
+from tools.capture.control import (
+    CaptureController,
+    ControlError,
+)
+from tools.logger.collection_control import (
+    CollectionError,
+    start_all,
+    status_all,
+    stop_all,
+)
+from tools.logger.fleet_control import FleetController, FleetError
+from tools.logger.monitor_control import (
+    MonitorController,
+    MonitorError,
+)
 
+_HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
 
 # #827: parse the log corpus ONCE and hold it in memory across requests. serve.py is a
@@ -145,26 +180,8 @@ def resolve_docs_path(rel: str, *, root: Path = _DOCS_ROOT) -> Path | None:
 
 
 _CAPTURE_DIR = _REPO / "tools" / "capture"
-if str(_CAPTURE_DIR) not in sys.path:
-    sys.path.insert(0, str(_CAPTURE_DIR))
-import handoff  # noqa: E402  (capture sibling - the Monitor<->Experiment handoff, #129)
-import serial_lock  # noqa: E402  (capture sibling - the #64 advisory-lock contract)
-from control import CaptureController, ControlError  # noqa: E402  (capture sibling)
 
 _LOGGER_DIR = _REPO / "tools" / "logger"
-if str(_LOGGER_DIR) not in sys.path:
-    sys.path.insert(0, str(_LOGGER_DIR))
-from collection_control import (  # noqa: E402  (logger sibling - #588)
-    CollectionError,
-    start_all,
-    status_all,
-    stop_all,
-)
-from fleet_control import FleetController, FleetError  # noqa: E402  (#588)
-from monitor_control import (  # noqa: E402  (logger sibling)
-    MonitorController,
-    MonitorError,
-)
 
 # The operator control plane (ADR-0011, extended #128): serve.py owns the lifecycle of
 # both modes - Experiment captures AND the Monitor logger - launching each as its own
@@ -221,7 +238,6 @@ def _host_header_name(hostport: str | None) -> str:
 
 # #822: the pass-anchored range labels (Data's contract, consumed not re-authored)
 # and the fixed window served when no watering is on record.
-from cycle_range import CYCLE_RANGES  # noqa: E402  (#822 the ratified labels)
 
 _CYCLE_FALLBACK = "7d"
 
@@ -231,8 +247,8 @@ def _cycle_window_for(inputs):
     dict, or None when no anchor exists. Reads the same series the tier reads."""
 
     def resolve(which: str):
-        from cycle_range import cycle_window
-        from multiplant_history import read_series
+        from tools.analytics.cycle_range import cycle_window
+        from tools.analytics.multiplant_history import read_series
 
         return cycle_window(read_series(), which=which)
 
@@ -484,13 +500,13 @@ def _fleet_adapter(registry=None):
     if not served:
         return tethered
     try:
-        from weather_pressure import latest_pressure as _pressure
+        from tools.analytics.weather_pressure import latest_pressure as _pressure
     except ImportError:
         _pressure = None
     # #676: address each board by its stable mDNS hostname first (sprout-<id>.local,
     # survives DHCP), the configured IP as a fallback; self-heal the registry when a
     # board answers at a fresh address. A missing mDNS responder degrades to the IP.
-    from fleet_resolve import candidate_base_urls, make_healer
+    from tools.analytics.fleet_resolve import candidate_base_urls, make_healer
 
     return FleetAdapter(
         [
@@ -533,7 +549,7 @@ def _window_inputs(inputs: list[str], hours: float | None, now: datetime) -> lis
     if hours is None:
         return inputs
     try:
-        from parse_v1 import _resolve
+        from tools.analytics.parse_v1 import _resolve
     except Exception:
         return inputs
     files = _resolve(inputs)
@@ -729,7 +745,7 @@ def attach_pulse_anchors(ctx: dict, model) -> dict:
 
     A sensor resolving to nothing valid is absent; the render falls back to the bounded
     interior (honest degradation, never an invented envelope). Returns ctx."""
-    from parse_v1 import BOARD_CLASS_ANCHORS, board_class
+    from tools.analytics.parse_v1 import BOARD_CLASS_ANCHORS, board_class
 
     profiles = {p.profile_id: p for p in model.profiles}
     by_dev_port: dict = {}
@@ -884,7 +900,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 # ONE payload behind all three candidates (multiplant_history,
                 # Data's half): same window, same plants, same numbers — so a prune
                 # verdict compares SURFACES, not accidental data differences.
-                import multiplant_history
+                from tools.analytics import multiplant_history
 
                 self._send_json(multiplant_history.build_payload())
             elif route == "trial":  # #1148 the evaluation surfaces
@@ -914,7 +930,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif route == "data_json":
                 ctx = _context(self.inputs, hours, channels)
                 # #1235: the pulse envelope spans the profiled anchors (all 7 moods)
-                from registry_model import load_registry_model as _lrm
+                from tools.analytics.registry_model import load_registry_model as _lrm
 
                 attach_pulse_anchors(ctx, _lrm())
                 # #822: what the cycle chip should SAY — the served window, or the
@@ -949,11 +965,14 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif route == "collection_status":  # both paths, one view (#588)
                 self._send_json(status_all(_MONITOR, _FLEET))
             elif route == "location_status":  # #966: name-only, never coords
-                import env_solar
+                from tools.analytics import env_solar
 
                 self._send_json(env_solar.location_status())
             elif route == "registry":  # #921 the Plants & Sensors tab seam
-                from registry_model import load_registry_model, registry_payload
+                from tools.analytics.registry_model import (
+                    load_registry_model,
+                    registry_payload,
+                )
 
                 model = load_registry_model()
                 # #1027 §5.1: the calm discovery set - answering boards not yet
@@ -964,7 +983,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 # discovery failure degrades to no candidates, never a broken tab.
                 undeclared: list = []
                 try:
-                    from device_discovery import discover_undeclared
+                    from tools.analytics.device_discovery import discover_undeclared
 
                     data = filter_since(
                         _PARSE_CACHE.load(gather_inputs()), _DISCOVERY_WINDOW_H
@@ -983,7 +1002,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 # Workbench-Diagnostics only: how the detector is doing against HER
                 # rulings. Both numerals ship (never a bare %), and precision is None
                 # until something is ruled — an unreviewed detection is not a miss.
-                from watering_log import event_id_for, precision_so_far
+                from tools.analytics.watering_log import event_id_for, precision_so_far
 
                 ctx = _context(self.inputs, hours, channels)
                 ids = [
@@ -993,8 +1012,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 ]
                 self._send_json(precision_so_far(ids))
             elif route == "sensor_health":  # #995 per-sensor QA/health readout
-                from registry_model import load_registry_model
-                from sensor_health import fleet_health
+                from tools.analytics.registry_model import load_registry_model
+                from tools.analytics.sensor_health import fleet_health
 
                 # Health reads over ALL available history — drift, dropouts, and the
                 # corrosion signals need the long record, and the Monitor range selector
@@ -1012,14 +1031,16 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     }
                 )
             elif route == "cards_json":  # #875 the Home plant-card payloads
-                from card_payload import (
+                from tools.analytics.card_payload import (
                     cards_from_context,
                     load_mood_map,
                     load_voice_pool,
                     system_cal_state,
                 )
-                from registry_model import load_registry_model
-                from watering_log import latest_by_plant  # #1137 manual waterings
+                from tools.analytics.registry_model import load_registry_model
+                from tools.analytics.watering_log import (
+                    latest_by_plant,  # #1137 manual waterings
+                )
 
                 # The Home reads the SAME served context as the Workbench (one truth,
                 # ADR-0008): live band/mood/forecast from build_context, rich identity
@@ -1180,7 +1201,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json(stop_all(_MONITOR, _FLEET))
             elif route == "location":  # #966: write the gitignored rig location
                 # Writes local config + involves coordinates; localhost-only (as /quit).
-                import env_solar
+                from tools.analytics import env_solar
 
                 try:
                     # returns NAME-ONLY status; save_location never logs the coordinates
@@ -1190,7 +1211,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif route == "watering_log":  # #1137: log a manual watering
                 # Appends to the local watering journal; localhost-only (as /quit). The
                 # logged event becomes the authoritative last_watered (beats detection).
-                from watering_log import log_manual
+                from tools.analytics.watering_log import log_manual
 
                 b = self._body()
                 try:
@@ -1204,7 +1225,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 # The operator's confirm/reject on a DETECTED watering. Append-only
                 # (a rejection is kept, never erased — the rejection IS the detector's
                 # training signal). Localhost-only, like the rest of the write plane.
-                from watering_log import log_verdict
+                from tools.analytics.watering_log import log_verdict
 
                 b = self._body()
                 try:
@@ -1215,7 +1236,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif route == "photo":  # #875 Q4: ingest a plant avatar
                 # Writes a local file + mutates the registry; localhost-only. The image
                 # is downsampled + EXIF-stripped before it ever lands (no home GPS).
-                from photo_intake import MAX_UPLOAD_BYTES
+                from tools.analytics.photo_intake import MAX_UPLOAD_BYTES
 
                 pid = parsed.path[len("/photo/") :]
                 clen = int(self.headers.get("Content-Length", 0) or 0)
@@ -1238,7 +1259,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         self._ingest_photo(pid, raw)
             elif route == "registry_apply":  # #921 slice 3 — classic-save a batch
                 # Mutates the local registry config; localhost-only (as /quit).
-                from registry_model import (
+                from tools.analytics.registry_model import (
                     apply_operations,
                     load_registry_model,
                     purge_device_files,
@@ -1363,8 +1384,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
         """#875 Q4: downsample + EXIF-strip the uploaded bytes into the gitignored
         avatar, then link it on the plant's registry entry. The strip happens before the
         file lands, so home GPS never touches disk."""
-        from photo_intake import ingest_photo, registry_photo_path
-        from registry_model import (
+        from tools.analytics.photo_intake import ingest_photo, registry_photo_path
+        from tools.analytics.registry_model import (
             apply_operations,
             load_registry_model,
             registry_payload,
@@ -1493,7 +1514,7 @@ def _tier_tick() -> None:
     failure isolation) lives in ``compaction_hook``; this is only the call site.
     Imported lazily so startup never pays for DuckDB. #1466: this ingests (fills) the
     store as well as compacting - a compaction-only tick left it empty."""
-    from compaction_hook import maybe_ingest_and_compact
+    from tools.analytics.compaction_hook import maybe_ingest_and_compact
 
     maybe_ingest_and_compact()
 

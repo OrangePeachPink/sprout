@@ -13,8 +13,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from serve import docs_content_type, resolve_docs_path
+from tools.analytics.serve import docs_content_type, resolve_docs_path
 
 _HERE = Path(__file__).resolve().parent
 _SERVE = _HERE / "serve.py"

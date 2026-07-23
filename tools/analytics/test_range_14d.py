@@ -7,13 +7,11 @@ Classic (ADR-0033) until the rollup tier lands.
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import RANGE_HOURS, TEMPLATE, filter_since
-from parse_v1 import parse_files
+from tools.analytics.dashboard import RANGE_HOURS, TEMPLATE, filter_since
+from tools.analytics.parse_v1 import parse_files
 
 _HEADER = (
     "# schema_version=3  fw=0.7.0  git=abc  session_id=s1\n"

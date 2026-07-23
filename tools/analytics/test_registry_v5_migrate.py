@@ -4,12 +4,10 @@ the GPIO cross-check as a hard gate, idempotence, and dry-run-writes-nothing."""
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from device_registry import Device, Registry
-from registry_v5_migrate import (
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.registry_v5_migrate import (
     KEY_TO_CHANNEL,
     SENSOR_NAMES,
     apply_migration,

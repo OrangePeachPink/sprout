@@ -620,7 +620,7 @@ wheels = [
 [[package]]
 name = "sprout"
 version = "0.8.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "duckdb" },
     { name = "pandas" },

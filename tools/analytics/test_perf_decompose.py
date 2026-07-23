@@ -14,9 +14,8 @@ import io
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import serve
-from serve import _context, _perf_log
+from tools.analytics import serve
+from tools.analytics.serve import _context, _perf_log
 
 _HEADER = "# fw=0.7.0  git=t  device_id=classic  session_id=s1\n"
 _COLS = (

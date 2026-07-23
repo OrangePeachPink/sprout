@@ -8,13 +8,11 @@ an off-day row. The DuckDB answer must equal the pure-Python CSV-truth calc EXAC
 
 from __future__ import annotations
 
-import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import Reading
-from tier_d0 import (
+from tools.analytics.parse_v1 import Reading
+from tools.analytics.tier_d0 import (
     _COLUMNS,
     CAP_US,
     build_parquet,

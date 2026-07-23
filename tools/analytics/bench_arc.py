@@ -41,7 +41,6 @@ import argparse
 import csv
 import json
 import statistics as st
-import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -53,9 +52,7 @@ _DATA = (
 _WINDOWS = _DATA / "windows"
 _REPORTS = _REPO / "reports"
 
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-from parse_v1 import band_for_raw  # noqa: E402
+from tools.analytics.parse_v1 import band_for_raw  # noqa: E402
 
 # (derivation phase column, derivation source column, output phase key).
 _PHASES = (

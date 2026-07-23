@@ -5,12 +5,10 @@ views or tripping the soil raw-only contract (DEC-#38 is soil-specific).
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context
-from parse_v1 import parse_files
+from tools.analytics.dashboard import build_context
+from tools.analytics.parse_v1 import parse_files
 
 _HEADER = (
     "# fw=0.7.0  git=t  run=env\n# device_id=plants_esp32_env  schema_version=1\n"

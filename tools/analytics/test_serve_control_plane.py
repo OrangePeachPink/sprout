@@ -29,9 +29,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import serve
-from serve import _host_header_name, _is_loopback_host
+from tools.analytics import serve
+from tools.analytics.serve import _host_header_name, _is_loopback_host
 
 _SERVE = Path(__file__).resolve().parent / "serve.py"
 

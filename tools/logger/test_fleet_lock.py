@@ -11,26 +11,21 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from pathlib import Path
 
 import pytest
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-if _HERE not in sys.path:
-    sys.path.insert(0, _HERE)
 _ANALYTICS = os.path.normpath(os.path.join(_HERE, "..", "analytics"))
-if _ANALYTICS not in sys.path:
-    sys.path.insert(0, _ANALYTICS)
 
-from device_registry import Registry  # noqa: E402
-from fleet_lock import (  # noqa: E402
+from tools.analytics.device_registry import Registry  # noqa: E402
+from tools.logger.fleet_lock import (  # noqa: E402
     FleetAlreadyRunning,
     FleetLock,
     incumbent,
     lock_path,
 )
-from fleet_logger import FleetLogger  # noqa: E402
+from tools.logger.fleet_logger import FleetLogger  # noqa: E402
 
 # --------------------------------------------------------------------------- #
 # the mutex itself

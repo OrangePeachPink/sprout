@@ -25,12 +25,15 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
+from tools.analytics.parse_v1 import (
+    parse_file,
+)
+from tools.analytics.tier_store import (
+    _TIER_ROOT,
+    build_partition,
+)
 
-from parse_v1 import parse_file  # noqa: E402  (the ONE parse boundary, ADR-0021)
-from tier_store import _TIER_ROOT, build_partition  # noqa: E402  (the D1 contract)
+_HERE = Path(__file__).resolve().parent
 
 
 def bucket_files(files) -> dict:

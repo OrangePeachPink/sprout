@@ -35,7 +35,7 @@ def _serial_port_present(port: str | None) -> bool:
     if port:
         return True
     try:
-        from plants_logger import autodetect_port
+        from tools.logger.plants_logger import autodetect_port
 
         return autodetect_port() is not None
     except Exception:

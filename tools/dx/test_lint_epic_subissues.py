@@ -9,7 +9,7 @@ MARKER, so the upsert path updates ONE comment in place rather than spamming
 
 from __future__ import annotations
 
-from lint_epic_subissues import (
+from tools.dx.lint_epic_subissues import (
     MARKER,
     body_has_checkboxes,
     comment_body,

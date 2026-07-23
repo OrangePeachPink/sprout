@@ -10,12 +10,9 @@ nicety, and it gets the sharpest fixture here.
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from device_discovery import discover_undeclared
+from tools.analytics.device_discovery import discover_undeclared
 
 T0 = datetime(2026, 7, 20, tzinfo=timezone.utc)
 
@@ -99,7 +96,7 @@ def test_no_telemetry_is_a_calm_empty_not_a_crash() -> None:
 def test_the_payload_carries_the_undeclared_key_absent_safe() -> None:
     """registry_payload gains the key; a caller that passes nothing gets []
     (the discovery card's calm-empty), never a KeyError."""
-    from registry_model import RegistryModel, registry_payload
+    from tools.analytics.registry_model import RegistryModel, registry_payload
 
     doc = registry_payload(RegistryModel())
     assert doc["undeclared"] == []

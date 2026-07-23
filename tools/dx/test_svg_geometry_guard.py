@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from svg_geometry_guard import PATTERN, find_hits, main
+from tools.dx.svg_geometry_guard import PATTERN, find_hits, main
 
 
 def _hit(s: str) -> bool:

@@ -9,12 +9,10 @@ the issue named - pinned here.
 from __future__ import annotations
 
 import json
-import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import weather_pressure as wp
+from tools.analytics import weather_pressure as wp
 
 _NOW = datetime(2026, 7, 3, 12, 0, 0, tzinfo=timezone.utc)
 
@@ -185,10 +183,9 @@ def test_serial_spine_cache_to_csv_to_parse(tmp_path: Path) -> None:
     """Cache file -> latest_pressure -> ContextFiller -> RotatingCsv ->
     parse_v1: the full serial spine with the real reader, no network."""
     _LOGGER = Path(__file__).resolve().parents[1] / "logger"
-    sys.path.insert(0, str(_LOGGER))
-    from context_fill import ContextFiller
-    from parse_v1 import context_class, parse_file
-    from plants_logger import RotatingCsv, parse_device_line
+    from tools.analytics.parse_v1 import context_class, parse_file
+    from tools.logger.context_fill import ContextFiller
+    from tools.logger.plants_logger import RotatingCsv, parse_device_line
 
     cache = tmp_path / "p.json"
     _prime(cache, hpa=1009.4, age_s=600)
@@ -223,7 +220,7 @@ def test_untethered_spine_cache_to_fleet_to_reading(tmp_path: Path) -> None:
     import http.server
     import threading
 
-    from source_adapter import DeviceAdapter, FleetAdapter
+    from tools.analytics.source_adapter import DeviceAdapter, FleetAdapter
 
     cache = tmp_path / "p.json"
     _prime(cache, hpa=1009.4, age_s=600)

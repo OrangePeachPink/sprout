@@ -26,22 +26,24 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from collections import namedtuple
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
-from channel_identity import (  # noqa: E402  (#1454 — the one S1-seam join)
+from tools.analytics.channel_identity import (  # noqa: E402  (#1454 — the one S1-seam join)
     build_plant_index,
     resolve_plant_id,
 )
-from device_registry import load_registry  # noqa: E402
-from segment_classifier import KINDS, classify, passes, segments  # noqa: E402
-from tier_store import CAP_US  # noqa: E402
+from tools.analytics.device_registry import load_registry  # noqa: E402
+from tools.analytics.segment_classifier import (  # noqa: E402
+    KINDS,
+    classify,
+    passes,
+    segments,
+)
+from tools.analytics.tier_store import CAP_US  # noqa: E402
 
 _REPO = _HERE.parents[1]
 TIER_RAW = _REPO / "reports" / "tier" / "raw"

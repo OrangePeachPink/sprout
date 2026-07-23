@@ -8,14 +8,12 @@ untouched.
 
 from __future__ import annotations
 
-import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context
-from device_registry import Device, Registry
-from parse_v1 import parse_files
+from tools.analytics.dashboard import build_context
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.parse_v1 import parse_files
 
 _HEADER = (
     "# fw=0.8.0  git=t  run=casing\n"
@@ -108,7 +106,7 @@ def test_band_ui_is_the_capitalized_mood_one_vocabulary() -> None:
     # #1234 (Design-QA ruling, ADR-0035): the rendered band word IS the mood word,
     # capitalized, DERIVED from mood-band-map (never a second authored copy — #638).
     # Same word, same meaning as the Home; the fw level stays the wire layer.
-    from dashboard import BAND_UI, MOOD_BY_BAND
+    from tools.analytics.dashboard import BAND_UI, MOOD_BY_BAND
 
     assert MOOD_BY_BAND, "the design map must be present in a full checkout"
     for fw, (word, _color) in BAND_UI.items():

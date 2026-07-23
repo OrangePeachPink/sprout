@@ -8,14 +8,11 @@ from __future__ import annotations
 
 import os
 import shutil
-import sys
 import tempfile
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-import serial_lock  # noqa: E402
+from tools.capture import serial_lock  # noqa: E402
 
 _FAILS: list[str] = []
 # A pid no live process will plausibly have — the "crashed owner" stand-in.

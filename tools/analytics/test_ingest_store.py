@@ -7,12 +7,8 @@ and the boundary never rewrites - only appends or drops.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from ingest_store import Store
-from parse_v1 import Reading
+from tools.analytics.ingest_store import Store
+from tools.analytics.parse_v1 import Reading
 
 
 def _reading(

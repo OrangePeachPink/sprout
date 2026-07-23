@@ -45,25 +45,22 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
 from collections import namedtuple  # noqa: E402
 
-from channel_identity import (  # noqa: E402  (#1454 — the one S1-seam join)
+from tools.analytics.channel_identity import (  # noqa: E402  (#1454 — the one S1-seam join)
     build_plant_index,
     resolve_plant_id,
 )
-from device_registry import load_registry  # noqa: E402
-from segment_classifier import classify, passes  # noqa: E402
-from segment_history import _journal_events  # noqa: E402
-from tier_rollup import read_events  # noqa: E402
+from tools.analytics.device_registry import load_registry  # noqa: E402
+from tools.analytics.segment_classifier import classify, passes  # noqa: E402
+from tools.analytics.segment_history import _journal_events  # noqa: E402
+from tools.analytics.tier_rollup import read_events  # noqa: E402
 
 # A LOCAL row type carrying `band` — candidate 1's bar is a band-per-day, and the
 # shared `segment_history.TierRow` deliberately carries only what the classifier
@@ -98,7 +95,8 @@ def read_series(root: Path | None = None, registry=None) -> dict:
     store contract §3). Resolution is the static registry, the live fleet truth on
     this host; unmapped rows are C2's readout job, not this surface's."""
     import duckdb
-    from segment_history import TIER_RAW
+
+    from tools.analytics.segment_history import TIER_RAW
 
     root = Path(root) if root is not None else TIER_RAW
     registry = registry if registry is not None else load_registry()
@@ -328,7 +326,7 @@ def tier_state(root: Path | None = None) -> str:
     returns ``{}`` for both, so "the store is dark" and "honestly nothing" rendered the
     same — the exact falsehood #1435 is (Home lit, /trial says "no readings").
     """
-    from segment_history import TIER_RAW
+    from tools.analytics.segment_history import TIER_RAW
 
     r = Path(root) if root is not None else TIER_RAW
     return "ready" if any(r.glob("date=*/device=*/*.parquet")) else "empty"

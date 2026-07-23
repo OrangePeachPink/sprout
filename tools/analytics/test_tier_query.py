@@ -7,7 +7,8 @@ DuckDB view over the glob, so date/device come from the path (hive-partitioning)
 from pathlib import Path
 
 import duckdb
-import tier_query
+
+from tools.analytics import tier_query
 
 
 def _mk_store(tmp_path: Path) -> str:

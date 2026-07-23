@@ -3,7 +3,7 @@
 Runs under `just test-dx`. The last two assert against the REAL tree: the claim is
 about this repository, and a guard proven only on fixtures proves nothing here."""
 
-import path_length_guard as g
+from tools.dx import path_length_guard as g
 
 
 def test_over_limit_flags_and_sorts_longest_first() -> None:

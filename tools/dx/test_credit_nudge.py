@@ -4,7 +4,7 @@ Runs under `just test-dx` (pytest tools/dx/). Import style mirrors
 test_link_check.py (tools/dx on sys.path). A fork PR can't be exercised in CI,
 so these tests are where the fire/silent contract earns its confidence."""
 
-from credit_nudge import (
+from tools.dx.credit_nudge import (
     evaluate,
     has_lane_trailer,
     is_maintainer_identity,

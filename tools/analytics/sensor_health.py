@@ -23,7 +23,7 @@ import statistics
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 
-from parse_v1 import IMPLAUSIBLE_WET_FLOOR
+from tools.analytics.parse_v1 import IMPLAUSIBLE_WET_FLOOR
 
 # The device self-declares OK on a healthy read; anything else is a fault it flagged
 # (e.g. SENSOR_FAULT). Empty/absent is treated as OK — a missing flag is not a fault.

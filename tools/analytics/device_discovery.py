@@ -43,12 +43,9 @@ already gates on a channel declaration).
 
 from __future__ import annotations
 
-import sys
 from collections.abc import Iterable
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import board_class, canonical_channel
+from tools.analytics.parse_v1 import board_class, canonical_channel
 
 
 def discover_undeclared(

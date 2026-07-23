@@ -6,14 +6,12 @@ small light image, never upscales, and takes bytes or a path.
 from __future__ import annotations
 
 import io
-import sys
 from pathlib import Path
 
 import pytest
 from PIL import Image
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from photo_intake import (
+from tools.analytics.photo_intake import (
     MAX_EDGE,
     MAX_UPLOAD_BYTES,
     ingest_photo,

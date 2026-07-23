@@ -19,16 +19,13 @@ second copy. ``tier_ingest`` is lazy so DuckDB stays off the dashboard startup p
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
 # _TIER_ROOT is the ratified store layout (single source); consume it, don't copy it.
-from tier_store import _TIER_ROOT  # noqa: E402
+from tools.analytics.tier_store import _TIER_ROOT  # noqa: E402
 
 _MARKER = ".last-compact"  # under the gitignored tier root; regenerable like the store
 
@@ -86,7 +83,9 @@ def maybe_ingest_and_compact(
 
     try:
         if _ingest is None or _compact is None:
-            import tier_ingest  # lazy: keeps DuckDB off the dashboard startup path
+            from tools.analytics import (
+                tier_ingest,  # lazy: keeps DuckDB off the dashboard startup path
+            )
 
             _ingest = _ingest or tier_ingest.ingest_once
             _compact = _compact or tier_ingest.compact

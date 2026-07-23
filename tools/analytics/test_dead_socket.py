@@ -11,10 +11,8 @@ from __future__ import annotations
 
 import io
 import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from serve import DashboardHandler
+from tools.analytics.serve import DashboardHandler
 
 
 class _FakeWfile:

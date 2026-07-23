@@ -38,9 +38,7 @@ _REPO = _HERE.parents[1]
 _DOCS_EXP = _REPO / "docs" / "experiments"
 _STORE = _REPO / "reports" / "bench_events.duckdb"
 
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-from parse_v1 import DEFAULT_CAL_BOUNDS  # noqa: E402
+from tools.analytics.parse_v1 import DEFAULT_CAL_BOUNDS  # noqa: E402
 
 # firmware band ladder, dry -> wet (7 bands from the 6 descending cal boundaries).
 _BANDS_DRY_TO_WET = (

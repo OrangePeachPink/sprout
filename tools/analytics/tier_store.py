@@ -27,11 +27,11 @@ from datetime import date as date_t
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
+from tools.analytics.parse_v1 import (
+    parse_file,
+)
 
-from parse_v1 import parse_file  # noqa: E402  (the ONE parse boundary, ADR-0021)
+_HERE = Path(__file__).resolve().parent
 
 _REPO = _HERE.parents[1]
 _TIER_ROOT = _REPO / "reports" / "tier" / "raw"
@@ -257,7 +257,7 @@ def registry_assignments(registry_path: str | None = None) -> list[tuple]:
     join must be temporal, or the never-stitch guarantee is inverted rather than
     upheld. ``start_ts=None`` covers grandfathered history; ``end_ts=None`` is
     still-open."""
-    from registry_model import load_model, load_registry_model
+    from tools.analytics.registry_model import load_model, load_registry_model
 
     model = load_model(registry_path) if registry_path else load_registry_model()
     return [
@@ -272,7 +272,7 @@ def registry_plant_map(registry_path: str | None = None) -> dict:
     **Not for resolving stored readings** — use ``registry_assignments`` and join on
     the interval (§3). Kept for callers that legitimately ask "what is on this channel
     right now" (a live card, a fleet glance), where today's answer IS the question."""
-    from registry_model import load_model, load_registry_model
+    from tools.analytics.registry_model import load_model, load_registry_model
 
     model = load_model(registry_path) if registry_path else load_registry_model()
     return {(a.device_id, a.channel): a.plant_id for a in model.open_assignments()}

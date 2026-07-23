@@ -10,11 +10,7 @@ and ``None -> None``.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import (
+from tools.analytics.parse_v1 import (
     BANDS_DRY_TO_WET,
     BANDS_WET_TO_DRY,
     DEFAULT_CAL_BOUNDS,

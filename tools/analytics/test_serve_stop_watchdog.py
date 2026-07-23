@@ -37,8 +37,10 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
-from serve import _SHUTDOWN_DEADLINE_S, _arm_shutdown_watchdog  # noqa: E402, F401
+from tools.analytics.serve import (  # noqa: E402, F401
+    _SHUTDOWN_DEADLINE_S,
+    _arm_shutdown_watchdog,
+)
 
 # Short enough to keep the suite quick, long enough that a slow CI runner starting a
 # Python process cannot be mistaken for the watchdog failing to fire.
@@ -66,8 +68,7 @@ def _run(source: str) -> subprocess.Popen:
 def _armed(deadline: float) -> str:
     return f"""
     import sys
-    sys.path.insert(0, {str(HERE)!r})
-    from serve import _arm_shutdown_watchdog
+    from tools.analytics.serve import _arm_shutdown_watchdog
     _arm_shutdown_watchdog({deadline})
     {_BLOCK}
     """

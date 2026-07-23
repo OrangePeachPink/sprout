@@ -15,16 +15,12 @@ in the direction the legacy path already takes. Decision list is on #1335.
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-from identity import build_projection
-from registry_model import (
+from tools.analytics.identity import build_projection
+from tools.analytics.registry_model import (
     Assignment,
     Plant,
     RegistryModel,

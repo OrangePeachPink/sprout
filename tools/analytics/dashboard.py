@@ -32,13 +32,11 @@ from datetime import timedelta
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
-from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
+from tools.analytics.parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
     LogData,
 )
-from source_adapter import (  # noqa: E402  (the source-adapter seam, #277)
+from tools.analytics.source_adapter import (  # noqa: E402  (the source-adapter seam, #277)
     TetheredAdapter,
 )
 
@@ -57,7 +55,7 @@ _REPO = _HERE.parents[1]
 # the surfaces are told, moved out of this delivery module whole. Re-exported here
 # so the 36 test files and 138 call sites that pin this path are unaffected;
 # card_context is the definition, these are names.
-from card_context import (  # noqa: E402,F401  (layer-3 composition)
+from tools.analytics.card_context import (  # noqa: E402,F401  (layer-3 composition)
     BAND_UI,
     FORECAST_BOUND_MIN_READINGS,
     FORECAST_INPUT_H,
@@ -79,7 +77,10 @@ from card_context import (  # noqa: E402,F401  (layer-3 composition)
     build_context,
     build_env_context,
 )
-from design_assets import FONTS_CSS, TOKENS_CSS  # noqa: E402  (layer-0 leaf)
+from tools.analytics.design_assets import (  # noqa: E402  (layer-0 leaf)
+    FONTS_CSS,
+    TOKENS_CSS,
+)
 
 TEMPLATE = _HERE / "dashboard_template.html"
 # #875: the Home surface (the Sprout Voice UI's landing page). A pure shell —
@@ -95,7 +96,10 @@ CDN_CHARTJS = "https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js
 # #1336 (ADR-0038 §5.1): the data paths live in the layer-0 `host_paths` leaf now —
 # serve.py imported THIS module for exactly these two constants. Re-exported here so
 # dashboard's own readers are unaffected; the leaf is the definition, this is a name.
-from host_paths import ARCHIVE_DIR, LOGS_DIR  # noqa: E402  (layer-0 leaf)
+from tools.analytics.host_paths import (  # noqa: E402  (layer-0 leaf)
+    ARCHIVE_DIR,
+    LOGS_DIR,
+)
 
 # Time-range windows (E8). None = all history.
 RANGE_HOURS: dict[str, float | None] = {

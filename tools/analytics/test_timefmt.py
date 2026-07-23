@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import timefmt
+from tools.analytics import timefmt
 
 _SUMMER = datetime(2026, 6, 28, 18, 14, tzinfo=timezone.utc)  # 13:14 CDT
 _WINTER = datetime(2026, 1, 15, 18, 14, tzinfo=timezone.utc)  # 12:14 CST

@@ -9,12 +9,10 @@ earn their space) is the companion doc, docs/analysis/env-value-verdict.md.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context
-from parse_v1 import parse_files
+from tools.analytics.dashboard import build_context
+from tools.analytics.parse_v1 import parse_files
 
 _HEADER = (
     "# fw=0.8.0  git=test123  run=envtest\n"

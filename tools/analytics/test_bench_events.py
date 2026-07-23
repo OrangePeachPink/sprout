@@ -8,11 +8,9 @@ annotated view are all deterministic and decoupled from the live bench evidence.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import bench_events as be
+from tools.analytics import bench_events as be
 
 # A two-plant survey: P01 has clean last/median raw; P08 has pre/post/delta phases;
 # P99 is narrative-only (events, no per-probe raw) — must yield events, no readings.

@@ -7,7 +7,7 @@ assigned layer 0."""
 
 from pathlib import Path
 
-import import_layer_guard as g
+from tools.dx import import_layer_guard as g
 
 
 def _tree(tmp_path: Path, **modules: str) -> Path:

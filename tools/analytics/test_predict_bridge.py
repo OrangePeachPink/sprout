@@ -3,13 +3,11 @@ caveats travelling, and the two-registries resolution with its provenance."""
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from device_registry import Device, Registry
-from predict_bridge import (
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.predict_bridge import (
     COLUMNS,
     build_views,
     current_arc,
@@ -17,7 +15,7 @@ from predict_bridge import (
     resolve_identity,
     segment_rows,
 )
-from segment_history import TierRow
+from tools.analytics.segment_history import TierRow
 
 T0 = datetime(2026, 7, 1, tzinfo=timezone.utc)
 
@@ -168,7 +166,7 @@ def test_temporal_is_rejected_when_it_maps_a_fleet_the_tier_never_saw() -> None:
     # committed EXAMPLE on a host with no local instance and returns plausible pairs
     # for devices that never logged a row. Non-emptiness is NOT proof — preferring it
     # would stamp `temporal` on rows the static registry actually mapped.
-    import predict_bridge
+    from tools.analytics import predict_bridge
 
     reg = Registry(
         devices=[
@@ -186,7 +184,7 @@ def test_temporal_is_rejected_when_it_maps_a_fleet_the_tier_never_saw() -> None:
         if hasattr(predict_bridge, "registry_plant_map")
         else None
     )
-    import tier_store
+    from tools.analytics import tier_store
 
     tier_store.registry_plant_map = lambda *a, **k: fake_temporal
     try:

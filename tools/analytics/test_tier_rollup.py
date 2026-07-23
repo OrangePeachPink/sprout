@@ -3,14 +3,12 @@ quality carried never averaged, events at exact timestamps, labeled reads."""
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from tier_rollup import (
+from tools.analytics.tier_rollup import (
     build_events,
     build_rollups,
     pick_tier,

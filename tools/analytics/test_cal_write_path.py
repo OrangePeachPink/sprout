@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from cal_receipt import CONFIRMED, PUSHED, STORED, evaluate
-from registry_model import Profile, RegistryModel, apply_operations
+from tools.analytics.cal_receipt import CONFIRMED, PUSHED, STORED, evaluate
+from tools.analytics.registry_model import Profile, RegistryModel, apply_operations
 
 AIR, WATER = 3137, 1052  # the classic's measured envelope
 

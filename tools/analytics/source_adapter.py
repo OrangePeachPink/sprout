@@ -34,7 +34,6 @@ construct it.
 
 from __future__ import annotations
 
-import sys
 import threading
 import time
 import urllib.error
@@ -44,13 +43,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Protocol
 
-from ingest_store import Store
-from parse_v1 import LogData, SegmentHeader, parse_files, reading_from_row
+from tools.analytics.ingest_store import Store
+from tools.analytics.parse_v1 import (
+    LogData,
+    SegmentHeader,
+    parse_files,
+    reading_from_row,
+)
 
 _LOGGER_DIR = Path(__file__).resolve().parent.parent / "logger"
-if str(_LOGGER_DIR) not in sys.path:
-    sys.path.insert(0, str(_LOGGER_DIR))
-from plants_logger import parse_device_line, stamp_row  # noqa: E402
+from tools.logger.plants_logger import parse_device_line, stamp_row  # noqa: E402
 
 # This adapter's own identity for stamp_row()'s logger_version (#277) - never
 # LOGGER_VERSION (plants_logger.py's own identity): a WiFi-polled row was not

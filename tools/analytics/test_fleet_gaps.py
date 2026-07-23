@@ -10,12 +10,9 @@ that counted a shared outage against the C5 would inflate its dropouts and could
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fleet_gaps import partition_shared, report, summarize, sweep_gaps
+from tools.analytics.fleet_gaps import partition_shared, report, summarize, sweep_gaps
 
 T0 = datetime(2026, 7, 8, tzinfo=timezone.utc)
 

@@ -18,12 +18,10 @@ racing ones.
 
 from __future__ import annotations
 
-import sys
 import threading
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_cache import ParseCache
+from tools.analytics.parse_cache import ParseCache
 
 _HDR = (
     "# schema_version=4  fw=0.8.0  git=t  device_id=dev  session_id=s1\n"

@@ -7,7 +7,7 @@ binary, and that the tree is clean so the guard lands green."""
 
 from pathlib import Path
 
-import nul_byte_guard as g
+from tools.dx import nul_byte_guard as g
 
 
 def _write(tmp_path: Path, name: str, data: bytes) -> str:

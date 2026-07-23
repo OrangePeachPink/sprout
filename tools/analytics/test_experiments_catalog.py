@@ -8,14 +8,11 @@ from __future__ import annotations
 
 import json
 import shutil
-import sys
 import tempfile
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-import experiments_catalog as cat  # noqa: E402
+from tools.analytics import experiments_catalog as cat  # noqa: E402
 
 
 def _mk(root: Path, name: str, manifest: dict | None) -> Path:
@@ -145,7 +142,7 @@ def _captured(root: Path, eid: str, started: str) -> None:
 
 
 def test_a_planned_record_reaches_the_catalog(tmp_path: Path) -> None:
-    from experiments_catalog import load_planned
+    from tools.analytics.experiments_catalog import load_planned
 
     docs, exp = tmp_path / "docs", tmp_path / "exp"
     _planned(docs, "plan-a", saved_at="2026-07-19T10:00:00Z")
@@ -158,7 +155,7 @@ def test_a_planned_record_reaches_the_catalog(tmp_path: Path) -> None:
 
 
 def test_a_landed_capture_supersedes_its_own_plan(tmp_path: Path) -> None:
-    from experiments_catalog import load_planned
+    from tools.analytics.experiments_catalog import load_planned
 
     docs, exp = tmp_path / "docs", tmp_path / "exp"
     _planned(docs, "run-1")
@@ -168,7 +165,7 @@ def test_a_landed_capture_supersedes_its_own_plan(tmp_path: Path) -> None:
 
 
 def test_only_planned_status_qualifies_and_junk_never_breaks_it(tmp_path: Path) -> None:
-    from experiments_catalog import load_planned
+    from tools.analytics.experiments_catalog import load_planned
 
     docs, exp = tmp_path / "docs", tmp_path / "exp"
     _planned(docs, "plan-ok")
@@ -182,7 +179,7 @@ def test_only_planned_status_qualifies_and_junk_never_breaks_it(tmp_path: Path) 
 
 
 def test_combined_orders_plans_by_when_they_were_written(tmp_path: Path) -> None:
-    from experiments_catalog import load_combined
+    from tools.analytics.experiments_catalog import load_combined
 
     docs, exp, bench = tmp_path / "docs", tmp_path / "exp", tmp_path / "bench"
     _captured(exp, "old-run", "2026-07-01T00:00:00Z")
@@ -193,7 +190,7 @@ def test_combined_orders_plans_by_when_they_were_written(tmp_path: Path) -> None
 
 
 def test_the_planned_card_says_planned_and_shows_no_fake_figures() -> None:
-    from experiments_catalog import planned_card
+    from tools.analytics.experiments_catalog import planned_card
 
     html_out = planned_card(
         {

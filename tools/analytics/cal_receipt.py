@@ -38,13 +38,10 @@ rather than discovered later: ``confirmed`` is unreachable for a serial-only boa
 
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
 STORED = "stored"
 PUSHED = "pushed"

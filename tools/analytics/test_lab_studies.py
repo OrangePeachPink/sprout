@@ -7,14 +7,11 @@ python tools/analytics/test_lab_studies.py
 from __future__ import annotations
 
 import shutil
-import sys
 import tempfile
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-import lab_studies  # noqa: E402
+from tools.analytics import lab_studies  # noqa: E402
 
 
 def test_missing_and_guards() -> None:

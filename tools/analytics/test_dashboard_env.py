@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import (
+from tools.analytics.dashboard import (
     _night_bands,
     _weather_hourly_join,
     build_env_context,
@@ -118,7 +116,7 @@ def test_weather_hourly_join_none_time_skipped() -> None:
 def test_build_env_context_no_location(tmp_path: Path) -> None:
     """No location config → available=False (offline-first, R9)."""
     # Temporarily point env_solar's _LOCATION to a nonexistent file.
-    import env_solar
+    from tools.analytics import env_solar
 
     orig = env_solar._LOCATION
     env_solar._LOCATION = tmp_path / "no_such_file.json"
@@ -134,7 +132,7 @@ def test_build_env_context_with_location(tmp_path: Path) -> None:
     """With a valid location config, solar layer populates night_bands + sun_events."""
     import json
 
-    import env_solar
+    from tools.analytics import env_solar
 
     loc = {"latitude": 38.9, "longitude": -77.0, "tz_offset_hours": -4.0}
     loc_file = tmp_path / "location.local.json"

@@ -17,24 +17,27 @@ from __future__ import annotations
 import argparse
 import html
 import json
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-_REPO = _HERE.parents[1]
-_EXPERIMENTS = _REPO / "experiments"
-_TEMPLATE = _HERE / "lab_template.html"
-
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-from bench_packages import (  # noqa: E402  (landed bench packages, #444)
+from tools.analytics.bench_packages import (
     bench_card,
     load_bench_packages,
     soft_wrap,
 )
-from design_assets import FONTS_CSS, TOKENS_CSS  # noqa: E402  (layer-0 leaf)
-from timefmt import local_first_system  # noqa: E402  (local-first lab labels, #328)
+from tools.analytics.design_assets import (
+    FONTS_CSS,
+    TOKENS_CSS,
+)
+from tools.analytics.timefmt import (
+    local_first_system,
+)
+
+_HERE = Path(__file__).resolve().parent
+_REPO = _HERE.parents[1]
+_TEMPLATE = _HERE / "lab_template.html"
+
+_EXPERIMENTS = _REPO / "experiments"
 
 
 def load_catalog(experiments_dir: str | Path | None = None) -> list[dict]:
@@ -91,7 +94,7 @@ def load_planned(
     showing both would double-count one experiment. Nothing is deleted on disk; this
     is a read-time view.
     """
-    from lab_notes import _DOCS_EXPERIMENTS  # the sidecar home
+    from tools.analytics.lab_notes import _DOCS_EXPERIMENTS  # the sidecar home
 
     root = Path(docs_dir) if docs_dir else _DOCS_EXPERIMENTS
     if not root.is_dir():

@@ -10,14 +10,17 @@ look like success).
 from __future__ import annotations
 
 import os
-import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from collection_control import CollectionError, start_all, status_all, stop_all
-from fleet_control import FleetController, FleetError, count_answering
-from fleet_lock import REFUSED_EXIT
+from tools.logger.collection_control import (
+    CollectionError,
+    start_all,
+    status_all,
+    stop_all,
+)
+from tools.logger.fleet_control import FleetController, FleetError, count_answering
+from tools.logger.fleet_lock import REFUSED_EXIT
 
 # A tiny long-running stand-in for fleet_logger.py, so controller tests spawn a
 # real process without polling anything.
@@ -194,8 +197,8 @@ def test_worker_stderr_goes_to_a_capped_log_not_devnull(tmp_path: Path) -> None:
 def test_active_served_excludes_retired_devices(monkeypatch) -> None:
     # #1007: a retired board is off BY CHOICE — never polled, never in `configured`,
     # never counted as 'not answering' (grill Q2).
-    import fleet_control
-    from device_registry import Device, Registry
+    from tools.analytics.device_registry import Device, Registry
+    from tools.logger import fleet_control
 
     reg = Registry(
         devices=[
@@ -203,7 +206,9 @@ def test_active_served_excludes_retired_devices(monkeypatch) -> None:
             Device("retired1", "esp32", None, base_url="http://b", retired=True),
         ]
     )
-    monkeypatch.setattr("device_registry.load_registry", lambda *a, **k: reg)
+    monkeypatch.setattr(
+        "tools.analytics.device_registry.load_registry", lambda *a, **k: reg
+    )
     assert fleet_control._served_device_count() == 1  # only the active board
     assert set(fleet_control._served_map()) == {"active1"}  # retired is not polled
 

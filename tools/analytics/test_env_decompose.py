@@ -7,11 +7,7 @@ hypotheses as NOT separable — never imply a sun-driven effect the data can't s
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import env_decompose as ed
+from tools.analytics import env_decompose as ed
 
 # 12 h of steady drying: raw climbs +20/h from 1500 (higher raw = drier).
 _DRYING = [(float(h), 1500.0 + 20.0 * h) for h in range(13)]

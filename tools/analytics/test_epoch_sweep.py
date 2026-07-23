@@ -4,12 +4,10 @@ the classification-order property that keeps bench evidence out of the delete se
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from device_registry import Device, Registry
-from epoch_sweep import (
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.epoch_sweep import (
     DELETE_UNWIRED,
     KEEP_ADMISSIBLE,
     KEEP_LAB_RECORD,

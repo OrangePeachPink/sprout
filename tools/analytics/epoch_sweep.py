@@ -41,15 +41,14 @@ import argparse
 import json
 import re
 import shutil
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
+from tools.analytics.parse_v1 import (
+    parse_file,
+)
 
-from parse_v1 import parse_file  # noqa: E402  (the ONE parse boundary, ADR-0021)
+_HERE = Path(__file__).resolve().parent
 
 # Ratified 2026-07-06 (maintainer-confirmed after the commissioning-record untangle).
 PRODUCTION_EPOCH = datetime(2026, 7, 6, 0, 0, 6, tzinfo=timezone.utc)
@@ -470,8 +469,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--approved", action="store_true")
     args = ap.parse_args(argv)
 
-    from device_registry import load_registry
-    from registry_model import load_model
+    from tools.analytics.device_registry import load_registry
+    from tools.analytics.registry_model import load_model
 
     registry_path = Path(args.registry)
     registry = load_registry(str(registry_path))

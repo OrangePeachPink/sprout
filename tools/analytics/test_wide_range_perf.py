@@ -7,13 +7,14 @@ back days.
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import FORECAST_BOUND_MIN_READINGS, FORECAST_INPUT_H, build_context
-from parse_v1 import LogData, Reading
+from tools.analytics.dashboard import (
+    FORECAST_BOUND_MIN_READINGS,
+    FORECAST_INPUT_H,
+    build_context,
+)
+from tools.analytics.parse_v1 import LogData, Reading
 
 _T0 = datetime(2026, 6, 1, tzinfo=timezone.utc)
 

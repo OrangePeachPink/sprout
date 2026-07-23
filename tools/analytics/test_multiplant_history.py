@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from device_registry import Device, Registry
-from multiplant_history import (
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.multiplant_history import (
     PlantRow,
     build_payload,
     daily_rows,
@@ -96,7 +94,7 @@ def test_every_live_band_resolves_to_a_mood(tmp_path: Path) -> None:
 def test_tier_state_empty_when_no_parquet(tmp_path: Path) -> None:
     """An empty store root is "empty" — the launcher has not filled it yet (#1466).
     A surface must say "still gathering", never "no readings"."""
-    from multiplant_history import tier_state
+    from tools.analytics.multiplant_history import tier_state
 
     assert tier_state(tmp_path) == "empty"
 
@@ -115,8 +113,8 @@ def _fill_store(root: Path, rows: list[tuple[str, int]]) -> None:
     import pytest
 
     pytest.importorskip("duckdb")
-    from parse_v1 import Reading
-    from tier_store import build_partition
+    from tools.analytics.parse_v1 import Reading
+    from tools.analytics.tier_store import build_partition
 
     tagged = [
         (
@@ -154,7 +152,7 @@ def test_tier_state_ready_and_both_generations_resolve(tmp_path: Path) -> None:
     import pytest
 
     pytest.importorskip("duckdb")
-    from multiplant_history import tier_state
+    from tools.analytics.multiplant_history import tier_state
 
     root = tmp_path / "tier"
     _fill_store(root, [("s1", 1500), ("ch2", 1520)])  # both token generations

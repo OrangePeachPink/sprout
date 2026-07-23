@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from identity_label_guard import PATTERN, SENTINEL, find_hits, main
+from tools.dx.identity_label_guard import PATTERN, SENTINEL, find_hits, main
 
 
 def _hit(s: str) -> bool:

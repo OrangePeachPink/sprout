@@ -10,11 +10,9 @@ configured-vs-answering counts #812 already shipped and are unchanged here.)
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import TEMPLATE
+from tools.analytics.dashboard import TEMPLATE
 
 _H = TEMPLATE.read_text(encoding="utf-8")
 _MON = _H[_H.index('id="monitorCard"') : _H.index('id="captureCard"')]

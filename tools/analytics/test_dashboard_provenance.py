@@ -9,12 +9,10 @@ order. This covers the fix: pick by each segment's real ``log_start_utc``
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context
-from parse_v1 import parse_files
+from tools.analytics.dashboard import build_context
+from tools.analytics.parse_v1 import parse_files
 
 _COLS = (
     "record_type,timestamp_utc,timestamp_local,session_id,"

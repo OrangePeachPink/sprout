@@ -6,7 +6,7 @@ guard whose green means nothing here."""
 
 from pathlib import Path
 
-import action_pin_guard as g
+from tools.dx import action_pin_guard as g
 
 
 def _wf(tmp_path: Path, body: str) -> Path:

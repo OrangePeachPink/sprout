@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
@@ -27,9 +26,7 @@ _REPO = _HERE.parents[1]
 _EXPERIMENTS = _REPO / "experiments"
 _STORE = _REPO / "reports" / "plants.duckdb"
 
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-from parse_v1 import parse_files  # noqa: E402
+from tools.analytics.parse_v1 import parse_files  # noqa: E402
 
 _COLS = [
     "experiment_id",

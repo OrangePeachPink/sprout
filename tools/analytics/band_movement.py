@@ -43,7 +43,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass, field
 
-from parse_v1 import BANDS_DRY_TO_WET
+from tools.analytics.parse_v1 import BANDS_DRY_TO_WET
 
 # Higher index = wetter (air-dry=0 .. submerged=6). The one ordering, from the
 # parse boundary (the leaf), so this module never re-defines the band vocabulary.

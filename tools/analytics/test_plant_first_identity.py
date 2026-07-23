@@ -8,13 +8,11 @@ key. This pins the fields build_context exposes for DesignQA's template half.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context
-from device_registry import Device, Registry
-from parse_v1 import parse_files
+from tools.analytics.dashboard import build_context
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.parse_v1 import parse_files
 
 _HEADER = (
     "# fw=0.8.0  git=t  run=identity\n"
@@ -115,7 +113,7 @@ def test_device_group_carries_the_side(tmp_path: Path) -> None:
 def test_registry_parses_side_and_plant_meta(tmp_path: Path) -> None:
     import json
 
-    from device_registry import load_registry
+    from tools.analytics.device_registry import load_registry
 
     p = tmp_path / "devices.json"
     p.write_text(

@@ -7,11 +7,7 @@ platform query is unavailable or fails.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import sprout_processes as sp
+from tools.analytics import sprout_processes as sp
 
 
 def _row(pid: int, command: str, ppid: int | None = None) -> dict:

@@ -7,17 +7,14 @@ before, tags honestly None.
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import CONTEXT_SOURCE_CLASS, context_class, parse_file
+from tools.analytics.parse_v1 import CONTEXT_SOURCE_CLASS, context_class, parse_file
 
 _LOGGER = Path(__file__).resolve().parents[1] / "logger"
-sys.path.insert(0, str(_LOGGER))
-from context_fill import ContextFiller  # noqa: E402
-from plants_logger import RotatingCsv, parse_device_line  # noqa: E402
+from tools.logger.context_fill import ContextFiller  # noqa: E402
+from tools.logger.plants_logger import RotatingCsv, parse_device_line  # noqa: E402
 
 _UTC_0 = datetime(2026, 7, 3, 12, 0, 0, tzinfo=timezone.utc)
 

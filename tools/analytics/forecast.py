@@ -34,10 +34,12 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
-from parse_v1 import DEFAULT_CAL_BOUNDS, LogData, parse_files  # noqa: E402
+from tools.analytics.parse_v1 import (  # noqa: E402
+    DEFAULT_CAL_BOUNDS,
+    LogData,
+    parse_files,
+)
 
 # A trend counts as real drying/wetting only if the slope is both statistically
 # significant (|slope| > Z * std-error) and above a practical floor (so a

@@ -3,13 +3,10 @@ A (the 2 h lead-in pad), absent-safe, and honest when it can't serve what was as
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from cycle_range import LEAD_IN_H, cycle_window, fleet_pass_anchors
-from segment_history import TierRow
+from tools.analytics.cycle_range import LEAD_IN_H, cycle_window, fleet_pass_anchors
+from tools.analytics.segment_history import TierRow
 
 T0 = datetime(2026, 7, 1, tzinfo=timezone.utc)
 

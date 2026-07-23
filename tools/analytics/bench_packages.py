@@ -21,19 +21,22 @@ from __future__ import annotations
 import html
 import json
 import re
-import sys
 from pathlib import Path
+
+from tools.analytics.design_assets import (
+    FONTS_CSS,
+    TOKENS_CSS,
+)
+from tools.analytics.lab_notes import (
+    load_notes,
+)
 
 _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
-_DATA_ROOT = _REPO / "docs" / "experiments" / "data"
 _DETAIL_TEMPLATE = _HERE / "lab_bench_detail_template.html"
-_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")  # no path traversal from the URL
 
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-from design_assets import FONTS_CSS, TOKENS_CSS  # noqa: E402  (layer-0 leaf)
-from lab_notes import load_notes  # noqa: E402  (back-fill notes on packages, #450 s3)
+_DATA_ROOT = _REPO / "docs" / "experiments" / "data"
+_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")  # no path traversal from the URL
 
 
 def _title(experiment_id: str) -> str:

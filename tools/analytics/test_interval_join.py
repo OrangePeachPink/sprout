@@ -5,16 +5,18 @@ sampling gap (two segments, and no valid_for_trend window spanning the hole)."""
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import duckdb
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from segment_classifier import segments, valid_for_trend, valid_trend_runs
-from segment_history import TierRow
-from tier_store import (
+from tools.analytics.segment_classifier import (
+    segments,
+    valid_for_trend,
+    valid_trend_runs,
+)
+from tools.analytics.segment_history import TierRow
+from tools.analytics.tier_store import (
     hours_per_band_duckdb,
     hours_per_band_truth,
     resolve_plant_at,

@@ -88,14 +88,27 @@ class Finding:
 
 
 def internal_imports(src: str, ours: set[str]) -> set[str]:
-    """The modules of ours this source imports (flat names — sys.path surgery means
-    everything is a bare stem today)."""
+    """The modules of ours this source imports. Post-flip (#1528 / ADR-0038 §5.4) the
+    canonical form is the package path — ``from tools.analytics.X import …`` or
+    ``from tools.analytics import X`` — so both are mapped back to the stem the layer
+    table keys on. The legacy bare-stem form is still recognized so the guard keeps
+    judging any straggler (and its own tests' fixtures) rather than going blind."""
     found: set[str] = set()
     for node in ast.walk(ast.parse(src)):
         if isinstance(node, ast.Import):
-            found |= {a.name.split(".")[0] for a in node.names}
+            for a in node.names:
+                parts = a.name.split(".")
+                found.add(parts[-1] if parts[0] == "tools" else parts[0])
         elif isinstance(node, ast.ImportFrom) and node.module:
-            found.add(node.module.split(".")[0])
+            parts = node.module.split(".")
+            if parts[0] == "tools":
+                if len(parts) > 2:
+                    found.add(parts[-1])  # from tools.<pkg>.X import names
+                else:
+                    # from tools.<pkg> import X, Y — the names ARE the modules
+                    found |= {a.name for a in node.names}
+            else:
+                found.add(parts[0])
     return found & ours
 
 

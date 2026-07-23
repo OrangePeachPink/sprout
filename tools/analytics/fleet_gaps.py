@@ -31,16 +31,15 @@ change + capture); this is prepped to that line.
 from __future__ import annotations
 
 import argparse
-import sys
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
+from tools.analytics.card_context import (
+    GAP_THRESHOLD_S,
+)
 
-from card_context import GAP_THRESHOLD_S  # noqa: E402  (the one gap threshold, #1431)
+_HERE = Path(__file__).resolve().parent
 
 # How close two boards' gap edges must be to count as the SAME outage. A shared host
 # outage stops every board's logging at once; independent WiFi dropouts do not line up.
@@ -161,11 +160,11 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="#1431 C5 dropout comparison")
     ap.add_argument("inputs", nargs="*", help="fleet CSVs (default: gather_inputs())")
     args = ap.parse_args(argv)
-    from parse_v1 import parse_files
+    from tools.analytics.parse_v1 import parse_files
 
     inputs = args.inputs
     if not inputs:
-        from dashboard import gather_inputs
+        from tools.analytics.dashboard import gather_inputs
 
         inputs = gather_inputs()
     data = parse_files([str(p) for p in inputs])

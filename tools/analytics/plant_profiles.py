@@ -24,12 +24,9 @@ channel's raw is distrusted as a proxy for the plant's true water state.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
 _REPO = _HERE.parents[1]
 _LOCAL = _REPO / "config" / "plant_profiles.local.json"

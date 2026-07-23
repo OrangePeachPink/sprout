@@ -8,13 +8,11 @@ silence still fails closed (#617). So the bench-calibrated classic stops renderi
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context
-from device_registry import Device, Registry
-from parse_v1 import parse_files
+from tools.analytics.dashboard import build_context
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.parse_v1 import parse_files
 
 _CAL_LINE = (
     "# cal_ch s1: bounds=3123,2140,1830,1520,1150,969 "

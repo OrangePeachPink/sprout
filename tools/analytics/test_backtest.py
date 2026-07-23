@@ -3,13 +3,11 @@ abstain/unresolved accounting, exact scoring, and the baseline slope predictor."
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from backtest import actual_waterings, backtest, baseline_predictor
-from segment_history import TierRow
+from tools.analytics.backtest import actual_waterings, backtest, baseline_predictor
+from tools.analytics.segment_history import TierRow
 
 T0 = datetime(2026, 7, 1, tzinfo=timezone.utc)
 

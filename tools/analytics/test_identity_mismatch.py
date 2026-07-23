@@ -6,12 +6,9 @@ a mismatch; serve.py surfaces it (dashboard notice + /fleet/status count).
 
 from __future__ import annotations
 
-import sys
 import time
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from source_adapter import DeviceAdapter, IdentityMismatchLog
+from tools.analytics.source_adapter import DeviceAdapter, IdentityMismatchLog
 
 
 def _telem(device_id: str, raw: int = 2400) -> str:

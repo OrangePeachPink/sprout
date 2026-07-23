@@ -7,13 +7,11 @@ ONLY to the gitignored local config and NEVER echoed back to a screenshottable s
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import env_solar
+from tools.analytics import env_solar
 
 
 def test_save_writes_the_local_config_and_round_trips(tmp_path: Path) -> None:

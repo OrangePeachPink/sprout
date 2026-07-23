@@ -8,12 +8,8 @@ driest), and the "thirsty" trigger is the third descending edge (the needs-water
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from forecast import next_drier_boundary, thirsty_boundary
-from parse_v1 import DEFAULT_CAL_BOUNDS
+from tools.analytics.forecast import next_drier_boundary, thirsty_boundary
+from tools.analytics.parse_v1 import DEFAULT_CAL_BOUNDS
 
 B = list(DEFAULT_CAL_BOUNDS)  # [3050, 2140, 1830, 1520, 1150, 1050]
 

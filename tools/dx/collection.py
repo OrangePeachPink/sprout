@@ -44,10 +44,8 @@ from pathlib import Path
 # Reuse Data's report-only discovery (the #493 identifiability half). It lives in
 # tools/analytics; add that dir to the path rather than duplicate the OS query here.
 _ANALYTICS = Path(__file__).resolve().parents[1] / "analytics"
-if str(_ANALYTICS) not in sys.path:
-    sys.path.insert(0, str(_ANALYTICS))
 
-from sprout_processes import (  # noqa: E402  (path set above)
+from tools.analytics.sprout_processes import (  # noqa: E402  (path set above)
     format_collector_line,
     group_launch_trees,
     list_sprout_processes,

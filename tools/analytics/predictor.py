@@ -37,16 +37,13 @@ from __future__ import annotations
 import argparse
 import json
 import statistics
-import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
-from plant_profiles import load_profiles  # noqa: E402
-from predict_bridge import current_arc, segment_rows  # noqa: E402
+from tools.analytics.plant_profiles import load_profiles  # noqa: E402
+from tools.analytics.predict_bridge import current_arc, segment_rows  # noqa: E402
 
 _US = timedelta(microseconds=1)
 
@@ -211,9 +208,13 @@ def forecast_fleet(
 
 
 def main(argv: list[str] | None = None) -> int:
-    from backtest import actual_waterings, backtest, baseline_predictor
-    from device_registry import load_registry
-    from predict_bridge import _tier_devices, resolve_identity, series_from_pairs
+    from tools.analytics.backtest import actual_waterings, backtest, baseline_predictor
+    from tools.analytics.device_registry import load_registry
+    from tools.analytics.predict_bridge import (
+        _tier_devices,
+        resolve_identity,
+        series_from_pairs,
+    )
 
     ap = argparse.ArgumentParser(description="#25 the next-watering predictor")
     ap.add_argument("--registry", default=None)

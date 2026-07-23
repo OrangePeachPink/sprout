@@ -30,33 +30,24 @@ from __future__ import annotations
 
 import json
 import statistics
-import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-
-import provenance  # noqa: E402  (sibling - server/app provenance for the panel, #324)
-from band_movement import as_dict as _movement_as_dict  # noqa: E402  (#650 substrate)
-from band_movement import band_movements, segment_start  # noqa: E402  (#627/#1133)
-from device_registry import Registry, load_registry  # noqa: E402  (#486 attribution)
-from forecast import fit_line, forecast_payload  # noqa: E402
-from parse_v1 import (  # noqa: E402  (needs _HERE on sys.path first)
-    DEFAULT_CAL_BOUNDS,
-    LogData,
-    canonical_channel,
+from tools.analytics import (
+    provenance,
 )
-from segment_classifier import (  # noqa: E402  (#1244 trend mask · #1247 windows)
-    classify,
+from tools.analytics.band_movement import (
+    as_dict as _movement_as_dict,
 )
-from timefmt import (  # noqa: E402  (local-time-first display labels, #328/#840)
-    local_first_system,
+from tools.analytics.band_movement import (
+    band_movements,
+    segment_start,
 )
-
-_REPO = _HERE.parents[1]
-
+from tools.analytics.device_registry import (
+    Registry,
+    load_registry,
+)
+from tools.analytics.forecast import fit_line, forecast_payload
 
 # #1336 (ADR-0038 §5.1): these live in the layer-0 `design_assets` leaf now. Four
 # modules used to import THIS ~2,000-line module to obtain them; three wanted nothing
@@ -65,7 +56,24 @@ _REPO = _HERE.parents[1]
 # Brand fonts are base64-embedded (latin subsets, SIL OFL) so the dashboard renders
 # in-brand fully offline - no Google-Fonts CDN. Vendored beside Chart.js;
 # regenerate via tools/analytics/embed_fonts.py.
-from host_paths import ARCHIVE_DIR, LOGS_DIR  # noqa: E402  (layer-0 leaf)
+from tools.analytics.host_paths import (
+    ARCHIVE_DIR,
+    LOGS_DIR,
+)
+from tools.analytics.parse_v1 import (
+    DEFAULT_CAL_BOUNDS,
+    LogData,
+    canonical_channel,
+)
+from tools.analytics.segment_classifier import (
+    classify,
+)
+from tools.analytics.timefmt import (
+    local_first_system,
+)
+
+_HERE = Path(__file__).resolve().parent
+_REPO = _HERE.parents[1]
 
 # #977: schema_version at/above which the raw-only value/unit contract (ADR-0030)
 # holds. Below it (or version-less) a row predates the contract and may legitimately
@@ -663,7 +671,7 @@ def build_env_context(start: datetime, end_utc: datetime) -> dict:
     Never commits or logs coordinates (R6 / ADR-0013): coords stay in the gitignored
     config and only the *derived* solar/weather series cross into the context."""
     try:
-        import env_solar
+        from tools.analytics import env_solar
     except ImportError:
         return {"available": False}
 
@@ -684,7 +692,7 @@ def build_env_context(start: datetime, end_utc: datetime) -> dict:
     weather_hourly: list[dict] = []
     weather_source: dict | None = None
     try:
-        import env_weather
+        from tools.analytics import env_weather
 
         wd = env_weather.get_weather(
             lat, lon, start.strftime("%Y-%m-%d"), end_utc.strftime("%Y-%m-%d")
@@ -700,7 +708,7 @@ def build_env_context(start: datetime, end_utc: datetime) -> dict:
     # one place that writes it. Offline -> refresh no-ops -> cache ages out ->
     # pressure fills stop, honestly.
     try:
-        import weather_pressure
+        from tools.analytics import weather_pressure
 
         weather_pressure.refresh_if_stale(location=loc)
     except Exception:

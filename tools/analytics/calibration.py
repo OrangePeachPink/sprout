@@ -26,16 +26,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
 _OUT = _REPO / "reports" / "calibration_candidate.json"
 
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-import analysis_store  # noqa: E402
+from tools.analytics import analysis_store  # noqa: E402
 
 _BANDS_SQL = """
     SELECT band,

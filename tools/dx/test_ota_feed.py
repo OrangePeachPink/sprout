@@ -8,7 +8,7 @@ wrong place would block legitimate curation.
 
 from pathlib import Path
 
-import ota_feed as f
+from tools.dx import ota_feed as f
 
 _DL = "https://github.com/OrangePeachPink/sprout/releases/download/v0.8.1"
 _CLASSIC_SIG = f"sig={_DL}/sprout-esp32-factory.bin.sig"

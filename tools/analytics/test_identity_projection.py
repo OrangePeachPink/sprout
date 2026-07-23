@@ -3,14 +3,16 @@ generation (#1315), time (#1331), and which-registry, per ADR-0038 §4."""
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from device_registry import Device, Registry
-from identity import Binding, Projection, build_projection, resolve_plant
-from registry_model import Assignment, Plant, RegistryModel, Sensor
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.identity import (
+    Binding,
+    Projection,
+    build_projection,
+    resolve_plant,
+)
+from tools.analytics.registry_model import Assignment, Plant, RegistryModel, Sensor
 
 T = lambda h: datetime(2026, 7, 10, h, 0, 0, tzinfo=timezone.utc)  # noqa: E731
 

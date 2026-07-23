@@ -5,15 +5,13 @@ meant "the port that emitted s1" — which IS ch2."""
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import duckdb
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from device_registry import Device, Registry
-from parse_v1 import LEGACY_CHANNEL_TOKENS, canonical_channel
-from segment_history import plant_series
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.parse_v1 import LEGACY_CHANNEL_TOKENS, canonical_channel
+from tools.analytics.segment_history import plant_series
 
 
 def test_the_stated_mapping_is_not_sequential() -> None:

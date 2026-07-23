@@ -37,15 +37,12 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
-from parse_v1 import (  # noqa: E402
+from tools.analytics.parse_v1 import (  # noqa: E402
     LEGACY_CHANNEL_TOKENS,
     board_class,
     parse_file,
@@ -287,7 +284,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
 
-    from device_registry import load_registry, resolve_registry_path
+    from tools.analytics.device_registry import load_registry, resolve_registry_path
 
     # #1315 rider: the dry-run path tolerated a missing --registry (discovery finds the
     # file), but --apply then did Path(None) -> TypeError. Resolve the path ONCE, up

@@ -6,11 +6,7 @@ photo, sensorless handling — and that raw never rides on the card.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from card_payload import (
+from tools.analytics.card_payload import (
     _ELAPSED_CLAIM,
     _RECENT_DRINK,
     build_card,
@@ -18,7 +14,7 @@ from card_payload import (
     load_voice_pool,
     pick_voice_line,
 )
-from registry_model import Plant
+from tools.analytics.registry_model import Plant
 
 # Load the real design sources — the card must track the canonical files, not a copy.
 MOOD = load_mood_map()
@@ -155,7 +151,7 @@ def test_the_voice_pick_is_stable_per_plant_but_varies_across_plants() -> None:
 def test_last_watered_from_a_detected_rewater_is_labelled_and_glanceable() -> None:
     from datetime import datetime, timezone
 
-    from card_payload import last_watered_from_rewater
+    from tools.analytics.card_payload import last_watered_from_rewater
 
     now = datetime(2026, 7, 18, 12, tzinfo=timezone.utc)
     lw = last_watered_from_rewater(
@@ -172,7 +168,7 @@ def test_a_logged_manual_watering_outranks_the_detected_guess() -> None:
     # #1137: a record the operator made is ground truth; a detection is a guess.
     from datetime import datetime, timezone
 
-    from card_payload import resolve_last_watered
+    from tools.analytics.card_payload import resolve_last_watered
 
     now = datetime(2026, 7, 18, 12, tzinfo=timezone.utc)
     detected = {"ts": "2026-07-12T12:00:00+00:00", "source": "detected"}  # 6d ago
@@ -191,7 +187,7 @@ def test_a_glug_and_a_detection_in_window_pair_keeping_the_earlier_time() -> Non
     # the glug records a button-press that lagged the soil-change by ~18 min.
     from datetime import datetime, timezone
 
-    from card_payload import resolve_last_watered
+    from tools.analytics.card_payload import resolve_last_watered
 
     now = datetime(2026, 7, 19, 18, 30, tzinfo=timezone.utc)
     detected = {"ts": "2026-07-19T18:04:00Z", "source": "detected"}  # soil moved
@@ -206,7 +202,7 @@ def test_a_glug_far_after_the_last_detection_is_a_new_watering() -> None:
     # time, e.g. the Bromeliad), a glug now is a NEW watering — its own time stands.
     from datetime import datetime, timezone
 
-    from card_payload import resolve_last_watered
+    from tools.analytics.card_payload import resolve_last_watered
 
     now = datetime(2026, 7, 19, 18, 30, tzinfo=timezone.utc)
     old_detected = {"ts": "2026-07-16T18:00:00Z", "source": "detected"}  # 3 days ago
@@ -219,7 +215,7 @@ def test_a_glug_far_after_the_last_detection_is_a_new_watering() -> None:
 def test_manual_or_detected_alone_and_neither_are_all_graceful() -> None:
     from datetime import datetime, timezone
 
-    from card_payload import resolve_last_watered
+    from tools.analytics.card_payload import resolve_last_watered
 
     now = datetime(2026, 7, 18, 12, tzinfo=timezone.utc)
     manual = {"plant_id": "p01", "source": "manual", "ts": "2026-07-18T10:00:00Z"}
@@ -319,7 +315,7 @@ def test_no_per_card_provisional_chip() -> None:
 
 
 def test_system_cal_state_is_settled_after_the_interior_brackets_ratify() -> None:
-    from card_payload import system_cal_state
+    from tools.analytics.card_payload import system_cal_state
 
     # #1039 -> RESOLVED (#995/#1174, #1218): the interior-bracket ratification landed,
     # so the system cal chip is settled — anchors AND interior brackets ratified, with
@@ -336,7 +332,7 @@ def test_system_cal_state_is_settled_after_the_interior_brackets_ratify() -> Non
 # next_need gate — statistically real only
 # --------------------------------------------------------------------------- #
 def test_next_need_is_known_only_on_a_reachable_forecast() -> None:
-    from card_payload import next_need_from_forecast
+    from tools.analytics.card_payload import next_need_from_forecast
 
     real = {"thirsty": {"reachable": True, "hours": 40, "hours_lo": 30, "hours_hi": 55}}
     nn = next_need_from_forecast(real)
@@ -345,7 +341,7 @@ def test_next_need_is_known_only_on_a_reachable_forecast() -> None:
 
 
 def test_next_need_is_absent_with_a_reason_when_not_statistically_real() -> None:
-    from card_payload import next_need_from_forecast
+    from tools.analytics.card_payload import next_need_from_forecast
 
     weak = {"thirsty": {"reachable": False, "reason": "no significant drying"}}
     nn = next_need_from_forecast(weak)
@@ -357,7 +353,7 @@ def test_next_need_is_absent_with_a_reason_when_not_statistically_real() -> None
 # cards_from_context — the registry bridge + most-thirsty-leads ordering
 # --------------------------------------------------------------------------- #
 def test_cards_from_context_bridges_identity_and_leads_with_thirst() -> None:
-    from card_payload import cards_from_context
+    from tools.analytics.card_payload import cards_from_context
 
     ctx = {
         "devices": [{"device_id": "y9d41p", "cal_provisional": True}],
@@ -399,7 +395,7 @@ def test_manual_watering_reaches_both_probed_and_sensorless_cards() -> None:
     # sensor -> no detection), and it must also feed a probed plant's card.
     from datetime import datetime, timezone
 
-    from card_payload import cards_from_context
+    from tools.analytics.card_payload import cards_from_context
 
     ctx = {
         "devices": [],
@@ -427,7 +423,7 @@ def test_manual_watering_reaches_both_probed_and_sensorless_cards() -> None:
 
 
 def test_cards_from_context_routes_a_fault_to_bysurface() -> None:
-    from card_payload import cards_from_context
+    from tools.analytics.card_payload import cards_from_context
 
     ctx = {
         "devices": [],

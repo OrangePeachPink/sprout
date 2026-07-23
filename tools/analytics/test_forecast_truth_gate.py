@@ -6,14 +6,12 @@ surfaced (`fit_excluded`) so nothing is silently dropped.
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context
-from forecast import fit_line
-from parse_v1 import parse_files
+from tools.analytics.dashboard import build_context
+from tools.analytics.forecast import fit_line
+from tools.analytics.parse_v1 import parse_files
 
 _HEADER = (
     "# fw=0.7.0  git=truthgate  run=r\n"

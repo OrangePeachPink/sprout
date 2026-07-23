@@ -3,12 +3,9 @@ projection is arithmetically honest, caveats ride along, and abstention is real.
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from predictor import (
+from tools.analytics.predictor import (
     MAX_HORIZON_DAYS,
     forecast_fleet,
     median_interval_h,
@@ -16,7 +13,7 @@ from predictor import (
     predict_fn,
     predict_plant,
 )
-from segment_history import TierRow
+from tools.analytics.segment_history import TierRow
 
 T0 = datetime(2026, 7, 1, tzinfo=timezone.utc)
 

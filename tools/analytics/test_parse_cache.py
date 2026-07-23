@@ -7,12 +7,10 @@ snapshot presented as live.
 from __future__ import annotations
 
 import collections
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_cache import ParseCache
-from parse_v1 import parse_file, parse_files
+from tools.analytics.parse_cache import ParseCache
+from tools.analytics.parse_v1 import parse_file, parse_files
 
 _HEADER = (
     "# fw=0.7.0  git=cachetest  run=r1\n"
