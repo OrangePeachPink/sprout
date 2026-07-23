@@ -216,15 +216,16 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-      # import-layer-guard (#1336 / ADR-0038 §2) — a module may import only from a
-      # strictly LOWER layer; never upward, never sideways. ENFORCING, but only over
+      # import-layer-guard (#1336 / ADR-0038 §2) — a module may import from a LOWER
+      # layer, or the SAME layer below layer 4 (§2 as amended, #1452); never upward,
+      # never sideways within layer 4, never a same-layer cycle. ENFORCING, but only over
       # modules that have a layer ASSIGNED: the ADR's condition is "enforcing once the
       # tree satisfies it", and the assigned subset satisfies it today (leaves are out).
       # Every future assignment is a deliberate act by the owning lane, so this can only
       # red on a module someone chose to put under the rule. Coverage (assigned vs total)
       # prints on every run — three modules judged must never read like the whole tree.
       - id: import-layer-guard
-        name: import-layer-guard (ADR-0038 §2 — imports go strictly downward)
+        name: import-layer-guard (ADR-0038 §2 — down, or same-layer below 4)
         entry: uv run python tools/dx/import_layer_guard.py --check
         language: system
         pass_filenames: false

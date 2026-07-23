@@ -320,6 +320,14 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
                padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px;
                border-left: 3px dashed var(--muted); background: transparent; }
 .regloc-trail { margin-top: 5px; font-size: 11px; }
+/* #1188 part 2: the structured side picker (ADR-0029 placement.ledge) — chrome register */
+.regloc-side { margin-top: 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.regloc-sidelbl { font-size: 12px; margin-right: 4px; }
+.sidebtn { font-size: 12px; padding: 4px 12px; border: 1px solid var(--border); border-radius: 6px;
+           background: none; cursor: pointer; }
+.sidebtn:hover { background: var(--surface); }
+.sidebtn.on { border-color: var(--leaf); box-shadow: inset 0 0 0 1px var(--leaf); font-weight: 600; }
+.regloc-side .regloc-note { flex-basis: 100%; margin-top: 4px; }
 .reglist { display: flex; flex-direction: column; }
 .regrow { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
 .regrow:last-child { border-bottom: 0; }
@@ -357,6 +365,23 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .regpickrow:hover { background: var(--surface); }
 .regpickrow[disabled] { opacity: .5; cursor: default; }
 .regpickrow .muted { margin-left: auto; }
+/* #1500/#1501: the reassignment door + Flow A. Deliberate, calm, never a modal on rename. */
+.reassprompt { margin-top: 8px; font-size: 12px; font-style: italic; }
+.reassdoor { display: inline-block; margin-top: 2px; }
+.reflow { margin-top: 8px; border: 1px solid var(--border); border-radius: var(--r-tile);
+          background: var(--surface-2); padding: 10px 12px; }
+.reflow-h { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.reflow-q { font-weight: 600; margin: 6px 0 4px; }
+.reflow-opt { display: block; width: 100%; text-align: left; background: none; border: 1px solid var(--border);
+              border-radius: 6px; padding: 7px 10px; margin: 4px 0; cursor: pointer; font-size: 13px; }
+.reflow-opt:hover { background: var(--surface); }
+.reflow-opt.on { border-color: var(--leaf); box-shadow: inset 3px 0 0 var(--leaf); }
+.reflow-new { border-style: dashed; }
+.reflow-newplant { margin: 6px 0; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 6px; }
+.reflow-note { font-size: 11px; line-height: 1.5; margin: 5px 0; max-width: 56ch; }
+.reflow-earlier { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0; }
+.reflow-confirm { font-size: 13px; line-height: 1.6; padding: 8px 10px; margin: 4px 0 10px;
+                  border-left: 3px dashed var(--muted); }
 .regpickhdr { font: 600 12px var(--font-ui); color: var(--muted); padding: 4px 8px 6px; }
 .regform { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 8px; }
 .regform label { display: flex; flex-direction: column; gap: 3px; font: 11px var(--font-data); color: var(--muted); }
@@ -1662,7 +1687,7 @@ function renderIntegrity(){
   // #965: fleet-poll endpoints are their own kind of source — a labeled line, never
   // mangled into a file path. Only shown when the capture actually has WiFi sources.
   if(L.fleet_sources && L.fleet_sources.length){
-    locRows.push(['fleet source(s)', `<code>${L.fleet_sources.join('</code>, <code>')}</code>`]);
+    locRows.push(['greenhouse source(s)', `<code>${L.fleet_sources.join('</code>, <code>')}</code>`]);
   }
   locRows.forEach(([l,v])=>{ const tr=el('tr'); tr.appendChild(el('td',null,l)); const td=el('td','small'); td.innerHTML=v; tr.appendChild(td); lt.appendChild(tr); });
   wrap.appendChild(lt);
@@ -2403,9 +2428,125 @@ function regView(){
 // #921 slice 3b: the mapping picker (the anxiety) — plant-first, no hand-typed channels.
 let __regPicking = null;    // plant_id whose sensor-picker is open
 let __regPickPort = null;   // a chosen FREE port {device_id, channel} awaiting a sensor
+let __regReassign = null;   // #1501: the in-flight Flow A reassignment state, or null
+let __regReassignAdd = false;  // #1502: the inline new-plant form open inside Flow A step 1
 function regStageAssign(plantId, port){
+  // #1501: if this channel already reads a DIFFERENT plant, taking its probe DISPLACES that
+  // plant — that's a reassignment, and it must go through Flow A's disposition + backdate +
+  // consequence confirm, never a silent remap. Enter Flow A at step 2 (the new plant is known).
+  const cur = ((__registry && __registry.current_mappings) || []).find(
+    mm => mm.device_id === port.device_id && mm.channel === port.channel);
+  if(cur && cur.plant_id && cur.plant_id !== plantId){
+    __regReassign = {displacedId: cur.plant_id, sensorId: port.sensor_id, deviceId: port.device_id,
+                     channel: port.channel, step: 2, newId: plantId, disposition: 'growing', when: 'now', at: ''};
+    __regPicking = null; __regPickPort = null; __regErrs = [];
+    renderRegistry();
+    return;
+  }
   regPend().mappings.assign.push({plant_id: plantId, sensor_id: port.sensor_id, device_id: port.device_id, channel: port.channel});
   __regPicking = null; __regPickPort = null; __regErrs = [];
+  renderRegistry();
+}
+// ===== #1500/#1501/#1502 §2/§3/§4: reassignment is a DELIBERATE act, never a silent remap =====
+// #1500 §2: editing a name is ALWAYS a rename (stages plants.edit, never an assign — already
+// true). Moving a probe to a DIFFERENT plant is a separate, deliberate door → Flow A.
+// #1501 §3: the four-step flow — (1) which plant is on the probe now, (2) the displaced plant's
+// fate (still-growing→sensorless default per ADR-0028, or gone→retire with history KEPT via the
+// paused/retired convention — never the deleting purge), (3) when (backdate → assign(now=…)),
+// (4) the consequence in plain words before anything stages. #1502 §4: a new plant needs only a name.
+function regReassignStart(displacedId, m){   // m = the displaced plant's open mapping
+  __regReassign = {displacedId, sensorId: m.sensor_id, deviceId: m.device_id, channel: m.channel,
+                   step: 1, newId: null, disposition: 'growing', when: 'now', at: ''};
+  __regPicking = null; __regEditing = null; __regReassignAdd = false;
+  renderRegistry();
+}
+function regReassignCancel(){ __regReassign = null; __regReassignAdd = false; renderRegistry(); }
+// #1502 §4: Flow B — a new plant, a name is all it needs (absence-safe, ADR-0028). Reusable:
+// Flow A step 1 calls it, and so does the grid empty state / an unassigned channel.
+function regNewPlantInline(onAdded){
+  const nid = (__registry && __registry.next_ids) ? __registry.next_ids.plant : '';
+  const box = el('div', 'reflow-newplant');
+  box.appendChild(el('div', 'reflow-q', 'A new plant — a name is all it needs.'));
+  const l = el('label'); const i = el('input'); i.placeholder = 'e.g. Gertrude'; l.appendChild(i); box.appendChild(l);
+  box.appendChild(el('div', 'reflow-note muted', 'Type, pot, and location are optional — add them any time. A plant with no probe is fine; it shows as a sensorless card, never an error.'));
+  const add = el('button', 'reglink', 'Add & use');
+  add.onclick = () => {
+    const nm = i.value.trim(); if(!nm) return;
+    regPend().plants.add.push({plant_id: nid, pet_name: nm});   // entities-before-mappings: staged add precedes the assign in the batch
+    if(onAdded) onAdded(nid);
+  };
+  box.appendChild(add);
+  return box;
+}
+function regReassignPanel(V, pById){
+  const R = __regReassign; if(!R) return null;
+  const nameOf = id => regPlantName(pById[id] || {plant_id: id});
+  const oldName = nameOf(R.displacedId);
+  const wrap = el('div', 'reflow');
+  wrap.appendChild(el('div', 'reflow-h', 'Moving <strong>' + esc(regSpell(R.sensorId, 'Sensor')) + '</strong> — the probe on ' + esc(oldName)));
+  if(R.step === 1){
+    wrap.appendChild(el('div', 'reflow-q', 'What is on this probe now?'));
+    V.plants.filter(p => p.plant_id !== R.displacedId && regLifecycle('plant', p.plant_id) !== 'deleted').forEach(p => {
+      const b = el('button', 'regpickrow', esc(regPlantName(p)));
+      b.onclick = () => { R.newId = p.plant_id; R.step = 2; renderRegistry(); };
+      wrap.appendChild(b);
+    });
+    if(__regReassignAdd){
+      wrap.appendChild(regNewPlantInline((pid) => { R.newId = pid; R.step = 2; __regReassignAdd = false; renderRegistry(); }));
+    } else {
+      const nb = el('button', 'regpickrow reflow-new', '＋ a plant I haven’t added yet');
+      nb.onclick = () => { __regReassignAdd = true; renderRegistry(); };   // Flow B, returns here
+      wrap.appendChild(nb);
+    }
+  } else if(R.step === 2){
+    wrap.appendChild(el('div', 'reflow-q', 'What happened to ' + esc(oldName) + '?'));
+    const opt = (val, label, sub) => {
+      const b = el('button', 'reflow-opt' + (R.disposition === val ? ' on' : ''), '<strong>' + label + '</strong> <span class="muted">' + sub + '</span>');
+      b.onclick = () => { R.disposition = val; R.step = 3; renderRegistry(); };
+      return b;
+    };
+    wrap.appendChild(opt('growing', 'Still growing, just not probed', '— it stays, now sensorless (an invitation, not an error)'));
+    wrap.appendChild(opt('gone', 'It’s gone', '— retire it; its history is kept, nothing deleted'));
+    wrap.appendChild(el('div', 'reflow-note muted', 'Default is still growing — a plant is never destroyed by the path of least resistance.'));
+  } else if(R.step === 3){
+    wrap.appendChild(el('div', 'reflow-q', 'When did this happen?'));
+    const nowb = el('button', 'reflow-opt' + (R.when === 'now' ? ' on' : ''), 'Now');
+    nowb.onclick = () => { R.when = 'now'; R.step = 4; renderRegistry(); };
+    wrap.appendChild(nowb);
+    const eb = el('button', 'reflow-opt' + (R.when === 'earlier' ? ' on' : ''), 'Earlier…');
+    eb.onclick = () => { R.when = 'earlier'; renderRegistry(); };
+    wrap.appendChild(eb);
+    if(R.when === 'earlier'){
+      const row = el('div', 'reflow-earlier');
+      const inp = el('input'); inp.type = 'datetime-local'; inp.value = R.at;
+      inp.oninput = () => { R.at = inp.value; };
+      const go = el('button', 'reglink', 'Use this time'); go.onclick = () => { if(R.at){ R.step = 4; renderRegistry(); } };
+      row.appendChild(inp); row.appendChild(go); wrap.appendChild(row);
+      wrap.appendChild(el('div', 'reflow-note muted', 'Backdating matters: a probe swapped Tuesday and recorded Friday would otherwise attribute three days of readings to the wrong plant.'));
+    }
+  } else if(R.step === 4){
+    const whenTxt = R.when === 'now' ? 'now' : fmtLocal(R.at.replace('T', ' '));
+    const conf = el('div', 'reflow-confirm');
+    conf.innerHTML = 'Readings <strong>before ' + esc(whenTxt) + '</strong> stay with <strong>' + esc(oldName) + '</strong>.<br>'
+      + 'Readings <strong>after</strong> bind to <strong>' + esc(nameOf(R.newId)) + '</strong>.<br>'
+      + 'Nothing is deleted; both keep their own past.'
+      + (R.disposition === 'gone' ? '<br><span class="muted">' + esc(oldName) + ' is retired — its history is kept.</span>' : '');
+    wrap.appendChild(conf);
+    const commit = el('button', 'btn primary', 'Confirm the move'); commit.onclick = regReassignCommit;
+    wrap.appendChild(commit);
+  }
+  const cancel = el('button', 'reglink muted', 'Cancel'); cancel.onclick = regReassignCancel;
+  wrap.appendChild(cancel);
+  return wrap;
+}
+function regReassignCommit(){
+  const R = __regReassign; if(!R || !R.newId) return;
+  const a = {plant_id: R.newId, sensor_id: R.sensorId, device_id: R.deviceId, channel: R.channel};
+  if(R.when === 'earlier' && R.at) a.now = new Date(R.at).toISOString();   // backdate → assign(now=…)
+  regPend().mappings.assign.push(a);
+  if(R.disposition === 'gone')   // retire = paused/retired convention, history KEPT (never the purge)
+    regPend().lifecycle.push({kind: 'plant', entity_id: R.displacedId, state: 'paused'});
+  __regReassign = null; __regErrs = [];
   renderRegistry();
 }
 function regSensorPicker(plant, V, dById){
@@ -2534,6 +2675,16 @@ function renderRegistry(reg){
     act.onclick = () => { __regPicking = (__regPicking === p.plant_id ? null : p.plant_id); __regPickPort = null; renderRegistry(); };
     card.appendChild(act);
     if(__regPicking === p.plant_id) card.appendChild(regSensorPicker(p, V, dById));
+    // #1500/#1501 §2/§3: the reassignment door — beside the name, the ONLY entry to Flow A.
+    // A mapped plant whose probe moved to a DIFFERENT plant goes through the deliberate flow,
+    // never the silent remap. (Renaming stays a plain rename via the pencil below.)
+    if(m && !p._staged){
+      const door = el('button', 'reglink reassdoor', 'Move this probe to another plant');
+      door.onclick = () => regReassignStart(p.plant_id, m);
+      card.appendChild(el('div', 'reassprompt muted', '…a different plant on this probe now?'));
+      card.appendChild(door);
+      if(__regReassign && __regReassign.displacedId === p.plant_id) card.appendChild(regReassignPanel(V, pById));
+    }
     // #1038: the rename affordance (pet name / type / pot) — pencil, or the inline form when open.
     if(!p._staged) card.appendChild(__regEditing === 'plant:' + p.plant_id ? regEditForm('plant', p) : regEditPencil('plant', p.plant_id));
     // #921 3c: lifecycle rides the same card — mapping action first, destructive controls last.
@@ -2615,12 +2766,13 @@ function regAddControl(kind){
     i.value = val || ''; i.dataset.k = key; l.appendChild(i); return l;
   };
   if(kind === 'plant'){
-    form.appendChild(mk('number (e.g. ' + nid + ')', 'plant_id', nid));
+    // #1502 §4: a name is enough — lead with it; everything else is absence-safe (ADR-0028).
+    form.appendChild(mk('name (e.g. Gertrude)', 'pet_name', ''));
     form.appendChild(mk('type (optional)', 'plant_type', ''));
-    form.appendChild(mk('pet name (optional)', 'pet_name', ''));
     form.appendChild(mk('pot (optional)', 'pot_description', ''));
     form.appendChild(mk('pot size (optional)', 'pot_size', ''));
     form.appendChild(mk('location (optional)', 'location', ''));
+    form.appendChild(mk('number (auto: ' + nid + ')', 'plant_id', nid));
   } else {
     form.appendChild(mk('number — required (e.g. ' + nid + ')', 'sensor_id', nid));
     form.appendChild(mk('friendly name (optional)', 'friendly_name', ''));
@@ -2700,7 +2852,34 @@ function regLocationControl(entity){
       'Been here before: ' + past.map(e =>
         esc(e.location) + ' until ' + esc(fmtDay(e.end_ts))).join(' · ')));
   }
+  // #1188 part 2 (ADR-0029 placement.ledge): the STRUCTURED side — left/right — replacing the
+  // side semantics people used to bury in the free-text location ("… (right)"). It rides the
+  // move: when the location changes, move_plant validates it against the ledge vocabulary and
+  // writes `side` onto the boundary event. A hidden input carries only a valid value, never ''.
+  const curSide = regLocSide(entity.plant_id);
+  const sideBox = el('div', 'regloc-side');
+  sideBox.appendChild(el('span', 'regloc-sidelbl muted', 'Side of the windowsill'));
+  const sideInput = el('input'); sideInput.type = 'hidden'; sideInput.value = curSide || '';
+  if(curSide) sideInput.dataset.k = 'side';   // only ever stage left/right — never an empty string
+  ['left', 'right'].forEach(val => {
+    const b = el('button', 'sidebtn' + (curSide === val ? ' on' : ''), val.charAt(0).toUpperCase() + val.slice(1));
+    b.type = 'button';
+    b.onclick = () => {
+      sideInput.value = val; sideInput.dataset.k = 'side';
+      [...sideBox.querySelectorAll('.sidebtn')].forEach(x => x.classList.toggle('on', x.textContent.toLowerCase() === val));
+    };
+    sideBox.appendChild(b);
+  });
+  sideBox.appendChild(sideInput);
+  sideBox.appendChild(el('div', 'regloc-note muted',
+    'Which side of the windowsill this pot sits on — a structured field now, not text tucked into the location. It’s recorded with the next move.'));
+  wrap.appendChild(sideBox);
   return wrap;
+}
+function regLocSide(plantId){   // #1188 part 2: the current structured side (left/right), or ''
+  const evs = regLocEvents(plantId);
+  const open = evs.filter(e => !e.end_ts).slice(-1)[0] || evs.slice(-1)[0];
+  return (open && open.side) || '';
 }
 function regEditForm(kind, entity){
   const idKey = {plant: 'plant_id', sensor: 'sensor_id', device: 'device_id'}[kind];
@@ -2734,7 +2913,7 @@ function regStageEdit(kind, id, form){
   const sec = {plant: 'plants', sensor: 'sensors', device: 'devices'}[kind];
   const idKey = {plant: 'plant_id', sensor: 'sensor_id', device: 'device_id'}[kind];
   const rec = {[idKey]: id};
-  form.querySelectorAll('input').forEach(i => { rec[i.dataset.k] = i.value.trim(); });   // '' clears a field
+  form.querySelectorAll('input').forEach(i => { if(i.dataset.k) rec[i.dataset.k] = i.value.trim(); });   // '' clears a keyed field; keyless inputs (the #1188 side hidden when unset) are skipped
   const p = regPend();
   p[sec].edit = p[sec].edit.filter(e => e[idKey] !== id);   // one staged edit per entity
   p[sec].edit.push(rec);
@@ -3016,7 +3195,7 @@ function renderFreshness(){
   // connected + fresh: no marker. Connected but the reading has aged past cadence: a calm
   // note that the charts show the last reading, not a live one — never silently current.
   setStaleBanner((stale && LIVE)
-    ? `The charts show the last reading, from <b>${esc(ageTxt)}</b> — the fleet may be between updates.`
+    ? `The charts show the last reading, from <b>${esc(ageTxt)}</b> — the greenhouse may be between updates.`
     : '', false);
 }
 // #976: a monotonically-increasing request generation. Every /data.json fetch stamps its

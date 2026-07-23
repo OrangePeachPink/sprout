@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""#1336 / ADR-0038 §2 — a module may import only from a strictly lower layer.
+"""#1336 / ADR-0038 §2 — imports go to a lower layer, or the same layer below 4.
 
 The rung the extractions wait behind. ADR-0038's measured condition: 149 of 184 host
 modules manipulate ``sys.path``, nothing is importable by name, and several Lab modules
@@ -7,8 +7,12 @@ import the ~2,000-line ``dashboard`` to obtain two CSS constants. **Any module c
 import any other and nothing makes a bad reach awkward** — the mechanism behind the
 #1315 two-truths incident, not a tidiness complaint.
 
-    A module may import only from a strictly lower layer.
-    Never upward, never sideways.
+    A module may import from a lower layer, or the same layer below layer 4.
+    Never upward; never sideways within layer 4; never a same-layer cycle.
+
+    Amended 2026-07-22 (#1452): same-layer composition below the delivery tier is
+    legitimate — a layer-3 module importing another layer-3 module is normal, not a
+    tangle. Layer 4 keeps the no-sideways rule, and a same-layer cycle stays a defect.
 
 **A declared table, never an inferred one.** Layer assignment is an architecture
 decision (Trellis owns the boundaries; Data owns the modules), so this file records
@@ -95,10 +99,32 @@ def internal_imports(src: str, ours: set[str]) -> set[str]:
     return found & ours
 
 
+def _same_layer_cycles(edges: dict[str, set[str]]) -> list[list[str]]:
+    """Elementary cycles in the same-layer import graph (§2's acyclic proviso). Each is
+    normalised to start at its smallest node and de-duplicated; output is sorted for a
+    stable finding order. One layer's same-layer graph is tiny, so a plain path-tracking
+    DFS is enough."""
+    found: set[tuple[str, ...]] = set()
+
+    def dfs(node: str, path: list[str]) -> None:
+        for nxt in sorted(edges.get(node, ())):
+            if nxt in path:
+                cyc = path[path.index(nxt) :]
+                i = cyc.index(min(cyc))
+                found.add(tuple(cyc[i:] + cyc[:i]))
+            else:
+                dfs(nxt, [*path, nxt])
+
+    for start in sorted(edges):
+        dfs(start, [start])
+    return [list(c) for c in sorted(found)]
+
+
 def check(host: Path = _HOST, layers: dict[str, int] | None = None) -> list[Finding]:
     layers = _LAYERS if layers is None else layers
     ours = {p.stem for p in host.glob("*.py")}
     findings: list[Finding] = []
+    same_layer_edges: dict[str, set[str]] = {}
     for module, layer in sorted(layers.items(), key=lambda kv: (kv[1], kv[0])):
         p = host / f"{module}.py"
         if not p.exists():
@@ -128,17 +154,44 @@ def check(host: Path = _HOST, layers: dict[str, int] | None = None) -> list[Find
             t_layer = layers.get(target)
             if t_layer is None:
                 continue  # unassigned: unjudgeable, counted in the coverage line
-            if t_layer >= layer:
-                direction = "SIDEWAYS" if t_layer == layer else "UPWARD"
+            if t_layer > layer:
                 findings.append(
                     Finding(
                         module,
-                        f"{direction} import of {target} "
+                        f"UPWARD import of {target} "
                         f"(layer {layer} {_LAYER_NAMES[layer]} -> layer {t_layer} "
-                        f"{_LAYER_NAMES[t_layer]}) — ADR-0038 §2 allows strictly lower "
-                        "only.",
+                        f"{_LAYER_NAMES[t_layer]}) — ADR-0038 §2: never upward.",
                     )
                 )
+            elif t_layer == layer:
+                if layer == 4:
+                    findings.append(
+                        Finding(
+                            module,
+                            f"SIDEWAYS import of {target} within layer 4 "
+                            f"({_LAYER_NAMES[layer]}) — ADR-0038 §2 forbids same-layer "
+                            "imports at layer 4.",
+                        )
+                    )
+                else:
+                    # Same-layer below 4 is legitimate composition (§2 as amended
+                    # 2026-07-22, #1452); recorded so the acyclic proviso is checkable.
+                    same_layer_edges.setdefault(module, set()).add(target)
+            # else t_layer < layer: a strictly-lower import, allowed.
+
+    # §2's acyclic proviso: same-layer imports below 4 are legal only while the
+    # same-layer graph has no cycle — "A importing B and B importing A at one layer is
+    # the tangle by another name, and the guard should reject it as usage grows."
+    for cycle in _same_layer_cycles(same_layer_edges):
+        lyr = layers[cycle[0]]
+        findings.append(
+            Finding(
+                cycle[0],
+                f"SAME-LAYER CYCLE at layer {lyr} ({_LAYER_NAMES[lyr]}): "
+                f"{' -> '.join([*cycle, cycle[0]])} — ADR-0038 §2 allows "
+                "same-layer imports below 4 only while acyclic.",
+            )
+        )
     return findings
 
 
@@ -152,7 +205,7 @@ def coverage(
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        description="ADR-0038 §2: imports go strictly downward"
+        description="ADR-0038 §2: down or same-layer below 4; no up, no sideways-in-4"
     )
     ap.add_argument(
         "--check", action="store_true", help="enforce (non-zero on a violation)"

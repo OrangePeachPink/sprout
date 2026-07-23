@@ -1,7 +1,8 @@
 # ADR-0011 — Experiment capture control plane
 
-**Status:** Proposed — *direction agreed (Firmware, Discussion #57); full decision detail co-authored when
-sub-issues are cut*
+**Status:** Accepted — implemented and in use; direction agreed (Firmware, Discussion #57), detail settled at
+build. *(2026-07-22 truth-pass, #1460: the `experiments_catalog.py` control plane + the capture flow are live on
+`main`.)*
 **Date:** 2026-06-25
 **Owner:** Data lane + Firmware lane (co-authored — the browser→host seam)
 **Lane:** data/analytics ↔ firmware (control seam)

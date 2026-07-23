@@ -1,7 +1,7 @@
 # ADR-0013 — Environmental data architecture
 
-**Status:** Proposed — *Data-led; the on-device sensor section (§5) co-authored with Firmware when that
-sub-issue is cut*
+**Status:** Accepted — implemented and in use; Data-led, §5 co-authored with Firmware. *(Truth-pass 2026-07-22,
+issue #1460: env `record_type` + the rig-location / env-overlay surfaces are live on `main`.)*
 **Date:** 2026-06-26
 **Owner:** Data lane
 **Lane:** data/analytics (external context streams, provenance, location privacy)
