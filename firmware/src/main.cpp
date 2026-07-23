@@ -295,8 +295,9 @@ static void pumpSet(int ch, bool on)
 }
 
 /* ---- supervisor I/O callbacks (#227, ADR-0016) -------------------------- */
-/* The supervisor is the sole sampler: read_raw returns ONE ADC sample (the FSM
- * does the discard + burst + trimmed mean itself). */
+/* The supervisor is the sole sampling AUTHORITY (ADR-0016 §1 — the mode-guarded
+ * standalone telemetry sweep is separately sanctioned): read_raw returns ONE ADC
+ * sample (the FSM does the discard + burst + trimmed mean itself). */
 static uint16_t readRaw(int ch, void *user)
 {
     (void)user;
