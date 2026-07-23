@@ -43,6 +43,10 @@ const bool BLINK_WHEN_THIRSTY = true;  // light up the onboard LED (LED_BUILTIN)
 
 unsigned long lastReadMs = 0;
 
+// The last mood I announced. bandFor() returns one of three fixed flash strings,
+// so "same pointer" means "same mood" — a cheap did-my-mood-change check.
+const __FlashStringHelper *lastBand = nullptr;
+
 void setup()
 {
     Serial.begin(9600);
@@ -50,7 +54,8 @@ void setup()
 
     // Give the Serial Monitor / Plotter a moment to connect on first boot.
     delay(1500);
-    Serial.println(F("Sprout Starter — reading A0. Open Tools > Serial Plotter to watch it live."));
+    Serial.println(F("Sprout Starter — reading A0. Open Tools > Serial Plotter to watch the raw "
+                     "line live; I'll speak up here whenever my mood changes."));
 }
 
 // Average SAMPLES raw reads — a cheap way to smooth ADC jitter.
@@ -82,10 +87,19 @@ void loop()
     int raw = readSensorRaw();
     bool thirsty = raw > THIRSTY_ABOVE;
 
-    Serial.print(F("raw="));
-    Serial.print(raw);
-    Serial.print(F("  "));
-    Serial.println(bandFor(raw));
+    // Plotter-friendly: the data line is ONLY "raw:NNN". The Serial Plotter charts
+    // label:value lines and skips the voice lines below (they carry no digits), so
+    // both tools work at once — the Plotter gets a clean line, the Monitor gets me.
+    Serial.print(F("raw:"));
+    Serial.println(raw);
+
+    // The voice line, separately — once at the first read, then whenever the mood
+    // changes. (A plant that repeats itself every second isn't charming.)
+    const __FlashStringHelper *band = bandFor(raw);
+    if (band != lastBand) {
+        Serial.println(band);
+        lastBand = band;
+    }
 
     if (BLINK_WHEN_THIRSTY) digitalWrite(LED_BUILTIN, thirsty ? HIGH : LOW);
 }
