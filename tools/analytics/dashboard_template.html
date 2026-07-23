@@ -343,6 +343,25 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .regchan-wait { font-size: 13px; font-style: italic; }
 /* Sits beside the channels when there is room and drops to its own line when there is
    not — chosen, not the accident of a 100% basis being shrunk by default flex rules. */
+/* #1027 §5.1/§5.5/§5.2: the adopt-a-board flow — calm/inviting (a guest, never an alarm) */
+.adoptwrap { margin: 4px 0 14px; }
+.adopthdr { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.adoptcard { border: 1px dashed var(--leaf); border-radius: var(--r-tile, 10px);
+             background: color-mix(in srgb, var(--leaf) 6%, transparent); padding: 12px 14px; margin-bottom: 8px; }
+.adopt-id { font-size: 14px; }
+.adopt-id strong { font-family: var(--font-data); }
+.adopt-meta { font-size: 12px; margin: 3px 0 10px; }
+.adopt-q { font-weight: 600; font-size: 13px; margin: 10px 0 5px; }
+.adopt-classes { display: flex; flex-wrap: wrap; gap: 6px; }
+.classbtn { text-align: left; background: none; border: 1px solid var(--border); border-radius: 7px;
+            padding: 7px 11px; cursor: pointer; font-size: 13px; }
+.classbtn:hover { background: var(--surface); }
+.classbtn.on { border-color: var(--leaf); box-shadow: inset 0 0 0 1px var(--leaf); }
+.adopt-pins { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0; }
+.adopt-pin { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--muted);
+             font-family: var(--font-data); }
+.adopt-pin input { width: 64px; }
+.adopt-note { font-size: 11.5px; line-height: 1.5; margin: 6px 0 10px; max-width: 56ch; }
 .regchan-teach { flex: 1 1 26ch; min-width: 26ch; align-self: center;
                  font-size: 12.5px; line-height: 1.5; max-width: 62ch; }
 .regcode { font-family: var(--font-data); font-size: 12px; font-weight: 600; }
@@ -2337,11 +2356,12 @@ function regSection(title, cap){
 }
 // ===== #921 slice 3a: add + save — classic review-then-save (Q10) =====
 let __pending = null;
-function regPendNew(){ return {plants:{add:[],edit:[]},sensors:{add:[],edit:[]},devices:{edit:[]},mappings:{assign:[],close:[]},lifecycle:[]}; }
+function regPendNew(){ return {plants:{add:[],edit:[]},sensors:{add:[],edit:[]},devices:{add:[],edit:[]},mappings:{assign:[],close:[]},lifecycle:[]}; }
 function regPend(){ if(!__pending) __pending = regPendNew(); return __pending; }
 function regDirtyCount(){ const b = __pending; if(!b) return 0;
   return b.plants.add.length + b.plants.edit.length + b.sensors.add.length + b.sensors.edit.length
-       + b.devices.edit.length + b.mappings.assign.length + b.mappings.close.length + b.lifecycle.length; }
+       + (b.devices.add ? b.devices.add.length : 0) + b.devices.edit.length
+       + b.mappings.assign.length + b.mappings.close.length + b.lifecycle.length; }
 let __regAdding = null;   // 'plant' | 'sensor' | null — which inline add-form is open
 let __regEditing = null;  // #1038: "kind:id" whose inline rename form is open, or null
 let __regErrs = [];       // structured 400 errors from the last Save attempt
@@ -2625,6 +2645,92 @@ function regChannelStrip(d){
       : 'Room for ' + free + ' more probe' + (free === 1 ? '' : 's') + ' on this board.'));
   return wrap;
 }
+// ===== #1027 §5.1/§5.5/§5.2: adopt an answering-but-unregistered board — calm, a guest =====
+// The poller sees boards it doesn't know (device_discovery.discover_undeclared, distinct from
+// the #1026 alarm — that alarm set is excluded by identity). Each surfaces as a calm adopt card:
+// §5.1 discovery → §5.5 show-id confirm → §5.2 the physical-config declaration (board class →
+// the recommended pins, keyed on the operator's selection per Trellis's ruling; a serial board
+// has no base_url and that's fine now, #1515). Adoption stages a devices.add; the Save commits it.
+let __regAdopt = null;   // the in-flight adoption {device_id, step, board (class token), pins:[]}
+function regAdoptCards(){
+  const und = (__registry && __registry.undeclared) || [];
+  if(!und.length) return null;
+  const wrap = el('div', 'adoptwrap');
+  wrap.appendChild(el('div', 'adopthdr', (und.length === 1 ? 'A new board is here' : und.length + ' new boards are here')
+    + ' — a guest, waiting to be adopted'));
+  und.forEach(u => wrap.appendChild(regAdoptCard(u)));
+  return wrap;
+}
+function regAdoptCard(u){
+  const active = __regAdopt && __regAdopt.device_id === u.device_id;
+  const card = el('div', 'adoptcard');
+  card.appendChild(el('div', 'adopt-id', 'It’s signing as <strong>' + esc(u.device_id) + '</strong>'));
+  const seen = u.last_seen ? fmtLocal(u.last_seen) : null;
+  const nch = (u.channels_seen || []).length;
+  const bits = [u.board ? esc(u.board) : null,
+    nch ? (nch + ' channel' + (nch === 1 ? '' : 's') + ' reporting') : null,
+    seen ? 'last heard ' + esc(seen) : null].filter(Boolean);
+  if(bits.length) card.appendChild(el('div', 'adopt-meta muted', bits.join(' · ')));
+  if(!active){
+    const b = el('button', 'btn', 'Adopt this board');
+    b.onclick = () => { __regAdopt = {device_id: u.device_id, step: 5, board: '', pins: []}; renderRegistry(); };
+    card.appendChild(b);
+    return card;
+  }
+  const A = __regAdopt;
+  if(A.step === 5){   // §5.5 — the trust step: confirm the minted id one-click
+    card.appendChild(el('div', 'adopt-q', 'This is the id it’s signing with. Is this the board you’re holding?'));
+    const yes = el('button', 'btn primary', 'Yes — adopt ' + esc(u.device_id));
+    yes.onclick = () => { A.step = 2; renderRegistry(); };
+    card.appendChild(yes);
+  } else if(A.step === 2){   // §5.2 — the physical-config declaration
+    card.appendChild(el('div', 'adopt-q', 'Which board is this?'));
+    const bpAll = (__registry && __registry.board_pinouts) || {};
+    const CLASSES = [['esp32-classic', 'Classic (ESP32-WROOM)'], ['esp32-c5', 'ESP32-C5'], ['esp32-s3', 'ESP32-S3']];
+    const picker = el('div', 'adopt-classes');
+    CLASSES.forEach(pair => {
+      const cls = pair[0], bp = bpAll[cls] || {};
+      const btn = el('button', 'classbtn' + (A.board === cls ? ' on' : ''),
+        '<strong>' + pair[1] + '</strong>' + (bp.verified ? ' <span class="muted">recommended pins ✓</span>' : ' <span class="muted">pins provisional</span>'));
+      btn.onclick = () => { A.board = cls; A.pins = (bp.pins || []).slice(); renderRegistry(); };
+      picker.appendChild(btn);
+    });
+    card.appendChild(picker);
+    if(A.board){
+      const bp = bpAll[A.board] || {};
+      const n = nch || A.pins.length || 4;
+      card.appendChild(el('div', 'adopt-q', 'Its ' + n + ' probe' + (n === 1 ? '' : 's') + ' — which GPIO is each wired to?'));
+      const pinrow = el('div', 'adopt-pins');
+      for(let i = 0; i < n; i++){
+        const l = el('label', 'adopt-pin', 'ch' + i);
+        const inp = el('input'); inp.type = 'number'; inp.value = (A.pins[i] != null ? A.pins[i] : '');
+        inp.oninput = () => { A.pins[i] = (inp.value === '' ? null : parseInt(inp.value, 10)); };
+        l.appendChild(inp); pinrow.appendChild(l);
+      }
+      card.appendChild(pinrow);
+      card.appendChild(el('div', 'adopt-note muted', bp.verified
+        ? 'Sprout filled in the bench-verified pins for this board — change any if your wiring differs.'
+        : 'These are Sprout’s best guess for this board — not bench-verified. Confirm them against your board first.'));
+      const go = el('button', 'btn primary', 'Adopt this board');
+      go.onclick = () => regAdoptCommit(u);
+      card.appendChild(go);
+    }
+  }
+  const cancel = el('button', 'reglink muted', 'Cancel'); cancel.onclick = () => { __regAdopt = null; renderRegistry(); };
+  card.appendChild(cancel);
+  return card;
+}
+function regAdoptCommit(u){
+  const A = __regAdopt; if(!A || !A.board) return;
+  const pins = A.pins.filter(p => p != null && !isNaN(p));
+  if(!pins.length){ __regErrs = [{message: 'Give at least one channel a GPIO pin before adopting.'}]; renderRegistry(); return; }
+  const p = regPend(); p.devices.add = p.devices.add || [];
+  // `board` carries the operator-SELECTED class token (esp32-classic/-c5/-s3) — the pinout keys
+  // off it; no base_url for a serial-discovered board (optional since #1515).
+  p.devices.add.push({device_id: A.device_id, board: A.board, channels: pins});
+  __regAdopt = null; __regErrs = [];
+  renderRegistry();
+}
 function renderRegistry(reg){
   if(reg) __registry = reg;
   const host = document.getElementById('plants'); if(!host) return;
@@ -2723,6 +2829,7 @@ function renderRegistry(reg){
 
   // ---- Boards: the MCUs (taxonomy board=MCU, #921) ----
   const bsec = regSection('Boards', 'the ESP32s — plug one in and it appears here');
+  const adopt = regAdoptCards(); if(adopt) bsec.appendChild(adopt);   // #1027 §5.1: answering-but-unregistered boards
   const blist = el('div', 'reglist');
   V.devices.forEach(d => {
     const lc = regLifecycle('device', d.device_id);
