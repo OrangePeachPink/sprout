@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""#1452 — the extracted serve.py route table (ADR-0038 layer 4, delivery).
+"""#1452 — the extracted serve.py route table (ADR-0038 layer 0, a leaf).
 
 The declarative routing map for the dashboard HTTP server: every GET and POST path,
 its match kind, and the STABLE id ``serve.py`` dispatches on. Pulling it out of the
@@ -13,8 +13,10 @@ module globals (controllers, renderers, the parse cache) — so moving them here
 drag the whole server with them. What moves is the *table*: the patterns, the kinds, and
 the order.
 
-Pure string matching: no I/O, no upward import (layer 4 depends on nothing above it, and
-here on nothing at all but the stdlib). **Order is significant and preserved exactly** —
+Pure string matching: no I/O, no import of ours at all — a layer-0 LEAF (Trellis-
+ratified on #1452: §2 forbids sideways within layer 4 and ``serve`` imports this table,
+so it cannot sit at 4; ``serve (4) → serve_routes (0)`` is the legal downward edge).
+**Order is significant and preserved exactly** —
 ``match`` returns the FIRST matching spec's id, so a specific prefix must precede its
 catch-all (``/lab/study/`` before ``/lab/``) and a ``…/notes`` spec must precede
 the generic ``/lab/`` it would otherwise be swallowed by. The ids are the contract

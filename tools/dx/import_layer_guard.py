@@ -55,18 +55,18 @@ _LAYERS: dict[str, int] = {
     # #1452 — the extracted route table: a pure string-matching LEAF (no I/O, no
     # import). serve (4) → serve_routes is a legal DOWNWARD edge. It is NOT layer 4: §2
     # forbids "sideways within layer 4" and serve imports it, so a route table at 4
-    # would be exactly that. (The ruling's table said "4"; §2 forces it below 4. Flagged
-    # back to Trellis/DX.)
+    # would be exactly that. Trellis RATIFIED the leaf placement on #1452 (the first
+    # ruling's "4" was corrected there).
     "serve_routes": 0,
     "parse_v1": 1,  # §1 "telemetry parsing (parse_v1)"
     "channel_identity": 2,  # #1454 — the S1-seam join (analysis; imports parse_v1 only)
     "card_context": 3,  # §5.3 extraction (#1336) — "dashboard context assembly" (§1)
-    # `dashboard` is CONCEPTUALLY layer 3 — ruled on #1452 (Trellis): zero HTTP I/O,
-    # imports only downward, so serve (4) → dashboard is a legal downward edge. It stays
-    # UNASSIGNED here on purpose: assigning dashboard=3 greenly needs card_context (also
-    # 3) strictly below it, OR the guard aligned to §2's exact "sideways WITHIN LAYER 4"
-    # wording (the guard currently forbids same-layer at every layer). A Trellis/DX call
-    # routed on #1452, not this extraction — whose own edges are all strictly downward.
+    # `dashboard` is layer 3 — ruled on #1452 (Trellis): zero HTTP I/O, pure
+    # context→string composition, imports only downward or same-layer (card_context, 3).
+    # serve (4) → dashboard (3) is a legal downward edge, and dashboard → card_context
+    # is legal same-layer composition below the delivery tier per §2 as amended
+    # 2026-07-22 (#1513; guard aligned in #1519). Assigned here per the #1452 chain.
+    "dashboard": 3,
     "serve": 4,  # §1 "HTTP routes, CLI entry points"
 }
 
