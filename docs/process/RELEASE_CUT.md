@@ -57,6 +57,10 @@ Then: add a 2–4 line human lede above the generated list (what this release *m
 - [ ] Add the version section to [`CHANGELOG.md`](../../CHANGELOG.md) (same content, per-component,
       Keep-a-Changelog form) — move items out of `[Unreleased]`, add the compare links. PR it (docs PR,
       normal gate).
+- [ ] **Check for missed prior sections** (maintainer-ruled 2026-07-24, the #1534 fold): confirm every
+      tagged release back to the last recorded section has its own `[x.y.z]` entry. Precedent: v0.8.0
+      shipped and `[Unreleased]` still read "Next cycle: v0.8.0" — the canonical in-repo record denied
+      a tagged release for days (ADR-0009 §6.3). The v0.8.1 cut writes **both `[0.8.0]` and `[0.8.1]`**.
 
 ## 5. Sign the draft — attach the assets BEFORE publishing (the #1438 guard)
 
