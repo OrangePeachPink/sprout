@@ -14,7 +14,7 @@ evidence (2026-07-06). The loader, analysis-tier join, and seed back-fill are Da
 [ADR-0028](0028-optional-peripherals-doctrine.md) (absence is first-class — every field optional; species never
 gates) · [ADR-0019](0019-capability-and-sensor-matrix.md) (per-channel calibration — the cross-board raw caveat, §6)
 **Relates:** #675 (this — the transitional home + the tracked work) · #834 (the dose→response session grounding the
-field model) · PRD-0008 / #25 (the predictor that conditions on this) · #833 / #822 / #832 (Predict-wave consumers
+field model) · PRD-0009 / #25 (the predictor that conditions on this) · #833 / #822 / #832 (Predict-wave consumers
 that join to this) · #674 (the install prose this supersedes as the *live* home)
 
 ---
@@ -29,7 +29,7 @@ the inference layer can join to.
 
 A raw ADC count means *different things* in a 2-inch succulent vs a 10-inch drought-cycled pothos vs a
 terracotta drip-tray resoaker. Pot geometry, soil-retention class, and care history are exactly the covariates
-that turn a bare raw into a plant-aware prediction. This is the **dimension table the predictor (PRD-0008) will
+that turn a bare raw into a plant-aware prediction. This is the **dimension table the predictor (PRD-0009) will
 condition on.**
 
 **The field model is now empirically grounded.** The 2026-07-06 #834 dose→response session measured, per plant,
@@ -107,7 +107,7 @@ not force false certainty where the maintainer has none (e.g. "does p05 need a b
 strategy?" stays an open question, not a fabricated field). The field model is **validated against the full #675
 seed** — every observation maps to a field.
 
-### 6. Prediction-consumer caveats (what PRD-0008 must honour)
+### 6. Prediction-consumer caveats (what PRD-0009 must honour)
 
 The profile *conditions* inference; it does not by itself make readings comparable. Two caveats travel with it:
 
@@ -132,7 +132,7 @@ The profile *conditions* inference; it does not by itself make readings comparab
 
 - The install-day observations become a first-class, queryable, **versioned** dimension keyed by the stable
   `plant_id` — no more stale references to a closed PR.
-- The predictor (PRD-0008) conditions on real covariates — *effective* pot volume, drainage pathology, soil
+- The predictor (PRD-0009) conditions on real covariates — *effective* pot volume, drainage pathology, soil
   *condition* — instead of a bare raw, and is warned where a probe reading cannot be trusted as a water proxy.
 - Nominal and effective size stay separable, so the recorded measurement (`diameter_in`) is preserved *and* the
   judgement that p04 behaves smaller is captured — neither overwrites the other.
