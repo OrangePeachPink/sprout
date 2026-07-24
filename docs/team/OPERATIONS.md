@@ -475,6 +475,27 @@ know GitHub, so every bit of bespoke machinery we *don't* build is friction a fu
 
 [board]: https://github.com/users/OrangePeachPink/projects/2
 
+## Architecture review cadence (maintainer-ruled 2026-07-24)
+
+Guard against the strategy quietly falling behind the implementation — or behind what the
+roadmap demands. On a **~monthly baseline the maintainer commissions an external
+technical-architecture review**, working with an external agent to grade Sprout against
+**public-release standards, not internal-prototype health**. It is a **maintainer trigger, not a
+scheduled job** — read it as *"prompt the maintainer to request an external architecture
+review,"* cadence-guided. The interval **flexes with velocity, volume, and rate of change**:
+pull it forward when a chapter warrants (an epic close, a big architecture wave, a fast-moving
+week), stretch it when the codebase is quiet. The precedent is the review that drove this week's
+hardening pass.
+
+**Delivery pattern — board-and-build, don't narrate (ruled from what worked, 2026-07-24):** a
+commissioned review's findings go **straight onto the board as issues, then get built and
+shipped — with no running narrative on the Discussions board.** The v0.8.1 hardening pass proved
+it: the external review's entire flagged capability set was boarded and delivered in ~2 days of
+coding, shipping with the release, zero discussion-board back-and-forth. Boarding-and-building
+beat discussing. This does **not** change *§ GitHub-native by default* (general, not-yet-buildable
+ideas still belong in **Discussions**) — the distinction is that a *commissioned review's
+findings are work*, so they route to **Issues** directly, like any other work.
+
 ## Deliberately-not-at-our-scale ledger (ratified 2026-07-20)
 
 Things we have considered and **decline at our current scale** — each with the written trigger that reopens it.
