@@ -496,6 +496,16 @@ beat discussing. This does **not** change *§ GitHub-native by default* (general
 ideas still belong in **Discussions**) — the distinction is that a *commissioned review's
 findings are work*, so they route to **Issues** directly, like any other work.
 
+**The theme-conformance gate (maintainer-ratified 2026-07-24, the #1534 fold):** a **themed
+release closes with a theme-level delta review** — expectation → promise → delivery — before its
+retro is considered complete. Increments passing their ACs does not establish that the *theme*
+shipped: v0.8.0 "Predict" closed with its self-declared headline (`predictor.py`) reaching no
+surface and its trust instrument dark, and the retro never asked. The review runs blind-first
+where practical (independent expectation baselines before the record is read; the fold pattern
+of #1534), composes with the monthly external review above, and its delta lands as issues per
+the board-and-build rule. The question it must answer on the record: *did the release name
+become true on the operator's surface?*
+
 ## Deliberately-not-at-our-scale ledger (ratified 2026-07-20)
 
 Things we have considered and **decline at our current scale** — each with the written trigger that reopens it.
