@@ -116,7 +116,7 @@ to be true — is the maintainer's ruling at the ratification session, held deli
   watering event, not just the drying-direction ETA.
 - **G6 — The prediction feedback loop.** `gap` — a prediction log (append `{ts, plant, model_tier, eta,
   interval}` at emit), recalc-after-watering, and model versioning — the substrate that makes R4's track record
-  and any "shown-then-revised" honesty possible. No prediction log exists today.
+  and any "shown-then-revised" accountability possible. No prediction log exists today.
 - **G7 — Prediction-Center summaries.** `gap` — a consolidated place that answers the greenhouse-wide prediction
   questions at a glance, rather than one chip per card.
 
