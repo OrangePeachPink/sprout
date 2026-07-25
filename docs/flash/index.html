@@ -123,6 +123,17 @@
       <p class="muted" style="margin:.6rem 0 .4rem">This is not a release. It's whatever
         <code>main</code> built most recently — it has not been through a release cut, and it may
         misbehave in ways a stable build won't.</p>
+      <!--
+        #1599 AC4 — honesty fence, and it comes OUT the moment B1 lands. Until stable
+        points at the signed release assets, both channels are built from `main` by the
+        same Pages job: same bytes, two names. A stable channel quietly serving an
+        unreleased build is the falsehood-family shape on the delivery surface, so it is
+        stated on the page rather than left for someone to discover from a sha256.
+      -->
+      <p class="muted" style="margin:0 0 .4rem"><strong>Right now these are the same
+        build.</strong> Until the next release cut wires stable to its signed release
+        assets, both channels are built from <code>main</code> — so "stable" here is not
+        yet a cut release. Flashing either gets you the same bytes.</p>
       <dl class="prov">
         <dt>Commit</dt><dd id="a-git">—</dd>
         <dt>Built</dt><dd id="a-built">—</dd>

@@ -112,9 +112,36 @@ jobs:
             [ "$m" = "$primary" ] || extra+=("$m")
           done
           echo "verified boards offered: ${#manifests[@]}"
+          built_utc="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           python3 tools/pages/build_flash_manifest.py \
             --primary "$primary" "${extra[@]}" \
+            --built-utc "$built_utc" \
             --out "$site/flash/manifest.json"
+
+          # #1599: publish the ALPHA manifest too. The flasher's alpha panel is gated on
+          # this file being fetchable (docs/flash/index.html), and nothing produced it —
+          # so the channel the page offers had no producer and the bench walk stopped.
+          #
+          # It is the SAME artifacts under a second name, and that is correct today: this
+          # job builds current `main` on every run, which IS the alpha build. What is not
+          # yet true is the other half — `manifest.json` is also built-from-main, so
+          # "stable" is currently serving an unreleased build. Fixing that means pointing
+          # stable at the SIGNED RELEASE ASSETS, which is B1 and is post-cut by design.
+          # Until then the alpha panel says so on the page (never silently), and this
+          # duplicate write is retired the moment stable has its own real source.
+          python3 tools/pages/build_flash_manifest.py \
+            --primary "$primary" "${extra[@]}" \
+            --built-utc "$built_utc" \
+            --out "$site/flash/manifest-alpha.json"
+
+          # Fail closed: the page reveals the alpha panel only if this fetches, so an
+          # empty or missing file would silently re-hide the channel we just published.
+          for f in manifest.json manifest-alpha.json; do
+            [ -s "$site/flash/$f" ] || {
+              echo "::error title=Manifest missing::$f was not written; the flasher would hide that channel."
+              exit 1
+            }
+          done
           echo "== flasher payload ==" && ls -l "$site/flash/"
 
       - name: Upload the Pages artifact
