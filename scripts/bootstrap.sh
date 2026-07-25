@@ -17,9 +17,11 @@
 set -eu
 
 TOOLS_ONLY=0
+CHECK_ONLY=0
 for arg in "$@"; do
     case "$arg" in
     --tools-only) TOOLS_ONLY=1 ;;
+    --check-only) CHECK_ONLY=1 ;;
     -h | --help)
         sed -n '2,15p' "$0" | sed 's/^#\{1,\} \{0,1\}//'
         exit 0
@@ -33,6 +35,24 @@ done
 
 say() { printf '\n>> %s\n' "$1"; }
 have() { command -v "$1" >/dev/null 2>&1; }
+
+# --check-only: say what IS and ISN'T here, install nothing, exit 0. Two callers want
+# this. A human asking "what is this about to do to my machine?" deserves an answer
+# before it does it. And the onboarding guard (#1562) has to prove the toolless path
+# works from a shell that genuinely lacks uv and just — which it cannot do by running
+# the real installers, because a guard that reaches the network and mutates the machine
+# it is grading is not a guard.
+if [ "$CHECK_ONLY" -eq 1 ]; then
+    printf 'bootstrap --check-only (nothing will be installed)\n'
+    for tool in git uv just; do
+        if have "$tool"; then
+            printf '  present  %s\n' "$tool"
+        else
+            printf '  MISSING  %s\n' "$tool"
+        fi
+    done
+    exit 0
+fi
 
 # ---------------------------------------------------------------- git (check only)
 if have git; then

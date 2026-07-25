@@ -17,21 +17,26 @@ itself isn't ad-hoc or re-derived each time.
 Steps (mirrors the README/CONTRIBUTING Quick Start verbatim, plus a clean-shutdown
 check carried over from the #512/#493 manual precedent):
 
-  1. scripts/bootstrap --tools-only
+  1. scripts/bootstrap --check-only, from a TOOLLESS shell
+                                - PASS: it runs with uv/just absent from PATH and
+                                   reports them missing (#1562). The wall itself:
+                                   `command not found: uv` happens one step BEFORE
+                                   `uv sync`, which is why this guard missed it
+  2. scripts/bootstrap --tools-only
                                 - PASS: exit 0. The Quick Start's HEADLINE command
                                    (#1557) — asserted so the guard cannot mirror the
                                    by-hand fallback while the headline rots
-  2. uv sync                    - PASS: exit 0
-  3. uv run pre-commit install  - PASS: exit 0
-  4. port :8765 free            - PASS: nothing already listening (#1337; `just start`
+  3. uv sync                    - PASS: exit 0
+  4. uv run pre-commit install  - PASS: exit 0
+  5. port :8765 free            - PASS: nothing already listening (#1337; `just start`
                                    is --serve-or-focus, so a live server would make
                                    this script grade one it did not start)
-  5. just start                 - PASS: GET / on :8765 returns HTTP 200 within 30s.
+  6. just start                 - PASS: GET / on :8765 returns HTTP 200 within 30s.
                                    Runs the LITERAL command (#1337), not serve.py
                                    directly; BROWSER=true keeps --open headless
-  6. POST /quit                 - PASS: server process exits within 10s
-  7. just processes             - PASS: reports zero live Sprout-spawned processes
-  8. just check                 - PASS: exit 0 (needs PlatformIO + a C compiler on
+  7. POST /quit                 - PASS: server process exits within 10s
+  8. just processes             - PASS: reports zero live Sprout-spawned processes
+  9. just check                 - PASS: exit 0 (needs PlatformIO + a C compiler on
                                    PATH - the documented honest-note gap from #512;
                                    this step's failure for THAT reason is a real
                                    result, not a script bug - see CONTRIBUTING.md)
@@ -97,6 +102,66 @@ def step_bootstrap_tools() -> StepResult:
     ok = proc.returncode == 0
     detail = "exit 0" if ok else f"exit {proc.returncode}\n{proc.stderr[-800:]}"
     return StepResult(f"scripts/{script} --tools-only", ok, detail)
+
+
+def step_bootstrap_from_a_toolless_shell() -> StepResult:
+    """The wall itself, asserted (#1562): bootstrap must work where uv and just are NOT.
+
+    Every other step here presupposes the tools — which is precisely why this guard
+    missed the #1541 report's very first finding. `command not found: uv` happens one
+    step *before* `uv sync`, in a shell the validator never simulated.
+
+    Runs `--check-only` with a PATH stripped of everything but the system directories,
+    so the script executes in a genuinely toolless environment and has to *detect and
+    report* rather than assume. `--check-only` installs nothing on purpose: a guard that
+    reaches the network and mutates the machine it is grading is not a guard.
+
+    PASS = it ran, and it correctly said uv and just were missing.
+    """
+    script = "bootstrap.ps1" if os.name == "nt" else "bootstrap.sh"
+    path = REPO_ROOT / "scripts" / script
+    if not path.exists():
+        return StepResult("toolless bootstrap", False, f"scripts/{script} is missing")
+
+    if os.name == "nt":
+        bare = os.environ.get("SYSTEMROOT", r"C:\Windows")
+        env = {
+            **os.environ,
+            "PATH": f"{bare}\\System32;{bare}",
+            "PATHEXT": os.environ.get("PATHEXT", ""),
+        }
+        cmd = ["pwsh", "-NoProfile", "-File", str(path), "-CheckOnly"]
+    else:
+        env = {"PATH": "/usr/bin:/bin", "HOME": os.environ.get("HOME", "/tmp")}
+        cmd = ["sh", str(path), "--check-only"]
+
+    try:
+        proc = subprocess.run(
+            cmd, cwd=REPO_ROOT, capture_output=True, text=True, timeout=120, env=env
+        )
+    except (OSError, subprocess.SubprocessError) as e:
+        return StepResult("toolless bootstrap", False, f"could not run it: {e}")
+
+    out = proc.stdout + proc.stderr
+    if proc.returncode != 0:
+        return StepResult(
+            "toolless bootstrap", False, f"exit {proc.returncode}\n{out[-500:]}"
+        )
+    # It must NOTICE. Reporting everything present from a shell with no PATH would mean
+    # the detection is broken and the real run would sail past a missing tool.
+    detected = [t for t in ("uv", "just") if f"MISSING  {t}" in out]
+    if len(detected) < 2:
+        return StepResult(
+            "toolless bootstrap",
+            False,
+            "ran, but did not report uv/just as missing from a stripped PATH — "
+            f"its detection is not working:\n{out[-400:]}",
+        )
+    return StepResult(
+        "toolless bootstrap",
+        True,
+        "ran with no tools on PATH; reported uv + just missing",
+    )
 
 
 def step_uv_sync() -> StepResult:
@@ -250,6 +315,7 @@ def main() -> int:
 
     try:
         for step in (
+            step_bootstrap_from_a_toolless_shell,
             step_bootstrap_tools,
             step_uv_sync,
             step_pre_commit_install,
