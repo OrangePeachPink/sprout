@@ -21,7 +21,27 @@ _SPARK = _H[_H.index("function drawSparkline(") : _H.rindex("</script>")]
 
 def test_the_sparkline_is_wired_into_the_pulse() -> None:
     assert "function drawSparkline(" in _H
-    assert "drawSparkline(box, ds, lo, hi, inner, tok)" in _H  # called from drawPulse
+    # #1581 (R6): the signature grew a `card` (next_need rides it). The pin FOLLOWS the
+    # call rather than being deleted -- it exists so the sparkline cannot be silently
+    # unwired. Pinning the argument list also catches a refactor that drops `card`,
+    # which would unwire the forecast while the chart still drew.
+    assert (
+        "drawSparkline(box, ds, lo, hi, inner, tok, card)" in _H
+    )  # called from drawPulse
+
+
+def test_the_forecast_is_drawn_with_a_boundary_not_colour_alone() -> None:
+    # #1581 (R6): the predicted curve and its boundary are the point of the slice; pin
+    # all THREE cues so none can quietly regress to colour-only.
+    assert "next_need" in _SPARK  # the forecast's source reaches the drawing
+    # 1. STYLE — pinned per dash pattern, not on a bare "setLineDash": there are TWO
+    # dashed elements (the predicted line and the boundary rule), so a substring check
+    # passes when either survives. Verified by regression-testing this pin itself:
+    # deleting the forecast line's dash left a bare check green. Both are named now.
+    assert "setLineDash([10, 8])" in _SPARK  # the predicted curve is dashed
+    assert "setLineDash([4, 6])" in _SPARK  # the boundary rule is dashed
+    assert "globalAlpha" in _SPARK  # 2. shading — the future region carries a wash
+    assert '"now"' in _SPARK and '"predicted"' in _SPARK  # 3. labels
 
 
 def test_it_clips_to_the_current_segment_never_across_a_watering() -> None:
