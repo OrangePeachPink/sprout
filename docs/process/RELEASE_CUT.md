@@ -26,6 +26,64 @@ bottom for every `vX.Y.Z`.
       If firmware didn't change this release, the constant still bumps at the next firmware release —
       note per-component reality in the notes instead.
 
+### 1.1 Reconcile the milestone against the tag line — both directions
+
+**The tag is the line, and the line moves.** A milestone is a plan made days earlier; the tag is the
+fact. Whatever is merged when you tag *ships in this release* no matter which milestone it carries,
+and whatever is still open *doesn't* no matter how confidently it was planned. Reconcile the record to
+the fact **before** closing the milestone (§2) — once it's closed you're editing history rather than
+recording it. This runs at every cut, not just when something looks wrong.
+
+**What the milestone is and isn't.** It does **not** generate the notes — those are auto-generated
+**tag-to-tag from commits** (§2), so a wrong milestone won't corrupt the release text. What it *is* is
+the traceability surface: the milestone page is the answer to "what shipped in this version," and it
+is where the maintainer's PR queue and contributors' credited work both resolve to a release. A
+milestone that disagrees with the tree misstates the record on the one page people consult to check
+it.
+
+**Milestone PRs, not just issues** *(maintainer's ruling, v0.8.1 cut)*: PRs get the version milestone
+as a rule. The work is traced through the PR queue and contributors are credited on PRs, so a PR that
+links to its release is the useful artifact. Prior releases were inconsistent about this — v0.7.3
+milestoned 14 PRs, v0.8.0 only 6 — which is exactly the ambiguity this line removes.
+
+Both directions, and the second one is the one that gets skipped:
+
+- [ ] **Under the line → pull in.** Anything **merged or closed** that carries a *later* milestone (or
+      none) gets re-milestoned to **this** version. Its bytes are in the tag; the record must say so.
+      Late-cycle work is the usual source — an item planned for next release, built early, merged
+      before the cut.
+- [ ] **Over the line → push out.** Anything **still open** on this milestone moves to the next
+      version or a later wave, each with a one-line reason. Scope is a decision, not an accident
+      (§0) — and **milestone placement for bench / hardware / scope is the maintainer's call**, never
+      a lane's default.
+
+Find both sets by query, never by memory (ADR-0003 §11):
+
+```bash
+# under the line — merged since the previous tag but carrying the wrong milestone, or none.
+# The previous tag's publish date is the boundary; anything merged after it is in this release.
+PREV=$(gh release view --repo OrangePeachPink/sprout --json publishedAt --jq .publishedAt)
+gh pr list --repo OrangePeachPink/sprout --state merged --limit 200 \
+  --json number,title,milestone,mergedAt \
+  --jq --arg prev "$PREV" '.[] | select(.mergedAt > $prev)
+        | select((.milestone.title // "none") != "v0.8.1")
+        | "\(.number) [\(.milestone.title // "NONE")] \(.title)"'
+
+# under the line — closed issues pointed at a later release
+gh issue list --repo OrangePeachPink/sprout --state closed --milestone "v0.8.2" --json number,title
+
+# over the line — still open on the milestone being cut
+gh issue list --repo OrangePeachPink/sprout --state open --milestone "v0.8.1" --json number,title
+```
+
+**Use the previous tag as the boundary, not "everything unmilestoned."** Merged PRs from earlier
+releases are also unmilestoned; sweeping without the date filter back-dates them into this version.
+
+*(Ruled by the maintainer at the v0.8.1 cut, after a manual reconciliation moved 29 issues and 10 PRs
+that had been built and merged under a next-release label. It was not a labelling slip — it is what
+always happens when a release's last days go well, which is why it is a standing step rather than a
+correction.)*
+
 ## 2. Close the milestone → the draft appears
 
 - [ ] Close the milestone (Issues → Milestones → Close). The `release-draft` workflow drafts the
