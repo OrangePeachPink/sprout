@@ -31,9 +31,10 @@ default:
 #  there and is never duplicated here. The double-click launcher (#86 B) is then just a
 #  desktop shortcut that runs `just start`.
 # ============================================================================
+# --serve-or-focus (#151) is single-instance: a second launch opens the existing tab, never a 2nd
+# server. For a forced fresh start over a stale server, use `just restart`. Stop it from the
+# dashboard or with Ctrl-C — Ctrl-C exits clean (#1552); it is not a crash.
 # Launch Sprout — serve + open the browser at the fixed port (the zero-CLI door). The one operator entry.
-# --serve-or-focus (#151) is single-instance: a second launch opens the existing tab, never a 2nd server.
-# For a forced fresh start over a stale server, use `just restart`.
 start:
     @just serve --serve-or-focus --open
 
@@ -46,6 +47,24 @@ restart:
 # ============================================================================
 # Serve the live dashboard on the fixed port 8765 (serve.py's own default; `just serve -p 8000` to override).
 serve *ARGS:
+    #!/usr/bin/env sh
+    # Ctrl-C is a DOCUMENTED way to stop Sprout — the startup banner says so — so it must
+    # not read as a crash (#1552). serve.py already handles SIGINT itself: it prints
+    # "stopped" and returns 0. What looked like a failure was `just` reporting the 130 its
+    # own interrupted child produced, on the one path a newcomer is told to use.
+    #
+    # `trap 'exit 0' INT` fires on SIGINT and NOTHING else, so a real failure still
+    # propagates its own code — verified: a child exiting 3 still exits 3. A blanket
+    # `|| true` (or just's `-` prefix, as `logger` uses for its own reasons) would hide
+    # every genuine crash to tidy one expected keystroke; serve failing to bind, or dying
+    # on an import error, must stay loud.
+    #
+    # The trap lives on `serve` — the leaf that runs python — so `start`, `restart` and
+    # `dash` all inherit it instead of each carrying a copy.
+    #
+    # On a real Ctrl-C the terminal signals the whole foreground process group, so python
+    # receives it directly and exits on its own; the shell is not the thing reaping it.
+    trap 'exit 0' INT
     {{py}} tools/analytics/serve.py {{ARGS}}
 
 # Friendly alias for `serve`.
