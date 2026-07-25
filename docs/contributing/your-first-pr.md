@@ -18,12 +18,21 @@ time it appears.
 You need three tools. Each does one job:
 
 - **Git** — version control; how code travels. If `git --version` prints a number, you already have it.
+  If not: `winget install Git.Git` (Windows), `xcode-select --install` (macOS),
+  `sudo apt install git` (Debian/Ubuntu).
 - **uv** — a fast Python environment manager (from Astral). It reads the project's lockfile and gives you the
-  *exact* Python and packages every other contributor has — no "works on my machine." See the
-  [uv docs](https://docs.astral.sh/uv/) to install.
+  *exact* Python and packages every other contributor has — no "works on my machine."
+  Install: `winget install astral-sh.uv` (Windows), `brew install uv` (macOS), or
+  `curl -LsSf https://astral.sh/uv/install.sh | sh` (Linux) — see the [uv docs](https://docs.astral.sh/uv/).
 - **just** — a tiny command runner. Instead of memorizing long commands, you run short recipes like
-  `just check`. Install with `winget install Casey.Just` (Windows), `brew install just` (macOS), or see the
-  [just docs](https://just.systems).
+  `just check`. Install: `winget install Casey.Just` (Windows), `brew install just` (macOS), or
+  `curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to ~/.local/bin`
+  (Linux) — see the [just docs](https://just.systems).
+
+**You don't have to do that by hand.** Once you have Git and the clone, **`./scripts/bootstrap.sh`**
+(or **`.\scripts\bootstrap.ps1`** on Windows) installs uv and just if they're missing, syncs the
+environment, wires the hooks, and prints the versions it verified. Safe to re-run — every step checks
+first and skips what's already there.
 
 > **The zero-install path:** the repo ships a devcontainer, so you can open it in **GitHub Codespaces** and skip
 > Step 0 entirely — the environment builds itself in the browser.
@@ -32,9 +41,15 @@ You need three tools. Each does one job:
 
 ```text
 git clone https://github.com/OrangePeachPink/sprout && cd sprout
+./scripts/bootstrap.sh      # or .\scripts\bootstrap.ps1 on Windows — see Step 0
+just start                  # launch Sprout — opens the dashboard in your browser
+```
+
+`bootstrap` is the two commands below, plus the tool installs, plus a verification pass. By hand:
+
+```text
 uv sync                     # reproduce the exact, locked dev environment
 uv run pre-commit install   # the quality checks auto-run on every commit
-just start                  # launch Sprout — opens the dashboard in your browser
 ```
 
 `uv sync` builds a local environment with the right Python and tools. `pre-commit install` wires up the hooks

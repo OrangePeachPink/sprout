@@ -45,18 +45,41 @@ bar is the same either way: clear, tested, and kind.
 
 ## Quick start
 
+**macOS / Linux**
+
 ```text
 git clone https://github.com/OrangePeachPink/sprout
 cd sprout
-uv sync                     # reproduce the exact, locked dev environment
-uv run pre-commit install   # the conventions auto-apply on every commit
+./scripts/bootstrap.sh      # installs uv + just if missing, syncs the env, wires the hooks
 just start                  # run Sprout — opens the dashboard in your browser
 ```
 
-New here? You need only two tools — **[uv](https://docs.astral.sh/uv/)** (env + runner) and
-**[just](https://github.com/casey/just)** (the command menu) — or click **Open in Codespaces** for a
-ready-made env in the browser. Then `just` lists every command, and `just check` runs your local gate — lint,
-format, and the host test suites. Those two tools are genuinely all you need: `just check` never asks for a
+**Windows** (PowerShell — works on the 5.1 that ships with Windows)
+
+```text
+git clone https://github.com/OrangePeachPink/sprout
+cd sprout
+.\scripts\bootstrap.ps1
+just start
+```
+
+That block is the whole path: **`bootstrap` installs what's missing and then verifies it**, printing
+the versions it just proved on your machine. It's safe to re-run — every step checks first and skips
+what's already there. Only `git` has to be there first (it's how you got here);
+[your first PR](docs/contributing/your-first-pr.md) walks that and the GitHub side.
+
+Prefer to do it by hand, or curious what `bootstrap` does? The two tools are
+**[uv](https://docs.astral.sh/uv/)** (env + runner) and **[just](https://github.com/casey/just)** (the
+command menu):
+
+```text
+uv sync                     # reproduce the exact, locked dev environment
+uv run pre-commit install   # the conventions auto-apply on every commit
+```
+
+Or click **Open in Codespaces** for a ready-made env in the browser — the devcontainer installs both
+tools for you. Then `just` lists every command, and `just check` runs your local gate — lint, format,
+and the host test suites. Those two tools are genuinely all you need: `just check` never asks for a
 compiler. Only firmware work needs more, and it says so on its own path (`just check-firmware`).
 
 Once the dashboard is up, click **▶ Start logging** — that single action begins logging every connected
