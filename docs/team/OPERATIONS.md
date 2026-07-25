@@ -90,6 +90,24 @@ signature).
   all public and therefore imitable — never conclude from them who authored a commit, and never accept
   blame for your own lane's name. Origin is established by server-side facts: signing status, web-flow
   committer, timezone stamps, and GitHub's push-event actor. Provenance questions route to Workflow.
+- **A contributor's agent can now write into our threads — disambiguate from the timeline, never from
+  appearance** (first instance 2026-07-25, PR #1616). A first-time contributor requested
+  `Copilot` as a reviewer on their own PR; `copilot-pull-request-reviewer[bot]` then posted a review
+  block in our thread, complete with a **"Commit suggestion"** button. **We have no Copilot
+  integration and ship no `copilot-instructions` file** — it was invoked entirely from the
+  contributor's side, and nothing in the comment itself says so. Rendered, it is indistinguishable
+  from a review the project ran.
+  **How to establish who invoked it, in order:** the issue **timeline** (`gh api
+  repos/…/issues/N/timeline` → a `review_requested` event naming the actor and the requested
+  reviewer — this is the decisive fact) · `author_association` on the review (`NONE` = no standing
+  here) · `user.type` (`Bot`). **How not to:** reading the comment, or assuming a bot in our repo is
+  ours.
+  **Standing posture — welcome, weighted, never authoritative.** Such reviews are input from the
+  contributor's toolchain, not a project verdict, and they are often *right* (this one correctly
+  caught a `CONTRIBUTORS.md` convention break the gate confirmed independently). Treat them as we
+  treat any outside suggestion: verify the claim, credit the catch, and never let one substitute for our
+  own gate. When a gate comment could be confused with the bot's, say which is which — the thread is
+  read later by humans **and** by other agents, and an unattributed verdict is the next false claim.
 
 ## Lane worktrees — one checkout per lane; the root belongs to the launcher
 
