@@ -152,6 +152,25 @@ exhaustiveness:
 Then: add a 2–4 line human lede above the generated list (what this release *means*), and state
 **per-component reality** (firmware / host / docs — what actually changed, ADR-0009 §3).
 
+- [ ] **@-mention scan on the generated list — before publish.** Auto-generated notes embed **PR
+      titles verbatim**, and PR titles are prose nobody writes with GitHub's mention parser in mind.
+      Any `@` in a title becomes a **live mention of whoever owns that handle**: a schema property, an
+      email fragment, a decorator, `@media`. Scan the composed body and backtick anything that is not
+      a real participant — then fix the **PR title at the source**, or the next regeneration
+      reintroduces it.
+
+      ```
+      gh release view <tag> --repo OrangePeachPink/sprout --json body --jq .body \
+        | grep -oE '(^|[^`[:alnum:]/])@[A-Za-z0-9][-A-Za-z0-9]*' | sort -u
+      ```
+
+      *(Caught at the v0.8.1 cut: `Person @id mirror` — the schema.org `@id` property in PR #1495's
+      title — rendered as a mention of an unrelated GitHub user, who was then **listed as a release
+      contributor** on the draft. Only two authors existed in the entire tag range. This is worse than
+      cosmetic: the stranger gets notified, the credit is false and public, and while a release body
+      stays editable, **the notification fires once**. Same failure as crediting a contribution that
+      never merged (§1.2), arriving through a door nobody typed.)*
+
 - [ ] **Register sweep** (#1161) — run `just voice-guard --all` and attach the delta (or "clean")
       to the release evidence; the retired register (PR #1099's wash) never migrates back silently.
       **Include repo metadata**: the GitHub description, topics, and About fields live in Settings,
