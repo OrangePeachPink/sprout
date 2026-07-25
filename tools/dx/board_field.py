@@ -16,8 +16,13 @@ checked against the **live board** rather than trusted. Two ways that matters:
   confirm the declared option id still exists on the live field, and fail loud with
   "fix the table" if it doesn't. Silently writing a stale id is worse than no tool.
 
-    python tools/dx/board_field.py read <issue>
-    python tools/dx/board_field.py <field> <issue> <value>
+**Issues and PRs both (#1522).** The board carries PR cards as first-class items, so a
+number here resolves as either — and an item that is not carded yet gets added rather
+than refused. Resolving issues only is exactly how a run of PRs reached the triage view
+with every planning field empty.
+
+    python tools/dx/board_field.py read <issue|pr>
+    python tools/dx/board_field.py <field> <issue|pr> <value>
 """
 
 from __future__ import annotations
@@ -126,30 +131,80 @@ def _gql(query: str) -> dict:
     return doc["data"]
 
 
-def _item_and_values(issue: int) -> tuple[str, dict[str, str | None]]:
-    """The issue's project-#2 item id, plus each field's current value name (or None).
+def _content(number: int) -> dict:
+    """The issue OR pull request with this number, as a project-content node (#1522).
 
-    Per-issue query — never the bulk item-list, which truncates silently (ADR-0003 §5).
+    Issues and PRs share one number space, so ``issueOrPullRequest`` resolves either —
+    and the board carries both (a PR card is a first-class item). Querying ``issue()``
+    alone made every PR look like it did not exist, which is how #1512/#1384/#1518/#1520
+    sat on the triage view with every field empty: the wrapper refused them, so only the
+    gate's raw-GraphQL Status write landed.
+
+    Per-number query — never the bulk item-list, which truncates silently (ADR-0003 §5).
     """
     sel = "\n".join(
         f'{k}: fieldValueByName(name: "{f["gql"]}") '
         "{ ... on ProjectV2ItemFieldSingleSelectValue { name } }"
         for k, f in FIELDS.items()
     )
+    body = (
+        f"id title projectItems(first: 10) {{ nodes {{ id project {{ id }} {sel} }} }}"
+    )
     data = _gql(
         f'{{ repository(owner: "OrangePeachPink", name: "sprout") '
-        f"{{ issue(number: {issue}) {{ title projectItems(first: 10) "
-        f"{{ nodes {{ id project {{ id }} {sel} }} }} }} }} }}"
+        f"{{ issueOrPullRequest(number: {number}) {{ __typename "
+        f"... on Issue {{ {body} }} ... on PullRequest {{ {body} }} }} }} }}"
     )
-    issue_node = (data.get("repository") or {}).get("issue")
-    if issue_node is None:
-        raise BoardError(f"issue #{issue} does not exist.")
-    for node in issue_node["projectItems"]["nodes"]:
-        if node["project"]["id"] == PROJECT_ID:
-            values = {k: (node[k] or {}).get("name") for k in FIELDS}
-            return node["id"], values
+    node = (data.get("repository") or {}).get("issueOrPullRequest")
+    if node is None:
+        # Both types were tried in one call — say so, so "#N does not exist" is never
+        # read as "#N is a PR and this tool only does issues" (the #1522 confusion).
+        raise BoardError(
+            f"#{number} is neither an issue nor a pull request in this repo."
+        )
+    return node
+
+
+def _add_to_board(number: int, content_id: str, kind: str) -> str:
+    """Put an un-carded issue/PR on Project #2 and return its new item id (#1522 AC2).
+
+    The gate was doing this by hand. Adding is idempotent server-side: a second add of
+    the same content returns the existing item rather than duplicating it.
+    """
+    data = _gql(
+        "mutation { addProjectV2ItemById(input: { "
+        f'projectId: "{PROJECT_ID}", contentId: "{content_id}" }}) '
+        "{ item { id } } }"
+    )
+    item = ((data.get("addProjectV2ItemById") or {}).get("item")) or {}
+    if not item.get("id"):
+        raise BoardError(
+            f"could not add {kind.lower()} #{number} to the board (Project #2)."
+        )
+    print(f"  #{number} added to the board ({kind.lower()}).")
+    return item["id"]
+
+
+def _item_and_values(number: int) -> tuple[str, dict[str, str | None]]:
+    """This issue/PR's project-#2 item id, plus each field's current value (or None).
+
+    Not on the board yet? Add it (AC2) rather than refusing — then RE-QUERY, because a
+    mutation's own "ok" is not evidence (#519/#522). A card that is still absent after a
+    successful-looking add is a loud failure, never an assumed one.
+    """
+    node = _content(number)
+    for item in node["projectItems"]["nodes"]:
+        if item["project"]["id"] == PROJECT_ID:
+            return item["id"], {k: (item[k] or {}).get("name") for k in FIELDS}
+
+    _add_to_board(number, node["id"], node["__typename"])
+    node = _content(number)  # never trust the mutation — prove the card exists
+    for item in node["projectItems"]["nodes"]:
+        if item["project"]["id"] == PROJECT_ID:
+            return item["id"], {k: (item[k] or {}).get("name") for k in FIELDS}
     raise BoardError(
-        f"issue #{issue} is not on the board (Project #2). Add it, then set fields."
+        f"#{number} was added to Project #2 but the card did not come back on a "
+        "re-query. Check the board before trusting any field value."
     )
 
 
@@ -179,14 +234,14 @@ def _assert_option_live(field: str, option_id: str) -> None:
         )
 
 
-def read(issue: int) -> int:
-    _, values = _item_and_values(issue)
+def read(number: int) -> int:
+    _, values = _item_and_values(number)
     for k in _READ_ORDER:
         print(f"  {k:9} {values[k] or EMPTY}")
     return 0
 
 
-def write(field: str, issue: int, word: str) -> int:
+def write(field: str, number: int, word: str) -> int:
     f = FIELDS[field]
     word = word.lower()
     if word not in f["options"]:
@@ -194,7 +249,7 @@ def write(field: str, issue: int, word: str) -> int:
         raise BoardError(f"unknown {field} '{word}'. Valid: {valid}")
     option_id = f["options"][word]
 
-    item_id, _ = _item_and_values(issue)  # also proves the issue is on the board
+    item_id, _ = _item_and_values(number)  # also puts it on the board if it wasn't
     _assert_option_live(field, option_id)  # drift guard, before the mutation
 
     _gql(
@@ -205,20 +260,20 @@ def write(field: str, issue: int, word: str) -> int:
     )
 
     # Never trust the mutation — re-query and print what the board reports (#519/#522).
-    _, values = _item_and_values(issue)
+    _, values = _item_and_values(number)
     now = values[field]
-    print(f"  #{issue} {field} = {now or EMPTY}")
+    print(f"  #{number} {field} = {now or EMPTY}")
     return 0
 
 
-def _issue_number(s: str) -> int:
-    """Parse the issue arg, or fail with a clean message. Scoped tightly so ONLY a truly
-    non-numeric arg triggers it — a broad `except ValueError` once caught an unrelated
-    UnicodeEncodeError (a ValueError subclass) and mislabelled it (#1447)."""
+def _card_number(s: str) -> int:
+    """Parse the issue/PR arg, or fail with a clean message. Scoped tightly so ONLY a
+    truly non-numeric arg triggers it — a broad `except ValueError` once caught an
+    unrelated UnicodeEncodeError (a ValueError subclass) and mislabelled it (#1447)."""
     try:
         return int(s)
     except ValueError:
-        raise BoardError(f"issue must be a number, got '{s}'.") from None
+        raise BoardError(f"issue/PR must be a number, got '{s}'.") from None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -231,8 +286,8 @@ def main(argv: list[str] | None = None) -> int:
     fields = " ".join(FIELDS)
     if not argv:
         print(
-            f"usage: board_field.py read <issue>\n"
-            f"       board_field.py <{fields}> <issue> <value>",
+            f"usage: board_field.py read <issue|pr>\n"
+            f"       board_field.py <{fields}> <issue|pr> <value>",
             file=sys.stderr,
         )
         return 2
@@ -241,12 +296,12 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if verb == "read":
             if len(argv) != 2:
-                raise BoardError("usage: board_field.py read <issue>")
-            return read(_issue_number(argv[1]))
+                raise BoardError("usage: board_field.py read <issue|pr>")
+            return read(_card_number(argv[1]))
         if verb in FIELDS:
             if len(argv) != 3:
-                raise BoardError(f"usage: board_field.py {verb} <issue> <value>")
-            return write(verb, _issue_number(argv[1]), argv[2])
+                raise BoardError(f"usage: board_field.py {verb} <issue|pr> <value>")
+            return write(verb, _card_number(argv[1]), argv[2])
         raise BoardError(f"unknown command '{verb}'. Use: read | {fields}")
     except BoardError as e:
         print(f"board_field: {e}", file=sys.stderr)
