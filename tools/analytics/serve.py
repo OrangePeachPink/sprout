@@ -1106,6 +1106,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     }
                 )
             elif route == "cards_json":  # #875 the Home plant-card payloads
+                from tools.analytics.attention_queue import attention_queue
                 from tools.analytics.card_payload import (
                     cards_from_context,
                     load_mood_map,
@@ -1130,6 +1131,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                             "cards": [],
                             "empty": True,
                             "had_any_logged": exc.had_any_logged,
+                            # #1579: the same shape on the empty path, so a consumer
+                            # reads `queue.queue` unconditionally instead of guarding.
+                            "queue": attention_queue([]),
                         }
                     )
                     return
@@ -1153,6 +1157,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         "exceptions": exceptions,
                         "count": len(cards),
                         "exception_count": len(exceptions),
+                        # #1579 (R2): the ranked queue rides the SAME payload, so the
+                        # order and the cards can never come from two different reads of
+                        # the context. Built from `allcards` deliberately — an
+                        # excepted plant is the model's Can't-tell, which LEADS the
+                        # queue; ranking only the display list would drop exactly
+                        # the plants someone has to go look at.
+                        "queue": attention_queue(allcards),
                         # #1039 → resolved (#995/#1174, #1218): the interior brackets
                         # ratified, so the system cal chip is settled.
                         "cal_state": system_cal_state(),
