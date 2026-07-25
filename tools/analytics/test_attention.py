@@ -218,3 +218,42 @@ def test_the_harm_level_renders_and_does_not_wear_a_mood_colour() -> None:
     assert "getting worse faster than a normal dry-down" in _WATER
     assert ".water .harm { color: var(--st-due)" in _H
     assert "--band-" not in _WATER
+
+
+# --------------------------------------------------------------------------- #
+# G7 (#1587) — the greenhouse summary counts the levels and mints no words
+# --------------------------------------------------------------------------- #
+_SUM = _H[
+    _H.index("function greenhouseSummary(") : _H.index("function nextNeedSpanHours(")
+]
+
+
+def test_the_summary_counts_the_model_and_defines_nothing_of_its_own() -> None:
+    """§5: it AGGREGATES these words. A summary with its own vocabulary is a second
+    answer to "which plants need you" — R11's complaint one layer up."""
+    assert "c.attention" in _SUM or "list[i].attention" in _SUM
+    for level in ("cant_tell", "heading_for_harm", "needs_you_now", "watch"):
+        assert level in _SUM
+    # it must not re-derive from moods or exceptions the way G3 originally did
+    assert "thirsty" not in _SUM.lower()
+    assert "exception" not in _SUM
+
+
+def test_the_calm_signal_became_the_all_clear_case_not_a_second_computation() -> None:
+    """G3's affirmative all-clear survives word for word — but as this function's
+    everyone-is-fine branch, so calm and the counts cannot disagree."""
+    assert "Nothing needs you right now." in _SUM
+    assert "Nothing needs you for about " in _SUM
+    assert "return greenhouseSummary(cards);" in _H
+
+
+def test_the_horizon_constant_is_not_duplicated_client_side() -> None:
+    """The composer owns the horizon (attention.CALM_HORIZON_H). A client-side copy of a
+    tunable constant is the drift #1598 just closed for R3's words."""
+    assert "var CALM_HORIZON_H" not in _H
+
+
+def test_the_summary_claims_a_horizon_only_when_a_forecast_supports_one() -> None:
+    """§6 rule 4: never a horizon Sprout cannot support."""
+    assert "soonest !== null" in _SUM
+    assert "Math.floor(soonest / 24)" in _SUM  # floor: a calm claim must understate

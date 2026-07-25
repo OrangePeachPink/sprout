@@ -351,28 +351,63 @@ window.__iconFor = function (n) { return '<svg viewBox="0 0 44 48">' + iconFor(n
      · otherwise -> calm, and it names WHEN the calm ends, because "all fine" with no time
        bound is unfalsifiable comfort. With no usable forecast it drops to the present
        tense it can actually support rather than inventing a horizon. */
-var CALM_HORIZON_H = 48;   /* proposed; a named constant because it wants a MEASURED answer
-                              (backtest.py) eventually, not a design opinion. */
+/* #1587: the calm horizon is no longer declared here. It lives host-side, once, in
+   attention.CALM_HORIZON_H — the composer decides which plants are inside it, and the
+   summary counts the answer. A client-side copy of a tunable constant is the same drift
+   the R3 vocabulary extraction (#1598) just closed, one constant instead of one word. */
 function calmSignal(cards) {
+  /* #1587 G7 renamed nothing and kept this entry point: the calm signal is now the
+     ALL-CLEAR CASE of the greenhouse summary, not a separate computation. G3 shipped
+     this re-deriving the levels itself (an exception scan, a mood list, a horizon
+     compare) because the composer did not exist yet; it does now, so the summary counts
+     the model's levels and defines none of its own (§5). */
+  return greenhouseSummary(cards);
+}
+/* #1587 G7 — the greenhouse-wide summary. It AGGREGATES the attention model's words and
+   mints none: a summary that invents its own vocabulary is a second answer to "which
+   plants need you", which is R11's complaint one layer up. Counts only; the ordering is
+   §8's, so the most serious thing she can act on is read first. */
+function greenhouseSummary(cards) {
   var list = (cards || []).filter(function (c) { return c && c.frame; });
   if (!list.length) return "";
-  var soonest = null;
+  var n = { cant_tell: 0, heading_for_harm: 0, needs_you_now: 0, watch: 0, all_clear: 0 },
+      unavailable = 0, soonest = null;
   for (var i = 0; i < list.length; i++) {
-    var c = list[i];
-    if (c.exception && c.exception.is) return "";      /* can't see -> never "all fine" */
-    var mood = String((c.frame || {}).mood || "").toLowerCase();
-    if (["thirsty", "parched", "faint"].indexOf(mood) >= 0) return "";  /* needs you now */
-    var nn = c.next_need || {};
-    if (nn.known && typeof nn.hours === "number") {
-      if (nn.hours <= CALM_HORIZON_H) return "";       /* inside the horizon -> Watch, not calm */
-      if (soonest === null || nn.hours < soonest) soonest = nn.hours;
-    }
+    var att = list[i].attention;
+    if (!att) { unavailable++; continue; }   /* not probed — first-class absent, counted */
+    if (n[att.state] === undefined) continue;
+    n[att.state]++;
+    var h = att.evidence && att.evidence.hours;
+    if (att.state === "all_clear" && typeof h === "number" &&
+        (soonest === null || h < soonest)) soonest = h;
   }
-  if (soonest === null) return "Nothing needs you right now.";   /* honest present tense */
-  /* floor, never round: rounding UP over-promises the calm — 60h would read "about 3
-     days" for a plant that wants water at 2.5. A calm claim must understate. */
-  var days = Math.floor(soonest / 24);
-  return "Nothing needs you for about " + (days <= 1 ? "a day" : days + " days") + ".";
+  var parts = [];
+  /* the model's words, count-conjugated (one vocabulary — a plural verb is not a new
+     word). Present-or-silent: a level with nobody in it says nothing at all. */
+  if (n.cant_tell) parts.push(n.cant_tell + " can’t tell");
+  if (n.heading_for_harm) parts.push(n.heading_for_harm + " heading for harm");
+  if (n.needs_you_now) parts.push(n.needs_you_now + (n.needs_you_now === 1 ? " needs you now" : " need you now"));
+  if (n.watch) parts.push(n.watch + " to watch");
+  if (unavailable) parts.push(unavailable + " unavailable");
+  if (!parts.length) {
+    /* everyone is fine — G3's affirmative all-clear, word for word as it shipped. */
+    if (soonest === null) return "Nothing needs you right now.";
+    /* floor, never round: rounding UP over-promises the calm — 60h would read "about 3
+       days" for a plant that wants water at 2.5. A calm claim must understate. */
+    var days = Math.floor(soonest / 24);
+    return "Nothing needs you for about " + (days <= 1 ? "a day" : days + " days") + ".";
+  }
+  /* the rest are fine, and the tail says so rather than leaving them uncounted — but it
+     only claims a horizon when a forecast supports one (§6 rule 4). */
+  if (n.all_clear) {
+    var tail = "the rest fine";
+    if (soonest !== null) {
+      var d = Math.floor(soonest / 24);
+      tail += " for about " + (d <= 1 ? "a day" : d + " days");
+    }
+    parts.push(tail);
+  }
+  return parts.join(" · ") + ".";
 }
 /* #1580 R3: the confidence vocabulary's two formatters — the ONE place the form lives on the
    surface (docs/design/foundations/confidence-vocabulary.md). R6/R11/G2/G3/G7 consume these;
