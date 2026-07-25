@@ -43,11 +43,38 @@ DRIFT_WINDOW = 20
 # cadence counts as a dropout (data-driven, so it adapts to any polling interval).
 DROPOUT_GAP_FACTOR = 4.0
 
+# #1626: how many neighbouring gaps the cadence is measured over. The cadence must be
+# LOCAL, not global: the live classic board's history spans two logging regimes — a
+# 5 s bench stretch (2026-06-28..07-01) and 30-35 s production either side — and a
+# global median over the pooled log lands at 5.0 s. Every ordinary 30 s production gap
+# then exceeds 4x that, which is the whole of the measured "47.6% dropouts": a cadence
+# CHANGE counted as 52,219 lost readings. Measured against the same log, a local window
+# gives 283 (0.26%) — the real gaps. 20 is wide enough to be robust to one long gap and
+# short enough to follow a regime change within a couple of minutes.
+DROPOUT_CADENCE_WINDOW = 20
+
 # --- inspect-for-corrosion prompt thresholds (conservative; a prompt, not a verdict) --
 _WETTER_RATE_PROMPT = 0.05  # >=5% of reads wetter-than-water => possible water ingress
 _STUCK_RATE_PROMPT = 0.20  # >=20% of reads inside a stuck run => stale/failing element
 _FAULT_RATE_PROMPT = 0.05  # >=5% device-flagged faults
 _DRIFT_ENVELOPE_FRAC = 0.15  # baseline moved >=15% of the air-water span
+
+# #1626 — the three signals that had NO gate at all. They fired on a single occurrence
+# over unbounded history, so every sensor ratcheted toward `inspect` as the log grew and
+# nothing could ever return to `ok`. A health metric that can only worsen with time is
+# measuring the log, not the hardware — the tell was the OLDER board scoring worse than
+# the newer one on identical hardware.
+#
+# `implausible_wet` gets the same 5% its rated sibling `wetter_than_water` already uses:
+# the two ask the same physical question (is this read below where a probe in soil can
+# be), so one threshold, not two. Measured live, the four classic channels sit at
+# 0.87-1.96% — and those reads are 3-5 multi-hour BOARD-WIDE episodes, simultaneous on
+# all four channels and already firmware-flagged, not per-probe corrosion evidence.
+_IMPLAUSIBLE_RATE_PROMPT = 0.05
+# The milder tier for the two watch-only signals: a quarter of the inspect gate, so a
+# sensor genuinely trending toward the stronger signal is visible before it arrives.
+_STUCK_RATE_WATCH = 0.05
+_DROPOUT_RATE_WATCH = 0.05
 
 
 @dataclass
@@ -68,8 +95,16 @@ class SensorHealth:
     longest_stuck_run: int  # longest consecutive-identical raw run
     stuck_rate: float  # fraction of reads inside a run >= STUCK_RUN
     drift_raw: int | None  # last-baseline - first-baseline (None if too few samples)
-    dropouts: int | None  # gaps > DROPOUT_GAP_FACTOR x median cadence
-    status: str = "ok"  # ok | watch | inspect
+    dropouts: int | None  # gaps > DROPOUT_GAP_FACTOR x the LOCAL cadence (#1626)
+    dropout_rate: float | None = (
+        None  # #1626: dropouts / gaps — a count can't be judged
+    )
+    # ok | watch | inspect | unknown. #1626: `unknown` is a sensor with NO soil readings
+    # — a non-soil instrument (spectral, temp/humidity, die temp) run through a
+    # soil-probe model. It is first-class absent, never a mild claim: "I have no soil
+    # evidence about this" and "this is fine" are different statements, and the second
+    # one is the failure the attention model's Can't tell exists to prevent.
+    status: str = "ok"
     inspect_for_corrosion: bool = False
     reasons: list[str] = field(default_factory=list)
 
@@ -119,21 +154,41 @@ def _drift(raws: list[int]) -> int | None:
     return round(last - first)
 
 
-def _dropouts(readings: list) -> int | None:
-    """Count inter-reading gaps longer than DROPOUT_GAP_FACTOR x the sensor's own median
-    cadence. None until there are enough timestamped reads to know the cadence."""
+def _dropouts(readings: list) -> tuple[int | None, float | None]:
+    """Gaps longer than ``DROPOUT_GAP_FACTOR`` x the **local** cadence, and that as a
+    rate over all gaps. ``(None, None)`` until there are enough timestamped reads.
+
+    #1626: the cadence is measured over a trailing window of neighbouring gaps rather
+    than the whole log. A pooled median is only meaningful if the log has one cadence,
+    and this one does not — so the old global median reported 47.6% of the classic
+    board's readings as dropouts when what actually changed was the polling interval.
+    A local window follows the regime instead of averaging across it, which is what
+    makes the count answer "did we lose readings" rather than "did the cadence change".
+
+    The rate is returned alongside because a bare count cannot be judged: 3 dropouts in
+    19,692 readings and 3 in 30 are the same number and different hardware.
+    """
     ts = [r.timestamp_utc for r in readings if r.timestamp_utc is not None]
     ts.sort()
     if len(ts) < 4:
-        return None
-    gaps = [(b - a).total_seconds() for a, b in zip(ts, ts[1:]) if b > a]
-    gaps = [g for g in gaps if g > 0]
+        return None, None
+    gaps = [g for g in ((b - a).total_seconds() for a, b in zip(ts, ts[1:])) if g > 0]
     if len(gaps) < 3:
-        return None
-    cadence = statistics.median(gaps)
-    if cadence <= 0:
-        return None
-    return sum(1 for g in gaps if g > DROPOUT_GAP_FACTOR * cadence)
+        return None, None
+    dropped = 0
+    for i, gap in enumerate(gaps):
+        # look back over the recent gaps; at the very start there is no history yet, so
+        # borrow the window ahead rather than judging the first gaps against nothing.
+        ref = (
+            gaps[max(0, i - DROPOUT_CADENCE_WINDOW) : i]
+            or gaps[i + 1 : i + 1 + DROPOUT_CADENCE_WINDOW]
+        )
+        if not ref:
+            continue
+        cadence = statistics.median(ref)
+        if cadence > 0 and gap > DROPOUT_GAP_FACTOR * cadence:
+            dropped += 1
+    return dropped, round(dropped / len(gaps), 4)
 
 
 def sensor_health(
@@ -167,7 +222,7 @@ def sensor_health(
     longest, stuck_reads = _longest_and_stuck(raws)
     stuck_rate = stuck_reads / len(raws) if raws else 0.0
     drift = _drift(raws)
-    dropouts = _dropouts(readings)
+    dropouts, dropout_rate = _dropouts(readings)
 
     health = SensorHealth(
         sensor_id=sid,
@@ -184,6 +239,7 @@ def sensor_health(
         stuck_rate=round(stuck_rate, 4),
         drift_raw=drift,
         dropouts=dropouts,
+        dropout_rate=dropout_rate,
     )
     _assess(health, raws, anchors)
     return health
@@ -192,15 +248,25 @@ def sensor_health(
 def _assess(h: SensorHealth, raws: list[int], anchors: dict | None) -> None:
     """Roll the counts up into a conservative status + corrosion PROMPT. Errs toward
     'watch', reserves 'inspect' (the eyes-on corrosion check) for the strong signals."""
-    n = len(raws) or 1
+    # #1626: no soil readings, no soil verdict. `n = len(raws) or 1` used to divide
+    # every rate by a fabricated 1, so a non-soil instrument was assessed against a
+    # soil-probe model on zero soil evidence and came out `watch`. Absent, not mild.
+    if not raws:
+        h.status = "unknown"
+        h.inspect_for_corrosion = False
+        h.reasons = ["no soil readings from this sensor — nothing to assess"]
+        return
+
+    n = len(raws)
     reasons: list[str] = []
     inspect = False
 
-    if h.implausible_wet:
+    if h.implausible_wet and h.implausible_wet / n >= _IMPLAUSIBLE_RATE_PROMPT:
         inspect = True
         reasons.append(
             f"{h.implausible_wet} read(s) below the physical wet rail "
-            f"({IMPLAUSIBLE_WET_FLOOR}) — a short, water ingress, or a disconnected ADC"
+            f"({IMPLAUSIBLE_WET_FLOOR}, {h.implausible_wet / n:.0%}) — a short, water "
+            "ingress, or a disconnected ADC"
         )
     if h.wetter_than_water and h.wetter_than_water / n >= _WETTER_RATE_PROMPT:
         inspect = True
@@ -233,10 +299,19 @@ def _assess(h: SensorHealth, raws: list[int], anchors: dict | None) -> None:
             watch.append("some wetter-than-water reads")
         if h.drier_than_air and h.drier_than_air / n >= 0.20:
             watch.append("frequently drier-than-air (dry soil, or an open sensor)")
-        if h.longest_stuck_run >= STUCK_RUN:
-            watch.append(f"a stuck run of {h.longest_stuck_run}")
-        if h.dropouts:
-            watch.append(f"{h.dropouts} dropout(s)")
+        # #1626: RATE, not "ever". A bare `longest_stuck_run >= 6` fires on essentially
+        # any probe given enough samples — six consecutive identical raws is what
+        # healthy, slow-moving soil looks like at a 30 s cadence, and the longest run
+        # only ever grows. The rated sibling `stuck_rate` already asks the real
+        # question: how much of this sensor's life is stuck, not whether it ever was.
+        if h.stuck_rate >= _STUCK_RATE_WATCH:
+            watch.append(
+                f"{h.stuck_rate:.0%} of reads stuck (longest run {h.longest_stuck_run})"
+            )
+        # #1626: likewise a rate. `if h.dropouts:` made one gap in a year a permanent
+        # watch, and nothing could ever clear it.
+        if h.dropout_rate is not None and h.dropout_rate >= _DROPOUT_RATE_WATCH:
+            watch.append(f"{h.dropouts} dropout(s) ({h.dropout_rate:.0%} of gaps)")
 
     h.inspect_for_corrosion = inspect
     h.reasons = reasons if inspect else watch

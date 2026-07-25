@@ -815,6 +815,10 @@ footer.prov code { font-family: var(--font-data); }
       .hstat.ok{color:var(--leaf,#4caf7d)}
       .hstat.watch{color:#c9a227}
       .hstat.inspect{color:#d2603a}
+      /* #1626: `unknown` = no soil readings to assess (a non-soil instrument run
+         through the soil-probe model). Muted, because it is an absence of evidence
+         rather than a mild concern — it must not read as a quieter `watch`. */
+      .hstat.unknown{color:var(--muted)}
       .hmetrics{color:var(--muted,#8a8a8a);font-size:.82rem;margin-top:4px}
       .hmetrics b{color:var(--ink,#ddd);font-weight:600}
       .hreasons{margin:6px 0 0;padding-left:18px;font-size:.82rem;color:var(--ink,#ccc)}
