@@ -1329,7 +1329,7 @@ def build_context(
     continuity = _continuity(sweeps, start, gaps_by_device, _canon)
     distribution = _distribution(by_sensor, sensor_ids, colors)
     quality = _quality_strips(by_sensor, sensor_ids, soil, start)
-    integrity = _integrity(soil, sweeps, by_sensor, sensor_ids, sessions)
+    integrity = _integrity(soil, sweeps, by_sensor, sensor_ids, sessions, _canon)
     # #685: per-DEVICE row counts (fenced by canonical id) + the log-locator, and
     # bound the session list so the Diagnostics panel stays small regardless of
     # dataset size. A reset storm (#712) can mint thousands of sessions; we show
@@ -1914,15 +1914,36 @@ def _quality_strips(by_sensor, sensor_ids, soil, start) -> dict:
     return {"cols": QUALITY_COLS, "strips": strips, "flags": flags}
 
 
-def _integrity(soil, sweeps, by_sensor, sensor_ids, sessions) -> dict:
+def _integrity(soil, sweeps, by_sensor, sensor_ids, sessions, canon=None) -> dict:
     counts = {sid: len(by_sensor[sid]) for sid in sensor_ids}
-    n_sensors = len(sensor_ids)
-    partial = sum(
-        1
-        for sw in sweeps
-        if len([r for r in sw.by_sensor.values() if r.raw_value is not None])
-        < n_sensors
-    )
+    # #1597: partiality is judged PER DEVICE. It used to compare a sweep's row count
+    # against the GREENHOUSE-WIDE sensor total — but a sweep belongs to one board (a
+    # board's channels sweep together, which is why the #1431 deficit was uniform across
+    # a C5's four channels). With two 4-channel boards that made `4 < 8` true for every
+    # complete sweep, so the panel reported 32,605 of 32,605 sweeps partial while the
+    # row/sweep ratio was exactly 4. Structurally wrong since the fleet went
+    # multi-device; the single-board case masked it.
+    #
+    # This is the falsehood family again: a locally-correct comparison asserting data
+    # loss that never happened, on a panel whose entire job is to be trusted about loss.
+    # An over-reported warning trains the operator to ignore the real one.
+    #
+    # Expectation per device = the distinct channels that device contributed in this
+    # window. Honest limitation, stated: a channel absent for the WHOLE window can't be
+    # missed by this counter (nothing establishes it should be there) — that is
+    # sensor_health's and fleet_gaps' question, not this one's.
+    _c = canon or (lambda d: d)
+    expected: dict[str, set] = {}
+    for r in soil:
+        expected.setdefault(_c(r.device_id), set()).add(r.sensor_id)
+    partial = 0
+    for sw in sweeps:
+        rows = [r for r in sw.by_sensor.values() if r.raw_value is not None]
+        if not rows:
+            continue  # an all-null sweep is a different defect, not a partial one
+        want = len(expected.get(_c(rows[0].device_id), ())) or len(rows)
+        if len(rows) < want:
+            partial += 1
     ts = [sw.timestamp_utc for sw in sweeps if sw.timestamp_utc]
     ts.sort()
     deltas = [(ts[i + 1] - ts[i]).total_seconds() for i in range(len(ts) - 1)]
