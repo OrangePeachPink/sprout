@@ -353,10 +353,13 @@ function nextNeedFigure(nn) {
   return a === b ? "~" + a + unit : a + "–" + b + unit;    // collapsed range: honest "~"
 }
 function nextNeedChip(nn) {
-  var span = nextNeedSpanHours(nn);
-  if (!span || !nn.hours) return "";        // no span => no how-sure claim
-  var w = (span[1] - span[0]) / nn.hours;   // relative width carries the confidence
-  var word = w <= 0.15 ? "FIRM" : w <= 0.5 ? "ROUGH" : "HAZY";
+  /* #1598: the word is CONSUMED, never re-derived. R3's thresholds live once, host-side in
+     card_payload.confidence_word(), because the attention model's Watch level is a second
+     consumer and two copies of a ruled vocabulary drift silently. No word => no chip, which
+     is the doc's rule (a midpoint with no span makes no how-sure claim) and is now decided
+     in one place rather than by each surface's own guard. */
+  var word = nn && nn.confidence_word;
+  if (!word) return "";
   return ' <span class="src nn-conf" title="How sure this is: the model\'s range is ' +
     esc(nextNeedFigure(nn)) + ' wide relative to the estimate.">' + word + "</span>";
 }
