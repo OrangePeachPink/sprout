@@ -51,6 +51,17 @@ jobs:
   sign:
     name: build + sign factory bins
     runs-on: ubuntu-latest
+    # GH_REPO at the JOB level, deliberately (#1346, found by the §5.1 dry-run walk).
+    # `gh` infers its repository from the checkout's .git — but the resolve step runs
+    # BEFORE actions/checkout by design (resolve first, gate on draft, fail fast without
+    # paying for a build). With no .git and no GH_REPO, every `gh` call in that step
+    # asked "which repo?", got no answer, and reported the draft as missing — so the
+    # signer refused every release it was built to sign, with an error that read like a
+    # missing draft rather than a missing repo context.
+    # Setting it here rather than per-step means no future gh step can be broken by
+    # where it sits relative to the checkout.
+    env:
+      GH_REPO: ${{ github.repository }}
     steps:
       # Resolve the release BEFORE anything else, and gate on draft: only a draft can
       # accept assets (#1438). A published release is immutable — skip loud, don't fail,
