@@ -788,13 +788,17 @@ _EXAMPLE = _REPO / "config" / "devices.example.json"
 
 def load_registry_model(path: str | Path | None = None) -> RegistryModel:
     """Load the registry model with the SAME config discovery as ``device_registry``
-    (#921 slice 2): the gitignored local config, else the committed example, else an
-    empty model (the first-run signal). A static (v1) config migrates on read."""
+    (#921 slice 2): the gitignored local config, else an empty model (the first-run
+    signal). A static (v1) config migrates on read.
+
+    **The committed example is NOT a fallback (#1594)** — see ``load_registry`` for the
+    reasoning. It was masking the genuine first-run signal: a fresh clone loaded three
+    fictional boards, so ``_zero_state`` answered "ready" and A4's "no boards yet"
+    screen was unreachable. Pass ``path`` explicitly to load the example on purpose."""
     if path is not None:
         return load_model(path)
-    for p in (_LOCAL, _EXAMPLE):
-        if p.exists():
-            return load_model(p)
+    if _LOCAL.exists():
+        return load_model(_LOCAL)
     return RegistryModel()
 
 

@@ -291,14 +291,24 @@ def resolve_registry_path(path: str | Path | None = None) -> Path | None:
 
 
 def load_registry(path: str | Path | None = None) -> Registry:
-    """The fleet registry, preferring the local config, then the example template.
+    """The fleet registry: the gitignored local config, else an **empty** registry.
 
-    ``path`` overrides discovery (used by tests). With no path: the gitignored
-    ``config/devices.local.json`` if present, else the committed
-    ``config/devices.example.json``, else an **empty** registry. A malformed or
-    non-conforming file also yields an empty registry - never raises, so the
-    monitor-all view degrades cleanly to raw streams."""
-    candidates = [Path(path)] if path is not None else [_LOCAL, _EXAMPLE]
+    ``path`` overrides discovery (used by tests, and the way the example template is
+    still loadable on purpose).
+
+    **The example is documentation, not data (#1594).** It used to be an implicit
+    fallback, so a fresh clone reported three devices — ``ESPclassic``, ``the S3``,
+    ``C5Official`` — that the user does not own. That is not merely a wrong empty-state
+    message: the fallback feeds everything that counts devices, so Home would render
+    plant cards for phantom hardware, the Plants & Sensors tab would list it, and A5's
+    reconcile would weigh it as a real pending board. Marking the rows instead would put
+    the duty to filter on every consumer forever, and a boundary that depends on
+    remembering is not a boundary (ADR-0038's own framing). Removing it at the source
+    fixes every consumer at once.
+
+    A malformed or non-conforming file also yields an empty registry - never raises, so
+    the monitor-all view degrades cleanly to raw streams."""
+    candidates = [Path(path)] if path is not None else [_LOCAL]
     src = next((p for p in candidates if p.exists()), None)
     if src is None:
         return Registry()
