@@ -65,7 +65,8 @@ one nobody wired.**
   `AGENTS.md` — attribution, credit, and bot-review provenance, written after a contributor's
   reviewer bot appeared in our threads.
 - The collective is a **greenhouse**, not a fleet, on every user surface (#1506).
-- Sprout's first external contribution merged.
+- A first-time contributor claimed a `good first issue` and opened their PR inside the release window;
+  it is still in review at the tag, so the credit lands with the merge rather than here (#1616).
 
 ### Known scope carried into v0.8.2
 
