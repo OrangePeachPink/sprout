@@ -169,6 +169,18 @@
     font-size: 12.5px; margin-left: 8px; }
   .lane .card { border-width: 1.5px; }
 
+  /* #1556 B6: hardware health, greenhouse-level. Calm when everything is fine — one
+     quiet line — and specific when it is not, naming the sensors rather than making her
+     go looking. It never wears a band colour: a probe's condition is not a reading. */
+  .hardware { max-width: 1180px; margin: 22px auto 0; padding: 10px 12px;
+    border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
+    font-size: 13px; color: var(--muted); }
+  .hardware b { color: var(--ink); font-weight: 600; }
+  .hardware .hw-inspect { color: var(--st-fault); font-weight: 700; }
+  .hardware .hw-watch { color: var(--st-due); font-weight: 600; }
+  .hardware .hw-ids { color: var(--ink); }
+  .hardware a { color: var(--ink); }
+
   /* #1551 B1: the stop control is chrome, not content — quiet until you look for it,
      and never competing with a plant for attention. It wears --st-fault only ARMED:
      the colour is the confirm step's signal, so a resting button that already looked
@@ -279,6 +291,12 @@
        Two-step arm-then-confirm, the semantics classic already ships (#721): a
        destructive action is never one click, and an armed button auto-cancels so a
        stray press never lingers hot. -->
+  <!-- #1556 B6: hardware health on the DEFAULT surface. It was reachable only from
+       classic Diagnostics, which means the one surface she actually looks at could not
+       tell her a probe was going bad. Greenhouse-level ROLL-UP only: R12 already puts
+       the per-plant instrument condition on the card, and repeating it here would be
+       two answers to one question (coordinate, don't duplicate). -->
+  <section class="hardware" id="hardware" hidden></section>
   <footer class="dangerzone">
     <button class="btn danger" id="quitBtn" type="button"
       title="Stops the local Sprout server (this app). Logging pauses until you start it again. Press once to arm, then again to confirm.">⏻ Stop server</button>
@@ -786,7 +804,59 @@ function refresh() {
     _cards = doc; paint(doc);
   }).catch(function () { /* keep the last good paint; the next tick retries */ });
 }
+/* #1556 B6 — the hardware roll-up. Reads /sensor/health, the SAME endpoint classic's
+   Diagnostics reads; promoting a surface must not mean minting a second source able to
+   disagree with the first. Present-or-silent on failure: an older server or a fetch
+   error HIDES the strip rather than claiming hardware is fine, because "I could not
+   ask" and "everything is well" are different statements (ADR-0028). */
+var HW_NAME_CAP = 4;   /* how many ids the strip will name before it counts instead */
+function paintHardware(sensors) {
+  var box = document.getElementById("hardware");
+  if (!box) return;
+  var inspect = [], watch = [], ok = 0;
+  for (var i = 0; i < (sensors || []).length; i++) {
+    var h = sensors[i] || {};
+    if (h.status === "inspect") inspect.push(h.sensor_id || "?");
+    else if (h.status === "watch") watch.push(h.sensor_id || "?");
+    else ok++;
+  }
+  if (!(inspect.length + watch.length + ok)) { box.hidden = true; return; }
+  var bits = [];
+  /* worst first: what needs a screwdriver outranks what needs an eye.
+     NAMES ONLY FOR `inspect`, and capped. Measured against the live greenhouse, the raw
+     list is 4 inspect + 7 watch + 0 ok across BOTH soil channels and non-soil sensors
+     (spectral, temp/humidity, die) — naming eleven ids in a chrome strip is noise, and a
+     permanently-loud strip is one she learns to stop reading. `watch` is the "keep an
+     eye" class, so it gets a count; `inspect` is the actionable one, so it gets names. */
+  if (inspect.length) {
+    var named = inspect.slice(0, HW_NAME_CAP).map(esc).join(", ");
+    var more = inspect.length - HW_NAME_CAP;
+    bits.push('<span class="hw-inspect">' + inspect.length + " to inspect</span> " +
+      '<span class="hw-ids">(' + named + (more > 0 ? ", +" + more + " more" : "") +
+      ")</span>");
+  }
+  if (watch.length)
+    bits.push('<span class="hw-watch">' + watch.length + " to watch</span>");
+  if (ok) bits.push(ok + " fine");
+  /* the DETAIL still lives on the Workbench — this is a promotion, not a move. */
+  box.innerHTML = "<b>Sensors</b> · " + bits.join(" · ") +
+    ' · <a href="/classic#diagnostics">details on the Workbench &rarr;</a>';
+  box.hidden = false;
+}
+function refreshHardware() {
+  var box = document.getElementById("hardware");
+  fetch("/sensor/health", { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) {
+      if (!j) { if (box) box.hidden = true; return; }
+      paintHardware((j.data || j).sensors || []);
+    })["catch"](function () {
+      if (box) box.hidden = true;   /* could not ask -> silent, never "all fine" */
+    });
+}
+
 refresh();
+refreshHardware();
 /* #1551 B1: the handle is kept so the stop path can cancel the poll. Without it a
    refresh fires into a server that is deliberately going away, and the resulting
    network error paints as a crash over an action she chose. */
