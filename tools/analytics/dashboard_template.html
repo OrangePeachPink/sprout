@@ -361,6 +361,14 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .adopt-pin { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--muted);
              font-family: var(--font-data); }
 .adopt-pin input { width: 64px; }
+/* #1545 (A2): the guided add-a-board flow — the same calm register as the adopt card, so
+   both doors into "connect hardware" read as one product, not two mechanisms. */
+.declarecard { border-style: solid; }
+.declare-count { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+.declare-chrow { display: flex; align-items: baseline; gap: 10px; padding: 5px 0;
+                 border-bottom: 1px solid var(--border); }
+.declare-chrow:last-of-type { border-bottom: 0; }
+.declare-chto { font-size: 13px; }
 /* #1546 (A3): the visual pin map — the board's own pins as targets, so wiring is a tap
    on a picture rather than a typed GPIO number. Chrome register; the only saturated cue
    is the assigned channel (a real chosen state), and refusal is never an alarm colour. */
@@ -2672,6 +2680,172 @@ function regChannelStrip(d){
 // the recommended pins, keyed on the operator's selection per Trellis's ruling; a serial board
 // has no base_url and that's fine now, #1515). Adoption stages a devices.add; the Save commits it.
 let __regAdopt = null;   // the in-flight adoption {device_id, step, board (class token), pins:[]}
+// ===== #1545 (A2): the guided Add-a-board flow — describe it BEFORE you flash it =====
+// The #1541 wall was that a fresh checkout has no in-app way to connect hardware: the adopt
+// path (#1027) only works for a board already answering, and a brand-new contributor has
+// nothing answering yet. A1 (#1544) opened the other door — `devices.declare` mints a
+// `pending-N` id that is a real key immediately, and re-keys the operator's channels and
+// plant mappings onto the wire id when the board first reports (never closed-and-reopened,
+// so declaring early fabricates no rewiring event). This is that door's surface:
+//
+//   class -> name -> sensors (A3's pin map) -> [save the board] -> plants -> flash handoff
+//
+// Two deliberate commits, each an explicit click: saving the board is what mints its id (the
+// server owns that, ADR-0027 — the human owns the label), and the plant mappings then stage
+// into the normal review-then-Save batch (Q10) like every other registry edit.
+let __regDeclare = null;   // {step, name, board, pins:[], nch, deviceId}
+function regDeclareStart(){
+  __regDeclare = {step: 'class', name: '', board: '', pins: [], nch: 4, deviceId: null};
+  __regAdopt = null; __regErrs = [];
+  renderRegistry();
+}
+function regDeclareCancel(){ __regDeclare = null; __regErrs = []; renderRegistry(); }
+function regDeclareCard(V){
+  const D = __regDeclare; if(!D) return null;
+  const card = el('div', 'adoptcard declarecard');
+  const bpAll = (__registry && __registry.board_pinouts) || {};
+  const CLASSES = [['esp32-classic', 'Classic (ESP32-WROOM)'], ['esp32-c5', 'ESP32-C5'], ['esp32-s3', 'ESP32-S3']];
+  card.appendChild(el('div', 'adopt-id', 'A new board — <strong>describe it now, flash it after</strong>'));
+  card.appendChild(el('div', 'adopt-meta muted',
+    'Sprout records your wiring and plant choices straight away. When the board first reports, it keeps them.'));
+
+  if(D.step === 'class'){
+    card.appendChild(el('div', 'adopt-q', 'Which board is this?'));
+    const picker = el('div', 'adopt-classes');
+    CLASSES.forEach(pair => {
+      const cls = pair[0], bp = bpAll[cls] || {};
+      const b = el('button', 'classbtn' + (D.board === cls ? ' on' : ''),
+        '<strong>' + pair[1] + '</strong>' + (bp.verified
+          ? ' <span class="muted">recommended pins ✓</span>'
+          : ' <span class="muted">pins provisional</span>'));
+      b.type = 'button';
+      b.onclick = () => { D.board = cls; D.pins = (bp.pins || []).slice(); D.step = 'name'; renderRegistry(); };
+      picker.appendChild(b);
+    });
+    card.appendChild(picker);
+    card.appendChild(el('div', 'adopt-note muted',
+      'Not sure? Pick the closest — you can rename and rewire it any time.'));
+  } else if(D.step === 'name'){
+    card.appendChild(el('div', 'adopt-q', 'What will you call it?'));
+    const l = el('label'); const i = el('input');
+    i.placeholder = 'e.g. the kitchen board'; i.value = D.name;
+    i.oninput = () => { D.name = i.value; };
+    l.appendChild(i); card.appendChild(l);
+    card.appendChild(el('div', 'adopt-note muted',
+      'A name is required — until the board reports, it is the only handle you have on it. Its id is Sprout’s to mint, never yours to type.'));
+    const next = el('button', 'btn primary', 'Next — its probes');
+    next.onclick = () => { if((D.name || '').trim()){ D.step = 'sensors'; renderRegistry(); } };
+    card.appendChild(next);
+  } else if(D.step === 'sensors'){
+    const bp = bpAll[D.board] || {};
+    card.appendChild(el('div', 'adopt-q', 'How many probes, and where are they wired?'));
+    const cnt = el('div', 'declare-count');
+    [1, 2, 3, 4].forEach(k => {
+      const b = el('button', 'pinchip' + (D.nch === k ? ' on' : ''), k + (k === 1 ? ' probe' : ' probes'));
+      b.type = 'button';
+      b.onclick = () => { D.nch = k; D.pins = D.pins.slice(0, k); renderRegistry(); };
+      cnt.appendChild(b);
+    });
+    card.appendChild(cnt);
+    card.appendChild(regPinMap(D, D.nch, bp));   // #1546: the same map the adopt path uses
+    const save = el('button', 'btn primary', 'Save this board');
+    save.onclick = () => regDeclareCommit();
+    card.appendChild(save);
+  } else if(D.step === 'plants'){
+    const dev = (V.devices || []).find(d => d.device_id === D.deviceId) || {};
+    card.appendChild(el('div', 'adopt-q', 'Saved. Which plant is on each probe?'));
+    card.appendChild(el('div', 'adopt-note muted',
+      esc(D.name) + ' is registered and waiting for hardware. Assign its probes now and the mapping goes live the moment the board reports — or skip and do it later from any plant card.'));
+    (dev.channels || []).forEach(ch => {
+      const row = el('div', 'declare-chrow');
+      row.appendChild(el('span', 'regcode', 'channel ' + esc(ch.channel)));
+      const staged = (regPend().mappings.assign || []).find(
+        a => a.device_id === D.deviceId && a.channel === ch.channel);
+      if(staged){
+        const p = (V.plants || []).find(x => x.plant_id === staged.plant_id) || {plant_id: staged.plant_id};
+        row.appendChild(el('span', 'declare-chto', '→ <strong>' + esc(regPlantName(p)) + '</strong>'));
+      } else {
+        const pick = el('button', 'reglink', 'choose a plant');
+        pick.onclick = () => { D.picking = (D.picking === ch.channel ? null : ch.channel); renderRegistry(); };
+        row.appendChild(pick);
+      }
+      card.appendChild(row);
+      if(D.picking === ch.channel) card.appendChild(regDeclarePlantPicker(V, ch.channel));
+    });
+    const done = el('button', 'btn primary', 'Done — what’s next?');
+    done.onclick = () => { D.step = 'flash'; D.picking = null; renderRegistry(); };
+    card.appendChild(done);
+  } else if(D.step === 'flash'){
+    card.appendChild(el('div', 'adopt-q', 'Last step: put Sprout on the board'));
+    card.appendChild(el('div', 'adopt-note muted',
+      '<strong>' + esc(D.name) + '</strong> is registered, wired, and waiting. Flash it with the firmware and it will report in on its own — Sprout matches it to this record automatically and everything you just set up goes live. Nothing else to do here.'
+      + (regDirtyCount() ? ' Your plant choices are still unsaved below — Save them when you’re ready.' : '')));
+    const fin = el('button', 'btn primary', 'Finish');
+    fin.onclick = () => { __regDeclare = null; renderRegistry(); };
+    card.appendChild(fin);
+    return card;   // no Cancel on the last step — the board is already saved
+  }
+  const cancel = el('button', 'reglink muted', D.step === 'plants' ? 'Do this later' : 'Cancel');
+  cancel.onclick = () => { if(D.step === 'plants'){ D.step = 'flash'; renderRegistry(); } else regDeclareCancel(); };
+  card.appendChild(cancel);
+  return card;
+}
+function regDeclarePlantPicker(V, channel){
+  const D = __regDeclare;
+  const wrap = el('div', 'regpicker');
+  wrap.appendChild(el('div', 'regpickhdr', 'Which plant is on ' + esc(channel) + '?'));
+  (V.plants || []).filter(p => regLifecycle('plant', p.plant_id) !== 'deleted').forEach(p => {
+    const b = el('button', 'regpickrow', esc(regPlantName(p)));
+    b.onclick = () => { regDeclareAssign(p.plant_id, channel); };
+    wrap.appendChild(b);
+  });
+  if(D.newplant){
+    wrap.appendChild(regNewPlantInline((pid) => { D.newplant = false; regDeclareAssign(pid, channel); }));
+  } else {
+    const nb = el('button', 'regpickrow reflow-new', '＋ a plant I haven’t added yet');
+    nb.onclick = () => { D.newplant = true; renderRegistry(); };
+    wrap.appendChild(nb);
+  }
+  return wrap;
+}
+function regDeclareAssign(plantId, channel){
+  const D = __regDeclare;
+  // A sensor id is required by the mapping seam; mint the next one alongside so a declared
+  // board's probe is a real sensor entity, not a nameless port.
+  const nid = (__registry && __registry.next_ids) ? __registry.next_ids.sensor : null;
+  const p = regPend();
+  const used = p.sensors.add.length;   // successive picks each need their own number
+  const sid = nid ? nid.replace(/(\d+)$/, (m) => String(parseInt(m, 10) + used).padStart(m.length, '0')) : null;
+  if(sid) p.sensors.add.push({sensor_id: sid});
+  p.mappings.assign.push({plant_id: plantId, sensor_id: sid, device_id: D.deviceId, channel: channel});
+  D.picking = null; D.newplant = false; __regErrs = [];
+  renderRegistry();
+}
+async function regDeclareCommit(){
+  const D = __regDeclare; if(!D) return;
+  const pins = (D.pins || []).slice(0, D.nch).filter(p => p != null && !isNaN(p));
+  if(!(D.name || '').trim()){ __regErrs = [{message: 'Give the board a name first.'}]; renderRegistry(); return; }
+  if(!pins.length){ __regErrs = [{message: 'Tap the pin each probe is wired to before saving.'}]; renderRegistry(); return; }
+  try{
+    const { ok, status, data } = await apiJson('/registry/apply', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({devices: {declare: [{name: D.name.trim(), board: D.board, channels: pins}]}}),
+    });
+    if(!ok){
+      __regErrs = (data && data.errors) || [{message: 'Could not save the board (HTTP ' + status + ')'}];
+      renderRegistry(); return;
+    }
+    const reg = (data && data.registry) || null;
+    // The id is minted server-side (ADR-0027: the board owns its id, the human owns the
+    // label). A1 hands it back in `applied.declared` for exactly this — the flow maps
+    // plants onto the id it just minted, no name-matching guess.
+    const minted = ((data && data.applied && data.applied.declared) || []);
+    D.deviceId = minted.length ? minted[minted.length - 1] : null;
+    D.step = D.deviceId ? 'plants' : 'flash';
+    __regErrs = [];
+    if(reg) renderRegistry(reg); else registryPoll();
+  }catch(e){ __regErrs = [{message: 'Could not save the board: ' + e}]; renderRegistry(); }
+}
 function regAdoptCards(){
   const und = (__registry && __registry.undeclared) || [];
   if(!und.length) return null;
@@ -2921,8 +3095,12 @@ function renderRegistry(reg){
   host.appendChild(ssec);
 
   // ---- Boards: the MCUs (taxonomy board=MCU, #921) ----
-  const bsec = regSection('Boards', 'the ESP32s — plug one in and it appears here');
+  // #1545: the caption used to promise "plug one in and it appears here" — true only for a
+  // board already flashed and answering, which a fresh checkout has none of (#1541's wall).
+  // Both doors are real now, so the caption names both.
+  const bsec = regSection('Boards', 'the ESP32s — add one here, or plug in a flashed board and it appears');
   const adopt = regAdoptCards(); if(adopt) bsec.appendChild(adopt);   // #1027 §5.1: answering-but-unregistered boards
+  if(__regDeclare) bsec.appendChild(regDeclareCard(V));               // #1545 A2: the guided add-a-board flow
   const blist = el('div', 'reglist');
   V.devices.forEach(d => {
     const lc = regLifecycle('device', d.device_id);
@@ -2937,8 +3115,17 @@ function renderRegistry(reg){
     const strip = regChannelStrip(d); if(strip) blist.appendChild(strip);   // #1027 §5.3
     if(__regEditing === 'device:' + d.device_id) blist.appendChild(regEditForm('device', d));
   });
-  if(!V.devices.length) blist.appendChild(el('div', 'muted', 'No boards yet — flash one with the web flasher and it shows up here.'));
-  bsec.appendChild(blist); host.appendChild(bsec);
+  // #1545/#1541: the empty state used to point only at the flasher, which left a fresh
+  // checkout with nothing to do in-app. Name the actual state and give it the door.
+  if(!V.devices.length) blist.appendChild(el('div', 'muted',
+    'No boards yet — nothing is registered, so there is nothing to read. Add one below (you can describe it before you flash it), or flash a board and it will appear here on its own.'));
+  bsec.appendChild(blist);
+  if(!__regDeclare){   // #1545 A2: the in-app door — no hardware required to start
+    const addb = el('button', 'reglink', '+ Add a board');
+    addb.onclick = regDeclareStart;
+    bsec.appendChild(addb);
+  }
+  host.appendChild(bsec);
 
   // ---- structured errors (from a failed Save) + the dirty bar (Q10) ----
   __regErrs.forEach(e => host.appendChild(el('div', 'regerr', esc((e.op ? e.op + ' — ' : '') + e.message))));
