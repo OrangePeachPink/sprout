@@ -2778,9 +2778,34 @@ function regDeclareCard(V){
   } else if(D.step === 'flash'){
     card.appendChild(el('div', 'adopt-q', 'Last step: put Sprout on the board'));
     card.appendChild(el('div', 'adopt-note muted',
-      '<strong>' + esc(D.name) + '</strong> is registered, wired, and waiting. Flash it with the firmware and it will report in on its own — Sprout matches it to this record automatically and everything you just set up goes live. Nothing else to do here.'
+      '<strong>' + esc(D.name) + '</strong> is registered, wired, and waiting. Flash it with the firmware and it will report in on its own — Sprout matches it to this record automatically and everything you just set up goes live.'
       + (regDirtyCount() ? ' Your plant choices are still unsaved below — Save them when you’re ready.' : '')));
-    const fin = el('button', 'btn primary', 'Finish');
+
+    // #1549 (A6): finish the sentence the flow starts. "Flash it" was a dead end that
+    // sent a newcomer to hunt for docs; the door belongs here.
+    //
+    // BOARD-AWARE, and that is not a nicety: WEB_FLASH_VERIFIED is {"esp32"} — classic
+    // ONLY. The C5 was pulled after a bench failure (native-USB "Failed to initialize")
+    // and the S3 was never in, so factory_bin.py emits no web-flasher manifest for
+    // either (ADR-0026 D6: an unverified board "is never offered from a browser").
+    // Offering the browser flasher for a C5 would walk someone into a known-failing
+    // loop, so those boards get their real, documented path instead of a broken door.
+    if(D.board === 'esp32-classic'){
+      const go = el('a', 'btn primary');
+      go.textContent = 'Flash it in the browser';
+      go.href = 'https://orangepeachpink.github.io/sprout/flash/';
+      go.target = '_blank';
+      go.rel = 'noopener';
+      go.title = 'Opens the web flasher — plug the board in over USB and click Install.';
+      card.appendChild(go);
+      card.appendChild(el('div', 'adopt-note muted',
+        'Opens the web flasher in a new tab. Plug the board in with a USB <em>data</em> cable, click Install, and come back here — nothing else to set up.'));
+    } else {
+      card.appendChild(el('div', 'adopt-note muted',
+        'The browser flasher is verified for the classic ESP32 only, so it is not offered for this board — it would fail partway. Flash it over USB instead: <code>just flash</code> from the repo (see docs/FLASHING.md). Everything you set up here still applies the moment it reports.'));
+    }
+
+    const fin = el('button', 'btn', 'Finish');
     fin.onclick = () => { __regDeclare = null; renderRegistry(); };
     card.appendChild(fin);
     return card;   // no Cancel on the last step — the board is already saved
