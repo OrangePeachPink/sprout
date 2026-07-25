@@ -132,3 +132,33 @@ def test_the_binds_shortcut_selects_only_actionable_plans() -> None:
     assert len(r.binds) == 1
     r2 = plan(_model(), [_stranger("y9d41p")])
     assert r2.binds == []
+
+
+# --------------------------------------------------------------------------- #
+# the Trellis hold (#1548): identity is not the cal-anchor classifier
+# --------------------------------------------------------------------------- #
+def test_a_declared_s3_never_auto_binds_to_an_answering_classic() -> None:
+    """The regression Trellis caught. `parse_v1.board_class` folds esp32-s3 into
+    "classic" (its catch-all cal-anchor arm), so the original check saw NO conflict and
+    would auto-bind an S3 declaration to a classic board — pointing her plants at the
+    wrong probes, on hardware with a different pin map."""
+    m = _model()
+    m.declare_device(name="Bench S3", board="esp32-s3", channels=[1, 2])
+    r = plan(m, [_stranger("y9d41p", "esp32-classic")])
+    assert r.plans[0].action == ADOPT  # NOT a bind
+    assert "doesn't match" in r.plans[0].reason
+
+
+def test_identity_class_keeps_the_three_tokens_distinct_and_absence_none() -> None:
+    """Identity must not fold. An unrecognized or absent string is None (honest
+    absence), never absorbed into a default that reads as a claim about hardware."""
+    from tools.analytics.reconcile import identity_class
+
+    assert identity_class("esp32-classic") == "esp32-classic"
+    assert identity_class("esp32-s3") == "esp32-s3"
+    assert identity_class("esp32-c5") == "esp32-c5"
+    assert (
+        len({identity_class(b) for b in ("esp32-classic", "esp32-s3", "esp32-c5")}) == 3
+    )
+    for absent in (None, "", "   ", "some-future-board"):
+        assert identity_class(absent) is None

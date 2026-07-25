@@ -38,7 +38,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from tools.analytics.parse_v1 import board_class
+from tools.analytics.board_pinouts import RECOMMENDED_SOIL_PINS
 
 # The outcomes. `bind` is the only one that mutates anything, and only on an explicit
 # operator/flow action.
@@ -72,13 +72,37 @@ class Reconciliation:
         return [p for p in self.plans if p.action == BIND]
 
 
+def identity_class(board: str | None) -> str | None:
+    """The board's **identity** class — an ADR-0036 §6 token (``esp32-classic`` ·
+    ``esp32-s3`` · ``esp32-c5``), or None when the board states nothing recognizable.
+
+    Deliberately NOT ``parse_v1.board_class`` (Trellis, #1548 hold). That one is the
+    2-valued **cal-anchor** classifier: ``"c5" if "c5" in board else "classic"``, whose
+    ``classic`` arm is a catch-all meaning "use DEFAULT_CAL_BOUNDS". Correct for picking
+    anchors, wrong for deciding identity — because **``board_class("esp32-s3")`` returns
+    ``"classic"``**, so a declared S3 and an answering classic would compare EQUAL,
+    report no conflict, and auto-bind the operator's wiring to the wrong hardware.
+    `s3-n8r2-01` is a real board with a different pin map; that bind would silently
+    point her plants at the wrong probes.
+
+    Two classifiers because there are two questions. "Which cal anchors apply?" folds
+    the world into two buckets on purpose. "Is this the board she described?" must not
+    fold at all — an unrecognized string stays None (honest absence, ADR-0028) rather
+    than being absorbed into a default that would read as a positive claim."""
+    if not board:
+        return None
+    token = board.strip().lower()
+    return token if token in RECOMMENDED_SOIL_PINS else None
+
+
 def _classes_conflict(declared_board: str | None, seen_board: str | None) -> bool:
-    """True only when BOTH sides state a class and they disagree. An absent class on
-    either side is not evidence of anything (ADR-0028: absence is honest, never a
-    mismatch), so it does not block a bind."""
-    if not declared_board or not seen_board:
+    """True only when BOTH sides state a RECOGNIZED class and those disagree. An absent
+    or unrecognized class on either side is not evidence of anything (ADR-0028: absence
+    is honest, never a mismatch), so it does not block a bind."""
+    a, b = identity_class(declared_board), identity_class(seen_board)
+    if a is None or b is None:
         return False
-    return board_class(declared_board) != board_class(seen_board)
+    return a != b
 
 
 def plan(model, undeclared: list | None = None) -> Reconciliation:
