@@ -46,7 +46,7 @@ Ordered, and each earns its level from a distinct signal:
 | level | reads as | earned by | ticket |
 |---|---|---|---|
 | **All clear** | *"nothing needs you until \<when\>"* | no plant at level 2+, and the soonest forecast is beyond the calm horizon | **G3** |
-| **Watch** | *"\<plant\> in 2–3d"* | a known forecast inside the horizon — R3's runway + its FIRM/ROUGH/HAZY | R11 |
+| **Watch** | *"\<plant\> in 2–3d"* | a known forecast inside the horizon — `runway.py`'s horizon (act-today / a-couple-days / about-a-week / plenty) **and** R3's FIRM/ROUGH/HAZY confidence vocabulary; Watch consumes both | R11 |
 | **Needs you now** | *"water now"* | at or past the Thirsty entry edge (already shipped as D3) | R11 |
 | **Heading for harm** | *"this one is getting worse faster than a normal dry-down"* | the #1497 exception labels — `rate_spike`, direction/rebound, floor-vs-rails | **G2** |
 
@@ -71,7 +71,14 @@ warning."* So All clear is a **stated** thing with a **horizon**, not an empty s
 
 Recorded because the review panel flagged it and it is easy to violate by accident:
 
-**ADR-0033 rules a 30-second pull loop.** G2 therefore surfaces as an affordance **on the pull
+**Push would buy nothing here, and cost a delivery layer.** "Heading for harm" is a multi-day
+soil trend — ADR-0035 calibrates the dry ceiling at *wilt-onset*, and a full dry-down runs on
+the order of days — while the Home surface already refreshes every 90 seconds
+(`home_template.html`, `setInterval(refresh, 90000)`). The signal reaches the operator roughly
+three thousand times faster than the thing it describes changes. A push channel would add
+delivery guarantees, retry, dedup, quiet hours and permissions, and — the architectural cost —
+**a second path by which truth reaches the operator, which must then agree with the pull
+surface forever.** G2 therefore surfaces as an affordance **on the pull
 surface** — the plant wears its own harm level, and the greenhouse summary counts it. It does
 **not** introduce a push channel (no browser notification, no email, no webhook). If a push
 channel is ever wanted, that is an **ADR conversation for Trellis first** (the push/pull
