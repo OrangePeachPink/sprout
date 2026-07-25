@@ -20,7 +20,7 @@ ternary, no null-coalescing). A bootstrap that needs the thing you are
 bootstrapping is not a bootstrap.
 #>
 [CmdletBinding()]
-param([switch]$ToolsOnly)
+param([switch]$ToolsOnly, [switch]$CheckOnly)
 
 $ErrorActionPreference = 'Stop'
 
@@ -33,6 +33,21 @@ function Refresh-Path {
     $machine = [Environment]::GetEnvironmentVariable('Path', 'Machine')
     $user = [Environment]::GetEnvironmentVariable('Path', 'User')
     $env:Path = "$machine;$user;$env:USERPROFILE\.local\bin"
+}
+
+# -CheckOnly: say what IS and ISN'T here, install nothing, exit 0. Two callers want this.
+# A human asking "what is this about to do to my machine?" deserves an answer before it
+# does it. And the onboarding guard (#1562) has to prove the toolless path works from a
+# shell that genuinely lacks uv and just — which it cannot do by running the real
+# installers, because a guard that reaches the network and mutates the machine it is
+# grading is not a guard.
+if ($CheckOnly) {
+    Write-Host 'bootstrap -CheckOnly (nothing will be installed)'
+    foreach ($tool in @('git', 'uv', 'just')) {
+        if (Have $tool) { Write-Host "  present  $tool" }
+        else { Write-Host "  MISSING  $tool" }
+    }
+    exit 0
 }
 
 # ---------------------------------------------------------------- git (check only)
