@@ -871,10 +871,24 @@ def registry_payload(model: RegistryModel, undeclared: list | None = None) -> di
     # one-tap default keyed on the operator's class pick (Trellis: stored token resolves
     # the pins; unknown class -> operator picks). Consumed from board_pinouts, never
     # re-authored; `verified` (only the classic today) tells the surface it may suggest.
-    from tools.analytics.board_pinouts import PINOUT_VERIFIED, RECOMMENDED_SOIL_PINS
+    # #1546 (A3) adds the INVENTORY alongside: `safe` is what a pin map may offer,
+    # `strapping` what it must refuse (and explain), `exhaustive` whether `safe` is the
+    # whole story - so the surface can draw a board instead of asking for a raw number.
+    from tools.analytics.board_pinouts import (
+        PINOUT_VERIFIED,
+        RECOMMENDED_SOIL_PINS,
+        SOIL_PIN_INVENTORY,
+    )
 
     doc["board_pinouts"] = {
-        cls: {"pins": list(pins), "verified": PINOUT_VERIFIED.get(cls, False)}
+        cls: {
+            "pins": list(pins),
+            "verified": PINOUT_VERIFIED.get(cls, False),
+            **{
+                k: (list(v) if isinstance(v, tuple) else v)
+                for k, v in (SOIL_PIN_INVENTORY.get(cls) or {}).items()
+            },
+        }
         for cls, pins in RECOMMENDED_SOIL_PINS.items()
     }
     return doc

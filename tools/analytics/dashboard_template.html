@@ -361,6 +361,26 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .adopt-pin { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--muted);
              font-family: var(--font-data); }
 .adopt-pin input { width: 64px; }
+/* #1546 (A3): the visual pin map — the board's own pins as targets, so wiring is a tap
+   on a picture rather than a typed GPIO number. Chrome register; the only saturated cue
+   is the assigned channel (a real chosen state), and refusal is never an alarm colour. */
+.pinmap { margin: 6px 0 2px; }
+.pinmap-chans { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.pinchip { border: 1px solid var(--border); border-radius: 999px; padding: 3px 11px; font-size: 12px;
+           font-family: var(--font-data); background: none; cursor: pointer; }
+.pinchip.on { border-color: var(--leaf); box-shadow: inset 0 0 0 1px var(--leaf); font-weight: 600; }
+.pinchip .pinchip-pin { color: var(--muted); }
+.pinboard { display: flex; flex-wrap: wrap; gap: 5px; padding: 9px 10px;
+            border: 1px solid var(--border); border-radius: var(--r-tile, 10px); background: var(--surface); }
+.pinbtn { min-width: 46px; font-family: var(--font-data); font-size: 12px; padding: 5px 7px;
+          border: 1px solid var(--border); border-radius: 6px; background: none; cursor: pointer; }
+.pinbtn:hover { background: var(--surface-2); }
+.pinbtn.taken { border-color: var(--leaf); box-shadow: inset 0 0 0 1px var(--leaf); font-weight: 600; }
+.pinbtn.unsafe { border-style: dashed; color: var(--muted); cursor: not-allowed; }
+.pinbtn.unsafe:hover { background: none; }
+.pinmap-legend { font-size: 11.5px; line-height: 1.5; margin-top: 7px; max-width: 58ch; }
+.pinmap-other { margin-top: 7px; display: flex; align-items: center; gap: 7px; font-size: 12px; }
+.pinmap-other input { width: 72px; }
 .adopt-note { font-size: 11.5px; line-height: 1.5; margin: 6px 0 10px; max-width: 56ch; }
 .regchan-teach { flex: 1 1 26ch; min-width: 26ch; align-self: center;
                  font-size: 12.5px; line-height: 1.5; max-width: 62ch; }
@@ -2699,18 +2719,8 @@ function regAdoptCard(u){
     if(A.board){
       const bp = bpAll[A.board] || {};
       const n = nch || A.pins.length || 4;
-      card.appendChild(el('div', 'adopt-q', 'Its ' + n + ' probe' + (n === 1 ? '' : 's') + ' — which GPIO is each wired to?'));
-      const pinrow = el('div', 'adopt-pins');
-      for(let i = 0; i < n; i++){
-        const l = el('label', 'adopt-pin', 'ch' + i);
-        const inp = el('input'); inp.type = 'number'; inp.value = (A.pins[i] != null ? A.pins[i] : '');
-        inp.oninput = () => { A.pins[i] = (inp.value === '' ? null : parseInt(inp.value, 10)); };
-        l.appendChild(inp); pinrow.appendChild(l);
-      }
-      card.appendChild(pinrow);
-      card.appendChild(el('div', 'adopt-note muted', bp.verified
-        ? 'Sprout filled in the bench-verified pins for this board — change any if your wiring differs.'
-        : 'These are Sprout’s best guess for this board — not bench-verified. Confirm them against your board first.'));
+      card.appendChild(el('div', 'adopt-q', 'Its ' + n + ' probe' + (n === 1 ? '' : 's') + ' — tap the pin each one is wired to.'));
+      card.appendChild(regPinMap(A, n, bp));
       const go = el('button', 'btn primary', 'Adopt this board');
       go.onclick = () => regAdoptCommit(u);
       card.appendChild(go);
@@ -2719,6 +2729,89 @@ function regAdoptCard(u){
   const cancel = el('button', 'reglink muted', 'Cancel'); cancel.onclick = () => { __regAdopt = null; renderRegistry(); };
   card.appendChild(cancel);
   return card;
+}
+// ===== #1546 (A3): the visual pin map — tap a channel, tap the pin it's wired to =====
+// The board's own safe pins are the targets, so wiring is a tap on a picture instead of a
+// typed GPIO number. Three rules, all from board_pinouts' own suggest-vs-ask stance:
+//   · a one-tap RECOMMENDED fill is offered ONLY where `verified` is true (classic today);
+//     on S3/C5 the map ASKS, because presenting a datasheet guess in the same voice as a
+//     measurement is how someone wires a probe to a strapping pin.
+//   · strapping pins are drawn but REFUSED, and say why — hiding them teaches nothing, and
+//     the operator holding the board can see the pin exists.
+//   · where the inventory is not exhaustive (the classic's ruled four), "another pin"
+//     stays open: absence of proof is not proof of absence.
+let __pinChan = 0;   // which channel the next pin tap assigns
+function regPinMap(A, n, bp){
+  const wrap = el('div', 'pinmap');
+  const safe = bp.safe || [], strapping = bp.strapping || [];
+  if(__pinChan >= n) __pinChan = 0;
+  // the channels — tap one to aim, its pin shows beside it
+  const chans = el('div', 'pinmap-chans');
+  for(let i = 0; i < n; i++){
+    const has = A.pins[i] != null;
+    const b = el('button', 'pinchip' + (__pinChan === i ? ' on' : ''),
+      'ch' + i + ' <span class="pinchip-pin">' + (has ? 'GPIO ' + A.pins[i] : '—') + '</span>');
+    b.type = 'button';
+    b.onclick = () => { __pinChan = i; renderRegistry(); };
+    chans.appendChild(b);
+  }
+  wrap.appendChild(chans);
+  // the board — every pin we can name, safe ones tappable, strapping ones refused
+  const board = el('div', 'pinboard');
+  const seen = [];
+  safe.concat(strapping).sort((x, y) => x - y).forEach(pin => {
+    if(seen.indexOf(pin) >= 0) return; seen.push(pin);
+    const unsafe = strapping.indexOf(pin) >= 0;
+    const takenBy = A.pins.indexOf(pin);
+    const b = el('button', 'pinbtn' + (unsafe ? ' unsafe' : '') + (takenBy >= 0 ? ' taken' : ''),
+      'GPIO ' + pin + (takenBy >= 0 ? ' <span class="muted">ch' + takenBy + '</span>' : ''));
+    b.type = 'button';
+    b.title = unsafe
+      ? 'GPIO ' + pin + ' is a strapping (boot) pin on this board — a probe here can stop it booting.'
+      : 'Assign GPIO ' + pin + ' to ch' + __pinChan;
+    if(unsafe){ b.disabled = true; }
+    else b.onclick = () => {
+      if(takenBy >= 0 && takenBy !== __pinChan) A.pins[takenBy] = null;   // a pin serves one channel
+      A.pins[__pinChan] = pin;
+      if(__pinChan < n - 1) __pinChan++;      // walk to the next channel, so a 4-probe board is 4 taps
+      renderRegistry();
+    };
+    board.appendChild(b);
+  });
+  wrap.appendChild(board);
+  // the recommendation — offered ONLY where the map is bench-verified
+  if(bp.verified && (bp.pins || []).length){
+    const rec = el('button', 'reglink', 'Use Sprout’s bench-verified pinout (' + bp.pins.join(', ') + ')');
+    rec.onclick = () => { A.pins = bp.pins.slice(0, n); __pinChan = 0; renderRegistry(); };
+    wrap.appendChild(rec);
+  }
+  const bits = [];
+  if(bp.note) bits.push(esc(bp.note));
+  if(strapping.length) bits.push('Dashed pins are strapping (boot) pins — Sprout won’t put a probe there.');
+  bits.push(bp.verified
+    ? 'This board’s pinout is bench-verified, so Sprout can suggest it.'
+    : 'Sprout has a datasheet map for this board but has <strong>not</strong> bench-verified it — so it asks instead of suggesting. Check your board and tap the pins you actually wired.');
+  wrap.appendChild(el('div', 'pinmap-legend muted', bits.join(' · ')));
+  // where the safe list isn't the whole chip (the classic's ruled four), keep a door open
+  if(bp.exhaustive === false){
+    const other = el('div', 'pinmap-other');
+    other.appendChild(el('span', 'muted', 'Wired somewhere else? GPIO'));
+    const inp = el('input'); inp.type = 'number';
+    const add = el('button', 'reglink', 'Use for ch' + __pinChan);
+    add.onclick = () => {
+      const v = parseInt(inp.value, 10);
+      if(isNaN(v)) return;
+      if(strapping.indexOf(v) >= 0){
+        __regErrs = [{message: 'GPIO ' + v + ' is a strapping (boot) pin on this board — a probe there can stop it booting.'}];
+        renderRegistry(); return;
+      }
+      A.pins[__pinChan] = v; if(__pinChan < n - 1) __pinChan++;
+      renderRegistry();
+    };
+    other.appendChild(inp); other.appendChild(add);
+    wrap.appendChild(other);
+  }
+  return wrap;
 }
 function regAdoptCommit(u){
   const A = __regAdopt; if(!A || !A.board) return;

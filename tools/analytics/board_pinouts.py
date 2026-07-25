@@ -43,6 +43,66 @@ PINOUT_VERIFIED: dict[str, bool] = {
     "esp32-c5": False,
 }
 
+# --------------------------------------------------------------------------- #
+# #1546 (A3): the soil-pin INVENTORY — which pins a surface may offer at all.
+#
+# `RECOMMENDED_SOIL_PINS` answers "which four?"; a pin-map surface also has to answer
+# "which pins may I show, and which must I refuse?" — you cannot draw a board and let
+# someone drop a probe on it without knowing the safe set. That knowledge was ruled in
+# docs/hardware/BOARDS.md but lived only as PROSE; neither this module nor firmware's
+# board_capability.h carried it as data. This makes the ruled numbers machine-readable
+# in the one canonical place, transcribed from BOARDS.md, never re-derived:
+#
+#   classic  - "Soil (ADC1, input-only pins): GPIO 36, 39, 34, 35"; strapping 0/2/12/15;
+#              classic input-only = 34-39 (the S3 section names the contrast). BOARDS
+#              does NOT enumerate the classic's full ADC1 range, so the safe set here is
+#              exactly the shipping four - we do not invent the rest.
+#   S3       - "ADC1 = GPIO 1-10"; "Strapping: GPIO 0, 3, 45, 46" -> safe = 1-10 less 3.
+#   C5       - "ADC1 = GPIO1-6"; strapping MTMS/2 + MTDI/3 removed -> safe = 1,4,5,6.
+#
+# `exhaustive=False` says the safe list is the ruled subset, not the chip's full ADC1
+# capability - so a surface offers these and still lets the operator state another pin
+# rather than claiming the board has no others. Absence of proof, not proof of absence.
+SOIL_PIN_INVENTORY: dict[str, dict] = {
+    "esp32-classic": {
+        "safe": (34, 35, 36, 39),
+        "strapping": (0, 2, 12, 15),
+        "exhaustive": False,  # BOARDS.md names the shipping four, not the full ADC1 set
+        "note": "input-only ADC1 pins (34-39) - the shipping map",
+    },
+    "esp32-s3": {
+        "safe": (1, 2, 4, 5, 6, 7, 8, 9, 10),
+        "strapping": (0, 3, 45, 46),
+        "exhaustive": True,  # ADC1 = 1-10, less strapping GPIO3
+        "note": "ADC1 is GPIO 1-10; GPIO3 is a strapping pin",
+    },
+    "esp32-c5": {
+        "safe": (1, 4, 5, 6),
+        "strapping": (2, 3),
+        "exhaustive": True,  # ADC1 = 1-6, less strapping 2/3 - forced, not chosen
+        "note": "ADC1 is GPIO 1-6; GPIO2/3 are strapping - the safe four are forced",
+    },
+}
+
+
+def soil_pin_inventory(board_class: str) -> dict | None:
+    """The offerable soil pins for a board class, or ``None`` if we have no map.
+
+    ``None`` is a first-class answer (ADR-0028), and the same suggest-vs-ask rule
+    :func:`recommended_pins` follows: a surface with no inventory must **ask**, never
+    invent a diagram. Callers get ``safe`` (offer these), ``strapping`` (refuse these,
+    and say why), and ``exhaustive`` (whether ``safe`` is the whole story).
+    """
+    return SOIL_PIN_INVENTORY.get(board_class)
+
+
+def is_strapping(board_class: str, pin: int) -> bool:
+    """Whether this pin is a strapping/boot pin on this board — the one question a
+    pin-map must answer before it accepts a drop. Unknown class ⇒ False: we do not
+    manufacture a hazard we have no record of (and the surface asks in that case)."""
+    inv = SOIL_PIN_INVENTORY.get(board_class)
+    return bool(inv and pin in inv["strapping"])
+
 
 def recommended_pins(board_class: str) -> tuple[int, ...] | None:
     """Sprout's soil pin map for this board class, or ``None`` if we have none.
