@@ -43,7 +43,18 @@ ota_pull_decision_t ota_pull_decide(const ota_pull_artifact_t *artifacts,
         !field_ok(self_version, OTA_PULL_VERSION_MAX))
         return OTA_PULL_SELF_UNKNOWN;
 
-    if (artifacts == NULL || count == 0u) return OTA_PULL_FEED_INVALID;
+    /* No array at all is a CALLER error - there is nothing to reason about. */
+    if (artifacts == NULL) return OTA_PULL_FEED_INVALID;
+
+    /* An EMPTY feed is not a broken one (#1284 desk re-verify). A banner-only
+     * document is the ruled pre-first-release state - the generator emits it, the
+     * guard blesses it, and docs/ota/feed.txt is committed in exactly that shape:
+     * "a banner-only feed offers nothing and boards stay put". Reporting it as
+     * FEED_INVALID told the truth about the outcome (stay put) and a lie about the
+     * reason - an operator running !otapull before the first cut would read a
+     * perfectly healthy feed as a broken one, and go debug the generator or the
+     * URL. Same stay-put behaviour, honest reason. */
+    if (count == 0u) return OTA_PULL_NO_ARTIFACT_FOR_BOARD;
 
     /* Every entry must be well-formed, not just ours. A feed carrying a
      * malformed entry is a feed we do not understand, and acting on the half we

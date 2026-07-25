@@ -21,14 +21,41 @@ curation) · #1340 · #271 · #1227 (verify from the device, not the transfer)
 The pull path is **dark by construction** — it exists only when a feed is provisioned at build time
 (mirrors the push password, #1333).
 
+> **Desk-verified 2026-07-24 (post-#1524), so this section is mechanics, not discovery:** the
+> generator + served file now exist. `docs/ota/feed.txt` is committed **banner-only** (the ruled
+> pre-first-release state), and Pages publishes `docs/.` to the site root — so it serves at
+> **`https://<pages-host>/ota/feed.txt`**, exactly the path the firmware pins. Confirmed by running
+> the **real device C parser** over the **real committed bytes**: `parse=ok, n=0` → a classic decides
+> `no-artifact-for-board`.
+
 - [ ] In the gitignored `firmware/platformio_local.ini`, add the feed URL to `build_flags`:
-      `-D OTA_FEED_URL='"https://<pages-host>/ota/feed.txt"'` (the curated Pages feed, #1258).
+      `-D OTA_FEED_URL='"https://<pages-host>/ota/feed.txt"'` (the curated Pages feed, #1258/#1524).
 - [ ] Flash a board with an **older** version so the feed can offer it something newer:
       `pio run -e esp32dev -t upload`.
 - [ ] Confirm the boot banner says **`# OTA: signed-pull ARMED (feed provisioned)`** and note the
       running `git=`/`fw=` from the banner. A public build prints `signed-pull OFF` — that is the
       wrong build for this sheet.
 - [ ] Board on WiFi (`!wifi` provisioned), reachable, serial monitor open @ 19200.
+- [ ] **Sanity shot before the cut (optional, 10 s):** send `!otapull` against the *current*
+      banner-only feed. Expect **`# otapull no-artifact`** — "the feed is fine, it offers nothing
+      yet." That is the healthy pre-cut answer, **not** an error. (Before #1284's desk re-verify the
+      device reported `feed-invalid` here, which read as a broken feed and would have sent you
+      debugging a working one.)
+
+**Populating the feed at the cut** (§6 of `docs/process/RELEASE_CUT.md`) — the feed is generated
+from a release's *signed assets*, so it follows signing, not precedes it:
+
+```bash
+just ota-feed v0.8.1            # dry-run: prints what would be served (works on a DRAFT)
+just ota-feed v0.8.1 --write    # writes docs/ota/feed.txt; commit it
+```
+
+- [ ] Fail-closed by design: every declared board needs **both** `.bin` and `.sig` attached or
+      **nothing** is emitted — a partial fleet is never served silently.
+- [ ] The `ota-feed-guard` pre-commit hook validates the committed file. **Read its name precisely:**
+      it runs the Python desk twin (`tools/dx/ota_feed.py check`), which *models* the device
+      contract — it is not the C parser. It is a strong mirror, not an on-device proof; §1's `git=`
+      echo remains the only on-device truth (#1227).
 
 ## §1 Happy path — a genuine update applies (D1 + D2)
 

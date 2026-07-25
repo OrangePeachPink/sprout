@@ -80,9 +80,12 @@ typedef enum {
     OTA_PULL_UPDATE = 0,
     /* the feed offers this board the version it is already running */
     OTA_PULL_UP_TO_DATE,
-    /* the feed is structurally unusable (empty, over-long field, missing url) */
+    /* the feed is structurally unusable (over-long field, missing url) or the
+     * caller passed no artifact array at all */
     OTA_PULL_FEED_INVALID,
-    /* the feed is fine but offers nothing for THIS board class */
+    /* the feed is fine but offers nothing for THIS board class - INCLUDING the
+     * banner-only feed, which is the ruled pre-first-release state and VALID
+     * (#1284): "offers nothing" is not "is broken" */
     OTA_PULL_NO_ARTIFACT_FOR_BOARD,
     /* the caller did not supply a usable current version / board identity */
     OTA_PULL_SELF_UNKNOWN
