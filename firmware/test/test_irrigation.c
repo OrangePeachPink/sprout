@@ -2423,12 +2423,21 @@ void t_ota_pull_fail_closed(void)
     ota_pull_artifact_t good[1] = {
         mk_art("esp32-classic", "0.8.1", "https://x/a.bin", "https://x/a.sig")};
 
+    /* NO ARRAY AT ALL is a caller error - nothing to reason about. */
     TEST_ASSERT_EQUAL_INT(
         OTA_PULL_FEED_INVALID,
         ota_pull_decide(NULL, 0, "esp32-classic", "0.7.3", NULL));
-    TEST_ASSERT_EQUAL_INT(
-        OTA_PULL_FEED_INVALID,
-        ota_pull_decide(good, 0, "esp32-classic", "0.7.3", NULL));
+
+    /* An EMPTY feed is NOT a broken one (#1284). This assertion used to expect
+     * FEED_INVALID; #1524 then made the banner-only feed the ruled, committed
+     * pre-first-release state ("offers nothing, boards stay put"), which turned
+     * that expectation into the device calling a healthy feed broken. Behaviour
+     * is unchanged either way (the board stays put) - the REASON is now honest,
+     * so a pre-cut !otapull doesn't send an operator debugging a working feed. */
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_NO_ARTIFACT_FOR_BOARD,
+        ota_pull_decide(good, 0, "esp32-classic", "0.7.3", NULL),
+        "an empty feed offers nothing - it is not structurally broken");
 
     /* not knowing what we are is a refusal, not a guess */
     TEST_ASSERT_EQUAL_INT_MESSAGE(
@@ -2819,6 +2828,34 @@ static void t_ota_pull_run_orchestrator(void)
             OTA_PULL_RUN_SELF_UNKNOWN,
             ota_pull_run(&t, "", "0.8.0", pk, buf, sizeof(buf), scratch, 4));
         TEST_ASSERT_EQUAL_INT(0, h.apply_calls);
+    }
+
+    /* THE SHIPPED PRE-FIRST-RELEASE FEED, end to end (#1284 desk re-verify).
+     * This is the shape docs/ota/feed.txt is committed in today: the banner plus
+     * #-comments, no board lines. Running the REAL parser over the REAL committed
+     * bytes is what surfaced this - the twin's guard prints "parses on-device"
+     * but runs the Python twin, so only the C path can prove the device's answer.
+     * The whole chain must read it as "offers nothing", NOT "feed is broken":
+     * an operator running !otapull before the first cut should see no-artifact. */
+    {
+        const char *shipped =
+            "# sprout-ota-feed v1\n"
+            "# No release carries signed assets yet - the first pullable "
+            "release "
+            "is v0.8.1.\n"
+            "# At the cut: just ota-feed vX.Y.Z --write\n"
+            "# Devices skip #-comments; a banner-only feed offers nothing and "
+            "boards stay put.\n";
+        pull_harness_t h = {.feed_text = shipped, .apply_verdict = OTA_ACCEPT};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_PULL_RUN_NO_ARTIFACT,
+                                      ota_pull_run(&t, "esp32-classic", "0.8.0",
+                                                   pk, buf, sizeof(buf),
+                                                   scratch, 4),
+                                      "the committed banner-only feed offers "
+                                      "nothing - it is not invalid");
+        TEST_ASSERT_EQUAL_INT_MESSAGE(0, h.apply_calls,
+                                      "nothing offered -> nothing applied");
     }
 
     /* Labels are total + stable (log/banner tokens, never a secret). */
