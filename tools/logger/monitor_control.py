@@ -67,10 +67,10 @@ class MonitorController:
             # never blocks a legitimate start — only a truly live holder does.
             owner = serial_lock.current_owner(self._lock_dir)
             if owner:
-                raise MonitorError(
-                    f"port held by {owner.get('mode')} (pid {owner.get('pid')}) "
-                    "- stop it first"
-                )
+                # #1554: "stop it first" doesn't say WHICH — and this is exactly the
+                # message the operator reads when the Start button refuses. The lock
+                # records the holder's checkout, so the refusal can name it.
+                raise MonitorError(serial_lock.explain_owner(owner, live=True))
             argv = [self._python, str(self._logger_py)]
             if port:
                 argv += ["--port", port]

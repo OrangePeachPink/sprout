@@ -4010,18 +4010,24 @@ function monRenderOwner(o){  // #330: surface a stale marker (+ recovery) or a l
   const el = document.getElementById('serialOwner'); if(!el) return;
   if(!o || !o.present){ el.hidden = true; el.innerHTML = ''; return; }
   el.hidden = false;
-  const who = `${o.mode || '?'} · pid ${o.pid} · ${o.port || 'port ?'}`;
+  // #1554: the sentence comes from the host (serial_lock.explain_owner) and is rendered
+  // VERBATIM — the lock is the only thing that knows which checkout started the holder,
+  // so the explanation belongs where that knowledge lives, not restated here. A server
+  // predating #1554 sends no `explain`; the old identity line is the fallback so an
+  // un-relaunched Sprout keeps working rather than showing a blank strip.
+  const who = `${o.mode || '?'} · pid ${o.pid}${o.origin ? ' · from ' + o.origin : ''} · ${o.port || 'port ?'}`;
   const when = o.opened_utc ? ` · opened ${fmtLocal(o.opened_utc)}` : '';
   if(o.stale){
     el.className = 'serialowner stale';
-    el.innerHTML = `<span>⚠ stale port marker — owner is gone: ${who}${when}. `
-      + `The port is free; this marker is just litter.</span>`
+    const say = o.explain || `stale port marker — owner is gone: ${who}. The port is free; this marker is just litter.`;
+    el.innerHTML = `<span>⚠ ${esc(say)}<br><span class="muted">${esc(who + when)}</span></span>`
       + `<button class="btn" id="ownerClear" type="button">Clear stale marker</button>`;
     const b = document.getElementById('ownerClear');
     if(b) b.addEventListener('click', ownerClear);
   } else {  // live holder — informational, never offer to clear (would free a held port)
     el.className = 'serialowner live';
-    el.innerHTML = `<span>● port held by ${who}${when}</span>`;
+    const say = o.explain || `port held by ${who}`;
+    el.innerHTML = `<span>● ${esc(say)}<br><span class="muted">${esc(who + when)}</span></span>`;
   }
 }
 async function ownerPoll(){
