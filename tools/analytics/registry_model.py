@@ -28,6 +28,27 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+# #1544 (A1, the #1541 wall): a board can be DESCRIBED before it has ever reported.
+# The whole "Add a board" flow depends on that state existing — the user has hardware in
+# hand, nothing flashed, nothing answering, and wants to say "I'm adding this board with
+# 4 probes in these plants." Adoption (#1027) is the inverse case (a board that already
+# answered), so this is a new axis, not a new adoption mode.
+#
+# **Binding is its own axis, deliberately NOT a lifecycle state.** `lifecycle` is the
+# UNIFIED active|paused|deleted vocabulary shared by plants, sensors and devices (Q3);
+# "pending" is meaningless for a plant, and folding it in would make every consumer of a
+# shared enum handle a value that can't occur for two of its three entity types — the
+# overload mistake #1152 ruled against on the exception axes. A declared board is
+# `lifecycle="active"` (it is not paused, not deleted) AND `binding="pending"`.
+DEVICE_BINDINGS = ("pending", "bound")
+
+# A declared board has no real device_id yet: ADR-0027 §1a mints the id ON THE BOARD
+# (SoC RNG, first boot, persisted to NVS), so the host cannot know it before first
+# contact. The declaration therefore carries a host-minted PROVISIONAL id, visibly
+# marked, which is a real registry key from the moment it exists — assignments, channel
+# declarations and plant mappings all hang off it immediately.
+PENDING_ID_PREFIX = "pending-"
+
 # The unified lifecycle (Q3): one concept for plants, sensors, and devices.
 # active  — collecting / mapped now
 # paused  — temporarily off, history preserved, trivially reversible (NOT a fault)
@@ -223,6 +244,117 @@ class RegistryModel:
             if a.device_id == device_id and a.channel == channel:
                 return a
         return None
+
+    # ---------------------- declared devices (#1544 / A1) ---------------------- #
+    def pending_devices(self) -> list[dict]:
+        """Boards that have been DESCRIBED but have never reported (#1544).
+
+        The zero state asks this to say the true thing — "no boards yet" vs "your board
+        is declared, waiting for it to report" are different screens, and A4 cannot tell
+        them apart without this."""
+        return [
+            d
+            for d in self.devices
+            if d.get("binding") == "pending" and d.get("lifecycle") != "deleted"
+        ]
+
+    def is_pending(self, device_id: str) -> bool:
+        """True if this id names a declared-but-unbound board."""
+        return any(d.get("device_id") == device_id for d in self.pending_devices())
+
+    def declare_device(
+        self,
+        *,
+        name: str,
+        board: str | None = None,
+        channels: list | None = None,
+        channel_source: str = "stated",
+        now: str | None = None,
+    ) -> dict:
+        """Declare a board that has not reported yet — the #1541 wall's missing entry
+        point. Returns the new device record.
+
+        The provisional id is minted here and is a **real key immediately**: channel
+        declarations and (later) plant assignments hang off it from the moment the user
+        describes the board, so their wiring and plant choices are recorded as history
+        the instant they make them — not held in surface state until hardware shows up.
+        A user who declares a board and never plugs it in still has their work saved.
+
+        ``name`` is required and ``device_id`` is never typed by the user (ADR-0027: the
+        board owns its id; the human owns the label)."""
+        label = (name or "").strip()
+        if not label:
+            raise ValueError("a declared board needs a name")
+        did = mint_pending_id(self)
+        entry: dict = {
+            "device_id": did,
+            "name": label,
+            "binding": "pending",
+            "lifecycle": "active",
+            "declared_ts": now or _utc_now(),
+        }
+        if board:
+            entry["board"] = board
+        self.devices.append(entry)
+        if channels:
+            self.declare_channels(did, channels, source=channel_source, now=now)
+        return entry
+
+    def bind_device(
+        self, pending_id: str, wire_id: str, *, now: str | None = None
+    ) -> dict | None:
+        """**The reconcile-on-first-contact rule** (#1544; A5 calls this when a board
+        actually answers). Returns the bound record, or None if ``pending_id`` names no
+        pending board.
+
+        The bind does NOT create a second record and does NOT rewrite history. It
+        re-keys the existing declaration to the id the board minted, and files the
+        provisional id in ``previous_ids`` — the **#602 identity-continuity fold**,
+        already shipped and already honoured by ``device_registry.canonical_for``. So
+        every assignment, channel declaration and reading written against the
+        provisional id keeps resolving to this board, through a mechanism that exists
+        rather than a second one invented here. A declared→bound bind is the same shape
+        as #602's factory-flash re-key: the board is the same board, its id changed.
+
+        Idempotent and honest: binding an already-bound id, or binding to an id another
+        live device already holds, is refused (never two records for one board)."""
+        rec = next(
+            (d for d in self.devices if d.get("device_id") == pending_id),
+            None,
+        )
+        if rec is None or rec.get("binding") != "pending":
+            return None
+        wire = (wire_id or "").strip()
+        if not wire:
+            raise ValueError("a bind needs the id the board reported")
+        live = {
+            d.get("device_id")
+            for d in self.devices
+            if d.get("device_id") != pending_id and d.get("lifecycle") != "deleted"
+        }
+        if wire in live:
+            # A different record already IS this board — the caller wanted adoption
+            # (#1027), not a bind. Refusing keeps the "never two records" invariant.
+            raise ValueError(f"device {wire} is already registered")
+        prior = list(rec.get("previous_ids") or ())
+        if pending_id not in prior:
+            prior.append(pending_id)  # #602: the provisional id becomes lineage
+        rec["previous_ids"] = prior
+        rec["device_id"] = wire
+        rec["binding"] = "bound"
+        rec["bound_ts"] = now or _utc_now()
+        # Re-key the temporal records the user already made against the declaration, so
+        # the mapping they built at declare-time is the mapping that goes live. These
+        # are the SAME rows re-pointed, never closed-and-reopened: nothing about the
+        # binding changed what is wired where, and inventing a boundary here would
+        # fabricate a "re-wiring" event the operator never performed (#1331's lesson).
+        for a in self.assignments:
+            if a.device_id == pending_id:
+                a.device_id = wire
+        for c in self.channel_declarations:
+            if c.device_id == pending_id:
+                c.device_id = wire
+        return rec
 
     # ------------------------ channel declarations (#1027) ------------------------ #
     def declared_channels(
@@ -717,6 +849,24 @@ def registry_payload(model: RegistryModel, undeclared: list | None = None) -> di
     doc["devices"] = [
         {**d, "channels": _channel_view(model, d)} for d in doc["devices"]
     ]
+    # #1544 (A1): the declared-but-not-yet-reporting set, so the zero state (A4) can say
+    # the TRUE thing. "No boards yet" and "your board is declared, waiting for it to
+    # report" are different screens with different next actions, and the #1541 wall was
+    # exactly a screen that could not tell them apart — it said "waiting for the first
+    # reading" forever without ever naming that zero devices were registered.
+    doc["pending_devices"] = [
+        {
+            "device_id": d.get("device_id"),
+            "name": d.get("name"),
+            "board": d.get("board"),
+            "declared_ts": d.get("declared_ts"),
+            "channels_declared": model.declared_channel_count(d.get("device_id", "")),
+        }
+        for d in model.pending_devices()
+    ]
+    doc["has_any_device"] = bool(
+        [d for d in model.devices if d.get("lifecycle") != "deleted"]
+    )
     # #1027 5.2: recommended soil pinout per board class, so the adopt surface offers a
     # one-tap default keyed on the operator's class pick (Trellis: stored token resolves
     # the pins; unknown class -> operator picks). Consumed from board_pinouts, never
@@ -838,6 +988,22 @@ def next_sensor_id(model: RegistryModel) -> str:
     return _next_numbered({s.sensor_id for s in model.sensors}, "s")
 
 
+def mint_pending_id(model: RegistryModel) -> str:
+    """A provisional id for a declared board (#1544): ``pending-0N``, server-allocated.
+
+    Deliberately **not** shaped like a real device_id (the 6-char base32 a board mints,
+    ADR-0027) — a placeholder that looked like the real thing would be indistinguishable
+    in a log line, and "is this board real?" must be answerable by looking. It counts
+    every id ever used, including bound and deleted ones, so a number is never reused —
+    the id stays stable identity even once it is lineage in ``previous_ids`` (#602)."""
+    used = {d.get("device_id", "") for d in model.devices}
+    used |= {pid for d in model.devices for pid in (d.get("previous_ids") or ())}
+    n = 1
+    while f"{PENDING_ID_PREFIX}{n:02d}" in used:
+        n += 1
+    return f"{PENDING_ID_PREFIX}{n:02d}"
+
+
 def _validate_channel_declaration(rec: dict, tag: str, err) -> None:
     """The §5.2 gate: a board must declare its channels to be adoptable (#1027).
 
@@ -929,7 +1095,9 @@ def apply_operations(
 
         {"plants":  {"add": [...], "edit": [...]},
          "sensors": {"add": [...], "edit": [...]},
-         "devices": {"add": [{device_id, channels: [pin,...], base_url?,
+         "devices": {"declare": [{name, channels: [pin,...], board?,
+                                 channel_source?}],   # #1544 — before it reports
+                     "add": [{device_id, channels: [pin,...], base_url?,
                              channel_source?, board?, name?}],
                      "edit": [...],
                      "rewire": [{device_id, channels: [pin,...], channel_source?}]},
@@ -1021,6 +1189,26 @@ def apply_operations(
             # the ruling exists to forbid.
             _validate_channel_declaration(rec, tag, err)
             staged_d.add(did)
+
+    # ---- validate: device DECLARES (#1544 / A1) — a board described before it reports.
+    # The id is server-minted (never client-supplied): a declared board has no real id
+    # to type, and letting a client name one would invite a collision with a real
+    # board's minted id. Name is required — it is the only handle the operator has on a
+    # board that cannot yet identify itself. The §5.2 channel gate applies here too: a
+    # declaration with no wiring is the same non-adoptable board the #1027 ruling
+    # forbids, whether it has reported or not.
+    for i, rec in enumerate(devices.get("declare") or []):
+        tag = f"devices.declare[{i}]"
+        if not (rec.get("name") or "").strip():
+            err(tag, "a board needs a name so you can tell it apart", "name")
+        if rec.get("device_id"):
+            err(
+                tag,
+                "a declared board's id is assigned by Sprout, not typed — the board "
+                "mints its own id when it first reports",
+                "device_id",
+            )
+        _validate_channel_declaration(rec, tag, err)
 
     known_p = existing_p | staged_p
     known_s = existing_s | staged_s
@@ -1135,7 +1323,20 @@ def apply_operations(
         "closed": 0,
         "lifecycle": 0,
         "purged": {"devices": 0, "plants": 0, "sensors": 0, "assignments": 0},
+        "declared": [],  # #1544: the minted ids, so the flow can map plants to them
     }
+    for rec in devices.get("declare") or []:  # #1544 A1 — declare-before-connect
+        entry = model.declare_device(
+            name=rec.get("name", ""),
+            board=rec.get("board"),
+            channels=_declared_pins(rec),
+            channel_source=rec.get("channel_source", "stated"),
+            now=now,
+        )
+        # The minted id is RETURNED, not guessed by the client: the same batch can map
+        # plants onto the board it just declared (the adopt-then-map shape, #1027).
+        applied["declared"].append(entry["device_id"])
+        applied["channels_declared"] += len(rec.get("channels") or [])
     for rec in devices.get("add") or []:  # #1027 adopt — register the answering board
         entry = {
             "device_id": (rec.get("device_id") or "").strip(),
