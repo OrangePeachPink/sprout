@@ -16,6 +16,34 @@ Ground rules for any agent (or human) contributing to this repository.
 [`docs/team/OPERATIONS.md`](docs/team/OPERATIONS.md) — that file describes **us** and is
 hard-marked out of scope for contributors and their tools.)*
 
+## 🤝 Bringing an agent? Most people do — here's what we ask
+
+**We don't ask you to declare it.** This project is built by a maintainer working with a team
+of coding agents; asking you to disclose what we do ourselves would be silly. These are about
+*attribution* and *accuracy*, not about tooling.
+
+- **You are the author.** Whatever helped you write it, the pull request is yours and you stand
+  behind it. Please **don't add co-author trailers for tools** — we don't either. A contributor's
+  handle is the credit, and a tool is not a person.
+- **Make sure your credit actually lands.** GitHub links commits to profiles by the author email.
+  If yours isn't verified on your account, your work **won't appear on your contribution graph** —
+  easy to miss, annoying to discover later. Check with
+  `git log -1 --format=%ae`; the `@users.noreply.github.com` address from *Settings → Emails*
+  always links. (We use a noreply address here too.)
+- **If you bring a reviewer bot, it speaks for you.** Requesting an automated reviewer on your own
+  PR is welcome — they catch real things. Just know its comments land in our thread under *your*
+  invitation, its suggestions are yours to accept or decline before we review, and we'll read them
+  as input, not as a project verdict.
+- **Every claim in your PR must be a real one.** If the description says the suite passed, it must
+  have actually run on your branch. We verify against the artifact rather than the summary — not
+  from suspicion, it's the same standard we hold our own work to, and an agent's confident recap of
+  a command it didn't run is the single easiest way for good work to get bounced.
+- **Scope stays where you said it would.** If your agent notices something else worth fixing,
+  that's a separate issue and we'd love to hear it — one concern per PR keeps review honest.
+
+None of this is a hurdle. It exists because agent-assisted contributions are now the norm here,
+and these five things are what make them land cleanly.
+
 > ## ⏱️ If you only have 30 seconds
 >
 > - **Sprout** is a plant-monitoring and (soon) automatic-watering system: ESP32 firmware →
