@@ -377,6 +377,17 @@ function waterHTML(card) {
       esc(String(lw.source || "detected").toUpperCase()) + "</span></span>";
   else
     h += '<span>watered <b>&mdash;</b> <span class="src">not seen yet</span></span>';
+  /* #1583 R12 (the ruled §8 order, level 1): if the MEASUREMENT can't be trusted, nothing
+     derived from it can be either. The card already replaces the mood with the instrument
+     reason — but the water story rendered on regardless, so a faulted probe still asserted
+     "next water ~2d" (or, since D3, "water now") one line below "reading can't be trusted".
+     That is the R12 failure exactly: the sensor's unhappiness reading as the plant's.
+     `last watered` survives — it is a detected EVENT from history, not a claim derived from
+     the suspect reading — and the forecast half says plainly that it cannot say. */
+  if (card.exception && card.exception.is) {
+    h += '<span>next <b>&mdash;</b> <span class="src">can’t say while the reading is off</span></span>';
+    return h;
+  }
   /* #1534 D3: a plant already AT or past Thirsty needs no forecast — the answer is now.
      Showing an ETA-to-Thirsty (or an absence) for a plant that is ALREADY thirsty is the
      one case where the forecast channel has nothing useful to add, and saying "—" reads
