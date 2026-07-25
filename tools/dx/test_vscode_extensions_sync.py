@@ -3,8 +3,7 @@
 `.vscode/extensions.json` is what a local contributor is offered on open;
 `.devcontainer/devcontainer.json` is what a Codespaces contributor gets installed. They
 had drifted to 12 vs 6 — same repo, same gate, half the editor — so a Codespaces user
-hit
-cspell and YAML failures with no editor support for either.
+met the cspell and YAML gates with no editor support for either.
 
 A declared exception list, not a fuzzy tolerance: the only permitted difference is named
 here with its reason, and anything else fails loud (the guard-family shape).

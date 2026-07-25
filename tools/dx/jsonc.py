@@ -9,8 +9,7 @@ document it was meant to parse.
 
 So: a scanner that knows what a string is. Comments are removed only outside strings,
 and escapes inside strings are honoured. It handles the subset VS Code actually emits
-— `//`
-line comments — and deliberately not `/* */` or trailing commas, because we do not use
+(`//` line comments) and deliberately not `/* */` or trailing commas — we do not use
 them, and silently accepting more than we can round-trip would be a worse lie than
 failing.
 """
