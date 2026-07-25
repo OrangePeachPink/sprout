@@ -2673,6 +2673,73 @@ void t_ota_pull_feed_fail_closed(void)
         "ignore");
     TEST_ASSERT_EQUAL_UINT32(0, n);
 
+    /* A DUPLICATE BOARD CLASS REJECTS THE WHOLE FEED (#1570). Mirrors the desk
+     * twin's vector (tools/dx/test_ota_feed.py::test_duplicate_board_rejects_
+     * the_feed: GOOD + a repeat of a board line) so generator and device are
+     * held to one contract by two suites that cannot drift silently. */
+    const char *dup_same = "# sprout-ota-feed v1\n"
+                           "board=esp32-classic version=0.8.1 "
+                           "image=https://x/c.bin sig=https://x/c.sig\n"
+                           "board=esp32-classic version=0.8.1 "
+                           "image=https://x/c.bin sig=https://x/c.sig\n";
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_MALFORMED,
+        ota_pull_parse_feed(dup_same, strlen(dup_same), a, 4, &n),
+        "two entries for one class is a corrupt feed - refuse it whole");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, n, "never a partial parse");
+
+    /* The case the refusal actually exists for: the duplicates DISAGREE. Picking
+     * either one is a silent guess about which image to flash, and the wrong
+     * guess is a board recovered over USB. first-wins and last-wins are both
+     * wrong answers to a question the feed failed to answer. */
+    const char *dup_conflict =
+        "# sprout-ota-feed v1\n"
+        "board=esp32-classic version=0.8.1 "
+        "image=https://x/new.bin sig=https://x/new.sig\n"
+        "board=esp32-classic version=0.7.9 "
+        "image=https://x/old.bin sig=https://x/old.sig\n";
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_MALFORMED,
+        ota_pull_parse_feed(dup_conflict, strlen(dup_conflict), a, 4, &n),
+        "conflicting duplicates must refuse, never pick one");
+    TEST_ASSERT_EQUAL_UINT32(0, n);
+
+    /* Rejected for ANY class, not just the reading board's own: a duplicate
+     * anywhere is evidence the document was mangled, and the parser is pure - it
+     * never knows which board is reading. A classic reading a feed whose C5 lines
+     * are doubled still refuses. */
+    const char *dup_other = "# sprout-ota-feed v1\n"
+                            "board=esp32-classic version=0.8.1 "
+                            "image=https://x/c.bin sig=https://x/c.sig\n"
+                            "board=esp32-c5 version=0.8.1 "
+                            "image=https://x/5.bin sig=https://x/5.sig\n"
+                            "board=esp32-c5 version=0.8.1 "
+                            "image=https://x/5.bin sig=https://x/5.sig\n";
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_MALFORMED,
+        ota_pull_parse_feed(dup_other, strlen(dup_other), a, 4, &n),
+        "a duplicate of ANY class rejects - the parser never guesses which "
+        "board is reading");
+    TEST_ASSERT_EQUAL_UINT32(0, n);
+
+    /* The other side of the cut: DISTINCT classes that share a prefix must still
+     * parse. Guards the check against a future refactor to a prefix/strncmp
+     * compare, which would refuse legitimate feeds as the fleet grows. */
+    const char *near_miss = "# sprout-ota-feed v1\n"
+                            "board=esp32-c5 version=0.8.1 "
+                            "image=https://x/5.bin sig=https://x/5.sig\n"
+                            "board=esp32-c55 version=0.8.1 "
+                            "image=https://x/55.bin sig=https://x/55.sig\n";
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_OK,
+        ota_pull_parse_feed(near_miss, strlen(near_miss), a, 4, &n),
+        "distinct classes sharing a prefix are not duplicates");
+    TEST_ASSERT_EQUAL_UINT32(2, n);
+
     TEST_ASSERT_EQUAL_STRING("ok", ota_pull_parse_label(OTA_PULL_PARSE_OK));
     TEST_ASSERT_EQUAL_STRING("no-banner",
                              ota_pull_parse_label(OTA_PULL_PARSE_NO_BANNER));

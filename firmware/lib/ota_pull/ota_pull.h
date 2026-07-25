@@ -142,6 +142,12 @@ ota_pull_decision_t ota_pull_decide(const ota_pull_artifact_t *artifacts,
  * and mirrors the wire contract's additive-never-stitch discipline: the feed must
  * be able to GAIN a field without stranding every deployed board, but it must never
  * be able to LOSE one and have a device quietly fill in a default.
+ *
+ * ONE ENTRY PER BOARD CLASS - a duplicate rejects the WHOLE feed (#1570). Two lines
+ * for one class have no defined answer, and both first-wins and last-wins are a
+ * silent guess about which image to flash. Rejected for any class, not just the
+ * reading board's, so the parser stays pure and mirrors the generator's own check
+ * (tools/dx/ota_feed.py) exactly - generator and device cannot drift apart.
  */
 #define OTA_PULL_FEED_BANNER "# sprout-ota-feed v1"
 
