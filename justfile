@@ -52,6 +52,13 @@ serve *ARGS:
 dash *ARGS:
     @just serve {{ARGS}}
 
+# Is Sprout correctly installed and ready on THIS machine? Reports; never repairs (#1553).
+# Checks tools, the locked env, the port, whether any board is declared, serial + firmware
+# (both optional), and the Windows clone-path budget. Non-zero only on a real blocker —
+# "no boards yet" and "no serial port" are states, not faults, and it says so.
+doctor *ARGS:
+    {{py}} tools/dx/doctor.py {{ARGS}}
+
 # List any live Sprout-spawned processes (Monitor logger / Experiment capture) by PID
 # + role - the #493 identifiability tool. "Port busy" with no Sprout window open? Run this first.
 processes:
