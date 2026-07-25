@@ -326,7 +326,44 @@ class NoDataYet(Exception):
         self.had_any_logged = had_any_logged
 
 
-def _empty_state_html(had_any_logged: bool) -> str:
+def _zero_state(model=None) -> tuple[str, dict]:
+    """Which zero state is this, really? (#1547 / A4)
+
+    The #1541 wall in one function: the first screen knew only ``had_any_logged``, so
+    a fresh checkout with **no boards registered** was told "waiting for the first
+    reading" — which would wait forever, and never said why. Three situations were
+    rendering as one sentence, and only one of them was true.
+
+    Returns ``(state, facts)``:
+
+    * ``no-boards`` — nothing is registered, so nothing will ever report. The next
+      action is to add a board, not to press Start.
+    * ``waiting`` — a board has been DECLARED (#1544) and hasn't reported yet. Naming
+      it is the payoff of declaring it: "waiting for Windowsill" is a status; "waiting
+      for the first reading" is a shrug.
+    * ``ready`` — boards are registered and bound; there is genuinely something to poll,
+      so the #644 Start launchpad is the right control (DX's correction: that control
+      solved a real chicken-and-egg and a fix must not delete it).
+
+    Registry failure degrades to ``ready`` — the pre-#1547 behavior. A broken registry
+    should not replace the operator's launchpad with a lecture about boards."""
+    try:
+        if model is None:
+            from tools.analytics.registry_model import load_registry_model
+
+            model = load_registry_model()
+        pending = model.pending_devices()
+        live = [d for d in model.devices if d.get("lifecycle") != "deleted"]
+        if not live:
+            return "no-boards", {}
+        if pending and len(pending) == len(live):
+            return "waiting", {"names": [d.get("name") for d in pending]}
+        return "ready", {}
+    except Exception:
+        return "ready", {}
+
+
+def _empty_state_html(had_any_logged: bool, model=None) -> str:
     """A genuine first-run page (#543) - no readings yet is not an error state, so
     it gets its own honest, on-tone response rather than the 500 error path.
 
@@ -350,21 +387,59 @@ def _empty_state_html(had_any_logged: bool) -> str:
         launchpad = ""
         script = ""
     else:
-        message = (
-            "<p>No readings yet - this is a fresh checkout with nothing logged.</p>"
-            "<p>Press <strong>Start logging</strong> below to begin polling "
-            "every registered device. This page opens the live dashboard the moment "
-            "the first reading lands.</p>"
-        )
-        launchpad = (
-            '<div class="launch">'
-            # #923: one collection action, consistent vocab with the Monitor card
-            '<button class="btn primary" id="collStart" type="button">'
-            "▶ Start logging</button>"
-            '<p class="status" id="collStatus" role="status" aria-live="polite"></p>'
-            "</div>"
-        )
-        script = _EMPTY_STATE_SCRIPT
+        state, facts = _zero_state(model)
+        if state == "no-boards":
+            # #1547: name the ACTUAL blocker. "Waiting for the first reading" was
+            # true of a state where nothing can ever arrive — no board sends readings.
+            message = (
+                "<p><strong>No boards yet.</strong> Sprout is running, but nothing is "
+                "reporting — there's no board set up to send readings.</p>"
+                "<p>Add a board to describe your hardware: which board, how many "
+                "probes, and which plants they're in.</p>"
+            )
+            launchpad = (
+                '<div class="launch">'
+                '<a class="btn primary" href="/classic#registry">Add a board</a>'
+                '<p class="status">Takes you to Plants &amp; Sensors, where boards '
+                "are set up.</p>"
+                "</div>"
+            )
+            script = ""
+        elif state == "waiting":
+            # A declared board (#1544) that hasn't reported. Naming it is the payoff
+            # of declaring it — it makes the wait legible instead of a shrug.
+            names = [n for n in facts.get("names", []) if n]
+            who = names[0] if len(names) == 1 else f"{len(names)} boards"
+            message = (
+                f"<p><strong>Waiting for {who} to report.</strong> You described "
+                "this hardware — Sprout is listening for it.</p>"
+                "<p>Plug it in and flash it; your plants appear here the moment it "
+                "sends its first reading.</p>"
+            )
+            launchpad = (
+                '<div class="launch">'
+                '<a class="btn primary" href="/classic#registry">Check setup</a>'
+                '<p class="status" id="collStatus" role="status" aria-live="polite">'
+                "</p></div>"
+            )
+            script = _EMPTY_STATE_SCRIPT  # still hands off the instant data lands
+        else:
+            message = (
+                "<p>No readings yet - this is a fresh checkout with nothing logged.</p>"
+                "<p>Press <strong>Start logging</strong> below to begin polling "
+                "every registered device. This page opens the live dashboard the "
+                "moment the first reading lands.</p>"
+            )
+            launchpad = (
+                '<div class="launch">'
+                # #923: one collection action, consistent vocab with the Monitor card
+                '<button class="btn primary" id="collStart" type="button">'
+                "▶ Start logging</button>"
+                '<p class="status" id="collStatus" role="status" '
+                'aria-live="polite"></p>'
+                "</div>"
+            )
+            script = _EMPTY_STATE_SCRIPT
     return f"""<!doctype html>
 <html lang="en">
 <head>
