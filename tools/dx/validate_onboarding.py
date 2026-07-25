@@ -33,15 +33,24 @@ check carried over from the #512/#493 manual precedent):
                                    signal: the end-to-end tty behaviour was verified
                                    when #1552 landed; the regression is someone
                                    deleting the trap or reaching for a blanket ignore
-  6. port :8765 free            - PASS: nothing already listening (#1337; `just start`
+  6. zero state is actionable - PASS: the first-run page names the blocker and offers
+                                   "Add a board" (#1547). A dead end that returns 200 is
+                                   still a dead end; rendered against an EMPTY registry
+                                   so the verdict can't depend on this machine's data
+  7. the fresh-contributor walk
+                                - PASS: empty -> declare through the REAL write path ->
+                                   the app reads `waiting` and NAMES the board. The
+                                   journey #1541 reported broken, end to end,
+                                   with no hardware
+  8. port :8765 free            - PASS: nothing already listening (#1337; `just start`
                                    is --serve-or-focus, so a live server would make
                                    this script grade one it did not start)
-  7. just start                 - PASS: GET / on :8765 returns HTTP 200 within 30s.
+  9. just start                 - PASS: GET / on :8765 returns HTTP 200 within 30s.
                                    Runs the LITERAL command (#1337), not serve.py
                                    directly; BROWSER=true keeps --open headless
-  8. POST /quit                 - PASS: server process exits within 10s
-  9. just processes             - PASS: reports zero live Sprout-spawned processes
-  10. just check                 - PASS: exit 0 (needs PlatformIO + a C compiler on
+  10. POST /quit                 - PASS: server process exits within 10s
+  11. just processes             - PASS: reports zero live Sprout-spawned processes
+  12. just check                 - PASS: exit 0 (needs PlatformIO + a C compiler on
                                    PATH - the documented honest-note gap from #512;
                                    this step's failure for THAT reason is a real
                                    result, not a script bug - see CONTRIBUTING.md)
@@ -244,6 +253,123 @@ def step_ctrl_c_stays_clean() -> StepResult:
     )
 
 
+def step_zero_state_is_actionable() -> StepResult:
+    """A dead end that returns HTTP 200 is still a dead end (#1562, #1547).
+
+    The old liveness criterion was `GET / -> 200`, which the #1541 wall passed perfectly
+    while telling a newcomer nothing about why nothing would ever arrive. Since
+    #1547 the
+    first-run page names the real blocker and offers a route, so assert THAT — the page
+    has to be actionable, not merely served.
+
+    Rendered directly against an EMPTY registry rather than fetched, so the
+    verdict never
+    depends on whether the machine running this happens to have data. That distinction
+    had teeth: #1594 was exactly a case where the page was correct and unreachable,
+    because the committed example registry supplied three devices to a fresh clone.
+
+    The child prints a tiny ASCII verdict rather than the page — piping a large
+    non-ASCII
+    document through a cp1252 console pipe dies on the encoding, not the assertion.
+    """
+    code = (
+        "from tools.analytics.serve import _empty_state_html as e;"
+        "h = e(False, model=None);"
+        "print('CTA=%d ROUTE=%d' % ('Add a board' in h, '#registry' in h))"
+    )
+    proc = _run(["uv", "run", "--frozen", "python", "-c", code], timeout_s=180)
+    if proc.returncode != 0:
+        return StepResult(
+            "zero state is actionable",
+            False,
+            f"could not render the first-run page:\n{proc.stderr[-400:]}",
+        )
+    out = proc.stdout.strip()
+    if "CTA=1" not in out:
+        return StepResult(
+            "zero state is actionable",
+            False,
+            "the first-run page does not offer 'Add a board' — a newcomer with no "
+            "registered board is told to wait for a reading that cannot arrive",
+        )
+    if "ROUTE=1" not in out:
+        return StepResult(
+            "zero state is actionable",
+            False,
+            "the page names the blocker but links nowhere to fix it",
+        )
+    return StepResult(
+        "zero state is actionable", True, "names the blocker and routes to Add a board"
+    )
+
+
+def step_the_fresh_contributor_walk() -> StepResult:
+    """The whole point, walked: zero -> declared board -> the app says so (#1562).
+
+    Every other step here proves one component. This proves the *journey* #1541
+    reported as broken — someone with hardware and an empty checkout reaching a state
+    where Sprout is waiting for their board by name, without editing JSON or reading
+    a doc.
+
+    Three assertions, in the order a person meets them:
+
+      1. an empty registry reads `no-boards` — the state that must exist for the CTA to
+         mean anything (and the exact thing #1594 masked with example data);
+      2. declaring a board through the REAL write path the flow posts to
+         (`apply_operations`, `devices.declare`) mints an id and is accepted;
+      3. the zero state then reads `waiting` and NAMES the board — "waiting for
+         Windowsill" is a status; "waiting for the first reading" is a shrug.
+
+    Runs entirely against an in-memory model, so it touches no registry, needs no
+    hardware, and cannot be fooled by whatever this machine happens to have configured.
+    """
+    code = (
+        "from tools.analytics.registry_model import RegistryModel, apply_operations;"
+        "from tools.analytics.serve import _zero_state;"
+        "m = RegistryModel();"
+        "s0 = _zero_state(m)[0];"
+        "r = apply_operations(m, {'devices': {'declare': ["
+        "{'name': 'Windowsill', 'board': 'esp32-classic', 'channels': [32, 33]}]}});"
+        "s1, facts = _zero_state(m);"
+        "named = 'Windowsill' in str(facts);"
+        "print('S0=%s S1=%s NAMED=%d' % (s0, s1, named))"
+    )
+    proc = _run(["uv", "run", "--frozen", "python", "-c", code], timeout_s=180)
+    if proc.returncode != 0:
+        return StepResult(
+            "the fresh-contributor walk",
+            False,
+            f"the declare path raised:\n{proc.stderr[-500:]}",
+        )
+    out = proc.stdout.strip()
+    if "S0=no-boards" not in out:
+        return StepResult(
+            "the fresh-contributor walk",
+            False,
+            f"an empty registry does not read `no-boards` ({out}) — the first screen "
+            "cannot offer the right next action (#1594's failure mode)",
+        )
+    if "S1=waiting" not in out:
+        return StepResult(
+            "the fresh-contributor walk",
+            False,
+            f"after declaring a board the app does not read `waiting` ({out}) — the "
+            "declaration did not take, so the flow's last step is a lie",
+        )
+    if "NAMED=1" not in out:
+        return StepResult(
+            "the fresh-contributor walk",
+            False,
+            "the waiting state does not name the board — 'waiting for the first "
+            "reading' is the shrug #1541 reported",
+        )
+    return StepResult(
+        "the fresh-contributor walk",
+        True,
+        "empty -> declared -> waiting for 'Windowsill', by name",
+    )
+
+
 def step_uv_sync() -> StepResult:
     proc = _run(["uv", "sync"], timeout_s=300)
     ok = proc.returncode == 0
@@ -400,6 +526,8 @@ def main() -> int:
             step_uv_sync,
             step_pre_commit_install,
             step_ctrl_c_stays_clean,
+            step_zero_state_is_actionable,
+            step_the_fresh_contributor_walk,
             step_preflight_port,
         ):
             result = step()
