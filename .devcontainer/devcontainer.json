@@ -14,13 +14,22 @@
   "customizations": {
     "vscode": {
       // The editor offers these on open, so format-on-save / lint / TOML all "just work".
+      // KEEP IN SYNC with .vscode/extensions.json (#1561): a Codespaces contributor and a
+      // local one should get the same editor, and this list had drifted to half of it.
+      // test_vscode_extensions_sync.py asserts the two agree; the ONLY allowed difference
+      // is remote-containers, which opens containers and is meaningless inside one.
       "extensions": [
         "charliermarsh.ruff",
         "ms-python.python",
         "platformio.platformio-ide",
         "editorconfig.editorconfig",
         "davidanson.vscode-markdownlint",
-        "tamasfe.even-better-toml"
+        "tamasfe.even-better-toml",
+        "github.vscode-pull-request-github",
+        "github.vscode-github-actions",
+        "streetsidesoftware.code-spell-checker",
+        "redhat.vscode-yaml",
+        "ms-vscode.cpptools"
       ]
     }
   },
