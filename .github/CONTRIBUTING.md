@@ -108,6 +108,18 @@ So two people never unknowingly build the same thing:
 New to how we work? **[What to expect](../docs/contributing/what-to-expect.md)** is the friendly one-page
 version — claiming, review, timing, and our no-guilt timeout.
 
+## Your editor
+
+Sprout ships its editor config, so **open the repo folder in VS Code and accept the "Recommended
+Extensions" prompt** — that's the whole setup. You get ruff formatting on save, markdownlint, spell-check,
+YAML and TOML support, PlatformIO for firmware, and C tooling for the native tests: the same checks
+`just check` runs, reported inline while you type instead of at commit time.
+
+The list lives in [`.vscode/extensions.json`](../.vscode/extensions.json), and the **Codespaces
+devcontainer installs the same set**, so a browser contributor and a local one get the same editor (a
+test keeps the two in sync). Any other editor is entirely fine — nothing here is VS Code-only, and
+`just check` is the real gate either way.
+
 ## Making a change
 
 1. **Claim it first** ([Claiming an issue](#claiming-an-issue)) — a maintainer assigns you and moves the
