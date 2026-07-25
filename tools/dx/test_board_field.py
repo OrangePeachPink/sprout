@@ -83,11 +83,55 @@ def test_write_prints_the_requeried_value_not_the_mutation(monkeypatch, capsys) 
     assert "size = M" in out  # the board's word, re-queried — not the requested 's'
 
 
-def test_missing_issue_is_a_clean_message(monkeypatch) -> None:
-    monkeypatch.setattr(b, "_gql", lambda q: {"repository": {"issue": None}})
+def _content_doc(typename="Issue", project_id=b.PROJECT_ID, values=None):
+    """One `issueOrPullRequest` response with a single project item (#1522)."""
+    values = values or {}
+    item = {"id": "ITEM", "project": {"id": project_id}}
+    # every declared field is present in a real response — absent ones come back null
+    item.update({k: ({"name": values[k]} if values.get(k) else None) for k in b.FIELDS})
+    return {
+        "repository": {
+            "issueOrPullRequest": {
+                "__typename": typename,
+                "id": "CONTENT",
+                "title": "t",
+                "projectItems": {"nodes": [item]},
+            }
+        }
+    }
+
+
+def test_missing_number_names_both_types(monkeypatch) -> None:
+    """#1522 AC3: a number that is neither must say so — "does not exist" alone reads
+    as "this tool only does issues", which is the confusion that hid the bug."""
+    monkeypatch.setattr(
+        b, "_gql", lambda q: {"repository": {"issueOrPullRequest": None}}
+    )
     with pytest.raises(b.BoardError) as e:
         b._item_and_values(99999)
-    assert "does not exist" in str(e.value)
+    msg = str(e.value)
+    assert "issue" in msg and "pull request" in msg
+
+
+def test_a_pull_request_resolves_like_an_issue(monkeypatch) -> None:
+    """#1522 AC1/AC4: the whole point — PR cards carry planning fields too."""
+    monkeypatch.setattr(
+        b, "_gql", lambda q: _content_doc("PullRequest", values={"size": "M"})
+    )
+    item_id, values = b._item_and_values(1512)
+    assert item_id == "ITEM"
+    assert values["size"] == "M"
+
+
+def test_the_query_asks_for_both_types(monkeypatch) -> None:
+    """Pin the mechanism, not just the result: querying `issue(` alone is the defect."""
+    seen = {}
+    monkeypatch.setattr(
+        b, "_gql", lambda q: (seen.update(q=q), _content_doc("PullRequest"))[1]
+    )
+    b._item_and_values(1512)
+    assert "issueOrPullRequest" in seen["q"]
+    assert "... on Issue" in seen["q"] and "... on PullRequest" in seen["q"]
 
 
 def test_read_renders_empty_fields_and_exits_zero(monkeypatch, capsys) -> None:
@@ -120,29 +164,45 @@ def test_the_empty_marker_encodes_on_a_legacy_console() -> None:
     b.EMPTY.encode("cp1252")  # raises UnicodeEncodeError if it regresses to U+2205
 
 
-def test_non_numeric_issue_is_named_accurately(monkeypatch) -> None:
+def test_non_numeric_arg_is_named_accurately(monkeypatch) -> None:
     """The old broad `except ValueError` mislabelled a UnicodeEncodeError.
     Only a truly non-numeric arg should say so now."""
     with pytest.raises(b.BoardError) as e:
-        b._issue_number("abc")
+        b._card_number("abc")
     assert "must be a number" in str(e.value)
-    assert b._issue_number("1069") == 1069
+    assert b._card_number("1069") == 1069
 
 
-def test_issue_not_on_the_board_is_named(monkeypatch) -> None:
-    monkeypatch.setattr(
-        b,
-        "_gql",
-        lambda q: {
-            "repository": {
-                "issue": {
-                    "projectItems": {
-                        "nodes": [{"id": "X", "project": {"id": "SOME_OTHER_PROJECT"}}]
-                    }
-                }
-            }
-        },
-    )
+def test_an_uncarded_item_is_added_not_refused(monkeypatch, capsys) -> None:
+    """#1522 AC2: refusing an un-carded number is what left the gate adding cards by
+    hand. Add it, then RE-QUERY — the add's own "ok" is not evidence (#519/#522)."""
+    calls = []
+
+    def fake_gql(q):
+        calls.append(q)
+        if "addProjectV2ItemById" in q:
+            return {"addProjectV2ItemById": {"item": {"id": "NEW"}}}
+        # first read: carded elsewhere only; after the add: on Project #2
+        added = any("addProjectV2ItemById" in c for c in calls)
+        return _content_doc(project_id=b.PROJECT_ID if added else "OTHER_PROJECT")
+
+    monkeypatch.setattr(b, "_gql", fake_gql)
+    item_id, _ = b._item_and_values(1443)
+    assert item_id == "ITEM"  # from the RE-QUERY, not the mutation's own id
+    assert any("addProjectV2ItemById" in c for c in calls)
+    assert "added to the board" in capsys.readouterr().out
+
+
+def test_a_card_still_absent_after_adding_fails_loud(monkeypatch) -> None:
+    """The add reported success and the card is still not there — that is a loud
+    failure, never an assumed one."""
+
+    def fake_gql(q):
+        if "addProjectV2ItemById" in q:
+            return {"addProjectV2ItemById": {"item": {"id": "NEW"}}}
+        return _content_doc(project_id="OTHER_PROJECT")  # never lands
+
+    monkeypatch.setattr(b, "_gql", fake_gql)
     with pytest.raises(b.BoardError) as e:
         b._item_and_values(1443)
-    assert "not on the board" in str(e.value)
+    assert "did not come back" in str(e.value)
