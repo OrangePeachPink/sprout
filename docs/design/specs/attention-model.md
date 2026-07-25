@@ -98,6 +98,37 @@ One model, three surfaces, no re-derivation:
 4. **Never a horizon Sprout cannot support** — no forecast, no "until Thursday."
 5. **Pull only** (§4) until an ADR says otherwise.
 
+## 7. What it consumes (verified against the served payload, 2026-07-25)
+
+The seam question put to Trellis is *"does the composed state consume the existing rollups and
+exception labels, or duplicate them?"* — answered here from the artifact, so the read starts
+from facts. **It consumes. One field is genuinely missing.**
+
+| model element | the field that already exists | verdict |
+|---|---|---|
+| **Instrument condition** (R12) | `card.exception` = `{is, kind, reason}` — `fault` / `no_signal`, with its own reason string | **consume** — the axis is already computed and already separate from mood |
+| **Needs you now** | `card.frame.mood` at/past the Thirsty edge | **consume** — D3 already ships on it |
+| **Watch** | `card.next_need` = `{known, hours, hours_lo, hours_hi}` | **consume** — R3/R6 already ship on it |
+| **All clear** (G3) | none needed — composed from the three above plus the soonest forecast | **derived**, no new data |
+| **Heading for harm** (G2) | `segment_classifier.classify` (#1497) is imported by `card_context` but **no per-card classification reaches `/cards.json`** | ⚠ **the one real gap** — Data surfaces it, Design consumes it |
+
+### The `urgency` field is a sort key, not a state — do not conflate them
+
+`card.urgency` already exists and is simply `dryness`: a 0–1 position in the band envelope,
+built to order the grid most-thirsty-first (#715/#747). It is **not** an attention level and must
+not be renamed into one:
+
+- it is continuous, not a level;
+- it knows **only** dryness — nothing of the forecast, the exception labels, or the instrument;
+- measured live: a **Parched** plant reads `0.404` and a **Thirsty** one `0.397` — nearly
+  indistinguishable — while a plant heading for harm at merely **Content** reads `0.28` and
+  therefore sorts *below both*. That inversion is precisely the failure G2 exists to catch.
+
+So the attention model **composes signals `urgency` deliberately ignores**, and `urgency` stays
+what it is: the tiebreak *within* a level. **R2 (#1579)** — the ranked predicted-urgency queue —
+is the other consumer of this distinction; it should rank by attention level first and use
+`urgency` only to order within one, rather than defining a third ranking.
+
 ## Open for ratification
 
 - **The calm horizon's value** (what counts as "far enough away to relax"): 48h is my proposal —
