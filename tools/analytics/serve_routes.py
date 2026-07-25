@@ -74,6 +74,7 @@ GET_ROUTES: tuple[Route, ...] = (
     Route("GET", EXACT, ("/cards.json",), "cards_json"),
     Route("GET", PREFIX, ("/photo/",), "photo"),
     Route("GET", EXACT, ("/serial/owner",), "serial_owner"),
+    Route("GET", EXACT, ("/serial/ports",), "serial_ports"),  # #1550 A7 the picker
     Route("GET", PREFIX, ("/docs/",), "docs"),
     Route("GET", EXACT, ("/lab",), "lab"),
     Route("GET", EXACT, ("/lab/experiments.json",), "lab_experiments"),

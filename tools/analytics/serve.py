@@ -1170,6 +1170,15 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         self._send("no photo", "text/plain", status=404)
             elif route == "serial_owner":  # who holds the port (#330)
                 self._send_json(serial_lock.owner_status())
+            elif route == "serial_ports":  # #1550 A7: what's plugged in, for the picker
+                # No in-app way to choose a port existed — `--port` was CLI-only, which
+                # on a multi-board desk meant editing a command line to do the most
+                # basic setup step. Read-only: enumerating never opens a port, so it
+                # can't steal one from a running logger (#64's advisory lock is about
+                # opening, not listing).
+                from tools.analytics.serial_ports import ports_payload
+
+                self._send_json(ports_payload())
             elif route == "docs":  # #808: front-door docs, guarded
                 self._serve_docs(unquote(parsed.path[len("/docs/") :]))
             elif route == "lab":  # the Lab Notebook catalog (#154 + bench #444)

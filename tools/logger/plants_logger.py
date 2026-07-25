@@ -31,8 +31,7 @@ import time
 from datetime import datetime, timedelta, timezone
 
 try:
-    import serial
-    from serial.tools import list_ports
+    import serial  # the port ENUMERATION moved to analytics.serial_ports (#1550)
 except ImportError:
     sys.exit("pyserial not installed.  Run:  pip install pyserial")
 
@@ -247,15 +246,13 @@ def reconnect_seam_line(gap_s, now, reason):
 
 
 def autodetect_port():
-    ports = list(list_ports.comports())
-    for p in ports:  # prefer a known USB-serial bridge
-        blob = " ".join(x for x in (p.description, p.manufacturer, p.hwid) if x).lower()
-        if any(
-            k in blob
-            for k in ("cp210", "ch340", "ftdi", "silicon labs", "usb serial", "wch")
-        ):
-            return p.device
-    return ports[0].device if ports else None
+    """The port to open when none was named. #1550 (A7): the heuristic moved to
+    `serial_ports` so the in-app picker and this logger cannot disagree about which
+    port is "the board" — a picker offering COM4 while the logger opens COM6, with
+    nothing explaining why, is the failure this consolidation prevents."""
+    from tools.analytics.serial_ports import autodetect
+
+    return autodetect()
 
 
 def parse_device_line(text):

@@ -48,6 +48,7 @@ _EXPECTED_GET = [
     ("GET", EXACT, ("/cards.json",), "cards_json"),
     ("GET", PREFIX, ("/photo/",), "photo"),
     ("GET", EXACT, ("/serial/owner",), "serial_owner"),
+    ("GET", EXACT, ("/serial/ports",), "serial_ports"),
     ("GET", PREFIX, ("/docs/",), "docs"),
     ("GET", EXACT, ("/lab",), "lab"),
     ("GET", EXACT, ("/lab/experiments.json",), "lab_experiments"),
