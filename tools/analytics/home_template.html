@@ -54,6 +54,9 @@
   .mast nav a:hover { color: var(--ink); border-color: var(--muted); }
 
   /* the grid's invitation line — "Tend a tiny jungle." placement proposal A (#1039) */
+  /* #1585 G3: the calm signal — chrome register, never a celebration (spec §3: Sprout is
+     fond, not perky). Quiet, above the grid, present only when it is true. */
+  .calm { color: var(--muted); font-size: 14px; margin: 12px 0 -4px; }
   .invite { font-family: var(--font-display); font-weight: 700; font-size: 19px;
     margin: 10px 0 14px; }
   .invite small { font-family: var(--font-ui); font-weight: 400; font-size: 13.5px;
@@ -334,6 +337,39 @@ window.__iconFor = function (n) { return '<svg viewBox="0 0 44 48">' + iconFor(n
      · not enough history yet      -> still learning (the one case "learning" is true)
      · measured flat / no trend    -> holding steady; there is no dry-down to measure
      · anything else               -> the reason as given, never invented */
+/* #1585 (G3): the calm signal — the affirmative all-clear, not the absence of alarm.
+   "For a calm character, 'nothing needs you until Thursday' is as valuable a prediction as
+   a warning." Composed from the ruled §8 order (docs/design/specs/attention-model.md) using
+   only fields already on the card — no second vocabulary, nothing re-derived:
+     · any plant at Needs-you-now (at/past Thirsty) -> not calm, say nothing
+     · any plant whose reading can't be trusted     -> not calm; "fine" and "I can't see"
+       are opposite claims and must never collapse (the §8 rule)
+     · otherwise -> calm, and it names WHEN the calm ends, because "all fine" with no time
+       bound is unfalsifiable comfort. With no usable forecast it drops to the present
+       tense it can actually support rather than inventing a horizon. */
+var CALM_HORIZON_H = 48;   /* proposed; a named constant because it wants a MEASURED answer
+                              (backtest.py) eventually, not a design opinion. */
+function calmSignal(cards) {
+  var list = (cards || []).filter(function (c) { return c && c.frame; });
+  if (!list.length) return "";
+  var soonest = null;
+  for (var i = 0; i < list.length; i++) {
+    var c = list[i];
+    if (c.exception && c.exception.is) return "";      /* can't see -> never "all fine" */
+    var mood = String((c.frame || {}).mood || "").toLowerCase();
+    if (["thirsty", "parched", "faint"].indexOf(mood) >= 0) return "";  /* needs you now */
+    var nn = c.next_need || {};
+    if (nn.known && typeof nn.hours === "number") {
+      if (nn.hours <= CALM_HORIZON_H) return "";       /* inside the horizon -> Watch, not calm */
+      if (soonest === null || nn.hours < soonest) soonest = nn.hours;
+    }
+  }
+  if (soonest === null) return "Nothing needs you right now.";   /* honest present tense */
+  /* floor, never round: rounding UP over-promises the calm — 60h would read "about 3
+     days" for a plant that wants water at 2.5. A calm claim must understate. */
+  var days = Math.floor(soonest / 24);
+  return "Nothing needs you for about " + (days <= 1 ? "a day" : days + " days") + ".";
+}
 /* #1580 R3: the confidence vocabulary's two formatters — the ONE place the form lives on the
    surface (docs/design/foundations/confidence-vocabulary.md). R6/R11/G2/G3/G7 consume these;
    none of them re-mints a second how-sure vocabulary able to disagree with this one. */
@@ -588,6 +624,8 @@ function paint(doc) {
   /* the drift chip — present-or-silent: only when a fresh sort would move cards */
   var painted = cards.concat(exceptions).map(_key);
   var drifted = served.join("") !== painted.join("");
+  var calm = calmSignal(cards);   /* #1585 G3 — the affirmative all-clear, when it is true */
+  if (calm) main.appendChild(el("div", "calm", calm));
   var invite = el("div", "invite",
     "Tend a tiny jungle. <small>most thirsty first</small>" +
     (drifted
