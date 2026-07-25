@@ -539,6 +539,12 @@ def cards_from_context(
         # the pulse chart can find its series even when no plant is registered
         # (plant_id None). Plumbing, never rendered.
         card["sensor_id"] = s.get("id")
+        # #1584 (G2): the trajectory FACTS the attention composer reads for its harm
+        # level. Facts only — no verdict is minted here; whether "drier and did not
+        # rebound" MEANS heading-for-harm is §8's decision, in one place. A context
+        # without the field (an older build) degrades to honest-absent, never to a
+        # silent "nothing wrong".
+        card["trajectory"] = s.get("trajectory") or {"known": False}
         cards.append(card)
     for sl in ctx.get("sensorless", []):
         pid = sl.get("plant_id")
@@ -556,6 +562,10 @@ def cards_from_context(
         )
         card["urgency"] = None  # a not-probed plant has no urgency to sort on
         card["sensor_id"] = None  # not probed — no series to join (first-class-absent)
+        # #1584: a sensorless plant has no series, so no trajectory to know. Absent by
+        # design rather than unknown — the composer already returns no attention state
+        # for these at all (ADR-0028).
+        card["trajectory"] = {"known": False}
         cards.append(card)
     # #1582 (R11): the composed attention state, resolved ONCE here so every surface
     # renders the same answer to "does this need me." Absent (None) for a not-probed

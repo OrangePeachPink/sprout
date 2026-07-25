@@ -279,7 +279,13 @@ class ExceptionLabel:
     kind: str
     source: str  # "wire" | "host"
     direction: str | None  # "drier" | "wetter" | None (step 0/absent)
-    rebound: bool  # True = reverted to baseline (transient); False = held (level shift)
+    # True = reverted to baseline (transient); False = HELD (the #1434 level shift);
+    # None = can't tell yet. #1584: the three-state was Design's ask and it is right —
+    # a bare False was doing two jobs, "it held" and "there was nothing to judge it
+    # against," and the consumer is a state that REPLACES the plant's mood. Under the
+    # old type the first row of a window, with no baseline and no evidence at all,
+    # would have rendered "this one is getting worse faster than a normal dry-down."
+    rebound: bool | None
     floor_vs_rails: str | None  # within | below-floor | above-air | None (no rails)
     step: int | None  # the signed wire step that anchors it — the audit trail (#1463)
 
@@ -306,23 +312,39 @@ def _settled_after(rows, k: int) -> int | None:
     return settled
 
 
-def _reverted(rows, k: int) -> bool:
+def _reverted(rows, k: int) -> bool | None:
     """Did the excursion at ``k`` come back to within ``RECOVER_NOISE_RAW`` of its
-    pre-excursion baseline inside ``REBOUND_MAX_H``? True = a transient artifact (a
-    splash that reverted); False = a level shift that held (the #1434 signature)."""
+    pre-excursion baseline inside ``REBOUND_MAX_H``?
+
+    ``True`` = a transient artifact (a splash that reverted). ``False`` = a level shift
+    that held — the #1434 signature. ``None`` = **can't tell**, and #1584 is why it is
+    now its own answer rather than folded into False:
+
+    - no baseline (``k == 0``, or a ``None`` prior raw) — nothing to compare against;
+    - no reading after the excursion inside the cap — the verdict simply isn't in yet.
+
+    Both are absences of evidence, and returning False for them told the consumer "it
+    held" on the strength of nothing. The other two axes already keep this promise
+    (``_floor_vs_rails`` returns None rather than guessing "within"); this one now does
+    too, which is what the module docstring claimed all along.
+    """
     if k == 0:
-        return False
+        return None
     baseline = rows[k - 1].raw_value
     if baseline is None:
-        return False
+        return None
     cap = rows[k].timestamp_utc + timedelta(hours=REBOUND_MAX_H)
+    saw_after = False
     for j in range(k + 1, len(rows)):
         if rows[j].timestamp_utc > cap:
             break
         rv = rows[j].raw_value
-        if rv is not None and abs(rv - baseline) <= RECOVER_NOISE_RAW:
+        if rv is None:
+            continue
+        saw_after = True
+        if abs(rv - baseline) <= RECOVER_NOISE_RAW:
             return True
-    return False
+    return False if saw_after else None
 
 
 def _floor_vs_rails(value: int | None, rails: tuple[int, int] | None) -> str | None:
@@ -436,6 +458,50 @@ def exception_segments(
         out.append((seg, lab))
         i = j + 1
     return out
+
+
+def trajectory_payload(
+    rows,
+    *,
+    rails: tuple[int, int] | None = None,
+    host_spike_raw: int = HOST_RATE_SPIKE_RAW,
+) -> dict:
+    """#1584 (G2) — the card's trajectory field: the MOST RECENT exception segment in
+    ``rows``, as facts, or ``{"known": False}``.
+
+    **Facts, not a verdict** (Design's line, and the right one): no ``is_harm`` boolean
+    is minted here. Whether *drier + did-not-rebound* means "heading for harm" is the
+    attention model's §8 decision, made in one place so every surface moves together.
+    This function owns *what happened*; the composer owns *what it reads as*.
+
+    ``rows`` must already be scoped to the current inter-watering segment — an excursion
+    from three waterings ago is history, not a trajectory (#1133's boundary, the same
+    one the hero sparkline clips to). Scoping is the caller's job because the caller is
+    the one that knows where the segment starts.
+
+    ``{"known": False}`` is the honest answer for "nothing classified", never ``None``
+    and never an omitted key (ADR-0028): the composer then declines to return level 2,
+    which is honest rather than broken. *Can't classify* must not read as *nothing
+    wrong* — the same reason **Can't tell** sits above **All clear**.
+    """
+    segs = exception_segments(rows, rails=rails, host_spike_raw=host_spike_raw)
+    if not segs:
+        return {"known": False}
+    seg, lab = segs[-1]  # most recent — the trajectory is a present-tense claim
+    return {
+        "known": True,
+        "kind": lab.kind,
+        "source": lab.source,  # wire = firmware declared it; host = we detected it
+        "direction": lab.direction,
+        "rebound": lab.rebound,  # True | False | None — None is "can't tell"
+        "floor_vs_rails": lab.floor_vs_rails,
+        "step": lab.step,
+        "since": (
+            seg.t0.strftime("%Y-%m-%dT%H:%M:%SZ")
+            if getattr(seg, "t0", None) is not None
+            else None
+        ),
+    }
 
 
 @dataclass(frozen=True)

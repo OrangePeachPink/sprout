@@ -61,12 +61,15 @@ from tools.analytics.host_paths import (
     LOGS_DIR,
 )
 from tools.analytics.parse_v1 import (
+    BOARD_CLASS_ANCHORS,
     DEFAULT_CAL_BOUNDS,
     LogData,
+    board_class,
     canonical_channel,
 )
 from tools.analytics.segment_classifier import (
     classify,
+    trajectory_payload,
 )
 from tools.analytics.timefmt import (
     local_first_system,
@@ -1114,6 +1117,13 @@ def build_context(
         # never claim an unmapped plant. Raw rows stay queryable either way.
         regdev = reg.device(_canon(last.device_id))
         registered = regdev is not None
+        # #1584: the rails the floor-vs-rails axis is judged against — the measured
+        # per-board-class anchors (wettest, driest), never a guess. An unknown board
+        # falls to the classic class, which is what `board_class` already documents as
+        # the project default; the axis stays honest-absent only if the anchors
+        # themselves are missing.
+        _anchors = BOARD_CLASS_ANCHORS.get(board_class(getattr(regdev, "board", None)))
+        _rails = (_anchors["water"], _anchors["air"]) if _anchors else None
         # #713: `sensor_id`/`channel` is the board PORT (the repurposed s1..s4);
         # `probe` is the physical sensor label the user stuck on the cable (her
         # s1..s8) - surface it as the sensor identity so `sN` in the UI = her
@@ -1221,6 +1231,14 @@ def build_context(
                 # compose #1133 + #1157: segment-bound rows, then the wide-corpus
                 # recent-window cap (protects the no-detected-segment fallback)
                 "forecast": forecast_payload(sid, _fc_window(_fc_settled), bounds),
+                # #1584 (G2): the harm SIGNAL, surfaced at last — the #1497 exception
+                # labels were computed and consumed by nobody, so the attention model's
+                # level 2 could only ever fire on an already-broken instrument, never on
+                # a plant genuinely trending badly (which is the case G2 exists for).
+                # Same segment-bound rows the forecast fits, deliberately: trajectory
+                # and ETA then describe ONE series, and a card cannot say "getting
+                # worse" about readings its own forecast never saw.
+                "trajectory": trajectory_payload(_fc_settled, rails=_rails),
                 # #919: rows the #670/#697 gate kept off the trend/forecast fits
                 # (still plotted as raw) - surfaced so exclusion is never silent.
                 "fit_excluded": fit_excluded,

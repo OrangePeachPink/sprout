@@ -198,3 +198,101 @@ def test_the_label_is_a_frozen_dataclass_carrying_all_four_axes() -> None:
         str(lab.rebound),
         lab.floor_vs_rails,
     } == {"rate_spike", "host", "drier", "False", "within"}
+
+
+# --------------------------------------------------------------------------- #
+# #1584 (G2) — rebound is three-state, and the card field is facts only
+# --------------------------------------------------------------------------- #
+def test_no_baseline_is_CANT_TELL_not_held() -> None:
+    """Design caught this reading the classifier, and it is the failure the whole
+    attention model exists to prevent arriving through the front door: under the old
+    two-state return, the FIRST row of a window — no prior reading, no evidence at all —
+    came back `rebound=False`, which the composer reads as a settled level shift and
+    renders as "this one is getting worse faster than a normal dry-down"."""
+    from tools.analytics.segment_classifier import _reverted
+
+    rows = _signed([2600, 2610, 2605])
+    assert _reverted(rows, 0) is None  # nothing before it to have rebounded TO
+
+
+def test_an_excursion_with_nothing_after_it_yet_is_CANT_TELL() -> None:
+    """The verdict isn't in: the excursion is the last thing we have seen, so "it held"
+    is a claim about rows that do not exist. Same discipline as the missing baseline."""
+    from tools.analytics.segment_classifier import _reverted
+
+    rows = _signed([1600, 2600])
+    assert _reverted(rows, 1) is None
+
+
+def test_the_1434_signature_still_reads_HELD_after_the_change() -> None:
+    """The tri-state must not soften the case the taxonomy was built for: real evidence,
+    a real verdict. False here still means it held."""
+    rows = _signed(_EVENT_1434)
+    lab = next(x for x in exception_labels(rows) if x is not None)
+    assert lab.rebound is False
+
+
+def test_the_trajectory_field_carries_facts_and_never_a_verdict() -> None:
+    """The card contract (#1584): axes, provenance and the audit step — no `is_harm`.
+    Whether these facts MEAN heading-for-harm is the attention model's §8 decision, made
+    in one place so two surfaces can never disagree about it."""
+    from tools.analytics.segment_classifier import trajectory_payload
+
+    t = trajectory_payload(_signed(_EVENT_1434), rails=(810, 2742))
+    assert t["known"] is True
+    assert (t["kind"], t["source"], t["direction"]) == ("rate_spike", "host", "drier")
+    assert (
+        t["rebound"] is False and t["floor_vs_rails"] == "within" and t["step"] == 991
+    )
+    assert t["since"].endswith("Z")
+    assert not any(k.startswith("is_") or k == "harm" for k in t)
+
+
+def test_no_exception_is_known_false_not_an_empty_dict() -> None:
+    """ADR-0028 in the shape the composer needs: *can't classify* must not read as
+    *nothing wrong*. `{"known": False}` says so; a missing key would be silence."""
+    from tools.analytics.segment_classifier import trajectory_payload
+
+    assert trajectory_payload(_signed([1600, 1610, 1620, 1630])) == {"known": False}
+
+
+def test_the_most_recent_excursion_wins_because_a_trajectory_is_present_tense() -> None:
+    from tools.analytics.segment_classifier import trajectory_payload
+
+    # an early wetter spike, then a later drier one — the later is the current claim
+    t = trajectory_payload(_signed([2600, 1500, 1510, 1520, 2300, 2280, 2290]))
+    assert t["direction"] == "drier" and t["step"] == 780
+
+
+def test_the_field_actually_lights_the_composers_harm_level_end_to_end() -> None:
+    """The point of #1584, walked the whole way rather than assumed: before this, the
+    labels were computed and imported by nobody, so §8 level 2 could only fire on an
+    already-broken instrument — never on a plant genuinely trending badly, which is the
+    case G2 exists for. Feeding the real #1434 recording through the real payload
+    builder into the real composer proves the wire is connected."""
+    from tools.analytics.attention import HEADING_FOR_HARM, attention_state
+    from tools.analytics.segment_classifier import trajectory_payload
+
+    card = {
+        "frame": {"state": "ok", "band": "content"},  # NOT thirsty — a trajectory
+        "next_need": {"known": True, "hours": 40.0},
+        "trajectory": trajectory_payload(_signed(_EVENT_1434), rails=(810, 2742)),
+    }
+    assert attention_state(card).state == HEADING_FOR_HARM
+
+
+def test_a_cant_tell_rebound_does_not_light_it() -> None:
+    """The other half of the same wire: no evidence must not read as "getting worse".
+    `rebound is None` fails the composer's `is False` check by design."""
+    from tools.analytics.attention import attention_state
+    from tools.analytics.segment_classifier import trajectory_payload
+
+    # the excursion is the last row — nothing after it to judge, so rebound is None
+    t = trajectory_payload(_signed([1600, 2600]))
+    assert t["rebound"] is None
+    card = {
+        "frame": {"state": "ok", "band": "content"},
+        "next_need": {"known": True, "hours": 40.0},
+        "trajectory": t,
+    }
+    assert attention_state(card).state != "heading_for_harm"
