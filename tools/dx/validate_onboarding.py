@@ -28,15 +28,20 @@ check carried over from the #512/#493 manual precedent):
                                    by-hand fallback while the headline rots
   3. uv sync                    - PASS: exit 0
   4. uv run pre-commit install  - PASS: exit 0
-  5. port :8765 free            - PASS: nothing already listening (#1337; `just start`
+  5. Ctrl-C stays clean       - PASS: `serve` traps INT and swallows NOTHING else
+                                   (#1552). Guards the MECHANISM, not a simulated
+                                   signal: the end-to-end tty behaviour was verified
+                                   when #1552 landed; the regression is someone
+                                   deleting the trap or reaching for a blanket ignore
+  6. port :8765 free            - PASS: nothing already listening (#1337; `just start`
                                    is --serve-or-focus, so a live server would make
                                    this script grade one it did not start)
-  6. just start                 - PASS: GET / on :8765 returns HTTP 200 within 30s.
+  7. just start                 - PASS: GET / on :8765 returns HTTP 200 within 30s.
                                    Runs the LITERAL command (#1337), not serve.py
                                    directly; BROWSER=true keeps --open headless
-  7. POST /quit                 - PASS: server process exits within 10s
-  8. just processes             - PASS: reports zero live Sprout-spawned processes
-  9. just check                 - PASS: exit 0 (needs PlatformIO + a C compiler on
+  8. POST /quit                 - PASS: server process exits within 10s
+  9. just processes             - PASS: reports zero live Sprout-spawned processes
+  10. just check                 - PASS: exit 0 (needs PlatformIO + a C compiler on
                                    PATH - the documented honest-note gap from #512;
                                    this step's failure for THAT reason is a real
                                    result, not a script bug - see CONTRIBUTING.md)
@@ -161,6 +166,81 @@ def step_bootstrap_from_a_toolless_shell() -> StepResult:
         "toolless bootstrap",
         True,
         "ran with no tools on PATH; reported uv + just missing",
+    )
+
+
+def step_ctrl_c_stays_clean() -> StepResult:
+    """Ctrl-C is a documented stop, and it must not regress into reading as a crash
+    (#1552, #1562).
+
+    **What this proves, and what it doesn't.** The end-to-end behaviour — press Ctrl-C
+    at a real terminal, get a clean exit and nothing left running — was verified at a
+    tty when #1552 landed, because a terminal signal cannot be faithfully delivered
+    from every host this guard runs on. Asserting it here would mean simulating a
+    signal and grading the simulation.
+
+    So this guards the *mechanism* instead, which is where the regression
+    actually lives: someone deletes the trap, or "fixes" a noisy exit with a
+    blanket ignore. Both are one
+    careless edit, and both silently restore the failure #1552 removed.
+
+    Two properties, and the second matters more than the first:
+
+    1. `serve` traps INT — the documented stop path is handled at all.
+    2. It does NOT swallow everything. A blanket `|| true`, or just's `-` prefix
+       (which `logger` legitimately uses, #148), would hide a serve that fails to bind
+       or dies on an import error. Tidying one expected keystroke must never cost
+       every real crash — that asymmetry is the whole design of the fix.
+    """
+    justfile = REPO_ROOT / "justfile"
+    if not justfile.exists():
+        return StepResult("Ctrl-C stays clean", False, "no justfile")
+    text = justfile.read_text(encoding="utf-8")
+    try:
+        recipe = text.split("\nserve *ARGS:", 1)[1].split("\n\n", 1)[0]
+    except IndexError:
+        return StepResult(
+            "Ctrl-C stays clean", False, "the `serve` recipe is gone or was renamed"
+        )
+
+    # COMMENTS ONLY EXPLAIN; they never execute. Both checks below run against the
+    # comment-stripped body, and that is not fussiness — the recipe's own comment quotes
+    # `trap 'exit 0' INT` while explaining it, and quotes `|| true` while explaining why
+    # it is NOT used. Scanning raw text makes the trap-check pass on a recipe whose trap
+    # was deleted (caught red-proofing this) and makes the blanket-check fail on
+    # the very
+    # sentence promising not to swallow. A guard fooled by prose about itself is worse
+    # than no guard.
+    body = [
+        ln.strip()
+        for ln in recipe.splitlines()
+        if ln.strip() and not ln.strip().startswith("#")
+    ]
+    if not any("trap" in ln and "INT" in ln for ln in body):
+        return StepResult(
+            "Ctrl-C stays clean",
+            False,
+            "`serve` no longer traps INT — Ctrl-C, the documented stop, will read as a "
+            "crash again (#1552)",
+        )
+    blanket = [
+        ln
+        for ln in body
+        if ln.startswith("-{{py}}") or ln.startswith("-uv ") or "|| true" in ln
+    ]
+    if blanket:
+        return StepResult(
+            "Ctrl-C stays clean",
+            False,
+            f"`serve` swallows ALL failures ({blanket[0]!r}) — a serve that cannot "
+            "bind "
+            "would go silent. Only SIGINT may be swallowed.",
+        )
+    return StepResult(
+        "Ctrl-C stays clean",
+        True,
+        "`serve` traps INT and swallows nothing else "
+        "(end-to-end proven at a tty, #1552)",
     )
 
 
@@ -319,6 +399,7 @@ def main() -> int:
             step_bootstrap_tools,
             step_uv_sync,
             step_pre_commit_install,
+            step_ctrl_c_stays_clean,
             step_preflight_port,
         ):
             result = step()
