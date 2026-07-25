@@ -17,17 +17,21 @@ itself isn't ad-hoc or re-derived each time.
 Steps (mirrors the README/CONTRIBUTING Quick Start verbatim, plus a clean-shutdown
 check carried over from the #512/#493 manual precedent):
 
-  1. uv sync                    - PASS: exit 0
-  2. uv run pre-commit install  - PASS: exit 0
-  3. port :8765 free            - PASS: nothing already listening (#1337; `just start`
+  1. scripts/bootstrap --tools-only
+                                - PASS: exit 0. The Quick Start's HEADLINE command
+                                   (#1557) — asserted so the guard cannot mirror the
+                                   by-hand fallback while the headline rots
+  2. uv sync                    - PASS: exit 0
+  3. uv run pre-commit install  - PASS: exit 0
+  4. port :8765 free            - PASS: nothing already listening (#1337; `just start`
                                    is --serve-or-focus, so a live server would make
                                    this script grade one it did not start)
-  4. just start                 - PASS: GET / on :8765 returns HTTP 200 within 30s.
+  5. just start                 - PASS: GET / on :8765 returns HTTP 200 within 30s.
                                    Runs the LITERAL command (#1337), not serve.py
                                    directly; BROWSER=true keeps --open headless
-  5. POST /quit                 - PASS: server process exits within 10s
-  6. just processes             - PASS: reports zero live Sprout-spawned processes
-  7. just check                 - PASS: exit 0 (needs PlatformIO + a C compiler on
+  6. POST /quit                 - PASS: server process exits within 10s
+  7. just processes             - PASS: reports zero live Sprout-spawned processes
+  8. just check                 - PASS: exit 0 (needs PlatformIO + a C compiler on
                                    PATH - the documented honest-note gap from #512;
                                    this step's failure for THAT reason is a real
                                    result, not a script bug - see CONTRIBUTING.md)
@@ -63,6 +67,36 @@ def _run(cmd: list[str], timeout_s: float) -> subprocess.CompletedProcess:
         text=True,
         timeout=timeout_s,
     )
+
+
+def step_bootstrap_tools() -> StepResult:
+    """The README's HEADLINE command must exist and run (#1557).
+
+    The Quick Start now leads with `scripts/bootstrap`, so the guard has to assert that
+    and not only the by-hand `uv sync` path below it — a validator that mirrors the
+    fallback while the headline rots is how the docs and the product drift apart.
+    `--tools-only` is the cheap half: it verifies git/uv/just and exits, so this costs a
+    second on a machine that already has them and never re-installs anything.
+
+    (Running it from a genuinely TOOLLESS shell — the wall a new contributor actually
+    hits — is #1562's job; this step proves the command is real, not that it bootstraps
+    from nothing.)
+    """
+    script = "bootstrap.ps1" if os.name == "nt" else "bootstrap.sh"
+    path = REPO_ROOT / "scripts" / script
+    if not path.exists():
+        return StepResult(
+            f"scripts/{script}", False, "missing — the README promises it"
+        )
+    cmd = (
+        ["pwsh", "-NoProfile", "-File", str(path), "-ToolsOnly"]
+        if os.name == "nt"
+        else ["sh", str(path), "--tools-only"]
+    )
+    proc = _run(cmd, timeout_s=180)
+    ok = proc.returncode == 0
+    detail = "exit 0" if ok else f"exit {proc.returncode}\n{proc.stderr[-800:]}"
+    return StepResult(f"scripts/{script} --tools-only", ok, detail)
 
 
 def step_uv_sync() -> StepResult:
@@ -215,7 +249,12 @@ def main() -> int:
     proc_holder: dict = {}
 
     try:
-        for step in (step_uv_sync, step_pre_commit_install, step_preflight_port):
+        for step in (
+            step_bootstrap_tools,
+            step_uv_sync,
+            step_pre_commit_install,
+            step_preflight_port,
+        ):
             result = step()
             results.append(result)
             if not result.ok:
