@@ -177,6 +177,7 @@ uv sync                     # the exact, locked dev env (Python, ruff, pytest, p
 uv run pre-commit install   # auto-format + lint + hygiene on every commit
 just check                  # your local gate: pre-commit + host/DX/analytics tests (uv + just only)
 just check-firmware         # the above PLUS the native C tests — needs PlatformIO (firmware work only)
+just doctor                 # is Sprout ready on THIS machine? reports, never repairs
 just                        # list every command
 ```
 

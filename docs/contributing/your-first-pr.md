@@ -41,6 +41,10 @@ just start                  # launch Sprout — opens the dashboard in your brow
 that auto-format and lint your work *as you commit*, so you never have to remember to. `just start` opens the
 dashboard — if a browser tab appears, you're running Sprout. 🌱
 
+**Something not right?** Run **`just doctor`** — it checks what's actually true on your machine (tools, the
+locked environment, the port, whether any board is declared yet, serial, firmware toolchain) and names the
+one thing that's missing instead of leaving you to guess. It reports; it never changes anything.
+
 ## Step 2 — Find something to work on
 
 - A question or a loose idea? → **[Discussions](https://github.com/OrangePeachPink/sprout/discussions)**, the
