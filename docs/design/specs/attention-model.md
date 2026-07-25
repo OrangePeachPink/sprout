@@ -129,12 +129,47 @@ what it is: the tiebreak *within* a level. **R2 (#1579)** — the ranked predict
 is the other consumer of this distinction; it should rank by attention level first and use
 `urgency` only to order within one, rather than defining a third ranking.
 
+## 8. The resolution order — RULED (Design, 2026-07-25)
+
+Data asked for this explicitly, and they are right that it is the decisive part: *"the
+resolution order is invisible in mockups and decisive in practice."* One state per plant,
+resolved **at the source**, in this order — first match wins:
+
+| # | state | when | why it sits here |
+|---|---|---|---|
+| 1 | **Can't tell** | the measurement is untrustworthy (`exception.kind` = fault/no_signal, or `sensor_health.status` = inspect) | an untrustworthy input cannot produce *any* honest plant claim, so it must be resolved before every other test |
+| 2 | **Heading for harm** | the #1497 labels say the trajectory is abnormal | rarer and less recoverable than thirst; a plant on this level while merely *Content* is exactly the case ordinary thirst-ranking misses |
+| 3 | **Needs you now** | at/past the Thirsty entry edge | a present fact outranks a prediction |
+| 4 | **Watch** | a reachable ETA inside the calm horizon | a prediction, and it says so |
+| 5 | **All clear** | none of the above | affirmative, with a horizon (§3) |
+
+**Data's sharpening is adopted and supersedes my §1 wording.** I wrote that an instrument
+condition *"suppresses"* the plant level; Data's framing is better and is now the rule:
+a state **replaces** the mood rather than decorating it, because *"people read the big word,
+not the small one."* A confident mood beside a small warning chip is the failure mode — one
+state per plant, or the surface can mislead while being technically complete.
+
+**Fine and unknown must be distinguishable** (Data's point, and it is why *Can't tell* sits at
+1 rather than being folded into *All clear*): "everything is fine" and "I cannot see" are
+opposite claims, and collapsing them is the single most misleading thing this surface could do.
+
+**Harm above needs-you-now** resolves the second question I left open. Reasoning: a thirsty
+plant recovers from a late watering; a plant on an abnormal trajectory may not, and it is the
+rarer signal, so it earns the top of the *plant* axis. If lived use disagrees, this is one
+constant to reorder, not a redesign.
+
+**One state per plant, one composer.** `attention_state(plant) -> (state, reason, evidence)`
+in Data's hands, with this order — every surface renders the same answer, which is also the
+fix for #1534's D1 cross-surface contradiction class. Surfaces **render** it; none re-derive it.
+
+**Still hers, not mine:** the calm horizon's *value* (48h proposed, §Open) — a named constant,
+and eventually a measured answer from `backtest.py` rather than a design opinion.
+
 ## Open for ratification
 
 - **The calm horizon's value** (what counts as "far enough away to relax"): 48h is my proposal —
   long enough that a daily glance suffices, short enough that it stays true. It wants a measured
   answer eventually (`backtest.py`) rather than a design opinion, so it ships as a named constant.
-- **Whether "Heading for harm" outranks "Needs you now" in the summary's ordering.** My
-  recommendation: yes — harm first, because it is the rarer and less recoverable case.
+- ~~Whether "Heading for harm" outranks "Needs you now"~~ — **ruled in §8**: harm first.
 
 — Design 🔍
