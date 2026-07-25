@@ -108,6 +108,13 @@
   .water b { color: var(--ink); font-weight: 600; }
   .water .src { font-size: 10.5px; letter-spacing: .06em; color: var(--muted); }
   .nn-known { color: var(--st-predicted); }  /* forecast = the violet channel, never a mood */
+  /* #1580 R3: the how-sure chip rides the SAME violet channel as the figure it qualifies —
+     provenance-about-a-number, the DETECTED/MANUAL chip shape, never a mood colour (R8).
+     Scoped `.water .src.nn-conf` deliberately: `.water .src` sets muted at (0,2,0) and
+     beats a bare `.nn-conf` (0,1,0), which renders the chip grey and silently breaks R3's
+     own "rides the predicted channel" rule. Caught by reading the computed colour. */
+  .water .src.nn-conf { color: var(--st-predicted); border: 1px solid currentColor;
+    border-radius: 3px; padding: 0 3px; letter-spacing: .04em; cursor: help; }
   /* #1137 the glug button — chrome register (an affordance, not a state): quiet
      pill at the water row's end; ink on hover; watering-teal droplet only. */
   .glug { margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
@@ -327,6 +334,32 @@ window.__iconFor = function (n) { return '<svg viewBox="0 0 44 48">' + iconFor(n
      · not enough history yet      -> still learning (the one case "learning" is true)
      · measured flat / no trend    -> holding steady; there is no dry-down to measure
      · anything else               -> the reason as given, never invented */
+/* #1580 R3: the confidence vocabulary's two formatters — the ONE place the form lives on the
+   surface (docs/design/foundations/confidence-vocabulary.md). R6/R11/G2/G3/G7 consume these;
+   none of them re-mints a second how-sure vocabulary able to disagree with this one. */
+function nextNeedSpanHours(nn) {   // the model's own interval, or null — never fabricated
+  var lo = nn && nn.hours_lo, hi = nn && nn.hours_hi;
+  return (typeof lo === "number" && typeof hi === "number" && hi > lo) ? [lo, hi] : null;
+}
+function nextNeedFigure(nn) {
+  var span = nextNeedSpanHours(nn), mid = nn.hours;
+  /* sub-36h reads in hours, longer in days — the same threshold the watered-ago line uses,
+     so both halves of the water story stay in one register. */
+  var asHours = (span ? span[1] : mid) < 36;
+  var unit = asHours ? "h" : "d", div = asHours ? 1 : 24;
+  var fmt = function (v) { return Math.max(1, Math.round(v / div)); };
+  if (!span) return "~" + fmt(mid) + unit;                     // midpoint only: no invented range
+  var a = fmt(span[0]), b = fmt(span[1]);
+  return a === b ? "~" + a + unit : a + "–" + b + unit;    // collapsed range: honest "~"
+}
+function nextNeedChip(nn) {
+  var span = nextNeedSpanHours(nn);
+  if (!span || !nn.hours) return "";        // no span => no how-sure claim
+  var w = (span[1] - span[0]) / nn.hours;   // relative width carries the confidence
+  var word = w <= 0.15 ? "FIRM" : w <= 0.5 ? "ROUGH" : "HAZY";
+  return ' <span class="src nn-conf" title="How sure this is: the model\'s range is ' +
+    esc(nextNeedFigure(nn)) + ' wide relative to the estimate.">' + word + "</span>";
+}
 function nextNeedWhy(nn) {
   var why = String((nn && nn.reason) || "").toLowerCase();
   if (!why) return "learning its rhythm";
@@ -354,7 +387,10 @@ function waterHTML(card) {
   if (dryNow)
     h += '<span class="nn-known">water now</span>';
   else if (nn.known)
-    h += '<span class="nn-known">next water ~' + Math.max(1, Math.round(nn.hours / 24)) + "d</span>";
+    /* #1580 R3: the interval IS the confidence (docs/design/foundations/confidence-vocabulary.md).
+       The model computes hours_lo/hours_hi from the slope +/- its standard error and the card used
+       to render only the midpoint — the span was already honest and simply invisible. */
+    h += '<span class="nn-known">next water ' + esc(nextNeedFigure(nn)) + "</span>" + nextNeedChip(nn);
   else
     /* #1534 D2: the payload hands us the forecast's OWN reason; a blanket "learning its
        rhythm" threw it away and over-promised — a plant on a dry-end plateau is not
