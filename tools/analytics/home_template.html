@@ -877,7 +877,7 @@ function drawPulse(card) {
        Tufte-quiet: no gridlines, no numerals, a band-tinted ground, the now-point
        emphasized. Never a cross-event line — clips to ds.segment_x; calm-empty when
        there's no detected re-water to anchor a segment. */
-    drawSparkline(box, ds, lo, hi, inner, tok);
+    drawSparkline(box, ds, lo, hi, inner, tok, card);   /* #1581 R6: card carries next_need */
   }).catch(function () { /* silent — the hero stands without its chart */ });
 }
 
@@ -885,7 +885,7 @@ function drawPulse(card) {
    (#1263 ratified vertical convention, fleet-wide) — so a dry-down climbs. x = time across
    the current segment. Absent-safe: a segment with too few points, or none at all, renders
    a calm-empty caption, never a fabricated line. */
-function drawSparkline(box, ds, lo, hi, inner, tok) {
+function drawSparkline(box, ds, lo, hi, inner, tok, card) {
   var sec = document.createElement("div");
   sec.className = "pulse spark";
   box.appendChild(sec);
@@ -911,8 +911,20 @@ function drawSparkline(box, ds, lo, hi, inner, tok) {
   var cv = document.getElementById("pulseSpark");
   var W = (cv.width = cv.clientWidth * 2), H = (cv.height = 192);
   var g = cv.getContext("2d");
-  var x0 = seg[0].x, x1 = seg[seg.length - 1].x, xspan = x1 - x0 || 1;
+  var x0 = seg[0].x, x1 = seg[seg.length - 1].x;
+  /* #1581 R6: the forecast is drawn ON this chart, so the x-axis has to make room for it.
+     `next_need.hours` is hours-from-now and `x` is hours-since-window-start, so the
+     horizon is simply x1 + hours — same unit, no conversion. Only a KNOWN forecast
+     extends the axis; with none, the span is exactly the observed span it always was
+     (byte-identical chart for a plant with no prediction). The horizon is capped at the
+     observed span so a far-off ETA cannot squeeze the history it was derived from. */
+  var nn6 = (card && card.next_need) || {};
+  var fcH = (nn6.known && typeof nn6.hours === "number" && nn6.hours > 0) ? nn6.hours : 0;
+  var obsSpan = x1 - x0 || 1;
+  if (fcH > obsSpan) fcH = obsSpan;
+  var xspan = obsSpan + fcH;
   function px(p) { return ((p.x - x0) / xspan) * W; }
+  function pxh(h) { return ((h - x0) / xspan) * W; }   /* an x in raw hours */
   /* #1263: DRIER AT TOP — fraction 0 (wettest, lo) -> y H (bottom); 1 (driest, hi) -> y 0. */
   function py(p) { var f = (p.y - lo) / (hi - lo); if (f < 0) f = 0; if (f > 1) f = 1; return (1 - f) * H; }
 
@@ -940,8 +952,50 @@ function drawSparkline(box, ds, lo, hi, inner, tok) {
   }
   g.stroke();
 
-  /* the now-point: the segment's latest reading, emphasized (a dot, not a numeral) */
+  /* #1581 R6: the forecast, drawn on the same chart with a boundary a viewer cannot
+     misread. THREE cues, never colour alone (the ratified requirement):
+       1. line STYLE — observed is solid ink, predicted is dashed;
+       2. SHADING — the future region carries a faint wash the past does not;
+       3. a LABEL — "now" on the boundary rule, "predicted" over the future.
+     The predicted curve runs from the last real reading to the Thirsty entry edge at the
+     predicted hour — the same crossing the ETA was computed from, so the picture and the
+     number cannot disagree. The lo/hi interval (R3's confidence) renders as a wedge: its
+     width IS the how-sure, the same claim the card's chip makes in words. */
   var last = seg[seg.length - 1];
+  if (fcH > 0) {
+    var xNow = px(last);
+    var thirstyRaw = zones.length > 4 ? zones[4] : null;   /* the Content->Thirsty edge */
+    var yT = thirstyRaw === null ? py(last) : (1 - ((thirstyRaw - lo) / (hi - lo))) * H;
+    /* 2. the future wash — shading, not a hue: the region past "now" is visibly a
+          different KIND of space, legible with colour vision absent entirely. */
+    g.globalAlpha = 0.07; g.fillStyle = tok("--ink", "#1E2A18");
+    g.fillRect(xNow, 0, W - xNow, H); g.globalAlpha = 1;
+    /* the interval wedge — only when the model gave one; never fabricated */
+    var loH = nn6.hours_lo, hiH = nn6.hours_hi;
+    if (typeof loH === "number" && typeof hiH === "number" && hiH > loH) {
+      var xa = pxh(x1 + Math.min(loH, fcH)), xb = pxh(x1 + Math.min(hiH, fcH));
+      g.globalAlpha = 0.16; g.fillStyle = tok("--st-predicted", "#7C5CFF");
+      g.beginPath(); g.moveTo(xNow, py(last)); g.lineTo(xa, yT); g.lineTo(xb, yT);
+      g.closePath(); g.fill(); g.globalAlpha = 1;
+    }
+    /* 1. the predicted line — dashed, in the predicted channel */
+    g.save();
+    g.setLineDash([10, 8]); g.lineWidth = 3; g.lineCap = "round";
+    g.strokeStyle = tok("--st-predicted", "#7C5CFF");
+    g.beginPath(); g.moveTo(xNow, py(last)); g.lineTo(pxh(x1 + fcH), yT); g.stroke();
+    /* the boundary rule itself — dashed, full height, muted (chrome, not a state) */
+    g.setLineDash([4, 6]); g.lineWidth = 2; g.strokeStyle = tok("--muted", "#6F7E62");
+    g.beginPath(); g.moveTo(xNow, 0); g.lineTo(xNow, H); g.stroke();
+    g.restore();
+    /* 3. the labels — the cue that survives a greyscale print or a colour-blind reader */
+    g.font = "600 20px " + (tok("--font-ui", "") || "system-ui, sans-serif");
+    g.fillStyle = tok("--muted", "#6F7E62");
+    g.textAlign = "right"; g.fillText("now", xNow - 8, 22);
+    g.textAlign = "left";
+    g.fillStyle = tok("--st-predicted", "#7C5CFF");
+    g.fillText("predicted", xNow + 10, 22);
+  }
+  /* the now-point: the segment's latest reading, emphasized (a dot, not a numeral) */
   g.fillStyle = tok("--leaf", "#2E7D32");
   g.beginPath(); g.arc(px(last), py(last), 6, 0, 2 * Math.PI); g.fill();
 }
