@@ -1707,7 +1707,9 @@ function renderIntegrity(){
   const rows = [
     ['readings (rows)', fmt(I.total)],
     ['sweeps (sample ticks)', fmt(I.sweeps)],
-    ['partial sweeps (&lt;4 sensors)', fmt(I.partial_sweeps)],
+    // #1597: no fixed "&lt;4" — partiality is judged against each BOARD's own channel
+    // count, and boards differ (a 2-channel board's 2-row sweep is complete).
+    ['partial sweeps (short for their board)', fmt(I.partial_sweeps)],
     ['cadence (median)', I.cadence_actual_s!=null? I.cadence_actual_s+' s' : '—'],
     // #322: device-set cadence + source — "temp" = a session-only experiment override
     // that won't persist to NVS; "nvs" = the deliberate saved default; "default" = compiled.
@@ -1757,9 +1759,17 @@ function renderIntegrity(){
     tr.appendChild(el('td','small muted', p.n!==I.count_max? `${I.count_max-p.n} fewer than the fullest channel` : 'fullest channel'));
     t2.appendChild(tr); });
   wrap.appendChild(t2);
-  if(I.count_gap>0){
+  // #1597 AC3: assert missing samples only when sweeps are ACTUALLY short. The old
+  // guard fired on count_gap alone and then quoted partial_sweeps — which was itself
+  // over-counted — so the panel claimed data loss that had not happened. An uneven row
+  // count across channels is real and worth showing, but it is not by itself evidence
+  // of a dropped sample (a channel added mid-window is uneven and lost nothing).
+  if(I.partial_sweeps>0){
     wrap.appendChild(el('div','note',
-      `⚠ channel row counts differ by <b>${I.count_gap}</b> — ${I.partial_sweeps} sweep(s) are missing a sensor. Real dropped samples, surfaced not smoothed.`));
+      `⚠ <b>${I.partial_sweeps}</b> sweep(s) carried fewer rows than their board's channel count — real dropped samples, surfaced not smoothed.`));
+  } else if(I.count_gap>0){
+    wrap.appendChild(el('div','note small muted',
+      `Channel row counts differ by ${I.count_gap} — every sweep was complete for its board, so this is uneven coverage (a channel joined or left mid-window), not dropped samples.`));
   }
 
   // gap SUMMARY (bounded) — count + longest; the full detail is in the log files.
