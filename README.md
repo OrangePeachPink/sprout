@@ -45,6 +45,22 @@ bar is the same either way: clear, tested, and kind.
 
 ## Quick start
 
+**What you need first**
+
+| | |
+| --- | --- |
+| **A computer** | macOS, Linux, or Windows 10/11. All three are supported and tested. |
+| **Git** | `git --version` should print a number. If not: `winget install Git.Git` (Windows), `xcode-select --install` (macOS), `sudo apt install git` (Debian/Ubuntu). |
+| **A GitHub account** | Only to *contribute*. Reading, cloning, and running Sprout need no account. To push, either [add an SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh) or install the [GitHub CLI](https://cli.github.com) and run `gh auth login`. Not a collaborator here? **Fork** the repo and branch from your fork — the normal open-source path. |
+| **Python** | Nothing to install. `uv` fetches the exact locked interpreter for you. |
+| **A board + probe** | **Optional.** Sprout runs, builds and tests without hardware; you need one only to read real soil. |
+
+> **Windows — where you clone matters.** Windows' classic `MAX_PATH` is 260 characters and applies to the
+> *whole* path, so we keep tracked paths under 200 and that leaves **about 60 characters for your clone
+> location**. `C:\dev\sprout` is ideal; a deep `…\OneDrive\Documents\GitHub\…` can exhaust the budget and
+> produce a checkout that fails — or silently lands incomplete — on a machine that has done nothing wrong.
+> `just doctor` measures yours and tells you the headroom.
+
 **macOS / Linux**
 
 ```text
