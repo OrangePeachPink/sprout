@@ -79,6 +79,27 @@ orphaned, and the plants you mapped light up. There is never a second record for
 *different*, unknown board answers instead, that is adoption (#1027), not a bind — the two paths
 meet here rather than competing.
 
+## "Port already in use" — what the startup message means (#1555)
+
+Sprout prints the URL it is **about to** use before it tries to bind, so a start that fails
+still tells you which port it wanted:
+
+```text
+Sprout: starting on http://127.0.0.1:8765/
+```
+
+If the port is taken, the next lines say **who has it**, because the fix differs:
+
+- **A Sprout is already there** — open that tab, stop it from the dashboard, or take the port
+  over with current code: `just restart`.
+- **Something else has it** (or a Sprout wedged mid-shutdown) — Sprout says so rather than
+  claiming a Sprout is running: whatever holds the port did not answer as one. Free it, or
+  serve elsewhere with `just serve -p 8766`.
+
+The distinction is a probe of a read-only Sprout route, not a guess: accepting a TCP
+connection is not evidence of being Sprout, and sending you to look for a dashboard window
+that does not exist is worse than saying "I don't know what this is."
+
 ## Fleet addressing — name, not IP (#676)
 
 The WiFi fleet is reached **by name**, not by a hardcoded IP. Each board advertises an mDNS
