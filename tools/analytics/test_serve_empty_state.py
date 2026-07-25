@@ -71,10 +71,38 @@ def test_real_data_does_not_raise(tmp_path: Path) -> None:
 # --------------------------------------------------------------------------- #
 
 
+def _configured():
+    """A registry with a real, bound board — the #543/#644 case these tests are about:
+    hardware IS set up, nothing has been logged yet.
+
+    #1594: passing the model explicitly also makes these hermetic. They used to call
+    with no model, which read the DEVELOPER'S registry — so they quietly depended on the
+    committed example being loaded as a fallback, and would have behaved differently on
+    a machine that had a real `devices.local.json`."""
+    from tools.analytics.registry_model import RegistryModel
+
+    m = RegistryModel()
+    pid = m.declare_device(name="Windowsill", board="esp32-classic", channels=[32])[
+        "device_id"
+    ]
+    m.bind_device(pid, "y9d41p")
+    return m
+
+
 def test_fresh_checkout_copy_says_nothing_logged() -> None:
-    html = _empty_state_html(had_any_logged=False)
+    html = _empty_state_html(had_any_logged=False, model=_configured())
     assert "fresh checkout" in html
     assert "filter" not in html.lower()
+
+
+def test_a_genuinely_empty_registry_says_no_boards_not_nothing_logged() -> None:
+    """#1594: with no board registered, "nothing logged" is the wrong sentence — nothing
+    CAN be logged. Before the example-fallback removal this state was unreachable."""
+    from tools.analytics.registry_model import RegistryModel
+
+    html = _empty_state_html(had_any_logged=False, model=RegistryModel())
+    assert "No boards yet" in html
+    assert "fresh checkout" not in html
 
 
 def test_filtered_copy_does_not_claim_fresh_checkout() -> None:
@@ -91,7 +119,7 @@ def test_filtered_copy_does_not_claim_fresh_checkout() -> None:
 def test_fresh_checkout_carries_a_working_start_control() -> None:
     # the operator's "one Start" must be reachable at zero data (chicken-and-egg
     # before #644: the shell's button only rendered once data existed).
-    html = _empty_state_html(had_any_logged=False)
+    html = _empty_state_html(had_any_logged=False, model=_configured())
     assert 'id="collStart"' in html
     assert "Start logging" in html  # #923: one collection action, consistent vocab
     # and it wires to ADR-0014's one action, not a dead button
@@ -161,11 +189,19 @@ def test_fresh_checkout_serves_200_not_500(tmp_path: Path) -> None:
             with urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=5) as resp:
                 assert resp.status == 200
                 body = resp.read().decode("utf-8")
-                assert "fresh checkout" in body
-                # #644: the install-day Start control survives the real HTTP path,
-                # not just the pure function - the "one Start" is reachable here.
-                assert 'id="collStart"' in body
-                assert "/collection/start" in body
+                # #1594: WHICH honest zero state renders depends on this machine's
+                # registry — "No boards yet" with none registered, "fresh checkout"
+                # with a board configured but nothing logged. Both are correct; the
+                # variants are pinned hermetically in the unit tests above. What this
+                # e2e exists to prove is the invariant: a real server serves an honest
+                # empty page over HTTP instead of a 500. Asserting one variant here
+                # made the test depend on the developer's own config (and only passed
+                # at all because the committed example was masking the empty case).
+                assert "No boards yet" in body or "fresh checkout" in body
+                # #644: whichever state, the page offers a real next action — the
+                # install-day Start when there IS hardware, Add-a-board when there
+                # isn't. A dead-end page is the regression this guards.
+                assert 'id="collStart"' in body or "Add a board" in body
         except urllib.error.HTTPError as exc:
             raise AssertionError(f"/ must not 500 on a fresh checkout: {exc}") from exc
 

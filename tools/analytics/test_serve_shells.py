@@ -122,7 +122,10 @@ def test_root_at_zero_segments_is_the_honest_empty_state(tmp_path: Path) -> None
     try:
         status, body, _ = _get(port, "/")
         assert status == 200
-        assert "fresh checkout" in body  # the honest first-run copy
+        # #1594: either honest zero state, depending on this machine's registry —
+        # the variants are unit-tested hermetically; here the point is that the page
+        # is the honest empty state at all, not a 500 and not a data-pretending shell.
+        assert "No boards yet" in body or "fresh checkout" in body
         assert "Sprout — home" not in body  # not the hydrating Home yet
     finally:
         proc.terminate()

@@ -118,7 +118,12 @@ def test_identity_falls_back_to_static_and_stamps_its_provenance() -> None:
     pairs, source = resolve_identity(reg)
     assert source in ("temporal", "static")
     if source == "static":
-        assert pairs == {("devA", "s1"): "pA"}
+        # #1594: this branch was DEAD until the example-registry fallback was removed —
+        # `load_registry_model()` used to load the committed example, so `source` was
+        # always "temporal" here and the assertion never ran. Now it does, and the
+        # expectation was stale: the static path canonicalizes the channel token per
+        # ADR-0036 (`s1` -> `ch2`), which is the correct, intended behaviour.
+        assert pairs == {("devA", "ch2"): "pA"}
     rows = segment_rows({"pA": _rows(_drydown(0, 1500, 5, 10))}, source)
     assert all(r["identity_source"] == source for r in rows)  # stamped on every row
 
