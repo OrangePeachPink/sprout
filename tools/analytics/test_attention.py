@@ -9,6 +9,8 @@ two are, is the failure this model exists to prevent.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from tools.analytics.attention import (
     ALL_CLEAR,
     CALM_HORIZON_H,
@@ -185,3 +187,34 @@ def test_the_state_unpacks_as_the_ratified_signature() -> None:
     state, reason, evidence = attention_state(card(band="Thirsty"))
     assert (state, reason) == (NEEDS_YOU_NOW, "water now")
     assert evidence["band"] == "Thirsty"
+
+
+# --------------------------------------------------------------------------- #
+# the surface half — the template CONSUMES the composed state (#1582 §5)
+# --------------------------------------------------------------------------- #
+_H = (Path(__file__).resolve().parent / "home_template.html").read_text(
+    encoding="utf-8"
+)
+_WATER = _H[_H.index("function waterHTML(") : _H.index("function glugPost(")]
+
+
+def test_the_card_reads_the_composed_state_and_re_derives_nothing() -> None:
+    """The point of the model: each branch consumed the state instead of computing its
+    own answer. The old local derivations must be GONE, not merely shadowed — a
+    surviving copy is exactly how two surfaces come to disagree (#1534's D1 class)."""
+    assert "card.attention" in _WATER
+    assert 'att.state === "cant_tell"' in _WATER
+    assert 'att.state === "needs_you_now"' in _WATER
+    # the retired local re-derivations
+    assert "dryNow" not in _H
+    assert "card.exception && card.exception.is" not in _WATER
+
+
+def test_the_harm_level_renders_and_does_not_wear_a_mood_colour() -> None:
+    """§6 rule 3: an attention level is not a reading. The harm line takes the state
+    channel's act-now token, distinct from --st-fault (the instrument axis, R12) —
+    collapsing the two would undo exactly the separation R12 just shipped."""
+    assert 'att.state === "heading_for_harm"' in _WATER
+    assert "getting worse faster than a normal dry-down" in _WATER
+    assert ".water .harm { color: var(--st-due)" in _H
+    assert "--band-" not in _WATER

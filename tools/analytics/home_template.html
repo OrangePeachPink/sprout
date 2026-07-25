@@ -111,6 +111,10 @@
   .water b { color: var(--ink); font-weight: 600; }
   .water .src { font-size: 10.5px; letter-spacing: .06em; color: var(--muted); }
   .nn-known { color: var(--st-predicted); }  /* forecast = the violet channel, never a mood */
+  /* #1582 §6 rule 3: an attention level is NOT a reading, so it never wears a mood colour.
+     The harm level takes the state channel's act-now token — plant-side urgency, distinct
+     from --st-fault, which is the instrument axis (R12) and would collapse the two. */
+  .water .harm { color: var(--st-due); font-weight: 600; }
   /* #1580 R3: the how-sure chip rides the SAME violet channel as the figure it qualifies —
      provenance-about-a-number, the DETECTED/MANUAL chip shape, never a mood colour (R8).
      Scoped `.water .src.nn-conf` deliberately: `.water .src` sets muted at (0,2,0) and
@@ -409,6 +413,11 @@ function nextNeedWhy(nn) {
 /* the water story — calm-empty: a quiet "—", never a data-pretending value */
 function waterHTML(card) {
   var lw = card.last_watered || {}, nn = card.next_need || {};
+  /* #1582 R11: the composed attention state, resolved host-side in ONE place
+     (tools/analytics/attention.py, the model's §8 order). The branches below READ it —
+     they no longer each re-derive their own answer to "does this need me", which is how
+     two surfaces come to disagree (the #1534 D1 class). Absent for a not-probed plant. */
+  var att = card.attention || {};
   var h = "";
   if (lw.known)
     /* the chip wears its honest provenance: MANUAL (logged, #1137) or DETECTED */
@@ -423,18 +432,23 @@ function waterHTML(card) {
      That is the R12 failure exactly: the sensor's unhappiness reading as the plant's.
      `last watered` survives — it is a detected EVENT from history, not a claim derived from
      the suspect reading — and the forecast half says plainly that it cannot say. */
-  if (card.exception && card.exception.is) {
+  if (att.state === "cant_tell") {
     h += '<span>next <b>&mdash;</b> <span class="src">can’t say while the reading is off</span></span>';
     return h;
   }
+  /* #1584 G2 (§8 level 2): the one level with no render before this — a TRAJECTORY, not
+     a position. It sits above needs-you-now because a thirsty plant recovers from a late
+     watering and a plant trending badly may not (#410's asymmetric-failure principle).
+     The water story still renders under it: the reading is trustworthy here, so when-next
+     is still worth saying — this line adds what the mood alone cannot tell her. */
+  if (att.state === "heading_for_harm")
+    h += '<span class="harm">getting worse faster than a normal dry-down</span>';
   /* #1534 D3: a plant already AT or past Thirsty needs no forecast — the answer is now.
      Showing an ETA-to-Thirsty (or an absence) for a plant that is ALREADY thirsty is the
      one case where the forecast channel has nothing useful to add, and saying "—" reads
      as "no idea" about a plant that is telling you plainly. The mood is the authority
      here (the ratified in-soil ladder, Soaked -> Faint); the forecast defers to it. */
-  var dryNow = ["thirsty", "parched", "faint"].indexOf(
-    String((card.frame || {}).mood || "").toLowerCase()) >= 0;
-  if (dryNow)
+  if (att.state === "needs_you_now")
     h += '<span class="nn-known">water now</span>';
   else if (nn.known)
     /* #1580 R3: the interval IS the confidence (docs/design/foundations/confidence-vocabulary.md).
