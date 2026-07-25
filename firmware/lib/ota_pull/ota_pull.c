@@ -202,6 +202,28 @@ ota_pull_parse_t ota_pull_parse_feed(const char *text, size_t len,
         /* MISSING KEYS ARE FATAL - the mirror of ignoring unknown ones. A device
          * must never fill in a default for something the feed failed to say. */
         if (!ota_pull_artifact_valid(&a)) return OTA_PULL_PARSE_MALFORMED;
+
+        /* A DUPLICATE BOARD CLASS REJECTS THE WHOLE FEED (#1570, the ruled S3b
+         * contract). Two lines for one class have no defined answer: first-wins
+         * and last-wins are both a silent GUESS about which image a board should
+         * flash, and the wrong guess is a bricked board recovered over USB. The
+         * feed is a POINTER whose only job is to be unambiguous - when it isn't,
+         * the honest reading is "this feed is corrupt", not "pick one".
+         *
+         * Rejected for ANY class, not just this board's own: a duplicate anywhere
+         * is evidence the document was hand-mangled or truncated mid-generation,
+         * and a feed that lied once is not a feed to take an image from. This also
+         * keeps the parser PURE - it never needs to know which board is reading -
+         * and makes it the exact mirror of the desk twin's `seen_boards` check
+         * (tools/dx/ota_feed.py), so generator and device cannot drift.
+         *
+         * MALFORMED, not a new verdict (#1570 AC3): the existing vocabulary
+         * already says "this feed is unusable" and carries through the
+         * orchestrator to OTA_PULL_RUN_FEED_INVALID -> the board stays put. */
+        for (size_t d = 0; d < count; d++) {
+            if (strcmp(out[d].board_class, a.board_class) == 0)
+                return OTA_PULL_PARSE_MALFORMED;
+        }
         out[count++] = a;
     }
 
