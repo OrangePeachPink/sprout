@@ -15,7 +15,13 @@ bottom for every `vX.Y.Z`.
       trigger it manually from Actions before cutting, since per-PR CI skips firmware).
 - [ ] No open PR is targeted at this version (check the milestone's linked PRs).
 
-## 1. Sync the version constants
+## 1. Sync the version constants — **and the dates**
+
+> **The lesson of the v0.8.1 cut: every place we declare a *version* is guarded, and every place we
+> declare a *date* is not.** `version-sync-guard` (#1407) checks the version sites against canonical
+> `pyproject.toml` and reports green — while the JSON-LD's `dateModified` sat two releases stale and
+> `CITATION.cff` had no `date-released` at all. A green guard is evidence about versions only. **Walk
+> the date rows by eye until #1633/#1637 teach the guard to check them.**
 
 - [ ] `pyproject.toml` → `version` = the release version. This is the **single product version line**
       (ADR-0009 §1) — everything else syncs to it (§3). *(Missed at the v0.7.2 cut — #1080; hence this
@@ -25,6 +31,22 @@ bottom for every `vX.Y.Z`.
 - [ ] `firmware/include/config.h` → `PLANTS_FW_VERSION` matches the release version (ADR-0009 §3).
       If firmware didn't change this release, the constant still bumps at the next firmware release —
       note per-component reality in the notes instead.
+- [ ] `uv.lock` → the `sprout` package entry matches. **Fix by regenerating (`just lock`), never by
+      hand** — it is generated state. The guard does not look here (#1633), and a stale lock is the
+      `uv run --frozen` trap the justfile calls *"a brutal, causeless first-PR trap"* (#254): it lands
+      on whoever runs the next command, with an error naming none of this.
+
+**The date rows — unguarded, so check them deliberately:**
+
+- [ ] `CITATION.cff` → `date-released` = the cut date. Added at the v0.8.1 cut; it is what makes a
+      citation resolvable to a point in time, and GitHub's "Cite this repository" widget renders it
+      (#1637).
+- [ ] `docs/index.html` → the JSON-LD `dateModified` = the cut date. **Found two releases stale at the
+      v0.8.1 cut** while `version` beside it was correct — machine-readable, publicly consumed, and
+      silently wrong. (`datePublished` is first publication and does **not** move.)
+
+*Both dates are a prediction until the publish click. Same-day is the norm and a date stale by hours
+beats an absent or two-release-old one — set them here, don't defer.*
 
 ### 1.1 Reconcile the milestone against the tag line — both directions
 
@@ -59,22 +81,20 @@ Both directions, and the second one is the one that gets skipped:
 
 Find both sets by query, never by memory (ADR-0003 §11):
 
-```bash
-# under the line — merged since the previous tag but carrying the wrong milestone, or none.
-# The previous tag's publish date is the boundary; anything merged after it is in this release.
-PREV=$(gh release view --repo OrangePeachPink/sprout --json publishedAt --jq .publishedAt)
-gh pr list --repo OrangePeachPink/sprout --state merged --limit 200 \
-  --json number,title,milestone,mergedAt \
-  --jq --arg prev "$PREV" '.[] | select(.mergedAt > $prev)
-        | select((.milestone.title // "none") != "v0.8.1")
-        | "\(.number) [\(.milestone.title // "NONE")] \(.title)"'
+      # under the line — merged since the previous tag but carrying the wrong milestone, or none.
+      # The previous tag's publish date is the boundary; anything merged after it is in this release.
+      PREV=$(gh release view --repo OrangePeachPink/sprout --json publishedAt --jq .publishedAt)
+      gh pr list --repo OrangePeachPink/sprout --state merged --limit 200 \
+        --json number,title,milestone,mergedAt \
+        --jq --arg prev "$PREV" '.[] | select(.mergedAt > $prev)
+              | select((.milestone.title // "none") != "v0.8.1")
+              | "\(.number) [\(.milestone.title // "NONE")] \(.title)"'
 
-# under the line — closed issues pointed at a later release
-gh issue list --repo OrangePeachPink/sprout --state closed --milestone "v0.8.2" --json number,title
+      # under the line — closed issues pointed at a later release
+      gh issue list --repo OrangePeachPink/sprout --state closed --milestone "v0.8.2" --json number,title
 
-# over the line — still open on the milestone being cut
-gh issue list --repo OrangePeachPink/sprout --state open --milestone "v0.8.1" --json number,title
-```
+      # over the line — still open on the milestone being cut
+      gh issue list --repo OrangePeachPink/sprout --state open --milestone "v0.8.1" --json number,title
 
 **Use the previous tag as the boundary, not "everything unmilestoned."** Merged PRs from earlier
 releases are also unmilestoned; sweeping without the date filter back-dates them into this version.
@@ -83,6 +103,34 @@ releases are also unmilestoned; sweeping without the date filter back-dates them
 that had been built and merged under a next-release label. It was not a labelling slip — it is what
 always happens when a release's last days go well, which is why it is a standing step rather than a
 correction.)*
+
+### 1.2 Reconcile the contributors — by query, never from the week's impression
+
+**Ask: did anyone outside the maintainer land a change in this window, and does the record say so?**
+Both halves matter, and they fail in opposite directions — a merged contributor who never gets listed
+is an uncredited person, and a *listed* contribution that never merged is a false claim about someone
+else's work in a public file.
+
+- [ ] Run the query. External human merges since the previous tag:
+
+            PREV=$(gh release view --repo OrangePeachPink/sprout --json publishedAt --jq .publishedAt)
+            gh pr list --repo OrangePeachPink/sprout --state merged --limit 200 \
+              --json number,title,author,mergedAt \
+              --jq --arg prev "$PREV" '.[] | select(.mergedAt > $prev)
+                    | select(.author.login != "OrangePeachPink")
+                    | select(.author.login | startswith("app/") | not)
+                    | "#\(.number) @\(.author.login) \(.title)"'
+
+- [ ] Every name it returns has an entry in `CONTRIBUTORS.md`, citing the **merged PR** (the file's own
+      convention — not the tracking issue).
+- [ ] Nothing in the release notes or CHANGELOG credits a contribution that **has not merged**. An open
+      PR at the tag is credited when it merges, which is the rule `CONTRIBUTORS.md` states for itself.
+- [ ] Bot authors (`app/dependabot`) are not contributors and get no entry.
+
+*(Added after the v0.8.1 CHANGELOG shipped the line "Sprout's first external contribution merged" —
+false twice: nothing external merged that release, and four community contributors already predated it.
+It was written from an impression of the week rather than from output, in the file whose entire purpose
+is to be the record. The maintainer caught it before the tag by asking this question.)*
 
 ## 2. Close the milestone → the draft appears
 
