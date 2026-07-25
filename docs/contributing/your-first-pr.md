@@ -37,6 +37,26 @@ first and skips what's already there.
 > **The zero-install path:** the repo ships a devcontainer, so you can open it in **GitHub Codespaces** and skip
 > Step 0 entirely — the environment builds itself in the browser.
 
+### Getting GitHub to know you
+
+You can clone and run Sprout with no account at all. You need one only to *push* work back. Two ways, pick either:
+
+- **GitHub CLI** — `gh auth login`, follow the prompts, done. (`gh` also makes `just doctor` able to tell you
+  whether you're authenticated.)
+- **An SSH key** — [GitHub's guide](https://docs.github.com/en/authentication/connecting-to-github-with-ssh)
+  walks it end to end.
+
+**Not a collaborator on this repo?** That's the normal case. **Fork** it to your own account, clone your fork,
+and branch there — your pull request comes from your fork and everything else in this guide is identical.
+
+### Where to put the clone
+
+Anywhere you like on macOS or Linux. **On Windows it matters:** the classic `MAX_PATH` limit is 260 characters
+for the *whole* path, and Sprout keeps its own tracked paths under 200 — which leaves roughly **60 characters
+for your clone location**. `C:\dev\sprout` is comfortable; a deep `…\OneDrive\Documents\GitHub\…` can run out
+and give you a checkout that fails, or silently lands incomplete, with nothing obviously wrong. Run
+**`just doctor`** any time and it measures your actual path and reports the headroom.
+
 ## Step 1 — Get Sprout running
 
 ```text
