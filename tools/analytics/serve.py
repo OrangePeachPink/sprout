@@ -399,7 +399,7 @@ def _empty_state_html(had_any_logged: bool, model=None) -> str:
             )
             launchpad = (
                 '<div class="launch">'
-                '<a class="btn primary" href="/classic#plants">Add a board</a>'
+                '<a class="btn primary" href="/classic#registry">Add a board</a>'
                 '<p class="status">Takes you to Plants &amp; Sensors, where boards '
                 "are set up.</p>"
                 "</div>"
@@ -418,7 +418,7 @@ def _empty_state_html(had_any_logged: bool, model=None) -> str:
             )
             launchpad = (
                 '<div class="launch">'
-                '<a class="btn primary" href="/classic#plants">Check setup</a>'
+                '<a class="btn primary" href="/classic#registry">Check setup</a>'
                 '<p class="status" id="collStatus" role="status" aria-live="polite">'
                 "</p></div>"
             )

@@ -3479,6 +3479,12 @@ async function healthPoll(){
 }
 function showTab(name, rerender){
   const tabs = ['monitor', 'plants', 'capture', 'diagnostics'];   // Lab is its own /lab route
+  // #1547: A4's ruled zero-state CTA deep-links `#registry` — the operator-facing name for
+  // this tab's job ("where boards are set up"), which is not the tab's internal id. Accept
+  // it as an ALIAS rather than renaming the tab: `#plants` is a shipped deep-link that
+  // showTab writes into history and #921's first-run path targets, so renaming would break
+  // existing links for a cosmetic gain. Additive — both hashes resolve here.
+  if(name === 'registry') name = 'plants';
   if(!tabs.includes(name)) name = 'monitor';
   // #921 Q10: don't browse away from unsaved registry edits without a heads-up.
   if(name !== 'plants' && typeof regDirty === 'function' && regDirty()
