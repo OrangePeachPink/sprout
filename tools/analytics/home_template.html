@@ -111,6 +111,10 @@
   .water b { color: var(--ink); font-weight: 600; }
   .water .src { font-size: 10.5px; letter-spacing: .06em; color: var(--muted); }
   .nn-known { color: var(--st-predicted); }  /* forecast = the violet channel, never a mood */
+  /* #1582 §6 rule 3: an attention level is NOT a reading, so it never wears a mood colour.
+     The harm level takes the state channel's act-now token — plant-side urgency, distinct
+     from --st-fault, which is the instrument axis (R12) and would collapse the two. */
+  .water .harm { color: var(--st-due); font-weight: 600; }
   /* #1580 R3: the how-sure chip rides the SAME violet channel as the figure it qualifies —
      provenance-about-a-number, the DETECTED/MANUAL chip shape, never a mood colour (R8).
      Scoped `.water .src.nn-conf` deliberately: `.water .src` sets muted at (0,2,0) and
@@ -375,28 +379,63 @@ window.__iconFor = function (n) { return '<svg viewBox="0 0 44 48">' + iconFor(n
      · otherwise -> calm, and it names WHEN the calm ends, because "all fine" with no time
        bound is unfalsifiable comfort. With no usable forecast it drops to the present
        tense it can actually support rather than inventing a horizon. */
-var CALM_HORIZON_H = 48;   /* proposed; a named constant because it wants a MEASURED answer
-                              (backtest.py) eventually, not a design opinion. */
+/* #1587: the calm horizon is no longer declared here. It lives host-side, once, in
+   attention.CALM_HORIZON_H — the composer decides which plants are inside it, and the
+   summary counts the answer. A client-side copy of a tunable constant is the same drift
+   the R3 vocabulary extraction (#1598) just closed, one constant instead of one word. */
 function calmSignal(cards) {
+  /* #1587 G7 renamed nothing and kept this entry point: the calm signal is now the
+     ALL-CLEAR CASE of the greenhouse summary, not a separate computation. G3 shipped
+     this re-deriving the levels itself (an exception scan, a mood list, a horizon
+     compare) because the composer did not exist yet; it does now, so the summary counts
+     the model's levels and defines none of its own (§5). */
+  return greenhouseSummary(cards);
+}
+/* #1587 G7 — the greenhouse-wide summary. It AGGREGATES the attention model's words and
+   mints none: a summary that invents its own vocabulary is a second answer to "which
+   plants need you", which is R11's complaint one layer up. Counts only; the ordering is
+   §8's, so the most serious thing she can act on is read first. */
+function greenhouseSummary(cards) {
   var list = (cards || []).filter(function (c) { return c && c.frame; });
   if (!list.length) return "";
-  var soonest = null;
+  var n = { cant_tell: 0, heading_for_harm: 0, needs_you_now: 0, watch: 0, all_clear: 0 },
+      unavailable = 0, soonest = null;
   for (var i = 0; i < list.length; i++) {
-    var c = list[i];
-    if (c.exception && c.exception.is) return "";      /* can't see -> never "all fine" */
-    var mood = String((c.frame || {}).mood || "").toLowerCase();
-    if (["thirsty", "parched", "faint"].indexOf(mood) >= 0) return "";  /* needs you now */
-    var nn = c.next_need || {};
-    if (nn.known && typeof nn.hours === "number") {
-      if (nn.hours <= CALM_HORIZON_H) return "";       /* inside the horizon -> Watch, not calm */
-      if (soonest === null || nn.hours < soonest) soonest = nn.hours;
-    }
+    var att = list[i].attention;
+    if (!att) { unavailable++; continue; }   /* not probed — first-class absent, counted */
+    if (n[att.state] === undefined) continue;
+    n[att.state]++;
+    var h = att.evidence && att.evidence.hours;
+    if (att.state === "all_clear" && typeof h === "number" &&
+        (soonest === null || h < soonest)) soonest = h;
   }
-  if (soonest === null) return "Nothing needs you right now.";   /* honest present tense */
-  /* floor, never round: rounding UP over-promises the calm — 60h would read "about 3
-     days" for a plant that wants water at 2.5. A calm claim must understate. */
-  var days = Math.floor(soonest / 24);
-  return "Nothing needs you for about " + (days <= 1 ? "a day" : days + " days") + ".";
+  var parts = [];
+  /* the model's words, count-conjugated (one vocabulary — a plural verb is not a new
+     word). Present-or-silent: a level with nobody in it says nothing at all. */
+  if (n.cant_tell) parts.push(n.cant_tell + " can’t tell");
+  if (n.heading_for_harm) parts.push(n.heading_for_harm + " heading for harm");
+  if (n.needs_you_now) parts.push(n.needs_you_now + (n.needs_you_now === 1 ? " needs you now" : " need you now"));
+  if (n.watch) parts.push(n.watch + " to watch");
+  if (unavailable) parts.push(unavailable + " unavailable");
+  if (!parts.length) {
+    /* everyone is fine — G3's affirmative all-clear, word for word as it shipped. */
+    if (soonest === null) return "Nothing needs you right now.";
+    /* floor, never round: rounding UP over-promises the calm — 60h would read "about 3
+       days" for a plant that wants water at 2.5. A calm claim must understate. */
+    var days = Math.floor(soonest / 24);
+    return "Nothing needs you for about " + (days <= 1 ? "a day" : days + " days") + ".";
+  }
+  /* the rest are fine, and the tail says so rather than leaving them uncounted — but it
+     only claims a horizon when a forecast supports one (§6 rule 4). */
+  if (n.all_clear) {
+    var tail = "the rest fine";
+    if (soonest !== null) {
+      var d = Math.floor(soonest / 24);
+      tail += " for about " + (d <= 1 ? "a day" : d + " days");
+    }
+    parts.push(tail);
+  }
+  return parts.join(" · ") + ".";
 }
 /* #1580 R3: the confidence vocabulary's two formatters — the ONE place the form lives on the
    surface (docs/design/foundations/confidence-vocabulary.md). R6/R11/G2/G3/G7 consume these;
@@ -437,6 +476,11 @@ function nextNeedWhy(nn) {
 /* the water story — calm-empty: a quiet "—", never a data-pretending value */
 function waterHTML(card) {
   var lw = card.last_watered || {}, nn = card.next_need || {};
+  /* #1582 R11: the composed attention state, resolved host-side in ONE place
+     (tools/analytics/attention.py, the model's §8 order). The branches below READ it —
+     they no longer each re-derive their own answer to "does this need me", which is how
+     two surfaces come to disagree (the #1534 D1 class). Absent for a not-probed plant. */
+  var att = card.attention || {};
   var h = "";
   if (lw.known)
     /* the chip wears its honest provenance: MANUAL (logged, #1137) or DETECTED */
@@ -451,18 +495,23 @@ function waterHTML(card) {
      That is the R12 failure exactly: the sensor's unhappiness reading as the plant's.
      `last watered` survives — it is a detected EVENT from history, not a claim derived from
      the suspect reading — and the forecast half says plainly that it cannot say. */
-  if (card.exception && card.exception.is) {
+  if (att.state === "cant_tell") {
     h += '<span>next <b>&mdash;</b> <span class="src">can’t say while the reading is off</span></span>';
     return h;
   }
+  /* #1584 G2 (§8 level 2): the one level with no render before this — a TRAJECTORY, not
+     a position. It sits above needs-you-now because a thirsty plant recovers from a late
+     watering and a plant trending badly may not (#410's asymmetric-failure principle).
+     The water story still renders under it: the reading is trustworthy here, so when-next
+     is still worth saying — this line adds what the mood alone cannot tell her. */
+  if (att.state === "heading_for_harm")
+    h += '<span class="harm">getting worse faster than a normal dry-down</span>';
   /* #1534 D3: a plant already AT or past Thirsty needs no forecast — the answer is now.
      Showing an ETA-to-Thirsty (or an absence) for a plant that is ALREADY thirsty is the
      one case where the forecast channel has nothing useful to add, and saying "—" reads
      as "no idea" about a plant that is telling you plainly. The mood is the authority
      here (the ratified in-soil ladder, Soaked -> Faint); the forecast defers to it. */
-  var dryNow = ["thirsty", "parched", "faint"].indexOf(
-    String((card.frame || {}).mood || "").toLowerCase()) >= 0;
-  if (dryNow)
+  if (att.state === "needs_you_now")
     h += '<span class="nn-known">water now</span>';
   else if (nn.known)
     /* #1580 R3: the interval IS the confidence (docs/design/foundations/confidence-vocabulary.md).

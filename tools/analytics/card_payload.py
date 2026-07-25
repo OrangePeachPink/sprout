@@ -35,6 +35,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from tools.analytics import watering_log
+from tools.analytics.attention import attention_state
 
 _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
@@ -556,6 +557,21 @@ def cards_from_context(
         card["urgency"] = None  # a not-probed plant has no urgency to sort on
         card["sensor_id"] = None  # not probed — no series to join (first-class-absent)
         cards.append(card)
+    # #1582 (R11): the composed attention state, resolved ONCE here so every surface
+    # renders the same answer to "does this need me." Absent (None) for a not-probed
+    # plant — attention is a claim about a measurement (see attention.attention_state).
+    for card in cards:
+        st = attention_state(card)
+        card["attention"] = (
+            None
+            if st is None
+            else {
+                "state": st.state,
+                "label": st.label,
+                "reason": st.reason,
+                "evidence": st.evidence,
+            }
+        )
     # most-thirsty leads (#715/#747): highest dryness first; no-urgency cards trail.
     cards.sort(
         key=lambda c: (c["urgency"] is not None, c["urgency"] or 0.0), reverse=True
