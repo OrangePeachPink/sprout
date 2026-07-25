@@ -393,6 +393,38 @@ def build_card(
 # --------------------------------------------------------------------------- #
 # composition — turn a built dashboard context into the Home's ordered card list
 # --------------------------------------------------------------------------- #
+#: R3's ratified thresholds, from docs/design/foundations/confidence-vocabulary.md.
+#: The word comes from the interval's width RELATIVE to the estimate: a wide span on a
+#: far-off forecast is not the same claim as the same span on a near one.
+CONFIDENCE_FIRM_MAX = 0.15
+CONFIDENCE_ROUGH_MAX = 0.50
+
+
+def confidence_word(hours, hours_lo, hours_hi) -> str | None:
+    """The R3 how-sure word — ``FIRM`` / ``ROUGH`` / ``HAZY``, or ``None`` (#1598).
+
+    **One home for a ruled vocabulary.** R3 shipped this as a template-local ternary,
+    right for one consumer; the attention model (#1592) makes *Watch* a second, and two
+    copies of a ruled vocabulary drift silently until the doc is the authority for
+    neither. It lives beside the ``confidence`` field it qualifies, so the card chip and
+    the composer read one answer.
+
+    ``None`` is a first-class result, not a fallback (ADR-0028, and the doc's own rule):
+    **a midpoint with no computable span makes no how-sure claim.** Returning a word
+    unconditionally would manufacture confidence out of a missing interval — the exact
+    thing R3's form exists to avoid.
+
+    This decides *where the rule lives*, never *what it says*: the boundaries and words
+    are R3's ratified decision, and changing either is a new maintainer call.
+    """
+    if not hours or hours_lo is None or hours_hi is None or hours_hi <= hours_lo:
+        return None
+    width = (hours_hi - hours_lo) / hours
+    if width <= CONFIDENCE_FIRM_MAX:
+        return "FIRM"
+    return "ROUGH" if width <= CONFIDENCE_ROUGH_MAX else "HAZY"
+
+
 def next_need_from_forecast(forecast: dict | None) -> dict | None:
     """Map a ``forecast_payload``'s ``thirsty`` ETA to a next_need field — surfaced as
     KNOWN only where **statistically real** (a significant drying fit, so ``reachable``
@@ -409,6 +441,11 @@ def next_need_from_forecast(forecast: dict | None) -> dict | None:
             "hours_hi": thirsty.get("hours_hi"),
             "basis": "forecast (significant drying fit)",
             "confidence": "provisional",  # honest: pre-cal, the rate is provisional
+            # #1598: the R3 how-sure word, computed ONCE here so the card chip and the
+            # attention model's Watch level cannot disagree. None when no span exists.
+            "confidence_word": confidence_word(
+                thirsty["hours"], thirsty.get("hours_lo"), thirsty.get("hours_hi")
+            ),
         }
     reason = thirsty.get("reason") or "no significant drying trend yet"
     return _absent(f"forecast not reliable yet — {reason}")
