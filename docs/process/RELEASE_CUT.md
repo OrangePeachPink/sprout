@@ -26,6 +26,43 @@ bottom for every `vX.Y.Z`.
       If firmware didn't change this release, the constant still bumps at the next firmware release —
       note per-component reality in the notes instead.
 
+### 1.1 Reconcile the milestone against the tag line — both directions
+
+**The tag is the line, and the line moves.** A milestone is a plan made days earlier; the tag is the
+fact. Whatever is merged when you tag *ships in this release* no matter which milestone its issue
+carries, and whatever is still open *doesn't* no matter how confidently it was planned. Reconcile the
+record to the fact before closing the milestone — **the auto-generated notes are built from the
+milestone (§2), so a milestone that disagrees with the tree produces notes that lie about what
+shipped.** This runs at every cut, not just when something looks wrong.
+
+Both directions, and the second one is the one that gets skipped:
+
+- [ ] **Under the line → pull in.** Anything **merged or closed** that carries a *later* milestone (or
+      none) gets re-milestoned to **this** version. Its bytes are in the tag; the record must say so.
+      Late-cycle work is the usual source — an item planned for next release, built early, merged
+      before the cut.
+- [ ] **Over the line → push out.** Anything **still open** on this milestone moves to the next
+      version or a later wave, each with a one-line reason. Scope is a decision, not an accident
+      (§0) — and **milestone placement for bench / hardware / scope is the maintainer's call**, never
+      a lane's default.
+
+Find both sets by query, never by memory (ADR-0003 §11):
+
+```bash
+# under the line — closed/merged but pointed at the wrong release
+gh issue list --repo OrangePeachPink/sprout --state closed --milestone "v0.8.2" --json number,title
+gh pr list   --repo OrangePeachPink/sprout --state merged --json number,title,milestone \
+  --jq '.[] | select(.milestone.title != "v0.8.1") | "\(.number) \(.title)"'
+
+# over the line — still open on the milestone being cut
+gh issue list --repo OrangePeachPink/sprout --state open --milestone "v0.8.1" --json number,title
+```
+
+*(Ruled by the maintainer at the v0.8.1 cut, after a manual reconciliation moved 29 issues and 10 PRs
+that had been built and merged under a next-release label. It was not a labelling slip — it is what
+always happens when a release's last days go well, which is why it is a standing step rather than a
+correction.)*
+
 ## 2. Close the milestone → the draft appears
 
 - [ ] Close the milestone (Issues → Milestones → Close). The `release-draft` workflow drafts the
