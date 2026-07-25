@@ -165,6 +165,22 @@
     font-size: 12.5px; margin-left: 8px; }
   .lane .card { border-width: 1.5px; }
 
+  /* #1551 B1: the stop control is chrome, not content — quiet until you look for it,
+     and never competing with a plant for attention. It wears --st-fault only ARMED:
+     the colour is the confirm step's signal, so a resting button that already looked
+     dangerous would spend the one visual cue it has before the decision point. */
+  .dangerzone { max-width: 1180px; margin: 28px auto 40px; padding: 0 4px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .btn.danger { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 8px;
+    background: transparent; color: var(--muted); border: 1px solid var(--border);
+    cursor: pointer; }
+  .btn.danger:hover { color: var(--ink); }
+  .btn.danger.armed { background: var(--st-fault); color: #fff;
+    border-color: var(--st-fault); font-weight: 700; }
+  .btn.danger[disabled] { opacity: .7; cursor: default; }
+  .danger-note { color: var(--muted); font-size: 12.5px; }
+  .danger-note.armed { color: var(--st-fault); font-weight: 700; }
+
   /* ---- first-run / calm-empty ---- */
   .empty { max-width: 560px; margin: 8vh auto 0; text-align: center;
     background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
@@ -252,6 +268,18 @@
     <nav><a href="/trial" title="the multi-plant history candidates, on trial (#1148)">Trial</a><a href="/classic" title="the Workbench — Classic Sprout, raw numbers and all">Workbench &rarr;</a></nav>
   </header>
   <main id="main" aria-live="polite"></main>
+  <!-- #1551 B1: the no-terminal door. It lives HERE, in the page chrome outside
+       <main>, and not inside paint() — the zero state returns early, so a control
+       painted with the cards would be missing on first run, which is exactly the
+       moment someone most needs to stop an app they started to look at nothing.
+       Two-step arm-then-confirm, the semantics classic already ships (#721): a
+       destructive action is never one click, and an armed button auto-cancels so a
+       stray press never lingers hot. -->
+  <footer class="dangerzone">
+    <button class="btn danger" id="quitBtn" type="button"
+      title="Stops the local Sprout server (this app). Logging pauses until you start it again. Press once to arm, then again to confirm.">⏻ Stop server</button>
+    <span class="danger-note" id="quitNote">Shuts down the app · press twice to confirm</span>
+  </footer>
 </div>
 
 <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-label="plant detail">
@@ -605,6 +633,52 @@ function stableCards(list) {
     return ia - ib;
   });
 }
+/* #1551 B1 — the in-UI stop (ADR-0005 §4 / ADR-0014), two-step so it is never a
+   one-click kill of the running app. Deliberately the SAME semantics as classic's
+   (#721) rather than a second design: two doors onto one destructive action should
+   not behave differently depending on which surface you happened to be looking at.
+   The auto-cancel matters — an armed button left hot is a trap for the next click. */
+var _quitArmed = false, _quitTimer = null;
+function stopServer() {
+  var btn = document.getElementById("quitBtn"), note = document.getElementById("quitNote");
+  if (!btn) return;
+  if (!_quitArmed) {
+    _quitArmed = true;
+    btn.classList.add("armed");
+    btn.textContent = "⏻ Press again to confirm";
+    if (note) {
+      note.textContent = "This stops the app — press again to confirm, or wait to cancel";
+      note.classList.add("armed");
+    }
+    _quitTimer = setTimeout(function () {
+      if (!_quitArmed) return;
+      _quitArmed = false;
+      btn.classList.remove("armed");
+      btn.textContent = "⏻ Stop server";
+      if (note) {
+        note.textContent = "Shuts down the app · press twice to confirm";
+        note.classList.remove("armed");
+      }
+    }, 4000);
+    return;
+  }
+  _quitArmed = false;
+  if (_quitTimer) { clearTimeout(_quitTimer); _quitTimer = null; }
+  btn.classList.remove("armed");
+  btn.disabled = true;
+  btn.textContent = "stopping…";
+  if (note) { note.textContent = "stopping the server…"; note.classList.remove("armed"); }
+  /* stop the poll first: a refresh racing the shutdown paints a network error over
+     a deliberate action, which reads as a crash rather than as "you stopped it". */
+  if (_poll) { clearInterval(_poll); _poll = null; }
+  fetch("/quit", { method: "POST" })["catch"](function () {
+    /* the socket drops as the server exits — expected, not an error to report */
+  });
+  btn.textContent = "⏻ server stopped";
+  if (note) note.textContent = "you can close this tab";
+  document.body.style.opacity = "0.55";
+}
+
 function paint(doc) {
   var main = document.getElementById("main");
   main.innerHTML = "";
@@ -664,7 +738,15 @@ function refresh() {
   }).catch(function () { /* keep the last good paint; the next tick retries */ });
 }
 refresh();
-setInterval(refresh, 90000);
+/* #1551 B1: the handle is kept so the stop path can cancel the poll. Without it a
+   refresh fires into a server that is deliberately going away, and the resulting
+   network error paints as a crash over an action she chose. */
+var _poll = setInterval(refresh, 90000);
+/* a real <button>, so Enter and Space come for free — no key handler to get wrong. */
+(function () {
+  var b = document.getElementById("quitBtn");
+  if (b) b.addEventListener("click", stopServer);
+})();
 
 /* ---- the hero: one plant, large — ladder + the pulse (chart, histogram minimum) ---- */
 var _ctx = null, _ctxAt = 0;
