@@ -75,6 +75,19 @@ def write_lock(
         "mode": mode,
         "port": port,
         "opened_utc": now,
+        # #1554: WHICH logger, not just "a logger". At the bench (2026-07-25) an
+        # orphaned plants_logger from a DX *worktree* held COM4, and the maintainer had
+        # to identify and stop the right process by hand — while deliberately NOT
+        # touching the production Wi-Fi fleet logger. Several loggers can exist on this
+        # machine at once, so a lock that says only "pid 12345, monitor" cannot answer
+        # the one question that matters: is this the one I care about?
+        #
+        # `origin` is the invoking checkout's directory name (the worktree), which is
+        # what distinguishes them in practice — deliberately the BASENAME, not the full
+        # path: this string is rendered in-app and lands in screenshots, and a full path
+        # carries the home directory (§0.8.1's personal-info fence, same reasoning as
+        # A7's USB-id drop).
+        "origin": Path.cwd().name,
     }
     path.write_text(json.dumps(record), encoding="utf-8")
     return record
@@ -120,7 +133,12 @@ def owner_status(lock_dir: str | Path | None = None) -> dict:
     """
     lock = read_lock(lock_dir)
     if lock is None:
-        return {"present": False, "live": False, "stale": False}
+        return {
+            "present": False,
+            "live": False,
+            "stale": False,
+            "explain": "No one is holding the serial port.",
+        }
     live = pid_alive(lock.get("pid"))
     return {
         "present": True,
@@ -130,7 +148,36 @@ def owner_status(lock_dir: str | Path | None = None) -> dict:
         "mode": lock.get("mode"),
         "port": lock.get("port"),
         "opened_utc": lock.get("opened_utc"),
+        # #1554: a pre-#1554 lock has no origin — honest None, never a guess at which
+        # checkout wrote it (ADR-0028). The sentence below degrades with it.
+        "origin": lock.get("origin"),
+        "explain": explain_owner(lock, live),
     }
+
+
+def explain_owner(lock: dict, live: bool) -> str:
+    """One sentence the surface renders verbatim: who holds the port, and what to do.
+
+    The lock has always known this; it just never said it. "Port busy" sent the
+    maintainer to Task Manager to work out *which* of several loggers was hers to stop —
+    at her own bench, on a stray worktree process, while a production fleet logger was
+    also running and must not be touched."""
+    who = f"pid {lock.get('pid')}"
+    origin = lock.get("origin")
+    if origin:
+        who += f", started from {origin}"
+    mode = lock.get("mode") or "a logger"
+    port = lock.get("port") or "the serial port"
+    if not live:
+        return (
+            f"A leftover marker from {mode} ({who}) — that process is gone, so "
+            f"{port} is already free. Safe to clear."
+        )
+    return (
+        f"{mode} ({who}) is using {port} right now. Stop that one to free the port — "
+        "clearing the marker would not release it, and another opener would reset the "
+        "board."
+    )
 
 
 def clear_if_stale(lock_dir: str | Path | None = None) -> dict:
@@ -145,7 +192,10 @@ def clear_if_stale(lock_dir: str | Path | None = None) -> dict:
     if status["live"]:
         return {
             "cleared": False,
-            "reason": f"owner is live (pid {status.get('pid')}, {status.get('mode')})",
+            # #1554: the refusal now NAMES the owner and says what to do instead —
+            # this is the message the bench case needed. Refusing stays correct: the
+            # port is genuinely held, and clearing the marker would not free it.
+            "reason": status.get("explain"),
         }
     clear_lock(lock_dir)
     return {"cleared": True, "reason": "stale lock removed"}

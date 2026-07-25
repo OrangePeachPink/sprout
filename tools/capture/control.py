@@ -200,10 +200,12 @@ class CaptureController:
                 # exclusive open is the hard backstop if a lock is missing.
                 owner = serial_lock.current_owner(self._lock_dir)
                 if owner:
-                    raise ControlError(
-                        f"port held by {owner.get('mode')} (pid {owner.get('pid')}) "
-                        "— stop the monitor first"
-                    )
+                    # #1554: refusing is right; refusing *anonymously* was the problem.
+                    # "stop the monitor first" is unactionable when several loggers run
+                    # on one machine — at the bench it was a stray worktree process, and
+                    # the production fleet logger was the one that must NOT be stopped.
+                    # The lock knows which; it now says so, in one sentence.
+                    raise ControlError(serial_lock.explain_owner(owner, live=True))
             # A human subject ('open bench') is accepted: the slug ('open_bench') is the
             # folder/CSV-header-safe token; the title keeps the human form for display.
             subject_slug = _slugify(subject, "subject")
