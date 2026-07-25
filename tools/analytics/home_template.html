@@ -179,6 +179,7 @@
   .hardware .hw-inspect { color: var(--st-fault); font-weight: 700; }
   .hardware .hw-watch { color: var(--st-due); font-weight: 600; }
   .hardware .hw-ids { color: var(--ink); }
+  .hardware .hw-unknown { color: var(--muted); }
   .hardware a { color: var(--ink); }
 
   /* #1551 B1: the stop control is chrome, not content — quiet until you look for it,
@@ -813,14 +814,15 @@ var HW_NAME_CAP = 4;   /* how many ids the strip will name before it counts inst
 function paintHardware(sensors) {
   var box = document.getElementById("hardware");
   if (!box) return;
-  var inspect = [], watch = [], ok = 0;
+  var inspect = [], watch = [], ok = 0, unknown = 0;
   for (var i = 0; i < (sensors || []).length; i++) {
     var h = sensors[i] || {};
     if (h.status === "inspect") inspect.push(h.sensor_id || "?");
     else if (h.status === "watch") watch.push(h.sensor_id || "?");
+    else if (h.status === "unknown") unknown++;
     else ok++;
   }
-  if (!(inspect.length + watch.length + ok)) { box.hidden = true; return; }
+  if (!(inspect.length + watch.length + ok + unknown)) { box.hidden = true; return; }
   var bits = [];
   /* worst first: what needs a screwdriver outranks what needs an eye.
      NAMES ONLY FOR `inspect`, and capped. Measured against the live greenhouse, the raw
@@ -838,6 +840,13 @@ function paintHardware(sensors) {
   if (watch.length)
     bits.push('<span class="hw-watch">' + watch.length + " to watch</span>");
   if (ok) bits.push(ok + " fine");
+  /* #1626/#1632: no soil readings -> NO VERDICT, counted and never folded into "fine".
+     Without this branch `else ok++` calls three non-soil instruments healthy, which
+     trades "unknown rendered as a mild claim" for "unknown rendered as a clean bill of
+     health" — strictly worse. Muted, not a warning colour: an absence is calm. It sits
+     AFTER `fine` because both are counts, so the verdict-bearing number leads and the
+     caveat reads as the footnote it is. (Design's copy, #1626 — verbatim.) */
+  if (unknown) bits.push('<span class="hw-unknown">' + unknown + " unknown</span>");
   /* the DETAIL still lives on the Workbench — this is a promotion, not a move. */
   box.innerHTML = "<b>Sensors</b> · " + bits.join(" · ") +
     ' · <a href="/classic#diagnostics">details on the Workbench &rarr;</a>';
