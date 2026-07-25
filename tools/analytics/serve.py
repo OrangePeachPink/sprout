@@ -1448,6 +1448,39 @@ def _port_in_use(host: str, port: int) -> bool:
         return probe.connect_ex((host, port)) == 0
 
 
+def _looks_like_sprout(url: str) -> bool:
+    """Does whatever holds this port answer like a Sprout server? (#1555)
+
+    Probes a cheap, read-only Sprout route (GETs are ungated, #1468). We say "Sprout is
+    already running" a lot; before this the claim rested on *something* accepting a TCP
+    connection, which is equally true of a stray dev server on 8765. Telling an operator
+    their Sprout is running when it isn't sends them hunting for a window that does not
+    exist — so the claim now has evidence behind it, and the honest fallback ("something
+    else is using this port") is a different sentence with a different fix."""
+    with contextlib.suppress(Exception):
+        req = urllib.request.Request(url + "monitor/status")
+        with urllib.request.urlopen(req, timeout=1.5) as resp:
+            return resp.status == 200 and "state" in json.loads(resp.read() or b"{}")
+    return False
+
+
+def _port_busy_advice(url: str, port: int) -> list[str]:
+    """What to actually DO about a busy port (#1555) — named separately because the
+    right advice differs by who holds it, and the old message gave one answer for both
+    cases and never mentioned the recipe that exists to fix the common one."""
+    if _looks_like_sprout(url):
+        return [
+            f"Sprout is already running at {url}",
+            '  Open that tab, or stop it ("Stop server" in the dashboard).',
+            "  To take over the port with current code:  just restart",
+        ]
+    return [
+        f"Port {port} is in use, but whatever holds it is not answering as Sprout.",
+        "  Another program has the port (or a Sprout that is wedged mid-shutdown).",
+        f"  Free it, or serve elsewhere:  just serve -p {port + 1}",
+    ]
+
+
 def _stop_existing(url: str, host: str, port: int) -> bool:
     """Ask a Sprout server already on the port to shut down (its #96 /quit endpoint),
     then wait for the port to free. Returns True if it released the port. Only stops a
@@ -1594,6 +1627,10 @@ def main(argv: list[str] | None = None) -> int:
     # launcher default) is single-instance - open the existing tab and bow out, so a
     # second double-click never spawns a second server or window (#151 AC1/AC2/AC4);
     # otherwise say so + exit non-zero.
+    # #1555: announce the port BEFORE anything can fail on it. The old order printed the
+    # URL only after a successful bind, so the one case where you most need to know the
+    # port Sprout wanted — it couldn't get it — was the case that never told you.
+    print(f"Sprout: starting on {url}")
     if _port_in_use(args.host, args.port):
         if args.restart and _stop_existing(url, args.host, args.port):
             pass  # took over the port; fall through to bind our own
@@ -1603,11 +1640,8 @@ def main(argv: list[str] | None = None) -> int:
                 webbrowser.open(url)
             return 0  # single-instance: exactly one server, no second window
         else:
-            print(f"Sprout is already running at {url}")
-            print(
-                '  Open that tab, or stop it first ("Stop server" in the dashboard, '
-                "or close its window)."
-            )
+            for line in _port_busy_advice(url, args.port):
+                print(line)
             return 1
 
     # Explicit CLI inputs are pinned; otherwise leave None so each request
@@ -1627,7 +1661,8 @@ def main(argv: list[str] | None = None) -> int:
                 if args.open:
                     webbrowser.open(url)
                 return 0
-            print(f"Sprout is already running at {url} - stop it first.")
+            for line in _port_busy_advice(url, args.port):  # #1555, same honest split
+                print(line)
             return 1
         raise
     src = DashboardHandler.inputs or "logs/ + B8 archive (auto-discovered each request)"
