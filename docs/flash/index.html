@@ -88,7 +88,13 @@
   <p class="lede">Get Sprout's firmware onto your ESP32 straight from this page — plug in USB, click
     <strong>Install</strong>. No Arduino IDE, no toolchain, no command line.</p>
 
-  <div class="install">
+  <!--
+    #1648: stable serves the RELEASE's signed bytes. If no release carries flasher
+    assets, the Pages job publishes NO stable manifest (fail-closed) — so this button
+    stays hidden rather than offering an installer that 404s on click. Same rule the
+    alpha gate has always followed: never offer a channel that isn't published.
+  -->
+  <div class="install" id="stable-gate" hidden>
     <esp-web-install-button manifest="./manifest.json">
       <button class="activate" slot="activate">Install Sprout</button>
       <span slot="unsupported" class="unsupported">
@@ -102,6 +108,12 @@
       </span>
     </esp-web-install-button>
   </div>
+  <p class="unsupported" id="stable-absent">
+    No released firmware is available to flash from this page right now. Nothing is broken on
+    your end — a stable build hasn't been published yet. You can still build and flash from
+    source: see
+    <a href="https://github.com/OrangePeachPink/sprout/blob/main/docs/FLASHING.md">FLASHING.md</a>.
+  </p>
 
   <!--
     #1334 release channels. STABLE is the default and the only thing on offer without a
@@ -124,16 +136,12 @@
         <code>main</code> built most recently — it has not been through a release cut, and it may
         misbehave in ways a stable build won't.</p>
       <!--
-        #1599 AC4 — honesty fence, and it comes OUT the moment B1 lands. Until stable
-        points at the signed release assets, both channels are built from `main` by the
-        same Pages job: same bytes, two names. A stable channel quietly serving an
-        unreleased build is the falsehood-family shape on the delivery surface, so it is
-        stated on the page rather than left for someone to discover from a sha256.
+        The #1599 AC4 caveat ("right now these are the same build") stood here and came
+        out with #1648, on the condition it named for itself: stable now serves the
+        signed assets of the latest release, alpha serves current `main`. Two sources,
+        two sets of bytes — the claim it warned about is no longer true, so the warning
+        goes rather than lingering as a stale note.
       -->
-      <p class="muted" style="margin:0 0 .4rem"><strong>Right now these are the same
-        build.</strong> Until the next release cut wires stable to its signed release
-        assets, both channels are built from <code>main</code> — so "stable" here is not
-        yet a cut release. Flashing either gets you the same bytes.</p>
       <dl class="prov">
         <dt>Commit</dt><dd id="a-git">—</dd>
         <dt>Built</dt><dd id="a-built">—</dd>
@@ -196,8 +204,14 @@
         set("p-sha", p.sha256);
         set("p-bytes", p.bytes != null ? `${p.bytes.toLocaleString()} bytes` : null);
         if (m.version || p.git || p.sha256) document.getElementById("provenance").hidden = false;
+        // #1648: the Install button is revealed only once the stable manifest is proven
+        // fetchable. A button that 404s teaches the reader the page lies — the exact
+        // failure the alpha gate was built to avoid, applied symmetrically to stable.
+        document.getElementById("stable-gate").hidden = false;
+        document.getElementById("stable-absent").hidden = true;
       })
-      .catch(() => { /* no manifest yet (e.g. previewing the page alone) — just hide the panel */ });
+      .catch(() => { /* no stable manifest published — the button stays hidden and the
+                        "not available" note stands in for it (it is the default state) */ });
 
     // #1334: reveal the alpha channel ONLY if an alpha manifest is actually published.
     // A visible opt-in for a channel that 404s would be worse than no channel at all —

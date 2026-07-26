@@ -30,7 +30,12 @@ def _load(path: str) -> dict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def combine(primary: str, extra: list[str], built_utc: str | None = None) -> dict:
+def combine(
+    primary: str,
+    extra: list[str],
+    built_utc: str | None = None,
+    parts_prefix: str = "",
+) -> dict:
     base = _load(primary)
     prov_top = dict(base.get("provenance", {}))
     if built_utc:
@@ -64,7 +69,19 @@ def combine(primary: str, extra: list[str], built_utc: str | None = None) -> dic
                 continue
             seen.add(fam)
             # per-board provenance rides its build entry (post-connect display).
-            out["builds"].append({**build, "provenance": prov})
+            entry = {**build, "provenance": prov}
+            if parts_prefix:
+                # #1648: ESP Web Tools resolves `parts[].path` RELATIVE TO THE MANIFEST
+                # URL, and factory_bin writes a bare basename. Both channels emit the
+                # same filenames, so serving different bytes per channel means the two
+                # payloads live in different directories while both manifests stay at
+                # the URLs the page fetches (./manifest.json, ./manifest-alpha.json).
+                # The prefix is what re-points a manifest at its own payload directory.
+                entry["parts"] = [
+                    {**p, "path": f"{parts_prefix}{p['path']}"}
+                    for p in build.get("parts", [])
+                ]
+            out["builds"].append(entry)
     return out
 
 
@@ -86,9 +103,20 @@ def main(argv: list[str] | None = None) -> int:
         default="",
         help="publish timestamp to stamp into provenance.built_utc (#1599)",
     )
+    ap.add_argument(
+        "--parts-prefix",
+        default="",
+        help="prefix each parts[].path with this (e.g. 'stable/') so the manifest "
+        "points at its own channel's payload directory (#1648)",
+    )
     a = ap.parse_args(argv)
 
-    combined = combine(a.primary, a.extra, built_utc=a.built_utc or None)
+    combined = combine(
+        a.primary,
+        a.extra,
+        built_utc=a.built_utc or None,
+        parts_prefix=a.parts_prefix,
+    )
     if not combined["builds"]:
         print("error: no builds in any input manifest", file=sys.stderr)
         return 1
