@@ -118,8 +118,10 @@ index.
 
 ## A look
 
-**Today — the live dashboard.** One command (`just start`) serves this: a functional **Monitor · Capture ·
-Lab** view — raw ADC and the calibrated band for every probe, plus the calibration ladder. Plain and
+**Today — the live dashboard.** One command (`just start`) serves this: **Monitor · Capture · Lab ·
+Trial · Plants & Sensors · Diagnostics & Logs** — raw ADC and the calibrated band for every probe, plus
+the calibration ladder. This is *Classic Sprout*, and ADR-0033 is explicit that it is scaffolding with a
+demolition date: Home — the glanceable per-plant card grid — is the destination surface. Plain and
 unpolished on purpose, and it shows exactly what it reads: a probe sitting in open air or in a glass of water
 is called out as an **instrument condition**, not handed a plant's mood — those aren't soil readings, and the
 seven moods are reserved for probes actually in a pot.
@@ -248,12 +250,12 @@ firmware C formatter (clang-format) runs in the gate on changed lines, pinned in
 
 ## Status
 
-**Monitoring is live.** As of the v0.7.0 go-live, eight plants report in soil over Wi-Fi or serial, each
-session saved to the catalog. **Watering is deliberately gated:** the firmware ships a **manual
-operator-commanded bounded pump pulse** (`!water` / `!stop`), but the relay path is **bench-unverified**
-(issue #191) and autonomous watering waits on real per-probe calibration (issue #94 — the safety-first
-order: *make watering correct before it's possible*). The firmware roadmap and current standing live in the
-[handoff notes](docs/HANDOFF_2026-06-23.md).
+**Monitoring is live.** Since the wave-1 go-live (2026-07-04), eight plants report in soil over Wi-Fi
+across two boards, each session saved to the catalog. **Watering is deliberately gated:** the firmware
+ships a **manual operator-commanded bounded pump pulse** (`!water` / `!stop`), and the safety order is
+*make watering correct before it's possible* — per-probe calibration (#170) and fail-safe actuator-off
+(#93) are **done**; the remaining gate is bench-verifying the relay path on real hardware (#191), which
+autonomous watering (#94) waits on. Current standing lives in [`docs/STATUS.md`](docs/STATUS.md).
 
 ## Contributing
 
