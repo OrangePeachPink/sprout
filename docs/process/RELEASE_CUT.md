@@ -20,8 +20,13 @@ bottom for every `vX.Y.Z`.
 > **The lesson of the v0.8.1 cut: every place we declare a *version* is guarded, and every place we
 > declare a *date* is not.** `version-sync-guard` (#1407) checks the version sites against canonical
 > `pyproject.toml` and reports green — while the JSON-LD's `dateModified` sat two releases stale and
-> `CITATION.cff` had no `date-released` at all. A green guard is evidence about versions only. **Walk
-> the date rows by eye until #1633/#1637 teach the guard to check them.**
+> `CITATION.cff` had no `date-released` at all. A green guard is evidence about versions only.
+>
+> **Partly closed since.** `uv.lock` is now a guarded version site (#1633), and `date-released` is now
+> checked for presence, format, and not-in-the-future (#1637). What the guard still *cannot* know is
+> whether a date matches the release that actually published — that needs the API, which a pre-commit
+> hook has no business calling. **Walk the `dateModified` row by eye, and treat a green guard as
+> evidence the date is well-formed, never that it is right.**
 
 - [ ] `pyproject.toml` → `version` = the release version. This is the **single product version line**
       (ADR-0009 §1) — everything else syncs to it (§3). *(Missed at the v0.7.2 cut — #1080; hence this
@@ -32,21 +37,31 @@ bottom for every `vX.Y.Z`.
       If firmware didn't change this release, the constant still bumps at the next firmware release —
       note per-component reality in the notes instead.
 - [ ] `uv.lock` → the `sprout` package entry matches. **Fix by regenerating (`just lock`), never by
-      hand** — it is generated state. The guard does not look here (#1633), and a stale lock is the
+      hand** — it is generated state. Guarded since #1633; before that a stale lock was the
       `uv run --frozen` trap the justfile calls *"a brutal, causeless first-PR trap"* (#254): it lands
       on whoever runs the next command, with an error naming none of this.
 
-**The date rows — unguarded, so check them deliberately:**
+**The date rows — check them deliberately; the guard only proves they are well-formed:**
 
-- [ ] `CITATION.cff` → `date-released` = the cut date. Added at the v0.8.1 cut; it is what makes a
+- [ ] `CITATION.cff` → `date-released` = the cut date, **in UTC** (`date -u +%F`). It is what makes a
       citation resolvable to a point in time, and GitHub's "Cite this repository" widget renders it
       (#1637).
 - [ ] `docs/index.html` → the JSON-LD `dateModified` = the cut date. **Found two releases stale at the
       v0.8.1 cut** while `version` beside it was correct — machine-readable, publicly consumed, and
       silently wrong. (`datePublished` is first publication and does **not** move.)
 
-*Both dates are a prediction until the publish click. Same-day is the norm and a date stale by hours
-beats an absent or two-release-old one — set them here, don't defer.*
+*Both dates are a prediction until the publish click. Set them here anyway — a date stale by hours
+beats an absent or two-release-old one — but **write them in UTC**, and the reason is not pedantry:*
+
+> **v0.8.1 got this wrong on the first try.** `date-released` was set to `2026-07-25` at §1 and the
+> release published at `2026-07-26T01:20:53Z`. Nothing went slowly; the cut simply ran on a US evening,
+> which is already the next day in UTC. An evening cut is the normal case here, so "same-day" in local
+> time is a **whole calendar day** wrong in the timestamp everyone else reads. `date -u +%F` costs
+> nothing and removes the entire class.
+
+*If a cut starts before midnight UTC and publishes after it, the date written at §1 will be a day
+early no matter how carefully it was typed. That is the one case worth a post-publish correction —
+the guard will not catch it, because a past date is not suspicious.*
 
 ### 1.1 Reconcile the milestone against the tag line — both directions
 

@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[2]
@@ -116,6 +117,52 @@ def canonical_version(repo: Path = _REPO) -> tuple[str | None, Finding | None]:
     return (v, None) if v else (None, Finding(rel, err or "unreadable"))
 
 
+_DATE_RELEASED = re.compile(r'(?m)^date-released:\s*"?(\d{4}-\d{2}-\d{2})"?')
+
+
+def check_release_date(repo: Path = _REPO, today: date | None = None) -> Finding | None:
+    """#1637: the citation must say WHEN the version it claims existed.
+
+    `date-released` is what anchors a citation to a point in time, and GitHub's "Cite
+    this repository" widget renders straight from this file. A version with no date
+    asserts "Sprout 0.8.1" with nothing saying when that was.
+
+    Two failures are checkable offline, and both have already happened here:
+
+    * **absent** — every release before v0.8.1 shipped without the field at all.
+    * **in the future** — the date is written at RELEASE_CUT §1, BEFORE the tag exists,
+      so it is a prediction until the publish click. v0.8.1 was set to 2026-07-25 and
+      published 2026-07-26T01:20:53Z: a US-evening cut lands on the next UTC day. The
+      field was wrong on its very first outing, by exactly that mechanism.
+
+    What is NOT checkable here is "does it match the published release" — that needs
+    the API, which a pre-commit hook has no business calling. That check belongs at
+    cut time (#1649). This guard catches the two shapes that need no network.
+    """
+    text = _read(repo, "CITATION.cff")
+    if text is None:
+        return None  # the MISSING-site check above already owns this
+    m = _DATE_RELEASED.search(text)
+    if not m:
+        return Finding(
+            "CITATION.cff",
+            "no date-released — the citation claims a version with no date. Add "
+            'date-released: "YYYY-MM-DD" (RELEASE_CUT §1, in UTC).',
+        )
+    try:
+        released = date.fromisoformat(m.group(1))
+    except ValueError:
+        return Finding("CITATION.cff", f"date-released {m.group(1)!r} is not a date.")
+    now = today or datetime.now(timezone.utc).date()
+    if released > now:
+        return Finding(
+            f"CITATION.cff:{_line_of(text, _DATE_RELEASED)}",
+            f"date-released is {released} — in the FUTURE (today is {now} UTC). The "
+            "citation would date the release before it exists.",
+        )
+    return None
+
+
 def check(repo: Path = _REPO) -> list[Finding]:
     canon, bad = canonical_version(repo)
     if bad:
@@ -134,6 +181,9 @@ def check(repo: Path = _REPO) -> list[Finding]:
             findings.append(
                 Finding(f"{rel}:{ln}", f"has {v!r}, canonical is {canon!r}")
             )
+    stale_date = check_release_date(repo)
+    if stale_date:
+        findings.append(stale_date)
     return findings
 
 
