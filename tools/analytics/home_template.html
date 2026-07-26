@@ -132,6 +132,25 @@
   .glug:hover, .glug:focus-visible { color: var(--ink); border-color: var(--muted); }
   .glug:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
   .hero .glug { font-size: 12.5px; padding: 5px 13px; }
+  /* #1643 the amount opener + cup chips. Chrome register like .glug — an affordance,
+     never a state. Deliberately SEPARATE from the glug button rather than a mode on
+     it: the plain watering must stay one tap, so the no-amount path is the existing
+     control, physically unchanged. This sits beside it and is skipped by not touching
+     it. An amount sometimes recorded beats a field that discourages logging. */
+  .glugmore { display: inline-flex; align-items: center; margin-left: 4px;
+    font-size: 11.5px; font-weight: 600; color: var(--muted); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px;
+    cursor: pointer; user-select: none; white-space: nowrap; }
+  .glugmore:hover, .glugmore:focus-visible { color: var(--ink); border-color: var(--muted); }
+  .glugmore:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .cups { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px;
+    align-items: center; }
+  .cup { font-size: 11px; font-weight: 600; color: var(--muted); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px;
+    cursor: pointer; user-select: none; white-space: nowrap; }
+  .cup:hover, .cup:focus-visible { color: var(--ink); border-color: var(--muted); }
+  .cup:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .cupunit { font-size: 10.5px; letter-spacing: .04em; color: var(--muted); }
   /* #1203 the verdict pair — an UNCONFIRMED detection asks; it never asserts.
      Chrome register on purpose: these are affordances, not states. Nothing here
      touches the frame, the mood, or the voice line — an unreviewed detection is
@@ -573,8 +592,49 @@ function waterHTML(card) {
       esc((card.identity || {}).name || card.plant_id) + '">' +
       '<svg viewBox="0 0 10 12" aria-hidden="true"><path d="M5 0.5 C8 4 9.5 6 9.5 8 ' +
       'a4.5 4.5 0 0 1 -9 0 C0.5 6 2 4 5 0.5 Z" fill="currentColor"/></svg>' +
-      "Glug glug</span>";
+      "Glug glug</span>" +
+      /* #1643: the optional amount. A second, quieter control — tapping it reveals the
+         cup chips; ignoring it leaves the one-tap watering exactly as it was. */
+      '<span class="glugmore" role="button" tabindex="0" data-pid="' +
+      esc(card.plant_id) + '" aria-label="log a watering with an amount for ' +
+      esc((card.identity || {}).name || card.plant_id) + '">+ amount</span>';
   return h;
+}
+
+/* #1643 — the amounts she actually measures with. Every one of the 32 doses in the
+   experiment corpus was recorded as a cup fraction from a 2-cup kitchen cup, so the
+   SURFACE speaks cups; a free-text mL box would be a fidelity downgrade and would not
+   join cleanly to the existing corpus. mL is the canonical unit on the wire and in the
+   journal — one conversion, here at the boundary, never scattered. */
+var CUP_ML = 236.588;
+var CUPS = [["⅛", 0.125], ["¼", 0.25], ["⅓", 1 / 3], ["½", 0.5],
+            ["¾", 0.75], ["1", 1], ["1½", 1.5], ["2", 2]];
+function cupsToMl(c) { return Math.round(c * CUP_ML * 10) / 10; }
+
+/* #1643: swap the "+ amount" opener for the chip row, in place. Nothing is posted
+   until she picks one — opening this is not a watering. */
+function glugAmountOpen(el) {
+  var pid = el.dataset.pid;
+  var row = document.createElement("span");
+  row.className = "cups";
+  for (var i = 0; i < CUPS.length; i++) {
+    var b = document.createElement("span");
+    b.className = "cup";
+    b.setAttribute("role", "button");
+    b.setAttribute("tabindex", "0");
+    b.dataset.pid = pid;
+    b.dataset.ml = String(cupsToMl(CUPS[i][1]));
+    b.setAttribute("aria-label", CUPS[i][0] + " cup");
+    b.textContent = CUPS[i][0];
+    row.appendChild(b);
+  }
+  var u = document.createElement("span");
+  u.className = "cupunit";
+  u.textContent = "cups";
+  row.appendChild(u);
+  el.parentNode.replaceChild(row, el);
+  var first = row.querySelector(".cup");
+  if (first) first.focus();
 }
 
 /* #1137: post the manual watering, calm states all the way — never blocks. */
@@ -584,10 +644,15 @@ function glugPost(el) {
   var label = el.lastChild;
   var was = label.nodeValue;
   label.nodeValue = "logging…";
+  /* #1643: the key is OMITTED when she didn't choose an amount — never 0, never a
+     default. A row with no amount must stay distinguishable from a real 0 mL pour, or
+     the corpus gains rows that look like measurements and aren't (ADR-0028). */
+  var body = { plant_id: el.dataset.pid };
+  if (el.dataset.ml) body.ml = parseFloat(el.dataset.ml);
   fetch("/watering/log", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ plant_id: el.dataset.pid })
+    body: JSON.stringify(body)
   }).then(function (r) { return r.json(); }).then(function (doc) {
     if (doc && doc.ok) { _glugged.add(el.dataset.pid); refresh(); }
     else { label.nodeValue = "couldn’t save"; delete el.dataset.busy; }
@@ -616,12 +681,20 @@ function verdictPost(el) {
 document.addEventListener("click", function (e) {
   var g = e.target.closest ? e.target.closest(".glug") : null;
   if (g) { e.stopPropagation(); e.preventDefault(); glugPost(g); return; }
+  var m = e.target.closest ? e.target.closest(".glugmore") : null;
+  if (m) { e.stopPropagation(); e.preventDefault(); glugAmountOpen(m); return; }
+  var c = e.target.closest ? e.target.closest(".cup") : null;
+  if (c) { e.stopPropagation(); e.preventDefault(); glugPost(c); return; }
   var v = e.target.closest ? e.target.closest(".vbtn") : null;
   if (v) { e.stopPropagation(); e.preventDefault(); verdictPost(v); }
 }, true);
 document.addEventListener("keydown", function (e) {
   if (!(e.key === "Enter" || e.key === " ") || !e.target.classList) return;
   if (e.target.classList.contains("glug")) {
+    e.stopPropagation(); e.preventDefault(); glugPost(e.target);
+  } else if (e.target.classList.contains("glugmore")) {
+    e.stopPropagation(); e.preventDefault(); glugAmountOpen(e.target);
+  } else if (e.target.classList.contains("cup")) {
     e.stopPropagation(); e.preventDefault(); glugPost(e.target);
   } else if (e.target.classList.contains("vbtn")) {
     e.stopPropagation(); e.preventDefault(); verdictPost(e.target);
