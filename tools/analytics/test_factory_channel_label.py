@@ -85,3 +85,31 @@ def test_a_tag_that_disagrees_with_config_still_labels_from_the_tag():
     ch, label = fb.channel_label("0.8.0", "v0.8.1", dirty=False)
     assert ch == "stable"
     assert label == "0.8.1"
+
+
+def test_a_release_build_without_its_tag_is_alpha_which_is_why_the_signer_creates_it():
+    """#1630 — the pure half of a whole-pipeline defect, pinned here so the reason
+    survives the workflow line that fixes it.
+
+    `channel_label` is correct and this test asserts it stays correct: no exact tag
+    means alpha, always (#1399 — stable is not a claim a build makes about itself).
+
+    The defect was in what the SIGNER handed it. Publish creates the tag, so at signing
+    time the checkout is a commit with no tag pointing at it; `git describe
+    --exact-match` found nothing and every release build labelled itself
+    `<version>-alpha`. The §5.1 dry-run walk demonstrated it and could not flag it — a
+    throwaway tag is *legitimately* alpha, so the walk is blind to this by construction.
+
+    The fix is upstream (sign-release.yml creates the release tag locally on the proven
+    target commit before building). This pins both halves of the contract so neither can
+    drift: without a tag the label MUST stay alpha, and with one it MUST be the bare
+    release version.
+    """
+    version = "0.8.1"
+    # what the signer used to hand it: a commit, no tag
+    channel, label = fb.channel_label(version, None, dirty=False)
+    assert (channel, label) == ("alpha", "0.8.1-alpha")
+
+    # what it hands it now, after the workflow tags the proven target commit
+    channel, label = fb.channel_label(version, f"v{version}", dirty=False)
+    assert (channel, label) == ("stable", "0.8.1")

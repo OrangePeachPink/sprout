@@ -206,6 +206,19 @@ empty release, and it cannot be fixed after — only re-cut.** Never skip to §6
       `gh release view vX.Y.Z --json isDraft,assets -q '"draft=\(.isDraft) assets=\(.assets|length)"'`
       must print `draft=true` and a **non-zero** asset count (the per-board bins + their `.sig` + the
       `SHA256SUMS`). **`assets=0` means STOP** — the signer failed or was never dispatched; do not publish.
+- [ ] **VERIFY the manifest is not labelled `-alpha` — the other thing that cannot be fixed after
+      publish** (#1630):
+
+          gh release download vX.Y.Z --repo OrangePeachPink/sprout \
+            --pattern 'manifest*.json' --dir /tmp/relcheck --clobber
+          jq -r '.version, .provenance.channel' /tmp/relcheck/manifest*.json
+
+      must print the bare version and `stable` — **`X.Y.Z-alpha` or `channel: alpha` means STOP.**
+      A release build labels itself from the tag it is signed for (#1399); if it says alpha, the
+      build could not see its tag and the manifest is describing an unreleased build. Publishing
+      seals it: the fleet pulls that manifest and the flasher reads it, and neither can be corrected
+      in place — only re-cut under a new tag. *(The §5.1 dry-run walk cannot catch this: a throwaway
+      tag is legitimately alpha, so this gate exists precisely because the walk is blind to it.)*
 - [ ] **Record the receipt** on the release-cut evidence: the asset list and the `SHA256SUMS`, so the
       flasher's stable channel (#1334) has verifiable bytes to point at.
 

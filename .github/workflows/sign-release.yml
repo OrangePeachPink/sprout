@@ -132,6 +132,35 @@ jobs:
           fi
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
+      # #1630: give the build the tag it is building FOR, or it labels itself alpha.
+      #
+      # factory_bin.py decides stable-vs-alpha with `git describe --tags --exact-match`
+      # (#1399: stable "is not a claim a build gets to make about itself"). But publish
+      # creates the tag — at signing time the checkout is a COMMIT and no tag points at
+      # it, so describe finds nothing and EVERY release build labels itself
+      # `<version>-alpha`. The dry-run walk proved it: tag v0.0.0-cuttest, config.h
+      # 0.8.0, manifest `0.8.0-alpha` — the tag was never consulted, because it did not
+      # exist. A real v0.8.1 cut would have published a manifest reading `0.8.1-alpha`,
+      # immutably, to the surface the fleet pulls and the flasher reads.
+      #
+      # Creating the tag LOCALLY (never pushed) asserts exactly what publish is about to
+      # assert: this commit is that release. It is verified as the draft's target by the
+      # step above, so the claim is proven before it is made, not assumed. #1399's rule
+      # is untouched — the build still refuses to call itself stable without an exact
+      # tag; it simply now HAS the one it is being built for.
+      - name: Tag the checkout as the release it is being signed for
+        if: steps.rel.outputs.skip != 'true'
+        env:
+          TAG: ${{ steps.rel.outputs.tag }}
+        run: |
+          git tag -f "$TAG" HEAD
+          described="$(git describe --tags --exact-match 2>/dev/null || true)"
+          [ "$described" = "$TAG" ] || {
+            echo "::error title=Tag not visible to the build::created '$TAG' but git describe returned '${described:-<none>}'. The build would label itself alpha (#1630)."
+            exit 1
+          }
+          echo "build will label itself: $TAG"
+
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         if: steps.rel.outputs.skip != 'true'
         with:
