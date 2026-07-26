@@ -1116,6 +1116,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 from tools.analytics.registry_model import load_registry_model
                 from tools.analytics.watering_log import (
                     latest_by_plant,  # #1137 manual waterings
+                    open_sessions_by_plant,  # #1671 the in-progress session
                 )
 
                 # The Home reads the SAME served context as the Workbench (one truth,
@@ -1145,6 +1146,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     # #1137: a logged manual watering outranks the detected heuristic
                     # for last_watered. Absent journal -> {} -> detected, as before.
                     manual_by_plant=latest_by_plant(),
+                    # #1671: many pours, one watering — the card tallies the session
+                    # she is standing in front of so a top-up is informed.
+                    sessions_by_plant=open_sessions_by_plant(),
                 )
                 # #875 Q3: the normal thirst grid stays readable; off-normal readings
                 # (air-dry / fault / no-signal) go to their own exceptions lane so the

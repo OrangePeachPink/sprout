@@ -492,6 +492,7 @@ def cards_from_context(
     mood_map: dict,
     voice_pool: dict,
     manual_by_plant: dict | None = None,
+    sessions_by_plant: dict | None = None,
     now: datetime | None = None,
 ) -> list[dict]:
     """Compose the Home's card list from a built dashboard ``context`` (dashboard.py) +
@@ -535,6 +536,10 @@ def cards_from_context(
         # the Home's lead signal: the calibrated dryness index (0=wettest..1=driest), a
         # LABELLED index for "who needs water first" — never the raw value.
         card["urgency"] = s.get("dryness")
+        # #1671: the session she is standing in front of — pours so far and the running
+        # total, so a top-up is an informed "another quarter" rather than a fresh guess.
+        # Absent (None) once the session closes; the ordinary last-watered line resumes.
+        card["watering_session"] = (sessions_by_plant or {}).get(pid)
         # #875 hero: the JOIN KEY to the served context (trajectory dataset id) so
         # the pulse chart can find its series even when no plant is registered
         # (plant_id None). Plumbing, never rendered.
@@ -562,6 +567,8 @@ def cards_from_context(
         )
         card["urgency"] = None  # a not-probed plant has no urgency to sort on
         card["sensor_id"] = None  # not probed — no series to join (first-class-absent)
+        # #1671: a sensorless plant still gets watered, and still gets a tally.
+        card["watering_session"] = (sessions_by_plant or {}).get(pid)
         # #1584: a sensorless plant has no series, so no trajectory to know. Absent by
         # design rather than unknown — the composer already returns no attention state
         # for these at all (ADR-0028).

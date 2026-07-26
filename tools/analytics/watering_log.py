@@ -220,3 +220,142 @@ def precision_so_far(detected_ids: list[str], path: str | Path | None = None) ->
         # None, not 0.0 or 1.0, when nothing has been ruled yet — honest absence
         "precision": (confirmed / ruled) if ruled else None,
     }
+
+
+# --------------------------------------------------------------------------- #
+# #1671 — the watering SESSION: many pours, one watering
+# --------------------------------------------------------------------------- #
+# The glug was built one-tap-one-event; the domain turned out to be
+# one-session-many-pours. How she actually waters a slow pot: carry over half a cup,
+# log it, watch, and two minutes later decide it needs a quarter more. The corpus
+# already records that shape three times over — p02's 1.5c then 0.5c thirty-six
+# minutes apart ("cumulative ~2c"), p01's "0.75cup (0.5+slow0.25)", p11's "3/4c soil
+# + 1/8c core" — and the 07-19 packet states the rule outright: *"waterings are
+# SESSIONS, not per-plant scatter."*
+#
+# Every pour stays its OWN journal row. That is deliberate: the row is what actually
+# happened, at the time it happened, and a session is a READING of those rows rather
+# than a thing the store mutates. Nothing is ever rewritten to accumulate a total —
+# an append-only journal that edits itself would stop being evidence.
+#
+# The clustering gap is the analysis layer's, not a new number: `segment_classifier.
+# PASS_GAP_MIN` = 75 min, calibrated against the maintainer's own four session-truths
+# (4/4). Imported rather than restated so the journal and the classifier can never
+# disagree about what one watering is.
+from tools.analytics.segment_classifier import PASS_GAP_MIN  # noqa: E402
+
+# The card's tally is for the session she is standing in front of. Past sessions are
+# history and roll up under `last_watered` as they always did.
+SESSION_GAP_MIN = PASS_GAP_MIN
+
+
+def _parse_ts(value: object) -> datetime | None:
+    try:
+        return datetime.strptime(str(value), "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=timezone.utc
+        )
+    except (ValueError, TypeError):
+        return None
+
+
+def sessions_for_plant(
+    plant_id: str,
+    *,
+    path: str | Path | None = None,
+    gap_min: float = SESSION_GAP_MIN,
+) -> list[dict]:
+    """That plant's manual pours grouped into sessions, oldest first.
+
+    A session is a run of pours each within ``gap_min`` of the one before it — the same
+    rule the classifier uses to cluster watering evidence into passes.
+
+    ``total_ml`` sums **only the pours that carried an amount**, and ``unmeasured``
+    counts the rest. They are kept apart on purpose: a session of three pours where one
+    was logged without an amount has a total that is a FLOOR, not a measurement, and a
+    consumer that cannot tell the difference would enter it into the dose corpus as if
+    it were complete (ADR-0028). ``total_ml`` is None when nothing was measured at all —
+    zero would read as "she poured nothing".
+    """
+    events = [
+        e
+        for e in load_events(path)
+        if e.get("plant_id") == plant_id and e.get("source") == "manual"
+    ]
+    dated = sorted(
+        ((_parse_ts(e.get("ts")), e) for e in events),
+        key=lambda p: (p[0] is None, p[0]),
+    )
+    out: list[dict] = []
+    cur: list[tuple] = []
+    for ts, ev in dated:
+        if ts is None:
+            continue  # an undated pour cannot be placed in a session; never guessed
+        if cur and (ts - cur[-1][0]).total_seconds() / 60.0 > gap_min:
+            out.append(_session(cur))
+            cur = []
+        cur.append((ts, ev))
+    if cur:
+        out.append(_session(cur))
+    return out
+
+
+def _session(pours: list[tuple]) -> dict:
+    mls = [float(e["ml"]) for _, e in pours if e.get("ml") is not None]
+    return {
+        "pours": len(pours),
+        "measured": len(mls),
+        "unmeasured": len(pours) - len(mls),
+        # None, never 0.0: "nothing was measured" and "she poured nothing" are
+        # different statements and only one of them is ever true here.
+        "total_ml": round(sum(mls), 1) if mls else None,
+        "first_ts": _iso(pours[0][0]),
+        "last_ts": _iso(pours[-1][0]),
+        "span_min": round((pours[-1][0] - pours[0][0]).total_seconds() / 60.0, 1),
+    }
+
+
+def open_session(
+    plant_id: str,
+    *,
+    now: datetime | None = None,
+    path: str | Path | None = None,
+    gap_min: float = SESSION_GAP_MIN,
+) -> dict | None:
+    """The session still in progress for this plant, or None.
+
+    "Still in progress" means the last pour is within ``gap_min`` of *now* — she may
+    walk back with another quarter cup. That is what the card tallies while she stands
+    there; once the gap closes the session becomes history and the card returns to its
+    ordinary last-watered line.
+    """
+    sessions = sessions_for_plant(plant_id, path=path, gap_min=gap_min)
+    if not sessions:
+        return None
+    last = sessions[-1]
+    end = _parse_ts(last["last_ts"])
+    if end is None:
+        return None
+    age_min = ((now or _utc_now()) - end).total_seconds() / 60.0
+    return last if age_min <= gap_min else None
+
+
+def open_sessions_by_plant(
+    *,
+    now: datetime | None = None,
+    path: str | Path | None = None,
+    gap_min: float = SESSION_GAP_MIN,
+) -> dict[str, dict]:
+    """Every plant's in-progress session, keyed by plant_id — one journal read for the
+    whole card payload rather than one per plant."""
+    at = now or _utc_now()
+    pids = {
+        e["plant_id"]
+        for e in load_events(path)
+        if e.get("source") == "manual" and e.get("plant_id")
+    }
+    out: dict[str, dict] = {}
+    for pid in pids:
+        s = open_session(pid, now=at, path=path, gap_min=gap_min)
+        if s is not None:
+            out[pid] = s
+    return out

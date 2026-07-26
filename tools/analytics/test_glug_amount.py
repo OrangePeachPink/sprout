@@ -45,7 +45,11 @@ def _run(snippet: str) -> dict:
         + "\nconsole.log(JSON.stringify({posts: _posts}));\n"
     )
     r = subprocess.run(
-        [node, "-e", harness], capture_output=True, text=True, timeout=30
+        [node, "-e", harness],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        encoding="utf-8",
     )
     assert r.returncode == 0, r.stderr
     return json.loads(r.stdout.strip().splitlines()[-1])
@@ -152,3 +156,79 @@ def test_opening_the_picker_posts_nothing_and_then_a_chip_posts_once() -> None:
     )
     (post,) = out["posts"]
     assert post["body"] == {"plant_id": "p06", "ml": 118.3}
+
+
+# --------------------------------------------------------------------------- #
+# #1671 — many pours, one watering
+# --------------------------------------------------------------------------- #
+_WATER = _H[_H.index("function waterHTML") : _H.index("/* #1137: post the manual")]
+_HELP = _H[_H.index("var CUP_ML") : _H.index("/* #1643: swap the")]
+
+
+def _row(session: dict | None = None) -> str:
+    """The real water row, rendered. `waterHTML` is the function that decides whether
+    she can pour again, so it is the one the tally has to be proved on."""
+    node = shutil.which("node")
+    if node is None:  # pragma: no cover
+        pytest.skip("node not available")
+    js = (
+        "function esc(s){return String(s);}\nfunction fmtLocal(x){return x;}\n"
+        "function nextNeedWhy(){return '';}\n"
+        "var _glugged = new Set(), _ruled = new Set();\n" + _HELP + _WATER + "\n"
+        "console.log(waterHTML({plant_id: 'p11', identity: {name: 'Gertrude'},"
+        " watering_session: " + json.dumps(session) + "}));\n"
+    )
+    r = subprocess.run(
+        [node, "-e", js], capture_output=True, text=True, timeout=30, encoding="utf-8"
+    )
+    assert r.returncode == 0, r.stderr
+    return r.stdout.strip()
+
+
+def test_three_pours_read_as_three_doses_and_their_sum() -> None:
+    """The maintainer's own sentence: "I've given Gertrude 3 doses, they add up to
+    1 1/4 cup, if she needs any more it might just be another 1/4." The card has to say
+    the first half of that so she can decide the second."""
+    html = _row({"pours": 3, "measured": 3, "unmeasured": 0, "total_ml": 295.7})
+    assert "3 doses" in html
+    assert "1 ¼ cup" in html
+
+
+def test_the_control_SURVIVES_an_open_session_so_she_can_top_up() -> None:
+    """The bug this fixes: `✓ logged just now` replaced the button and stayed for the
+    whole hour a two-minute top-up happens in. An open session keeps the door open."""
+    html = _row({"pours": 1, "measured": 1, "unmeasured": 0, "total_ml": 118.3})
+    assert "glugmore" in html and "+ more" in html
+    assert "logged just now" not in html
+
+
+def test_a_partly_unmeasured_session_reports_a_floor_not_a_total() -> None:
+    """A session where one pour had no amount has a total that is a FLOOR. Rendering it
+    as if it were complete would put a short measurement into the dose corpus."""
+    html = _row({"pours": 3, "measured": 2, "unmeasured": 1, "total_ml": 177.4})
+    assert "¾ cup" in html and "1 unmeasured" in html
+
+
+def test_a_session_with_nothing_measured_claims_no_volume_at_all() -> None:
+    html = _row({"pours": 2, "measured": 0, "unmeasured": 2, "total_ml": None})
+    assert "2 doses" in html and "2 unmeasured" in html
+    assert "cup" not in html
+
+
+def test_no_session_leaves_the_ordinary_one_tap_row_untouched() -> None:
+    html = _row(None)
+    assert "Glug glug" in html and "+ amount" in html and "tally" not in html
+
+
+def test_a_fraction_of_a_cup_is_a_cup_not_cups() -> None:
+    """Voice: "¼ cup", never "¼ cups" — plural only past a whole cup."""
+    node = shutil.which("node")
+    if node is None:  # pragma: no cover
+        pytest.skip("node not available")
+    js = (
+        _HELP + "\nconsole.log(JSON.stringify([59.1, 236.6, 295.7].map(mlToCupWords)));"
+    )
+    r = subprocess.run(
+        [node, "-e", js], capture_output=True, text=True, timeout=30, encoding="utf-8"
+    )
+    assert json.loads(r.stdout.strip()) == ["¼ cup", "1 cup", "1 ¼ cups"]
