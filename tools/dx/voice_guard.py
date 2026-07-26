@@ -54,6 +54,24 @@ PATTERNS: list[tuple[str, re.Pattern[str]]] = [
         ),
     ),
     (
+        "fleet (#1506)",
+        # The collective is a GREENHOUSE, not a fleet — we grow plants, not a motor
+        # pool. #1506 retired the word from user surfaces and shipped in v0.8.1... and
+        # it came straight back: STATUS.md gained "the fleet is 8 instrumented plants"
+        # in #1653, days later, written by the lane that should have known. A sweep is
+        # only true as of the last commit touching what it describes (#1479's thesis),
+        # which is the argument for a guard rather than another sweep.
+        #
+        # #923's vocabulary contract keeps `fleet` legal in CODE and ENDPOINTS, and
+        # there are ~619 such uses. So this must not fire on any of them:
+        #   fleet_logger, fleet_sources  -> `_` is a word char, \b doesn't split there
+        #   DASH.fleet, st.fleet         -> excluded by the leading-dot lookbehind
+        #   "fleet", 'fleet'             -> quoted literal = an endpoint or a key
+        # What is left is prose: "the fleet", "fleet-wide", "wider fleet". Exactly the
+        # register this retires, and nothing else.
+        re.compile(r"""(?<![.\w'"])fleet(?![\w'"])""", re.I),
+    ),
+    (
         "copula (#1138)",
         re.compile(
             # (?![\w-]) spares plant-care/plant-first/plants; the noun list

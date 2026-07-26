@@ -89,7 +89,7 @@ processes:
 collection ACTION="status" *ARGS:
     {{py}} tools/dx/collection.py {{ACTION}} {{ARGS}}
 
-# Stop every running collector (monitor + fleet) headlessly - graceful, then hard-kill (#689).
+# Stop every running collector (monitor + greenhouse) headlessly - graceful, then hard-kill (#689).
 # The recourse when a browser tab closed or a collector orphaned and there's no Stop button.
 stop-collection *ARGS:
     {{py}} tools/dx/collection.py stop {{ARGS}}
