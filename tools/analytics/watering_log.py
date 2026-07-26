@@ -299,19 +299,111 @@ def sessions_for_plant(
     return out
 
 
+# How close two pours must be to count as "the same size" when describing a session's
+# SHAPE. The chips emit exact values, so equality would work for anything logged from
+# the card; the tolerance is for amounts that arrive from anywhere else (a future pump,
+# a hand-entered correction) and should not be called uneven over a rounding artifact.
+_SAME_POUR_TOL = 0.05
+
+
+def _trend(mls: list[float]) -> str | None:
+    """What the pour sizes DID across the session: ``flat_within_tolerance`` ·
+    ``monotone_decreasing`` · ``monotone_increasing`` · ``mixed``.
+
+    **Mechanical names on purpose (#1673).** An earlier cut of this called the middle
+    one ``tapering``, and that is a story about the operator — that she stood there,
+    watching the pot, easing off — not a description of the arithmetic. It may well be
+    the true story, and it is the interesting one, but it would be an interpretation
+    resting on four recorded split sessions. A number that is wrong is correctable; a
+    label that is wrong gets joined against. The evocative words wait for the maintainer
+    to rule on the vocabulary with a corpus behind it.
+
+    That distinction is not pedantry. As the maintainer put it while correcting today's
+    record: a multi-pour session means she was *watching and responding*; the same rows
+    entered in two taps mean she had already decided. **The shape is a property of how
+    the watering was decided, not of the numbers** — so this function reports only what
+    the numbers did, and leaves the meaning to whoever can actually know it.
+
+    ``None`` when it cannot be characterised — fewer than two pours, or any pour logged
+    without an amount. A sequence with unknown terms has no trend, and guessing one puts
+    an interpretation into the corpus that no measurement supports (ADR-0028).
+    """
+    if len(mls) < 2:
+        return None
+    first = mls[0]
+    if all(abs(m - first) <= _SAME_POUR_TOL * max(first, 1.0) for m in mls):
+        return "flat_within_tolerance"
+    pairs = list(zip(mls, mls[1:]))
+    if all(b <= a + _SAME_POUR_TOL * a for a, b in pairs):
+        return "monotone_decreasing"
+    if all(b >= a - _SAME_POUR_TOL * a for a, b in pairs):
+        return "monotone_increasing"
+    return "mixed"
+
+
 def _session(pours: list[tuple]) -> dict:
     mls = [float(e["ml"]) for _, e in pours if e.get("ml") is not None]
+    t0, t1 = pours[0][0], pours[-1][0]
+    span = round((t1 - t0).total_seconds() / 60.0, 1)
+    total = round(sum(mls), 1) if mls else None
+    complete = len(mls) == len(pours)
     return {
         "pours": len(pours),
         "measured": len(mls),
         "unmeasured": len(pours) - len(mls),
         # None, never 0.0: "nothing was measured" and "she poured nothing" are
         # different statements and only one of them is ever true here.
-        "total_ml": round(sum(mls), 1) if mls else None,
-        "first_ts": _iso(pours[0][0]),
-        "last_ts": _iso(pours[-1][0]),
-        "span_min": round((pours[-1][0] - pours[0][0]).total_seconds() / 60.0, 1),
+        "total_ml": total,
+        "first_ts": _iso(t0),
+        "last_ts": _iso(t1),
+        "span_min": span,
+        # The sequence itself — the answer to "how was it delivered", which no summary
+        # number carries. `at_min` is minutes from the session's own start, so a
+        # consumer can plot the session without re-parsing timestamps.
+        "sequence": [
+            {
+                "ts": _iso(ts),
+                "at_min": round((ts - t0).total_seconds() / 60.0, 1),
+                "ml": float(e["ml"]) if e.get("ml") is not None else None,
+            }
+            for ts, e in pours
+        ],
+        # The waits between pours, in order. Derivable from `sequence` by subtraction —
+        # which is exactly why it is here: a consumer doing that arithmetic itself is a
+        # second place to get it wrong (#1673's AC).
+        "gaps_min": [
+            round((b[0] - a[0]).total_seconds() / 60.0, 1)
+            for a, b in zip(pours, pours[1:])
+        ],
+        # Average delivery rate across the session. None unless the session is fully
+        # measured AND actually spread over time: a single pour has no rate, and a
+        # partially-measured session's rate would be a floor masquerading as a average.
+        "ml_per_min": (
+            round(total / span, 2) if (complete and total and span > 0) else None
+        ),
+        # None whenever the sequence has an unknown term — see _trend.
+        "trend": _trend(mls) if complete else None,
     }
+
+
+def previous_session(
+    plant_id: str,
+    *,
+    now: datetime | None = None,
+    path: str | Path | None = None,
+    gap_min: float = SESSION_GAP_MIN,
+) -> dict | None:
+    """The last CLOSED watering session for this plant — "when did the previous one
+    start, when did it end, how long was it spread over".
+
+    If a session is currently open, this is the one before it; otherwise it is the most
+    recent. None when the plant has no closed session on record."""
+    sessions = sessions_for_plant(plant_id, path=path, gap_min=gap_min)
+    if not sessions:
+        return None
+    is_open = open_session(plant_id, now=now, path=path, gap_min=gap_min) is not None
+    closed = sessions[:-1] if is_open else sessions
+    return closed[-1] if closed else None
 
 
 def open_session(
