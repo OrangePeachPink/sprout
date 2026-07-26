@@ -151,6 +151,15 @@
   .cup:hover, .cup:focus-visible { color: var(--ink); border-color: var(--muted); }
   .cup:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
   .cupunit { font-size: 10.5px; letter-spacing: .04em; color: var(--muted); }
+  /* #1671 the running session tally. Leaf-tinted like .glugged — a completed good
+     thing — but it does NOT end the interaction: the amount control stays beside it,
+     because a session is open until she walks away, not until she taps once. */
+  .tally { display: inline-flex; align-items: center; gap: 5px; margin-left: auto;
+    font-size: 11.5px; font-weight: 700; color: var(--leaf);
+    background: color-mix(in srgb, var(--leaf) 10%, var(--surface));
+    border: 1.5px solid color-mix(in srgb, var(--leaf) 45%, transparent);
+    border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+  .tally .part { font-weight: 600; color: var(--muted); }
   /* #1203 the verdict pair — an UNCONFIRMED detection asks; it never asserts.
      Chrome register on purpose: these are affordances, not states. Nothing here
      touches the frame, the mood, or the voice line — an unreviewed detection is
@@ -565,6 +574,25 @@ function waterHTML(card) {
   /* #1229: once glugged THIS SESSION (or the journal already says manual·just now),
      the card wears a retained confirmed chip and the button is GONE — a double-tap
      becomes impossible, a missed plant becomes visible at a glance. */
+  /* #1671: an OPEN session replaces the old dead-end chip. "✓ logged just now" ended
+     the interaction after one tap, which is why a two-minute top-up was unrecordable —
+     the button was gone for the whole hour a top-up happens in. Now the card tallies
+     what she has poured and keeps the amount control available beside it. */
+  var ses = card.watering_session;
+  if (ses && ses.pours) {
+    var bits = ses.pours + (ses.pours === 1 ? " dose" : " doses");
+    if (ses.total_ml) bits += " · " + mlToCupWords(ses.total_ml);
+    /* a session mixing measured and unmeasured pours reports a FLOOR, never a total
+       that looks complete — the corpus must be able to tell them apart (ADR-0028). */
+    if (ses.unmeasured)
+      bits += ' <span class="part">+ ' + ses.unmeasured + " unmeasured</span>";
+    h += '<span class="tally">✓ ' + bits + "</span>";
+    if (card.plant_id)
+      h += '<span class="glugmore" role="button" tabindex="0" data-pid="' +
+        esc(card.plant_id) + '" aria-label="add another pour for ' +
+        esc((card.identity || {}).name || card.plant_id) + '">+ more</span>';
+    return h;
+  }
   var confirmed = (card.plant_id && _glugged.has(card.plant_id)) ||
     (lw.known && lw.source === "manual" && lw.ago === "just now");
   if (confirmed) {
@@ -607,6 +635,22 @@ function waterHTML(card) {
    join cleanly to the existing corpus. mL is the canonical unit on the wire and in the
    journal — one conversion, here at the boundary, never scattered. */
 var CUP_ML = 236.588;
+/* #1671: mL back to the words she poured in. Snaps to the eighth — every amount on
+   record is an eighth-multiple, and "1 1/4 cups" is the sentence she thinks in, where
+   "295.7 mL" is one she would have to convert. Off-grid totals (a future pump, a
+   half-remembered pour) fall back to a decimal rather than being forced to a fraction
+   that would misreport what happened. */
+var EIGHTHS = ["", "⅛", "¼", "⅜", "½", "⅝", "¾", "⅞"];
+function mlToCupWords(ml) {
+  var eighths = Math.round((ml / CUP_ML) * 8);
+  if (!eighths) return "a splash";
+  if (Math.abs(eighths / 8 * CUP_ML - ml) > 3) return (ml / CUP_ML).toFixed(2) + " cups";
+  var whole = Math.floor(eighths / 8), rest = EIGHTHS[eighths % 8];
+  var n = (whole ? String(whole) : "") + (whole && rest ? " " : "") + rest;
+  /* "1/4 cup", not "1/4 cups" — a fraction of one cup is still one cup's worth of
+     noun. Plural only once there is more than a cup. */
+  return n + (eighths > 8 ? " cups" : " cup");
+}
 var CUPS = [["⅛", 0.125], ["¼", 0.25], ["⅓", 1 / 3], ["½", 0.5],
             ["¾", 0.75], ["1", 1], ["1½", 1.5], ["2", 2]];
 function cupsToMl(c) { return Math.round(c * CUP_ML * 10) / 10; }

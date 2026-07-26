@@ -128,3 +128,93 @@ def test_precision_reports_both_numerals_and_abstains_before_any_ruling(tmp_path
     p = precision_so_far(detected, j)
     assert (p["confirmed"], p["rejected"], p["ruled"], p["proposed"]) == (2, 1, 3, 1)
     assert abs(p["precision"] - 2 / 3) < 1e-9  # over RULED events only
+
+
+# --------------------------------------------------------------------------- #
+# #1671 — the watering SESSION: many pours, one watering
+# --------------------------------------------------------------------------- #
+def test_pours_within_the_gap_are_one_session_with_a_running_total(tmp_path) -> None:
+    """The maintainer's shape: carry over half a cup, watch, top up two minutes later,
+    and again. Three journal rows, one watering, one total."""
+    from datetime import timedelta
+
+    from tools.analytics.watering_log import sessions_for_plant
+
+    j = _journal(tmp_path)
+    t0 = datetime(2026, 7, 26, 14, 0, tzinfo=timezone.utc)
+    for offset, ml in ((0, 118.3), (2, 118.3), (9, 59.1)):
+        log_manual("p11", ts=t0 + timedelta(minutes=offset), ml=ml, path=j)
+    (s,) = sessions_for_plant("p11", path=j)
+    assert s["pours"] == 3
+    assert s["total_ml"] == 295.7  # = 1 1/4 cups
+    assert s["span_min"] == 9.0
+
+
+def test_a_pour_past_the_gap_starts_a_NEW_session(tmp_path) -> None:
+    """Yesterday's watering is not part of today's. The gap is the classifier's own
+    PASS_GAP_MIN, imported rather than restated so the two can never disagree."""
+    from datetime import timedelta
+
+    from tools.analytics.watering_log import SESSION_GAP_MIN, sessions_for_plant
+
+    j = _journal(tmp_path)
+    t0 = datetime(2026, 7, 26, 14, 0, tzinfo=timezone.utc)
+    log_manual("p11", ts=t0, ml=118.3, path=j)
+    log_manual("p11", ts=t0 + timedelta(minutes=SESSION_GAP_MIN + 1), ml=59.1, path=j)
+    a, b = sessions_for_plant("p11", path=j)
+    assert a["pours"] == 1 and b["pours"] == 1
+
+
+def test_a_mixed_session_reports_a_FLOOR_and_says_how_many_are_missing(tmp_path):
+    """A session where one pour was logged without an amount has a total that is a
+    floor, not a measurement. Collapsing the two would put a short number into the dose
+    corpus wearing the same shape as a real one (ADR-0028)."""
+    from datetime import timedelta
+
+    from tools.analytics.watering_log import sessions_for_plant
+
+    j = _journal(tmp_path)
+    t0 = datetime(2026, 7, 26, 14, 0, tzinfo=timezone.utc)
+    log_manual("p06", ts=t0, ml=118.3, path=j)
+    log_manual("p06", ts=t0 + timedelta(minutes=3), path=j)  # no amount
+    (s,) = sessions_for_plant("p06", path=j)
+    assert s["pours"] == 3 - 1 and s["measured"] == 1 and s["unmeasured"] == 1
+    assert s["total_ml"] == 118.3  # the floor, and `unmeasured` says it is one
+
+
+def test_a_session_with_no_amounts_at_all_totals_None_never_zero(tmp_path) -> None:
+    """ "Nothing was measured" and "she poured nothing" are different statements, and
+    only one of them is ever true here."""
+    from tools.analytics.watering_log import sessions_for_plant
+
+    j = _journal(tmp_path)
+    log_manual("p04", ts=datetime(2026, 7, 26, tzinfo=timezone.utc), path=j)
+    (s,) = sessions_for_plant("p04", path=j)
+    assert s["total_ml"] is None and s["unmeasured"] == 1
+
+
+def test_open_session_closes_once_she_has_walked_away(tmp_path) -> None:
+    """The tally is for the plant she is standing in front of. Past the gap it becomes
+    history and the card returns to its ordinary last-watered line."""
+    from datetime import timedelta
+
+    from tools.analytics.watering_log import SESSION_GAP_MIN, open_session
+
+    j = _journal(tmp_path)
+    t0 = datetime(2026, 7, 26, 14, 0, tzinfo=timezone.utc)
+    log_manual("p11", ts=t0, ml=118.3, path=j)
+    assert open_session("p11", now=t0 + timedelta(minutes=20), path=j) is not None
+    later = t0 + timedelta(minutes=SESSION_GAP_MIN + 5)
+    assert open_session("p11", now=later, path=j) is None
+
+
+def test_sessions_are_per_plant_never_pooled(tmp_path) -> None:
+    from tools.analytics.watering_log import open_sessions_by_plant
+
+    j = _journal(tmp_path)
+    t0 = datetime(2026, 7, 26, 14, 0, tzinfo=timezone.utc)
+    log_manual("p11", ts=t0, ml=118.3, path=j)
+    log_manual("p06", ts=t0, ml=59.1, path=j)
+    out = open_sessions_by_plant(now=t0, path=j)
+    assert out["p11"]["total_ml"] == 118.3
+    assert out["p06"]["total_ml"] == 59.1
