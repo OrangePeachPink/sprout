@@ -10,7 +10,9 @@ from pathlib import Path
 from tools.dx import version_sync_guard as g
 
 
-def _repo(tmp_path: Path, version="1.2.3", citation=None, fw=None, html=None) -> Path:
+def _repo(
+    tmp_path: Path, version="1.2.3", citation=None, fw=None, html=None, lock=None
+) -> Path:
     (tmp_path / "pyproject.toml").write_text(
         f'[project]\nversion = "{version}"\n', encoding="utf-8"
     )
@@ -24,6 +26,21 @@ def _repo(tmp_path: Path, version="1.2.3", citation=None, fw=None, html=None) ->
     (tmp_path / "docs").mkdir()
     (tmp_path / "docs" / "index.html").write_text(
         f'  "version": "{html or version}",\n', encoding="utf-8"
+    )
+    # #1633: a realistic lockfile — OTHER packages first, and one of them deliberately
+    # carries the canonical version string. A guard anchored to `version =` rather than
+    # to the sprout BLOCK would match here and pass (or go ambiguous) for the wrong
+    # reason, so the fixture makes that mistake detectable instead of theoretical.
+    (tmp_path / "uv.lock").write_text(
+        "[[package]]\n"
+        'name = "pandas"\n'
+        f'version = "{version}"\n'
+        "\n"
+        "[[package]]\n"
+        'name = "sprout"\n'
+        f'version = "{lock or version}"\n'
+        'source = { editable = "." }\n',
+        encoding="utf-8",
     )
     return tmp_path
 
@@ -86,6 +103,45 @@ def test_historical_mentions_are_never_flagged(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     assert g.check(repo) == []  # the drifted-looking prose is invisible to the guard
+
+
+def test_a_stale_lockfile_is_caught(tmp_path: Path) -> None:
+    """#1633, the exact v0.8.1 miss: four sites at the new version, the lock behind.
+
+    The guard reported "4 declared site(s) agree" — green, and true — while uv.lock
+    still read the old number. Every routine command runs `uv run --frozen`, so that
+    lands on whoever runs the next command after the bump merges, with an error that
+    names none of this.
+    """
+    (f,) = g.check(_repo(tmp_path, version="1.2.3", lock="1.2.2"))
+    assert "uv.lock" in f.path
+    assert "'1.2.2'" in f.detail and "'1.2.3'" in f.detail
+
+
+def test_the_lock_pattern_ignores_other_packages(tmp_path: Path) -> None:
+    """A lockfile is mostly OTHER packages' versions.
+
+    The fixture's pandas entry sits at the canonical version; if the pattern were a
+    loose `version =` it would match twice and fail as ambiguous even when sprout is
+    perfectly in sync. Passing here is what proves the anchor is on the sprout block.
+    """
+    assert g.check(_repo(tmp_path)) == []
+
+
+def test_a_drifted_lock_is_reported_at_sprouts_line_not_a_namesakes(
+    tmp_path: Path,
+) -> None:
+    """Naming the wrong line sends the reader to edit the wrong package.
+
+    pandas shares the canonical version, so a line-number derived from searching for
+    the bare literal could land on pandas' block. The reported line must be sprout's.
+    """
+    repo = _repo(tmp_path, version="1.2.3", lock="1.2.2")
+    (f,) = g.check(repo)
+    reported = int(f.path.split(":")[1])
+    lines = (repo / "uv.lock").read_text(encoding="utf-8").splitlines()
+    assert lines[reported - 1] == 'version = "1.2.2"'
+    assert lines[reported - 2] == 'name = "sprout"'
 
 
 def test_the_real_tree_agrees() -> None:
