@@ -193,7 +193,7 @@ def test_device_adapter_unreachable_device_is_empty_not_a_crash() -> None:
     assert data.readings == [] and data.segments == []
 
 
-def test_device_adapter_empty_response_is_honest_empty() -> None:
+def test_device_adapter_empty_response_is_calm_empty() -> None:
     # every channel empty (g_last_row[ch][0] == '\0') -> just the header line
     da = DeviceAdapter("http://192.0.2.1", fetch=lambda url: _DEVICE_COLS_HEADER + "\n")
     data = da.load()

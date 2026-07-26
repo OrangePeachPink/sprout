@@ -155,7 +155,7 @@ def test_adapter_reaches_a_rebooted_board_by_hostname_when_ip_is_stale() -> None
     assert data.sources == ["http://sprout-y9d41p.local"]  # reached by NAME fallback
 
 
-def test_all_candidates_unreachable_is_honest_empty() -> None:
+def test_all_candidates_unreachable_is_calm_empty() -> None:
     a = DeviceAdapter(
         "http://192.168.1.9",
         candidates=["http://sprout-y9d41p.local", "http://192.168.1.9"],

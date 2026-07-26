@@ -25,6 +25,8 @@ display name goes here instead).
   ([#1129](https://github.com/OrangePeachPink/sprout/pull/1129)).
 - **[@SAY-5](https://github.com/SAY-5)** — `just check` now names the untracked files it never inspected, so a
   green gate no longer hides a brand-new file ([#1395](https://github.com/OrangePeachPink/sprout/pull/1395)).
+- **[@Jethin10](https://github.com/Jethin10)** — retired the `honest-empty` term from live analytics test
+  identifiers in favor of `calm-empty` ([#1616](https://github.com/OrangePeachPink/sprout/pull/1616)).
 
 <!-- New contributors are added here as their first PR merges (handle-only default; name on request). -->
 
