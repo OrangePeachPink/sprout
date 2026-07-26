@@ -33,8 +33,9 @@ is ever in trouble.
 
 The minimum Sprout is deliberately small: **a microcontroller and one soil sensor is already a complete
 Sprout** ([ADR-0028](docs/adr/0028-optional-peripherals-doctrine.md)) — a pump, an OLED, and extra probes are
-optional enhancements, never an entry bar. And it's past the bench: as of the **v0.7.0 go-live, eight plants
-run live in soil**, reporting over Wi-Fi or serial with each session saved to the catalog.
+optional enhancements, never an entry bar. And it's past the bench: since the **wave-1 go-live
+(2026-07-04)** the greenhouse runs live in soil — currently 11 plants, 8 of them sensored, on 2 boards —
+reporting over Wi-Fi with each session saved to the catalog.
 
 It's an open-source learning-and-portfolio build, made to be **enjoyable to run and trustworthy to read** — process and
 tooling sized to match, not over-engineered.
@@ -177,7 +178,7 @@ A few principles behind how Sprout reads a plant:
 | Mini submersible DC water pump | 4 | DC 2.5-6 V (rated ~3 / 4.5 V), ~0.18 A, ~100 L/h, submersible. **DC only - never mains.** |
 | 4-channel relay module | 1 | 5 V module. Active-high vs active-low and 3.3 V-drive compatibility **to be bench-verified.** |
 | PVC vinyl tubing | ~4 m | ID ~5.54 mm / OD ~8.20 mm. |
-| Microcontroller | 1+ | **ESP32** (classic dual-core; SoC marked `ESP-32D`, ESP32-D0WD class) from the SunFounder ESP32 kit is the baseline. Firmware also builds for **ESP32-S3** and **ESP32-C5** boards — the multi-board fleet, per-board serial paths, and pin maps live in [`docs/hardware/BOARDS.md`](docs/hardware/BOARDS.md). 3.3 V ADC matches the 0-3.0 V sensor output; 4 sensors on ADC1 (avoid ADC2 = WiFi); WiFi/BT for monitoring. |
+| Microcontroller | 1+ | **ESP32** (classic dual-core; SoC marked `ESP-32D`, ESP32-D0WD class) from the SunFounder ESP32 kit is the baseline. Firmware also builds for **ESP32-S3** and **ESP32-C5** boards — the supported boards, per-board serial paths, and pin maps live in [`docs/hardware/BOARDS.md`](docs/hardware/BOARDS.md). 3.3 V ADC matches the 0-3.0 V sensor output; 4 sensors on ADC1 (avoid ADC2 = WiFi); WiFi/BT for monitoring. |
 | Status display | 1 | 1.3" SH1106 128x64 I2C OLED (Hosyond 5-pack). On the I2C bus (GPIO21/22), powered at 3.3 V. Shows status / last-watered / errors. |
 
 (Kit provenance is recorded in the local `parts` inventory: UMLIFE watering kit. The SunFounder ESP32 kit
@@ -201,7 +202,7 @@ Firmware lives in [`firmware/`](firmware/) as a PlatformIO project (ESP32, Ardui
 > install own the core.
 
 Board env is `esp32dev` (classic ESP32); the `esp32s3` and ESP32-C5 envs build from the same source for the
-wider fleet — see [`docs/hardware/BOARDS.md`](docs/hardware/BOARDS.md) for per-board serial paths and pin
+other supported boards — see [`docs/hardware/BOARDS.md`](docs/hardware/BOARDS.md) for per-board serial paths and pin
 maps. Pin assignments and tunables live in `firmware/include/config.h`.
 The build cache and resolved libraries (`firmware/.pio/`) are git-ignored.
 
@@ -250,8 +251,9 @@ firmware C formatter (clang-format) runs in the gate on changed lines, pinned in
 
 ## Status
 
-**Monitoring is live.** Since the wave-1 go-live (2026-07-04), eight plants report in soil over Wi-Fi
-across two boards, each session saved to the catalog. **Watering is deliberately gated:** the firmware
+**Monitoring is live.** Since the wave-1 go-live (2026-07-04), the greenhouse reports in soil over
+Wi-Fi — currently 11 plants, 8 sensors, 2 boards, and subject to change — each session saved to the
+catalog. **Watering is deliberately gated:** the firmware
 ships a **manual operator-commanded bounded pump pulse** (`!water` / `!stop`), and the safety order is
 *make watering correct before it's possible* — per-probe calibration (#170) and fail-safe actuator-off
 (#93) are **done**; the remaining gate is bench-verifying the relay path on real hardware (#191), which

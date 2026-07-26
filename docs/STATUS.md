@@ -7,8 +7,9 @@ look next. For *why* decisions were made, see the ADRs; for the live working vie
 
 ## In one line
 
-Eight windowsill plants log soil moisture honestly (raw ADC counts plus a calibrated seven-band
-classifier) across two boards on WiFi; a Python logger and a served dashboard render it.
+A windowsill greenhouse of 11 plants, 8 of them read by sensors across two boards on WiFi, logs soil
+moisture as raw ADC counts plus a calibrated seven-band classifier; a Python logger and a served
+dashboard render it.
 Operator-commanded bounded pump pulses (`!water` / `!stop`) exist via the actuation supervisor;
 the relay path is **bench-unverified** (#191) and autonomous watering is gated (#94).
 
@@ -16,8 +17,9 @@ the relay path is **bench-unverified** (#191) and autonomous watering is gated (
 
 - **Firmware 0.8.1** (`firmware/`, PlatformIO) — sweeps **four soil sensors per board** on ADC1,
   classifies each into seven moisture bands, and emits schema-v5 telemetry.
-  Two boards are live (classic ESP32 + official ESP32-C5), so the fleet is **8 instrumented
-  plants**; the count that governs the code is four, the count that governs the sill is eight.
+  The greenhouse is **11 plants, 8 sensors, 2 boards** — currently, and subject to change. Four
+  sensors is what governs the *code*; the other numbers govern the sill. Three plants are grown but
+  not read: a physical-fit problem, not a wiring one.
   Operator-commanded bounded pulses via `!water <ch>` / `!stop` — wired through the actuation
   supervisor (ADR-0016); relay path **bench-unverified** (#191). Autonomous watering not yet wired.
   Commands: set sweep cadence at runtime (ADR-0011).
@@ -63,8 +65,9 @@ the relay path is **bench-unverified** (#191) and autonomous watering is gated (
 ## Firmware standing (detail)
 
 Schema v5. Each board sweeps four sensors; the co-located cross-probe agreement run that shaped this
-page is **finished** — since wave-1 (2026-07-04) the probes are distributed one per plant across two
-boards, eight plants in all. On the C5, probe stickers `s5`–`s8` sit on ports that emit `s3/s4/s1/s2`:
+page is **finished** — since wave-1 (2026-07-04) the sensors are distributed one per plant across two
+boards, reading 8 of the greenhouse's 11 plants. On the C5, probe stickers `s5`–`s8` sit on ports that
+emit `s3/s4/s1/s2`:
 channel is not probe (ADR-0027), and the registry is what reconciles them.
 
 `value` / `unit` are emitted NULL on purpose — raw ADC counts plus the calibrated band are
