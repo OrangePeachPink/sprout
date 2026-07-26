@@ -78,6 +78,10 @@ jobs:
           just build-c5  # esp32c5  -> sprout-esp32c5-factory.bin + manifest-esp32c5.json
 
       - name: Assemble the Pages site (docs/ + flasher bins + combined manifest)
+        env:
+          # #1648: the stable channel downloads the latest release's signed assets.
+          # `contents: read` is enough to read a published release's assets.
+          GH_TOKEN: ${{ github.token }}
         run: |
           site="_site"
           mkdir -p "$site"
@@ -113,36 +117,81 @@ jobs:
           done
           echo "verified boards offered: ${#manifests[@]}"
           built_utc="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          python3 tools/pages/build_flash_manifest.py \
-            --primary "$primary" "${extra[@]}" \
-            --built-utc "$built_utc" \
-            --out "$site/flash/manifest.json"
 
-          # #1599: publish the ALPHA manifest too. The flasher's alpha panel is gated on
-          # this file being fetchable (docs/flash/index.html), and nothing produced it —
-          # so the channel the page offers had no producer and the bench walk stopped.
-          #
-          # It is the SAME artifacts under a second name, and that is correct today: this
-          # job builds current `main` on every run, which IS the alpha build. What is not
-          # yet true is the other half — `manifest.json` is also built-from-main, so
-          # "stable" is currently serving an unreleased build. Fixing that means pointing
-          # stable at the SIGNED RELEASE ASSETS, which is B1 and is post-cut by design.
-          # Until then the alpha panel says so on the page (never silently), and this
-          # duplicate write is retired the moment stable has its own real source.
+          # ALPHA = current `main`, which is exactly what this job just built. This is
+          # the ONLY manifest the from-main build may write (#1599, #1648).
           python3 tools/pages/build_flash_manifest.py \
             --primary "$primary" "${extra[@]}" \
             --built-utc "$built_utc" \
             --out "$site/flash/manifest-alpha.json"
 
-          # Fail closed: the page reveals the alpha panel only if this fetches, so an
-          # empty or missing file would silently re-hide the channel we just published.
-          for f in manifest.json manifest-alpha.json; do
-            [ -s "$site/flash/$f" ] || {
-              echo "::error title=Manifest missing::$f was not written; the flasher would hide that channel."
+          # ---------------------------------------------------------------- STABLE
+          # #1648: stable serves the RELEASE's signed bytes, never a rebuild of `main`.
+          #
+          # Until now this job wrote the same built-from-main artifacts under two names,
+          # so the default CTA — no checkbox, the thing a stranger clicks — offered an
+          # UNSIGNED build that existed in no release and labelled itself alpha. Measured
+          # post-v0.8.1: front door `0.8.1-alpha` sha bcba7293…, release `0.8.1` sha
+          # ec0b98d6…. Different bytes. The signer was taught to label honestly (#1630);
+          # the server was never taught to ask for the signed thing.
+          #
+          # Why COPY the bytes instead of linking the release:
+          #   1. A release asset 302s to release-assets.githubusercontent.com with NO
+          #      access-control-allow-origin — ESP Web Tools runs in the browser and
+          #      cannot fetch it. (Same reason the bins are same-origin today.)
+          #   2. That redirect target is a SIGNED, TIME-LIMITED URL (~1h). A baked-in
+          #      link would be dead long before anyone clicked it.
+          # So the only correct stable channel is: fetch the release's assets here,
+          # verify them against the release's own SHA256SUMS, and serve those bytes.
+          #
+          # FAIL CLOSED, exactly as alpha does: no release with assets, or a checksum
+          # that disagrees, publishes NO stable manifest. The page then offers no stable
+          # channel rather than a wrong one — an unpublished channel is not offered.
+          mkdir -p "$site/flash/stable"
+          # Download EVERY asset, not a filtered subset: SHA256SUMS lists the .sig files
+          # too, and `sha256sum -c` fails on a listed file that isn't there. Fetching a
+          # narrower pattern would take stable dark on every deploy — verified against
+          # the real v0.8.1 assets. Serving the .sig bytes same-origin is a bonus: a
+          # reader can verify the signature on what they just flashed.
+          if gh release download --repo "$GITHUB_REPOSITORY" --dir "$site/flash/stable" \
+               --pattern '*' --clobber 2>/dev/null \
+             && [ -s "$site/flash/stable/SHA256SUMS" ]; then
+            # Verify the bytes we just fetched are the bytes the release recorded. A
+            # mismatch means the artifact is not what the receipt says, and serving it
+            # would be worse than serving nothing.
+            ( cd "$site/flash/stable" && sha256sum -c SHA256SUMS ) || {
+              echo "::error title=Release checksum mismatch::the downloaded release assets do not match their SHA256SUMS; refusing to publish a stable channel."
               exit 1
             }
-          done
-          echo "== flasher payload ==" && ls -l "$site/flash/"
+            stable_primary="$site/flash/stable/manifest-esp32.json"
+            if [ -f "$stable_primary" ]; then
+              stable_extra=()
+              for m in "$site"/flash/stable/manifest-*.json; do
+                [ "$m" = "$stable_primary" ] || stable_extra+=("$m")
+              done
+              # The combined manifest stays at ./manifest.json — the URL the page
+              # fetches — but its parts point into stable/, because both channels emit
+              # the SAME bin filenames and only one set may win at flash/<name>.
+              python3 tools/pages/build_flash_manifest.py \
+                --primary "$stable_primary" "${stable_extra[@]}" \
+                --built-utc "$built_utc" \
+                --parts-prefix "stable/" \
+                --out "$site/flash/manifest.json"
+              echo "stable channel: published from the latest release"
+            else
+              echo "::warning title=No stable manifest::the latest release has no manifest-esp32.json; stable will not be offered."
+            fi
+          else
+            echo "::warning title=No release assets::no release carries flasher assets yet; stable will not be offered (fail-closed, #1648)."
+          fi
+
+          # Fail closed on ALPHA (unchanged, #1599): the page reveals the alpha panel only
+          # if its manifest fetches, so a silently-unwritten file would re-hide it.
+          [ -s "$site/flash/manifest-alpha.json" ] || {
+            echo "::error title=Alpha manifest missing::manifest-alpha.json was not written; the flasher would hide that channel."
+            exit 1
+          }
+          echo "== flasher payload ==" && ls -lR "$site/flash/"
 
       - name: Upload the Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
