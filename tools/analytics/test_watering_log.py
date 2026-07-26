@@ -218,3 +218,109 @@ def test_sessions_are_per_plant_never_pooled(tmp_path) -> None:
     out = open_sessions_by_plant(now=t0, path=j)
     assert out["p11"]["total_ml"] == 118.3
     assert out["p06"]["total_ml"] == 59.1
+
+
+def test_a_session_carries_its_start_end_and_spread(tmp_path) -> None:
+    """ "When did it start, when did it end, how long was it spread over" — the three
+    the maintainer asked for, on the session rather than reconstructed from rows."""
+    from datetime import timedelta
+
+    from tools.analytics.watering_log import sessions_for_plant
+
+    j = _journal(tmp_path)
+    t0 = datetime(2026, 7, 26, 14, 0, tzinfo=timezone.utc)
+    log_manual("p11", ts=t0, ml=118.3, path=j)
+    log_manual("p11", ts=t0 + timedelta(minutes=12), ml=59.1, path=j)
+    (s,) = sessions_for_plant("p11", path=j)
+    assert s["first_ts"] == "2026-07-26T14:00:00Z"
+    assert s["last_ts"] == "2026-07-26T14:12:00Z"
+    assert s["span_min"] == 12.0
+    assert [p["at_min"] for p in s["sequence"]] == [0.0, 12.0]
+
+
+def test_the_sequence_distinguishes_even_from_tapering(tmp_path) -> None:
+    """Two sessions can both total 1 1/2 cups and mean opposite things: four even
+    quarters is a plant taking water steadily; 3/4 -> 1/2 -> 1/4 -> 1/8 is one that
+    stopped accepting it. The total cannot tell them apart; the sequence can."""
+    from datetime import timedelta
+
+    from tools.analytics.watering_log import sessions_for_plant
+
+    j = _journal(tmp_path)
+    t0 = datetime(2026, 7, 26, 14, 0, tzinfo=timezone.utc)
+    for i, ml in enumerate((88.7, 88.7, 88.7, 88.7)):
+        log_manual("p10", ts=t0 + timedelta(minutes=3 * i), ml=ml, path=j)
+    for i, ml in enumerate((177.4, 118.3, 59.1, 29.6)):
+        log_manual("p11", ts=t0 + timedelta(minutes=3 * i), ml=ml, path=j)
+    assert sessions_for_plant("p10", path=j)[0]["shape"] == "even"
+    assert sessions_for_plant("p11", path=j)[0]["shape"] == "tapering"
+
+
+def test_an_unmeasured_pour_leaves_the_session_SHAPELESS(tmp_path) -> None:
+    """A sequence with an unknown term has no shape. Guessing one would put an
+    interpretation into the corpus that no measurement supports."""
+    from datetime import timedelta
+
+    from tools.analytics.watering_log import sessions_for_plant
+
+    j = _journal(tmp_path)
+    t0 = datetime(2026, 7, 26, 14, 0, tzinfo=timezone.utc)
+    log_manual("p03", ts=t0, ml=118.3, path=j)
+    log_manual("p03", ts=t0 + timedelta(minutes=2), path=j)  # no amount
+    log_manual("p03", ts=t0 + timedelta(minutes=5), ml=59.1, path=j)
+    (s,) = sessions_for_plant("p03", path=j)
+    assert s["shape"] is None
+    assert s["ml_per_min"] is None  # a floor must not masquerade as an average
+    assert s["total_ml"] == 177.4 and s["unmeasured"] == 1
+
+
+def test_a_single_pour_has_no_shape_and_no_rate(tmp_path) -> None:
+    from tools.analytics.watering_log import sessions_for_plant
+
+    j = _journal(tmp_path)
+    log_manual("p07", ts=datetime(2026, 7, 26, tzinfo=timezone.utc), ml=59.1, path=j)
+    (s,) = sessions_for_plant("p07", path=j)
+    assert s["shape"] is None and s["ml_per_min"] is None and s["span_min"] == 0.0
+
+
+def test_the_rate_is_the_sessions_own_delivery_rate(tmp_path) -> None:
+    from datetime import timedelta
+
+    from tools.analytics.watering_log import sessions_for_plant
+
+    j = _journal(tmp_path)
+    t0 = datetime(2026, 7, 26, 14, 0, tzinfo=timezone.utc)
+    log_manual("p02", ts=t0, ml=118.3, path=j)
+    log_manual("p02", ts=t0 + timedelta(minutes=10), ml=118.3, path=j)
+    (s,) = sessions_for_plant("p02", path=j)
+    assert s["ml_per_min"] == round(236.6 / 10, 2)
+
+
+def test_previous_session_is_the_last_CLOSED_one(tmp_path) -> None:
+    """Asked while she is mid-session, "the previous watering" means the one before
+    this — not the one she is standing in."""
+    from datetime import timedelta
+
+    from tools.analytics.watering_log import previous_session
+
+    j = _journal(tmp_path)
+    now = datetime(2026, 7, 26, 14, 0, tzinfo=timezone.utc)
+    log_manual("p04", ts=now - timedelta(days=5), ml=118.3, path=j)
+    log_manual(
+        "p04", ts=now - timedelta(days=5) + timedelta(minutes=4), ml=59.1, path=j
+    )
+    log_manual("p04", ts=now, ml=236.6, path=j)  # today's, still open
+    prev = previous_session("p04", now=now + timedelta(minutes=5), path=j)
+    assert prev["total_ml"] == 177.4 and prev["span_min"] == 4.0
+    assert prev["first_ts"].startswith("2026-07-21")
+
+
+def test_previous_session_is_None_when_there_has_only_ever_been_one(tmp_path) -> None:
+    from datetime import timedelta
+
+    from tools.analytics.watering_log import previous_session
+
+    j = _journal(tmp_path)
+    now = datetime(2026, 7, 26, 14, 0, tzinfo=timezone.utc)
+    log_manual("p09", ts=now, ml=59.1, path=j)
+    assert previous_session("p09", now=now + timedelta(minutes=1), path=j) is None
