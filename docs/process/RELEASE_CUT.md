@@ -222,6 +222,43 @@ empty release, and it cannot be fixed after — only re-cut.** Never skip to §6
 - [ ] **Record the receipt** on the release-cut evidence: the asset list and the `SHA256SUMS`, so the
       flasher's stable channel (#1334) has verifiable bytes to point at.
 
+### 5.0 Re-signing a draft — clear the assets first, and confirm they are gone
+
+*Both of these cost the v0.8.1 cut a failed run, and neither is guessable from the workflow file.*
+
+**`gh release upload` carries no `--clobber`, deliberately** (#1346: an artifact is written once; a
+name collision fails loud rather than silently replacing published bytes). So a **second** dispatch
+against a draft that already has assets does not overwrite them — it **fails**:
+
+      asset under the same name already exists: [SHA256SUMS manifest-esp32.json
+      sprout-esp32-factory.bin ...]
+
+That failure reads like the signer being broken. It isn't; it is the write-once rule holding.
+
+- [ ] **Before re-dispatching, delete every existing asset:**
+
+          for a in $(gh release view vX.Y.Z --repo OrangePeachPink/sprout --json assets --jq '.assets[].name'); do
+            gh release delete-asset vX.Y.Z "$a" --repo OrangePeachPink/sprout --yes
+          done
+
+- [ ] **Retargeting does NOT clear assets.** Changing `target_commitish` leaves them attached, and
+      they now describe a commit the draft no longer points at. **A retarget always implies a
+      re-sign**, and the clearing above is part of it — assets built from the old target are not
+      merely stale, they misdescribe the release.
+
+**Confirm state on a FRESH read, after a pause — never the read that immediately follows a write.**
+GitHub's release API is eventually consistent: at the v0.8.1 cut a read taken straight after a
+retarget reported `assets=0` when six were still attached, which produced a confident, wrong
+conclusion and a failed dispatch. The same shape cost a second observation the same night, when a
+publish read-back straight after the click still showed `isDraft=true`.
+
+- [ ] After any asset delete / retarget / publish, **pause, then re-query** before believing the
+      result. `gh api repos/OWNER/REPO/releases --jq '.[]|select(.tag_name=="vX.Y.Z")'` reads through
+      to the API rather than a subcommand's view, which makes a disagreement visible.
+
+*A single read taken immediately after a mutation is not evidence. Every release-state claim in the
+cut evidence should come from a re-query.*
+
 ### 5.1 The dry-run seam walk — do this ONCE before a lane's first real cut, and any time the pipeline changes
 
 The asset-less cut happened because no one walked draft → sign → verify → publish end-to-end before it
