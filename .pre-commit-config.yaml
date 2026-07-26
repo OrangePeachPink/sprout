@@ -234,9 +234,9 @@ repos:
       # device parser's contract (firmware/lib/ota_pull/ota_pull.h): exact banner,
       # required keys, char[24]/char[256] bounds, no duplicate board, https URLs,
       # declared board classes only. Curation (#1258) edits the file by hand — this
-      # guard is what makes a hand-edit unable to strand the fleet.
+      # guard is what makes a hand-edit unable to strand the greenhouse.
       - id: ota-feed-guard
-        name: ota-feed-guard (#1524 — the feed the fleet pulls parses on-device)
+        name: ota-feed-guard (#1524 — the feed the greenhouse pulls parses on-device)
         entry: uv run python tools/dx/ota_feed.py check
         language: system
         files: ^docs/ota/feed\.txt$

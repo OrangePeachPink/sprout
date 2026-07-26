@@ -34,7 +34,7 @@ is ever in trouble.
 The minimum Sprout is deliberately small: **a microcontroller and one soil sensor is already a complete
 Sprout** ([ADR-0028](docs/adr/0028-optional-peripherals-doctrine.md)) — a pump, an OLED, and extra probes are
 optional enhancements, never an entry bar. And it's past the bench: since the **wave-1 go-live
-(2026-07-04)** the greenhouse runs live in soil — currently 11 plants, 8 of them sensored, on 2 boards —
+(2026-07-04)** the greenhouse runs live in soil — currently 11 plants, 8 of them with sensors, on 2 boards —
 reporting over Wi-Fi with each session saved to the catalog.
 
 It's an open-source learning-and-portfolio build, made to be **enjoyable to run and trustworthy to read** — process and
