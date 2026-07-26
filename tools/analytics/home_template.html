@@ -584,7 +584,7 @@ function waterHTML(card) {
     if (ses.total_ml) bits += " · " + mlToCupWords(ses.total_ml);
     /* #1671: the spread, once there is one. A single pour has no span worth saying;
        "over 9 min" is what turns three taps into one watering in her head. The richer
-       session facts (the pour sequence, the rate, the even/tapering shape) ride in the
+       session facts (the pour sequence, the gaps, the rate, the size trend) ride in the
        payload for the analysis surfaces — the card stays a glance, not a report. */
     if (ses.span_min >= 1) bits += " · over " + Math.round(ses.span_min) + " min";
     /* a session mixing measured and unmeasured pours reports a FLOOR, never a total

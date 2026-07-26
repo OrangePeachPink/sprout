@@ -306,30 +306,38 @@ def sessions_for_plant(
 _SAME_POUR_TOL = 0.05
 
 
-def _shape(mls: list[float]) -> str | None:
-    """How the session was delivered: ``even`` · ``tapering`` · ``building`` ·
-    ``mixed``.
+def _trend(mls: list[float]) -> str | None:
+    """What the pour sizes DID across the session: ``flat_within_tolerance`` ·
+    ``monotone_decreasing`` · ``monotone_increasing`` · ``mixed``.
 
-    The maintainer's question — *"all even 1/4 cups repeated 4x? Or 3/4, 1/2, 1/4, then
-    1/8 tapering off?"* — is about the sequence, and the sequence is a different fact
-    from the total. Two sessions can both be 1½ cups and mean opposite things: four even
-    quarters is a plant taking water steadily, while ¾ → ½ → ¼ → ⅛ is one that stopped
-    accepting it.
+    **Mechanical names on purpose (#1673).** An earlier cut of this called the middle
+    one ``tapering``, and that is a story about the operator — that she stood there,
+    watching the pot, easing off — not a description of the arithmetic. It may well be
+    the true story, and it is the interesting one, but it would be an interpretation
+    resting on four recorded split sessions. A number that is wrong is correctable; a
+    label that is wrong gets joined against. The evocative words wait for the maintainer
+    to rule on the vocabulary with a corpus behind it.
+
+    That distinction is not pedantry. As the maintainer put it while correcting today's
+    record: a multi-pour session means she was *watching and responding*; the same rows
+    entered in two taps mean she had already decided. **The shape is a property of how
+    the watering was decided, not of the numbers** — so this function reports only what
+    the numbers did, and leaves the meaning to whoever can actually know it.
 
     ``None`` when it cannot be characterised — fewer than two pours, or any pour logged
-    without an amount. A sequence with unknown terms has no shape, and guessing one
-    would put an interpretation into the corpus that no measurement supports (ADR-0028).
+    without an amount. A sequence with unknown terms has no trend, and guessing one puts
+    an interpretation into the corpus that no measurement supports (ADR-0028).
     """
     if len(mls) < 2:
         return None
     first = mls[0]
     if all(abs(m - first) <= _SAME_POUR_TOL * max(first, 1.0) for m in mls):
-        return "even"
+        return "flat_within_tolerance"
     pairs = list(zip(mls, mls[1:]))
     if all(b <= a + _SAME_POUR_TOL * a for a, b in pairs):
-        return "tapering"
+        return "monotone_decreasing"
     if all(b >= a - _SAME_POUR_TOL * a for a, b in pairs):
-        return "building"
+        return "monotone_increasing"
     return "mixed"
 
 
@@ -360,14 +368,21 @@ def _session(pours: list[tuple]) -> dict:
             }
             for ts, e in pours
         ],
+        # The waits between pours, in order. Derivable from `sequence` by subtraction —
+        # which is exactly why it is here: a consumer doing that arithmetic itself is a
+        # second place to get it wrong (#1673's AC).
+        "gaps_min": [
+            round((b[0] - a[0]).total_seconds() / 60.0, 1)
+            for a, b in zip(pours, pours[1:])
+        ],
         # Average delivery rate across the session. None unless the session is fully
         # measured AND actually spread over time: a single pour has no rate, and a
         # partially-measured session's rate would be a floor masquerading as a average.
         "ml_per_min": (
             round(total / span, 2) if (complete and total and span > 0) else None
         ),
-        # None whenever the sequence has an unknown term — see _shape.
-        "shape": _shape(mls) if complete else None,
+        # None whenever the sequence has an unknown term — see _trend.
+        "trend": _trend(mls) if complete else None,
     }
 
 

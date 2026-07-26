@@ -236,6 +236,7 @@ def test_a_session_carries_its_start_end_and_spread(tmp_path) -> None:
     assert s["last_ts"] == "2026-07-26T14:12:00Z"
     assert s["span_min"] == 12.0
     assert [p["at_min"] for p in s["sequence"]] == [0.0, 12.0]
+    assert s["gaps_min"] == [12.0]  # the wait between pours, not recomputed downstream
 
 
 def test_the_sequence_distinguishes_even_from_tapering(tmp_path) -> None:
@@ -252,12 +253,12 @@ def test_the_sequence_distinguishes_even_from_tapering(tmp_path) -> None:
         log_manual("p10", ts=t0 + timedelta(minutes=3 * i), ml=ml, path=j)
     for i, ml in enumerate((177.4, 118.3, 59.1, 29.6)):
         log_manual("p11", ts=t0 + timedelta(minutes=3 * i), ml=ml, path=j)
-    assert sessions_for_plant("p10", path=j)[0]["shape"] == "even"
-    assert sessions_for_plant("p11", path=j)[0]["shape"] == "tapering"
+    assert sessions_for_plant("p10", path=j)[0]["trend"] == "flat_within_tolerance"
+    assert sessions_for_plant("p11", path=j)[0]["trend"] == "monotone_decreasing"
 
 
-def test_an_unmeasured_pour_leaves_the_session_SHAPELESS(tmp_path) -> None:
-    """A sequence with an unknown term has no shape. Guessing one would put an
+def test_an_unmeasured_pour_leaves_the_session_TRENDLESS(tmp_path) -> None:
+    """A sequence with an unknown term has no trend. Guessing one would put an
     interpretation into the corpus that no measurement supports."""
     from datetime import timedelta
 
@@ -269,18 +270,18 @@ def test_an_unmeasured_pour_leaves_the_session_SHAPELESS(tmp_path) -> None:
     log_manual("p03", ts=t0 + timedelta(minutes=2), path=j)  # no amount
     log_manual("p03", ts=t0 + timedelta(minutes=5), ml=59.1, path=j)
     (s,) = sessions_for_plant("p03", path=j)
-    assert s["shape"] is None
+    assert s["trend"] is None
     assert s["ml_per_min"] is None  # a floor must not masquerade as an average
     assert s["total_ml"] == 177.4 and s["unmeasured"] == 1
 
 
-def test_a_single_pour_has_no_shape_and_no_rate(tmp_path) -> None:
+def test_a_single_pour_has_no_trend_and_no_rate(tmp_path) -> None:
     from tools.analytics.watering_log import sessions_for_plant
 
     j = _journal(tmp_path)
     log_manual("p07", ts=datetime(2026, 7, 26, tzinfo=timezone.utc), ml=59.1, path=j)
     (s,) = sessions_for_plant("p07", path=j)
-    assert s["shape"] is None and s["ml_per_min"] is None and s["span_min"] == 0.0
+    assert s["trend"] is None and s["ml_per_min"] is None and s["span_min"] == 0.0
 
 
 def test_the_rate_is_the_sessions_own_delivery_rate(tmp_path) -> None:
