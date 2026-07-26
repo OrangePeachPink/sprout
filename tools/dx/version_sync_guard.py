@@ -49,6 +49,19 @@ _SITES = (
     ),
     # the JSON-LD SoftwareApplication block that feeds search engines
     ("docs/index.html", re.compile(r'(?m)^\s*"version":\s*"([^"]+)"')),
+    # #1633: the fifth site, and the one that bites hardest. Every routine command
+    # runs `uv run --frozen`; a lock that disagrees with pyproject fails with an error
+    # that names none of this, and it lands on whoever runs the next command after a
+    # bump merges — most likely a new contributor. Anchored to the `sprout` package
+    # BLOCK, not to any `version =` in the file: a lockfile is mostly other packages'
+    # versions, and a loose pattern here would match hundreds and fail as ambiguous.
+    # Fix a finding by REGENERATING (`uv lock`), never by hand-editing: the lockfile is
+    # generated state, and a hand-typed version there is a second unverified claim
+    # wearing the costume of a fix.
+    (
+        "uv.lock",
+        re.compile(r'(?m)^\[\[package\]\]\nname = "sprout"\nversion = "([^"]+)"'),
+    ),
 )
 
 
@@ -65,11 +78,15 @@ def _read(repo: Path, rel: str) -> str | None:
     return p.read_text(encoding="utf-8") if p.exists() else None
 
 
-def _line_of(text: str, needle: str) -> int:
-    for n, line in enumerate(text.splitlines(), 1):
-        if needle in line:
-            return n
-    return 0
+def _line_of(text: str, pattern: re.Pattern) -> int:
+    """Line of the SITE's match, not of the first place the literal happens to appear.
+
+    #1633: uv.lock is mostly other packages' versions, so searching for the bare string
+    would point at whichever dependency shares the number — a guard that names the wrong
+    line sends the reader to edit the wrong thing, which is worse than naming no line.
+    """
+    m = pattern.search(text)
+    return text.count("\n", 0, m.start(1)) + 1 if m else 0
 
 
 def extract(text: str, pattern: re.Pattern) -> tuple[str | None, str | None]:
@@ -113,7 +130,7 @@ def check(repo: Path = _REPO) -> list[Finding]:
         if err:
             findings.append(Finding(rel, err))
         elif v != canon:
-            ln = _line_of(text, v)
+            ln = _line_of(text, pat)
             findings.append(
                 Finding(f"{rel}:{ln}", f"has {v!r}, canonical is {canon!r}")
             )
@@ -139,7 +156,10 @@ def main(argv: list[str] | None = None) -> int:
             print(str(f), file=sys.stderr)
         print(
             "  A release bumps ALL of them together (ADR-0009 §3). Historical mentions "
-            "of an old version in docs/ADRs are correct — never rewrite those.",
+            "of an old version in docs/ADRs are correct — never rewrite those.\n"
+            "  uv.lock is GENERATED: fix it with `uv lock`, never by hand. A "
+            "hand-typed version there is a second unverified claim dressed as a "
+            "fix (#1633).",
             file=sys.stderr,
         )
         return 1 if args.check else 0
