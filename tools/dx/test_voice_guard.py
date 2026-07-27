@@ -143,3 +143,41 @@ def test_the_allow_marker_still_works_for_fleet():
     """A deliberate mention — quoting the retired term to explain it — stays sayable."""
     line = "we used to call it the fleet  <!-- voice-guard: allow -->"
     assert vg.scan_line(line) == []
+
+
+# ---- #1479 AC4: user-facing text says Workbench --------------------------------
+# Design's ruling. "Classic Sprout" survives only in architecture prose naming the
+# transitional migration architecture — and docs/adr/ is already out of scope, so
+# ADR-0033 and its descendants keep it without an exemption.
+
+
+def test_classic_sprout_in_user_prose_is_flagged():
+    assert "Classic Sprout (#1479 AC4)" in vg.scan_line(
+        "This is Classic Sprout, and ADR-0033 calls it scaffolding"
+    )
+
+
+def test_the_hardware_class_named_Classic_is_never_flagged():
+    """The collision that DECIDED the ruling, asserted rather than assumed.
+
+    `Classic (ESP32-WROOM)` is a live board class in the greenhouse right now. A
+    pattern that flagged the hardware label would be switched off within a day, and
+    then it would catch nothing at all.
+    """
+    for line in [
+        "  const CLASSES = [['esp32-classic', 'Classic (ESP32-WROOM)'], ...];",
+        "the classic board holds four channels",
+        "Board env is `esp32dev` (classic ESP32)",
+    ]:
+        assert "Classic Sprout (#1479 AC4)" not in vg.scan_line(line), line
+
+
+def test_workbench_is_the_approved_word():
+    assert vg.scan_line("Today - the Workbench. One command serves it.") == []
+
+
+def test_adrs_keep_the_architecture_noun():
+    """Ruling part 2: architecture prose may say Classic Sprout. docs/adr/ is already
+    skipped, so this needs no new exemption — asserted so a future scope change to
+    SKIP_DIR_PARTS does not silently start flagging ADR-0033."""
+    assert vg._skipped("docs/adr/0033-two-surface-architecture-home-and-workbench.md")
