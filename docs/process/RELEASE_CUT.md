@@ -280,6 +280,55 @@ empty release, and it cannot be fixed after — only re-cut.** Never skip to §6
 - [ ] **Record the receipt** on the release-cut evidence: the asset list and the `SHA256SUMS`, so the
       flasher's stable channel (#1334) has verifiable bytes to point at.
 
+### 5.0 Re-signing a draft — clear the assets first, and confirm they are gone
+
+*Both of these cost the v0.8.1 cut a failed run, and neither is guessable from the workflow file.*
+
+**`gh release upload` carries no `--clobber`, deliberately** (#1346: an artifact is written once; a
+name collision fails loud rather than silently replacing published bytes). So a **second** dispatch
+against a draft that already has assets does not overwrite them — it **fails**:
+
+      asset under the same name already exists: [SHA256SUMS manifest-esp32.json
+      sprout-esp32-factory.bin ...]
+
+That failure reads like the signer being broken. It isn't; it is the write-once rule holding.
+
+- [ ] **Before re-dispatching, delete every existing asset:**
+
+          for a in $(gh release view vX.Y.Z --repo OrangePeachPink/sprout --json assets --jq '.assets[].name'); do
+            gh release delete-asset vX.Y.Z "$a" --repo OrangePeachPink/sprout --yes
+          done
+
+- [ ] **Retargeting does NOT clear assets.** Changing `target_commitish` leaves them attached, and
+      they now describe a commit the draft no longer points at. **A retarget always implies a
+      re-sign**, and the clearing above is part of it — assets built from the old target are not
+      merely stale, they misdescribe the release.
+
+**Confirm state on a FRESH read before believing it.** A single read taken immediately after a
+mutation is not evidence — the write may not have settled, **or another actor may have written between
+your read and your next command.** At the v0.8.1 cut a dispatch failed on a name collision with assets
+a *second lane* had attached ninety seconds earlier; the reader's own `assets=0` had been accurate when
+taken. **Re-query immediately before acting, not merely after the last write** — and on a release one
+click from immutable, confirm no one else is mid-cut.
+
+- [ ] Before any asset delete / retarget / dispatch / publish, **re-query** rather than trusting the
+      last read. `gh api repos/OWNER/REPO/releases --jq '.[]|select(.tag_name=="vX.Y.Z")'` reads
+      through to the API rather than a subcommand's view, which makes a disagreement visible.
+- [ ] On a release one click from immutable, **confirm no one else is mid-cut.** A concurrent writer
+      is the failure no pause length protects against.
+
+> **Why this is phrased around actors rather than latency.** The first draft of this section blamed
+> eventual consistency — *"a read reported `assets=0` when six were still attached."* The run timeline
+> says otherwise: the assets had genuinely been deleted, the `assets=0` was correct when taken, and six
+> **new** assets were attached by a second run in the ninety seconds before the upload step. No API lag
+> was needed to explain it. That correction matters more than the credit: a future releaser reading
+> *"the API is eventually consistent"* designs a sleep-and-retry around a phantom, while the failure
+> that actually happened — someone else writing to the same draft — goes unmentioned and unprotected.
+>
+> Separately, a publish read-back straight after the click did show `isDraft=true` when the release had
+> published. That one **may** be genuine propagation lag; it is recorded as observed and **unverified**,
+> rather than borrowing certainty from the story above.
+
 ### 5.1 The dry-run seam walk — do this ONCE before a lane's first real cut, and any time the pipeline changes
 
 The asset-less cut happened because no one walked draft → sign → verify → publish end-to-end before it
