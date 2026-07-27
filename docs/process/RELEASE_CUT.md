@@ -246,18 +246,30 @@ That failure reads like the signer being broken. It isn't; it is the write-once 
       re-sign**, and the clearing above is part of it — assets built from the old target are not
       merely stale, they misdescribe the release.
 
-**Confirm state on a FRESH read, after a pause — never the read that immediately follows a write.**
-GitHub's release API is eventually consistent: at the v0.8.1 cut a read taken straight after a
-retarget reported `assets=0` when six were still attached, which produced a confident, wrong
-conclusion and a failed dispatch. The same shape cost a second observation the same night, when a
-publish read-back straight after the click still showed `isDraft=true`.
+**Confirm state on a FRESH read before believing it.** A single read taken immediately after a
+mutation is not evidence — the write may not have settled, **or another actor may have written between
+your read and your next command.** At the v0.8.1 cut a dispatch failed on a name collision with assets
+a *second lane* had attached ninety seconds earlier; the reader's own `assets=0` had been accurate when
+taken. **Re-query immediately before acting, not merely after the last write** — and on a release one
+click from immutable, confirm no one else is mid-cut.
 
-- [ ] After any asset delete / retarget / publish, **pause, then re-query** before believing the
-      result. `gh api repos/OWNER/REPO/releases --jq '.[]|select(.tag_name=="vX.Y.Z")'` reads through
-      to the API rather than a subcommand's view, which makes a disagreement visible.
+- [ ] Before any asset delete / retarget / dispatch / publish, **re-query** rather than trusting the
+      last read. `gh api repos/OWNER/REPO/releases --jq '.[]|select(.tag_name=="vX.Y.Z")'` reads
+      through to the API rather than a subcommand's view, which makes a disagreement visible.
+- [ ] On a release one click from immutable, **confirm no one else is mid-cut.** A concurrent writer
+      is the failure no pause length protects against.
 
-*A single read taken immediately after a mutation is not evidence. Every release-state claim in the
-cut evidence should come from a re-query.*
+> **Why this is phrased around actors rather than latency.** The first draft of this section blamed
+> eventual consistency — *"a read reported `assets=0` when six were still attached."* The run timeline
+> says otherwise: the assets had genuinely been deleted, the `assets=0` was correct when taken, and six
+> **new** assets were attached by a second run in the ninety seconds before the upload step. No API lag
+> was needed to explain it. That correction matters more than the credit: a future releaser reading
+> *"the API is eventually consistent"* designs a sleep-and-retry around a phantom, while the failure
+> that actually happened — someone else writing to the same draft — goes unmentioned and unprotected.
+>
+> Separately, a publish read-back straight after the click did show `isDraft=true` when the release had
+> published. That one **may** be genuine propagation lag; it is recorded as observed and **unverified**,
+> rather than borrowing certainty from the story above.
 
 ### 5.1 The dry-run seam walk — do this ONCE before a lane's first real cut, and any time the pipeline changes
 
