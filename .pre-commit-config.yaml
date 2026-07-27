@@ -184,6 +184,19 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      # internal-prompt-guard (#1659) — internal lane prompts, runbooks and transcripts
+      # stay in the private workspace repo. The #1117/#1129 incident is the standing
+      # proof: a contributor's agent read our then-public instruction files and faithfully
+      # imitated internal conventions, twice, before the audience-scoped fix landed. Every
+      # public doc is executable input for every reader's agent. Two layers — path shape
+      # for the obvious mis-stage, an exact sentinel for the internal doc under an
+      # innocuous name. NOT a prose heuristic: docs/process/ and OPERATIONS.md belong here.
+      - id: internal-prompt-guard
+        name: internal-prompt-guard (#1659 — internal lane material stays private)
+        entry: uv run python tools/dx/internal_prompt_guard.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
       # action-pin-guard (#1346) — every workflow `uses:` is a 40-hex commit SHA with a
       # version comment. STRUCTURAL only here: offline, instant, no rate limit. The
       # network half (--resolve, which is what catches an annotated TAG OBJECT pinned in
