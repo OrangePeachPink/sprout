@@ -117,50 +117,98 @@ def canonical_version(repo: Path = _REPO) -> tuple[str | None, Finding | None]:
     return (v, None) if v else (None, Finding(rel, err or "unreadable"))
 
 
-_DATE_RELEASED = re.compile(r'(?m)^date-released:\s*"?(\d{4}-\d{2}-\d{2})"?')
+# Every site that declares WHEN this release happened. Both are set in the same edit
+# at RELEASE_CUT §1 and both were wrong in the same way at v0.8.1 — so they are checked
+# as a set, not one at a time.
+#
+# NOT here on purpose: `datePublished`. That is first publication and must never move;
+# guarding it against "the cut date" would demand exactly the wrong edit every release.
+_DATE_SITES = (
+    (
+        "CITATION.cff",
+        "date-released",
+        re.compile(r'(?m)^date-released:\s*"?(\d{4}-\d{2}-\d{2})"?'),
+    ),
+    (
+        "docs/index.html",
+        "dateModified",
+        re.compile(r'(?m)^\s*"dateModified":\s*"(\d{4}-\d{2}-\d{2})"'),
+    ),
+)
 
 
-def check_release_date(repo: Path = _REPO, today: date | None = None) -> Finding | None:
-    """#1637: the citation must say WHEN the version it claims existed.
+def check_release_dates(repo: Path = _REPO, today: date | None = None) -> list[Finding]:
+    """#1637: every site must say WHEN the version it claims existed — and agree.
 
-    `date-released` is what anchors a citation to a point in time, and GitHub's "Cite
-    this repository" widget renders straight from this file. A version with no date
-    asserts "Sprout 0.8.1" with nothing saying when that was.
+    `date-released` anchors the citation GitHub's "Cite this repository" widget renders;
+    `dateModified` is machine-readable structured data search tooling consumes. A
+    version with no date asserts "Sprout 0.8.1" with nothing saying when that was.
 
-    Two failures are checkable offline, and both have already happened here:
+    Three shapes are checkable offline, and all three have already happened here:
 
-    * **absent** — every release before v0.8.1 shipped without the field at all.
-    * **in the future** — the date is written at RELEASE_CUT §1, BEFORE the tag exists,
-      so it is a prediction until the publish click. v0.8.1 was set to 2026-07-25 and
-      published 2026-07-26T01:20:53Z: a US-evening cut lands on the next UTC day. The
-      field was wrong on its very first outing, by exactly that mechanism.
+    * **absent** — every release before v0.8.1 shipped with no date at all.
+    * **in the future** — these are written at §1, BEFORE the tag exists, so they are
+      predictions until the publish click. v0.8.1 set both to 2026-07-25 and published
+      2026-07-26T01:20:53Z: a US-evening cut lands on the next UTC day.
+    * **disagreeing** — the shape that caught PR #1655 itself. The first pass corrected
+      `date-released` and left `dateModified` a day behind, because they live in
+      different files and only one was in front of me. Two rows written by one edit can
+      only be verified as a pair.
 
-    What is NOT checkable here is "does it match the published release" — that needs
-    the API, which a pre-commit hook has no business calling. That check belongs at
-    cut time (#1649). This guard catches the two shapes that need no network.
+    NOT checkable here: "does this match the release that published" — that needs the
+    API, and a pre-commit hook has no business making a network call. It belongs at cut
+    time (#1649). Note the asymmetry that leaves: a date in the FUTURE is detectable
+    with nothing but today's date, but a date in the PAST is indistinguishable from a
+    correct one. So this catches the pre-publish mistake and structurally cannot catch
+    a cut that crosses midnight UTC — which is why RELEASE_CUT §1 says to write `date
+    -u +%F` rather than trusting the guard.
     """
-    text = _read(repo, "CITATION.cff")
-    if text is None:
-        return None  # the MISSING-site check above already owns this
-    m = _DATE_RELEASED.search(text)
-    if not m:
-        return Finding(
-            "CITATION.cff",
-            "no date-released — the citation claims a version with no date. Add "
-            'date-released: "YYYY-MM-DD" (RELEASE_CUT §1, in UTC).',
-        )
-    try:
-        released = date.fromisoformat(m.group(1))
-    except ValueError:
-        return Finding("CITATION.cff", f"date-released {m.group(1)!r} is not a date.")
     now = today or datetime.now(timezone.utc).date()
-    if released > now:
-        return Finding(
-            f"CITATION.cff:{_line_of(text, _DATE_RELEASED)}",
-            f"date-released is {released} — in the FUTURE (today is {now} UTC). The "
-            "citation would date the release before it exists.",
+    findings: list[Finding] = []
+    seen: dict[str, date] = {}
+    for rel, field, pat in _DATE_SITES:
+        text = _read(repo, rel)
+        if text is None:
+            continue  # the MISSING-site check already owns an absent file
+        m = pat.search(text)
+        if not m:
+            findings.append(
+                Finding(
+                    rel,
+                    f"no {field} — this site claims a version with no date. Add it "
+                    f"(RELEASE_CUT §1, in UTC).",
+                )
+            )
+            continue
+        try:
+            when = date.fromisoformat(m.group(1))
+        except ValueError:
+            findings.append(Finding(rel, f"{field} {m.group(1)!r} is not a date."))
+            continue
+        if when > now:
+            findings.append(
+                Finding(
+                    f"{rel}:{_line_of(text, pat)}",
+                    f"{field} is {when} — in the FUTURE (today is {now} UTC). It would "
+                    "date the release before it exists.",
+                )
+            )
+            continue
+        seen[f"{rel} {field}"] = when
+
+    # The pair check. Only meaningful once both parsed cleanly — reporting "they
+    # disagree" on top of "one of them is garbage" buries the actionable finding.
+    if len(seen) == len(_DATE_SITES) and len(set(seen.values())) > 1:
+        detail = ", ".join(f"{k}={v}" for k, v in sorted(seen.items()))
+        findings.append(
+            Finding(
+                "release dates",
+                f"the date sites DISAGREE ({detail}). They are set in one edit at "
+                "RELEASE_CUT §1 and describe one event; correcting one and forgetting "
+                "the other is how v0.8.1 shipped a day early on both.",
+            )
         )
-    return None
+    return findings
 
 
 def check(repo: Path = _REPO) -> list[Finding]:
@@ -181,9 +229,7 @@ def check(repo: Path = _REPO) -> list[Finding]:
             findings.append(
                 Finding(f"{rel}:{ln}", f"has {v!r}, canonical is {canon!r}")
             )
-    stale_date = check_release_date(repo)
-    if stale_date:
-        findings.append(stale_date)
+    findings.extend(check_release_dates(repo))
     return findings
 
 

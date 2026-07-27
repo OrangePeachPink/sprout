@@ -22,11 +22,16 @@ bottom for every `vX.Y.Z`.
 > `pyproject.toml` and reports green — while the JSON-LD's `dateModified` sat two releases stale and
 > `CITATION.cff` had no `date-released` at all. A green guard is evidence about versions only.
 >
-> **Partly closed since.** `uv.lock` is now a guarded version site (#1633), and `date-released` is now
-> checked for presence, format, and not-in-the-future (#1637). What the guard still *cannot* know is
-> whether a date matches the release that actually published — that needs the API, which a pre-commit
-> hook has no business calling. **Walk the `dateModified` row by eye, and treat a green guard as
-> evidence the date is well-formed, never that it is right.**
+> **Mostly closed since.** `uv.lock` is now a guarded version site (#1633), and **both** date rows —
+> `date-released` and `dateModified` — are checked for presence, format, not-in-the-future, and
+> **agreement with each other** (#1637). That last one exists because correcting one row and
+> forgetting the other is the mistake that produced this whole thread.
+>
+> What the guard still *cannot* know is whether a date matches the release that actually published —
+> that needs the API, which a pre-commit hook has no business calling. Note the asymmetry: a date in
+> the **future** is detectable from today's date alone, but a date in the **past** is indistinguishable
+> from a correct one. **Treat a green guard as evidence the dates are well-formed and consistent, never
+> that they are right.**
 
 - [ ] `pyproject.toml` → `version` = the release version. This is the **single product version line**
       (ADR-0009 §1) — everything else syncs to it (§3). *(Missed at the v0.7.2 cut — #1080; hence this
@@ -41,14 +46,16 @@ bottom for every `vX.Y.Z`.
       `uv run --frozen` trap the justfile calls *"a brutal, causeless first-PR trap"* (#254): it lands
       on whoever runs the next command, with an error naming none of this.
 
-**The date rows — check them deliberately; the guard only proves they are well-formed:**
+**The date rows — set them in ONE edit; the guard proves they are well-formed and agree, not that
+they are right:**
 
 - [ ] `CITATION.cff` → `date-released` = the cut date, **in UTC** (`date -u +%F`). It is what makes a
       citation resolvable to a point in time, and GitHub's "Cite this repository" widget renders it
       (#1637).
-- [ ] `docs/index.html` → the JSON-LD `dateModified` = the cut date. **Found two releases stale at the
-      v0.8.1 cut** while `version` beside it was correct — machine-readable, publicly consumed, and
-      silently wrong. (`datePublished` is first publication and does **not** move.)
+- [ ] `docs/index.html` → the JSON-LD `dateModified` = **the same date**. **Found two releases stale at
+      the v0.8.1 cut** while `version` beside it was correct — machine-readable, publicly consumed, and
+      silently wrong. (`datePublished` is first publication and does **not** move; the guard ignores it
+      on purpose, because checking it against the cut date would demand the wrong edit every release.)
 
 *Both dates are a prediction until the publish click. Set them here anyway — a date stale by hours
 beats an absent or two-release-old one — but **write them in UTC**, and the reason is not pedantry:*

@@ -12,7 +12,13 @@ from tools.dx import version_sync_guard as g
 
 
 def _repo(
-    tmp_path: Path, version="1.2.3", citation=None, fw=None, html=None, lock=None
+    tmp_path: Path,
+    version="1.2.3",
+    citation=None,
+    fw=None,
+    html=None,
+    lock=None,
+    dmod=None,
 ) -> Path:
     (tmp_path / "pyproject.toml").write_text(
         f'[project]\nversion = "{version}"\n', encoding="utf-8"
@@ -29,8 +35,13 @@ def _repo(
         f'constexpr char PLANTS_FW_VERSION[] = "{fw or version}";\n', encoding="utf-8"
     )
     (tmp_path / "docs").mkdir()
+    # #1637/#1655: docs/index.html carries the SECOND release-date row. It must agree
+    # with CITATION.cff's, or every synthetic repo trips the pair check.
     (tmp_path / "docs" / "index.html").write_text(
-        f'  "version": "{html or version}",\n', encoding="utf-8"
+        f'  "version": "{html or version}",\n'
+        f'  "datePublished": "2019-01-01",\n'
+        f'  "dateModified": "{dmod or "2020-01-01"}",\n',
+        encoding="utf-8",
     )
     # #1633: a realistic lockfile — OTHER packages first, and one of them deliberately
     # carries the canonical version string. A guard anchored to `version =` rather than
@@ -88,8 +99,11 @@ def test_an_ambiguous_pattern_fails_loudly(tmp_path: Path) -> None:
     (repo / "docs" / "index.html").write_text(
         '  "version": "1.2.3",\n  "version": "9.9.9",\n', encoding="utf-8"
     )
-    (f,) = g.check(repo)
-    assert "ambiguous" in f.detail
+    findings = g.check(repo)
+    # Rewriting the file also drops its dateModified row, so the date check speaks up
+    # too (#1655). Both are true; asserting on the set keeps each finding honest.
+    assert any("ambiguous" in f.detail for f in findings)
+    assert any("no dateModified" in f.detail for f in findings)
 
 
 def test_a_missing_site_fails_loudly(tmp_path: Path) -> None:
@@ -152,8 +166,8 @@ def test_a_drifted_lock_is_reported_at_sprouts_line_not_a_namesakes(
     assert lines[reported - 2] == 'name = "sprout"'
 
 
-def _cff(tmp_path: Path, body: str) -> Path:
-    repo = _repo(tmp_path)
+def _cff(tmp_path: Path, body: str, dmod: str = "2020-01-01") -> Path:
+    repo = _repo(tmp_path, dmod=dmod)
     (repo / "CITATION.cff").write_text(body, encoding="utf-8")
     return repo
 
@@ -161,38 +175,76 @@ def _cff(tmp_path: Path, body: str) -> Path:
 def test_a_future_release_date_is_caught(tmp_path: Path) -> None:
     """#1637, and the exact way v0.8.1 got it wrong.
 
-    date-released is written at RELEASE_CUT §1, BEFORE the tag exists — so it is a
-    prediction until the publish click. v0.8.1 was set to 2026-07-25 and published
-    2026-07-26T01:20:53Z: a US-evening cut lands on the next UTC day. The field was
-    wrong on its first outing by exactly this mechanism.
+    The date rows are written at RELEASE_CUT §1, BEFORE the tag exists — so they are
+    predictions until the publish click. v0.8.1 set both to 2026-07-25 and published
+    2026-07-26T01:20:53Z: a US-evening cut lands on the next UTC day.
     """
-    repo = _cff(tmp_path, 'version: "1.2.3"\ndate-released: "2026-07-27"\n')
-    f = g.check_release_date(repo, today=date(2026, 7, 26))
-    assert f is not None and "FUTURE" in f.detail
+    repo = _cff(
+        tmp_path, 'version: "1.2.3"\ndate-released: "2026-07-27"\n', dmod="2026-07-27"
+    )
+    fs = g.check_release_dates(repo, today=date(2026, 7, 26))
+    assert any("FUTURE" in f.detail for f in fs)
 
 
 def test_todays_date_is_fine(tmp_path: Path) -> None:
     """Same-day precision is the accepted trade (#1637) — only the future is wrong."""
-    repo = _cff(tmp_path, 'version: "1.2.3"\ndate-released: "2026-07-26"\n')
-    assert g.check_release_date(repo, today=date(2026, 7, 26)) is None
+    repo = _cff(
+        tmp_path, 'version: "1.2.3"\ndate-released: "2026-07-26"\n', dmod="2026-07-26"
+    )
+    assert g.check_release_dates(repo, today=date(2026, 7, 26)) == []
 
 
 def test_a_missing_release_date_is_caught(tmp_path: Path) -> None:
     """Every Sprout release before v0.8.1 shipped with no date at all."""
     repo = _cff(tmp_path, 'version: "1.2.3"\n')
-    f = g.check_release_date(repo)
-    assert f is not None and "no date-released" in f.detail
+    fs = g.check_release_dates(repo)
+    assert any("no date-released" in f.detail for f in fs)
+
+
+def test_a_missing_datemodified_is_caught(tmp_path: Path) -> None:
+    """The sibling row: machine-readable, publicly consumed, and easy to forget."""
+    repo = _repo(tmp_path)
+    (repo / "docs" / "index.html").write_text('  "version": "1.2.3",\n', "utf-8")
+    fs = g.check_release_dates(repo)
+    assert any("no dateModified" in f.detail for f in fs)
 
 
 def test_a_malformed_release_date_is_not_silently_accepted(tmp_path: Path) -> None:
     repo = _cff(tmp_path, 'version: "1.2.3"\ndate-released: "2026-13-99"\n')
-    f = g.check_release_date(repo)
-    assert f is not None and "not a date" in f.detail
+    fs = g.check_release_dates(repo)
+    assert any("not a date" in f.detail for f in fs)
 
 
-def test_the_real_tree_has_a_sane_release_date() -> None:
-    """The live claim: the citation is dated, and not dated in the future."""
-    assert g.check_release_date() is None
+def test_the_two_date_rows_must_agree(tmp_path: Path) -> None:
+    """THE new check, and it caught PR #1655's own first pass.
+
+    That pass corrected CITATION.cff and left docs/index.html a day behind — the two
+    rows live in different files and only one was in front of me. Both are written by
+    ONE edit at RELEASE_CUT §1 and describe ONE event, so they can only be verified as
+    a pair. Neither date is in the future here; nothing but the pair check sees this.
+    """
+    repo = _cff(
+        tmp_path, 'version: "1.2.3"\ndate-released: "2026-07-26"\n', dmod="2026-07-25"
+    )
+    fs = g.check_release_dates(repo, today=date(2026, 7, 26))
+    assert any("DISAGREE" in f.detail for f in fs)
+
+
+def test_datepublished_is_never_dragged_along(tmp_path: Path) -> None:
+    """`datePublished` is FIRST publication and must not move.
+
+    Guarding it against the cut date would demand precisely the wrong edit every
+    release — so it is deliberately absent from the declared table.
+    """
+    repo = _repo(tmp_path)
+    p = repo / "docs" / "index.html"
+    p.write_text(p.read_text("utf-8").replace("2019-01-01", "1999-12-31"), "utf-8")
+    assert g.check_release_dates(repo) == []
+
+
+def test_the_real_tree_has_sane_release_dates() -> None:
+    """The live claim: both rows are dated, not future, and agree with each other."""
+    assert g.check_release_dates() == []
 
 
 def test_the_real_tree_agrees() -> None:
