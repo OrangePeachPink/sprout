@@ -20,8 +20,18 @@ bottom for every `vX.Y.Z`.
 > **The lesson of the v0.8.1 cut: every place we declare a *version* is guarded, and every place we
 > declare a *date* is not.** `version-sync-guard` (#1407) checks the version sites against canonical
 > `pyproject.toml` and reports green — while the JSON-LD's `dateModified` sat two releases stale and
-> `CITATION.cff` had no `date-released` at all. A green guard is evidence about versions only. **Walk
-> the date rows by eye until #1633/#1637 teach the guard to check them.**
+> `CITATION.cff` had no `date-released` at all. A green guard is evidence about versions only.
+>
+> **Mostly closed since.** `uv.lock` is now a guarded version site (#1633), and **both** date rows —
+> `date-released` and `dateModified` — are checked for presence, format, not-in-the-future, and
+> **agreement with each other** (#1637). That last one exists because correcting one row and
+> forgetting the other is the mistake that produced this whole thread.
+>
+> What the guard still *cannot* know is whether a date matches the release that actually published —
+> that needs the API, which a pre-commit hook has no business calling. Note the asymmetry: a date in
+> the **future** is detectable from today's date alone, but a date in the **past** is indistinguishable
+> from a correct one. **Treat a green guard as evidence the dates are well-formed and consistent, never
+> that they are right.**
 
 - [ ] `pyproject.toml` → `version` = the release version. This is the **single product version line**
       (ADR-0009 §1) — everything else syncs to it (§3). *(Missed at the v0.7.2 cut — #1080; hence this
@@ -32,21 +42,33 @@ bottom for every `vX.Y.Z`.
       If firmware didn't change this release, the constant still bumps at the next firmware release —
       note per-component reality in the notes instead.
 - [ ] `uv.lock` → the `sprout` package entry matches. **Fix by regenerating (`just lock`), never by
-      hand** — it is generated state. The guard does not look here (#1633), and a stale lock is the
+      hand** — it is generated state. Guarded since #1633; before that a stale lock was the
       `uv run --frozen` trap the justfile calls *"a brutal, causeless first-PR trap"* (#254): it lands
       on whoever runs the next command, with an error naming none of this.
 
-**The date rows — unguarded, so check them deliberately:**
+**The date rows — set them in ONE edit; the guard proves they are well-formed and agree, not that
+they are right:**
 
-- [ ] `CITATION.cff` → `date-released` = the cut date. Added at the v0.8.1 cut; it is what makes a
+- [ ] `CITATION.cff` → `date-released` = the cut date, **in UTC** (`date -u +%F`). It is what makes a
       citation resolvable to a point in time, and GitHub's "Cite this repository" widget renders it
       (#1637).
-- [ ] `docs/index.html` → the JSON-LD `dateModified` = the cut date. **Found two releases stale at the
-      v0.8.1 cut** while `version` beside it was correct — machine-readable, publicly consumed, and
-      silently wrong. (`datePublished` is first publication and does **not** move.)
+- [ ] `docs/index.html` → the JSON-LD `dateModified` = **the same date**. **Found two releases stale at
+      the v0.8.1 cut** while `version` beside it was correct — machine-readable, publicly consumed, and
+      silently wrong. (`datePublished` is first publication and does **not** move; the guard ignores it
+      on purpose, because checking it against the cut date would demand the wrong edit every release.)
 
-*Both dates are a prediction until the publish click. Same-day is the norm and a date stale by hours
-beats an absent or two-release-old one — set them here, don't defer.*
+*Both dates are a prediction until the publish click. Set them here anyway — a date stale by hours
+beats an absent or two-release-old one — but **write them in UTC**, and the reason is not pedantry:*
+
+> **v0.8.1 got this wrong on the first try.** `date-released` was set to `2026-07-25` at §1 and the
+> release published at `2026-07-26T01:20:53Z`. Nothing went slowly; the cut simply ran on a US evening,
+> which is already the next day in UTC. An evening cut is the normal case here, so "same-day" in local
+> time is a **whole calendar day** wrong in the timestamp everyone else reads. `date -u +%F` costs
+> nothing and removes the entire class.
+
+*If a cut starts before midnight UTC and publishes after it, the date written at §1 will be a day
+early no matter how carefully it was typed. That is the one case worth a post-publish correction —
+the guard will not catch it, because a past date is not suspicious.*
 
 ### 1.1 Reconcile the milestone against the tag line — both directions
 
@@ -257,6 +279,55 @@ empty release, and it cannot be fixed after — only re-cut.** Never skip to §6
       **"The §5.1 walk was green" is not evidence that a release will label itself correctly.**
 - [ ] **Record the receipt** on the release-cut evidence: the asset list and the `SHA256SUMS`, so the
       flasher's stable channel (#1334) has verifiable bytes to point at.
+
+### 5.0 Re-signing a draft — clear the assets first, and confirm they are gone
+
+*Both of these cost the v0.8.1 cut a failed run, and neither is guessable from the workflow file.*
+
+**`gh release upload` carries no `--clobber`, deliberately** (#1346: an artifact is written once; a
+name collision fails loud rather than silently replacing published bytes). So a **second** dispatch
+against a draft that already has assets does not overwrite them — it **fails**:
+
+      asset under the same name already exists: [SHA256SUMS manifest-esp32.json
+      sprout-esp32-factory.bin ...]
+
+That failure reads like the signer being broken. It isn't; it is the write-once rule holding.
+
+- [ ] **Before re-dispatching, delete every existing asset:**
+
+          for a in $(gh release view vX.Y.Z --repo OrangePeachPink/sprout --json assets --jq '.assets[].name'); do
+            gh release delete-asset vX.Y.Z "$a" --repo OrangePeachPink/sprout --yes
+          done
+
+- [ ] **Retargeting does NOT clear assets.** Changing `target_commitish` leaves them attached, and
+      they now describe a commit the draft no longer points at. **A retarget always implies a
+      re-sign**, and the clearing above is part of it — assets built from the old target are not
+      merely stale, they misdescribe the release.
+
+**Confirm state on a FRESH read before believing it.** A single read taken immediately after a
+mutation is not evidence — the write may not have settled, **or another actor may have written between
+your read and your next command.** At the v0.8.1 cut a dispatch failed on a name collision with assets
+a *second lane* had attached ninety seconds earlier; the reader's own `assets=0` had been accurate when
+taken. **Re-query immediately before acting, not merely after the last write** — and on a release one
+click from immutable, confirm no one else is mid-cut.
+
+- [ ] Before any asset delete / retarget / dispatch / publish, **re-query** rather than trusting the
+      last read. `gh api repos/OWNER/REPO/releases --jq '.[]|select(.tag_name=="vX.Y.Z")'` reads
+      through to the API rather than a subcommand's view, which makes a disagreement visible.
+- [ ] On a release one click from immutable, **confirm no one else is mid-cut.** A concurrent writer
+      is the failure no pause length protects against.
+
+> **Why this is phrased around actors rather than latency.** The first draft of this section blamed
+> eventual consistency — *"a read reported `assets=0` when six were still attached."* The run timeline
+> says otherwise: the assets had genuinely been deleted, the `assets=0` was correct when taken, and six
+> **new** assets were attached by a second run in the ninety seconds before the upload step. No API lag
+> was needed to explain it. That correction matters more than the credit: a future releaser reading
+> *"the API is eventually consistent"* designs a sleep-and-retry around a phantom, while the failure
+> that actually happened — someone else writing to the same draft — goes unmentioned and unprotected.
+>
+> Separately, a publish read-back straight after the click did show `isDraft=true` when the release had
+> published. That one **may** be genuine propagation lag; it is recorded as observed and **unverified**,
+> rather than borrowing certainty from the story above.
 
 ### 5.1 The dry-run seam walk — do this ONCE before a lane's first real cut, and any time the pipeline changes
 
