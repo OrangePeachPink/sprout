@@ -48,7 +48,7 @@ def test_autostart_announces_success_when_really_collecting() -> None:
     assert "fleet" in blob  # names what's actually running
 
 
-def test_autostart_is_honest_empty_when_nothing_reachable() -> None:
+def test_autostart_is_calm_empty_when_nothing_reachable() -> None:
     # no serial port + no fleet -> start_all raises CollectionError -> honest "nothing",
     # never a fake success (the #872 anti-pattern that masked the outage).
     mon = _FakeCtl("stopped", "stopped")
@@ -83,14 +83,14 @@ def test_autostart_reports_a_start_exception_loudly() -> None:
     _auto_start_collection(mon, _Boom(), port_present=_NO_SERIAL[0], log=lines.append)
     # start_all wraps a fleet-start exception into a skipped reason, so the net
     # effect is
-    # "nothing collecting" -> the honest-empty message (still loud, never silent)
+    # "nothing collecting" -> the calm-empty message (still loud, never silent)
     assert any("nothing to log yet" in line or "failed" in line for line in lines)
 
 
 if __name__ == "__main__":
     for fn in (
         test_autostart_announces_success_when_really_collecting,
-        test_autostart_is_honest_empty_when_nothing_reachable,
+        test_autostart_is_calm_empty_when_nothing_reachable,
         test_verify_then_assert_catches_a_start_that_did_not_take,
         test_autostart_reports_a_start_exception_loudly,
     ):

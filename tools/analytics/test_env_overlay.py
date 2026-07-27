@@ -66,7 +66,7 @@ def test_no_context_means_no_toggle_and_null_points(tmp_path: Path) -> None:
             _soil("2026-07-03T00:30:30.000Z", 1520),
         ],
     )
-    assert d["has_env"] is False  # honest-empty: the overlay toggle never appears
+    assert d["has_env"] is False  # calm-empty: the overlay toggle never appears
     assert all(p["temp_c"] is None and p["rh_pct"] is None for p in d["env_points"])
 
 

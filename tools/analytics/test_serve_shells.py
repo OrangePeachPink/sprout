@@ -113,7 +113,7 @@ def test_classic_serves_the_workbench_shell_fast(tmp_path: Path) -> None:
         proc.wait(timeout=5)
 
 
-def test_root_at_zero_segments_is_the_honest_empty_state(tmp_path: Path) -> None:
+def test_root_at_zero_segments_is_the_calm_empty_state(tmp_path: Path) -> None:
     # a genuinely fresh checkout (empty dir, no *.csv) -> the empty-state page, never a
     # 500 and never a data-pretending shell (the _has_segments gate, #543/#1018).
     empty = tmp_path / "empty"
