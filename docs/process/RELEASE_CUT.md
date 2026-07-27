@@ -134,6 +134,20 @@ is to be the record. The maintainer caught it before the tag by asking this ques
 
 ## 2. Close the milestone → the draft appears
 
+- [ ] **Run the preflight FIRST — this is the last cheap moment:**
+
+          just release-preflight vX.Y.Z
+
+      One pass/fail table over §0/§1/§1.1/§1.2/§4: the version and date sites, a `CHANGELOG` section
+      for this tag, the milestone empty of open issues and PRs, and the contributors merged since the
+      previous tag. At the v0.8.1 cut these were ~15 separate manual queries across an hour, and
+      **four of them did not exist as checks at all** — they surfaced because the maintainer asked, not
+      because a gate ran. Once §2 completes the draft exists; after §6 the assets are immutable (#1661).
+
+      *Rows it reports but does not decide are marked `SKIP`. Contributor reconciliation is a
+      judgement about crediting a person — a gate that guessed would fail on a correct release, and
+      §1.2 is where the judgement belongs.*
+
 - [ ] Close the milestone (Issues → Milestones → Close). The `release-draft` workflow drafts the
       GitHub Release with **auto-generated, tag-to-tag notes** grouped by `type:` label.
       *(Fallback: Actions → "release draft on milestone close" → Run workflow with the version.)*
@@ -202,10 +216,26 @@ empty release, and it cannot be fixed after — only re-cut.** Never skip to §6
 - [ ] **The signer must pass its own fail-closed gates** (watch the run): signing key present (no key →
       it refuses, by design), builds the draft's `target_commitish` (the commit that becomes the tag —
       the tag does not exist yet), both boards `[SUCCESS]`, `.sig` files produced.
-- [ ] **VERIFY the draft now carries assets — this is the gate, not a nicety:**
-      `gh release view vX.Y.Z --json isDraft,assets -q '"draft=\(.isDraft) assets=\(.assets|length)"'`
-      must print `draft=true` and a **non-zero** asset count (the per-board bins + their `.sig` + the
-      `SHA256SUMS`). **`assets=0` means STOP** — the signer failed or was never dispatched; do not publish.
+- [ ] **VERIFY the artifact contract — this is the gate, not a nicety:**
+
+          just release-verify vX.Y.Z
+
+      **`assets > 0` is not the check**, and it is what this step asked for until #1662 — it passes on
+      a release missing a signature. `release-verify` downloads the assets and asserts the **exact**
+      inventory per board class, that `SHA256SUMS` covers all of them, that the real bytes / the sums /
+      the manifest's own `sha256` all agree, that `provenance.git` is the draft's target, and that the
+      body carries no unintended `@mention` (#1639). Non-zero exit means **do not publish**.
+
+      *(At the v0.8.1 cut this was done by hand with ad-hoc Python three times, once per signing
+      cycle.)*
+
+- [ ] **If anything fails, re-sign as ONE transaction rather than by hand:**
+
+          just release-resign vX.Y.Z            # --dry-run reports the plan and stops
+
+      It refuses to start while another signer run is live (the v0.8.1 collision — see §5.0), confirms
+      the target, clears the existing assets (`gh release upload` has no `--clobber`, by design),
+      dispatches once, waits out the ~4 minute build, and finishes by running `release-verify` (#1663).
 - [ ] **VERIFY the manifest is not labelled `-alpha` — the other thing that cannot be fixed after
       publish** (#1630):
 
@@ -219,6 +249,12 @@ empty release, and it cannot be fixed after — only re-cut.** Never skip to §6
       seals it: the fleet pulls that manifest and the flasher reads it, and neither can be corrected
       in place — only re-cut under a new tag. *(The §5.1 dry-run walk cannot catch this: a throwaway
       tag is legitimately alpha, so this gate exists precisely because the walk is blind to it.)*
+
+      **`release-verify` above asserts this too** — the manual `jq` is kept as the by-hand fallback and
+      as the explanation of *what* is being asserted. The blindness itself is now rehearsed offline
+      (#1664, `tools/release/test_release_rehearsal.py`): a real tagged checkout must label itself
+      bare, an untagged one must say alpha, and the signer workflow must still tag its own checkout.
+      **"The §5.1 walk was green" is not evidence that a release will label itself correctly.**
 - [ ] **Record the receipt** on the release-cut evidence: the asset list and the `SHA256SUMS`, so the
       flasher's stable channel (#1334) has verifiable bytes to point at.
 

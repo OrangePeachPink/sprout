@@ -367,6 +367,26 @@ board-hygiene *ARGS:
 ota-feed TAG *ARGS:
     {{py}} tools/dx/ota_feed.py generate --tag {{TAG}} {{ARGS}}
 
+# ---- The cut's tooling (#1649 / CP3) --------------------------------------------------
+# RELEASE_CUT's checks used to live in the operator's head and ~15 ad-hoc queries. These
+# are the same checks, in the order the ceremony runs them. NOTE: `just --list` shows the
+# LAST comment line above a recipe, so each one ends with its own one-line summary.
+
+# Runs BEFORE the milestone closes - the last moment corrections are cheap (#1661).
+# One pass/fail table: version + date sites, CHANGELOG section, milestone, contributors
+release-preflight TAG *ARGS:
+    {{py}} tools/release/preflight.py {{TAG}} {{ARGS}}
+
+# `assets > 0` passes on a release missing a signature (#1662).
+# Assert the exact artifact inventory on a real release - run after every signer dispatch
+release-verify TAG *ARGS:
+    {{py}} tools/release/verify.py {{TAG}} {{ARGS}}
+
+# `gh release upload` has no --clobber by design, so a re-sign must clear first (#1663).
+# Re-sign as ONE transaction: refuse if a signer is live, clear, dispatch, wait, verify
+release-resign TAG *ARGS:
+    {{py}} tools/release/resign.py {{TAG}} {{ARGS}}
+
 # ---- Board field self-service (#1443, ADR-0003 §5) -------------------------------------
 # Read/write the five Project-#2 planning fields in one line, so an attribute is never
 # skipped because writing it was annoying (how velocity: drifted to 7-of-69). Every WRITE
