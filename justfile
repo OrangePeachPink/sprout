@@ -392,6 +392,11 @@ release-resign TAG *ARGS:
 milestone-propagate *ARGS:
     {{py}} tools/release/milestone.py {{ARGS}}
 
+# The v0.8.1 ceremony ran 2h55 across midnight, its state carried in a person's head.
+# Where the cut is and the exact next action - every field a live query, never a guess
+release-state TAG *ARGS:
+    {{py}} tools/release/state.py {{TAG}} {{ARGS}}
+
 # ---- Board field self-service (#1443, ADR-0003 §5) -------------------------------------
 # Read/write the five Project-#2 planning fields in one line, so an attribute is never
 # skipped because writing it was annoying (how velocity: drifted to 7-of-69). Every WRITE
