@@ -119,10 +119,11 @@ index.
 
 ## A look
 
-**Today — the live dashboard.** One command (`just start`) serves this: **Monitor · Capture · Lab ·
+**Today — the Workbench.** One command (`just start`) serves this: **Monitor · Capture · Lab ·
 Trial · Plants & Sensors · Diagnostics & Logs** — raw ADC and the calibrated band for every probe, plus
-the calibration ladder. This is *Classic Sprout*, and ADR-0033 is explicit that it is scaffolding with a
-demolition date: Home — the glanceable per-plant card grid — is the destination surface. Plain and
+the calibration ladder. The Workbench is where the instrument is read; **Home** — the glanceable
+per-plant card grid — is where a plant speaks for itself, and ADR-0033 is the plan for getting
+there. Plain and
 unpolished on purpose, and it shows exactly what it reads: a probe sitting in open air or in a glass of water
 is called out as an **instrument condition**, not handed a plant's mood — those aren't soil readings, and the
 seven moods are reserved for probes actually in a pot.

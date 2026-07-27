@@ -54,6 +54,20 @@ PATTERNS: list[tuple[str, re.Pattern[str]]] = [
         ),
     ),
     (
+        "Classic Sprout (#1479 AC4)",
+        # Design's AC4 ruling: user-facing text always says WORKBENCH. "Classic Sprout"
+        # survives only in architecture prose, where it names the transitional migration
+        # architecture — and docs/adr/ is already out of this guard's scope, so ADR-0033
+        # and its descendants keep it for free.
+        #
+        # BARE "Classic" is deliberately NOT matched. `Classic (ESP32-WROOM)` is a live
+        # board class in the greenhouse right now, and that collision is exactly what
+        # decided the ruling: in a repo where board classes are discussed constantly,
+        # "check the classic readings" must keep one meaning. A pattern that flagged the
+        # hardware label would be switched off within a day.
+        re.compile(r"\bClassic\s+Sprout\b"),
+    ),
+    (
         "fleet (#1506)",
         # The collective is a GREENHOUSE, not a fleet — we grow plants, not a motor
         # pool. #1506 retired the word from user surfaces and shipped in v0.8.1... and
