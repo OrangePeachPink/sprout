@@ -47,7 +47,7 @@ this file's — recorded here only as explored history.
 
 **What it was.** The original design system: the honest-instrument dashboard UI, the seven-band moisture ladder,
 the mood/personality previews (`top`, `personality`, `personality-dry`, `ladder`). v1 was — and the live
-dashboard tokens still are — the source of truth for the instrument surface.
+dashboard tokens still are — the canonical source for the instrument surface.
 
 **Why superseded (not rejected).** v1 was a foundation, not a dead end. v3 layered personality *onto* it without
 displacing it. It lives on through the token contract (ADR-0004) and every dense numeric readout that stayed
@@ -90,7 +90,7 @@ kit — fourteen pages in their pre-alignment state.
   `ditl-breathe` — a dozen near-identical keyframe blocks that drifted in timing and origin.
 
 v3 replaced both with shared infrastructure: the `--bg` token and the single living `<sprout-mark>` custom
-element (reduced-motion aware, one source of truth for the mark's behavior).
+element (reduced-motion aware, one canonical source for the mark's behavior).
 
 **The useful anti-pattern.** A value repeated inline on every page is a value that will drift. Backgrounds belong
 to a token; a repeated animated glyph belongs to one component — not a copy in each page's `<style>`.

@@ -90,14 +90,14 @@ The machine sidecar carries a `notes` object whose shape follows
 "v3 · saved …" between commits. We do **not** build a bespoke version store — git is the version
 store, the `version`/`saved_at` fields are the live-session breadcrumb.
 
-### 5. Who writes, and the honest durability boundary
+### 5. Who writes, and the durability boundary
 
 The `/lab` notes editor (in `serve.py`, the localhost operator tool) **writes the tracked pair to
 the working tree**. Durability is realized on **commit + push** — a normal git action, not a hidden
 one. This keeps faith with the project's no-hidden-server / no-surprise-state posture: the app never
 auto-commits or pushes behind the operator's back.
 
-The honest boundary: notes written but **not yet committed** are local-only. That is acceptable and
+The boundary: notes written but **not yet committed** are local-only. That is acceptable and
 truthful for a single-operator local tool, and it is surfaced in the UI (an "uncommitted" hint is a
 Design follow-up). Two **optional future enhancements** can shrink the gap without violating the
 posture — both deferred, neither required by this ADR:
@@ -130,7 +130,7 @@ by the Data lane unilaterally.
   durable lifecycle from the isolated raw evidence (R5's evidence-vs-interpretation split holds).
 - The notebook reuses ADR-0012 §5's findings pair instead of forking a parallel store — one durable
   home for "what this experiment concluded," whether typed in `/lab` or written by hand.
-- A clear, honest durability boundary (committed = backed up) keeps the no-hidden-action posture and
+- A clear durability boundary (committed = backed up) keeps the no-hidden-action posture and
   names the two optional enhancements that would tighten it later.
 - The gitignore re-anchor is surfaced as a coordinated Workflow task, not a silent Data edit.
 

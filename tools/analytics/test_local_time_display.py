@@ -8,15 +8,13 @@ is droppable, and the dashboard's human display fields carry no UTC.
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context
-from device_registry import Device, Registry
-from parse_v1 import parse_files
-from timefmt import _abbrev_zone, local_first, local_first_system
+from tools.analytics.dashboard import build_context
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.parse_v1 import parse_files
+from tools.analytics.timefmt import _abbrev_zone, local_first, local_first_system
 
 _HEADER = (
     "# schema_version=3  fw=0.7.0  git=abc  session_id=s1\n"

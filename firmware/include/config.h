@@ -5,7 +5,7 @@
 #include "board_capability.h" // BOARD_CAP - per-board pins are a descriptor field (ADR-0019 §1, #436)
 
 // Firmware version (keep in sync with README as it changes)
-constexpr char PLANTS_FW_VERSION[] = "0.7.1";
+constexpr char PLANTS_FW_VERSION[] = "0.8.1";
 
 // Serial - dropped 115200 -> 19200 for noise margin on the USB-serial link
 // (the prefix-corruption framing errors); throughput is irrelevant at this cadence.
@@ -35,7 +35,14 @@ const int SENSOR_PINS[NUM_SENSORS] = {
 // All four go in the ONE original recovering plant for now -> a cross-probe
 // agreement test (how much do 4 probes in the same soil disagree over a run).
 // Per-channel name = the physical sensor id (short, space-free).
-constexpr const char *SENSOR_NAMES[NUM_SENSORS] = {"s3", "s4", "s1", "s2"};
+// ADR-0036 (ratified 2026-07-19, Fork A): these are the FIRMWARE CHANNEL layer -
+// a board port / ADC lane - and they are what the wire `sensor_id` carries. They
+// are NOT probe stickers. The old {s3,s4,s1,s2} encoded a MUTABLE probe<->channel
+// binding in an IMMUTABLE flashed constant, so moving a probe silently mislabelled
+// the wire until reflash, and per-board s1..s4 collided fleet-wide. Probe identity
+// now lives in the registry (a probe move is a registry event); a reading stays
+// unique as (device_id, sensor_id), exactly as before.
+constexpr const char *SENSOR_NAMES[NUM_SENSORS] = {"ch0", "ch1", "ch2", "ch3"};
 // Throwaway reads after switching the ADC mux to a channel (S/H settle).
 constexpr int ADC_DISCARD = 4;
 // Free-text run label for the log header - set per deployment.
@@ -55,7 +62,11 @@ constexpr const char *RUN_LABEL = "4probe-coloc-origplant";
 //   SENSOR_FAULT quality_flag value + fault= reason (#670). v4 is a strict superset
 //   of v3 - all additive payload/header, ZERO new CANONICAL_COLUMNS (the companion
 //   shared-core stays byte-identical); parse_v1 branches once at >=4, never stitches.
-constexpr int PLANTS_SCHEMA_VERSION = 4;
+// v5 (#1042 / ADR-0036): the `sensor_id` rename is a SCHEMA BOUNDARY, not an
+// in-place edit (never-stitch, ADR-0006 / ADR-0021). v4 rows carry the old
+// port-as-sticker token; v5 rows carry the channel. Old rows are never rewritten,
+// and a parser can tell from the version which contract a row was written under.
+constexpr int PLANTS_SCHEMA_VERSION = 5;
 constexpr const char *RECORD_TYPE_SOIL = "plants.soil";       // namespaced record_type
 constexpr const char *SENSOR_MODEL     = "UMLIFE_v2_TLC555";  // probe family
 constexpr const char *SENSOR_POSITION  = "origplant";        // all four co-located now; per-channel at repot
@@ -69,7 +80,17 @@ constexpr const char *SOIL_CHANNEL     = "soil_moisture";    // the measured qua
 // common-cup anchors (4-probe): WET_RAW 900 stays below the saturated anchors (center 978,
 // min probe 926); DRY_RAW 3400 stays above the air-dry anchors (center 3170, max probe
 // 3191), leaving room for very dry winter air. NOTE: value/unit (the moist%) are emitted
-// NULL (#38) - this linear map is reserved, never analysed; truth is raw_value + band.
+// NULL (#38) - this linear map is reserved, never analysed; raw + band is the reading.
+// #1152 kinematics (TELEMETRY_SCHEMA S4, Data-ratified wire row): a single-step
+// |delta| bigger than this is faster than soil moves at READ_INTERVAL_MS - the
+// reading may be real but the JUMP is not trustable (probe yanked/reseated,
+// contact break). Emits SUSPECT + fault=rate_spike; raw is preserved (ADR-0006).
+// PROVISIONAL: derived with margin from the #1174 dry-down, where a FULL watering
+// moved a channel ~900 counts across MANY 30 s steps - so a single step this big
+// is instrument motion, not soil. Data owns cal values; ratify or retune there.
+// 0 disables the check.
+constexpr uint16_t SENSOR_MAX_DELTA_RAW = 1200;
+
 constexpr int SENSOR_WET_RAW = 900;   // raw at/below this would read 100% (reserved)
 constexpr int SENSOR_DRY_RAW = 3400;  // raw at/above this would read 0% (reserved)
 
@@ -170,13 +191,59 @@ constexpr int WIFI_HTTP_PORT = 80; // served-status skeleton (#21)
 // --- Phase-0 OTA (#302, maintainer-ruled interim; NOT the ADR-0026 fence) -----
 // ArduinoOTA is LAN-only (espota over the local net, mDNS-advertised) and armed only
 // while WiFi-connected. It is PASSWORD-gated: the espota password below. This is a
-// deliberately weak Phase-0 interim - a shared, LAN-scoped default, overridable per
-// build with `-D OTA_PASSWORD='"..."'`. The real posture (signed images + a
-// verified-marker + key management) is ADR-0026, staged as a follow-up amendment;
-// do NOT treat this as the security fence. Public-repo note: this is a placeholder,
-// not a secret - exploiting it still requires being on the LAN.
-#ifndef OTA_PASSWORD
-#define OTA_PASSWORD "sprout-phase0"
+// deliberately weak Phase-0 interim - a shared, LAN-scoped default. The real posture
+// (signed images + a verified-marker + key management) is ADR-0026, staged as a
+// follow-up amendment; do NOT treat this as the security fence.
+//
+// PROVISIONED-OR-OFF (#1333, maintainer-approved). There is NO default password,
+// and that absence is the whole mechanism: the push receiver arms only when a
+// password was provisioned AT BUILD TIME.
+//
+// The retired placeholder ("sprout-phase0") was published on purpose as an example -
+// but a published credential compiled into every PUBLIC build (CI, release,
+// web-flasher) is a known-password receiver listening on a stranger's LAN, on a
+// board they flashed from our own front door. "You still have to be on the LAN"
+// is a real mitigation for a maintainer's own bench and a much weaker one for a
+// household that has guests, roommates, or a shared flat's WiFi. The person who
+// clicks Flash on the Pages site never opted into that, and cannot see it.
+//
+// So: no local override file -> no OTA_PASSWORD -> receiver never begins (see
+// OTA_PUSH_ARMED). Public builds are dark by construction, not by remembering to
+// set something. Bench builds are UNCHANGED - they already provision by copying
+// firmware/platformio_local.example.ini -> platformio_local.ini (gitignored), and
+// that one file supplies BOTH the -D OTA_PASSWORD compiled in here AND the
+// uploader's --auth, which must match. See docs/OTA_FLASH.md § Password.
+//
+// Do NOT reintroduce a default here to "make bench easier" - a default re-arms
+// every public build, which is the exact defect this closes.
+// A board keeps accepting its OLD password until it is re-flashed.
+//
+// TEMPORARY BY DESIGN: the push mechanism retires in v0.8.1 (#1340) once signed
+// pull (#302) is proven on the live fleet. This latch dies with the receiver -
+// there is nothing to unwind later.
+#ifdef OTA_PASSWORD
+#define OTA_PUSH_ARMED 1
+#else
+#define OTA_PUSH_ARMED 0
+#endif
+
+// #302 S3 (#1284) — the SIGNED PULL path arms the same way the push path does:
+// PROVISIONED-OR-OFF, dark by construction. OTA_FEED_URL is the curated release
+// feed (ADR-0026 D1/D4, #1258) the device pulls from; there is NO default, so a
+// public/web-flashed build has no feed and the pull client is absent from the
+// runtime path — not merely idle. The bench provisions it the same one file the
+// push password rides (firmware/platformio_local.ini, gitignored):
+//     build_flags = -D OTA_FEED_URL='"https://<pages-host>/ota/feed.txt"'
+// The feed is UNSIGNED and only a POINTER; the IMAGE's ed25519 signature is the
+// sole authority for running code (ota_gate, S2). So a provisioned URL grants no
+// trust — a wrong or hostile feed can waste a download, never boot unsigned code.
+// TLS trust for the fetch is the Mozilla root bundle (esp_crt_bundle), not a
+// pinned cert — GitHub/Pages certs rotate, and the signature (not the transport)
+// is what makes an image safe. Pull RETIRES the push path once proven live (#1340).
+#ifdef OTA_FEED_URL
+#define OTA_PULL_ARMED 1
+#else
+#define OTA_PULL_ARMED 0
 #endif
 // NTP-on-connect (#278/#276, ADR-0018 §3): SNTP arms on WiFi association; rows
 // flip time_source=device_uptime -> device_synced once the clock is real.

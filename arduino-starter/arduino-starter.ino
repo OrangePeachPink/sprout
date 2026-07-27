@@ -11,9 +11,9 @@
  * go further: VS Code + PlatformIO, or GitHub Codespaces. Come meet Sprout
  * Full: you just hand-built its heart — read, calibrate, band, speak.
  *
- * Honest-data, from minute one: this prints the RAW sensor reading + a
- * plain-word band. No fake percentage — a raw number plus where it falls
- * between two spots YOU measured is more honest than a made-up "62%".
+ * Real numbers, from minute one: this prints the RAW sensor reading + a
+ * plain-word band. A raw number, plus where it falls
+ * between the two spots YOU measured, is all you need.
  */
 
 // ===== TUNE ME — this is the whole control panel =====
@@ -27,19 +27,25 @@ const int SAMPLES = 8;            // readings I average each check (smooths the 
 // now live in firmware/include/cal_class_defaults.h (#952) — but those are 12-bit ESP32
 // values at a different ADC reference, so they do NOT transfer to the R4 as-is; your R4
 // numbers are yours to measure. When you graduate to Sprout Full, that file is where a
-// board's honest dry/wet anchors are sourced.)
+// board's dry/wet anchors are sourced.)
 const int DRY_READING = 600;  // what you saw with the probe in dry AIR
 const int WET_READING = 260;  // what you saw with the probe in a CUP OF WATER
 
 // --- Where the 3 bands split (between your two numbers above) ---
-const int THIRSTY_ABOVE = 500;  // drier (bigger) than this  -> "thirsty"
-const int SOAKED_BELOW = 340;   // wetter (smaller) than this -> "just watered"
-//                        (anything in between -> "all good")
+// These are three of Sprout's real mood words — the same ladder you'll meet in
+// Sprout Full (Faint · Parched · Thirsty · Content · Thriving · Refreshed · Soaked).
+const int THIRSTY_ABOVE = 500;  // drier (bigger) than this  -> "Thirsty"
+const int SOAKED_BELOW = 340;   // wetter (smaller) than this -> "Soaked"
+//                        (anything in between -> "Content")
 
 const bool BLINK_WHEN_THIRSTY = true;  // light up the onboard LED (LED_BUILTIN) when it needs water
 // ===== end of the control panel — everything below just runs it =====
 
 unsigned long lastReadMs = 0;
+
+// The last mood I announced. bandFor() returns one of three fixed flash strings,
+// so "same pointer" means "same mood" — a cheap did-my-mood-change check.
+const __FlashStringHelper *lastBand = nullptr;
 
 void setup()
 {
@@ -48,7 +54,8 @@ void setup()
 
     // Give the Serial Monitor / Plotter a moment to connect on first boot.
     delay(1500);
-    Serial.println(F("Sprout Starter — reading A0. Open Tools > Serial Plotter to watch it live."));
+    Serial.println(F("Sprout Starter — reading A0. Open Tools > Serial Plotter to watch the raw "
+                     "line live; I'll speak up here whenever my mood changes."));
 }
 
 // Average SAMPLES raw reads — a cheap way to smooth ADC jitter.
@@ -61,13 +68,14 @@ int readSensorRaw()
     return (int)(total / SAMPLES);
 }
 
-// Turn a raw reading into one of the three Sprout-voice bands.
+// Turn a raw reading into one of Sprout's real mood words — the mood leads, then a
+// friendly first-person line (the same shape Sprout Full speaks in).
 const __FlashStringHelper *bandFor(int raw)
 {
-    if (raw > THIRSTY_ABOVE) return F("HIGH AND DRY: I'm parched! Grab the watering can.");
-    if (raw < SOAKED_BELOW) return F("JUST WATERED: Ahh, just drank - let me soak it up. "
+    if (raw > THIRSTY_ABOVE) return F("Thirsty - I could really use a drink. Grab the watering can.");
+    if (raw < SOAKED_BELOW) return F("Soaked - ahh, just drank; let me soak it up. "
                                      "(If the outer pot's swimming, tip the extra out.)");
-    return F("ALL GOOD: Comfy. Nothing to do - I'm happy.");
+    return F("Content - comfy, nothing to do. I'm happy.");
 }
 
 void loop()
@@ -79,10 +87,19 @@ void loop()
     int raw = readSensorRaw();
     bool thirsty = raw > THIRSTY_ABOVE;
 
-    Serial.print(F("raw="));
-    Serial.print(raw);
-    Serial.print(F("  "));
-    Serial.println(bandFor(raw));
+    // Plotter-friendly: the data line is ONLY "raw:NNN". The Serial Plotter charts
+    // label:value lines and skips the voice lines below (they carry no digits), so
+    // both tools work at once — the Plotter gets a clean line, the Monitor gets me.
+    Serial.print(F("raw:"));
+    Serial.println(raw);
+
+    // The voice line, separately — once at the first read, then whenever the mood
+    // changes. (A plant that repeats itself every second isn't charming.)
+    const __FlashStringHelper *band = bandFor(raw);
+    if (band != lastBand) {
+        Serial.println(band);
+        lastBand = band;
+    }
 
     if (BLINK_WHEN_THIRSTY) digitalWrite(LED_BUILTIN, thirsty ? HIGH : LOW);
 }

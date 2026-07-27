@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="Sprout — plants that finally have a voice: a seedling in a sensor ring on a light ground, with the seven-band mood spectrum along the bottom">
+  <!-- Light sibling of social-preview.svg — same composition + copy (voice-clean, no hook, no overclaim),
+       light palette for light-background contexts. Dark card is the og:image; this is the pair-member. -->
+  <defs>
+    <radialGradient id="bg" cx="24%" cy="34%" r="95%">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.55" stop-color="#F2F7EA"/><stop offset="1" stop-color="#E3E9D8"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#8BD24F" stop-opacity="0.28"/><stop offset="0.6" stop-color="#8BD24F" stop-opacity="0.07"/><stop offset="1" stop-color="#8BD24F" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="leafA" x1="0" y1="1" x2="0.35" y2="0"><stop offset="0" stop-color="#2f8a44"/><stop offset="1" stop-color="#A9DA6E"/></linearGradient>
+    <linearGradient id="leafB" x1="0" y1="1" x2="0.35" y2="0"><stop offset="0" stop-color="#26803f"/><stop offset="1" stop-color="#34A853"/></linearGradient>
+    <radialGradient id="soil" cx="50%" cy="0%" r="90%"><stop offset="0" stop-color="#6b4a2e"/><stop offset="1" stop-color="#4a3320"/></radialGradient>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=JetBrains+Mono:wght@500&amp;display=swap');
+      .wm { font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800; }
+      .tag { font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 700; }
+      .cat { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 500; letter-spacing: 5px; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <g fill="#34A853" opacity="0.35">
+    <circle cx="126" cy="200" r="2.4"/><circle cx="406" cy="250" r="2"/><circle cx="176" cy="430" r="2.2"/>
+  </g>
+
+  <circle cx="288" cy="300" r="192" fill="none" stroke="#cfe0bb" stroke-width="8"/>
+  <circle cx="288" cy="300" r="192" fill="none" stroke="#34A853" stroke-width="8" stroke-linecap="round"
+          stroke-dasharray="330 876" transform="rotate(-125 288 300)" opacity="0.95"/>
+
+  <circle cx="288" cy="312" r="185" fill="url(#glow)"/>
+  <ellipse cx="288" cy="476" rx="150" ry="24" fill="url(#soil)"/>
+  <g transform="translate(132,142) scale(13)" fill="none" stroke="#26803f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 26 V12"/>
+    <path d="M12 13 C8 11 6 8 7 5 C11 6 12 10 12 13 Z" fill="url(#leafA)"/>
+    <path d="M12 13 C16 11 18 8 17 5 C13 6 12 10 12 13 Z" fill="url(#leafB)"/>
+    <path d="M12 11 C9 6 11 3 12 1 C14 4 14 8 12 11 Z" fill="#A9DA6E"/>
+  </g>
+
+  <text class="cat" x="520" y="240" font-size="18" fill="#6f8a54">SOIL · MOISTURE · CARE</text>
+  <text class="wm" x="516" y="362" font-size="112" fill="#1E2A18">Sprout</text>
+  <text class="tag" x="520" y="436" font-size="42" fill="#2f9a4d">Plants that finally have a voice.</text>
+
+  <g>
+    <rect x="0" y="616" width="171.5" height="14" fill="#17B6C4"/>
+    <rect x="171.5" y="616" width="171.5" height="14" fill="#34A853"/>
+    <rect x="343" y="616" width="171.5" height="14" fill="#8BD24F"/>
+    <rect x="514.5" y="616" width="171.5" height="14" fill="#C6D84A"/>
+    <rect x="686" y="616" width="171.5" height="14" fill="#F5A623"/>
+    <rect x="857.5" y="616" width="171.5" height="14" fill="#E8703A"/>
+    <rect x="1029" y="616" width="171" height="14" fill="#E0483D"/>
+  </g>
+</svg>

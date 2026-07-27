@@ -1,8 +1,8 @@
 # Friendly troubleshooting
 
 Something doesn't look right? Start here. These are the most common "my plant says X" cases — each with a
-plain-language cause and a clear next step. Sprout is designed to be honest; most odd readings have an
-honest explanation.
+plain-language cause and a clear next step. Sprout tells you what it's actually seeing, and most odd
+readings have a plain explanation.
 
 > Can't find your symptom here? Check the **[seven bands guide](what-sprout-is-telling-you.md)** for band
 > meanings, or the **[sensor board check](trust-your-sensor.md)** if readings seem systematically wrong.

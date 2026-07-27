@@ -8,13 +8,11 @@ with env rows parsed by their class and the soil views uncontaminated. Firmware'
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context, render
-from make_env_sample import env_sample_text
-from parse_v1 import parse_files
+from tools.analytics.dashboard import build_context, render
+from tools.analytics.make_env_sample import env_sample_text
+from tools.analytics.parse_v1 import parse_files
 
 
 def _parse(tmp_path: Path):

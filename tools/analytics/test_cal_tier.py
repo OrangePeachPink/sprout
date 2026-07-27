@@ -15,13 +15,11 @@ cal_source the derivation swaps to read it and the tier→label mapping is uncha
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context
-from device_registry import Device, Registry
-from parse_v1 import parse_files
+from tools.analytics.dashboard import build_context
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.parse_v1 import parse_files
 
 # a verified per-channel cal line (#507) — the top, channel-cal state
 _CAL_LINE = (
@@ -30,7 +28,7 @@ _CAL_LINE = (
 )
 # the shared factory default bounds — a header that merely echoes these is NOT board-cal
 _DEFAULT_BOUNDS = (
-    "# cal bounds(dry>wet): 3050 2140 1830 1520 1150 1050  [moist% 900..3400]\n"
+    "# cal bounds(dry>wet): 2293 2086 1879 1636 1393 1150  [moist% 900..3400]\n"
 )
 # the C5's own measured envelope (#899/#933): distinct from the default → board-cal
 _MEASURED_BOUNDS = (
@@ -135,6 +133,18 @@ def test_template_renders_the_three_tiers() -> None:
     assert "cal · uncalibrated" in tpl  # the uncalibrated caveat
     # channel-cal is unlabeled; the old always-on "bench-verified" chip is gone
     assert "cal · bench-verified" not in tpl
+
+
+def test_workbench_never_claims_the_ladder_is_proposed() -> None:
+    # #1233: the "INTERIOR BANDS PROPOSED" badge was a provisional-era artifact. The
+    # brackets ratified (#995 -> #1218/#1220) — the Workbench must not assert a state
+    # that stopped being true at the release.
+    tpl = (Path(__file__).resolve().parent / "dashboard_template.html").read_text(
+        encoding="utf-8"
+    )
+    assert "interior bands proposed" not in tpl.lower()
+    assert "un-reconciled" not in tpl  # the stale caption sentence went with it
+    assert "ratified seven-in-soil ladder" in tpl  # the truthful replacement
 
 
 if __name__ == "__main__":

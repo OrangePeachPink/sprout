@@ -18,11 +18,7 @@ below in the SAME PR so review sees it for what it is, not a quiet diff.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import parse_v1
+from tools.analytics import parse_v1
 
 # The frozen positional contract. Do NOT edit this to "make the test pass" — see the
 # module docstring: a change here is a breaking wire change, reviewed as such.

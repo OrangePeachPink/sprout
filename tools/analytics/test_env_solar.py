@@ -7,15 +7,12 @@ python tools/analytics/test_env_solar.py
 from __future__ import annotations
 
 import shutil
-import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-import env_solar  # noqa: E402
+from tools.analytics import env_solar  # noqa: E402
 
 # A public city-center reference (NOT anyone's home) - matches config/location.example.
 _LAT, _LON, _TZ = 41.8781, -87.6298, -5

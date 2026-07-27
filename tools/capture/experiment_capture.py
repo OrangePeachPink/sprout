@@ -54,13 +54,12 @@ from pathlib import Path
 _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
 _LOGGER_DIR = _REPO / "tools" / "logger"
-if str(_LOGGER_DIR) not in sys.path:
-    sys.path.insert(0, str(_LOGGER_DIR))
 
 # Reuse the monitor logger's pure telemetry helpers (one parse_device_line, one
 # checksum). A future refactor could extract these into a serial-free shared
 # module so neither tool hard-imports pyserial; not needed for this slice.
-from plants_logger import (  # noqa: E402  (sibling import after sys.path)
+from tools.capture import serial_lock  # noqa: E402  (sibling module)
+from tools.logger.plants_logger import (  # noqa: E402  (sibling import after sys.path)
     CANONICAL_COLS,
     is_line_noise,
     iso_local,
@@ -68,10 +67,6 @@ from plants_logger import (  # noqa: E402  (sibling import after sys.path)
     parse_device_line,
     tz_offset,
 )
-
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-import serial_lock  # noqa: E402  (sibling module)
 
 
 class CaptureError(RuntimeError):
@@ -251,7 +246,9 @@ class SerialReader(Reader):
         self._firmware = _empty_provenance()  # filled by _wait_for_banner (#329)
 
     def _default_open(self):
-        from serial_open import open_no_reset  # #566-B: never reset on open (#712)
+        from tools.capture.serial_open import (
+            open_no_reset,  # #566-B: never reset on open (#712)
+        )
 
         kw = {"timeout": 1}
         if os.name != "nt":  # Windows serial is exclusive already; POSIX needs the flag

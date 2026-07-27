@@ -8,20 +8,15 @@ start/stop + the serial mutex are exercised without a real device.
 from __future__ import annotations
 
 import shutil
-import sys
 import tempfile
 import time
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-import monitor_control as mc  # noqa: E402
+from tools.logger import monitor_control as mc  # noqa: E402
 
 _CAP = _HERE.parents[0] / "capture"
-if str(_CAP) not in sys.path:
-    sys.path.insert(0, str(_CAP))
-import serial_lock  # noqa: E402
+from tools.capture import serial_lock  # noqa: E402
 
 _FAILS: list[str] = []
 _FAKE_LOGGER = "import time\nwhile True:\n    time.sleep(0.2)\n"

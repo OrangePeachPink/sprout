@@ -6,10 +6,8 @@ every ~30 s → the reconnect storm). esptool is a separate path and unaffected.
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from serial_open import open_no_reset
+from tools.capture.serial_open import open_no_reset
 
 
 class FakeSerial:
@@ -63,7 +61,7 @@ def test_config_applied_and_port_never_opened_on_construct() -> None:
 def test_real_path_uses_pyserial_deferred_open(monkeypatch) -> None:
     # with no factory, it must construct serial.Serial() with NO args (deferred),
     # never serial.Serial(port, baud) (which opens + pulses DTR).
-    import serial_open
+    from tools.capture import serial_open
 
     calls = {"argc": None}
 

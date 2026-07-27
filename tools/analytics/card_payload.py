@@ -1,0 +1,596 @@
+"""#875 — the per-plant CARD PAYLOAD seam (Data structure half of the Sprout Voice UI).
+
+The locked card contract (2026-07-18 grill, night 1): a plant card is a **mood-colored
+frame** (state, never identity) · an **identity block** (name/number, pot descriptor,
+location chip, optional photo) · a **band word + first-person line** · **last-watered +
+next-need** as graceful-absence placeholders (until the 0.8.0 detected-watering
+classifier + validated forecasts) · **raw stays Workbench-side** (never on the card).
+
+This module is the pure, dependency-free seam that turns (a registry ``Plant`` + its
+current band + optional forecast) into that card object. It computes NOTHING about the
+soil itself — band comes from the existing calibrated-band path, a forecast (where
+statistically real) is injected — so it stays a unit-testable formatter, and Design-QA's
+Home grid renders the object without re-deriving anything (one truth, ADR-0008).
+
+**Honesty laws it enforces (ADR-0007/§3, ADR-0028):**
+- Mood is a 1:1 function of the calibrated *band*, never the 0-100 index (via
+  ``mood-band-map.json``); the card carries the ``--band-*`` token, never a raw value.
+- Copy is sourced ONLY from ``voice-strings.json`` — no hard-coded lines, no second
+  mapping (INCORPORATION.md). The picker never *invents* a line.
+- Absence is first-class: ``last_watered`` / ``next_need`` are ``{"known": false,
+  "reason": ...}`` structures, never nulls pretending to be data.
+- **The voice can't claim what the instrument can't prove.** Until the 0.8.0 watering
+  detector exists, a byMood line that asserts a watering *event/time* ("my last drink
+  was two days ago") would contradict the honest ``last_watered: unknown`` chip — so the
+  picker filters those lines out. Where that empties a mood's pool, the card reports a
+  ``voice_gap`` (a named hole for the grill) rather than fabricating a line.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import zlib
+from datetime import datetime, timezone
+from pathlib import Path
+
+from tools.analytics import watering_log
+from tools.analytics.attention import attention_state
+
+_HERE = Path(__file__).resolve().parent
+_REPO = _HERE.parents[1]
+_COMPONENTS = _REPO / "docs" / "design" / "components"
+_MOOD_MAP = _COMPONENTS / "mood-band-map.json"
+_VOICE = _COMPONENTS / "voice-strings.json"
+
+# A detected re-water within this many hours is "recent" enough to unlock a recent-drink
+# voice line (#875 Q2). Beyond it, the event is still shown on the last-watered chip
+# ("~6 days ago") — the maintainer's #1 watering cue — but the voice stays soil-state.
+WATERING_RECENT_H = 48.0
+
+# #1137 follow-up: a glug and a detected re-water this close are ONE watering seen two
+# ways (soil-change + button-press), not two competing events. A same-session catch-up
+# glug lands minutes-to-hours after the soil already moved; beyond a same-day window
+# they are genuinely different waterings. A heuristic — the maintainer can tune it.
+SAME_EVENT_WINDOW_H = 12.0
+
+# Two classes of watering claim in a byMood line (both are soil-state-independent, so
+# they must reconcile with the last-watered truth, not just the band):
+#
+# _ELAPSED_CLAIM — a line hard-coding a SPECIFIC elapsed time ("my last drink was two
+#   days ago"). The number is baked into the copy, so it's honest only by luck. We can't
+#   template it from a static pool, so it stays filtered until voice-strings.json makes
+#   the number dynamic (a Design-QA enhancement) — flagged, never guessed.
+# _RECENT_DRINK — a line asserting a recent-but-UNQUANTIFIED drink ("just had a good
+#   drink"). This one IS honest the moment we have a recent detected re-water (#875 Q2,
+#   the maintainer's call: the detected event is the #1 watering cue, stop hiding it),
+#   so it unlocks when `recent_water` is true.
+_ELAPSED_CLAIM = re.compile(
+    r"\b(last (drink|water)|(one|two|three|four|five|\d+)\s+(days?|hours?)\s+ago|"
+    r"\d+\s*[dh]\s+ago|watered\b.*\bago)\b",
+    re.IGNORECASE,
+)
+_RECENT_DRINK = re.compile(
+    r"\b(just (had|been)|had a (good )?drink|just watered)\b", re.IGNORECASE
+)
+
+
+def load_mood_map(path: str | Path | None = None) -> dict:
+    """The canonical band→mood map (``mood-band-map.json``), keyed by lowercase UI band
+    (``moist``) AND firmware level (``well watered``) so either resolves. Empty on a
+    missing/broken file — the card then degrades to a no-mood frame, never crashes."""
+    p = Path(path) if path else _MOOD_MAP
+    try:
+        doc = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    out: dict = {}
+    for b in doc.get("bands", []):
+        entry = {
+            "uiBand": b.get("uiBand"),
+            "mood": b.get("mood"),
+            "token": b.get("token"),
+            "motion": b.get("motion", "none"),
+            "diagnostic": bool(b.get("diagnostic")),
+        }
+        for key in (b.get("uiBand"), b.get("fwLevel")):
+            if key:
+                out[str(key).strip().lower()] = entry
+    return out
+
+
+def load_voice_pool(path: str | Path | None = None) -> dict:
+    """The first-person voice pool (``voice-strings.json``): ``{"byMood": {...},
+    "bySurface": {...}}``. Empty on a missing/broken file."""
+    p = Path(path) if path else _VOICE
+    try:
+        doc = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return {"byMood": doc.get("byMood", {}), "bySurface": doc.get("bySurface", {})}
+
+
+def _absent(reason: str) -> dict:
+    """A first-class-absent field (ADR-0028): a reason, not a data-pretending null."""
+    return {"known": False, "reason": reason}
+
+
+def humanize_ago(hours: float) -> str:
+    """A glanceable relative time: 'just now' / '18h ago' / '6d ago'. The maintainer's
+    watering cue reads at a glance, not as a timestamp."""
+    if hours < 1:
+        return "just now"
+    if hours < 36:
+        return f"{round(hours)}h ago"
+    return f"{round(hours / 24)}d ago"
+
+
+def _last_watered_field(ts_str: str, source: str, now: datetime) -> dict | None:
+    """A last-watered field from an ISO ts + its honest source label. ``source`` is the
+    provenance the chip shows — ``detected`` (band_movement heuristic) or ``manual`` (a
+    logged operator event, #1137). Returns None on an unparseable ts."""
+    try:
+        ts = datetime.fromisoformat(str(ts_str).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    hours_ago = max(0.0, (now - ts).total_seconds() / 3600.0)
+    return {
+        "known": True,
+        "source": source,
+        "ts": ts_str,
+        "hours_ago": round(hours_ago, 1),
+        "ago": humanize_ago(hours_ago),
+        "recent": hours_ago <= WATERING_RECENT_H,
+    }
+
+
+def last_watered_from_rewater(
+    rewater: dict | None, now: datetime, *, plant_id: str | None = None
+) -> dict | None:
+    """Turn a band_movement DETECTED re-water (``{ts, source:'detected'}``) into a
+    last_watered field (#875 Q2). Always labelled with the re-water's own source
+    (``detected``). Returns None when there's no detected re-water (absence).
+
+    #1203: a DETECTED event also carries the verdict seam — the rebuild-stable
+    ``event_id`` (``watering_log.event_id_for``, Data's own derived id, never invented
+    here) and its ``detection_state``. The state is ``proposed`` until she rules on it;
+    it is never silently ``confirmed``, because an unreviewed detection is not ground
+    truth. A manual watering has no verdict seam — it IS the ground truth."""
+    if not isinstance(rewater, dict) or not rewater.get("ts"):
+        return None
+    field = _last_watered_field(rewater["ts"], rewater.get("source", "detected"), now)
+    if field is not None and plant_id:
+        eid = watering_log.event_id_for(plant_id, rewater["ts"])
+        field["event_id"] = eid
+        field["detection_state"] = watering_log.detection_state(eid)
+    return field
+
+
+def last_watered_from_manual(event: dict | None, now: datetime) -> dict | None:
+    """#1137: a LOGGED manual watering (``{plant_id, source:'manual', ts}`` from the
+    watering journal) as a last_watered field, labelled ``manual``. None when absent."""
+    if not isinstance(event, dict) or not event.get("ts"):
+        return None
+    return _last_watered_field(event["ts"], "manual", now)
+
+
+def resolve_last_watered(
+    rewater: dict | None,
+    manual: dict | None,
+    now: datetime,
+    *,
+    plant_id: str | None = None,
+) -> dict | None:
+    """#1137: reconcile the DETECTED re-water (a soil-change — an accurate TIME)
+    with a LOGGED manual watering (the operator's ground-truth FACT).
+
+    - **Same watering, two clocks (#1137 follow-up):** when both fire within
+      ``SAME_EVENT_WINDOW_H`` they are ONE event — keep the human FACT (``source`` stays
+      ``manual``) but adopt the **earlier** timestamp, the one closest to the physical
+      watering. The detector reads the soil a few minutes after; a catch-up glug records
+      a button-press that can lag. This stops a late glug from stamping a plant "watered
+      now" when the soil shows it was watered 20 minutes ago.
+    - **Different waterings** (far apart — e.g. a glug for a plant the detector never
+      caught): the more-recent event wins, the manual keeping its tie-break authority.
+    - Either absent: return whichever exists, or None."""
+    detected = last_watered_from_rewater(rewater, now, plant_id=plant_id)
+    logged = last_watered_from_manual(manual, now)
+    if not (logged and detected):
+        return logged or detected
+    if abs(logged["hours_ago"] - detected["hours_ago"]) <= SAME_EVENT_WINDOW_H:
+        # one watering — human fact + the earlier (soil-accurate) time
+        earlier = detected if detected["hours_ago"] >= logged["hours_ago"] else logged
+        return {**earlier, "source": "manual"}
+    return logged if logged["hours_ago"] <= detected["hours_ago"] else detected
+
+
+def _exception(state: str) -> dict:
+    """#875 Q3: is this reading OUTSIDE the normal soil range, so it belongs in the
+    exceptions lane rather than the normal thirst grid? Only the hard states (fault /
+    no-signal) are exceptions now. Under the #995/#1174-ratified ladder (ADR-0035,
+    #1218) **Faint (air-dry) is an in-soil mood** — it leads the thirst grid like any
+    band, it does NOT leave the ladder. The probe-in-air / probe-in-water conditions
+    (a raw past the off-ladder air / water anchor) are the #1152 exception layer, added
+    with both anchor thresholds together — not from the band's diagnostic flag."""
+    kind = None
+    if state in ("fault_sensor", "fault_pump"):
+        kind = "fault"
+    elif state == "no_signal":
+        kind = "no_signal"
+    reasons = {
+        "fault": "sensor fault — reading can't be trusted",
+        "no_signal": "no recent reading — is it plugged in?",
+    }
+    return {"is": kind is not None, "kind": kind, "reason": reasons.get(kind)}
+
+
+def _stable_index(seed: str, n: int) -> int:
+    """A deterministic pick in ``[0, n)`` from a seed — a plant's line stays stable
+    across renders (no flicker) while different plants vary. crc32, not ``hash()``
+    (salted per-process, would flicker)."""
+    return zlib.crc32(seed.encode("utf-8")) % n if n else 0
+
+
+def _line_ok(line: str, *, recent_water: bool) -> bool:
+    """Whether a byMood line is honest to show given the watering truth. An elapsed-time
+    claim is never OK from a static pool (needs templating); a recent-drink claim is OK
+    only with a recent detected re-water; a pure soil-state line is always OK."""
+    if _ELAPSED_CLAIM.search(line):
+        return False
+    if _RECENT_DRINK.search(line):
+        return recent_water
+    return True
+
+
+def pick_voice_line(
+    pool: dict, mood: str | None, *, plant_id: str, recent_water: bool = False
+) -> tuple[str | None, str | None]:
+    """One first-person line for a mood, or ``(None, gap_reason)`` when the honest pool
+    is empty. Filters watering claims that would contradict the last-watered truth
+    (#875 Q2): elapsed-number lines stay out until templated; recent-drink lines unlock
+    on a recent detected re-water. Never invents copy."""
+    if not mood:
+        return None, "no mood (band absent) — bySurface state applies, not byMood"
+    lines = ((pool.get("byMood") or {}).get(mood)) or []
+    if not lines:
+        return None, f"voice-strings.json has no byMood line for '{mood}'"
+    safe = [ln for ln in lines if _line_ok(ln, recent_water=recent_water)]
+    if not safe:
+        # nothing honest remains — the refreshed case with no recent re-water. Name the
+        # hole rather than fabricate; the detected re-water (when recent) unlocks it.
+        return None, (
+            f"every byMood line for '{mood}' asserts a watering event, and no recent "
+            "detected re-water makes one honest — needs an event-free variant"
+        )
+    return safe[_stable_index(plant_id, len(safe))], None
+
+
+def _identity(plant) -> dict:
+    """The identity block: name / number / pot descriptor / location / optional photo.
+    Accepts a ``Plant`` dataclass or a plain dict (the served registry payload shape).
+    """
+
+    def g(attr: str):
+        if isinstance(plant, dict):
+            return plant.get(attr)
+        return getattr(plant, attr, None)
+
+    pid = g("plant_id") or ""
+    return {
+        "name": g("pet_name") or (f"Plant {pid}" if pid else "Unnamed plant"),
+        "number": pid,
+        "pot": g("pot_description") or g("pot_size"),
+        "location": g("location"),
+        "photo": g("photo"),  # a local, gitignored path or None (absent-safe)
+    }
+
+
+def _surface_line(
+    voice_pool: dict, surface: str, pid: str
+) -> tuple[str | None, str | None]:
+    """A ``bySurface`` line (fault / empty / loading / onboarding), stable per plant."""
+    lines = ((voice_pool.get("bySurface") or {}).get(surface)) or []
+    if not lines:
+        return None, f"voice-strings.json has no bySurface line for '{surface}'"
+    return lines[_stable_index(pid, len(lines))], None
+
+
+def _frame(**kw) -> dict:
+    """A frame with every key present (the surface never guesses a missing one)."""
+    base = {
+        "band": None,
+        "mood": None,
+        "token": None,
+        "motion": "none",
+        "asleep": False,
+        "state": "no_signal",
+    }
+    base.update(kw)
+    return base
+
+
+def build_card(
+    plant,
+    *,
+    band: str | None = None,
+    mood_map: dict,
+    voice_pool: dict,
+    sensorless: bool = False,
+    surface: str | None = None,
+    asleep: bool = False,
+    next_need: dict | None = None,
+    last_watered: dict | None = None,
+    recent_water: bool = False,
+) -> dict:
+    """Assemble one plant's card payload against the locked #875 contract.
+
+    ``band`` is the current UI band word or firmware level (case-insensitive), or None
+    when the plant has no live signal. ``surface`` routes a non-mood state (e.g.
+    ``fault_sensor`` / ``fault_pump``) to the ``bySurface`` voice pool instead of
+    ``byMood`` (the seam-map's rule: a faulted plant has no mood). ``next_need`` is an
+    already-vetted forecast boundary (inject ONLY where statistically real) or None →
+    graceful absence. ``last_watered`` is an already-formatted detected-re-water field
+    (#875 Q2) or None → graceful absence; ``recent_water`` says that re-water is recent
+    enough to unlock a recent-drink voice line. Raw is never included — Workbench-side.
+
+    NO per-card cal-provisional flag (#1039 grill ruling): cal state is SYSTEM-level
+    (``system_cal_state``), shown once on the Workbench with a path-to-clear, never a
+    per-card chip — completed bench work is honored, not badged on every plant.
+    """
+    ident = _identity(plant)
+    pid = ident["number"]
+
+    # last_watered: a DETECTED re-water when we have one (#875 Q2, the #1 cue),
+    # else first-class-absent. The logged/classified event is still 0.8.0; this is the
+    # honest heuristic, always labelled source="detected" by the caller.
+    if last_watered is None:
+        last_watered = _absent(
+            "no watering detected in this window — a logged event arrives with 0.8.0"
+        )
+    if next_need is None:
+        next_need = _absent(
+            "no validated forecast yet — a next-need estimate needs the 0.8.0 "
+            "detector + a cal'd drying rate"
+        )
+
+    if surface:  # a fault / non-mood state — bySurface voice, no mood on the frame
+        voice, gap = _surface_line(voice_pool, surface, pid)
+        frame = _frame(asleep=asleep, state=surface)
+    elif sensorless:  # ADR-0028: present by design, not probed — never fake-degraded
+        voice = None
+        gap = "alive, not probed — no byMood line for the sensorless state"
+        frame = _frame(asleep=asleep, state="sensorless")
+    else:
+        entry = mood_map.get((band or "").strip().lower()) if band else None
+        mood = entry["mood"] if entry else None
+        voice, gap = pick_voice_line(
+            voice_pool, mood, plant_id=pid, recent_water=recent_water
+        )
+        frame = _frame(
+            band=entry["uiBand"] if entry else None,
+            mood=mood,
+            token=entry["token"] if entry else None,
+            motion="none" if asleep else (entry["motion"] if entry else "none"),
+            asleep=asleep,
+            state="live" if entry else "no_signal",
+        )
+
+    return {
+        "plant_id": pid,
+        "identity": ident,
+        # mood-colored FRAME — state, never identity (the color-roles charter)
+        "frame": frame,
+        "voice": voice,  # one first-person line (honesty-filtered), or None
+        "voice_gap": gap,  # why voice is None — a named hole, never a fabricated line
+        "band_word": frame["band"],  # the plain band word (raw stays Workbench-side)
+        "last_watered": last_watered,  # detected re-water (#875 Q2) or absent
+        "next_need": next_need,  # absent, or an injected statistically-real boundary
+        "exception": _exception(frame["state"]),  # #875 Q3 lane (Faint stays in-soil)
+    }
+
+
+# --------------------------------------------------------------------------- #
+# composition — turn a built dashboard context into the Home's ordered card list
+# --------------------------------------------------------------------------- #
+#: R3's ratified thresholds, from docs/design/foundations/confidence-vocabulary.md.
+#: The word comes from the interval's width RELATIVE to the estimate: a wide span on a
+#: far-off forecast is not the same claim as the same span on a near one.
+CONFIDENCE_FIRM_MAX = 0.15
+CONFIDENCE_ROUGH_MAX = 0.50
+
+
+def confidence_word(hours, hours_lo, hours_hi) -> str | None:
+    """The R3 how-sure word — ``FIRM`` / ``ROUGH`` / ``HAZY``, or ``None`` (#1598).
+
+    **One home for a ruled vocabulary.** R3 shipped this as a template-local ternary,
+    right for one consumer; the attention model (#1592) makes *Watch* a second, and two
+    copies of a ruled vocabulary drift silently until the doc is the authority for
+    neither. It lives beside the ``confidence`` field it qualifies, so the card chip and
+    the composer read one answer.
+
+    ``None`` is a first-class result, not a fallback (ADR-0028, and the doc's own rule):
+    **a midpoint with no computable span makes no how-sure claim.** Returning a word
+    unconditionally would manufacture confidence out of a missing interval — the exact
+    thing R3's form exists to avoid.
+
+    This decides *where the rule lives*, never *what it says*: the boundaries and words
+    are R3's ratified decision, and changing either is a new maintainer call.
+    """
+    if not hours or hours_lo is None or hours_hi is None or hours_hi <= hours_lo:
+        return None
+    width = (hours_hi - hours_lo) / hours
+    if width <= CONFIDENCE_FIRM_MAX:
+        return "FIRM"
+    return "ROUGH" if width <= CONFIDENCE_ROUGH_MAX else "HAZY"
+
+
+def next_need_from_forecast(forecast: dict | None) -> dict | None:
+    """Map a ``forecast_payload``'s ``thirsty`` ETA to a next_need field — surfaced as
+    KNOWN only where **statistically real** (a significant drying fit, so ``reachable``
+    is true). Otherwise first-class-absent with the forecast's own reason. None when no
+    forecast exists at all (``build_card`` then supplies the generic absence)."""
+    if not forecast:
+        return None
+    thirsty = forecast.get("thirsty") or {}
+    if thirsty.get("reachable") and thirsty.get("hours") is not None:
+        return {
+            "known": True,
+            "hours": thirsty["hours"],
+            "hours_lo": thirsty.get("hours_lo"),
+            "hours_hi": thirsty.get("hours_hi"),
+            "basis": "forecast (significant drying fit)",
+            "confidence": "provisional",  # honest: pre-cal, the rate is provisional
+            # #1598: the R3 how-sure word, computed ONCE here so the card chip and the
+            # attention model's Watch level cannot disagree. None when no span exists.
+            "confidence_word": confidence_word(
+                thirsty["hours"], thirsty.get("hours_lo"), thirsty.get("hours_hi")
+            ),
+        }
+    reason = thirsty.get("reason") or "no significant drying trend yet"
+    return _absent(f"forecast not reliable yet — {reason}")
+
+
+def _plant_for(pid, sensor: dict, plants_by_id: dict):
+    """The richest identity available for a plant id: the temporal registry ``Plant``
+    (name/pot/location/photo) if present, else a dict from the live sensor's static
+    fields — so the card is never blank just because the temporal registry lags."""
+    if pid and pid in plants_by_id:
+        return plants_by_id[pid]
+    return {
+        "plant_id": pid,
+        "pet_name": sensor.get("plant_name"),
+        "plant_type": sensor.get("plant_type"),
+        "pot_size": sensor.get("pot_size"),
+    }
+
+
+def system_cal_state() -> dict:
+    """#1039 grill ruling → RESOLVED (#995/#1174, 2026-07-19). The interior-bracket
+    ratification LANDED: a fresh current-fleet dry-down re-partitioned the seven in-soil
+    bands (ADR-0035, #1218), so the system provisional chip clears entirely — anchors
+    AND interior brackets are ratified, with no path left to clear.
+
+    Per the #1153 axis-decouple (Firmware-endorsed): model-ratification is a DIFFERENT
+    fact than per-device cal-verification. A board still lacking a verified per-channel
+    cal is a per-device state the cal chain owns — NOT this system chip. So this reports
+    only the (now settled) model state; the old derivation from per-device
+    ``cal_provisional`` was conflating the two axes and is retired."""
+    return {
+        "anchors": "ratified",
+        "interior_brackets": "ratified",
+        "provisional": False,
+        "clears_when": None,
+    }
+
+
+def cards_from_context(
+    ctx: dict,
+    *,
+    plants_by_id: dict,
+    mood_map: dict,
+    voice_pool: dict,
+    manual_by_plant: dict | None = None,
+    sessions_by_plant: dict | None = None,
+    now: datetime | None = None,
+) -> list[dict]:
+    """Compose the Home's card list from a built dashboard ``context`` (dashboard.py) +
+    the temporal registry's plants. This is the bridge the seam-map flagged: live
+    band/mood/forecast come from ``ctx['sensors']`` (the static-registry card path),
+    rich identity from ``plants_by_id`` (the temporal registry). Most-thirsty leads.
+
+    ``manual_by_plant`` (#1137) is the latest LOGGED manual watering per plant_id (from
+    the watering journal, read caller-side to keep this a pure formatter). A logged
+    event outranks the detected re-water for ``last_watered``. Absent -> detected."""
+    now = now or datetime.now(timezone.utc)
+    manual_by_plant = manual_by_plant or {}
+    # #875 Q2: the DETECTED re-water per plant (band_movement heuristic), by plant.
+    rewater = {
+        e.get("plant_id"): e.get("rewater")
+        for e in ctx.get("band_history", [])
+        if e.get("plant_id") and e.get("rewater")
+    }
+    cards: list[dict] = []
+    for s in ctx.get("sensors", []):
+        pid = s.get("plant_id")
+        if s.get("sensor_fault"):
+            surface, band = "fault_sensor", None
+        elif s.get("no_signal") or s.get("unassigned"):
+            surface, band = None, None  # a no-signal / unassigned frame, not a mood
+        else:
+            surface, band = None, s.get("band_fw")
+        lw = resolve_last_watered(
+            rewater.get(pid), manual_by_plant.get(pid), now, plant_id=pid
+        )
+        card = build_card(
+            _plant_for(pid, s, plants_by_id),
+            band=band,
+            surface=surface,
+            mood_map=mood_map,
+            voice_pool=voice_pool,
+            next_need=next_need_from_forecast(s.get("forecast")),
+            last_watered=lw,
+            recent_water=bool(lw and lw.get("recent")),
+        )
+        # the Home's lead signal: the calibrated dryness index (0=wettest..1=driest), a
+        # LABELLED index for "who needs water first" — never the raw value.
+        card["urgency"] = s.get("dryness")
+        # #1671: the session she is standing in front of — pours so far and the running
+        # total, so a top-up is an informed "another quarter" rather than a fresh guess.
+        # Absent (None) once the session closes; the ordinary last-watered line resumes.
+        card["watering_session"] = (sessions_by_plant or {}).get(pid)
+        # #875 hero: the JOIN KEY to the served context (trajectory dataset id) so
+        # the pulse chart can find its series even when no plant is registered
+        # (plant_id None). Plumbing, never rendered.
+        card["sensor_id"] = s.get("id")
+        # #1584 (G2): the trajectory FACTS the attention composer reads for its harm
+        # level. Facts only — no verdict is minted here; whether "drier and did not
+        # rebound" MEANS heading-for-harm is §8's decision, in one place. A context
+        # without the field (an older build) degrades to honest-absent, never to a
+        # silent "nothing wrong".
+        card["trajectory"] = s.get("trajectory") or {"known": False}
+        cards.append(card)
+    for sl in ctx.get("sensorless", []):
+        pid = sl.get("plant_id")
+        # #1137: a sensorless plant has no sensor, so no DETECTED re-water — a logged
+        # manual watering is its ONLY last_watered source (and the whole point of the
+        # log: you still water the plants Sprout can't feel).
+        lw = last_watered_from_manual(manual_by_plant.get(pid), now)
+        card = build_card(
+            _plant_for(pid, sl, plants_by_id),
+            sensorless=True,
+            mood_map=mood_map,
+            voice_pool=voice_pool,
+            last_watered=lw,
+            recent_water=bool(lw and lw.get("recent")),
+        )
+        card["urgency"] = None  # a not-probed plant has no urgency to sort on
+        card["sensor_id"] = None  # not probed — no series to join (first-class-absent)
+        # #1671: a sensorless plant still gets watered, and still gets a tally.
+        card["watering_session"] = (sessions_by_plant or {}).get(pid)
+        # #1584: a sensorless plant has no series, so no trajectory to know. Absent by
+        # design rather than unknown — the composer already returns no attention state
+        # for these at all (ADR-0028).
+        card["trajectory"] = {"known": False}
+        cards.append(card)
+    # #1582 (R11): the composed attention state, resolved ONCE here so every surface
+    # renders the same answer to "does this need me." Absent (None) for a not-probed
+    # plant — attention is a claim about a measurement (see attention.attention_state).
+    for card in cards:
+        st = attention_state(card)
+        card["attention"] = (
+            None
+            if st is None
+            else {
+                "state": st.state,
+                "label": st.label,
+                "reason": st.reason,
+                "evidence": st.evidence,
+            }
+        )
+    # most-thirsty leads (#715/#747): highest dryness first; no-urgency cards trail.
+    cards.sort(
+        key=lambda c: (c["urgency"] is not None, c["urgency"] or 0.0), reverse=True
+    )
+    return cards

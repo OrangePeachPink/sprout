@@ -9,13 +9,11 @@ Both gate DISPLAY only; raw rows stay fully queryable (house rule).
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context
-from device_registry import Device, Registry
-from parse_v1 import parse_files
+from tools.analytics.dashboard import build_context
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.parse_v1 import parse_files
 
 _HEADER = (
     "# fw=0.8.0  git=t  run=honesty\n"
@@ -242,7 +240,7 @@ def test_genuine_saturation_is_not_a_fault(tmp_path: Path) -> None:
 def test_implausible_wet_is_a_parse_boundary_flag_raw_untouched(tmp_path: Path) -> None:
     # the flag lives on Reading (the single boundary), raw preserved; env readings
     # (huge raw) never trip it.
-    from parse_v1 import IMPLAUSIBLE_WET_FLOOR
+    from tools.analytics.parse_v1 import IMPLAUSIBLE_WET_FLOOR
 
     log = _write(
         tmp_path,

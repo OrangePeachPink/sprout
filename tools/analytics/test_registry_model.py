@@ -8,11 +8,9 @@ one atomic boundary (close old, open new) so history is never silently rewritten
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from registry_model import (
+from tools.analytics.registry_model import (
     Plant,
     Profile,
     RegistryModel,
@@ -169,6 +167,47 @@ def test_migrate_static_honors_retired_as_paused() -> None:
     assert by_id["yyvvpd"] == "paused"  # off-by-choice, reversible, calm - not active
 
 
+def test_migrate_static_brings_sensorless_plants_into_the_model() -> None:
+    # #1027: the ADR-0028 `sensorless` roster (plants present by design, not probed)
+    # must become first-class, lifecycle-manageable Plant entities — not a Monitor-only
+    # block the registry tab can't see. No open assignment => "alive · not probed".
+    static = {
+        "devices": [{"device_id": "y9d41p", "channels": {"s1": {"plant_id": "p01"}}}],
+        "sensorless": [
+            {"plant_id": "p05", "plant_name": "Pothos cutting", "pot_size": "4in"},
+            {"plant_id": "p08"},
+        ],
+    }
+    m = RegistryModel.from_dict(static)
+    assert {p.plant_id for p in m.plants} == {"p01", "p05", "p08"}
+    p05 = next(p for p in m.plants if p.plant_id == "p05")
+    assert p05.pet_name == "Pothos cutting"  # plant_name -> pet_name
+    assert p05.pot_size == "4in"
+    assert p05.lifecycle == "active"  # present + alive, just unprobed
+    # unprobed == no open assignment; only the probed p01 has a current mapping
+    assert {a.plant_id for a in m.open_assignments()} == {"p01"}
+
+
+def test_plant_photo_round_trips_and_defaults_absent() -> None:
+    # #875 card contract: the optional identity-block photo is absent by default and
+    # round-trips through the model when set (a local, gitignored path).
+    assert Plant(plant_id="p01").photo is None  # absent-safe default
+    m = RegistryModel(plants=[Plant(plant_id="p01", photo="config/photos/p01.jpg")])
+    back = RegistryModel.from_dict(m.to_dict())
+    assert back.plants[0].photo == "config/photos/p01.jpg"
+
+
+def test_migrate_static_a_probed_plant_is_not_duplicated_by_sensorless() -> None:
+    # a plant can't be both probed and sensorless — a live reading wins, no dup Plant.
+    static = {
+        "devices": [{"device_id": "y9d41p", "channels": {"s1": {"plant_id": "p01"}}}],
+        "sensorless": [{"plant_id": "p01", "plant_name": "should not overwrite"}],
+    }
+    m = RegistryModel.from_dict(static)
+    assert [p.plant_id for p in m.plants] == ["p01"]  # exactly one
+    assert next(a for a in m.open_assignments()).plant_id == "p01"  # still probed
+
+
 # --------------------------------------------------------------------------- #
 # serialization round-trip
 # --------------------------------------------------------------------------- #
@@ -233,3 +272,84 @@ if __name__ == "__main__":
         test_save_and_load_round_trip(Path(d))
         test_load_missing_file_is_empty_not_a_crash(Path(d))
     print("All checks passed.")
+
+
+# --------------------------------------------------------------------------- #
+# #1188 — a location edit is a MOVE (the #921 "c" ruling)
+# --------------------------------------------------------------------------- #
+
+
+def test_a_location_edit_records_a_move_and_never_loses_the_old_spot() -> None:
+    from tools.analytics.registry_model import Plant, RegistryModel, apply_operations
+
+    m = RegistryModel(plants=[Plant(plant_id="p01", location="windowsill left")])
+    apply_operations(
+        m, {"plants": {"edit": [{"plant_id": "p01", "location": "windowsill right"}]}}
+    )
+    hist = m.location_history("p01")
+    assert [e.location for e in hist] == ["windowsill left", "windowsill right"]
+    # the grandfathered prior: it WAS there, we don't know since when
+    assert hist[0].start_ts is None and hist[0].end_ts is not None
+    assert hist[-1].is_open  # the new spot is current
+    assert m.plants[0].location == "windowsill right"  # cheap-read mirror kept
+
+
+def test_a_second_move_chains_without_a_hole() -> None:
+    from tools.analytics.registry_model import Plant, RegistryModel, apply_operations
+
+    m = RegistryModel(plants=[Plant(plant_id="p01", location="left")])
+    for spot in ("right", "office"):
+        apply_operations(
+            m, {"plants": {"edit": [{"plant_id": "p01", "location": spot}]}}
+        )
+    hist = m.location_history("p01")
+    assert [e.location for e in hist] == ["left", "right", "office"]
+    assert sum(1 for e in hist if e.is_open) == 1  # exactly one current spot
+    # every closed span's end is the next span's start — a hole-free chain
+    assert hist[0].end_ts == hist[1].start_ts and hist[1].end_ts == hist[2].start_ts
+
+
+def test_move_boundaries_are_the_context_edges_consumers_gate_on() -> None:
+    from tools.analytics.registry_model import Plant, RegistryModel, apply_operations
+
+    m = RegistryModel(plants=[Plant(plant_id="p01", location="left")])
+    assert m.move_boundaries("p01") == []  # never moved -> one continuous context
+    apply_operations(
+        m, {"plants": {"edit": [{"plant_id": "p01", "location": "right"}]}}
+    )
+    bounds = m.move_boundaries("p01")
+    assert len(bounds) == 1 and isinstance(bounds[0], str)
+
+
+def test_a_non_location_edit_is_not_a_move() -> None:
+    from tools.analytics.registry_model import Plant, RegistryModel, apply_operations
+
+    m = RegistryModel(plants=[Plant(plant_id="p01", location="left")])
+    apply_operations(
+        m, {"plants": {"edit": [{"plant_id": "p01", "pet_name": "Bernie"}]}}
+    )
+    assert m.location_events == []  # renaming a plant never moved it
+    # and re-saving the SAME location is not a move either (the editor round-trips
+    # every field on save — an unchanged value must not manufacture history)
+    apply_operations(m, {"plants": {"edit": [{"plant_id": "p01", "location": "left"}]}})
+    assert m.location_events == []
+
+
+def test_the_payload_carries_the_move_record_for_movers_only() -> None:
+    from tools.analytics.registry_model import (
+        Plant,
+        RegistryModel,
+        apply_operations,
+        registry_payload,
+    )
+
+    m = RegistryModel(
+        plants=[Plant(plant_id="p01", location="left"), Plant(plant_id="p02")]
+    )
+    apply_operations(
+        m, {"plants": {"edit": [{"plant_id": "p01", "location": "right"}]}}
+    )
+    doc = registry_payload(m)
+    assert "p01" in doc["location_history"]
+    assert "p02" not in doc["location_history"]  # present-or-silent: no move, no key
+    assert doc["location_history"]["p01"][-1]["end_ts"] is None

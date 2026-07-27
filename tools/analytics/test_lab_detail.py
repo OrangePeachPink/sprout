@@ -13,9 +13,7 @@ import tempfile
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-import lab_detail  # noqa: E402
+from tools.analytics import lab_detail  # noqa: E402
 
 _CAPTURE_PY = _HERE.parents[1] / "tools" / "capture" / "experiment_capture.py"
 
@@ -39,7 +37,10 @@ def test_svg_helper() -> None:
     )
     assert "<svg" in out and out.count("<polyline") == 2
     assert "#ff0000" in out and "#00ff00" in out
-    assert lab_detail._svg([]) == '<p class="empty">no trajectory</p>'
+    assert lab_detail._svg([]) == (
+        '<p class="empty">No trajectory yet — this probe hasn\'t '
+        "reported any points.</p>"
+    )
 
 
 def test_svg_is_an_instrument() -> None:

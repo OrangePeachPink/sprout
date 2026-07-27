@@ -18,28 +18,67 @@ time it appears.
 You need three tools. Each does one job:
 
 - **Git** — version control; how code travels. If `git --version` prints a number, you already have it.
+  If not: `winget install Git.Git` (Windows), `xcode-select --install` (macOS),
+  `sudo apt install git` (Debian/Ubuntu).
 - **uv** — a fast Python environment manager (from Astral). It reads the project's lockfile and gives you the
-  *exact* Python and packages every other contributor has — no "works on my machine." See the
-  [uv docs](https://docs.astral.sh/uv/) to install.
+  *exact* Python and packages every other contributor has — no "works on my machine."
+  Install: `winget install astral-sh.uv` (Windows), `brew install uv` (macOS), or
+  `curl -LsSf https://astral.sh/uv/install.sh | sh` (Linux) — see the [uv docs](https://docs.astral.sh/uv/).
 - **just** — a tiny command runner. Instead of memorizing long commands, you run short recipes like
-  `just check`. Install with `winget install Casey.Just` (Windows), `brew install just` (macOS), or see the
-  [just docs](https://just.systems).
+  `just check`. Install: `winget install Casey.Just` (Windows), `brew install just` (macOS), or
+  `curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to ~/.local/bin`
+  (Linux) — see the [just docs](https://just.systems).
+
+**You don't have to do that by hand.** Once you have Git and the clone, **`./scripts/bootstrap.sh`**
+(or **`.\scripts\bootstrap.ps1`** on Windows) installs uv and just if they're missing, syncs the
+environment, wires the hooks, and prints the versions it verified. Safe to re-run — every step checks
+first and skips what's already there.
 
 > **The zero-install path:** the repo ships a devcontainer, so you can open it in **GitHub Codespaces** and skip
 > Step 0 entirely — the environment builds itself in the browser.
 
+### Getting GitHub to know you
+
+You can clone and run Sprout with no account at all. You need one only to *push* work back. Two ways, pick either:
+
+- **GitHub CLI** — `gh auth login`, follow the prompts, done. (`gh` also makes `just doctor` able to tell you
+  whether you're authenticated.)
+- **An SSH key** — [GitHub's guide](https://docs.github.com/en/authentication/connecting-to-github-with-ssh)
+  walks it end to end.
+
+**Not a collaborator on this repo?** That's the normal case. **Fork** it to your own account, clone your fork,
+and branch there — your pull request comes from your fork and everything else in this guide is identical.
+
+### Where to put the clone
+
+Anywhere you like on macOS or Linux. **On Windows it matters:** the classic `MAX_PATH` limit is 260 characters
+for the *whole* path, and Sprout keeps its own tracked paths under 200 — which leaves roughly **60 characters
+for your clone location**. `C:\dev\sprout` is comfortable; a deep `…\OneDrive\Documents\GitHub\…` can run out
+and give you a checkout that fails, or silently lands incomplete, with nothing obviously wrong. Run
+**`just doctor`** any time and it measures your actual path and reports the headroom.
+
 ## Step 1 — Get Sprout running
 
 ```text
-git clone https://github.com/OrangePeachPink/sprout && cd plants
+git clone https://github.com/OrangePeachPink/sprout && cd sprout
+./scripts/bootstrap.sh      # or .\scripts\bootstrap.ps1 on Windows — see Step 0
+just start                  # launch Sprout — opens the dashboard in your browser
+```
+
+`bootstrap` is the two commands below, plus the tool installs, plus a verification pass. By hand:
+
+```text
 uv sync                     # reproduce the exact, locked dev environment
 uv run pre-commit install   # the quality checks auto-run on every commit
-just start                  # launch Sprout — opens the dashboard in your browser
 ```
 
 `uv sync` builds a local environment with the right Python and tools. `pre-commit install` wires up the hooks
 that auto-format and lint your work *as you commit*, so you never have to remember to. `just start` opens the
 dashboard — if a browser tab appears, you're running Sprout. 🌱
+
+**Something not right?** Run **`just doctor`** — it checks what's actually true on your machine (tools, the
+locked environment, the port, whether any board is declared yet, serial, firmware toolchain) and names the
+one thing that's missing instead of leaving you to guess. It reports; it never changes anything.
 
 ## Step 2 — Find something to work on
 

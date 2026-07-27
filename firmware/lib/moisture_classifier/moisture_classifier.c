@@ -9,14 +9,17 @@
 
 bool moisture_level_is_display(moisture_level_t l)
 {
-    return (l >= MOIST_DRY) && (l <= MOIST_OVERWATERED);
+    /* #995: all 7 are in-soil display bands (Faint..Soaked). The off-ladder
+     * probe-in-air/water exceptions are the #1152 anchor layer, not a level. */
+    return (l >= MOIST_AIR_DRY) && (l <= MOIST_SUBMERGED);
 }
 
 moisture_class_t moisture_class_of(moisture_level_t l)
 {
-    if (l <= MOIST_AIR_DRY)   return MCLASS_DRY_DIAG;   /* idx 0    */
-    if (l >= MOIST_SUBMERGED) return MCLASS_WET_DIAG;   /* idx 6    */
-    return MCLASS_SOIL;                                 /* idx 1..5 */
+    /* confirm-SPEED grouping (#995): edge bands keep distinct timing. */
+    if (l <= MOIST_AIR_DRY) return MCLASS_DRY_DIAG; /* idx 0  Faint edge  */
+    if (l >= MOIST_SUBMERGED) return MCLASS_WET_DIAG; /* idx 6  Soaked edge */
+    return MCLASS_SOIL; /* idx 1..5 mid soil  */
 }
 
 const char *moisture_level_name(moisture_level_t l)
@@ -110,6 +113,20 @@ uint16_t moisture_trimmed_mean(uint16_t *s, uint16_t n, uint8_t trim_each,
 moisture_level_t moisture_update(moisture_state_t *st, const moisture_cfg_t *cfg,
                                  uint16_t raw_filtered)
 {
+    /* #1152 kinematics: compare against the PREVIOUS accepted raw before it is
+     * overwritten. Soil cannot move this fast at the sampling cadence, so a
+     * bigger step means the instrument moved, not the moisture. */
+    /* #1434 AC0: keep the SIGNED step so the check is auditable from the wire
+     * (telemetry step=), not inferred from logged rows. The magnitude drives
+     * rate_spike; the sign carries direction for the exception taxonomy. */
+    int signed_delta = (int)raw_filtered - (int)st->last_raw;
+    st->last_delta = (int16_t)signed_delta;
+    if (cfg->max_delta_raw > 0) {
+        int delta = signed_delta < 0 ? -signed_delta : signed_delta;
+        st->rate_spike = (uint16_t)delta > cfg->max_delta_raw;
+    } else {
+        st->rate_spike = false;
+    }
     st->last_raw = raw_filtered;
 
     moisture_level_t candidate =
@@ -152,6 +169,8 @@ void moisture_init(moisture_state_t *st, const moisture_cfg_t *cfg,
     st->last_raw      = raw_seed;
     st->last_spread   = 0;
     st->health_warn   = false;
+    st->rate_spike = false; /* a seed has no previous step to compare */
+    st->last_delta = 0; /* #1434 AC0: no prior sample -> zero step */
 }
 
 moisture_level_t moisture_process(moisture_state_t *st, const moisture_cfg_t *cfg,

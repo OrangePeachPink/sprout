@@ -1,0 +1,312 @@
+#!/usr/bin/env python3
+"""#1443 — read/write the five Project #2 board fields in one line.
+
+The four planning attributes (plus Status) live on the board as fields, not labels
+(ADR-0003 §5). Lanes must be able to read and set them in one line, or attributes rot —
+`velocity:` reached 7-of-69 because writing it was annoying. This makes the field the
+path of least resistance. The `just` recipes are thin passthroughs to this.
+
+Guard-family shape (the #1409 pattern): a **declared ID table**, and every operation is
+checked against the **live board** rather than trusted. Two ways that matters:
+
+- **Never trust a fired mutation** (#519/#522): after a write we RE-QUERY the field and
+  print the value the board now reports — the confirmation is the read-back, not the
+  mutation's own "ok".
+- **The declared table can drift** (a renamed/removed option): before writing, we
+  confirm the declared option id still exists on the live field, and fail loud with
+  "fix the table" if it doesn't. Silently writing a stale id is worse than no tool.
+
+**Issues and PRs both (#1522).** The board carries PR cards as first-class items, so a
+number here resolves as either — and an item that is not carded yet gets added rather
+than refused. Resolving issues only is exactly how a run of PRs reached the triage view
+with every planning field empty.
+
+    python tools/dx/board_field.py read <issue|pr>
+    python tools/dx/board_field.py <field> <issue|pr> <value>
+"""
+
+from __future__ import annotations
+
+import contextlib
+import json
+import subprocess
+import sys
+
+PROJECT_ID = "PVT_kwHOCpHTeM4Bbmep"
+
+# The declared table (spec on #1443). Each field: its Project field id + the option
+# words a lane types → the option ids the board stores. Words are the lane's vocabulary;
+# ids are the board's. Adding a row is deliberate — this is a table, never a lookup.
+FIELDS: dict[str, dict] = {
+    "owner": {
+        "id": "PVTSSF_lAHOCpHTeM4BbmepzhYhYBg",
+        "gql": "Owner",
+        "options": {
+            "firmware": "217a1dc9",
+            "data": "7bafb049",
+            "design": "a09f3b9a",
+            "dx": "124f213e",
+            "trellis": "70fd18c0",
+            "workflow": "04d26220",
+            "maintainer": "7ac7b0d6",
+        },
+    },
+    "velocity": {
+        "id": "PVTSSF_lAHOCpHTeM4BbmepzhYhYE0",
+        "gql": "Velocity",
+        "options": {"v1": "f3c7b174", "v2": "b16828b0"},
+    },
+    "size": {
+        "id": "PVTSSF_lAHOCpHTeM4BbmepzhWV5dA",
+        "gql": "Size",
+        "options": {
+            "xs": "5d8ec1e1",
+            "s": "79c17528",
+            "m": "48136fd0",
+            "l": "a61b3080",
+            "xl": "7d090c3a",
+        },
+    },
+    "priority": {
+        "id": "PVTSSF_lAHOCpHTeM4BbmepzhWV5cI",
+        "gql": "Priority",
+        "options": {
+            "p0": "f5ba88db",
+            "p1": "6b7cebb2",
+            "p2": "9e0a9579",
+            "p3": "9c8eef09",
+        },
+    },
+    "status": {
+        "id": "PVTSSF_lAHOCpHTeM4BbmepzhWV5GY",
+        "gql": "Status",
+        # the recipe words the spec uses → the board's option ids
+        "options": {
+            "backlog": "e24cf82d",
+            "progress": "b8970df8",
+            "verify": "0742aca7",
+            "ready": "7c75f7df",
+            "done": "ba88d845",
+        },
+    },
+}
+
+# Read order = the board's mental model: who owns it, how fast, how big, how urgent.
+_READ_ORDER = ("owner", "velocity", "size", "priority", "status")
+
+# The empty-field marker. An unset field is a LEGAL, expected state (the readiness view
+# exists to find them), so a read renders it and exits 0 — it never errors (#1447). An
+# em-dash, not U+2205: the latter is not cp1252-encodable and crashed the tool on a
+# Windows console (and, a ValueError subclass, the crash masqueraded as a bad arg).
+EMPTY = "—"
+
+
+class BoardError(Exception):
+    """A loud, actionable failure — never a silent wrong write."""
+
+
+def _gql(query: str) -> dict:
+    """Run a GraphQL query and return its `data`, failing loud on any error.
+
+    `gh` exits non-zero when GraphQL reports errors even alongside partial `data`
+    (a not-found issue returns both). Prefer the structured `errors[].message` over
+    the raw stderr, and still return `data` when it is usable — so a null `issue`
+    reaches the caller as a clean 'does not exist' rather than a generic API blob."""
+    p = subprocess.run(
+        ["gh", "api", "graphql", "-f", f"query={query}"],
+        capture_output=True,
+        text=True,
+    )
+    try:
+        doc = json.loads(p.stdout)
+    except (json.JSONDecodeError, ValueError):
+        raise BoardError(
+            f"GitHub API call failed:\n{(p.stderr or p.stdout).strip()}"
+        ) from None
+    if doc.get("errors"):
+        msgs = "; ".join(e.get("message", str(e)) for e in doc["errors"])
+        if doc.get("data") is None:
+            raise BoardError(f"GitHub API: {msgs}")
+        # partial data (e.g. issue: null) — let the caller give the clean message
+    return doc["data"]
+
+
+def _content(number: int) -> dict:
+    """The issue OR pull request with this number, as a project-content node (#1522).
+
+    Issues and PRs share one number space, so ``issueOrPullRequest`` resolves either —
+    and the board carries both (a PR card is a first-class item). Querying ``issue()``
+    alone made every PR look like it did not exist, which is how #1512/#1384/#1518/#1520
+    sat on the triage view with every field empty: the wrapper refused them, so only the
+    gate's raw-GraphQL Status write landed.
+
+    Per-number query — never the bulk item-list, which truncates silently (ADR-0003 §5).
+    """
+    sel = "\n".join(
+        f'{k}: fieldValueByName(name: "{f["gql"]}") '
+        "{ ... on ProjectV2ItemFieldSingleSelectValue { name } }"
+        for k, f in FIELDS.items()
+    )
+    body = (
+        f"id title projectItems(first: 10) {{ nodes {{ id project {{ id }} {sel} }} }}"
+    )
+    data = _gql(
+        f'{{ repository(owner: "OrangePeachPink", name: "sprout") '
+        f"{{ issueOrPullRequest(number: {number}) {{ __typename "
+        f"... on Issue {{ {body} }} ... on PullRequest {{ {body} }} }} }} }}"
+    )
+    node = (data.get("repository") or {}).get("issueOrPullRequest")
+    if node is None:
+        # Both types were tried in one call — say so, so "#N does not exist" is never
+        # read as "#N is a PR and this tool only does issues" (the #1522 confusion).
+        raise BoardError(
+            f"#{number} is neither an issue nor a pull request in this repo."
+        )
+    return node
+
+
+def _add_to_board(number: int, content_id: str, kind: str) -> str:
+    """Put an un-carded issue/PR on Project #2 and return its new item id (#1522 AC2).
+
+    The gate was doing this by hand. Adding is idempotent server-side: a second add of
+    the same content returns the existing item rather than duplicating it.
+    """
+    data = _gql(
+        "mutation { addProjectV2ItemById(input: { "
+        f'projectId: "{PROJECT_ID}", contentId: "{content_id}" }}) '
+        "{ item { id } } }"
+    )
+    item = ((data.get("addProjectV2ItemById") or {}).get("item")) or {}
+    if not item.get("id"):
+        raise BoardError(
+            f"could not add {kind.lower()} #{number} to the board (Project #2)."
+        )
+    print(f"  #{number} added to the board ({kind.lower()}).")
+    return item["id"]
+
+
+def _item_and_values(number: int) -> tuple[str, dict[str, str | None]]:
+    """This issue/PR's project-#2 item id, plus each field's current value (or None).
+
+    Not on the board yet? Add it (AC2) rather than refusing — then RE-QUERY, because a
+    mutation's own "ok" is not evidence (#519/#522). A card that is still absent after a
+    successful-looking add is a loud failure, never an assumed one.
+    """
+    node = _content(number)
+    for item in node["projectItems"]["nodes"]:
+        if item["project"]["id"] == PROJECT_ID:
+            return item["id"], {k: (item[k] or {}).get("name") for k in FIELDS}
+
+    _add_to_board(number, node["id"], node["__typename"])
+    node = _content(number)  # never trust the mutation — prove the card exists
+    for item in node["projectItems"]["nodes"]:
+        if item["project"]["id"] == PROJECT_ID:
+            return item["id"], {k: (item[k] or {}).get("name") for k in FIELDS}
+    raise BoardError(
+        f"#{number} was added to Project #2 but the card did not come back on a "
+        "re-query. Check the board before trusting any field value."
+    )
+
+
+def _assert_option_live(field: str, option_id: str) -> None:
+    """Confirm the declared option id still exists on the LIVE field before writing.
+
+    This is the drift guard: a renamed/removed option would make the mutation write a
+    stale id (or fail opaquely). Better to stop and say 'fix the table' by name."""
+    f = FIELDS[field]
+    data = _gql(
+        f'{{ node(id: "{PROJECT_ID}") {{ ... on ProjectV2 '
+        f'{{ field(name: "{f["gql"]}") {{ ... on ProjectV2SingleSelectField '
+        "{ id options { id } } } } } }"
+    )
+    live = ((data.get("node") or {}).get("field")) or {}
+    if live.get("id") != f["id"]:
+        raise BoardError(
+            f"field '{field}' id in the table ({f['id']}) != the live board "
+            f"({live.get('id')}). The board changed — fix the table in {__file__}."
+        )
+    live_ids = {o["id"] for o in live.get("options", [])}
+    if option_id not in live_ids:
+        word = next(w for w, i in f["options"].items() if i == option_id)
+        raise BoardError(
+            f"option '{field}={word}' ({option_id}) is not on the live field anymore — "
+            f"it was renamed or removed. Fix the table in {__file__}; do not guess."
+        )
+
+
+def read(number: int) -> int:
+    _, values = _item_and_values(number)
+    for k in _READ_ORDER:
+        print(f"  {k:9} {values[k] or EMPTY}")
+    return 0
+
+
+def write(field: str, number: int, word: str) -> int:
+    f = FIELDS[field]
+    word = word.lower()
+    if word not in f["options"]:
+        valid = " ".join(f["options"])
+        raise BoardError(f"unknown {field} '{word}'. Valid: {valid}")
+    option_id = f["options"][word]
+
+    item_id, _ = _item_and_values(number)  # also puts it on the board if it wasn't
+    _assert_option_live(field, option_id)  # drift guard, before the mutation
+
+    _gql(
+        "mutation { updateProjectV2ItemFieldValue(input: { "
+        f'projectId: "{PROJECT_ID}", itemId: "{item_id}", fieldId: "{f["id"]}", '
+        f'value: {{ singleSelectOptionId: "{option_id}" }} }}) '
+        "{ projectV2Item { id } } }"
+    )
+
+    # Never trust the mutation — re-query and print what the board reports (#519/#522).
+    _, values = _item_and_values(number)
+    now = values[field]
+    print(f"  #{number} {field} = {now or EMPTY}")
+    return 0
+
+
+def _card_number(s: str) -> int:
+    """Parse the issue/PR arg, or fail with a clean message. Scoped tightly so ONLY a
+    truly non-numeric arg triggers it — a broad `except ValueError` once caught an
+    unrelated UnicodeEncodeError (a ValueError subclass) and mislabelled it (#1447)."""
+    try:
+        return int(s)
+    except ValueError:
+        raise BoardError(f"issue/PR must be a number, got '{s}'.") from None
+
+
+def main(argv: list[str] | None = None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    # Encoding-independent output: a glyph the console can't encode must never crash the
+    # tool (#1447 — U+2205 died on cp1252). errors="replace" degrades to '?' at worst.
+    with contextlib.suppress(AttributeError):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+    fields = " ".join(FIELDS)
+    if not argv:
+        print(
+            f"usage: board_field.py read <issue|pr>\n"
+            f"       board_field.py <{fields}> <issue|pr> <value>",
+            file=sys.stderr,
+        )
+        return 2
+
+    verb = argv[0]
+    try:
+        if verb == "read":
+            if len(argv) != 2:
+                raise BoardError("usage: board_field.py read <issue|pr>")
+            return read(_card_number(argv[1]))
+        if verb in FIELDS:
+            if len(argv) != 3:
+                raise BoardError(f"usage: board_field.py {verb} <issue|pr> <value>")
+            return write(verb, _card_number(argv[1]), argv[2])
+        raise BoardError(f"unknown command '{verb}'. Use: read | {fields}")
+    except BoardError as e:
+        print(f"board_field: {e}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

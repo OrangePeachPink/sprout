@@ -14,9 +14,10 @@
 | 1 | classic ESP32 / NodeMCU-32S / ESP-32D | ESP32-D0WD (Xtensa LX6 ×2) | CP2102 (UART) | 4 MB | ✅ baseline (`esp32dev`), unchanged |
 | 2a | `c5-official-01` — Espressif ESP32-C5-DevKitC-1-**N8R8** (official; box + silkscreen + module can agree) | ESP32-C5 (RISC-V, dual-band Wi-Fi 6) | CP210x on the `UART` port (COM11) **+ native USB** on the `USB` port (COM12) | **8 MB + 8 MB PSRAM** | 🟡 builds today (#529); `flash_id` + pins pending |
 | 2b | `c5-yellow-01` — ESP32-C5-KITC-A clone (module can: `ESPC5-32 H4`) | ESP32-C5 | CH340 on the one tested port (COM10); 2nd port unconfirmed | unknown until `flash_id` (possibly 4 MB) | 🟡 builds today; identity resolved, USB split partial |
-| 3 | `s3-n8r2-01` — ESP32-S3-N8R2 dual-USB | ESP32-S3 (Xtensa LX7 ×2) | native USB serial/JTAG (`303A:4001`, COM7) is the **only** working port — the CH343 UART-bridge port is dead (#443); see the serial section | 8 MB + 2 MB PSRAM (`flash_id`-confirmed 2026-07-03) | 🟢 builds + flashes via native USB (esptool-direct) |
+| 3 | `s3-n8r2-01` — ESP32-S3-N8R2 dual-USB | ESP32-S3 (Xtensa LX7 ×2), QFN56 rev v0.2 | **both ports work** — connector labeled `COM` = CH343 UART bridge; connector labeled `USB` = native CDC/JTAG. The earlier "UART-bridge port is dead" finding was **falsified at the 2026-07-26 recovery** (CH343 enumerated stably and carried the whole session); the 07-03 failure was most likely the unqualified C-to-C cable, not the port. Trust observed VID/PID over label lore | 8 MB + 2 MB PSRAM (`flash_id`-confirmed 2026-07-03, re-confirmed 07-26) | 🟢 recovered + running v0.8.1 (QIO→DIO, #1034/#1055). **No header pins** — carrying sensors requires soldering; **cal entry pending its own sweep — do not inherit the N16R8's anchors** (#1681, ruled 2026-07-26) |
+| 3b | `s3-n16r8-pinned-01` — ESP32-S3-DevKitC-1 v1.6 clone (Lonely Binary), **N16R8**, header pins installed | ESP32-S3 (Xtensa LX7 ×2) | same dual-connector layout as row 3: `COM` = CH340K UART bridge; `USB` = native CDC/JTAG. C-to-C path unreliable on this unit — use a qualified A-to-C data cable | **16 MB + 8 MB PSRAM** (esptool-confirmed 2026-07-26) | 🟢 full bring-up 2026-07-26: web-flash (EWT 10.0.0 via CH343-class bridge), app-only preservation update, Wi-Fi/portal/mDNS/telemetry, cadence persistence. Soil pins: **silkscreen `1` = GPIO1 = `ch0` sensor-verified** (air 3219–3222 / submerged 1053–1057, legible silkscreen); GPIO2/4/5 (`ch1–3`) declared + emitting, **candidate** — no probe has touched them |
 
-> Identity source of truth: the #443 intake evidence packet,
+> Identity canonical source: the #443 intake evidence packet,
 > [`docs/evidence/2026-07-01-esp32-s3-c5-intake/`](../evidence/2026-07-01-esp32-s3-c5-intake/README.md)
 > (photos + Device Manager enumerations, curated by Sage). There are TWO C5 variants in
 > house; which one the fleet standardizes on is an open maintainer decision on #443.
@@ -100,6 +101,42 @@ question and the pin-assignment question are separate, and only the first is res
 - Continuity is still **meter-pending (B1)** — the clones lie, and even this official board's
   header→GPIO routing wants confirming; expect per-VARIANT entries if the two C5s' usable pins
   differ.
+
+### ADC1 sensor ceiling per board (scale headroom)
+
+The pin budget above is built around the kit's **4** soil probes. This table is the verified
+**ADC1-only** ceiling if a single board ever scales past 4 (ADC2 stays off with Wi-Fi on every
+chip, so the ceiling is simply "how many usable ADC1 channels does the family expose?"). It sizes
+the card-grid scale ceiling — e.g. 4 boards × 6 = 24 plants. Channel counts are datasheet-verified
+(retrieved 2026-07-12); the "clean-for-soil" column subtracts strapping/JTAG/unbonded pins.
+
+| Board | ADC1 channels (datasheet) | Clean-for-soil ceiling | Why |
+| --- | --- | --- | --- |
+| classic ESP32-D0WD (WROOM-32) | 8 — GPIO32–39 | **6** | WROOM bonds only 6 of the 8 (GPIO37/38 not on the module); none are strapping; 34–39 input-only = fine for ADC. 6 uses every exposed ADC1 pin — zero spare. |
+| ESP32-S3 | 10 — GPIO1–10 | **9** | Skip strapping GPIO3; flash/PSRAM (≈GPIO26–32) and native USB-JTAG (19/20) don't touch ADC1. Most headroom of the three. |
+| ESP32-C5 | 6 — GPIO1–6 | **4** | GPIO2 & GPIO3 are JTAG **+ boot-strapping** — the same reason the C5 soil map is forced to `{1,4,5,6}`. Reaching 6 means sensors on strap pins (boot-mode risk), so the clean ceiling stays 4. |
+
+**So 6-per-board holds for an all-S3 fleet; classic WROOM reaches exactly 6 (no spare ADC1 pin);
+the C5 caps at 4 clean** — a mixed fleet's per-board ceiling is set by whichever C5s are in it.
+Secondary constraint: 6 sensors implies 6 pumps → 6 more (digital) GPIOs for relays; on the 32-pin
+C5 the total budget (6 sensors + 6 relays + I²C + power) gets tight fast, a second reason the C5
+sits at 4.
+
+**Not yet verified (honest — bench-pass trio, no urgency):**
+
+1. That *our* classic module truly doesn't bond GPIO37/38 (standard WROOM-32, but confirm on the
+   silkscreen — a bare-chip board that exposes them could reach 8).
+2. Whether a capacitive sensor on the C5's GPIO2/3 actually disrupts boot. The datasheet says
+   "strapping"; only a bench test says "tolerable or not." Rides the next bench day.
+3. The S3's chosen ADC1 pins vs. the relay/I²C map (10 channels exist, but confirm the 6 picked
+   don't collide with chosen relay/I²C pins).
+
+Sources (retrieved 2026-07-12): [ESP32-C5 datasheet Table 2-7][c5ds] · [ESP32-S3 IDF ADC][s3adc] ·
+[ESP32 IDF ADC][esp32adc], plus the respective datasheets.
+
+[c5ds]: https://documentation.espressif.com/esp32-c5_datasheet_en.html
+[s3adc]: https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/adc/index.html
+[esp32adc]: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/adc/index.html
 
 ## Serial per board (the real gotcha)
 

@@ -8,11 +8,9 @@ annotated view are all deterministic and decoupled from the live bench evidence.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import bench_events as be
+from tools.analytics import bench_events as be
 
 # A two-plant survey: P01 has clean last/median raw; P08 has pre/post/delta phases;
 # P99 is narrative-only (events, no per-probe raw) — must yield events, no readings.
@@ -83,7 +81,7 @@ def _survey_dir(tmp_path: Path) -> Path:
 def test_band_for_raw_dry_to_wet() -> None:
     assert be.band_for_raw(3274) == "air-dry"  # >= b0, driest
     assert be.band_for_raw(1977) == "needs water"
-    assert be.band_for_raw(1272) == "well watered"  # low raw = wet
+    assert be.band_for_raw(1550) == "well watered"  # low raw = wet (#1218 ladder)
     assert be.band_for_raw(900) == "submerged"  # below every boundary
     assert be.band_for_raw(None) is None
     assert be.band_for_raw("nan") is None

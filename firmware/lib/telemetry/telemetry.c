@@ -22,7 +22,7 @@ uint32_t telemetry_fnv1a32(uint32_t h, const void *data, size_t len)
 }
 
 const char *telemetry_quality_flag(const moisture_state_t *st,
-                                   uint16_t wet_rail_raw)
+                                   uint16_t wet_rail_raw, uint16_t air_dry_raw)
 {
     uint16_t raw = st->last_raw;
     /* #670: a raw below the physical wet rail is impossible - a fault (short /
@@ -31,19 +31,36 @@ const char *telemetry_quality_flag(const moisture_state_t *st,
      * `raw <= 5 -> SATURATED`, which masked dead boards as drowning plants (the
      * live s3-1 0/7/4/1 case). wet_rail_raw==0 disables the check (unknown rail). */
     if (wet_rail_raw > 0 && raw < wet_rail_raw) return "SENSOR_FAULT";
-    if (raw >= 4090) return "SATURATED"; /* dry-rail: ADC railed high */
+    if (raw >= 4090) return "SATURATED"; /* dry-rail: ADC railed high (clamp) */
+    /* #1152: the SYMMETRIC MIRROR of the sub-wet-rail fault. Above the board's
+     * air rail (but not pegged) is impossibly dry for soil - an open circuit or
+     * a disconnected lead, not a very thirsty plant. Ordered AFTER the peg check
+     * so the pegged-clamp condition keeps its own distinct SATURATED value. */
+    if (air_dry_raw > 0 && raw > air_dry_raw) return "SENSOR_FAULT";
     if (st->last_spread >= 2000)
         return "NO_SIGNAL"; /* floating / disconnected */
+    if (st->rate_spike)
+        return "SUSPECT"; /* #1152 kinematics: implausible step */
     if (st->health_warn) return "SUSPECT"; /* noisy / poor contact */
     return "OK";
 }
 
-const char *telemetry_fault_reason(uint16_t raw, uint16_t wet_rail_raw)
+const char *telemetry_fault_reason(const moisture_state_t *st,
+                                   uint16_t wet_rail_raw, uint16_t air_dry_raw)
 {
-    if (wet_rail_raw == 0 || raw >= wet_rail_raw) return NULL; /* not a fault */
-    if (raw <= TELEMETRY_DEAD_ADC_MAX)
-        return "dead_adc"; /* floating to ~0: disconnected / dead ADC */
-    return "stuck_wet"; /* below the rail but not near-zero: short / contamination */
+    uint16_t raw = st->last_raw;
+    /* Hard (physically impossible) faults first - they outrank a kinematics
+     * hint, which only says the STEP was implausible, not the reading. */
+    if (wet_rail_raw > 0 && raw < wet_rail_raw) {
+        if (raw <= TELEMETRY_DEAD_ADC_MAX)
+            return "dead_adc"; /* floating to ~0: disconnected / dead ADC */
+        return "stuck_wet"; /* below rail, not near-zero: short / contamination */
+    }
+    /* #1152 physics mirror: impossibly dry -> open circuit / disconnected lead */
+    if (air_dry_raw > 0 && raw > air_dry_raw && raw < 4090) return "open_adc";
+    /* #1152 kinematics: the reading may be real but the jump is not trustable */
+    if (st->rate_spike) return "rate_spike";
+    return NULL; /* not a fault */
 }
 
 int telemetry_format_soil_row(char *buf, size_t buflen,
@@ -55,20 +72,28 @@ int telemetry_format_soil_row(char *buf, size_t buflen,
      * label + is the pre-mint degrade identifier. Time-provenance fields (#278,
      * schema §11) ride the payload too - additive, doesn't touch the 14-column CSV
      * shape. device_timestamp_utc is OMITTED (not an empty key) when NULL/unsynced -
-     * absence, not a guessed value, is the honest NULL here. */
+     * absence, not a guessed value, is what NULL means here. */
     char payload
         [384]; /* #601 name= + #739 v4 keys + #952/#997 cal_tier/cal_src on WiFi
                   rows. Sized for the worst-case field combo (WiFi + SNTP-synced
                   device_timestamp_utc + a fault reason + cal provenance) so no
                   additive key is ever silently dropped from a full row. */
+    /* #1434 AC0: step= is the SIGNED raw delta from the previous accepted sample -
+     * the exact quantity rate_spike compares to max_delta_raw. It rides the base
+     * payload (always present, never a dropped tail key) next to its sibling
+     * spread=, so the kinematics check is auditable from the wire: a reader can
+     * verify (|step| > threshold) <=> fault=rate_spike, and read direction
+     * (wetter vs drier) for the exception taxonomy. Emitting it here - not
+     * reconstructing it from logged rows - is the point: logged rows differ from
+     * the classifier's accepted-sample sequence across any dropped row. */
     int len =
         snprintf(payload, sizeof(payload),
-                 "name=%s;level=%s;role=%s;spread=%u;gpio=%d;device_seq=%lu;"
-                 "time_source=%s",
+                 "name=%s;level=%s;role=%s;spread=%u;step=%d;gpio=%d;"
+                 "device_seq=%lu;time_source=%s",
                  r->name ? r->name : "", moisture_level_name(r->level),
                  moisture_level_is_display(r->level) ? "disp" : "diag",
-                 (unsigned)r->state->last_spread, r->gpio_pin,
-                 (unsigned long)r->device_seq, r->time_source);
+                 (unsigned)r->state->last_spread, (int)r->state->last_delta,
+                 r->gpio_pin, (unsigned long)r->device_seq, r->time_source);
     /* Each append is bounds-guarded; a would-be overflow just drops the tail key
      * (snprintf still NUL-terminates - never a partial-but-unterminated payload). */
     if (r->device_timestamp_utc && r->device_timestamp_utc[0] != '\0' &&
@@ -84,12 +109,13 @@ int telemetry_format_soil_row(char *buf, size_t buflen,
     }
     /* #670: the specific fault reason rides payload; the coarse SENSOR_FAULT token
      * is in quality_flag (below). NULL when the raw is not a fault. */
-    const char *fault = telemetry_fault_reason(r->raw, r->wet_rail_raw);
+    const char *fault =
+        telemetry_fault_reason(r->state, r->wet_rail_raw, r->air_dry_raw);
     if (fault && len > 0 && (size_t)len < sizeof(payload)) {
         len += snprintf(payload + len, sizeof(payload) - (size_t)len,
                         ";fault=%s", fault);
     }
-    /* #669: rssi is honest-absent off WiFi (omit, never a fake 0); uptime_s/heap
+    /* #669: rssi is absent off WiFi (omit, never a placeholder 0); uptime_s/heap
      * ride every row (transport-independent board diagnostics). */
     if (r->rssi_present && len > 0 && (size_t)len < sizeof(payload)) {
         len += snprintf(payload + len, sizeof(payload) - (size_t)len,
@@ -104,7 +130,7 @@ int telemetry_format_soil_row(char *buf, size_t buflen,
      * rssi_present == WiFi-associated). The header cal signals are tethered-only, so
      * this wire token is the off-tether supplement; a tethered row omits it and the
      * header derivation governs (Data #997 fallback). Omitted (not an empty key)
-     * when the value is NULL/"" - honest-absent, never a guessed token. */
+     * when the value is NULL/"" - absent, never a guessed token. */
     if (r->rssi_present && r->cal_tier && r->cal_tier[0] != '\0' && len > 0 &&
         (size_t)len < sizeof(payload)) {
         len += snprintf(payload + len, sizeof(payload) - (size_t)len,
@@ -126,7 +152,8 @@ int telemetry_format_soil_row(char *buf, size_t buflen,
         buf, buflen, "%s,%s,%s,%s,%llu,%s,%s,%s,%s,%u,,,%s,%s", r->record_type,
         r->session_id, r->device_id, r->fw_version, r->up_ms, r->sensor_model,
         r->sensor_name, r->sensor_position, r->channel_str, (unsigned)r->raw,
-        telemetry_quality_flag(r->state, r->wet_rail_raw), payload);
+        telemetry_quality_flag(r->state, r->wet_rail_raw, r->air_dry_raw),
+        payload);
     return (n >= 0 && (size_t)n < buflen) ? n : -1;
 }
 

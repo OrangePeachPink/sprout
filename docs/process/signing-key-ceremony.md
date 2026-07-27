@@ -42,7 +42,12 @@ identical, so this stays a same-day land.
 
 - Merge the signing PR (#302). The next **published** release runs `sign-release.yml`: it builds the
   board-aware factory bins (classic + C5), signs each with the secret, verifies against the committed public
-  key, and attaches `<bin>` + `<bin>.sig` to the release. A future pull-OTA (#302) checks the `.sig` before
+  key, and attaches `<bin>` + `<bin>.sig` to the release. **What is signed is domain-separated** (#1282): the
+  message is the 10-byte tag `sprout-fw\0` followed by the image bytes, never the bare image — so a firmware
+  signature can never be replayed as a signature over a different artifact class. The device-side verify
+  prepends the same tag; signer and verifier must agree or every release is rejected on-device. The `.sig`
+  stays **detached** (a sibling artifact, never a trailer inside the image), so one signed image serves both
+  the OTA and web-flasher paths. A future pull-OTA (#302) checks the `.sig` before
   applying.
 - **Before the ceremony** the workflow **skips signing with a warning** — it does not fail, so releases
   still cut unsigned in the interim.

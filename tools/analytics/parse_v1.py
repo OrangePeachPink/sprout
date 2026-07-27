@@ -95,9 +95,49 @@ BANDS_DRY_TO_WET = list(reversed(BANDS_WET_TO_DRY))
 # (BAND_UI, the band index, #626) at the single parse boundary (ADR-0021), while
 # the raw `payload['level']` stays byte-for-byte untouched.
 _CANON_BAND = {name.lower(): name for name in BANDS_WET_TO_DRY}
-# Reconciled firmware values (main.cpp:63, #255). Used only when a segment's
-# provenance header lacks a "cal bounds" line; prefer header-derived bounds always.
-DEFAULT_CAL_BOUNDS = (3050, 2140, 1830, 1520, 1150, 1050)
+# The ratified classic in-soil ladder — #995/#1174 (2026-07-19, ADR-0035) with the
+# #1236-RATIFIED wet-end re-derive (route B, maintainer production GO): Saturated is a
+# thin at-the-rail band (ceiling 1150 = rail+98), Wet/Moist/Ideal re-spaced, the dry
+# half unchanged. The host sibling of firmware's MOISTURE_CFG_DEFAULT.boundary, per
+# the #1153 host-mirror contract — PAIR-MERGED with Firmware's boundary PR, one motion.
+# Descending: the 6 interior edges of the 7 in-soil bands (Soaked..Faint). Faint =
+# raw >= [0] (unbounded up), Soaked = raw < [5] (unbounded down); the off-ladder
+# air/water anchors live in BOARD_CLASS_ANCHORS below (#1235/#1152). Used only when a
+# segment's provenance header lacks a "cal bounds" line; prefer header bounds always.
+DEFAULT_CAL_BOUNDS = (2293, 2086, 1879, 1636, 1393, 1150)
+
+# #1235/#1152 — the per-BOARD-CLASS off-ladder anchors: the measured in-soil envelope
+# rails (#995/#1174 dry-down, medians of the per-channel cal), the host sibling of
+# firmware's board_capability values. ONE definition, two consumers: the pulse envelope
+# spans them (#1235) and the #1152 exception layer keys off the SAME rails (dry past
+# air = probe-in-air; wet past water = probe-in-water) — never two copies. A profiled
+# per-CHANNEL anchor (registry cal chain) beats the class value when present (ADR-0019).
+# #1215 (ratified): the #898 cross-board factor is INTERVAL-DEPENDENT — 0.803 on the
+# full rail-to-rail envelope (978 cup rail; the probe-in-water exception interval) vs
+# 0.850 on the in-soil ladder interval (these 1052/982 wet floors). Both valid for
+# their jobs; ADC compression isn't perfectly linear rail-to-rail. Never conflate.
+BOARD_CLASS_ANCHORS = {
+    "classic": {"air": 3137, "water": 1052},
+    "c5": {"air": 2754, "water": 982},
+}
+
+# #1339 / ADR-0035 §4 (amended 2026-07-20): the measured Faint-CEILING per board class
+# — the top of the in-soil envelope, ratified 2026-07-19 (#1174) from the dual-envelope
+# dry-down. NOT a sensor maximum: humane calibration sets the ceiling at wilt-onset, so
+# readings past it are EXPECTED rather than anomalous. Consumed here, never re-derived.
+BOARD_CLASS_CEILING = {"classic": 2500, "c5": 2213}
+
+# The §2 `range` exception token. An in-soil reading above the ceiling is possible but
+# beyond what we have characterized — distinct from `physics`, which is impossible.
+DRIER_THAN_CALIBRATED = "drier-than-calibrated"
+
+
+def board_class(board: str | None) -> str:
+    """Board string -> anchor class. Anything self-describing as a C5 is ``c5``;
+    everything else (incl. absent) is ``classic`` — the project's primary/default
+    board class, matching DEFAULT_CAL_BOUNDS's own classic-sided default."""
+    return "c5" if board and "c5" in board.lower() else "classic"
+
 
 # A capacitive soil probe cannot read WETTER than fully submerged in water. On the
 # classic's scale the physical wet rail is ~900 raw ("wetter than a cup of water");
@@ -117,6 +157,54 @@ IMPLAUSIBLE_WET_FLOOR = 500
 # `schema_version=2` is already live-emitted by experiment_capture.py with
 # `device_id`=name, so reusing it would misclassify every shipped experiment row.
 STABLE_ID_SCHEMA_VERSION = 3
+
+# #1042 / ADR-0036 (Fork A, maintainer-ruled 2026-07-19): the schema_version at which
+# the wire's `sensor_id` stops being a PORT STICKER (s1..s4) and becomes the firmware
+# CHANNEL (ch0..ch3). Same version-gated shape as STABLE_ID_SCHEMA_VERSION above: the
+# column stays a string and only its MEANING moves, so a parser can tell from the
+# version which contract a row was written under. v4-and-earlier rows keep their old
+# token and are NEVER rewritten (never-stitch, ADR-0006/ADR-0021) — the boundary is
+# the point, not a side effect.
+CHANNEL_ID_SCHEMA_VERSION = 5
+
+# #1315 read-path translation. The pre-rename firmware constant, stated by Firmware
+# from source (`config.h` at the rename commit's parent) and NOT inferred:
+#
+#     constexpr const char *SENSOR_NAMES[NUM_SENSORS] = {"s3", "s4", "s1", "s2"};
+#
+# One global constexpr with no board guard, so both boards emitted this identical,
+# NON-SEQUENTIAL order. Index i is the channel; the value is the token that channel
+# emitted under v4. This is the single source for the mapping — the migration tool
+# consumes it rather than keeping a second copy.
+LEGACY_CHANNEL_TOKENS: tuple[str, ...] = ("s3", "s4", "s1", "s2")
+_LEGACY_TO_CHANNEL: dict[str, str] = {
+    tok: f"ch{i}" for i, tok in enumerate(LEGACY_CHANNEL_TOKENS)
+}
+
+
+def canonical_channel(token: str | None) -> str | None:
+    """Fold a channel token into the canonical ``chN`` namespace (ADR-0036).
+
+    **The read-path translation (#1315).** A v5 flash bisects the analysis store: the
+    raw tier holds v4 ``sN`` rows beside v5 ``chN`` rows, and ADR-0036 §4 forbids
+    rewriting the old ones. A join keyed on the raw token therefore matches only half
+    the history — pre-flash readings silently stop resolving to their plant.
+
+    Folding at JOIN time fixes that without touching a single stored row: the rows
+    stay exactly as the boards reported them (never-stitch intact), and the
+    translation is retroactively correct because ``s1`` always meant *"the port that
+    emitted s1"* — which IS ``ch2``. Normalising both the registry key and the wire
+    token through this function makes the join correct in all four combinations
+    (registry migrated or not) x (row v4 or v5).
+
+    Unknown tokens pass through unchanged — honest, never guessed into a channel."""
+    if not token:
+        return token
+    t = str(token).strip()
+    if t.lower().startswith("ch"):
+        return t  # already canonical
+    return _LEGACY_TO_CHANNEL.get(t, t)
+
 
 _KV_RE = re.compile(r"(\w+)=(.*?)(?=\s+\w+=|$)")
 _SENSOR_RE = re.compile(r"ch(\d+)=GPIO(\d+)/(\S+)")
@@ -231,8 +319,21 @@ def parse_payload(s: str | None) -> dict[str, str]:
     return out
 
 
+def range_exception(raw: int | None, ceiling: int | None) -> str | None:
+    """#1339: the §2 ``range`` exception for a reading past the characterized envelope.
+
+    Returns ``DRIER_THAN_CALIBRATED`` when ``raw`` is above the board's Faint-ceiling,
+    else ``None``. Separate from the band so a caller can surface the exception while
+    still showing the raw — the reading is real, it is the *meaning* we lack."""
+    if raw is None or ceiling is None:
+        return None
+    return DRIER_THAN_CALIBRATED if raw > ceiling else None
+
+
 def band_for_raw(
-    raw: int | None, bounds: tuple[int, ...] = DEFAULT_CAL_BOUNDS
+    raw: int | None,
+    bounds: tuple[int, ...] = DEFAULT_CAL_BOUNDS,
+    ceiling: int | None = None,
 ) -> str | None:
     """Naive band for a raw ADC count using descending (dry>wet) boundaries.
 
@@ -241,9 +342,23 @@ def band_for_raw(
     ``payload.level`` (which carries hysteresis state). Use the per-row
     ``Reading.band`` for ground truth; use this only for drawing the band
     ladder / shading a chart from the file's own cal bounds.
+
+    **Above the ceiling the band is WITHHELD, never clamped** (#1339, ADR-0035 §4
+    amended). Passing a ``ceiling`` makes a reading past it return ``None`` rather
+    than the driest band: "drier than anything we have measured" and "at the dry
+    ceiling" must not render identically, because silently collapsing them makes the
+    INSTRUMENT'S LIMIT look like A PLANT STATE. The caller pairs this with
+    ``range_exception`` to say what it is instead. Absence is the withholding — no
+    eighth band is minted, and the reserved `withheld` token (the #1152 actuation
+    axis) is deliberately not spent here.
+
+    ``ceiling=None`` keeps the historical clamping behaviour for callers that have not
+    opted in, so this is additive.
     """
     if raw is None:
         return None
+    if ceiling is not None and raw > ceiling:
+        return None  # withheld: past what we have characterized
     for name, edge in zip(BANDS_DRY_TO_WET, bounds):
         if raw >= edge:
             return name
@@ -347,6 +462,17 @@ class Reading:
     @property
     def spread(self) -> int | None:
         return _int(self.payload.get("spread"))
+
+    @property
+    def step(self) -> int | None:
+        """The signed single-step raw delta from the previous ACCEPTED classifier
+        sample (#1463, rides the base payload next to ``spread=``). Positive =
+        drier jump (wetter is lower raw), negative = wetter jump, ``0`` on the seed
+        row. This is the EXACT quantity the firmware's ``rate_spike`` check compares
+        to ``max_delta_raw`` — emitted, not host-reconstructed, so it is the true
+        accepted-sample delta even across a dropped row (the host could never rebuild
+        it from logged rows). None on a pre-#1463 row that never emits it."""
+        return _int(self.payload.get("step"))
 
     @property
     def gpio(self) -> int | None:
@@ -474,6 +600,18 @@ class Reading:
         the #602 map bridges. A row with no schema_version at all is treated as
         legacy (name), never guessed as stable."""
         return (self.schema_version or 0) >= STABLE_ID_SCHEMA_VERSION
+
+    @property
+    def sensor_id_is_channel(self) -> bool:
+        """#1042 / ADR-0036: does this row's ``sensor_id`` mean the firmware CHANNEL
+        (``ch0``..``ch3``) rather than the retired port sticker (``s1``..``s4``)?
+
+        The same version-gated pattern as ``device_id_is_stable_id`` (the v3
+        precedent): the column stays a string, only its meaning is gated.
+        ``schema_version >= 5`` ⇒ channel; below (or absent) ⇒ the legacy sticker,
+        treated as legacy and never guessed as a channel. v4 rows are never
+        rewritten — a probe move is now a registry event, not a reflash."""
+        return (self.schema_version or 0) >= CHANNEL_ID_SCHEMA_VERSION
 
     @property
     def device_name(self) -> str | None:

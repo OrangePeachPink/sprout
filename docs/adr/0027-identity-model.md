@@ -2,8 +2,9 @@
 
 **Status:** Accepted — *drafted by Firmware at the bench (2026-07-04) from the three-family fleet
 bring-up (#584); concluded + ratified by Trellis per the maintainer's shepherd/conclude directive
-(2026-07-04). Sub-decision **1b is RESOLVED = Option B** (see §1b); the only remaining open is calibration
-portability — a flagged bench test (§6), not a blocker. Was Proposed 2026-07-04 → Accepted same day.*
+(2026-07-04). Sub-decision **1b is RESOLVED = Option B** (see §1b); calibration portability, the last
+open thread, is **RESOLVED 2026-07-21 on the portable branch** (§6, #621 — classic↔C5; S3 descoped). Was
+Proposed 2026-07-04 → Accepted same day.*
 Establishes a stable-UUID identity model; reframes the already-merged #602 coalescing as an interim
 legacy bridge rather than the permanent strategy.
 
@@ -80,7 +81,7 @@ stable minted id; the friendly *name* moves to the registry (which already carri
 identifier** as much as legibility: under B a row emitted before the UUID is minted (NVS wipe, mint race,
 factory-fresh first boot) has no valid `device_id`, and `name=` is the only identity it can carry. It is
 ~free (+~10 bytes ≈ 0.06% of the 19200 budget, Data-measured) and does **not** undo B — a clearly-labelled
-`name=` payload field is a separate honest label, not the conflation-in-the-id-column B removes. It closes B's
+`name=` payload field is a separate plain label, not the conflation-in-the-id-column B removes. It closes B's
 one genuine regression vs A (which kept the name in the id column as its fallback). **Rationale:** B fixes
 the conflation *at its root* — `device_id` becomes a true
 stable identifier (its proper job) instead of a mutable label masquerading as an id in the "id" column,
@@ -157,14 +158,47 @@ Going forward: **Channel** = `(device_uuid, port/GPIO)`, backstage; **Probe** = 
 `s12`), the user-facing identity carrying QA and calibration. The maintainer thinks in probes and
 plants; the pin is a lookup.
 
-### 6. Calibration = probe-intrinsic composed with a per-board ADC transfer — portability is OPEN
+### 6. Calibration = probe-intrinsic composed with a per-board ADC transfer — portability RESOLVED (classic↔C5); S3 untested
 
 Raw ADC depends on **both** the probe and the board's ADC (reference, gain, parasitics). Model
 calibration as composable — probe endpoints plus a per-board ADC offset / dynamic-range mapping — so
 that **either** "a probe's calibration is portable across boards given the board's ADC transfer"
-**or** "calibration must be re-derived per `(probe, device)`" can be expressed. Which one holds
-within the app's required statistical bounds is **untested**; it is flagged as a bench test (one
-probe across N boards, compare endpoints), not hard-committed here.
+**or** "calibration must be re-derived per `(probe, device)`" can be expressed.
+
+**Resolved 2026-07-21 (#621), on the "portable" branch — for the classic↔C5 pair.** The bench test
+this section flagged (one probe set across boards, compare endpoints) was run on 2026-07-10
+(`docs/experiments/2026-07-10-bench-watering-and-sensor-cal/`): the same four probes (s05–s08),
+measured on the **classic** (2026-07-04 QA) then the **C5** (2026-07-10, deployed). The board-to-board
+difference is a **per-board constant, not per-`(probe, device)`**:
+
+| probe | Δair | Δwet | air compression |
+|---|---|---|---|
+| s05 | −316 | +58 | −17% |
+| s06 | −320 | +43 | −17% |
+| s07 | −327 | +97 | −19% |
+| s08 | −416\* | +44 | ~−16% (via the 07-04 C5 anchor; its air ran early) |
+
+The transfer is a **range compression, not a pure additive offset**: the C5's air end drops ~17% while
+its wet end rises slightly, so the classic's ~[890, 3080] maps to the C5's ~[935, 2790] — narrower and
+shifted, consistently across all four probes. It is also **stable across sessions** (s06: 2792/1020 on
+07-10 vs 2792/1022 on 07-04, no drift), which is what makes a per-board transfer trustworthy enough to
+model rather than re-measure per move.
+
+**Conclusion:** a probe's calibration **is portable across boards given the board's ADC transfer** — the
+per-board term is a real, stable, modelable range-mapping, not `(probe, device)` chaos. Probe-intrinsic
+cal (the sticker's QA/anchors, ADR-0036 probe layer) survives a board move; the board contributes a
+transfer, not a re-derivation.
+
+**Scope of the evidence, stated honestly:** N=4 probes, one board pair (classic↔C5), two sessions. It
+is a strong result for this pair, not a proven universal law. **The S3 leg is untested and descoped**
+(maintainer, 2026-07-21): the lab S3 has never been onboarded — its pins are unsoldered and its image
+does not yet boot (#1034) — so the three-board test is deliberately a two-board result. Adding the S3 is
+gated on S3 bring-up (#443 / #1034); if a third family ever shows a *non*-modelable transfer, this
+section reopens for that family only.
+
+*(This records the **finding**. Landing the measured per-board C5 values into the firmware's
+`board_capability.h` is separate work — #1433 — after #767 closed the "set the C5 cal" issue without
+the numbers actually reaching the code.)*
 
 ### 7. Observation types stay additive by `record_type`
 
@@ -176,7 +210,7 @@ canonical-column cut.
 
 The #602 work shipped three rules that graduate from a display-time workaround into permanent
 invariants of the identity registry / mapping table: **a live identity is never swallowed** by another's alias,
-**provenance rows are never rewritten** (raw wire truth is preserved), and **any merge is visible,
+**provenance rows are never rewritten** (the raw wire record is preserved), and **any merge is visible,
 not silent**. These are load-bearing for the UUID model, not disposable.
 
 ### 9. Migration — the 2nd epoch
@@ -193,8 +227,8 @@ purely as the reader for pre-migration logs. *(Data's §8/§9 precision.)*
 identities are not equally safe to map. `plants_esp32_f4e9d4` was **unique** to the classic — it coalesces
 directly. `Sprout ESP32` was the **shared firmware default across all three boards** (#601's original
 finding) — it must be split by evidence (session/timeframe/transport) before any mapping, and rows that
-remain genuinely ambiguous stay **honest-unknown** (an explicit unattributable bucket), never
-blind-coalesced. *(Trellis's #620 honest-migration rule, folded in at the maintainer's direction.)*
+remain genuinely ambiguous stay **explicit-unknown** (an explicit unattributable bucket), never
+blind-coalesced. *(Trellis's #620 explicit-migration rule, folded in at the maintainer's direction.)*
 
 ## Wave scoping
 

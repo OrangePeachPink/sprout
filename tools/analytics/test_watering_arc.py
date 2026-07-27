@@ -8,12 +8,10 @@ evidence.
 
 from __future__ import annotations
 
-import sys
 import xml.dom.minidom as minidom
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import watering_arc as wa
+from tools.analytics import watering_arc as wa
 
 
 def _capture(path: Path, header: str, raws: list[int]) -> None:

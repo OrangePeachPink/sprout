@@ -31,17 +31,17 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-_REPO = _HERE.parents[1]
-_CAPTURE_PY = _HERE / "experiment_capture.py"
+from tools.capture import (
+    serial_lock,
+)
 
 # Spawn the capture as a quiet child of serve.py - no extra console window on
 # Windows; 0 elsewhere (#183).
 _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-import serial_lock  # noqa: E402  (sibling leaf — the #64 advisory-lock contract)
+_HERE = Path(__file__).resolve().parent
+_REPO = _HERE.parents[1]
+_CAPTURE_PY = _HERE / "experiment_capture.py"
 
 # A safe path/identifier token — letters, digits, dot, dash, underscore; no "..",
 # no slashes. experiment_id / subject become a folder name, so this is the guard
@@ -200,10 +200,12 @@ class CaptureController:
                 # exclusive open is the hard backstop if a lock is missing.
                 owner = serial_lock.current_owner(self._lock_dir)
                 if owner:
-                    raise ControlError(
-                        f"port held by {owner.get('mode')} (pid {owner.get('pid')}) "
-                        "— stop the monitor first"
-                    )
+                    # #1554: refusing is right; refusing *anonymously* was the problem.
+                    # "stop the monitor first" is unactionable when several loggers run
+                    # on one machine — at the bench it was a stray worktree process, and
+                    # the production fleet logger was the one that must NOT be stopped.
+                    # The lock knows which; it now says so, in one sentence.
+                    raise ControlError(serial_lock.explain_owner(owner, live=True))
             # A human subject ('open bench') is accepted: the slug ('open_bench') is the
             # folder/CSV-header-safe token; the title keeps the human form for display.
             subject_slug = _slugify(subject, "subject")

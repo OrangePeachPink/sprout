@@ -11,21 +11,21 @@
   <a href="https://github.com/OrangePeachPink/sprout/releases"><img
     src="https://img.shields.io/github/v/release/OrangePeachPink/sprout?label=release&amp;color=8BD24F"
     alt="latest release"></a>
-  <img src="https://img.shields.io/badge/soil-honest-E8703A" alt="honest by default">
+  <img src="https://img.shields.io/badge/soil-calibrated%20bands-8BD24F" alt="calibrated moisture bands">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-007EC6" alt="MIT license"></a>
   <a href="https://github.com/OrangePeachPink/sprout/actions/workflows/ci.yml"><img
     src="https://github.com/OrangePeachPink/sprout/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 </p>
 
 > **Hi, I'm Sprout.** I watch a windowsill of plants and tell you, in plain words, how each one is doing —
-> no guesswork, no fake percentages: I read the soil honestly and speak for the plant. (Watering? On my
-> roadmap — and true to form, I won't claim it until it's calibrated.)
+> no guesswork: I read the soil myself and speak for the plant. (Watering? On my roadmap — and true to
+> form, I won't claim it until it's calibrated.)
 
 ---
 
 ## What Sprout is
 
-Sprout is a small, honest, **automatic plant-care system** for a windowsill: capacitive soil-moisture probes
+Sprout is a small **automatic plant-care system** for a windowsill: capacitive soil-moisture probes
 on one or more **ESP32-class boards** — each reporting **over Wi-Fi (untethered)** or a USB-serial cable —
 with a **Python** logger and analytics behind them and a served **dashboard** out front. It watches the soil,
 classifies it into seven calibrated moisture bands, and (once calibration is in) will water before a plant
@@ -33,33 +33,75 @@ is ever in trouble.
 
 The minimum Sprout is deliberately small: **a microcontroller and one soil sensor is already a complete
 Sprout** ([ADR-0028](docs/adr/0028-optional-peripherals-doctrine.md)) — a pump, an OLED, and extra probes are
-optional enhancements, never an entry bar. And it's past the bench: as of the **v0.7.0 go-live, eight plants
-run live in soil**, reporting over Wi-Fi or serial with each session saved to the catalog.
+optional enhancements, never an entry bar. And it's past the bench: since the **wave-1 go-live
+(2026-07-04)** the greenhouse runs live in soil — currently 11 plants, 8 of them with sensors, on 2 boards —
+reporting over Wi-Fi with each session saved to the catalog.
 
 It's an open-source learning-and-portfolio build, made to be **enjoyable to run and trustworthy to read** — process and
 tooling sized to match, not over-engineered.
 
 Sprout is developed with AI assistance — the maintainer works alongside AI coding tools — and AI-assisted
 contributions are as welcome as hand-written ones. Contribute however you work, with or without AI tools; the
-bar is the same either way: honest, tested, and kind.
+bar is the same either way: clear, tested, and kind.
 
 ## Quick start
 
+**What you need first**
+
+| | |
+| --- | --- |
+| **A computer** | macOS, Linux, or Windows 10/11. All three are supported and tested. |
+| **Git** | `git --version` should print a number. If not: `winget install Git.Git` (Windows), `xcode-select --install` (macOS), `sudo apt install git` (Debian/Ubuntu). |
+| **A GitHub account** | Only to *contribute*. Reading, cloning, and running Sprout need no account. To push, either [add an SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh) or install the [GitHub CLI](https://cli.github.com) and run `gh auth login`. Not a collaborator here? **Fork** the repo and branch from your fork — the normal open-source path. |
+| **Python** | Nothing to install. `uv` fetches the exact locked interpreter for you. |
+| **A board + probe** | **Optional.** Sprout runs, builds and tests without hardware; you need one only to read real soil. |
+
+> **Windows — where you clone matters.** Windows' classic `MAX_PATH` is 260 characters and applies to the
+> *whole* path, so we keep tracked paths under 200 and that leaves **about 60 characters for your clone
+> location**. `C:\dev\sprout` is ideal; a deep `…\OneDrive\Documents\GitHub\…` can exhaust the budget and
+> produce a checkout that fails — or silently lands incomplete — on a machine that has done nothing wrong.
+> `just doctor` measures yours and tells you the headroom.
+
+**macOS / Linux**
+
 ```text
-git clone https://github.com/OrangePeachPink/sprout && cd sprout
-uv sync                     # reproduce the exact, locked dev environment
-uv run pre-commit install   # the conventions auto-apply on every commit
+git clone https://github.com/OrangePeachPink/sprout
+cd sprout
+./scripts/bootstrap.sh      # installs uv + just if missing, syncs the env, wires the hooks
 just start                  # run Sprout — opens the dashboard in your browser
 ```
 
-New here? You need only two tools — **[uv](https://docs.astral.sh/uv/)** (env + runner) and
-**[just](https://github.com/casey/just)** (the command menu) — or click **Open in Codespaces** for a
-ready-made env in the browser. Then `just` lists every command, and `just check` runs the same lint + format +
-tests that CI does.
+**Windows** (PowerShell — works on the 5.1 that ships with Windows)
+
+```text
+git clone https://github.com/OrangePeachPink/sprout
+cd sprout
+.\scripts\bootstrap.ps1
+just start
+```
+
+That block is the whole path: **`bootstrap` installs what's missing and then verifies it**, printing
+the versions it just proved on your machine. It's safe to re-run — every step checks first and skips
+what's already there. Only `git` has to be there first (it's how you got here);
+[your first PR](docs/contributing/your-first-pr.md) walks that and the GitHub side.
+
+Prefer to do it by hand, or curious what `bootstrap` does? The two tools are
+**[uv](https://docs.astral.sh/uv/)** (env + runner) and **[just](https://github.com/casey/just)** (the
+command menu):
+
+```text
+uv sync                     # reproduce the exact, locked dev environment
+uv run pre-commit install   # the conventions auto-apply on every commit
+```
+
+Or click **Open in Codespaces** for a ready-made env in the browser — the devcontainer installs both
+tools for you. Then `just` lists every command, and `just check` runs your local gate — lint, format,
+and the host test suites. Those two tools are genuinely all you need: `just check` never asks for a
+compiler. Only firmware work needs more, and it says so on its own path (`just check-firmware`).
 
 Once the dashboard is up, click **▶ Start logging** — that single action begins logging every connected
 sensor at once, whether it's plugged in over USB or reporting over Wi-Fi. On a brand-new install with no data yet,
-the honest empty-state hands you the same Start button, so day one is never a dead-end.
+the empty-state hands you the same Start button, so day one is never a dead-end.
 
 ## How it works
 
@@ -70,17 +112,20 @@ the honest empty-state hands you the same Start button, so day one is never a de
    soil read      (higher = drier)  bands (calibrated)   and — when ready — a pump
 ```
 
-The chain is deliberately honest: **raw counts and the calibrated band are the truth.** Any 0–100 figure is a
+The chain is built on one rule: **raw counts and the calibrated band are the reading.** Any 0–100 figure is a
 clearly-labelled *relative* index between the wet/dry anchors — never presented as real volumetric water
 content. A plant's mood, its status color, and any watering all derive from the **band**, never from that
 index.
 
 ## A look
 
-**Today — the live dashboard.** One command (`just start`) serves this: a functional **Monitor · Capture ·
-Lab** view — raw ADC and the calibrated band for every probe, plus the calibration ladder. Plain and
-unpolished on purpose, and honest about what it reads: probes in dry air show **Parched**, probes sitting
-in water show **Drowning**, because the dashboard shows what the capture actually contains.
+**Today — the live dashboard.** One command (`just start`) serves this: **Monitor · Capture · Lab ·
+Trial · Plants & Sensors · Diagnostics & Logs** — raw ADC and the calibrated band for every probe, plus
+the calibration ladder. This is *Classic Sprout*, and ADR-0033 is explicit that it is scaffolding with a
+demolition date: Home — the glanceable per-plant card grid — is the destination surface. Plain and
+unpolished on purpose, and it shows exactly what it reads: a probe sitting in open air or in a glass of water
+is called out as an **instrument condition**, not handed a plant's mood — those aren't soil readings, and the
+seven moods are reserved for probes actually in a pot.
 
 <p align="center">
   <img src="docs/design/brand/readme-dashboard.png"
@@ -106,7 +151,7 @@ a UI/UX contributor to jump in ([#867](https://github.com/OrangePeachPink/sprout
 ## The brand
 
 Sprout isn't a readout — it's a **character**. The plant speaks for itself, in the first person, calm and
-honest. The full identity, voice rules, the living mark, and the seven-band mood system are in the brand
+plain-spoken. The full identity, voice rules, the living mark, and the seven-band mood system are in the brand
 guide:
 
 - **[Brand guide](docs/design/brand/BRAND.md)** — voice, the living mark + motion, the mood↔band system, the
@@ -116,11 +161,11 @@ guide:
 - Decisions of record: **[ADR-0007 (brand &amp; voice)](docs/adr/0007-brand-guidelines.md)** ·
   **[ADR-0008 (personality layer)](docs/adr/0008-design-system-v3-personality-layer.md)**.
 
-## Honest by default
+## The reading rules
 
-A few principles the whole system is built to, so the data can always be trusted:
+A few principles behind how Sprout reads a plant:
 
-- **Raw + band = truth;** a percentage is a labelled relative index, never VWC.
+- **Raw + band are the reading;** a percentage is a labelled relative index, never VWC.
 - **Mood &amp; automation follow the calibrated band,** never the index.
 - **Every number is mono, right-aligned, tabular** — data looks like data.
 - **Gaps are surfaced, not smoothed** — the dashboard shows what the capture actually contains.
@@ -133,7 +178,7 @@ A few principles the whole system is built to, so the data can always be trusted
 | Mini submersible DC water pump | 4 | DC 2.5-6 V (rated ~3 / 4.5 V), ~0.18 A, ~100 L/h, submersible. **DC only - never mains.** |
 | 4-channel relay module | 1 | 5 V module. Active-high vs active-low and 3.3 V-drive compatibility **to be bench-verified.** |
 | PVC vinyl tubing | ~4 m | ID ~5.54 mm / OD ~8.20 mm. |
-| Microcontroller | 1+ | **ESP32** (classic dual-core; SoC marked `ESP-32D`, ESP32-D0WD class) from the SunFounder ESP32 kit is the baseline. Firmware also builds for **ESP32-S3** and **ESP32-C5** boards — the multi-board fleet, per-board serial paths, and pin maps live in [`docs/hardware/BOARDS.md`](docs/hardware/BOARDS.md). 3.3 V ADC matches the 0-3.0 V sensor output; 4 sensors on ADC1 (avoid ADC2 = WiFi); WiFi/BT for monitoring. |
+| Microcontroller | 1+ | **ESP32** (classic dual-core; SoC marked `ESP-32D`, ESP32-D0WD class) from the SunFounder ESP32 kit is the baseline. Firmware also builds for **ESP32-S3** and **ESP32-C5** boards — the supported boards, per-board serial paths, and pin maps live in [`docs/hardware/BOARDS.md`](docs/hardware/BOARDS.md). 3.3 V ADC matches the 0-3.0 V sensor output; 4 sensors on ADC1 (avoid ADC2 = WiFi); WiFi/BT for monitoring. |
 | Status display | 1 | 1.3" SH1106 128x64 I2C OLED (Hosyond 5-pack). On the I2C bus (GPIO21/22), powered at 3.3 V. Shows status / last-watered / errors. |
 
 (Kit provenance is recorded in the local `parts` inventory: UMLIFE watering kit. The SunFounder ESP32 kit
@@ -149,8 +194,15 @@ Firmware lives in [`firmware/`](firmware/) as a PlatformIO project (ESP32, Ardui
 - Upload: `pio run -t upload`
 - Monitor: `pio device monitor` (19200 baud, set in `platformio.ini`)
 
+> **Build failing with `Python version mismatch: penv has X.Y, current interpreter is X.Z. Recreating
+> penv...` then `uv installation via pip failed with exit code 106`?** You likely have **two** PlatformIO
+> installs — the IDE extension's bundled core *and* a standalone `pio` on your PATH — sharing
+> `~/.platformio` and rebuilding each other's `penv` with different Pythons. Native tests still pass (they
+> skip the ESP32 platform), which hides it. The untangle is machine-specific; the fix is to let **one**
+> install own the core.
+
 Board env is `esp32dev` (classic ESP32); the `esp32s3` and ESP32-C5 envs build from the same source for the
-wider fleet — see [`docs/hardware/BOARDS.md`](docs/hardware/BOARDS.md) for per-board serial paths and pin
+other supported boards — see [`docs/hardware/BOARDS.md`](docs/hardware/BOARDS.md) for per-board serial paths and pin
 maps. Pin assignments and tunables live in `firmware/include/config.h`.
 The build cache and resolved libraries (`firmware/.pio/`) are git-ignored.
 
@@ -165,7 +217,9 @@ One command sets up, one command checks — the conventions help you instead of 
 ```text
 uv sync                     # the exact, locked dev env (Python, ruff, pytest, pre-commit)
 uv run pre-commit install   # auto-format + lint + hygiene on every commit
-just check                  # the full gate: pre-commit + tests — exactly what CI runs
+just check                  # your local gate: pre-commit + host/DX/analytics tests (uv + just only)
+just check-firmware         # the above PLUS the native C tests — needs PlatformIO (firmware work only)
+just doctor                 # is Sprout ready on THIS machine? reports, never repairs
 just                        # list every command
 ```
 
@@ -197,12 +251,13 @@ firmware C formatter (clang-format) runs in the gate on changed lines, pinned in
 
 ## Status
 
-**Monitoring is live.** As of the v0.7.0 go-live, eight plants report in soil over Wi-Fi or serial, each
-session saved to the catalog. **Watering is deliberately gated:** the firmware ships a **manual
-operator-commanded bounded pump pulse** (`!water` / `!stop`), but the relay path is **bench-unverified**
-(issue #191) and autonomous watering waits on real per-probe calibration (issue #94 — the safety-first
-order: *make watering correct before it's possible*). The firmware roadmap and current standing live in the
-[handoff notes](docs/HANDOFF_2026-06-23.md).
+**Monitoring is live.** Since the wave-1 go-live (2026-07-04), the greenhouse reports in soil over
+Wi-Fi — currently 11 plants, 8 sensors, 2 boards, and subject to change — each session saved to the
+catalog. **Watering is deliberately gated:** the firmware
+ships a **manual operator-commanded bounded pump pulse** (`!water` / `!stop`), and the safety order is
+*make watering correct before it's possible* — per-probe calibration (#170) and fail-safe actuator-off
+(#93) are **done**; the remaining gate is bench-verifying the relay path on real hardware (#191), which
+autonomous watering (#94) waits on. Current standing lives in [`docs/STATUS.md`](docs/STATUS.md).
 
 ## Contributing
 
@@ -234,7 +289,7 @@ paperwork.** Opening a PR just means your contribution ships under the same MIT 
 Sprout free for the next person. It's also why the copyright reads *"Veronica K. Hogue and Sprout
 contributors"*: the moment you contribute, that **"and contributors" is you.**
 
-**No warranty** — it's provided as-is. (We read the soil honestly; we don't promise your monstera survives
+**No warranty** — it's provided as-is. (We read the soil as best we can; we don't promise your monstera survives
 your vacation.)
 
 We picked the friendliest license we could so the distance between *"I found this repo"* and *"I'm using and
@@ -243,7 +298,8 @@ improving it"* is as close to zero as open source allows. Take it and grow somet
 ---
 
 <p align="center"><sub>Built in the open by
-<a href="https://github.com/OrangePeachPink">V. K. Hogue</a> · source under
+<a href="https://vkhogue.com">Veronica Hogue</a>
+(<a href="https://github.com/OrangePeachPink">@OrangePeachPink</a>) · source under
 <a href="LICENSE">MIT</a>.</sub></p>
 
 <p align="center"><sub>Sprout · plants with a pulse · <b>tend well.</b></sub></p>

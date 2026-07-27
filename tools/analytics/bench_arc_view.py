@@ -22,14 +22,11 @@ out of scope (#423).
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
 _REPORTS = _HERE.parents[1] / "reports"
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-from bench_arc import recompute_arc  # noqa: E402
+from tools.analytics.bench_arc import recompute_arc  # noqa: E402
 
 # 7-band ladder, dry -> wet, with the calibration-ladder raw ranges + colours.
 # (name, sub, raw-lo, raw-hi, clamp-lo, clamp-hi, hex)

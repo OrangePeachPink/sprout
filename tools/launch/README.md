@@ -1,7 +1,9 @@
 # Sprout launcher — double-click to start
 
-The no-terminal way to run Sprout. One double-click → the dashboard opens in your browser at the fixed
-port. Stop it from the dashboard's **Stop server** button (you can also just close the window).
+The no-terminal way to run Sprout. One double-click → Sprout opens in your browser at the fixed
+port. Stop it from the **Stop server** button, which is on **both** surfaces — the Home and the
+Workbench — and is there from the very first run, before any readings exist (you can also just
+close the window). Press it once to arm, again to confirm.
 
 ## Use it
 

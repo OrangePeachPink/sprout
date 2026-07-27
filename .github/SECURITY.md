@@ -17,13 +17,43 @@ privately:
 Please include what you found, how to reproduce it, and the potential impact.
 We'll acknowledge your report, investigate, and keep you posted on a fix.
 
+**This channel is for software vulnerabilities only.** For a **conduct** concern,
+see the [Code of Conduct](CODE_OF_CONDUCT.md) — it goes to the maintainer
+directly, not through here. Different purpose, different handling; routing one
+through the other serves neither.
+
 ## Scope
 
-Most security-relevant surface is small and local: the host logger / dashboard
-binds to `127.0.0.1` (localhost only), and the firmware has no network services
-enabled by default. Secrets (e.g. any WiFi credentials) are kept out of git
-(`.gitignore`). Reports about credential handling, the localhost control
-endpoints, or dependency vulnerabilities are all welcome.
+The host logger / dashboard binds to `127.0.0.1` (localhost only).
+
+The **firmware does run network services** — a security policy is the wrong place
+to understate a surface, so here is the actual list. Once a board joins WiFi it
+brings up:
+
+- an **HTTP status server on port 80**, reachable from your LAN;
+- **mDNS**, advertising `sprout-<device-id>.local` plus the HTTP service so boards
+  stay reachable across DHCP churn (the hostname is a minted nonce, never a MAC or
+  silicon id — ADR-0020);
+- **SNTP** time sync on association.
+
+**Firmware-update receivers — a public build arms none by default.** ArduinoOTA
+(the interim Phase-0 LAN path, #302) is compiled in **only when a unique password
+is explicitly provisioned at build time**; a public artifact ships without it, so
+it does not arm any network update receiver on the WiFi edge and carries no in-tree
+default password (there is nothing to publish — the receiver is absent by
+construction, #1333). A bench build that provisions its own password
+([docs/OTA_FLASH.md](../docs/OTA_FLASH.md)) is the only way the LAN receiver exists,
+and it is temporary by design — it retires once the **signed pull-OTA path
+(ADR-0026)** is proven on the fleet (#1340). That signed pull path is the forward
+mechanism.
+
+A board that has **no stored credentials**, or that repeatedly fails to join,
+raises a temporary **`Sprout-Setup-…` access point** with a setup page — so an
+out-of-the-box board does put a service on the air until it is provisioned.
+
+Secrets (e.g. WiFi credentials) are kept out of git (`.gitignore`). Reports about
+credential handling, the (bench-only) OTA path, the setup portal, the localhost
+control endpoints, or dependency vulnerabilities are all welcome.
 
 ## Hardware & physical safety
 

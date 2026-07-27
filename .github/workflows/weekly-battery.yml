@@ -15,6 +15,12 @@ on:
 permissions:
   contents: read
 
+# #1346 (maintainer ruling: 6.1.19 everywhere) — must match ci.yml, pages.yml and
+# sign-release.yml. This is the scheduled backstop, so an unpinned PlatformIO here would
+# report a *different* toolchain's result than the one the release actually ships with.
+env:
+  PIO_VERSION: "6.1.19"
+
 concurrency:
   group: weekly-battery
   cancel-in-progress: true
@@ -24,24 +30,24 @@ jobs:
     name: lint + hygiene (full)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Set up uv (+ the locked Python)
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           enable-cache: true
           version: "0.11.14"
 
       - name: Set up just
-        uses: extractions/setup-just@v4
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
 
       - name: Sync the locked environment
         run: uv sync --locked
 
       - name: Cache npx tooling (markdownlint / cspell)
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.npm
           key: npx-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
@@ -57,27 +63,27 @@ jobs:
     name: firmware (native tests + compile)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Set up uv (+ the locked Python)
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           enable-cache: true
           version: "0.11.14"
 
       - name: Set up just
-        uses: extractions/setup-just@v4
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
 
       - name: Sync the locked environment
         run: uv sync --locked
 
       - name: Install PlatformIO
-        run: pip install platformio
+        run: pip install --quiet "platformio==${PIO_VERSION}"
 
       - name: Cache PlatformIO packages
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.platformio
           key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
@@ -90,8 +96,10 @@ jobs:
         run: just build
 
   # Experimental boards (#436 S3, #442 C5) — still non-blocking-informational (ADR-0024);
-  # step-level continue-on-error keeps the job's own check green while a warning
-  # annotation surfaces a real break (#504).
+  # NON-BLOCKING = EVERY step, not just compile (#1439): a non-compile step (uv sync,
+  # pip install, cache) failing would otherwise red the job despite the name. Every step
+  # is continue-on-error; test_experimental_nonblocking.py asserts it so a new step can't
+  # reopen the hole.
   experimental-boards:
     name: experimental board (${{ matrix.env }}) — non-blocking
     runs-on: ubuntu-latest
@@ -100,25 +108,31 @@ jobs:
       matrix:
         env: [esp32s3, esp32c5]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        continue-on-error: true
 
       - name: Set up uv (+ the locked Python)
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        continue-on-error: true
         with:
           enable-cache: true
           version: "0.11.14"
 
       - name: Set up just
-        uses: extractions/setup-just@v4
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        continue-on-error: true
 
       - name: Sync the locked environment
+        continue-on-error: true
         run: uv sync --locked
 
       - name: Install PlatformIO
-        run: pip install platformio
+        continue-on-error: true
+        run: pip install --quiet "platformio==${PIO_VERSION}"
 
       - name: Cache PlatformIO packages
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        continue-on-error: true
         with:
           path: ~/.platformio
           key: pio-experimental-${{ matrix.env }}-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
@@ -130,9 +144,10 @@ jobs:
         run: pio run -d firmware -e ${{ matrix.env }}
 
       - name: Surface a non-blocking failure
-        if: steps.compile.outcome == 'failure'
+        if: always() && steps.compile.outcome != 'success'
+        continue-on-error: true
         run: |
-          echo "::warning title=Experimental board compile failed (non-blocking)::${{ matrix.env }} failed to compile on the pinned toolchain. Non-blocking (ADR-0024) - see the Compile-check log, then fix or file it."
+          echo "::warning title=Experimental board build failed (non-blocking)::${{ matrix.env }} did not build clean on the pinned toolchain. Non-blocking (ADR-0024) - see the steps above, then fix or file it."
 
   # External-link check (#913) — the ONE link job that goes online. Internal/relative links are
   # the per-PR gate (tools/dx/link_check.py, a uv-native pre-commit hook); EXTERNAL links rot on
@@ -143,12 +158,12 @@ jobs:
     name: external links (lychee) — non-blocking
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check external links (lychee — config in lychee.toml)
         id: lychee
         continue-on-error: true
-        uses: lycheeverse/lychee-action@v2
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
         with:
           args: "--config lychee.toml --no-progress ./**/*.md ./**/*.html"
           fail: true
@@ -157,3 +172,28 @@ jobs:
         if: steps.lychee.outcome == 'failure'
         run: |
           echo "::warning title=External link(s) unreachable (non-blocking)::lychee found dead external links. Non-blocking (weekly battery, #740) - see the lychee report in the step summary, then fix or file follow-ups."
+
+  # Action-pin resolvability (#1346) — the OTHER network check, same posture as lychee
+  # above. Per-PR we assert only that every `uses:` is a 40-hex SHA (offline, in
+  # pre-commit); here we ask upstream whether each SHA is a real COMMIT. That is what
+  # catches an annotated TAG OBJECT pinned in place of a commit: it looks like a perfectly
+  # good pin in the diff and fails only at job startup, on whatever workflow holds it.
+  # Non-blocking on purpose — a rate limit or an upstream outage must not red the battery
+  # — but it never reports a network failure as a clean pin (it says "not checked").
+  action-pins:
+    name: action pin resolvability — non-blocking
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Verify every pinned action SHA resolves to a commit
+        id: pins
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }} # authenticated = a usable API rate limit
+        run: python tools/dx/action_pin_guard.py --check --resolve
+
+      - name: Surface a non-blocking failure
+        if: steps.pins.outcome == 'failure'
+        run: |
+          echo "::warning title=Action pin does not resolve (non-blocking)::A workflow pins an action SHA that is not a commit in that repo - likely an annotated tag OBJECT. That workflow will fail at job startup with 'unable to find version'. See the step log for the file, line and action."

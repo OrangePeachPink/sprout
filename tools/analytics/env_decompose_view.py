@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Functional render of the H1/H2 drying-rate decomposition (#199, PRD-0002 R5).
 
+Status: pending — consumers land in #199, with `env_decompose` (#1388).
+
 Turns :func:`env_decompose.decompose` output into two honest scatter panels so an
 *accelerating* curve (**H1**: drying rate rises as the soil dries) and a *sun-driven*
 curve (**H2**: drying rate tracks radiation) can be looked at side by side:

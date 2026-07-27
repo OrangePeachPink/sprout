@@ -17,12 +17,40 @@ itself isn't ad-hoc or re-derived each time.
 Steps (mirrors the README/CONTRIBUTING Quick Start verbatim, plus a clean-shutdown
 check carried over from the #512/#493 manual precedent):
 
-  1. uv sync                    - PASS: exit 0
-  2. uv run pre-commit install  - PASS: exit 0
-  3. just start (headless)      - PASS: GET / on :8765 returns HTTP 200 within 30s
-  4. POST /quit                 - PASS: server process exits within 10s
-  5. just processes             - PASS: reports zero live Sprout-spawned processes
-  6. just check                 - PASS: exit 0 (needs PlatformIO + a C compiler on
+  1. scripts/bootstrap --check-only, from a TOOLLESS shell
+                                - PASS: it runs with uv/just absent from PATH and
+                                   reports them missing (#1562). The wall itself:
+                                   `command not found: uv` happens one step BEFORE
+                                   `uv sync`, which is why this guard missed it
+  2. scripts/bootstrap --tools-only
+                                - PASS: exit 0. The Quick Start's HEADLINE command
+                                   (#1557) — asserted so the guard cannot mirror the
+                                   by-hand fallback while the headline rots
+  3. uv sync                    - PASS: exit 0
+  4. uv run pre-commit install  - PASS: exit 0
+  5. Ctrl-C stays clean       - PASS: `serve` traps INT and swallows NOTHING else
+                                   (#1552). Guards the MECHANISM, not a simulated
+                                   signal: the end-to-end tty behaviour was verified
+                                   when #1552 landed; the regression is someone
+                                   deleting the trap or reaching for a blanket ignore
+  6. zero state is actionable - PASS: the first-run page names the blocker and offers
+                                   "Add a board" (#1547). A dead end that returns 200 is
+                                   still a dead end; rendered against an EMPTY registry
+                                   so the verdict can't depend on this machine's data
+  7. the fresh-contributor walk
+                                - PASS: empty -> declare through the REAL write path ->
+                                   the app reads `waiting` and NAMES the board. The
+                                   journey #1541 reported broken, end to end,
+                                   with no hardware
+  8. port :8765 free            - PASS: nothing already listening (#1337; `just start`
+                                   is --serve-or-focus, so a live server would make
+                                   this script grade one it did not start)
+  9. just start                 - PASS: GET / on :8765 returns HTTP 200 within 30s.
+                                   Runs the LITERAL command (#1337), not serve.py
+                                   directly; BROWSER=true keeps --open headless
+  10. POST /quit                 - PASS: server process exits within 10s
+  11. just processes             - PASS: reports zero live Sprout-spawned processes
+  12. just check                 - PASS: exit 0 (needs PlatformIO + a C compiler on
                                    PATH - the documented honest-note gap from #512;
                                    this step's failure for THAT reason is a real
                                    result, not a script bug - see CONTRIBUTING.md)
@@ -31,6 +59,7 @@ check carried over from the #512/#493 manual precedent):
 from __future__ import annotations
 
 import contextlib
+import os
 import subprocess
 import time
 import urllib.error
@@ -59,6 +88,288 @@ def _run(cmd: list[str], timeout_s: float) -> subprocess.CompletedProcess:
     )
 
 
+def step_bootstrap_tools() -> StepResult:
+    """The README's HEADLINE command must exist and run (#1557).
+
+    The Quick Start now leads with `scripts/bootstrap`, so the guard has to assert that
+    and not only the by-hand `uv sync` path below it — a validator that mirrors the
+    fallback while the headline rots is how the docs and the product drift apart.
+    `--tools-only` is the cheap half: it verifies git/uv/just and exits, so this costs a
+    second on a machine that already has them and never re-installs anything.
+
+    (Running it from a genuinely TOOLLESS shell — the wall a new contributor actually
+    hits — is #1562's job; this step proves the command is real, not that it bootstraps
+    from nothing.)
+    """
+    script = "bootstrap.ps1" if os.name == "nt" else "bootstrap.sh"
+    path = REPO_ROOT / "scripts" / script
+    if not path.exists():
+        return StepResult(
+            f"scripts/{script}", False, "missing — the README promises it"
+        )
+    cmd = (
+        ["pwsh", "-NoProfile", "-File", str(path), "-ToolsOnly"]
+        if os.name == "nt"
+        else ["sh", str(path), "--tools-only"]
+    )
+    proc = _run(cmd, timeout_s=180)
+    ok = proc.returncode == 0
+    detail = "exit 0" if ok else f"exit {proc.returncode}\n{proc.stderr[-800:]}"
+    return StepResult(f"scripts/{script} --tools-only", ok, detail)
+
+
+def step_bootstrap_from_a_toolless_shell() -> StepResult:
+    """The wall itself, asserted (#1562): bootstrap must work where uv and just are NOT.
+
+    Every other step here presupposes the tools — which is precisely why this guard
+    missed the #1541 report's very first finding. `command not found: uv` happens one
+    step *before* `uv sync`, in a shell the validator never simulated.
+
+    Runs `--check-only` with a PATH stripped of everything but the system directories,
+    so the script executes in a genuinely toolless environment and has to *detect and
+    report* rather than assume. `--check-only` installs nothing on purpose: a guard that
+    reaches the network and mutates the machine it is grading is not a guard.
+
+    PASS = it ran, and it correctly said uv and just were missing.
+    """
+    script = "bootstrap.ps1" if os.name == "nt" else "bootstrap.sh"
+    path = REPO_ROOT / "scripts" / script
+    if not path.exists():
+        return StepResult("toolless bootstrap", False, f"scripts/{script} is missing")
+
+    if os.name == "nt":
+        bare = os.environ.get("SYSTEMROOT", r"C:\Windows")
+        env = {
+            **os.environ,
+            "PATH": f"{bare}\\System32;{bare}",
+            "PATHEXT": os.environ.get("PATHEXT", ""),
+        }
+        cmd = ["pwsh", "-NoProfile", "-File", str(path), "-CheckOnly"]
+    else:
+        env = {"PATH": "/usr/bin:/bin", "HOME": os.environ.get("HOME", "/tmp")}
+        cmd = ["sh", str(path), "--check-only"]
+
+    try:
+        proc = subprocess.run(
+            cmd, cwd=REPO_ROOT, capture_output=True, text=True, timeout=120, env=env
+        )
+    except (OSError, subprocess.SubprocessError) as e:
+        return StepResult("toolless bootstrap", False, f"could not run it: {e}")
+
+    out = proc.stdout + proc.stderr
+    if proc.returncode != 0:
+        return StepResult(
+            "toolless bootstrap", False, f"exit {proc.returncode}\n{out[-500:]}"
+        )
+    # It must NOTICE. Reporting everything present from a shell with no PATH would mean
+    # the detection is broken and the real run would sail past a missing tool.
+    detected = [t for t in ("uv", "just") if f"MISSING  {t}" in out]
+    if len(detected) < 2:
+        return StepResult(
+            "toolless bootstrap",
+            False,
+            "ran, but did not report uv/just as missing from a stripped PATH — "
+            f"its detection is not working:\n{out[-400:]}",
+        )
+    return StepResult(
+        "toolless bootstrap",
+        True,
+        "ran with no tools on PATH; reported uv + just missing",
+    )
+
+
+def step_ctrl_c_stays_clean() -> StepResult:
+    """Ctrl-C is a documented stop, and it must not regress into reading as a crash
+    (#1552, #1562).
+
+    **What this proves, and what it doesn't.** The end-to-end behaviour — press Ctrl-C
+    at a real terminal, get a clean exit and nothing left running — was verified at a
+    tty when #1552 landed, because a terminal signal cannot be faithfully delivered
+    from every host this guard runs on. Asserting it here would mean simulating a
+    signal and grading the simulation.
+
+    So this guards the *mechanism* instead, which is where the regression
+    actually lives: someone deletes the trap, or "fixes" a noisy exit with a
+    blanket ignore. Both are one
+    careless edit, and both silently restore the failure #1552 removed.
+
+    Two properties, and the second matters more than the first:
+
+    1. `serve` traps INT — the documented stop path is handled at all.
+    2. It does NOT swallow everything. A blanket `|| true`, or just's `-` prefix
+       (which `logger` legitimately uses, #148), would hide a serve that fails to bind
+       or dies on an import error. Tidying one expected keystroke must never cost
+       every real crash — that asymmetry is the whole design of the fix.
+    """
+    justfile = REPO_ROOT / "justfile"
+    if not justfile.exists():
+        return StepResult("Ctrl-C stays clean", False, "no justfile")
+    text = justfile.read_text(encoding="utf-8")
+    try:
+        recipe = text.split("\nserve *ARGS:", 1)[1].split("\n\n", 1)[0]
+    except IndexError:
+        return StepResult(
+            "Ctrl-C stays clean", False, "the `serve` recipe is gone or was renamed"
+        )
+
+    # COMMENTS ONLY EXPLAIN; they never execute. Both checks below run against the
+    # comment-stripped body, and that is not fussiness — the recipe's own comment quotes
+    # `trap 'exit 0' INT` while explaining it, and quotes `|| true` while explaining why
+    # it is NOT used. Scanning raw text makes the trap-check pass on a recipe whose trap
+    # was deleted (caught red-proofing this) and makes the blanket-check fail on
+    # the very
+    # sentence promising not to swallow. A guard fooled by prose about itself is worse
+    # than no guard.
+    body = [
+        ln.strip()
+        for ln in recipe.splitlines()
+        if ln.strip() and not ln.strip().startswith("#")
+    ]
+    if not any("trap" in ln and "INT" in ln for ln in body):
+        return StepResult(
+            "Ctrl-C stays clean",
+            False,
+            "`serve` no longer traps INT — Ctrl-C, the documented stop, will read as a "
+            "crash again (#1552)",
+        )
+    blanket = [
+        ln
+        for ln in body
+        if ln.startswith("-{{py}}") or ln.startswith("-uv ") or "|| true" in ln
+    ]
+    if blanket:
+        return StepResult(
+            "Ctrl-C stays clean",
+            False,
+            f"`serve` swallows ALL failures ({blanket[0]!r}) — a serve that cannot "
+            "bind "
+            "would go silent. Only SIGINT may be swallowed.",
+        )
+    return StepResult(
+        "Ctrl-C stays clean",
+        True,
+        "`serve` traps INT and swallows nothing else "
+        "(end-to-end proven at a tty, #1552)",
+    )
+
+
+def step_zero_state_is_actionable() -> StepResult:
+    """A dead end that returns HTTP 200 is still a dead end (#1562, #1547).
+
+    The old liveness criterion was `GET / -> 200`, which the #1541 wall passed perfectly
+    while telling a newcomer nothing about why nothing would ever arrive. Since
+    #1547 the
+    first-run page names the real blocker and offers a route, so assert THAT — the page
+    has to be actionable, not merely served.
+
+    Rendered directly against an EMPTY registry rather than fetched, so the
+    verdict never
+    depends on whether the machine running this happens to have data. That distinction
+    had teeth: #1594 was exactly a case where the page was correct and unreachable,
+    because the committed example registry supplied three devices to a fresh clone.
+
+    The child prints a tiny ASCII verdict rather than the page — piping a large
+    non-ASCII
+    document through a cp1252 console pipe dies on the encoding, not the assertion.
+    """
+    code = (
+        "from tools.analytics.serve import _empty_state_html as e;"
+        "h = e(False, model=None);"
+        "print('CTA=%d ROUTE=%d' % ('Add a board' in h, '#registry' in h))"
+    )
+    proc = _run(["uv", "run", "--frozen", "python", "-c", code], timeout_s=180)
+    if proc.returncode != 0:
+        return StepResult(
+            "zero state is actionable",
+            False,
+            f"could not render the first-run page:\n{proc.stderr[-400:]}",
+        )
+    out = proc.stdout.strip()
+    if "CTA=1" not in out:
+        return StepResult(
+            "zero state is actionable",
+            False,
+            "the first-run page does not offer 'Add a board' — a newcomer with no "
+            "registered board is told to wait for a reading that cannot arrive",
+        )
+    if "ROUTE=1" not in out:
+        return StepResult(
+            "zero state is actionable",
+            False,
+            "the page names the blocker but links nowhere to fix it",
+        )
+    return StepResult(
+        "zero state is actionable", True, "names the blocker and routes to Add a board"
+    )
+
+
+def step_the_fresh_contributor_walk() -> StepResult:
+    """The whole point, walked: zero -> declared board -> the app says so (#1562).
+
+    Every other step here proves one component. This proves the *journey* #1541
+    reported as broken — someone with hardware and an empty checkout reaching a state
+    where Sprout is waiting for their board by name, without editing JSON or reading
+    a doc.
+
+    Three assertions, in the order a person meets them:
+
+      1. an empty registry reads `no-boards` — the state that must exist for the CTA to
+         mean anything (and the exact thing #1594 masked with example data);
+      2. declaring a board through the REAL write path the flow posts to
+         (`apply_operations`, `devices.declare`) mints an id and is accepted;
+      3. the zero state then reads `waiting` and NAMES the board — "waiting for
+         Windowsill" is a status; "waiting for the first reading" is a shrug.
+
+    Runs entirely against an in-memory model, so it touches no registry, needs no
+    hardware, and cannot be fooled by whatever this machine happens to have configured.
+    """
+    code = (
+        "from tools.analytics.registry_model import RegistryModel, apply_operations;"
+        "from tools.analytics.serve import _zero_state;"
+        "m = RegistryModel();"
+        "s0 = _zero_state(m)[0];"
+        "r = apply_operations(m, {'devices': {'declare': ["
+        "{'name': 'Windowsill', 'board': 'esp32-classic', 'channels': [32, 33]}]}});"
+        "s1, facts = _zero_state(m);"
+        "named = 'Windowsill' in str(facts);"
+        "print('S0=%s S1=%s NAMED=%d' % (s0, s1, named))"
+    )
+    proc = _run(["uv", "run", "--frozen", "python", "-c", code], timeout_s=180)
+    if proc.returncode != 0:
+        return StepResult(
+            "the fresh-contributor walk",
+            False,
+            f"the declare path raised:\n{proc.stderr[-500:]}",
+        )
+    out = proc.stdout.strip()
+    if "S0=no-boards" not in out:
+        return StepResult(
+            "the fresh-contributor walk",
+            False,
+            f"an empty registry does not read `no-boards` ({out}) — the first screen "
+            "cannot offer the right next action (#1594's failure mode)",
+        )
+    if "S1=waiting" not in out:
+        return StepResult(
+            "the fresh-contributor walk",
+            False,
+            f"after declaring a board the app does not read `waiting` ({out}) — the "
+            "declaration did not take, so the flow's last step is a lie",
+        )
+    if "NAMED=1" not in out:
+        return StepResult(
+            "the fresh-contributor walk",
+            False,
+            "the waiting state does not name the board — 'waiting for the first "
+            "reading' is the shrug #1541 reported",
+        )
+    return StepResult(
+        "the fresh-contributor walk",
+        True,
+        "empty -> declared -> waiting for 'Windowsill', by name",
+    )
+
+
 def step_uv_sync() -> StepResult:
     proc = _run(["uv", "sync"], timeout_s=300)
     ok = proc.returncode == 0
@@ -73,15 +384,61 @@ def step_pre_commit_install() -> StepResult:
     return StepResult("uv run pre-commit install", ok, detail)
 
 
+def step_preflight_port() -> StepResult:
+    """The port must be free BEFORE we test `just start` (#1337).
+
+    `just start` is `--serve-or-focus`: if a server already holds :8765 it focuses
+    that one and exits 0 — correct behaviour, but it means the validator would be
+    grading a server it did not start. Without this step that shows up as the
+    baffling "server exited early (code 0)".
+
+    Rather than adapt around it, this reports the precondition. A port answering
+    503 is the specific tell that a previous server accepted /quit and then hung
+    without releasing it — worth naming, because it is invisible to
+    `just processes`."""
+    try:
+        with urllib.request.urlopen(BASE_URL, timeout=2) as resp:
+            status = resp.status
+    except urllib.error.HTTPError as exc:
+        status = exc.code
+    except (urllib.error.URLError, ConnectionError, TimeoutError):
+        return StepResult("port :8765 free (clean start)", True, "nothing listening")
+    hint = (
+        " — a 503 means a previous server accepted /quit but never exited and is "
+        "still holding the port; `just processes` does not see it"
+        if status == 503
+        else ""
+    )
+    return StepResult(
+        "port :8765 free (clean start)",
+        False,
+        f"something is already serving on :8765 (HTTP {status}){hint}. "
+        "Stop it, then re-run — the validator must start the server it grades.",
+    )
+
+
 def step_start_and_check(proc_holder: dict) -> StepResult:
-    """Launch serve.py headless (no --open - a clean/CI machine has no browser to
-    open) and poll for HTTP 200, matching #512's manual fresh-clone test."""
+    """Run the LITERAL `just start` a newcomer types, then poll for HTTP 200.
+
+    #1337: this step used to shell out to `uv run python tools/analytics/serve.py`
+    while *labelling* itself "just start". That is a validator that cannot fail the
+    way a newcomer fails — it skipped `just` entirely, skipped the recipe's
+    `@just serve --serve-or-focus --open` indirection, and skipped both flags. A
+    broken justfile, a renamed recipe, or a broken single-instance path would all
+    have sailed through green while the documented command was dead.
+
+    Headless without lying about the command: `BROWSER` makes Python's `webbrowser`
+    resolve to a GenericBrowser running a no-op, so `--open` executes its real code
+    path and opens nothing. The command under test stays byte-identical to the
+    README's; only what counts as "a browser" changes."""
+    env = {**os.environ, "BROWSER": "true"}  # no-op "browser" — see docstring
     server = subprocess.Popen(
-        ["uv", "run", "python", "tools/analytics/serve.py"],
+        ["just", "start"],
         cwd=REPO_ROOT,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        env=env,
     )
     proc_holder["proc"] = server
 
@@ -163,7 +520,16 @@ def main() -> int:
     proc_holder: dict = {}
 
     try:
-        for step in (step_uv_sync, step_pre_commit_install):
+        for step in (
+            step_bootstrap_from_a_toolless_shell,
+            step_bootstrap_tools,
+            step_uv_sync,
+            step_pre_commit_install,
+            step_ctrl_c_stays_clean,
+            step_zero_state_is_actionable,
+            step_the_fresh_contributor_walk,
+            step_preflight_port,
+        ):
             result = step()
             results.append(result)
             if not result.ok:

@@ -28,6 +28,27 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+# #1544 (A1, the #1541 wall): a board can be DESCRIBED before it has ever reported.
+# The whole "Add a board" flow depends on that state existing — the user has hardware in
+# hand, nothing flashed, nothing answering, and wants to say "I'm adding this board with
+# 4 probes in these plants." Adoption (#1027) is the inverse case (a board that already
+# answered), so this is a new axis, not a new adoption mode.
+#
+# **Binding is its own axis, deliberately NOT a lifecycle state.** `lifecycle` is the
+# UNIFIED active|paused|deleted vocabulary shared by plants, sensors and devices (Q3);
+# "pending" is meaningless for a plant, and folding it in would make every consumer of a
+# shared enum handle a value that can't occur for two of its three entity types — the
+# overload mistake #1152 ruled against on the exception axes. A declared board is
+# `lifecycle="active"` (it is not paused, not deleted) AND `binding="pending"`.
+DEVICE_BINDINGS = ("pending", "bound")
+
+# A declared board has no real device_id yet: ADR-0027 §1a mints the id ON THE BOARD
+# (SoC RNG, first boot, persisted to NVS), so the host cannot know it before first
+# contact. The declaration therefore carries a host-minted PROVISIONAL id, visibly
+# marked, which is a real registry key from the moment it exists — assignments, channel
+# declarations and plant mappings all hang off it immediately.
+PENDING_ID_PREFIX = "pending-"
+
 # The unified lifecycle (Q3): one concept for plants, sensors, and devices.
 # active  — collecting / mapped now
 # paused  — temporarily off, history preserved, trivially reversible (NOT a fault)
@@ -53,6 +74,12 @@ class Plant:
     pot_description: str | None = None  # "the red pot" (Q7)
     pot_size: str | None = None
     location: str | None = None  # current spot; MOVES are events (see location_events)
+    # #875 card contract: an optional plant photo for the identity block. A LOCAL-only,
+    # gitignored path (never committed; EXIF-strip applies if a share path is ever added
+    # — same fence as the operator's home coordinates). Absent-safe: the card renders a
+    # clean no-photo identity block when None. The path convention / allowed formats /
+    # size cap are a grill question; the field itself is decided and additive here.
+    photo: str | None = None
     lifecycle: str = "active"
 
 
@@ -109,6 +136,70 @@ class LocationEvent:
 
     plant_id: str
     location: str
+    # #1188 AC2 / ADR-0029: structured placement on the move, replacing free-text
+    # location's side semantics. `side` is the placement.ledge vocabulary (left/right),
+    # the SAME two values #806 put on the device and the ADR-0029 profile carries -
+    # see SIDE_VALUES. `window` is the structured spot. Both optional: a move may still
+    # carry only the free-text `location` (the interim PR #1179 shape), so an old event
+    # round-trips unchanged and a control can adopt the structured fields incrementally.
+    side: str | None = None
+    window: str | None = None
+    start_ts: str | None = None
+    end_ts: str | None = None
+
+    @property
+    def is_open(self) -> bool:
+        return self.end_ts is None
+
+
+# #1188 / ADR-0029 placement.ledge: the one side vocabulary. #806 put `side` on the
+# device; plant_profiles.ENUMS["placement.ledge"] carries it for sensorless plants; this
+# is the same two values on the temporal move. A seam test pins these three to agree so
+# a fourth copy can never drift (test_placement_side.py) - consumed, never re-authored.
+SIDE_VALUES: tuple[str, ...] = ("left", "right")
+
+
+#: How a channel's pin came to be recorded (#1027 §5.2, Design-QA's sixth need).
+#: ``stated`` — she told us this pin. ``recommended`` — she accepted Sprout's default
+#: for the board class. The distinction is the same one the cal receipt draws between
+#: ``stored`` and ``confirmed``: **a default we assumed and a fact she stated are
+#: different claims**, and a record that flattens them makes the surface either
+#: overclaim ("your board is wired to GPIO 34") or nag (re-asking what she already told
+#: us). Flattening is the easy mistake here because both produce the same integer.
+DECLARATION_SOURCES = ("stated", "recommended")
+
+
+@dataclass
+class ChannelDeclaration:
+    """What a board declares it *has* — a channel and the pin it is wired to.
+
+    **Trellis's ruling (#1027, Option A), and why it is a regression fix rather than a
+    new feature.** ADR-0036 §1 already names *channel* as ``(device_id, port/GPIO)``,
+    firmware-owned: the board lane the firmware actually reads. The firmware declares
+    channels on **every telemetry row** — a board with zero plants mapped still emits
+    ``ch0..ch3``, because a channel is a pin with a probe on it, not a relationship to
+    a plant. The static registry's ``devices[].channels{}`` got this right; the temporal
+    model replaced it with derived assignments and dropped the declaration on the way.
+
+    **Different owners, different lifetimes.** A channel lives from adoption until the
+    board is rewired or retired; an assignment lives from mapping until the probe moves.
+    Modelling the longer-lived thing as a by-product of the shorter-lived one is
+    backwards, and it is what made the empty-channel teaching state (§5.3)
+    *structurally* unrepresentable: you cannot render "this channel has no plant yet"
+    if the channel exists only because a plant is on it.
+
+    **Temporal, like every other fact here.** A rewire — *"I took two of the sensors
+    off and moved them to my esp32"* — is an **edit event**, not a re-adoption: it
+    closes the old declaration and opens a new one, so the wiring reads as history. Same
+    machinery as an assignment boundary or a location event, deliberately: one temporal
+    pattern in this model, not three.
+    """
+
+    device_id: str
+    # canonical chN (ADR-0036) — consumed via canonical_channel, never minted here
+    channel: str
+    pin: int | None = None  # the GPIO; None = declared but pin unknown
+    source: str = "stated"
     start_ts: str | None = None
     end_ts: str | None = None
 
@@ -131,6 +222,7 @@ class RegistryModel:
     profiles: list[Profile] = field(default_factory=list)
     assignments: list[Assignment] = field(default_factory=list)
     location_events: list[LocationEvent] = field(default_factory=list)
+    channel_declarations: list[ChannelDeclaration] = field(default_factory=list)
 
     # --------------------------- derivation (read) --------------------------- #
     def open_assignments(self) -> list[Assignment]:
@@ -152,6 +244,224 @@ class RegistryModel:
             if a.device_id == device_id and a.channel == channel:
                 return a
         return None
+
+    # ---------------------- declared devices (#1544 / A1) ---------------------- #
+    def pending_devices(self) -> list[dict]:
+        """Boards that have been DESCRIBED but have never reported (#1544).
+
+        The zero state asks this to say the true thing — "no boards yet" vs "your board
+        is declared, waiting for it to report" are different screens, and A4 cannot tell
+        them apart without this."""
+        return [
+            d
+            for d in self.devices
+            if d.get("binding") == "pending" and d.get("lifecycle") != "deleted"
+        ]
+
+    def is_pending(self, device_id: str) -> bool:
+        """True if this id names a declared-but-unbound board."""
+        return any(d.get("device_id") == device_id for d in self.pending_devices())
+
+    def declare_device(
+        self,
+        *,
+        name: str,
+        board: str | None = None,
+        channels: list | None = None,
+        channel_source: str = "stated",
+        now: str | None = None,
+    ) -> dict:
+        """Declare a board that has not reported yet — the #1541 wall's missing entry
+        point. Returns the new device record.
+
+        The provisional id is minted here and is a **real key immediately**: channel
+        declarations and (later) plant assignments hang off it from the moment the user
+        describes the board, so their wiring and plant choices are recorded as history
+        the instant they make them — not held in surface state until hardware shows up.
+        A user who declares a board and never plugs it in still has their work saved.
+
+        ``name`` is required and ``device_id`` is never typed by the user (ADR-0027: the
+        board owns its id; the human owns the label)."""
+        label = (name or "").strip()
+        if not label:
+            raise ValueError("a declared board needs a name")
+        did = mint_pending_id(self)
+        entry: dict = {
+            "device_id": did,
+            "name": label,
+            "binding": "pending",
+            "lifecycle": "active",
+            "declared_ts": now or _utc_now(),
+        }
+        if board:
+            entry["board"] = board
+        self.devices.append(entry)
+        if channels:
+            self.declare_channels(did, channels, source=channel_source, now=now)
+        return entry
+
+    def bind_device(
+        self, pending_id: str, wire_id: str, *, now: str | None = None
+    ) -> dict | None:
+        """**The reconcile-on-first-contact rule** (#1544; A5 calls this when a board
+        actually answers). Returns the bound record, or None if ``pending_id`` names no
+        pending board.
+
+        The bind does NOT create a second record and does NOT rewrite history. It
+        re-keys the existing declaration to the id the board minted, and files the
+        provisional id in ``previous_ids`` — the **#602 identity-continuity fold**,
+        already shipped and already honoured by ``device_registry.canonical_for``. So
+        every assignment, channel declaration and reading written against the
+        provisional id keeps resolving to this board, through a mechanism that exists
+        rather than a second one invented here. A declared→bound bind is the same shape
+        as #602's factory-flash re-key: the board is the same board, its id changed.
+
+        Idempotent and honest: binding an already-bound id, or binding to an id another
+        live device already holds, is refused (never two records for one board)."""
+        rec = next(
+            (d for d in self.devices if d.get("device_id") == pending_id),
+            None,
+        )
+        if rec is None or rec.get("binding") != "pending":
+            return None
+        wire = (wire_id or "").strip()
+        if not wire:
+            raise ValueError("a bind needs the id the board reported")
+        live = {
+            d.get("device_id")
+            for d in self.devices
+            if d.get("device_id") != pending_id and d.get("lifecycle") != "deleted"
+        }
+        if wire in live:
+            # A different record already IS this board — the caller wanted adoption
+            # (#1027), not a bind. Refusing keeps the "never two records" invariant.
+            raise ValueError(f"device {wire} is already registered")
+        prior = list(rec.get("previous_ids") or ())
+        if pending_id not in prior:
+            prior.append(pending_id)  # #602: the provisional id becomes lineage
+        rec["previous_ids"] = prior
+        rec["device_id"] = wire
+        rec["binding"] = "bound"
+        rec["bound_ts"] = now or _utc_now()
+        # Re-key the temporal records the user already made against the declaration, so
+        # the mapping they built at declare-time is the mapping that goes live. These
+        # are the SAME rows re-pointed, never closed-and-reopened: nothing about the
+        # binding changed what is wired where, and inventing a boundary here would
+        # fabricate a "re-wiring" event the operator never performed (#1331's lesson).
+        for a in self.assignments:
+            if a.device_id == pending_id:
+                a.device_id = wire
+        for c in self.channel_declarations:
+            if c.device_id == pending_id:
+                c.device_id = wire
+        return rec
+
+    # ------------------------ channel declarations (#1027) ------------------------ #
+    def declared_channels(
+        self, device_id: str, at_time: str | None = None
+    ) -> list[ChannelDeclaration]:
+        """This board's declared channels — the open set, or the set in force at
+        ``at_time``.
+
+        Resolved on the **covering interval** (``start_ts <= t < end_ts``), the same
+        rule identity resolution uses, so a question about the past gets the wiring
+        the board actually had then. Answering a historical question with today's
+        wiring is the #1331 mistake in another field; no reason to make it twice.
+        """
+        out = [d for d in self.channel_declarations if d.device_id == device_id]
+        if at_time is None:
+            out = [d for d in out if d.is_open]
+        else:
+            out = [
+                d
+                for d in out
+                if (d.start_ts is None or d.start_ts <= at_time)
+                and (d.end_ts is None or at_time < d.end_ts)
+            ]
+        return sorted(out, key=lambda d: d.channel)
+
+    def declared_channel_count(self, device_id: str) -> int:
+        """§5.2's gate in one number: *"could have one sensor, could have 4, could have
+        6"*. Zero means the board has declared nothing — which is not an adoptable
+        board, not a board with no plants."""
+        return len(self.declared_channels(device_id))
+
+    def unassigned_channels(self, device_id: str) -> list[ChannelDeclaration]:
+        """Declared channels carrying no open assignment — §5.3's calm-empty set.
+
+        **A real query, deliberately.** Design-QA's fourth need: if this were only
+        derivable by diffing declared-against-assigned in a template, it would be a
+        policy living in a template — the exact thing ADR-0038 §3 forbids and slice 2
+        spent its effort removing. The surface asks a question; it does not compute an
+        answer.
+        """
+        return [
+            d
+            for d in self.declared_channels(device_id)
+            if self.current_for_channel(device_id, d.channel) is None
+        ]
+
+    def declaration_history(self, device_id: str) -> list[ChannelDeclaration]:
+        """Every declaration this board has carried, oldest first — the rewire record.
+        A grandfathered first entry has ``start_ts=None`` (it was wired that way; we
+        don't know since when) rather than an invented start date."""
+        evs = [d for d in self.channel_declarations if d.device_id == device_id]
+        return sorted(evs, key=lambda d: (d.start_ts or "", d.channel, d.end_ts or "~"))
+
+    def declare_channels(
+        self,
+        device_id: str,
+        pins: list[int | None],
+        *,
+        source: str = "stated",
+        now: str | None = None,
+    ) -> list[ChannelDeclaration]:
+        """Declare (or re-declare) this board's channels — the adopt and rewire path.
+
+        ``pins`` is positional: index *i* is channel ``ch{i}``, which is ADR-0036's own
+        ordering and the order the firmware emits. The count is therefore implicit in
+        the list, exactly as §5.2 frames it — *"could have one sensor, could have 4,
+        could have 6"*.
+
+        **A re-declaration is a rewire, not a re-adoption.** Every open declaration is
+        closed at ``now`` and a fresh set opened, so the board's wiring reads as history
+        and the two-probes-moved-to-the-esp32 case is an edit event. Nothing is
+        overwritten and nothing is deleted — the same close-and-open shape as
+        :meth:`move_plant` and an assignment boundary.
+        """
+        ts = now or _utc_now()
+        for d in self.channel_declarations:
+            if d.device_id == device_id and d.is_open:
+                d.end_ts = ts
+        fresh = [
+            ChannelDeclaration(
+                device_id=device_id,
+                channel=f"ch{i}",
+                pin=pin,
+                source=source,
+                start_ts=ts,
+            )
+            for i, pin in enumerate(pins)
+        ]
+        self.channel_declarations.extend(fresh)
+        return fresh
+
+    def location_history(self, plant_id: str) -> list[LocationEvent]:
+        """#1188: every spot this plant has occupied, oldest first — the move record
+        the editor renders and the confidence re-evaluation reads. A grandfathered
+        first entry carries ``start_ts=None`` (it was there; we don't know since
+        when) rather than inventing a start."""
+        evs = [ev for ev in self.location_events if ev.plant_id == plant_id]
+        return sorted(evs, key=lambda e: (e.start_ts or "", e.end_ts or "~"))
+
+    def move_boundaries(self, plant_id: str) -> list[str]:
+        """#1188: the timestamps at which this plant CHANGED location — the context
+        boundaries. Readings either side of one are not a continuous context (the
+        micro-climate changed), so a trend/forecast that spans a boundary is
+        comparing two different situations. Consumers gate on these."""
+        return [
+            ev.end_ts for ev in self.location_history(plant_id) if ev.end_ts is not None
+        ]
 
     def history_for_plant(self, plant_id: str) -> list[Assignment]:
         """Every assignment a plant held, oldest-first — the derivable series (Q8)."""
@@ -212,14 +522,52 @@ class RegistryModel:
         return True
 
     def move_plant(
-        self, plant_id: str, location: str, *, now: str | None = None
+        self,
+        plant_id: str,
+        location: str,
+        *,
+        side: str | None = None,
+        window: str | None = None,
+        now: str | None = None,
     ) -> LocationEvent:
-        """Record a plant move as an event (Q7): close the open spot, open the new."""
+        """Record a plant move as an event (Q7): close the open spot, open the new.
+
+        #1188 AC2: the move may carry structured placement - ``side`` (left/right,
+        ADR-0029 placement.ledge) and ``window`` - alongside or instead of free-text
+        ``location``. ``side``, when given, must be a known ledge value; an unknown one
+        is a ``ValueError`` (a mis-typed side that silently persisted would put a plant
+        on the wrong ledge for its whole context history)."""
+        if side is not None and side not in SIDE_VALUES:
+            raise ValueError(f"side must be one of {SIDE_VALUES}, not {side!r}")
         ts = now or _utc_now()
-        for ev in self.location_events:
-            if ev.plant_id == plant_id and ev.is_open:
-                ev.end_ts = ts
-        fresh = LocationEvent(plant_id=plant_id, location=location, start_ts=ts)
+        open_evs = [
+            ev for ev in self.location_events if ev.plant_id == plant_id and ev.is_open
+        ]
+        if not open_evs:
+            # #1188: the FIRST move of a grandfathered plant. Its current spot was
+            # set without an event (migrated / created directly), so closing "the
+            # open event" would close nothing and the old location would vanish from
+            # history. Synthesize the prior spot with start_ts=None — the ADR-0027
+            # grandfathered convention: it WAS there, we don't know since when — and
+            # close it at the move instant. History gains a hole-free chain.
+            prior = next(
+                (pl.location for pl in self.plants if pl.plant_id == plant_id), None
+            )
+            if prior:
+                self.location_events.append(
+                    LocationEvent(
+                        plant_id=plant_id, location=prior, start_ts=None, end_ts=ts
+                    )
+                )
+        for ev in open_evs:
+            ev.end_ts = ts
+        fresh = LocationEvent(
+            plant_id=plant_id,
+            location=location,
+            side=side,
+            window=window,
+            start_ts=ts,
+        )
         self.location_events.append(fresh)
         for p in self.plants:
             if p.plant_id == plant_id:
@@ -271,6 +619,11 @@ class RegistryModel:
         self.location_events = [
             e for e in self.location_events if e.plant_id not in pset
         ]
+        # A purged board's wiring history goes with it — the declaration is the
+        # board's own fact, so it cannot outlive the board (#1027).
+        self.channel_declarations = [
+            d for d in self.channel_declarations if d.device_id not in dset
+        ]
         n_dev = sum(1 for d in self.devices if d.get("device_id") in dset)
         n_pl = sum(1 for p in self.plants if p.plant_id in pset)
         n_se = sum(1 for s in self.sensors if s.sensor_id in sset)
@@ -294,6 +647,7 @@ class RegistryModel:
             "profiles": [asdict(p) for p in self.profiles],
             "assignments": [asdict(a) for a in self.assignments],
             "location_events": [asdict(e) for e in self.location_events],
+            "channel_declarations": [asdict(d) for d in self.channel_declarations],
         }
 
     @classmethod
@@ -328,6 +682,11 @@ class RegistryModel:
                     LocationEvent(**_only(LocationEvent, e))
                     for e in doc.get("location_events", [])
                     if isinstance(e, dict)
+                ],
+                channel_declarations=[
+                    ChannelDeclaration(**_only(ChannelDeclaration, d))
+                    for d in doc.get("channel_declarations", [])
+                    if isinstance(d, dict)
                 ],
             )
         # the static (v1) shape -> migrate (grandfather in, start_ts unknown)
@@ -378,6 +737,24 @@ class RegistryModel:
                         start_ts=None,  # grandfathered — unknown origin, never invented
                     )
                 )
+        # #1027: the top-level `sensorless` roster (ADR-0028) — plants present by design
+        # but not probed — migrate to first-class Plant entities too, so they're
+        # lifecycle-manageable in the registry ("alive · not probed") rather than a
+        # Monitor-only block the tab can't see. A plant that is ALSO probed on some
+        # channel is already a Plant (a live reading wins) — skip the dup. No assignment
+        # is opened: having no open mapping is exactly what "not probed" means.
+        for raw in doc.get("sensorless", []):
+            if not isinstance(raw, dict):
+                continue
+            pid = raw.get("plant_id")
+            if not pid or pid in plants_seen:
+                continue
+            plants_seen[pid] = Plant(
+                plant_id=pid,
+                plant_type=raw.get("plant_type"),
+                pet_name=raw.get("plant_name"),
+                pot_size=raw.get("pot_size"),
+            )
         m.plants = list(plants_seen.values())
         m.sensors = list(sensors_seen.values())
         return m
@@ -391,7 +768,7 @@ def _only(cls, raw: dict) -> dict:
 
 def load_model(path: str | Path) -> RegistryModel:
     """Load the registry model from JSON, migrating a static (v1) config on the way.
-    Never raises — a missing/malformed file yields an empty model (honest-empty, the
+    Never raises — a missing/malformed file yields an empty model (calm-empty, the
     first-run signal slice 2 lands on)."""
     try:
         doc = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -411,22 +788,33 @@ _EXAMPLE = _REPO / "config" / "devices.example.json"
 
 def load_registry_model(path: str | Path | None = None) -> RegistryModel:
     """Load the registry model with the SAME config discovery as ``device_registry``
-    (#921 slice 2): the gitignored local config, else the committed example, else an
-    empty model (the first-run signal). A static (v1) config migrates on read."""
+    (#921 slice 2): the gitignored local config, else an empty model (the first-run
+    signal). A static (v1) config migrates on read.
+
+    **The committed example is NOT a fallback (#1594)** — see ``load_registry`` for the
+    reasoning. It was masking the genuine first-run signal: a fresh clone loaded three
+    fictional boards, so ``_zero_state`` answered "ready" and A4's "no boards yet"
+    screen was unreachable. Pass ``path`` explicitly to load the example on purpose."""
     if path is not None:
         return load_model(path)
-    for p in (_LOCAL, _EXAMPLE):
-        if p.exists():
-            return load_model(p)
+    if _LOCAL.exists():
+        return load_model(_LOCAL)
     return RegistryModel()
 
 
-def registry_payload(model: RegistryModel) -> dict:
+def registry_payload(model: RegistryModel, undeclared: list | None = None) -> dict:
     """The /registry GET seam for the Plants & Sensors tab (#921 slice 2). The model as
     JSON, plus two derived conveniences the surface needs: the **current mapping** (the
     open assignments, resolved) and a **first_run** flag (an empty registry means this
-    tab is the fresh-install setup landing, Q9). DesignQA builds the tab on this."""
+    tab is the fresh-install setup landing, Q9). DesignQA builds the tab on this.
+
+    ``undeclared`` (#1027 §5.1): the calm discovery set - answering boards not yet
+    registered - computed from telemetry by the caller (:func:`device_discovery.
+    discover_undeclared`), since this serializer has no telemetry of its own. Optional
+    so every existing caller is unchanged; ``[]`` (or absent) is the honest empty state
+    the discovery card renders as "no new boards", never a fabricated candidate."""
     doc = model.to_dict()
+    doc["undeclared"] = undeclared or []
     doc["current_mappings"] = [
         {
             "plant_id": a.plant_id,
@@ -438,6 +826,22 @@ def registry_payload(model: RegistryModel) -> dict:
         }
         for a in model.open_assignments()
     ]
+    # #1188: the move record per plant — the editor renders "moved on X" from this,
+    # and a mover's context boundaries are queryable without a second round trip.
+    doc["location_history"] = {
+        p.plant_id: [
+            {
+                "location": ev.location,
+                "side": ev.side,  # #1188 AC2: structured placement (ADR-0029)
+                "window": ev.window,
+                "start_ts": ev.start_ts,
+                "end_ts": ev.end_ts,
+            }
+            for ev in model.location_history(p.plant_id)
+        ]
+        for p in model.plants
+        if model.location_history(p.plant_id)
+    }
     doc["first_run"] = not (model.plants or model.sensors or model.devices)
     # #921 slice 3 Q2: the server owns id allocation - the client prefills the next
     # number from here instead of computing it (one source of truth, no add-race).
@@ -449,6 +853,48 @@ def registry_payload(model: RegistryModel) -> dict:
     doc["devices"] = [
         {**d, "channels": _channel_view(model, d)} for d in doc["devices"]
     ]
+    # #1544 (A1): the declared-but-not-yet-reporting set, so the zero state (A4) can say
+    # the TRUE thing. "No boards yet" and "your board is declared, waiting for it to
+    # report" are different screens with different next actions, and the #1541 wall was
+    # exactly a screen that could not tell them apart — it said "waiting for the first
+    # reading" forever without ever naming that zero devices were registered.
+    doc["pending_devices"] = [
+        {
+            "device_id": d.get("device_id"),
+            "name": d.get("name"),
+            "board": d.get("board"),
+            "declared_ts": d.get("declared_ts"),
+            "channels_declared": model.declared_channel_count(d.get("device_id", "")),
+        }
+        for d in model.pending_devices()
+    ]
+    doc["has_any_device"] = bool(
+        [d for d in model.devices if d.get("lifecycle") != "deleted"]
+    )
+    # #1027 5.2: recommended soil pinout per board class, so the adopt surface offers a
+    # one-tap default keyed on the operator's class pick (Trellis: stored token resolves
+    # the pins; unknown class -> operator picks). Consumed from board_pinouts, never
+    # re-authored; `verified` (only the classic today) tells the surface it may suggest.
+    # #1546 (A3) adds the INVENTORY alongside: `safe` is what a pin map may offer,
+    # `strapping` what it must refuse (and explain), `exhaustive` whether `safe` is the
+    # whole story - so the surface can draw a board instead of asking for a raw number.
+    from tools.analytics.board_pinouts import (
+        PINOUT_VERIFIED,
+        RECOMMENDED_SOIL_PINS,
+        SOIL_PIN_INVENTORY,
+    )
+
+    doc["board_pinouts"] = {
+        cls: {
+            "pins": list(pins),
+            "verified": PINOUT_VERIFIED.get(cls, False),
+            **{
+                k: (list(v) if isinstance(v, tuple) else v)
+                for k, v in (SOIL_PIN_INVENTORY.get(cls) or {}).items()
+            },
+        }
+        for cls, pins in RECOMMENDED_SOIL_PINS.items()
+    }
     return doc
 
 
@@ -462,6 +908,14 @@ def _channel_view(model: RegistryModel, device: dict) -> list[dict]:
     dev_id = device.get("device_id")
     static = device.get("channels")
     ports = list(static.keys()) if isinstance(static, dict) else []
+    # #1027: declared channels are ports in their own right — that is the whole point
+    # of the declaration. Without this a board that has declared four channels and
+    # mapped none would render as having no ports at all, which is exactly the
+    # empty-channel state (§5.3) failing to be representable.
+    declared = {d.channel: d for d in model.declared_channels(dev_id)}
+    for ch in declared:
+        if ch not in ports:
+            ports.append(ch)
     for a in model.assignments:
         if a.device_id == dev_id and a.channel not in ports:
             ports.append(a.channel)
@@ -478,6 +932,13 @@ def _channel_view(model: RegistryModel, device: dict) -> list[dict]:
                 else None,  # None = free port (3b candidate)
                 "cal_tier": prof.tier if prof else "uncalibrated",
                 "provenance": prof.provenance if prof else None,
+                # #1027 — the board's own facts, beside the registry's meaning.
+                # `declared` False on a port that carries an assignment but no
+                # declaration is a legitimate reading (a grandfathered board that
+                # predates the declaration), not an error: absence stays first-class.
+                "declared": ch in declared,
+                "pin": declared[ch].pin if ch in declared else None,
+                "pin_source": declared[ch].source if ch in declared else None,
             }
         )
     return view
@@ -510,11 +971,19 @@ _MODEL_KEYS = {
     "profiles",
     "assignments",
     "location_events",
+    "channel_declarations",
 }
 _PLANT_ID_RE = re.compile(r"p\d{2,}")
 _SENSOR_ID_RE = re.compile(r"s\d{2,}")
 # what a plant edit may change - never `plant_id` (canonical, immutable post-save)
-_PLANT_FIELDS = ("plant_type", "pet_name", "pot_description", "pot_size", "location")
+_PLANT_FIELDS = (
+    "plant_type",
+    "pet_name",
+    "pot_description",
+    "pot_size",
+    "location",
+    "photo",  # #875: the optional identity-block photo path (local-only, gitignored)
+)
 
 
 def _next_numbered(existing: set[str], prefix: str) -> str:
@@ -537,6 +1006,104 @@ def next_sensor_id(model: RegistryModel) -> str:
     return _next_numbered({s.sensor_id for s in model.sensors}, "s")
 
 
+def mint_pending_id(model: RegistryModel) -> str:
+    """A provisional id for a declared board (#1544): ``pending-0N``, server-allocated.
+
+    Deliberately **not** shaped like a real device_id (the 6-char base32 a board mints,
+    ADR-0027) — a placeholder that looked like the real thing would be indistinguishable
+    in a log line, and "is this board real?" must be answerable by looking. It counts
+    every id ever used, including bound and deleted ones, so a number is never reused —
+    the id stays stable identity even once it is lineage in ``previous_ids`` (#602)."""
+    used = {d.get("device_id", "") for d in model.devices}
+    used |= {pid for d in model.devices for pid in (d.get("previous_ids") or ())}
+    n = 1
+    while f"{PENDING_ID_PREFIX}{n:02d}" in used:
+        n += 1
+    return f"{PENDING_ID_PREFIX}{n:02d}"
+
+
+def _validate_channel_declaration(rec: dict, tag: str, err) -> None:
+    """The §5.2 gate: a board must declare its channels to be adoptable (#1027).
+
+    Accepts ``channels: [pin, ...]`` — positional, index *i* being ``ch{i}`` per
+    ADR-0036 — or the same list of ``{"pin": int}`` dicts, whichever the surface finds
+    natural. A pin may be ``None`` (declared, pin not known yet); the *count* is the
+    part §5.2 gates on, because the count is what makes the board a known config.
+
+    Rejects an empty or absent declaration by design. A board that answers but has
+    declared nothing is precisely the state the ruling calls non-adoptable, and
+    accepting it here would let the record exist in a shape the surface then has to
+    apologise for.
+    """
+    raw = rec.get("channels")
+    if raw is None:
+        err(
+            tag,
+            "a board must declare its channels to be adopted — how many probes and "
+            "what pins they are wired to (#1027 §5.2). No plants yet is fine; no "
+            "pin config is not an adoptable board.",
+            "channels",
+        )
+        return
+    if not isinstance(raw, list) or not raw:
+        err(tag, "channels must be a non-empty list of pins", "channels")
+        return
+    source = rec.get("channel_source", "stated")
+    if source not in DECLARATION_SOURCES:
+        err(
+            tag,
+            f"channel_source must be one of {DECLARATION_SOURCES} — a default we "
+            "assumed and a pin she stated are different claims, and the record has "
+            "to keep them apart",
+            "channel_source",
+        )
+    for j, entry in enumerate(raw):
+        pin = entry.get("pin") if isinstance(entry, dict) else entry
+        if pin is None:
+            continue  # declared, pin unknown — legitimate
+        if not isinstance(pin, int) or isinstance(pin, bool) or pin < 0:
+            err(tag, f"channel {j} pin must be a non-negative GPIO number", "channels")
+
+
+def _declared_pins(rec: dict) -> list[int | None]:
+    """The pin list from an accepted declaration, in channel order."""
+    return [
+        (entry.get("pin") if isinstance(entry, dict) else entry)
+        for entry in (rec.get("channels") or [])
+    ]
+
+
+def _validate_profile_fields(rec: dict, tag: str, err) -> None:
+    """Shared profile validation for add/edit (#963).
+
+    The anchor check is the load-bearing one. Higher raw = drier, so a capacitive
+    probe's AIR anchor must read higher than its WATER anchor. A wizard that captures
+    them in the wrong order — probe into the cup before the air reading — would
+    otherwise store an inverted calibration that looks perfectly well-formed and makes
+    every downstream band wrong in a way nothing else detects. Refusing here is the
+    only place that catches it before it becomes the plant's truth."""
+    tier = rec.get("tier")
+    if tier is not None and tier not in CAL_TIERS:
+        err(tag, f"tier {tier!r} not in {CAL_TIERS}", "tier")
+    anchors = rec.get("anchors")
+    if anchors is None:
+        return
+    if not isinstance(anchors, dict):
+        err(tag, "anchors must be an object with air/water", "anchors")
+        return
+    air, water = anchors.get("air"), anchors.get("water")
+    for name, val in (("air", air), ("water", water)):
+        if val is not None and not isinstance(val, int):
+            err(tag, f"anchors.{name} must be a whole raw count", f"anchors.{name}")
+    if isinstance(air, int) and isinstance(water, int) and air <= water:
+        err(
+            tag,
+            f"anchors inverted: air {air} must read DRIER (higher raw) than "
+            f"water {water} — captured in the wrong order?",
+            "anchors",
+        )
+
+
 def apply_operations(
     model: RegistryModel, ops: dict, *, now: str | None = None
 ) -> dict:
@@ -546,7 +1113,12 @@ def apply_operations(
 
         {"plants":  {"add": [...], "edit": [...]},
          "sensors": {"add": [...], "edit": [...]},
-         "devices": {"edit": [...]},
+         "devices": {"declare": [{name, channels: [pin,...], board?,
+                                 channel_source?}],   # #1544 — before it reports
+                     "add": [{device_id, channels: [pin,...], base_url?,
+                             channel_source?, board?, name?}],
+                     "edit": [...],
+                     "rewire": [{device_id, channels: [pin,...], channel_source?}]},
          "mappings":{"assign": [{plant_id, sensor_id, device_id, channel, profile_id?}],
                      "close":  [{device_id, channel}]},
          "lifecycle":[{kind, entity_id, state}]}
@@ -568,8 +1140,11 @@ def apply_operations(
     sensors = ops.get("sensors") or {}
     devices = ops.get("devices") or {}
     mappings = ops.get("mappings") or {}
+    profiles_ops = ops.get("profiles") or {}  # #963: the owner-cal write path
     lifecycle = ops.get("lifecycle") or []
 
+    existing_prof = {p.profile_id for p in model.profiles}
+    staged_prof: set[str] = set()
     existing_p = {p.plant_id for p in model.plants}
     existing_s = {s.sensor_id for s in model.sensors}
     existing_d = {d.get("device_id") for d in model.devices}
@@ -602,8 +1177,60 @@ def apply_operations(
         else:
             staged_s.add(sid)
 
+    # ---- validate: device adds (#1027 adopt) — a board the registry never registered.
+    # The id comes FROM the board (#1026 mismatch / #1027 §5.1 telemetry discovery), so
+    # it's taken as-is, only checked non-empty + not-already-registered; adopting a
+    # known id is an error (edit the label instead), not a silent duplicate device row.
+    #
+    # base_url is OPTIONAL (#1027 ruling, 2026-07-22). It is the WiFi POLL ADDRESS, not
+    # the identity: a board from telemetry discovery has a device_id but no reachable
+    # address, and a serial/tethered board never has one. The poll path already gates on
+    # it — served_devices() = "has a base_url" — so an adopted board without one is not
+    # WiFi-polled (honest-absent, ADR-0028), never broken. Requiring it blocked adopting
+    # exactly the discovered boards §5.1 surfaces. What makes a board "known" is its
+    # physical config: the §5.2 channel declaration (below) stays the gate.
+    staged_d: set[str] = set()
+    for i, rec in enumerate(devices.get("add") or []):
+        tag = f"devices.add[{i}]"
+        did = (rec.get("device_id") or "").strip()
+        if not did:
+            err(tag, "a device id is required to adopt a board", "device_id")
+        elif did in existing_d or did in staged_d:
+            err(tag, f"device {did} is already registered", "device_id")
+        else:
+            # #1027 §5.2, ruled: **adoption REQUIRES a physical-config declaration.**
+            # "a new board needs to declare how many probes and what pins they are
+            # wired to, or else it isn't a known board config." No-plants-yet is
+            # legitimate; no-pin-config is not an adoptable board — so this is a hard
+            # gate at the seam, not a nudge on the surface. Enforced here because a
+            # surface-only check leaves the API able to mint the unadoptable board
+            # the ruling exists to forbid.
+            _validate_channel_declaration(rec, tag, err)
+            staged_d.add(did)
+
+    # ---- validate: device DECLARES (#1544 / A1) — a board described before it reports.
+    # The id is server-minted (never client-supplied): a declared board has no real id
+    # to type, and letting a client name one would invite a collision with a real
+    # board's minted id. Name is required — it is the only handle the operator has on a
+    # board that cannot yet identify itself. The §5.2 channel gate applies here too: a
+    # declaration with no wiring is the same non-adoptable board the #1027 ruling
+    # forbids, whether it has reported or not.
+    for i, rec in enumerate(devices.get("declare") or []):
+        tag = f"devices.declare[{i}]"
+        if not (rec.get("name") or "").strip():
+            err(tag, "a board needs a name so you can tell it apart", "name")
+        if rec.get("device_id"):
+            err(
+                tag,
+                "a declared board's id is assigned by Sprout, not typed — the board "
+                "mints its own id when it first reports",
+                "device_id",
+            )
+        _validate_channel_declaration(rec, tag, err)
+
     known_p = existing_p | staged_p
     known_s = existing_s | staged_s
+    known_d = existing_d | staged_d  # adopt-then-map in one batch resolves
 
     # ---- validate: edits target an existing entity (id is immutable — no rename) ----
     for i, rec in enumerate(plants.get("edit") or []):
@@ -627,6 +1254,38 @@ def apply_operations(
                 f"no such device {rec.get('device_id')!r}",
                 "device_id",
             )
+    # #1027 §5.2: a rewire is an EDIT EVENT, not a re-adoption — "I took two of the
+    # sensors off and moved them to my esp32" changes what the board has, and must read
+    # as that board's history rather than as a new board. Same declaration gate as
+    # adoption: a rewire that declares nothing would leave a board in the very state the
+    # ruling forbids, reached by a different door.
+    for i, rec in enumerate(devices.get("rewire") or []):
+        tag = f"devices.rewire[{i}]"
+        if (rec.get("device_id") or "") not in existing_d | staged_d:
+            err(tag, f"no such device {rec.get('device_id')!r}", "device_id")
+        else:
+            _validate_channel_declaration(rec, tag, err)
+
+    # ---- validate: profiles (#963 — the owner-cal record, ratified option 1) -----
+    # The host owns cal VALUES; the device NVS slot is the projection (Trellis, #963;
+    # Firmware ack). A profile is a first-class reusable object: channels reference it
+    # by profile_id and never hold a private copy, so re-characterizing a probe moves
+    # every channel that references it together.
+    for i, rec in enumerate(profiles_ops.get("add") or []):
+        tag = f"profiles.add[{i}]"
+        pid = (rec.get("profile_id") or "").strip()
+        if not pid:
+            err(tag, "profile_id is required", "profile_id")
+        elif pid in existing_prof or pid in staged_prof:
+            err(tag, f"profile {pid} already exists", "profile_id")
+        else:
+            staged_prof.add(pid)
+        _validate_profile_fields(rec, tag, err)
+    for i, rec in enumerate(profiles_ops.get("edit") or []):
+        tag = f"profiles.edit[{i}]"
+        if (rec.get("profile_id") or "") not in existing_prof:
+            err(tag, f"no such profile {rec.get('profile_id')!r}", "profile_id")
+        _validate_profile_fields(rec, tag, err)
 
     # ---- validate: assign refs resolve (a channel already held is a remap, not error)
     for i, mp in enumerate(mappings.get("assign") or []):
@@ -635,7 +1294,7 @@ def apply_operations(
             err(tag, f"no such plant {mp.get('plant_id')!r}", "plant_id")
         if (mp.get("sensor_id") or "") not in known_s:
             err(tag, f"no such sensor {mp.get('sensor_id')!r}", "sensor_id")
-        if (mp.get("device_id") or "") not in existing_d:
+        if (mp.get("device_id") or "") not in known_d:
             err(tag, f"no such device {mp.get('device_id')!r}", "device_id")
         if not (mp.get("channel") or "").strip():
             err(tag, "a channel (board port) is required", "channel")
@@ -673,12 +1332,57 @@ def apply_operations(
     applied = {
         "plants_added": 0,
         "sensors_added": 0,
+        "devices_added": 0,
+        "channels_declared": 0,
+        "rewired": 0,
+        "profiles_added": 0,
         "edited": 0,
         "mapped": 0,
         "closed": 0,
         "lifecycle": 0,
         "purged": {"devices": 0, "plants": 0, "sensors": 0, "assignments": 0},
+        "declared": [],  # #1544: the minted ids, so the flow can map plants to them
     }
+    for rec in devices.get("declare") or []:  # #1544 A1 — declare-before-connect
+        entry = model.declare_device(
+            name=rec.get("name", ""),
+            board=rec.get("board"),
+            channels=_declared_pins(rec),
+            channel_source=rec.get("channel_source", "stated"),
+            now=now,
+        )
+        # The minted id is RETURNED, not guessed by the client: the same batch can map
+        # plants onto the board it just declared (the adopt-then-map shape, #1027).
+        applied["declared"].append(entry["device_id"])
+        applied["channels_declared"] += len(rec.get("channels") or [])
+    for rec in devices.get("add") or []:  # #1027 adopt — register the answering board
+        entry = {
+            "device_id": (rec.get("device_id") or "").strip(),
+            "base_url": (rec.get("base_url") or "").strip(),
+            "lifecycle": "active",
+        }
+        if rec.get("name"):
+            entry["name"] = rec["name"]  # the mutable human label (#583), optional
+        if rec.get("board"):
+            entry["board"] = rec["board"]  # board class — what the pinout keys off
+        model.devices.append(entry)
+        model.declare_channels(  # #1027: the board declares what it HAS, at adoption
+            entry["device_id"],
+            _declared_pins(rec),
+            source=rec.get("channel_source", "stated"),
+            now=now,
+        )
+        applied["devices_added"] += 1
+        applied["channels_declared"] += len(rec.get("channels") or [])
+    for rec in devices.get("rewire") or []:  # #1027 — close the old set, open the new
+        model.declare_channels(
+            (rec.get("device_id") or "").strip(),
+            _declared_pins(rec),
+            source=rec.get("channel_source", "stated"),
+            now=now,
+        )
+        applied["rewired"] += 1
+        applied["channels_declared"] += len(rec.get("channels") or [])
     for rec in plants.get("add") or []:
         pid = (rec.get("plant_id") or "").strip() or next_plant_id(model)
         model.plants.append(
@@ -696,10 +1400,47 @@ def apply_operations(
             )
         )
         applied["sensors_added"] += 1
+    for rec in profiles_ops.get("add") or []:
+        model.profiles.append(
+            Profile(
+                profile_id=rec["profile_id"],
+                name=rec.get("name") or rec["profile_id"],
+                sensor_type=rec.get("sensor_type"),
+                anchors=rec.get("anchors"),
+                provenance=rec.get("provenance"),
+                tier=rec.get("tier") or "uncalibrated",
+            )
+        )
+        applied["profiles_added"] += 1
+    for rec in profiles_ops.get("edit") or []:
+        prof = next(p for p in model.profiles if p.profile_id == rec["profile_id"])
+        for k in ("name", "sensor_type", "anchors", "provenance", "tier"):
+            if k in rec:
+                setattr(prof, k, rec[k])
+        applied["edited"] += 1
     for rec in plants.get("edit") or []:
         p = next(x for x in model.plants if x.plant_id == rec.get("plant_id"))
         for k in _PLANT_FIELDS:
-            if k in rec:
+            if k not in rec:
+                continue
+            # #1188 (the #921 "c" ruling): a LOCATION edit is a MOVE, not a text
+            # field write. Route it through move_plant so the old spot CLOSES and a
+            # new one opens — history is never lost, and the boundary is queryable
+            # by the consumers that must re-evaluate across it (a plant that moved
+            # is in a different micro-climate; readings either side are not one
+            # continuous context). Every other field is a plain edit.
+            if k == "location" and (rec[k] or None) != (p.location or None):
+                # #1188 AC2: the edit may carry structured placement (ADR-0029) beside
+                # the free-text location; move_plant validates `side` against the ledge
+                # vocabulary and writes both onto the boundary event.
+                model.move_plant(
+                    p.plant_id,
+                    rec[k],
+                    side=rec.get("side"),
+                    window=rec.get("window"),
+                    now=now,
+                )
+            else:
                 setattr(p, k, rec[k])
         applied["edited"] += 1
     for rec in sensors.get("edit") or []:

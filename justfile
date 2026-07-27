@@ -31,9 +31,10 @@ default:
 #  there and is never duplicated here. The double-click launcher (#86 B) is then just a
 #  desktop shortcut that runs `just start`.
 # ============================================================================
+# --serve-or-focus (#151) is single-instance: a second launch opens the existing tab, never a 2nd
+# server. For a forced fresh start over a stale server, use `just restart`. Stop it from the
+# dashboard or with Ctrl-C — Ctrl-C exits clean (#1552); it is not a crash.
 # Launch Sprout — serve + open the browser at the fixed port (the zero-CLI door). The one operator entry.
-# --serve-or-focus (#151) is single-instance: a second launch opens the existing tab, never a 2nd server.
-# For a forced fresh start over a stale server, use `just restart`.
 start:
     @just serve --serve-or-focus --open
 
@@ -46,11 +47,36 @@ restart:
 # ============================================================================
 # Serve the live dashboard on the fixed port 8765 (serve.py's own default; `just serve -p 8000` to override).
 serve *ARGS:
+    #!/usr/bin/env sh
+    # Ctrl-C is a DOCUMENTED way to stop Sprout — the startup banner says so — so it must
+    # not read as a crash (#1552). serve.py already handles SIGINT itself: it prints
+    # "stopped" and returns 0. What looked like a failure was `just` reporting the 130 its
+    # own interrupted child produced, on the one path a newcomer is told to use.
+    #
+    # `trap 'exit 0' INT` fires on SIGINT and NOTHING else, so a real failure still
+    # propagates its own code — verified: a child exiting 3 still exits 3. A blanket
+    # `|| true` (or just's `-` prefix, as `logger` uses for its own reasons) would hide
+    # every genuine crash to tidy one expected keystroke; serve failing to bind, or dying
+    # on an import error, must stay loud.
+    #
+    # The trap lives on `serve` — the leaf that runs python — so `start`, `restart` and
+    # `dash` all inherit it instead of each carrying a copy.
+    #
+    # On a real Ctrl-C the terminal signals the whole foreground process group, so python
+    # receives it directly and exits on its own; the shell is not the thing reaping it.
+    trap 'exit 0' INT
     {{py}} tools/analytics/serve.py {{ARGS}}
 
 # Friendly alias for `serve`.
 dash *ARGS:
     @just serve {{ARGS}}
+
+# Is Sprout correctly installed and ready on THIS machine? Reports; never repairs (#1553).
+# Checks tools, the locked env, the port, whether any board is declared, serial + firmware
+# (both optional), and the Windows clone-path budget. Non-zero only on a real blocker —
+# "no boards yet" and "no serial port" are states, not faults, and it says so.
+doctor *ARGS:
+    {{py}} tools/dx/doctor.py {{ARGS}}
 
 # List any live Sprout-spawned processes (Monitor logger / Experiment capture) by PID
 # + role - the #493 identifiability tool. "Port busy" with no Sprout window open? Run this first.
@@ -63,7 +89,7 @@ processes:
 collection ACTION="status" *ARGS:
     {{py}} tools/dx/collection.py {{ACTION}} {{ARGS}}
 
-# Stop every running collector (monitor + fleet) headlessly - graceful, then hard-kill (#689).
+# Stop every running collector (monitor + greenhouse) headlessly - graceful, then hard-kill (#689).
 # The recourse when a browser tab closed or a collector orphaned and there's no Stop button.
 stop-collection *ARGS:
     {{py}} tools/dx/collection.py stop {{ARGS}}
@@ -101,16 +127,90 @@ build-c5:
 flash *ARGS:
     {{pio}} run -d firmware -t upload {{ARGS}}
 
+# Flash the ALPHA channel — the CLI counterpart of the web flasher's alpha (#1334): current main,
+# the dev-team build, unversioned and unproven. It flashes your CHECKED-OUT tree over USB, labeled
+# by exact COMMIT — never a release version string (that would be a lie about unreleased bytes,
+# the drift the channel split exists to end). It does NOT checkout/pull — that would mutate a lane
+# worktree (AGENTS §2.5); it fetches read-only and WARNS if you're behind origin/main or off it, so
+# "latest main" is a `git pull` you choose, not a surprise. Stable, by contrast, is a cut release:
+# flash that from the web flasher, or check out its tag and `just flash`. Firmware's bench byte-path;
+# same USB prereqs as `just flash` (board connected + your OK). Args pass through to the uploader.
+
+# Flash the alpha channel (current main, dev-team, commit-labeled) over USB — the CLI alpha (#1334).
+flash-alpha *ARGS:
+    #!/usr/bin/env sh
+    set -u
+    git fetch --quiet origin main 2>/dev/null || true
+    commit="$(git rev-parse --short HEAD)"
+    branch="$(git branch --show-current)"; [ -n "$branch" ] || branch="detached"
+    behind="$(git rev-list --count HEAD..origin/main 2>/dev/null || echo 0)"
+    printf '>> ALPHA channel - current build, NOT a release (commit=%s branch=%s)\n' "$commit" "$branch"
+    printf '>> Unversioned + unproven, the dev-team channel - expect the unexpected.\n'
+    [ "$branch" != "main" ] && printf '>> NOTE: alpha = current main; you are on "%s", so this flashes THAT.\n' "$branch"
+    [ "$behind" -gt 0 ] && printf '>> NOTE: origin/main is %s commit(s) ahead - `git pull` first for the latest alpha.\n' "$behind"
+    just flash {{ARGS}}
+
 # OTA-flash a board over WiFi by its mDNS device_id (#302 Phase-0, LAN-only). No USB.
-#   e.g.  just ota k7m2rt              (classic esp32dev — targets sprout-k7m2rt.local)
-#         just ota n3jhsp esp32c5      (C5 board — uses the esp32c5_ota env)
+#   e.g.  just ota k7m2rt                       (classic esp32dev — targets sprout-k7m2rt.local)
+#         just ota n3jhsp esp32c5               (C5 board — uses the esp32c5_ota env)
+#         just ota n3jhsp esp32c5 192.168.1.42  (multi-homed host: pin the LAN callback IP)
 # Board-aware: the optional 2nd arg selects the <board>_ota env (default esp32dev).
+# host_ip (optional 3rd arg, #1227): pins the espota UDP ack-callback interface for a multi-homed
+#   host (LAN + VPN + WSL). Setting PLATFORMIO_UPLOAD_FLAGS *replaces* the ini's upload_flags, so we
+#   repeat --auth, newline-joined (space-joined arrives as one argv token and breaks auth; see #1225).
+#   The --auth value is resolved like the ini would (#1268): the gitignored platformio_local.ini
+#   override (#1260) wins, else the in-tree placeholder — so a rotated password still authenticates here.
+# Truth check (#1227): espota's UDP ack can time out even after a healthy flash on a multi-homed host,
+#   exiting FAILED on success. So after upload we poll the board's status page for git= and report
+#   reality — VERIFIED on the sha when it's back on the expected commit; a real failure only if it
+#   never returns (which also catches a genuine half-flash).
 # Prereqs: the board already runs OTA firmware (>= this build) + has WiFi creds set.
 # Honest limits: a DEAD or NEW/unprovisioned board has no OTA receiver — flash it WIRED
-# (just flash). Password is the Phase-0 placeholder in the <board>_ota env. See
-# docs/OTA_FLASH.md.
-ota device board="esp32dev" *ARGS:
-    {{pio}} run -d firmware -e {{board}}_ota -t upload --upload-port sprout-{{device}}.local {{ARGS}}
+# (just flash). Password is the Phase-0 placeholder in the <board>_ota env. See docs/OTA_FLASH.md.
+ota device board="esp32dev" host_ip="":
+    #!/usr/bin/env sh
+    set -u
+    host="sprout-{{device}}.local"
+    expected="$(git rev-parse --short HEAD)"
+    printf '>> ota: flashing %s (env %s_ota) — expecting git=%s\n' "$host" "{{board}}" "$expected"
+    if [ -n "{{host_ip}}" ]; then
+        # env var REPLACES the ini upload_flags → repeat --auth; newline-joined, not space (#1225).
+        # Resolve --auth like the ini (#1268): the gitignored platformio_local.ini override (#1260)
+        # wins, else the in-tree placeholder — so a rotated password still authenticates on this path.
+        auth="sprout-phase0"; auth_src="in-tree placeholder"
+        if [ -f firmware/platformio_local.ini ]; then
+            la="$(awk -v want="[env:{{board}}_ota]" '
+                $0 == want { inenv = 1; next } /^\[/ { inenv = 0 }
+                inenv && match($0, /--auth=[^[:space:]]+/) { print substr($0, RSTART + 7, RLENGTH - 7); exit }
+            ' firmware/platformio_local.ini)"
+            [ -z "$la" ] && la="$(awk 'match($0, /--auth=[^[:space:]]+/) { print substr($0, RSTART + 7, RLENGTH - 7); exit }' firmware/platformio_local.ini)"
+            [ -n "$la" ] && { auth="$la"; auth_src="platformio_local.ini"; }
+        fi
+        PLATFORMIO_UPLOAD_FLAGS="$(printf -- '--auth=%s\n--host_ip=%s' "$auth" "{{host_ip}}")"
+        export PLATFORMIO_UPLOAD_FLAGS
+        # never echo the password — report only its SOURCE (#1268).
+        printf '>> host_ip pinned to %s (auth from %s, repeated in the upload flags)\n' "{{host_ip}}" "$auth_src"
+    fi
+    {{pio}} run -d firmware -e {{board}}_ota -t upload --upload-port "$host" \
+        || printf '>> espota exit was non-zero — checking the board itself before believing it (#1227)\n'
+    printf '>> verifying via http://%s/ (board reboots + re-announces mDNS; polling ~60s)...\n' "$host"
+    got=""
+    i=0
+    while [ "$i" -lt 20 ]; do
+        got="$(curl -fs --max-time 3 "http://$host/" 2>/dev/null | sed -n 's/.*git=\([0-9A-Fa-f][0-9A-Fa-f]*\).*/\1/p' | head -n1)"
+        [ -n "$got" ] && break
+        i=$((i + 1)); sleep 3
+    done
+    if [ -z "$got" ]; then
+        printf '>> FAILED: %s never answered after upload — mDNS/WiFi down, or a genuine bad flash.\n' "$host"
+        exit 1
+    fi
+    if [ "$got" = "$expected" ]; then
+        printf '>> VERIFIED on %s — the board is running the expected commit.\n' "$got"
+    else
+        printf '>> FAILED: board reports git=%s but expected %s (half-flash or a stale image).\n' "$got" "$expected"
+        exit 1
+    fi
 
 # Native host C unit tests for the firmware logic — no ESP32, no flash. (#260)
 # Runs via PlatformIO env:native (Unity framework, host compiler).
@@ -167,8 +267,39 @@ lint-adr:
 pre-commit:
     uv run --frozen pre-commit run --all-files
 
-# The pre-merge gate: all hooks + the tests. Exactly what CI runs (mirrors #89).
-check: pre-commit test
+# THE DEFAULT GATE (#1337) — needs exactly two tools: `uv` and `just`.
+#
+# This runs everything a docs / dashboard / Python / graphics contribution can break: every
+# pre-commit hook plus the host, DX and analytics suites. Most arrivals touch one of those, so
+# the default is the door most people walk through, and the two-tool promise in the README is
+# TRUE for it rather than true-with-a-correction.
+#
+# It deliberately does NOT run the native C firmware tests — those need PlatformIO and a host
+# compiler, which is a real install we do not ask a docs contributor to do. The recipe SAYS SO
+# when it finishes: a gate that quietly runs less than you think it does is indistinguishable
+# from one that passed (the #1327 lesson), so the omission is announced, never implied.
+
+# The default gate: pre-commit + host/DX/analytics tests. Needs only uv + just (#1337).
+check: pre-commit test-host test-dx test-analytics
+    @echo ""
+    @echo "  check PASSED - pre-commit + host + DX + analytics."
+    @echo "  NOT run: test-native (the native C firmware tests; they need PlatformIO + a compiler)."
+    @echo "  Touched firmware/ ? run:  just check-firmware"
+    @echo "  Either way CI runs the full battery on every PR - this is your local gate, not the gate."
+    @{{py}} tools/dx/untracked_notice.py
+
+# THE FIRMWARE GATE (#1337): the default gate PLUS the native C tests. Needs PlatformIO and a
+# host compiler on top of uv + just — named honestly on its own path rather than hidden inside
+# the default, so the bigger install belongs to the smaller door.
+
+# The firmware gate: everything `check` runs PLUS the native C tests (needs PlatformIO).
+check-firmware: check test-native
+
+# Back-compat alias (#1189 shipped this name; `check` now means the same thing). Kept so muscle
+# memory and existing docs/scripts keep working — safe to use, nothing to change.
+
+# Alias for `check` — the old #1189 name, kept working.
+check-host: check
 
 # Everything else runs --frozen; commit pyproject.toml + uv.lock together as a deliberate change.
 # Update uv.lock after a pyproject.toml dependency change — the ONE command allowed to rewrite it (#254).
@@ -211,6 +342,77 @@ identifier-guard *ARGS:
 link-check *ARGS:
     {{py}} tools/dx/link_check.py --check {{ARGS}}
 
+# Voice register sweep (#1161): changed-lines guard is a pre-commit hook (advisory); this
+# recipe is the manual/release entry point.
+#   just voice-guard --all                        # full-tree sweep (the RELEASE_CUT §3 backstop)
+#   just voice-guard --diff-range origin/main...HEAD   # a PR's delta
+voice-guard *ARGS:
+    {{py}} tools/dx/voice_guard.py {{ARGS}}
+
+# Board-hygiene lint (#732): the board must tell the truth. Sweeps every card for
+# closed-not-Done drift (blocking), stale In-Progress (advisory, --stale-days 4), and
+# oversized milestones (advisory, --milestone-warn 40). Event-driven: run at the release
+# cut + on demand; needs the local gh login (ProjectV2 scope — not a per-PR CI job).
+#   just board-hygiene              # sweep + non-zero on closed-not-Done drift
+#   just board-hygiene --advisory   # report only
+board-hygiene *ARGS:
+    {{py}} tools/dx/board_hygiene.py {{ARGS}}
+
+# OTA release feed (#1524 / #1284 AC5): emit docs/ota/feed.txt from a release's signed
+# assets (works on a DRAFT — section 5.1 dry-run). Fail-closed: every declared board
+# needs its .bin + .sig attached or nothing is emitted. Run at the cut (RELEASE_CUT §6),
+# then review + commit the diff; hand-curation (#1258) is guarded by ota-feed-guard.
+#   just ota-feed v0.8.1            # print the feed for that release
+#   just ota-feed v0.8.1 --write    # write docs/ota/feed.txt
+ota-feed TAG *ARGS:
+    {{py}} tools/dx/ota_feed.py generate --tag {{TAG}} {{ARGS}}
+
+# ---- The cut's tooling (#1649 / CP3) --------------------------------------------------
+# RELEASE_CUT's checks used to live in the operator's head and ~15 ad-hoc queries. These
+# are the same checks, in the order the ceremony runs them. NOTE: `just --list` shows the
+# LAST comment line above a recipe, so each one ends with its own one-line summary.
+
+# Runs BEFORE the milestone closes - the last moment corrections are cheap (#1661).
+# One pass/fail table: version + date sites, CHANGELOG section, milestone, contributors
+release-preflight TAG *ARGS:
+    {{py}} tools/release/preflight.py {{TAG}} {{ARGS}}
+
+# `assets > 0` passes on a release missing a signature (#1662).
+# Assert the exact artifact inventory on a real release - run after every signer dispatch
+release-verify TAG *ARGS:
+    {{py}} tools/release/verify.py {{TAG}} {{ARGS}}
+
+# `gh release upload` has no --clobber by design, so a re-sign must clear first (#1663).
+# Re-sign as ONE transaction: refuse if a signer is live, clear, dispatch, wait, verify
+release-resign TAG *ARGS:
+    {{py}} tools/release/resign.py {{TAG}} {{ARGS}}
+
+# ---- Board field self-service (#1443, ADR-0003 §5) -------------------------------------
+# Read/write the five Project-#2 planning fields in one line, so an attribute is never
+# skipped because writing it was annoying (how velocity: drifted to 7-of-69). Every WRITE
+# re-queries and prints what the board now reports — the mutation's "ok" is not trusted
+# (#519/#522). Needs the local gh login (ProjectV2 scope); works from any worktree.
+#   just board 1443                 # read all five fields for issue 1443
+#   just owner 1443 dx              # firmware|data|design|dx|trellis|workflow|maintainer
+#   just velocity 1443 v2           # v1|v2
+#   just size 1443 s                # xs|s|m|l|xl
+#   just priority 1443 p1           # p0|p1|p2|p3
+#   just status 1443 verify         # backlog|progress|verify|ready|done
+
+# Read all five board fields for issue N (owner/velocity/size/priority/status).
+board N:
+    {{py}} tools/dx/board_field.py read {{N}}
+owner N VALUE:
+    {{py}} tools/dx/board_field.py owner {{N}} {{VALUE}}
+velocity N VALUE:
+    {{py}} tools/dx/board_field.py velocity {{N}} {{VALUE}}
+size N VALUE:
+    {{py}} tools/dx/board_field.py size {{N}} {{VALUE}}
+priority N VALUE:
+    {{py}} tools/dx/board_field.py priority {{N}} {{VALUE}}
+status N VALUE:
+    {{py}} tools/dx/board_field.py status {{N}} {{VALUE}}
+
 # DX tool tests (pytest — identifier-guard + link-check suites; new DX suites land here too).
 test-dx:
     {{py}} -m pytest tools/dx/ -q
@@ -220,6 +422,26 @@ test-dx:
 # ~70s — the real cost of the compensating control actually running.
 test-analytics:
     {{py}} -m pytest tools/analytics/ -q
+
+# --- The DuckDB/Parquet analysis-store tier (#828 / #1239; DX ergonomics #1249) --------------
+# Analytics-only path — none of these need a firmware toolchain (pairs with `just check-host`).
+#
+# Build: backfill every historical logs/*.csv -> reports/tier/raw (gitignored + regenerable, per
+# docs/TIER_STORE_CONTRACT.md). Idempotent + resumable (--skip-existing), fidelity-checked per
+# partition (§6). Re-running converges to the same bytes; delete reports/tier to rebuild clean.
+store-rebuild *ARGS:
+    {{py}} tools/analytics/tier_backfill.py {{ARGS}}
+
+# Verify the store is contract-compliant: (re)builds one reference partition and asserts its DuckDB
+# rollup EXACTLY equals an independent integer-us recompute (the s4 invariant) + prints the provenance
+# lineage (source_file / schema_version). Non-zero exit on any mismatch. Consumes tier_store, not a copy.
+store-verify device="y9d41p" date="2026-07-18":
+    {{py}} tools/analytics/tier_store.py --device {{device}} --date {{date}}
+
+# Ad-hoc SQL over the store (registered as the `store` view; date/device are hive-partition columns):
+#   just store-query "SELECT device, band, COUNT(*) FROM store GROUP BY 1, 2 ORDER BY 3 DESC"
+store-query sql:
+    {{py}} tools/analytics/tier_query.py "{{sql}}"
 
 # ============================================================================
 #  LANES: register your recipes in your section above. Pattern:

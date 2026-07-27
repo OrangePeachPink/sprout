@@ -5,11 +5,9 @@ time.monotonic() read-side accessor. Real shape: plants_logger.py appends
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import parse_file
+from tools.analytics.parse_v1 import parse_file
 
 _COLS = "record_type,timestamp_utc,session_id,sensor_id,raw_value,quality_flag,payload"
 _HEADER = "# log_start_utc=2026-07-01T00:00:00Z  tz_offset=-05:00\n"

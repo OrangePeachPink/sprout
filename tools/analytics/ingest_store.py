@@ -21,7 +21,7 @@ stays exactly as received."""
 
 from __future__ import annotations
 
-from parse_v1 import Reading, dedupe_key
+from tools.analytics.parse_v1 import Reading, dedupe_key
 
 
 class Store:

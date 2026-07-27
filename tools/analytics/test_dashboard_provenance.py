@@ -9,12 +9,10 @@ order. This covers the fix: pick by each segment's real ``log_start_utc``
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context
-from parse_v1 import parse_files
+from tools.analytics.dashboard import build_context
+from tools.analytics.parse_v1 import parse_files
 
 _COLS = (
     "record_type,timestamp_utc,timestamp_local,session_id,"
@@ -109,7 +107,7 @@ def test_config_id_surfaces_on_the_device_block(tmp_path: Path) -> None:
 
 
 def test_config_id_is_none_on_a_pre_v4_view(tmp_path: Path) -> None:
-    # honest-empty (ADR-0028): a schema_version=1 segment emits no config_id.
+    # calm-empty (ADR-0028): a schema_version=1 segment emits no config_id.
     log = tmp_path / "v1.csv"
     log.write_text(
         _live_header("0.7.0", "156ca68", "y9d41p", "2026-07-11T10:00:00.000Z")

@@ -34,7 +34,7 @@ construct it.
 
 from __future__ import annotations
 
-import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -43,13 +43,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Protocol
 
-from ingest_store import Store
-from parse_v1 import LogData, SegmentHeader, parse_files, reading_from_row
+from tools.analytics.ingest_store import Store
+from tools.analytics.parse_v1 import (
+    LogData,
+    SegmentHeader,
+    parse_files,
+    reading_from_row,
+)
 
 _LOGGER_DIR = Path(__file__).resolve().parent.parent / "logger"
-if str(_LOGGER_DIR) not in sys.path:
-    sys.path.insert(0, str(_LOGGER_DIR))
-from plants_logger import parse_device_line, stamp_row  # noqa: E402
+from tools.logger.plants_logger import parse_device_line, stamp_row  # noqa: E402
 
 # This adapter's own identity for stamp_row()'s logger_version (#277) - never
 # LOGGER_VERSION (plants_logger.py's own identity): a WiFi-polled row was not
@@ -109,6 +112,109 @@ def _http_get(url: str, timeout: float = _FETCH_TIMEOUT_S) -> str:
         return resp.read().decode("utf-8", errors="replace")
 
 
+# #1020: trip after this many consecutive failed fetches, then SKIP for the cooldown.
+# One transient blip never trips; a board dead for a few polls stops burning its ~4s
+# timeout on every /data.json request.
+_BREAKER_TRIP_AFTER = 3
+_BREAKER_COOLDOWN_S = 30.0
+
+
+class FetchBreaker:
+    """A per-device negative cache / circuit breaker for the fleet fetch path (#1020).
+
+    #953's durable half: an offline board burned its full ``_FETCH_TIMEOUT_S`` on
+    **every** request, and the pool is parallel, so one dead board set the dashboard's
+    wall-clock. After ``trip_after`` consecutive failures a device is SKIPPED for
+    ``cooldown_s`` (the timeout is never paid in the outage); a skip returns nothing,
+    exactly like a real miss, so it surfaces as "not answering" (ADR-0028), never "no
+    data by design". After the cooldown one real retry runs (half-open): success closes
+    it, a failure re-opens it. State is keyed by device + shared across per-request
+    adapters, so it lives at module scope. Thread-safe (parallel fetch)."""
+
+    def __init__(
+        self,
+        trip_after: int = _BREAKER_TRIP_AFTER,
+        cooldown_s: float = _BREAKER_COOLDOWN_S,
+    ) -> None:
+        self._trip_after = trip_after
+        self._cooldown_s = cooldown_s
+        self._state: dict[str, tuple[int, float]] = {}  # key -> (fails, open_until)
+        self._lock = threading.Lock()
+
+    def should_skip(self, key: str, now: float) -> bool:
+        """True while the breaker is OPEN for ``key`` - tripped AND cooling down."""
+        with self._lock:
+            st = self._state.get(key)
+            return st is not None and st[0] >= self._trip_after and now < st[1]
+
+    def record(self, key: str, *, ok: bool, now: float) -> None:
+        """A success closes the breaker; a failure increments and (past the threshold)
+        opens it for the cooldown window."""
+        with self._lock:
+            if ok:
+                self._state.pop(key, None)
+                return
+            fails = self._state.get(key, (0, 0.0))[0] + 1
+            open_until = now + self._cooldown_s if fails >= self._trip_after else 0.0
+            self._state[key] = (fails, open_until)
+
+
+# Module-scoped so breaker state survives across the per-request FleetAdapter /
+# DeviceAdapter builds in serve.py. Tests inject a fresh breaker + a fake `mono`.
+_DEFAULT_BREAKER = FetchBreaker()
+
+# #1026: a mismatch is "active" until a matching poll clears it OR it goes this stale
+# (a board that went offline mid-mismatch shouldn't alarm forever).
+_MISMATCH_TTL_S = 120.0
+
+
+class IdentityMismatchLog:
+    """#1026: a board answering at a REGISTERED ``base_url`` with a ``device_id`` the
+    registry has NEVER heard of (not the expected canonical id, not one of its
+    ``previous_ids``) is the "currently true" alarm class - a re-flashed board on a
+    neighbor's DHCP lease, self-signing an unadopted identity. It must surface loudly,
+    not accumulate rows under a ghost. This shared log records the latest mismatch per
+    mismatch per base_url; a matching poll CLEARS it, and ``active()`` also drops stale
+    entries. Thread-safe (the fleet polls concurrently)."""
+
+    def __init__(self, ttl_s: float = _MISMATCH_TTL_S) -> None:
+        self._ttl_s = ttl_s
+        self._m: dict[str, dict] = {}
+        self._lock = threading.Lock()
+
+    def record(self, base_url: str, *, expected: str, got: str, now: float) -> None:
+        with self._lock:
+            self._m[base_url] = {
+                "base_url": base_url,
+                "expected": expected,
+                "got": got,
+                "at": now,
+            }
+
+    def clear(self, base_url: str) -> None:
+        with self._lock:
+            self._m.pop(base_url, None)
+
+    def active(self, now: float) -> list[dict]:
+        """Current mismatches (freshest data), stale ones dropped."""
+        with self._lock:
+            fresh = [
+                {k: v for k, v in m.items() if k != "at"}
+                for m in self._m.values()
+                if now - m["at"] <= self._ttl_s
+            ]
+        return fresh
+
+
+_DEFAULT_MISMATCHES = IdentityMismatchLog()
+
+
+def active_mismatches(now: float | None = None) -> list[dict]:
+    """#1026: the fleet's currently-active identity mismatches (serve.py's surfaces read
+    this for the dashboard notice + the /fleet/status count)."""
+    return _DEFAULT_MISMATCHES.active(now if now is not None else time.time())
+
+
 class DeviceAdapter:
     """The WiFi-served transport (#276/#277): a device's own ``GET /telemetry``,
     the same wire bytes as serial. ``base_url`` is the device's root, e.g.
@@ -143,6 +249,11 @@ class DeviceAdapter:
         pressure_source=None,
         candidates=None,
         on_resolved=None,
+        breaker=None,
+        mono=None,
+        expected_id=None,
+        previous_ids=None,
+        mismatch_log=None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         # #676: ordered addresses to try — the mDNS hostname first (stable across
@@ -155,6 +266,19 @@ class DeviceAdapter:
         self._clock = clock if clock is not None else self._utc_now
         self._pressure_source = pressure_source
         self._next_sample_id = 0
+        # #1020: the shared negative cache. Keyed by the device's first candidate (its
+        # stable base_url) so state persists across per-request adapter builds.
+        self._breaker = breaker if breaker is not None else _DEFAULT_BREAKER
+        self._mono = mono if mono is not None else time.monotonic
+        self._breaker_key = self._candidates[0] if self._candidates else None
+        # #1026: the identity the registry expects here + its accepted aliases
+        # (previous_ids model legitimate renames, #602). An id outside that set is a
+        # ghost — logged loudly, never silently filed.
+        self._expected_id = expected_id
+        self._previous_ids = set(previous_ids or ())
+        self._mismatch_log = (
+            mismatch_log if mismatch_log is not None else _DEFAULT_MISMATCHES
+        )
 
     @staticmethod
     def _utc_now() -> datetime:
@@ -165,6 +289,14 @@ class DeviceAdapter:
         # adapter always reads its own discovered address, matching the seam's
         # contract (a caller never needs to know which transport it's reading
         # from, or pass transport-specific args through a generic call site).
+        # #1020: if the breaker is OPEN for this device (it failed its last N fetches
+        # and is within the cooldown), SKIP the fetch - don't burn the timeout. An
+        # empty return is identical to a real miss, so it surfaces as "not answering",
+        # never "no data by design". After the cooldown one real retry runs (half-open).
+        if self._breaker_key is not None and self._breaker.should_skip(
+            self._breaker_key, self._mono()
+        ):
+            return LogData()
         # #676: try each candidate in order (mDNS hostname first, IP fallback) and
         # use the first that ANSWERS - so a board that rebooted to a new DHCP IP is
         # still reached by name, no registry hand-edit.
@@ -177,6 +309,10 @@ class DeviceAdapter:
                 break
             except (urllib.error.URLError, OSError, TimeoutError):
                 continue  # this address is unreachable - try the next candidate
+        if self._breaker_key is not None:  # #1020: success closes, a miss trips open
+            self._breaker.record(
+                self._breaker_key, ok=text is not None, now=self._mono()
+            )
         if text is None:
             return LogData()  # no candidate reachable - honest empty, not a crash
 
@@ -212,6 +348,22 @@ class DeviceAdapter:
         if not readings:
             return LogData()
         seg.device_id = readings[0].device_id
+        # #1026: compare the self-reported id to what the registry expects here.
+        # An id the registry never heard of (not expected, not a previous_id) answering
+        # at a registered base_url is the loud alarm class - record it (the surface
+        # renders a notice + counts it); a match clears it. Only when serve.py passes
+        # the expectation; a bare/test DeviceAdapter (no expected_id) never alarms.
+        if self._expected_id is not None:
+            got = seg.device_id
+            if got and got != self._expected_id and got not in self._previous_ids:
+                self._mismatch_log.record(
+                    self._base_url,
+                    expected=self._expected_id,
+                    got=got,
+                    now=time.time(),
+                )
+            else:
+                self._mismatch_log.clear(self._base_url)
         # #676: the board answered at `working` - let the caller self-heal the
         # registry if that's a fresh address (best-effort; never affects the poll).
         if self._on_resolved is not None:

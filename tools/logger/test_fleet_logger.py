@@ -7,18 +7,19 @@ cadence-loop mechanics, restart dedupe seeded from disk, and provenance
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fleet_logger import FLEET_LOGGER_VERSION, FleetLogger, seed_store_from_disk
+from tools.logger.fleet_logger import (
+    FLEET_LOGGER_VERSION,
+    FleetLogger,
+    seed_store_from_disk,
+)
 
 _ANALYTICS = Path(__file__).resolve().parents[1] / "analytics"
-sys.path.insert(0, str(_ANALYTICS))
-from device_registry import Device, Registry  # noqa: E402
-from ingest_store import Store  # noqa: E402
-from parse_v1 import parse_file, parse_files  # noqa: E402
-from source_adapter import DeviceAdapter  # noqa: E402
+from tools.analytics.device_registry import Device, Registry  # noqa: E402
+from tools.analytics.ingest_store import Store  # noqa: E402
+from tools.analytics.parse_v1 import parse_file, parse_files  # noqa: E402
+from tools.analytics.source_adapter import DeviceAdapter  # noqa: E402
 
 _DEVICE_COLS = (
     "# device_cols: record_type,session_id,device_id,fw,millis_ms,sensor_model,"
@@ -424,7 +425,7 @@ def test_end_to_end_over_real_http(tmp_path: Path) -> None:
 def test_rotating_csv_header_names_its_real_writer(tmp_path: Path) -> None:
     from datetime import datetime, timezone
 
-    from plants_logger import LOGGER_VERSION, RotatingCsv
+    from tools.logger.plants_logger import LOGGER_VERSION, RotatingCsv
 
     now = datetime(2026, 7, 3, 12, 0, 0, tzinfo=timezone.utc)
     fleet = RotatingCsv(str(tmp_path / "a"), logger_version=FLEET_LOGGER_VERSION)

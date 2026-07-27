@@ -11,11 +11,6 @@ the signal loud (this slice) does not.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
 
 class _Boom:
     @staticmethod
@@ -35,7 +30,7 @@ class _Ok:
 # plants_logger._archive_step (module-level, function-based logger)
 # --------------------------------------------------------------------------- #
 def test_plants_archive_failure_is_loud_and_counted(monkeypatch, capsys) -> None:
-    import plants_logger as pl
+    from tools.logger import plants_logger as pl
 
     pl._archive_fail_count = 0
     monkeypatch.setattr(pl, "archive_logs", _Boom)
@@ -51,7 +46,7 @@ def test_plants_archive_failure_is_loud_and_counted(monkeypatch, capsys) -> None
 
 
 def test_plants_archive_success_clears_the_streak(monkeypatch, capsys) -> None:
-    import plants_logger as pl
+    from tools.logger import plants_logger as pl
 
     pl._archive_fail_count = 5
     monkeypatch.setattr(pl, "archive_logs", _Ok)
@@ -61,7 +56,7 @@ def test_plants_archive_success_clears_the_streak(monkeypatch, capsys) -> None:
 
 
 def test_plants_archive_unavailable_is_stated_once(monkeypatch, capsys) -> None:
-    import plants_logger as pl
+    from tools.logger import plants_logger as pl
 
     pl._archive_unavailable_warned = False
     monkeypatch.setattr(pl, "archive_logs", None)
@@ -75,7 +70,7 @@ def test_plants_archive_unavailable_is_stated_once(monkeypatch, capsys) -> None:
 # fleet_logger.FleetLogger._archive (class-based logger)
 # --------------------------------------------------------------------------- #
 def _fleet(tmp_path):
-    import fleet_logger as fl
+    from tools.logger import fleet_logger as fl
 
     return fl, fl.FleetLogger(logdir=str(tmp_path), registry=[])
 

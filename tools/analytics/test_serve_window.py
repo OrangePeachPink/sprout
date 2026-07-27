@@ -5,13 +5,11 @@ opens fast: a 7d view never parses the whole multi-week corpus, and a bare reque
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import serve
-from dashboard import RANGE_HOURS
+from tools.analytics import serve
+from tools.analytics.dashboard import RANGE_HOURS
 
 _NOW = datetime(2026, 7, 10, 12, 0, 0, tzinfo=timezone.utc)
 

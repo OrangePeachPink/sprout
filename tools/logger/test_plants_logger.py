@@ -8,12 +8,10 @@ from __future__ import annotations
 
 import csv
 import gzip
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from plants_logger import (
+from tools.logger.plants_logger import (
     CANONICAL_COLS,
     DEVICE_COLS,
     LOGGER_VERSION,
@@ -25,8 +23,7 @@ from plants_logger import (
 )
 
 _ANALYTICS = Path(__file__).resolve().parents[1] / "analytics"
-sys.path.insert(0, str(_ANALYTICS))
-from parse_v1 import parse_file  # noqa: E402
+from tools.analytics.parse_v1 import parse_file  # noqa: E402
 
 # --------------------------------------------------------------------------- #
 # helpers

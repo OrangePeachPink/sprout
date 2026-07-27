@@ -8,12 +8,10 @@ consume — the trajectory break, the quality-strip gap marks, and the integrity
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import GAP_THRESHOLD_S, build_context
-from parse_v1 import parse_files
+from tools.analytics.dashboard import GAP_THRESHOLD_S, build_context
+from tools.analytics.parse_v1 import parse_files
 
 _HEADER = (
     "# fw=0.7.0  git=test123  run=gaptest\n"

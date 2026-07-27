@@ -10,11 +10,9 @@ Proves the three answers to Design-QA's seam questions:
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from registry_model import (
+from tools.analytics.registry_model import (
     Plant,
     RegistryModel,
     Sensor,
@@ -84,6 +82,32 @@ def test_edit_changes_fields_but_not_identity() -> None:
     assert m.plants[0].plant_id == "p01"  # identity is immutable
 
 
+def test_pot_size_and_location_round_trip_through_add_and_edit() -> None:
+    # #833: these two are the fields that forced config-file surgery — pot_size was
+    # settable nowhere in-app, location was add-only. The apply layer already carries
+    # both (they're in _PLANT_FIELDS); this locks that so a future field-list change
+    # can't silently drop what the editor now depends on.
+    m = _model()
+    r = apply_operations(
+        m,
+        {
+            "plants": {
+                "add": [
+                    {"pet_name": "Fern", "pot_size": '6"', "location": "left sill"}
+                ],
+                "edit": [
+                    {"plant_id": "p01", "pot_size": '4"', "location": "right sill"}
+                ],
+            }
+        },
+    )
+    assert r["ok"] and r["applied"]["plants_added"] == 1 and r["applied"]["edited"] == 1
+    added = next(p for p in m.plants if p.pet_name == "Fern")
+    assert added.pot_size == '6"' and added.location == "left sill"  # add carries both
+    edited = next(p for p in m.plants if p.plant_id == "p01")
+    assert edited.pot_size == '4"' and edited.location == "right sill"  # edit too
+
+
 def test_edit_a_nonexistent_entity_is_a_structured_error() -> None:
     r = apply_operations(_model(), {"plants": {"edit": [{"plant_id": "p99"}]}})
     assert not r["ok"]
@@ -98,6 +122,132 @@ def test_device_friendly_label_writes_the_name_key() -> None:
     )
     assert r["ok"]
     assert m.devices[0]["name"] == "Board A"  # `name` is the mutable label (#583)
+
+
+# --------------------------------------------------------------------------- #
+# device adopt (#1027) — register an answering-but-unknown board in-UI, no JSON edit
+# --------------------------------------------------------------------------- #
+def test_adopt_registers_an_answering_board() -> None:
+    m = _model()
+    r = apply_operations(
+        m,
+        {
+            "devices": {
+                "add": [
+                    {
+                        "device_id": "n3jhsp",
+                        "base_url": "http://192.168.1.89",
+                        "name": "c5yellow2",
+                        "channels": [1, 4, 5, 6],  # #1027 §5.2 — the C5 soil map
+                        "board": "esp32c5",
+                    }
+                ]
+            }
+        },
+    )
+    assert r["ok"] and r["applied"]["devices_added"] == 1
+    new = next(d for d in m.devices if d["device_id"] == "n3jhsp")
+    assert new["base_url"] == "http://192.168.1.89"
+    assert new["name"] == "c5yellow2"  # the label the operator gave it
+    assert new["lifecycle"] == "active"  # a freshly adopted board polls immediately
+    # #1027: adoption declares the board's channels — four, with their pins, in chN
+    # order. The count is the §5.2 gate; the pins are what the empty-channel state
+    # teaches ("connect a sensor to GPIO 4").
+    assert r["applied"]["channels_declared"] == 4
+    decl = m.declared_channels("n3jhsp")
+    assert [d.channel for d in decl] == ["ch0", "ch1", "ch2", "ch3"]
+    assert [d.pin for d in decl] == [1, 4, 5, 6]
+    assert {d.source for d in decl} == {"stated"}
+
+
+def test_adopt_without_a_base_url_is_allowed() -> None:
+    # #1027 ruling (2026-07-22): base_url is OPTIONAL at adoption — it is the WiFi poll
+    # address, not the identity. A board from #1027 §5.1 telemetry discovery has a
+    # device_id (from the wire) and no reachable address; requiring base_url blocks
+    # adopting exactly those boards. It is stored empty and the poll path skips it
+    # (served_devices() = "has a base_url", covered in test_device_registry) — honest-
+    # absent, not broken. The §5.2 channel declaration is what makes it adoptable.
+    m = _model()
+    r = apply_operations(
+        m,
+        {
+            "devices": {
+                "add": [
+                    {"device_id": "n3jhsp", "name": "discovered", "channels": [1, 4]}
+                ]
+            }
+        },
+    )
+    assert r["ok"] and r["applied"]["devices_added"] == 1
+    new = next(d for d in m.devices if d["device_id"] == "n3jhsp")
+    assert new["base_url"] == ""  # empty → device_registry loads it as not-WiFi-served
+    assert new["lifecycle"] == "active"
+    assert [d.channel for d in m.declared_channels("n3jhsp")] == ["ch0", "ch1"]
+
+
+def test_adopt_still_requires_a_channel_declaration() -> None:
+    # The relax loosened base_url ONLY. The §5.2 gate stands: a board that declares no
+    # channels is non-adoptable (#1027, ruled), even with a base_url.
+    m = _model()
+    r = apply_operations(
+        m, {"devices": {"add": [{"device_id": "n3jhsp", "base_url": "http://x"}]}}
+    )
+    assert not r["ok"]  # rejected whole, nothing added
+    assert r["errors"][0]["field"] == "channels"
+    assert len(m.devices) == 1
+
+
+def test_adopting_an_already_registered_id_is_an_error_not_a_dup() -> None:
+    m = _model()  # y9d41p already registered
+    r = apply_operations(
+        m,
+        {
+            "devices": {
+                "add": [
+                    {
+                        "device_id": "y9d41p",
+                        "base_url": "http://x",
+                        "channels": [36, 39, 34, 35],  # #1027 §5.2
+                    }
+                ]
+            }
+        },
+    )
+    assert not r["ok"]  # edit the label instead — never a silent duplicate device row
+    assert r["errors"][0]["field"] == "device_id"
+    assert len(m.devices) == 1
+
+
+def test_adopt_then_map_in_one_batch_resolves() -> None:
+    # the real adopt flow: register the board AND wire a plant to it atomically.
+    m = _model()
+    r = apply_operations(
+        m,
+        {
+            "devices": {
+                "add": [
+                    {
+                        "device_id": "8gtt1h",
+                        "base_url": "http://y",
+                        "channels": [36, 39, 34, 35],  # #1027 §5.2
+                    }
+                ]
+            },
+            "mappings": {
+                "assign": [
+                    {
+                        "plant_id": "p01",
+                        "sensor_id": "s01",
+                        "device_id": "8gtt1h",  # the just-added board
+                        "channel": "s1",
+                    }
+                ]
+            },
+        },
+    )
+    assert r["ok"]
+    assert r["applied"]["devices_added"] == 1 and r["applied"]["mapped"] == 1
+    assert m.current_for_channel("8gtt1h", "s1").plant_id == "p01"
 
 
 # --------------------------------------------------------------------------- #

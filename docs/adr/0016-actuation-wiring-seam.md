@@ -61,7 +61,7 @@ veto-blocks-dose, forced-dose-respects-ceiling).
 
 - **`main.cpp` keeps owning sampling and feeds the supervisor cached values.** Rejected: duplicates the
   sampler, reintroduces the invariant-2 hazard, and splits cadence control across two owners.
-- **Two relay drivers (pulse + supervisor) with ad-hoc coordination.** Rejected: no single source of truth for
+- **Two relay drivers (pulse + supervisor) with ad-hoc coordination.** Rejected: no single source for
   pump state; "at most one pump" becomes a runtime race instead of a structural guarantee.
 - **An auto/manual mode interlock** (only one path live at a time). Workable, but two safety-critical code
   paths to keep correct versus one authority — rejected for the simpler invariant.

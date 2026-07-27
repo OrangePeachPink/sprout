@@ -136,3 +136,75 @@ def save_notes(
     p.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8", newline="\n")
     # pure persisted notes; serve.py adds the save path to the response (#327)
     return notes
+
+
+# #545 item 2 (maintainer ruling A, 2026-07-20): the capture control plane owns the
+# planned -> running -> complete stamp. This ORDER is the lifecycle; status moves
+# forward along it and never back.
+_STATUS_ORDER = {"planned": 0, "running": 1, "complete": 2}
+CONTROL_PLANE_AUTHOR = "control-plane"
+
+
+def advance_status(
+    eid: str,
+    to_status: str,
+    docs_dir: str | Path | None = None,
+    *,
+    author: str = CONTROL_PLANE_AUTHOR,
+    create: bool = False,
+) -> dict:
+    """Stamp a capture's lifecycle status — the narrow seam the control plane calls
+    when a run starts and finishes (#545 item 2, ruling A).
+
+    Deliberately NOT ``save_notes(status=...)``: that seam bumps the prose ``version``
+    and appends an edit-log entry describing a human documenting the experiment. A
+    machine stamping "this run started" is a different event; conflating them would
+    inflate the version of prose nobody wrote and credit the operator with edits they
+    never made.
+
+    Rules:
+
+    - **Forward only** — ``planned -> running -> complete``. A backwards move is
+      refused rather than silently rewriting history: a run that already completed
+      cannot be un-completed by a late or duplicated signal.
+    - **Idempotent** — already at the target means no write and no version bump, so a
+      control-plane retry is safe.
+    - **An absent sidecar is not an error** — an unplanned capture simply has no plan
+      to advance (``reason="no-sidecar"``) unless ``create=True``.
+    - The transition is attributed to the **control plane** in ``edit_log``, so the
+      provenance trail shows what moved this and when.
+
+    Returns ``{moved, from, to, reason?}``; never raises for an ordinary no-op.
+    """
+    if to_status not in _STATUS_ORDER:
+        raise ValueError(f"invalid status {to_status!r}; expected one of {_STATUSES}")
+    p = _notes_path(eid, docs_dir)
+    if p is None:
+        raise ValueError(f"invalid experiment id: {eid!r}")
+    doc: dict = {}
+    if p.exists():
+        try:
+            existing = json.loads(p.read_text(encoding="utf-8"))
+            if isinstance(existing, dict):
+                doc = existing
+        except (json.JSONDecodeError, OSError):
+            doc = {}
+    elif not create:
+        return {"moved": False, "from": None, "to": to_status, "reason": "no-sidecar"}
+    notes = doc.get("notes") if isinstance(doc.get("notes"), dict) else _empty()
+    current = notes.get("status")
+    if current == to_status:
+        return {"moved": False, "from": current, "to": to_status, "reason": "already"}
+    if current is not None and _STATUS_ORDER[to_status] < _STATUS_ORDER[current]:
+        return {"moved": False, "from": current, "to": to_status, "reason": "backwards"}
+    stamped = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    notes["status"] = to_status
+    notes["edit_log"] = [
+        *(notes.get("edit_log") or []),
+        {"at": stamped, "by": author, "fields": ["status"]},
+    ]
+    doc.setdefault("experiment_id", eid)
+    doc["notes"] = notes
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8", newline="\n")
+    return {"moved": True, "from": current, "to": to_status}

@@ -43,7 +43,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass, field
 
-from parse_v1 import BANDS_DRY_TO_WET
+from tools.analytics.parse_v1 import BANDS_DRY_TO_WET
 
 # Higher index = wetter (air-dry=0 .. submerged=6). The one ordering, from the
 # parse boundary (the leaf), so this module never re-defines the band vocabulary.
@@ -106,6 +106,19 @@ def _detect_rewater(ordered: list):
             latest = r.timestamp_utc
         prev_i = i
     return latest
+
+
+def segment_start(readings):
+    """#1133: the current inter-watering segment's start = the most recent DETECTED
+    re-water among ``readings`` (the #875 Q2 seam), or None when none is detected (then
+    the whole window is one segment). Trends/forecasts bind to this so a least-squares
+    fit never bridges a watering event — a line across the dry-down→rewater→dry-down
+    sawtooth averages physically unrelated arcs. A future manual watering-log cuts here
+    too (the fail-safe edge). Returns the raw datetime; the caller windows on it."""
+    ordered = sorted(
+        (r for r in readings if _band_bearing(r)), key=lambda r: r.timestamp_utc
+    )
+    return _detect_rewater(ordered) if ordered else None
 
 
 def _movement_for(ordered: list, device_id: str, sensor_id: str) -> BandMovement:

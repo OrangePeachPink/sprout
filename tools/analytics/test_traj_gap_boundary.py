@@ -7,14 +7,16 @@ bury the live signal. Stats / forecast / band-history keep the FULL windowed dat
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import TRAJ_GAP_BOUNDARY_H, _recent_run_start, build_context
-from parse_v1 import parse_files
+from tools.analytics.dashboard import (
+    TRAJ_GAP_BOUNDARY_H,
+    _recent_run_start,
+    build_context,
+)
+from tools.analytics.parse_v1 import parse_files
 
 _HEADER = (
     "# fw=0.7.0  git=test123  run=gapboundary\n"

@@ -1,9 +1,9 @@
 # Can you trust your sensor? A 3-minute board check
 
-Sprout's whole promise is **honest data** — but a cheap capacitive soil-moisture sensor can lie *before*
+Sprout's whole promise is **a reading you can trust** — but a cheap capacitive soil-moisture sensor can fail *before*
 Sprout ever sees the number. A large share of the inexpensive boards sold online ship with a known functional
-flaw, and many carry silkscreen printing errors too. If your board is one of the bad ones, "honest" readings
-are honestly wrong.
+flaw, and many carry silkscreen printing errors too. If your board is one of the bad ones, readings that
+look fine are simply wrong.
 
 So before you trust a reading, spend three minutes learning to trust — or distrust — the hardware in your hand.
 You need your eyes and a cheap multimeter. That's it.
@@ -68,7 +68,7 @@ Which flaw actually bites depends on how you power the board:
 | 2 — `NE555` timer | **Fatal** — will not run at 3.3 V | Usually fine (≥ 4.5 V) | Run it at ≥ 4.5 V, or replace it |
 | 3 — floating 1 MΩ resistor | **Matters** | **Matters** (supply does not help) | Fix it (below), or replace it |
 
-If a board fails, you have three honest choices:
+If a board fails, you have three real choices:
 
 - **Fix it.** For Flaw 3, solder a 1 MΩ resistor across the `AOUT` and `GND` pins, or run a short wire from the
   resistor's floating side to ground.

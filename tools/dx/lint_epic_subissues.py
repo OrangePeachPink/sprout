@@ -8,15 +8,17 @@ sweeps that trust the prose miss it. Native sub-issues give a real progress bar,
 a trustworthy roll-up, and a relationship the API can query — which is what lets
 the release/verification sweeps rely on structure instead of stale text.
 
-It reports, **warn-only by default**, on each open `epic`-labelled issue:
+It discovers epics STRUCTURALLY (#1446): an epic is an open issue with >=1 native
+sub-issue (ADR-0003 §2) — zero label reads, so the `epic`-label retirement can't
+blind it. It reports, **warn-only by default**, on each:
 
   BODY CHECKBOXES   any `- [ ]` / `- [x]` task-list checkbox in the body — the
                     second-tracker smell (#739): state must live only in native
                     sub-issues, never a body checklist (#810 AC1).
   UNATTACHED REFS   `#N` refs in a bundle/scope section that aren't attached as
                     native sub-issues (best-effort, warn-only — #810 AC2).
-  NOTICE            an issue *titled* like an epic ("Epic: …") that lacks the
-                    `epic` label → the standard won't govern it (label it).
+  NOTICE            an issue *titled* like an epic ("Epic: …") with no native
+                    sub-issues → the standard won't govern it (attach children).
 
 It reads live GitHub issue data (sub-issue relationships aren't in the repo
 tree), so it runs via `gh` (local: your authenticated CLI; CI: GITHUB_TOKEN) —
@@ -49,7 +51,6 @@ import subprocess
 import sys
 
 DEFAULT_REPO = "OrangePeachPink/sprout"
-EPIC_LABEL = "epic"
 CHECKBOX = re.compile(r"^\s*[-*+]\s*\[[ xX]\]")
 REF = re.compile(r"#(\d+)")
 TITLE_LOOKS_EPIC = re.compile(r"^\s*epic\b", re.IGNORECASE)
@@ -66,7 +67,7 @@ IN_ACTIONS = os.environ.get("GITHUB_ACTIONS") == "true"
 
 ISSUE_FIELDS = (
     "number title body labels(first:20){nodes{name}} "
-    "subIssues(first:100){nodes{number}}"
+    "subIssues(first:100){totalCount nodes{number}}"
 )
 
 
@@ -162,6 +163,14 @@ def scope_section_refs(body: str) -> list[int]:
 
 def hashes(refs: list[int]) -> str:
     return " ".join(f"#{r}" for r in refs)
+
+
+def is_epic(issue: dict) -> bool:
+    """An epic is an open issue with >=1 native sub-issue (ADR-0003 §2, ratified by the
+    2026-07-22 `epic`-label retirement, #1446). Discovery is STRUCTURAL — zero label
+    reads — so stripping the label can't blind the lint. An issue with 0 sub-issues is
+    not an epic yet, however titled; if it gains children it is discovered then."""
+    return issue["subIssues"]["totalCount"] > 0
 
 
 def epic_findings(issue: dict) -> list[str]:
@@ -328,10 +337,9 @@ def main(argv: list[str]) -> int:
 
     for it in issues:
         num = it["number"]
-        labels = {n["name"] for n in it["labels"]["nodes"]}
-        is_epic = EPIC_LABEL in labels
+        epic = is_epic(it)  # structural: has native sub-issues (#1446)
 
-        if is_epic:
+        if epic:
             fs = epic_findings(it)
             if fs:
                 findings += 1
@@ -346,14 +354,15 @@ def main(argv: list[str]) -> int:
                 if r != "none":
                     print(f"  #{num}: prior hygiene comment {r}")
 
-        if not is_epic and TITLE_LOOKS_EPIC.match(it["title"] or ""):
+        if not epic and TITLE_LOOKS_EPIC.match(it["title"] or ""):
             emit(
                 "notice",
-                "Epic labelling",
-                f"#{num} is titled like an epic but lacks the `{EPIC_LABEL}` "
-                f"label, so the standard won't govern it (ADR-0003 §2).",
+                "Epic structure",
+                f"#{num} is titled like an epic but has no native sub-issues, so the "
+                f"standard won't govern it (ADR-0003 §2). Attach its children as "
+                f"sub-issues, or it isn't an epic.",
             )
-            summary.append(f"| #{num} | unlabelled-epic |")
+            summary.append(f"| #{num} | titled-epic, no sub-issues |")
 
     if IN_ACTIONS and summary and os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as fh:

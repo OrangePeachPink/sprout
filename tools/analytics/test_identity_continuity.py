@@ -9,13 +9,11 @@ rendering as three cards - two of them "offline" ghosts.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context, filter_channels
-from device_registry import Device, Registry, load_registry
-from parse_v1 import parse_files
+from tools.analytics.dashboard import build_context, filter_channels
+from tools.analytics.device_registry import Device, Registry, load_registry
+from tools.analytics.parse_v1 import parse_files
 
 _HEADER = (
     "# fw=0.8.0  git=test123  run=identity\n"
@@ -220,9 +218,8 @@ def test_fleet_writer_coalesces_file_lineage_row_stays_truthful(
     tmp_path: Path,
 ) -> None:
     _LOGGER = Path(__file__).resolve().parents[1] / "logger"
-    sys.path.insert(0, str(_LOGGER))
-    from fleet_logger import FleetLogger
-    from source_adapter import DeviceAdapter
+    from tools.analytics.source_adapter import DeviceAdapter
+    from tools.logger.fleet_logger import FleetLogger
 
     # the device still reports its OLD identity on the wire (pre-rename cache)
     body = (

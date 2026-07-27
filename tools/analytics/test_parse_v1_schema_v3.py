@@ -6,17 +6,14 @@ friendly label + pre-mint degrade identifier. Pre-bump logs parse unchanged.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import STABLE_ID_SCHEMA_VERSION, parse_file, parse_files
+from tools.analytics.parse_v1 import STABLE_ID_SCHEMA_VERSION, parse_file, parse_files
 
 _LOGGER = Path(__file__).resolve().parents[1] / "logger"
-sys.path.insert(0, str(_LOGGER))
 from datetime import datetime, timezone  # noqa: E402
 
-from plants_logger import RotatingCsv, parse_device_line  # noqa: E402
+from tools.logger.plants_logger import RotatingCsv, parse_device_line  # noqa: E402
 
 _UTC = datetime(2026, 7, 4, 12, 0, 0, tzinfo=timezone.utc)
 _COLS = (

@@ -77,6 +77,79 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .rangesel .rangebtn:first-child { border-left: none; }
 .rangesel .rangebtn:hover { color: var(--ink); }
 .rangesel .rangebtn.active { background: var(--leaf); color: #fff; }
+/* #822: the pass-anchored selector sits beside the clock ranges, visibly its own
+   group; the note beside it carries what the window actually served. */
+.cyclesel { margin-left: 8px; }
+.cyclenote { font-size: 11.5px; color: var(--muted); margin-left: 8px; }
+.cyclenote b { color: var(--ink); font-weight: 600; }
+.cyclenote .declined { color: var(--st-dry, #E8703A); }
+/* #1150: the sticky way home — only rendered once the masthead scrolls off, so the
+   two never appear at once. Deliberately bottom-LEFT: bottom-right is where the
+   Stop-server control lives, and a way-out button should never sit beside a
+   shut-it-down button. */
+.homedock { position: fixed; left: 16px; bottom: 16px; z-index: 50;
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600; text-decoration: none;
+  color: var(--ink); background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-pill); padding: 8px 14px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.28); }
+.homedock:hover { border-color: var(--muted); }
+.homedock:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media print { .homedock { display: none; } }
+/* #963 the owner-cal wizard — an INSTRUMENT flow. Plain, warm, chrome register;
+   never the plant character. No plant is talking while you calibrate. */
+.calmask { position: fixed; inset: 0; background: rgba(12,18,14,.55); z-index: 60;
+  display: flex; align-items: center; justify-content: center; padding: 20px; }
+.calwiz { background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  width: min(560px, 100%); max-height: 90vh; overflow: auto; padding: 20px 22px 18px; }
+.calwiz h3 { font-family: var(--font-display); font-size: 19px; margin: 0 0 4px; }
+.calwiz .sub { color: var(--muted); font-size: 13px; line-height: 1.5; margin: 0 0 14px; }
+.calwiz .step { font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted); font-weight: 700; margin-bottom: 6px; }
+.calreadout { font-family: var(--font-data); font-size: 30px; font-weight: 600;
+  color: var(--ink); }
+.calreadout small { font-size: 12px; color: var(--muted); font-weight: 400; }
+.calsettle { font-size: 12px; margin-top: 6px; }
+.calsettle.settling { color: var(--muted); }
+.calsettle.ready { color: var(--leaf); font-weight: 600; }
+.calbar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden;
+  margin-top: 8px; }
+.calbar i { display: block; height: 100%; background: var(--leaf); width: 0; }
+.calrow { display: flex; gap: 10px; align-items: center; margin-top: 16px; }
+.calrow .spacer { flex: 1 1 auto; }
+.calwiz .btn.primary { background: var(--leaf); color: #fff; border-color: var(--leaf); }
+.calwiz .btn[disabled] { opacity: .45; cursor: not-allowed; }
+.calfail { border: 1px solid var(--st-dry); border-radius: 10px; padding: 12px 14px;
+  background: color-mix(in srgb, var(--st-dry) 8%, var(--surface)); font-size: 13px;
+  line-height: 1.55; }
+.calfail b { color: var(--st-dry); }
+/* the result: stored CELEBRATES (#963 ruled UX). The board line is a separate calm
+   channel in chrome — nothing here needs her action, so nothing earns amber. */
+.calwin { font-family: var(--font-display); font-size: 22px; font-weight: 800;
+  color: var(--leaf); margin: 2px 0 4px; }
+.calboard { font-size: 13px; color: var(--muted); line-height: 1.55; margin-top: 10px;
+  padding-top: 10px; border-top: 1px solid var(--border); }
+.calboard b { color: var(--ink); font-weight: 600; }
+.calanchors { font-family: var(--font-data); font-size: 12.5px; color: var(--muted);
+  margin-top: 6px; }
+/* the standing offer sits quietly at the card's foot — a door, never a nag */
+.calofferwrap { margin-top: 8px; display: flex; }
+.caloffer { margin-left: 0; }
+/* #832 cross-board comparison */
+.cmpbar { margin: 4px 0 10px; }
+.cmprow { display: grid; grid-template-columns: minmax(110px,170px) 1fr auto; align-items: center;
+  gap: 12px; padding: 4px 2px; }
+.cmpname { font-family: var(--font-ui); font-weight: 600; font-size: 13px; }
+.cmpname .brd { color: var(--muted); font-weight: 400; font-size: 11px; }
+.cmplane { display: flex; height: 16px; border-radius: 4px; overflow: hidden;
+  border: 1px solid var(--border); }
+.cmpseg { flex: 1 1 0; min-width: 0; opacity: .26; }
+.cmpseg.on { opacity: 1; }
+.cmpseg.cur { outline: 2px solid var(--ink); outline-offset: -2px; z-index: 1; }
+.cmptrack { position: relative; height: 16px; border-radius: 4px; border: 1px solid var(--border);
+  background: linear-gradient(to right, var(--band-saturated), var(--band-ideal), var(--band-parched)); }
+.cmptrack .pin { position: absolute; top: -3px; bottom: -3px; width: 3px; background: var(--ink); }
+.cmpval { font-family: var(--font-data); font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.cmpabsent { color: var(--st-dry, #E8703A); font-size: 11.5px; }
 .chansel { display: inline-flex; gap: 4px; }
 .chanchip { font-family: var(--font-data); font-size: 11px; font-weight: 600; cursor: pointer; color: #fff;
   border-radius: var(--r-pill); padding: 3px 9px; border: 1px solid transparent; user-select: none; }
@@ -123,6 +196,31 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .recbanner::before { content: ""; width: 8px; height: 8px; border-radius: var(--r-pill);
   background: var(--muted); flex: none; }
 .recbanner .recnote { color: var(--muted); font-family: var(--font-data); }
+/* #966: rig-location setup form (Diagnostics) */
+.locgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.locgrid .capf { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.locgrid .capf input { font-family: var(--font-data); }
+/* #1026: the ghost-identity notice — earned alarm (warning-toned, unmissable), not horror. */
+.mismatchbanner { margin-top: 7px; padding: 8px 12px; border-radius: 8px; font-size: 13px;
+  color: var(--ink); display: block;
+  background: color-mix(in srgb, var(--st-fault) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--st-fault) 45%, transparent); }
+.mismatchbanner strong { color: var(--st-fault); }
+.mismatchbanner code { font-family: var(--font-data); }
+/* #1455: the stale-view marker — the charts say when they're frozen, so an old window
+   is never silently trusted as live. Two registers: a calm "between updates" note
+   (still connected, data just aged), and a warmer "disconnected — frozen" attention when
+   the fetch is failing. Connectivity state, not a soil reading — the warm tone reuses the
+   same disconnect cue the freshness line already uses (--st-dry), for one consistent
+   signal, never the fault alarm. */
+.stalebanner { margin-top: 7px; padding: 8px 12px; border-radius: 8px; font-size: 13px;
+  color: var(--ink); display: block;
+  background: color-mix(in srgb, var(--muted) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--muted) 30%, transparent); }
+.stalebanner.warn {
+  background: color-mix(in srgb, var(--st-dry) 12%, transparent);
+  border-color: color-mix(in srgb, var(--st-dry) 45%, transparent); }
+.stalebanner b { font-family: var(--font-data); font-weight: 600; }
 .caphint { font-family: var(--font-data); font-size: 10px; color: var(--muted); text-transform: none; min-height: 12px; }
 .capstatus.run { color: var(--leaf); font-weight: 600; }
 .capstatus.run::before { box-shadow: 0 0 8px currentColor;
@@ -212,9 +310,88 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .regmap { margin-top: 6px; font-size: 13px; }
 .regmap.unmapped { color: var(--muted); font-style: italic; }
 .regmeta, .regmeta { margin-top: 6px; font-size: 11px; }
+/* #1188: the move-aware location control + the card move marker. Chrome register
+   throughout — a move notice is not a soil reading, and state owns saturation. */
+.regmoved { margin-top: 4px; font-size: 11px; }
+.regmoved span { border-bottom: 1px dotted var(--border); cursor: help; }
+.regloc { margin-top: 8px; }
+.regloc-lbl { font-size: 12px; margin-bottom: 3px; }
+.regloc-note { margin-top: 6px; font-size: 12.5px; line-height: 1.5; max-width: 54ch;
+               padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px;
+               border-left: 3px dashed var(--muted); background: transparent; }
+.regloc-trail { margin-top: 5px; font-size: 11px; }
+/* #1188 part 2: the structured side picker (ADR-0029 placement.ledge) — chrome register */
+.regloc-side { margin-top: 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.regloc-sidelbl { font-size: 12px; margin-right: 4px; }
+.sidebtn { font-size: 12px; padding: 4px 12px; border: 1px solid var(--border); border-radius: 6px;
+           background: none; cursor: pointer; }
+.sidebtn:hover { background: var(--surface); }
+.sidebtn.on { border-color: var(--leaf); box-shadow: inset 0 0 0 1px var(--leaf); font-weight: 600; }
+.regloc-side .regloc-note { flex-basis: 100%; margin-top: 4px; }
 .reglist { display: flex; flex-direction: column; }
 .regrow { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
 .regrow:last-child { border-bottom: 0; }
+/* #1027 §5.3 — the channel strip. An empty channel is CHROME, never state: it is not
+   a soil reading, and state owns saturation (colour-roles charter). Colouring a waiting
+   channel would say the soil is telling us something while no probe is in any soil. */
+.regchans { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 0 10px 0; }
+.regchan { display: flex; flex-direction: column; gap: 2px; min-width: 104px;
+           padding: 6px 9px; border: 1px solid var(--border); border-radius: 6px; }
+.regchan.free { border-style: dashed; background: transparent; }
+.regchan-id { font-family: var(--font-data); font-size: 12px; color: var(--muted); }
+.regchan-on { font-size: 13px; }
+.regchan-wait { font-size: 13px; font-style: italic; }
+/* Sits beside the channels when there is room and drops to its own line when there is
+   not — chosen, not the accident of a 100% basis being shrunk by default flex rules. */
+/* #1027 §5.1/§5.5/§5.2: the adopt-a-board flow — calm/inviting (a guest, never an alarm) */
+.adoptwrap { margin: 4px 0 14px; }
+.adopthdr { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.adoptcard { border: 1px dashed var(--leaf); border-radius: var(--r-tile, 10px);
+             background: color-mix(in srgb, var(--leaf) 6%, transparent); padding: 12px 14px; margin-bottom: 8px; }
+.adopt-id { font-size: 14px; }
+.adopt-id strong { font-family: var(--font-data); }
+.adopt-meta { font-size: 12px; margin: 3px 0 10px; }
+.adopt-q { font-weight: 600; font-size: 13px; margin: 10px 0 5px; }
+.adopt-classes { display: flex; flex-wrap: wrap; gap: 6px; }
+.classbtn { text-align: left; background: none; border: 1px solid var(--border); border-radius: 7px;
+            padding: 7px 11px; cursor: pointer; font-size: 13px; }
+.classbtn:hover { background: var(--surface); }
+.classbtn.on { border-color: var(--leaf); box-shadow: inset 0 0 0 1px var(--leaf); }
+.adopt-pins { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0; }
+.adopt-pin { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--muted);
+             font-family: var(--font-data); }
+.adopt-pin input { width: 64px; }
+/* #1545 (A2): the guided add-a-board flow — the same calm register as the adopt card, so
+   both doors into "connect hardware" read as one product, not two mechanisms. */
+.declarecard { border-style: solid; }
+.declare-count { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+.declare-chrow { display: flex; align-items: baseline; gap: 10px; padding: 5px 0;
+                 border-bottom: 1px solid var(--border); }
+.declare-chrow:last-of-type { border-bottom: 0; }
+.declare-chto { font-size: 13px; }
+/* #1546 (A3): the visual pin map — the board's own pins as targets, so wiring is a tap
+   on a picture rather than a typed GPIO number. Chrome register; the only saturated cue
+   is the assigned channel (a real chosen state), and refusal is never an alarm colour. */
+.pinmap { margin: 6px 0 2px; }
+.pinmap-chans { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.pinchip { border: 1px solid var(--border); border-radius: 999px; padding: 3px 11px; font-size: 12px;
+           font-family: var(--font-data); background: none; cursor: pointer; }
+.pinchip.on { border-color: var(--leaf); box-shadow: inset 0 0 0 1px var(--leaf); font-weight: 600; }
+.pinchip .pinchip-pin { color: var(--muted); }
+.pinboard { display: flex; flex-wrap: wrap; gap: 5px; padding: 9px 10px;
+            border: 1px solid var(--border); border-radius: var(--r-tile, 10px); background: var(--surface); }
+.pinbtn { min-width: 46px; font-family: var(--font-data); font-size: 12px; padding: 5px 7px;
+          border: 1px solid var(--border); border-radius: 6px; background: none; cursor: pointer; }
+.pinbtn:hover { background: var(--surface-2); }
+.pinbtn.taken { border-color: var(--leaf); box-shadow: inset 0 0 0 1px var(--leaf); font-weight: 600; }
+.pinbtn.unsafe { border-style: dashed; color: var(--muted); cursor: not-allowed; }
+.pinbtn.unsafe:hover { background: none; }
+.pinmap-legend { font-size: 11.5px; line-height: 1.5; margin-top: 7px; max-width: 58ch; }
+.pinmap-other { margin-top: 7px; display: flex; align-items: center; gap: 7px; font-size: 12px; }
+.pinmap-other input { width: 72px; }
+.adopt-note { font-size: 11.5px; line-height: 1.5; margin: 6px 0 10px; max-width: 56ch; }
+.regchan-teach { flex: 1 1 26ch; min-width: 26ch; align-self: center;
+                 font-size: 12.5px; line-height: 1.5; max-width: 62ch; }
 .regcode { font-family: var(--font-data); font-size: 12px; font-weight: 600; }
 .regto { margin-left: auto; font-size: 12px; }
 .pausedchip { font-family: var(--font-data); font-size: 11px; font-weight: 600; color: var(--muted);
@@ -235,6 +412,23 @@ header.top .sub { color: var(--muted); margin-top: 4px; }
 .regpickrow:hover { background: var(--surface); }
 .regpickrow[disabled] { opacity: .5; cursor: default; }
 .regpickrow .muted { margin-left: auto; }
+/* #1500/#1501: the reassignment door + Flow A. Deliberate, calm, never a modal on rename. */
+.reassprompt { margin-top: 8px; font-size: 12px; font-style: italic; }
+.reassdoor { display: inline-block; margin-top: 2px; }
+.reflow { margin-top: 8px; border: 1px solid var(--border); border-radius: var(--r-tile);
+          background: var(--surface-2); padding: 10px 12px; }
+.reflow-h { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.reflow-q { font-weight: 600; margin: 6px 0 4px; }
+.reflow-opt { display: block; width: 100%; text-align: left; background: none; border: 1px solid var(--border);
+              border-radius: 6px; padding: 7px 10px; margin: 4px 0; cursor: pointer; font-size: 13px; }
+.reflow-opt:hover { background: var(--surface); }
+.reflow-opt.on { border-color: var(--leaf); box-shadow: inset 3px 0 0 var(--leaf); }
+.reflow-new { border-style: dashed; }
+.reflow-newplant { margin: 6px 0; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 6px; }
+.reflow-note { font-size: 11px; line-height: 1.5; margin: 5px 0; max-width: 56ch; }
+.reflow-earlier { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0; }
+.reflow-confirm { font-size: 13px; line-height: 1.6; padding: 8px 10px; margin: 4px 0 10px;
+                  border-left: 3px dashed var(--muted); }
 .regpickhdr { font: 600 12px var(--font-ui); color: var(--muted); padding: 4px 8px 6px; }
 .regform { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 8px; }
 .regform label { display: flex; flex-direction: column; gap: 3px; font: 11px var(--font-data); color: var(--muted); }
@@ -343,6 +537,13 @@ details.wiring > summary { cursor: pointer; color: var(--muted); font-size: 12px
 .legend { display: flex; gap: var(--space-md); flex-wrap: wrap; margin-top: var(--space-sm); font-size: 12px; }
 .legend .it { display: flex; align-items: center; gap: 6px; }
 .legend .dot { width: 12px; height: 12px; border-radius: 3px; }
+/* #1186 focus-tap: the legend is the chart's focus control */
+.legend .it.focusable { cursor: pointer; border-radius: 6px; padding: 1px 5px; }
+.legend .it.focusable:hover { background: var(--surface-2); }
+.legend .it.focusable:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.legend .it.focused { font-weight: 700; color: var(--ink); }
+.legend .it.focused .dot { background: var(--ink) !important; }
+.legend .it.faded { opacity: .45; }
 .kpi { display: flex; gap: var(--space-xl); flex-wrap: wrap; margin-top: var(--space-sm); }
 .kpi .k .v { font-family: var(--font-data); font-weight: 600; font-size: 20px; }
 .kpi .k .l { color: var(--muted); font-size: 11px; }
@@ -423,27 +624,53 @@ footer.prov code { font-family: var(--font-data); }
 </head>
 <body>
 <div class="wrap">
+  <!-- #1150: the persistent way home. The in-flow "← Home" scrolls away, and the
+       Workbench is a LONG page — she was stranded on it. This pill appears only once
+       the masthead has left the viewport, so it never doubles the link when both would
+       be visible. Chrome register, bottom-left, out of the content's way. -->
+  <a href="/" class="homedock" id="homeDock" hidden>&larr; Home</a>
+
   <header class="top">
     <div>
+      <!-- #875: the Workbench is "Classic Sprout" behind the Home card grid — a
+           quiet way back to the front door, styled to the muted chrome register. -->
+      <a href="/" id="homeLink" style="font-size:12.5px;color:var(--muted);text-decoration:none">&larr; Home</a>
       <h1>🌱 Sprout — soil moisture</h1>
       <div class="orient" id="orient" style="color:var(--ink);font-size:13px;margin-top:5px;max-width:64ch"></div>
       <div class="sub" id="subline"></div>
       <!-- #979: the "am I recording?" answer, where her eye already is. Shown ONLY when
            collection is stopped AND live rows are rendering — calm/info, never a fault. -->
       <div class="recbanner" id="recBanner" hidden></div>
+      <!-- #1026: a board answering at a registered address with an id the registry never
+           heard of — surfaced loudly (earned alarm, "currently true"), never a silent ghost. -->
+      <div class="mismatchbanner" id="mismatchBanner" hidden></div>
+      <!-- #1455: the charts say when they're frozen (disconnected / stale) — never a
+           silently-old window trusted as live. -->
+      <div class="stalebanner" id="staleBanner" hidden></div>
     </div>
     <div class="controls">
       <div class="chansel" id="chansel"></div>
       <div class="rangesel" id="rangesel">
-        <button class="rangebtn" data-r="1h" type="button">1h</button>
-        <button class="rangebtn" data-r="3h" type="button">3h</button>
-        <button class="rangebtn" data-r="12h" type="button">12h</button>
-        <button class="rangebtn" data-r="24h" type="button">24h</button>
-        <button class="rangebtn" data-r="48h" type="button">48h</button>
-        <button class="rangebtn" data-r="7d" type="button">7d</button>
-        <button class="rangebtn" data-r="30d" type="button">30d</button>
-        <button class="rangebtn" data-r="all" type="button">all</button>
+        <button class="rangebtn" data-r="1h" type="button" title="Last 1 hour">1h</button>
+        <button class="rangebtn" data-r="3h" type="button" title="Last 3 hours">3h</button>
+        <button class="rangebtn" data-r="12h" type="button" title="Last 12 hours">12h</button>
+        <button class="rangebtn" data-r="24h" type="button" title="Last 24 hours">24h</button>
+        <button class="rangebtn" data-r="48h" type="button" title="Last 48 hours">48h</button>
+        <button class="rangebtn" data-r="7d" type="button" title="Last 7 days">7d</button>
+        <button class="rangebtn" data-r="14d" type="button" title="Last 14 days — find the last watering (#1191)">14d</button>
+        <button class="rangebtn" data-r="30d" type="button" title="Last 30 days">30d</button>
+        <button class="rangebtn" data-r="all" type="button" title="All recorded history">all</button>
       </div>
+      <!-- #822: the pass-anchored ranges. Separated from the clock ranges above on
+           purpose — these answer "since I last watered", not "the last N hours", and
+           the window moves with the fleet rather than the clock. -->
+      <div class="rangesel cyclesel" id="cyclesel">
+        <button class="rangebtn" data-r="cycle1" type="button"
+          title="Since the last watering round — anchored to the detected pass, with a short lead-in so the pre-water state is visible">since watering</button>
+        <button class="rangebtn" data-r="cycle2" type="button"
+          title="The last two watering rounds — for comparing one dry-down against the previous">2 cycles</button>
+      </div>
+      <span class="cyclenote" id="cyclenote"></span>
       <span class="refreshed" id="refreshed"></span>
       <!-- #724: always-live model — the redundant `auto` toggle is retired (a live
            view auto-refreshes by default). Refresh keeps ONE distinct job: force an
@@ -467,6 +694,8 @@ footer.prov code { font-family: var(--font-data); }
     <button class="tab active" type="button" data-tab="monitor" role="tab" aria-selected="true">Monitor</button>
     <button class="tab" type="button" data-tab="capture" role="tab" aria-selected="false">Capture</button>
     <a class="tab" href="/lab" role="tab">Lab</a>
+    <!-- #1148: the evaluation surfaces, while the three candidates are on trial -->
+    <a class="tab" href="/trial" role="tab" title="the multi-plant history candidates, on trial (#1148)">Trial</a>
     <button class="tab" type="button" data-tab="plants" role="tab" aria-selected="false">Plants &amp; Sensors</button>
     <button class="tab" type="button" data-tab="diagnostics" role="tab" aria-selected="false">Diagnostics &amp; Logs</button>
   </nav>
@@ -540,7 +769,7 @@ footer.prov code { font-family: var(--font-data); }
 
   <div id="overview">
     <section class="card">
-      <div class="panel-h"><h2>Channels <span class="proposed" title="endpoints (saturated + air-dry) are ratified; the interior boundaries are the un-reconciled A2 spec">interior bands proposed</span></h2><span class="cap" id="cardsCap"></span></div>
+      <div class="panel-h"><h2>Channels</h2><span class="cap" id="cardsCap"></span></div>
       <div class="cards" id="cards"></div>
     </section>
 
@@ -553,7 +782,7 @@ footer.prov code { font-family: var(--font-data); }
          has swung across the 7 bands over the window. The human-legible "time
          dimension" of watering status: position now + discrete trail + trend. -->
     <section class="card" id="bandMoveCard">
-      <div class="panel-h"><h2>Band movement</h2><span class="cap">which way each plant is heading across the 7 bands — drier ⟶ wetter · discrete steps, not a slope</span></div>
+      <div class="panel-h"><h2>Band movement</h2><span class="cap">which way each plant is heading across the 7 bands — wetter ⟵ · ⟶ drier · discrete steps, not a slope</span></div>
       <div id="bandMove"></div>
     </section>
 
@@ -574,6 +803,54 @@ footer.prov code { font-family: var(--font-data); }
        here; quality timeline, data integrity, bench provenance, segment listing →
        here; fleet groups + cards + ladder + trajectory stay on Monitor. -->
   <div id="diagnostics" style="display:none">
+    <!-- #995: the per-physical-sensor health/QA readout (grill Q8) — extends the bench
+         SENSOR_QA discipline into the running rig. NOT a plant life-story; a probe QA
+         detail: out-of-envelope, stuck/stale reads, drift, dropouts, inspect-for-corrosion. -->
+    <style>
+      .healthgrid{display:flex;flex-direction:column;gap:10px}
+      .hrow{border:1px solid var(--line,#2a2a2a);border-radius:10px;padding:10px 12px;font-family:var(--font-ui)}
+      .hrow-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+      .hsid{font-weight:600}
+      .hstat{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:999px;border:1px solid currentColor}
+      .hstat.ok{color:var(--leaf,#4caf7d)}
+      .hstat.watch{color:#c9a227}
+      .hstat.inspect{color:#d2603a}
+      /* #1626: `unknown` = no soil readings to assess (a non-soil instrument run
+         through the soil-probe model). Muted, because it is an absence of evidence
+         rather than a mild concern — it must not read as a quieter `watch`. */
+      .hstat.unknown{color:var(--muted)}
+      .hmetrics{color:var(--muted,#8a8a8a);font-size:.82rem;margin-top:4px}
+      .hmetrics b{color:var(--ink,#ddd);font-weight:600}
+      .hreasons{margin:6px 0 0;padding-left:18px;font-size:.82rem;color:var(--ink,#ccc)}
+      .hreasons li{margin:2px 0}
+    </style>
+    <section class="card" id="healthCard">
+      <!-- #1203: the detector's own QA — how it is doing against HER rulings.
+           Diagnostics-side by design: this is a labeled ratio over a handful of
+           events, which is instrument detail, never a Home-face number. -->
+      <div class="panel-h"><h2>Detector precision</h2><span class="cap">confirm/reject rulings you have made on detected waterings — both numerals always shown; a bare percentage over a few events would read like a measurement it is not</span></div>
+      <div id="detPrecision" class="small muted">loading…</div>
+
+      <!-- #832: cross-board comparison, BOTH ruled renderings as coexisting options.
+           A = band lanes (the ruled translation layer — zero derived numbers).
+           B = envelope position, each probe against ITS OWN anchors, labeled as an
+           index. Never a fleet 0-100 (ADR-0035); `dryness` is deliberately NOT used
+           here because it normalizes against one fleet-wide range — the very
+           dishonesty this issue opened on, which cross_board.py fences. -->
+      <div class="panel-h"><h2>Compare across boards</h2><span class="cap" id="cmpCap"></span></div>
+      <div class="cmpbar">
+        <div class="rangesel" id="cmpsel">
+          <button class="rangebtn active" data-c="bands" type="button"
+            title="Every plant on the seven shared mood lanes — bands are the ruled cross-board translation layer">band lanes</button>
+          <button class="rangebtn" data-c="envelope" type="button"
+            title="Each probe's position within its OWN wet-dry envelope — a labeled index, never a shared 0-100">envelope position</button>
+        </div>
+      </div>
+      <div id="cmpView"></div>
+
+      <div class="panel-h"><h2>Sensor health</h2><span class="cap">per physical probe — out-of-envelope reads, stuck/stale runs, baseline drift, dropouts, and honest inspect-for-corrosion prompts (the bench SENSOR_QA discipline, on the running rig · #995)</span></div>
+      <div id="sensorHealth" class="healthgrid"><span class="muted">Loading sensor health…</span></div>
+    </section>
     <!-- #923: the serial baseline (a single USB-tethered board) lives here now, off the
          daily Monitor view — an advanced / occasional path. Monitor's one "Start
          collection" already includes a tethered board when present; this drives ONLY the
@@ -587,6 +864,25 @@ footer.prov code { font-family: var(--font-data); }
         <button class="btn" id="monStop" type="button" disabled>■ Stop</button>
         <span class="capstatus" id="monStatus">—</span>
       </div>
+    </section>
+    <!-- #966: rig-location setup — the last hand-edited JSON a new user would hit. Enables
+         day/night shading, solar position + weather. Privacy fence (ADR-0013 §3): coordinates
+         are written ONLY to the gitignored local config and NEVER echoed back to this screen
+         (the status shows the name, not the numbers). Serve-only (localhost write). -->
+    <section class="card" id="locCard">
+      <div class="panel-h"><h2>Rig location</h2><span class="cap">turns on day/night shading, solar position + weather — coordinates stay on this machine, never committed or shown back</span></div>
+      <div id="locStatus" class="small muted" style="margin-bottom:10px">—</div>
+      <div class="locgrid">
+        <label class="capf">name<input id="locName" type="text" maxlength="40" placeholder="my windowsill" spellcheck="false"></label>
+        <label class="capf">latitude<input id="locLat" type="number" step="any" placeholder="e.g. 51.48"></label>
+        <label class="capf">longitude<input id="locLon" type="number" step="any" placeholder="e.g. 0.00"></label>
+        <label class="capf">tz offset (hrs)<input id="locTz" type="number" step="any" placeholder="e.g. 0"></label>
+      </div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button class="btn primary" id="locSave" type="button">Save location</button>
+        <span class="capstatus" id="locSaveStatus"></span>
+      </div>
+      <div class="small muted" style="margin-top:8px">When set, the trajectory shows real day/night shading (computed solar geometry) and pulls local weather. Coordinates are written only to the gitignored <code>config/location.local.json</code> — never committed, never logged, never shown back here.</div>
     </section>
     <!-- #758: the project's two front doors, reachable from inside the running app. Reference material
          lives in Diagnostics & Logs, off the daily Monitor view (doctrine two-jobs split, #716). -->
@@ -617,7 +913,7 @@ footer.prov code { font-family: var(--font-data); }
     <!-- #716: the calibration REFERENCE lives here (Diagnostics), split off the Monitor "Watering status"
          live view — band definitions + ratification state, the two-jobs split (live -> Monitor, cal -> here). -->
     <section class="card">
-      <div class="panel-h"><h2>Calibration reference</h2><span class="cap">the band definitions readings are scored against · endpoints ratified · interior boundaries pending A2 · per-channel cal pending (#170)</span></div>
+      <div class="panel-h"><h2>Calibration reference</h2><span class="cap">the band definitions readings are scored against · the ratified seven-in-soil ladder (#1218/#1220, per board class) · per-channel cal pending (#170)</span></div>
       <div class="ladder" id="calref"></div>
     </section>
 
@@ -653,7 +949,7 @@ let connOk = true;          // did the last /data.json fetch succeed? (live mode
 let lastOkMs = Date.now();  // when we last had good data, for the disconnect notice
 let activeChannels = null;  // Set of active sensor ids; null = all (E10)
 let __chanClickT = null;    // #993: debounce a single click so a double-click (solo) can pre-empt it
-const RANGE_H = { '1h': 1, '3h': 3, '12h': 12, '24h': 24, '48h': 48, '7d': 168, '30d': 720, all: null };  // #821: 48h between 1d and 7d
+const RANGE_H = { '1h': 1, '3h': 3, '12h': 12, '24h': 24, '48h': 48, '7d': 168, '14d': 336, '30d': 720, all: null };  // #821: 48h; #1191: 14d sawtooth-finder
 const SENSOR_COLORS = ['#17B6C4','#34A853','#8BD24F','#F5A623'];  // band-ramp series, one palette (#203)
 function chanColor(sid){ const d=(sid.match(/\d+/)||['1'])[0]; return SENSOR_COLORS[(parseInt(d)-1) % SENSOR_COLORS.length]; }
 
@@ -712,6 +1008,7 @@ function renderHeader(){
     `fw <span class="mono">${m.fw||'?'}</span>${appBit} · ${fmt(DASH.integrity.total)} readings · ` +
     `${m.total_hours}h since ${m.start_display || m.start_local}${cue}`;
   renderRecordingBanner();  // #979: re-evaluate on each data render (rows may have changed)
+  renderIdentityMismatches();  // #1026: surface any ghost identity this poll detected
   const tc = document.getElementById('trajCount');
   // #718: plant-first, and name the window so it reads as history over a range.
   // #807: count the LIVE plotted channels (trajectory.plant_count), not every
@@ -754,7 +1051,7 @@ function deviceState(d){
 /* ---- summary cards, grouped per device (#583 / #575's eight rules) ---- */
 function renderCards(){
   const wrap = document.getElementById('cards'); wrap.innerHTML = '';
-  document.getElementById('cardsCap').textContent = 'raw + band = truth · click a card for the single-plant view';
+  document.getElementById('cardsCap').textContent = 'the reading is raw + band · click a card for the single-plant view';
   const devices = (DASH.devices && DASH.devices.length) ? DASH.devices
     : [{device_id:null, name:'Sprout', sensors: DASH.sensors.map(s=>s.id)}];
   const multi = devices.length > 1;                    // COLLAPSE: one device = today's flat wall
@@ -866,6 +1163,21 @@ function renderCards(){
   }
 }
 
+/* #963/#1335 §5.4: the standing calibrate offer — visible on any channel without an
+   owner cal, styled as a quiet door rather than a warning. Requiredness is a tunable
+   we can promote later; today it never blocks anything. */
+function calOffer(s){
+  const dev = (DASH.devices||[]).find(d=>d.device_id===s.device_id);
+  const tier = (dev && (dev.cal_tier || (dev.cal_provisional ? 'uncalibrated' : 'channel-cal')))
+    || 'uncalibrated';
+  if(tier === 'channel-cal') return null;          // top state: no offer needed
+  const b = el('button','glug caloffer','calibrate');
+  b.type = 'button';
+  b.title = 'Give this probe its own measured range (about a minute)';
+  b.addEventListener('click', e=>{ e.stopPropagation(); openCalWizard(s.id); });
+  return b;
+}
+
 function cardFor(s){
   const c = el('div','scard'); c.title = `Open the ${plantLabel(s)} single-plant view`;
   c.addEventListener('click', () => showDetail(s.id));
@@ -899,7 +1211,7 @@ function cardFor(s){
     c.classList.add('stalecard');
     c.appendChild(el('div','stalestamp small muted', `last seen ${fmtAge(s.age_s!=null?s.age_s:0)} — not the live reading`));
   }
-  const pill = el('span','pill', `${s.band_ui}${s.mood ? ` <span style="opacity:.8">· ${s.mood}</span>` : ''}`);
+  const pill = el('span','pill', `${s.band_ui}`);  // #1234: the mood word IS the band word
   pill.style.background = s.band_color;
   const pwrap = el('div'); pwrap.appendChild(pill);
   // #658: on an unassigned card, ride the instrument's own band beside the "No
@@ -930,7 +1242,7 @@ function cardFor(s){
   add('range', `${fmt(s.raw_min)}–${fmt(s.raw_max)}`);
   add('median', fmt(s.raw_median));
   add('slope', s.slope_per_hr!=null? `${s.slope_per_hr>=0?'+':''}${s.slope_per_hr}/h` : '—');
-  // #919: fault/sub-rail/OOB rows are kept on the plot (raw = truth) but excluded from
+  // #919: fault/sub-rail/OOB rows are kept on the plot (raw preserved, ADR-0006) but excluded from
   // the trend + forecast fits; surface the count so the exclusion is never silent.
   if(s.fit_excluded>0) add('excluded from fit', `${s.fit_excluded}`);
   if(s.ambient){ // #562: interior-ambient context — value never shown without its source tag
@@ -945,6 +1257,8 @@ function cardFor(s){
     add('pressure', `${s.pressure.hpa} hPa <span class="muted">(${s.pressure.source} · exterior)</span>`);
   }
   c.appendChild(meta);
+  const offer = calOffer(s);           // #963: the standing calibrate door
+  if(offer){ const w = el('div','calofferwrap'); w.appendChild(offer); c.appendChild(w); }
   return c;
 }
 
@@ -998,7 +1312,9 @@ function renderLadder(){
   });
 }
 
-// #627/#717: band-movement view — per plant, a 7-segment lane (drier ⟶ wetter)
+// #627/#717: band-movement view — per plant, a 7-segment lane. #1263: the lane runs
+// WET-LEFT -> DRIER-RIGHT, the one horizontal wet side the fleet uses (the #1136 hero
+// journey sets it); the arrows below point up for drier, matching dry = top.
 // with the TOUCHED-band span lit, a marker at the current band, and a net-trend
 // chip. The human-legible time dimension of watering status: which way is each
 // plant heading + how far has it swung. Discrete + honest — no %, only the bands
@@ -1017,17 +1333,21 @@ function renderBandHistory(){
     row.appendChild(el('div','bmname', e.label));
     const lane = el('div','bmlane'); lane.setAttribute('role','img');
     lane.setAttribute('aria-label', `${e.label}: now ${e.current.band}, ${(e.trend&&e.trend.dir)||'steady'}`);
-    bands.forEach((b,i)=>{
+    // #1263: cal.bands is dry->wet; reverse so the lane reads wet-LEFT -> drier-RIGHT.
+    const laneBands = bands.slice().reverse();
+    laneBands.forEach((b,i)=>{
       const seg = el('div','bmseg'); seg.style.background = b.color;
-      const inSpan = (i>=e.driest_index && i<=e.wettest_index);
+      const bi = bands.length - 1 - i;              // back to the dry->wet index space
+      const inSpan = (bi>=e.driest_index && bi<=e.wettest_index);
       seg.style.opacity = inSpan ? '1' : '.26';     // only the touched bands are lit
-      if(i===e.current_index) seg.classList.add('cur');
-      seg.title = b.ui + (i===e.current_index ? ' · now' : '');
+      if(bi===e.current_index) seg.classList.add('cur');
+      seg.title = b.ui + (bi===e.current_index ? ' · now' : '');
       lane.appendChild(seg);
     });
     row.appendChild(lane);
     const t = e.trend || {};
-    const arrow = t.dir==='drying' ? '↓ drier' : t.dir==='wetting' ? '↑ wetter' : '→ steady';
+    // #1263: drier points UP, because dry is the top of every vertical axis we draw.
+    const arrow = t.dir==='drying' ? '↑ drier' : t.dir==='wetting' ? '↓ wetter' : '→ steady';
     row.appendChild(el('span','bmtrend '+(t.dir||'steady'), arrow));
     const curUi = (bands[e.current_index] && bands[e.current_index].ui) || e.current.band;
     const meta = [curUi];
@@ -1040,6 +1360,27 @@ function renderBandHistory(){
 
 // #716: the calibration REFERENCE — band definitions + ratification state, on Diagnostics & Logs. Same
 // band lanes as the Monitor watering-status view, minus the live chips (definition, not live reading).
+/* #1203: the detector-precision readout. Honest by construction — precision is
+   null until she has ruled on something, and unreviewed detections are reported
+   separately rather than counted against the detector (absence of a verdict is
+   not evidence of a wrong call). */
+function renderDetectorPrecision(){
+  const box = document.getElementById('detPrecision'); if(!box) return;
+  fetch('/watering/precision').then(r=>r.json()).then(p=>{
+    if(!p || !p.detected){
+      box.textContent = 'No detected waterings yet — nothing to rule on.';
+      return;
+    }
+    const pct = p.precision==null ? null : Math.round(p.precision*100);
+    box.innerHTML =
+      `<b>${p.confirmed}</b> confirmed / <b>${p.ruled}</b> ruled` +
+      (pct==null ? ' · <span class="muted">no rulings yet — no precision to report</span>'
+                 : ` · <b>${pct}%</b> precision`) +
+      ` · <span class="muted">${p.rejected} rejected · ${p.proposed} still unreviewed ` +
+      `(of ${p.detected} detected)</span>`;
+  }).catch(()=>{ box.textContent = 'precision unavailable'; });
+}
+
 function renderCalRef(){
   const wrap = document.getElementById('calref'); if(!wrap) return; wrap.innerHTML = '';
   DASH.cal.bands.forEach(b => {
@@ -1126,6 +1467,49 @@ const gapShade = {  // E9: shade the span of a logging interruption (min-width s
     });
   }
 };
+/* #1247 C3 (Design-QA ruled): a masked segment is not a gap — "measured, but not
+   counted." Diagonal hatch (chrome grey, ~12%, 45°, ~6px pitch) marks excluded-from-
+   trend windows; visually distinct from the solid gap-shade and every band tint.
+   Chrome register only: no ramp hue, no fault red — an exclusion is routine. */
+let _hatchPat = null;
+function hatchPattern(ctx){
+  if(_hatchPat) return _hatchPat;
+  const t = document.createElement('canvas'); t.width = 8; t.height = 8;
+  const tc = t.getContext('2d');
+  tc.strokeStyle = hexA('#9A8480', 0.12); tc.lineWidth = 1.4;  /* --muted @ ~12% */
+  tc.beginPath();                                   /* 45° lines, seamless 8px tile */
+  tc.moveTo(-2, 6); tc.lineTo(6, -2);
+  tc.moveTo(2, 10); tc.lineTo(10, 2);
+  tc.stroke();
+  _hatchPat = ctx.createPattern(t, 'repeat');
+  return _hatchPat;
+}
+const maskHatch = {
+  id:'maskHatch',
+  beforeDatasetsDraw(chart, args, opts){
+    const x = chart.scales.x, area = chart.chartArea, c = chart.ctx;
+    if(!x) return;
+    (opts.windows||[]).forEach(w=>{
+      let l = x.getPixelForValue(w.x0), r = x.getPixelForValue(w.x1);
+      if(r < area.left || l > area.right) return;
+      l = Math.max(l, area.left); r = Math.min(r, area.right);
+      c.save(); c.fillStyle = hatchPattern(c);
+      c.fillRect(l, area.top, Math.max(4, r-l), area.bottom-area.top);
+      c.restore();
+    });
+  }
+};
+const MASK_KIND_LABELS = { 'watering-transient':'watering transient', 'rebound':'rebound', 'flagged':'flagged readings' };
+function maskCaption(wins){  /* name the reason CLASS the mask carries, not a code */
+  const kinds = [...new Set((wins||[]).map(w=>MASK_KIND_LABELS[w.kind]||w.kind))];
+  return kinds.length ? `hatched = excluded from trends (${kinds.join(' · ')})` : '';
+}
+function maskSegColor(base, wins){  /* the points inside stay PLOTTED, at faint alpha —
+  the exclusion is visible, the evidence is never erased (Design-QA #1247) */
+  if(!wins || !wins.length) return undefined;
+  return (ctx)=>{ const mx = (ctx.p0.parsed.x + ctx.p1.parsed.x) / 2;
+    return wins.some(w=>mx >= w.x0 && mx <= w.x1) ? hexA(base, 0.3) : undefined; };
+}
 const nightShade = {  // #198: real night windows from computed solar geometry (#365/#366) -
   id:'nightShade',    // never a fabricated light cycle; omitted entirely with no location config.
   beforeDatasetsDraw(chart, args, opts){
@@ -1159,8 +1543,15 @@ function renderTraj(){
     const _s = (DASH.sensors||[]).find(x=>x.id===d.id);
     const _dash = _multiDev ? _dashFor(_s && _s.device_id) : [];
     return { label:(d.label||d.id), data:g.points, parsing:false, borderColor:d.color, backgroundColor:d.color,
-      borderWidth:1.6, borderDash:_dash, pointRadius:0, tension:0.25, spanGaps:false, _local:g.locals };
+      borderWidth:1.6, borderDash:_dash, pointRadius:0, tension:0.25, spanGaps:false, _local:g.locals,
+      // #1247: this series' excluded stretch renders faint — visible, never erased
+      segment:{ borderColor: maskSegColor(d.color, d.mask_windows) },
+      _sid:d.id, _base:d.color };  // #1186: focus-tap join key + restore color
   });
+  // #1247 C3: the overview hatches the UNION of every channel's masked windows (a
+  // fleet watering IS a fleet-wide exclusion zone); the per-series faint stretch
+  // says which channel, the hatch says a trend exclusion happened here.
+  const _maskWins = DASH.trajectory.datasets.flatMap(d=>d.mask_windows||[]);
   charts.traj = new Chart(document.getElementById('trajChart'), {
     type:'line', data:{ datasets },
     options:{
@@ -1178,6 +1569,7 @@ function renderTraj(){
         legend:{ display:false },
         bandShade:{ bands: DASH.cal.bands },
         gapShade:{ gaps: DASH.gaps },
+        maskHatch:{ windows: _maskWins },  // #1247: the visible receipt of exclusion
         // #198: real night windows (computed solar geometry, #365/#366) - [] when no
         // location is configured, so the chart is unaffected (R9 offline-first).
         nightShade:{ bands: (DASH.env && DASH.env.available) ? DASH.env.night_bands : [] },
@@ -1187,12 +1579,51 @@ function renderTraj(){
         }}
       }
     },
-    plugins:[nightShade, bandShade, gapShade]
+    plugins:[nightShade, bandShade, gapShade, maskHatch]
   });
+  // #1247: one quiet chrome-register line naming the reason class — only when the
+  // window actually carries exclusions (calm-empty otherwise, never a stale label).
+  (()=>{ let cap = document.getElementById('trajMaskCap');
+    const txt = maskCaption(_maskWins);
+    if(!cap){ cap = el('div','small muted'); cap.id='trajMaskCap'; cap.style.marginTop='4px';
+      const lgEl = document.getElementById('trajLegend'); lgEl.parentElement.insertBefore(cap, lgEl.nextSibling); }
+    cap.textContent = txt; cap.style.display = txt ? '' : 'none'; })();
   const lg = document.getElementById('trajLegend'); lg.innerHTML = '';
   DASH.sensors.forEach(s=>{
     const it=el('div','it'); const d=el('span','dot'); d.style.background=s.color; it.appendChild(d);
     it.appendChild(el('span',null, plantLabel(s))); lg.appendChild(it);  // #713/#714/#925: plant-first, no GPIO (chart title/time = #718)
+    // #1186 (the charter's chart-series pass, interaction half): legend-tap focuses
+    // ONE series — it saturates to --series-focus (ink), the rest drop to
+    // --series-faint. Tap again to release. Only sensors that are actually
+    // plotted get the affordance (the #807 live-channel filter can drop some).
+    if (charts.traj.data.datasets.some(ds=>ds._sid===s.id)) {
+      it.classList.add('focusable'); it.setAttribute('role','button');
+      it.setAttribute('tabindex','0'); it.title='tap to focus this plant';
+      const go = ()=>applyTrajFocus(trajFocus===s.id ? null : s.id);
+      it.addEventListener('click', go);
+      it.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
+      it.dataset.sid = s.id;
+    }
+  });
+  if (trajFocus) applyTrajFocus(trajFocus);  // keep focus across auto-refresh rebuilds
+}
+
+// #1186: one vivid line at a time — the state channel stays uncontested (charter).
+let trajFocus = null;
+function applyTrajFocus(sid){
+  if (!charts.traj) return;
+  const faint = parseFloat(css('--series-faint')) || 0.28;
+  const ink = css('--series-focus') || css('--ink') || '#1E2A18';
+  trajFocus = sid && charts.traj.data.datasets.some(ds=>ds._sid===sid) ? sid : null;
+  charts.traj.data.datasets.forEach(ds=>{
+    if (!trajFocus) { ds.borderColor=ds._base; ds.backgroundColor=ds._base; ds.borderWidth=1.6; }
+    else if (ds._sid===trajFocus) { ds.borderColor=ink; ds.backgroundColor=ink; ds.borderWidth=2.6; }
+    else { ds.borderColor=hexA(ds._base,faint); ds.backgroundColor=hexA(ds._base,faint); ds.borderWidth=1.2; }
+  });
+  charts.traj.update('none');
+  document.querySelectorAll('#trajLegend .it.focusable').forEach(n=>{
+    n.classList.toggle('focused', !!trajFocus && n.dataset.sid===trajFocus);
+    n.classList.toggle('faded', !!trajFocus && n.dataset.sid!==trajFocus);
   });
 }
 
@@ -1280,7 +1711,9 @@ function renderIntegrity(){
   const rows = [
     ['readings (rows)', fmt(I.total)],
     ['sweeps (sample ticks)', fmt(I.sweeps)],
-    ['partial sweeps (&lt;4 sensors)', fmt(I.partial_sweeps)],
+    // #1597: no fixed "&lt;4" — partiality is judged against each BOARD's own channel
+    // count, and boards differ (a 2-channel board's 2-row sweep is complete).
+    ['partial sweeps (short for their board)', fmt(I.partial_sweeps)],
     ['cadence (median)', I.cadence_actual_s!=null? I.cadence_actual_s+' s' : '—'],
     // #322: device-set cadence + source — "temp" = a session-only experiment override
     // that won't persist to NVS; "nvs" = the deliberate saved default; "default" = compiled.
@@ -1307,7 +1740,7 @@ function renderIntegrity(){
   // #965: fleet-poll endpoints are their own kind of source — a labeled line, never
   // mangled into a file path. Only shown when the capture actually has WiFi sources.
   if(L.fleet_sources && L.fleet_sources.length){
-    locRows.push(['fleet source(s)', `<code>${L.fleet_sources.join('</code>, <code>')}</code>`]);
+    locRows.push(['greenhouse source(s)', `<code>${L.fleet_sources.join('</code>, <code>')}</code>`]);
   }
   locRows.forEach(([l,v])=>{ const tr=el('tr'); tr.appendChild(el('td',null,l)); const td=el('td','small'); td.innerHTML=v; tr.appendChild(td); lt.appendChild(tr); });
   wrap.appendChild(lt);
@@ -1330,9 +1763,17 @@ function renderIntegrity(){
     tr.appendChild(el('td','small muted', p.n!==I.count_max? `${I.count_max-p.n} fewer than the fullest channel` : 'fullest channel'));
     t2.appendChild(tr); });
   wrap.appendChild(t2);
-  if(I.count_gap>0){
+  // #1597 AC3: assert missing samples only when sweeps are ACTUALLY short. The old
+  // guard fired on count_gap alone and then quoted partial_sweeps — which was itself
+  // over-counted — so the panel claimed data loss that had not happened. An uneven row
+  // count across channels is real and worth showing, but it is not by itself evidence
+  // of a dropped sample (a channel added mid-window is uneven and lost nothing).
+  if(I.partial_sweeps>0){
     wrap.appendChild(el('div','note',
-      `⚠ channel row counts differ by <b>${I.count_gap}</b> — ${I.partial_sweeps} sweep(s) are missing a sensor. Real dropped samples, surfaced not smoothed.`));
+      `⚠ <b>${I.partial_sweeps}</b> sweep(s) carried fewer rows than their board's channel count — real dropped samples, surfaced not smoothed.`));
+  } else if(I.count_gap>0){
+    wrap.appendChild(el('div','note small muted',
+      `Channel row counts differ by ${I.count_gap} — every sweep was complete for its board, so this is uneven coverage (a channel joined or left mid-window), not dropped samples.`));
   }
 
   // gap SUMMARY (bounded) — count + longest; the full detail is in the log files.
@@ -1350,7 +1791,7 @@ function envConditionsLine(){
   // #198: measured conditions for the visible window - honest, never fabricated.
   // No location configured -> say exactly why the shading is absent (R9, not a bug).
   const env = DASH.env;
-  if(!env || !env.available) return 'Day/night shading is off — no rig location configured (see config/location.example.json).';
+  if(!env || !env.available) return 'Day/night shading is off — no rig location set. <a href="#diagnostics" style="color:var(--leaf)">Set it in Diagnostics → Rig location</a> to turn on shading, solar + weather (#966).';
   const hourly = env.weather_hourly || [];
   if(!hourly.length) return 'Day/night shading is real (computed solar geometry) — no weather layer cached for this window yet.';
   const covers = hourly.map(h=>h.cloud_cover).filter(v=>v!=null);
@@ -1373,7 +1814,7 @@ function renderProv(){
     `device <code>${m.device_id||'?'}</code> git <code>${m.git||'?'}</code> run <code>${m.run||'?'}</code><br>` +
     `Sources: ${m.sources.map(s=>`<code>${s.replace(/\\/g,'/').split('/').pop()}</code>`).join(', ')}<br>` +
     `The legacy moist% <code>value</code> column is intentionally not plotted (B2/C2); analysis is on raw_value + band. ` +
-    `The endpoints (saturated + air-dry) are ratified from the common-cup anchors; the interior band boundaries are the un-reconciled spec (A2), shown as <b>proposed</b>. ` +
+    `Band boundaries are the ratified seven-in-soil ladder (#995 → #1218/#1220; per board class). ` +
     `${envConditionsLine()}`;
 }
 
@@ -1393,7 +1834,12 @@ function renderProvenance(){  // #324 bench-evidence panel
     : ['running', 'current', 'ok'];
   const deviceRows = [
     ['device id', d.device_id], ['firmware', d.fw], ['fw git', d.fw_git],
-    ['schema', d.schema_version], ['config id', d.config_id], ['logger', d.logger_version], ['tz offset', d.tz_offset],
+    // #1430: this is the HOST CSV file-format version (parse_v1's schema_version=1),
+    // not the DEVICE's wire schema (4 on 0.7.3, 5 on main). Under a "device/firmware"
+    // heading a bare "schema" read as the device's and disagreed by 3-4. Named for
+    // what it is, and distinct from the device's own schema_version when #329/#273/#274
+    // land — the two will need to coexist without one masquerading as the other.
+    ['csv schema', d.schema_version], ['config id', d.config_id], ['logger', d.logger_version], ['tz offset', d.tz_offset],
   ];
   // #496: this view's latest segment is a legacy-converted capture, not a live
   // session — say so plainly rather than let old fw/device_id read as current.
@@ -1419,6 +1865,8 @@ function renderProvenance(){  // #324 bench-evidence panel
 function renderOverview(){
   destroyCharts();
   renderHeader(); renderCards(); renderLadder(); renderBandHistory(); renderCalRef();
+  renderCycleNote(); renderDetectorPrecision(); renderCompare();
+  calTick();   // #963: the wizard's live readout rides the same refresh
   renderTraj(); renderSpread(); renderDist();
   renderQuality(); renderIntegrity(); renderProvenance(); renderProv();
   if(!LIVE) applyStaticChannels();
@@ -1497,12 +1945,12 @@ function renderDetail(sid){
   /* header */
   const head = el('section','card');
   const hr = el('div','panel-h');
-  hr.appendChild(el('h2', null, `${plantLabel(s)} <span class="muted" style="font-weight:400">single-plant view</span> <span class="proposed" title="endpoints ratified; interior boundaries pending A2">interior bands proposed</span>`));
+  hr.appendChild(el('h2', null, `${plantLabel(s)} <span class="muted" style="font-weight:400">single-plant view</span>`));
   head.appendChild(hr);
   const dh = el('div','dhead');
   dh.style.borderLeft = `5px solid ${s.color}`; dh.style.paddingLeft = '14px';
   dh.appendChild(el('div', null, `<div class="raw">${fmt(s.raw_last)}<span class="rawu"> raw</span></div>`));
-  const pill = el('span','pill', `${s.band_ui}${s.mood ? ` · ${s.mood}` : ''}`); pill.style.background = s.band_color;
+  const pill = el('span','pill', `${s.band_ui}`); pill.style.background = s.band_color;  // #1234 one vocabulary
   const meta = el('div'); meta.appendChild(pill);
   meta.appendChild(el('div','small muted', `fw band <span class="mono">${s.band_fw}</span> · in band ${fmtHours(f.band_now_hours)} · n=${fmt(s.n)}`));
   dh.appendChild(meta);
@@ -1522,15 +1970,18 @@ function renderDetail(sid){
   fc.appendChild((()=>{ const h=el('div','panel-h'); h.appendChild(el('h2',null,'Forecasts')); h.appendChild(el('span','cap','extrapolated from the current drying rate — gated until drying is statistically real')); return h; })());
   const grid = el('div','dgrid3');
   grid.appendChild(etaLine(f.next_band, 'enters next drier band', null));
-  grid.appendChild(etaLine(f.thirsty, 'thirsty (needs water)', 'threshold = A2 needs-water edge (un-validated)'));
+  grid.appendChild(etaLine(f.thirsty, 'thirsty (needs water)', 'threshold = the ratified needs-water edge (#1218, per board class)'));
   grid.appendChild(diurnalCard(f.diurnal));
   fc.appendChild(grid); det.appendChild(fc);
 
   /* trajectory + trend */
   const tj = el('section','card');
-  tj.appendChild((()=>{ const h=el('div','panel-h'); h.appendChild(el('h2',null,'Trajectory + trend')); h.appendChild(el('span','cap','this probe only · band shading · dashed = least-squares trend')); return h; })());
+  tj.appendChild((()=>{ const h=el('div','panel-h'); h.appendChild(el('h2',null,'Trajectory + trend'));
+    // #1247: append the reason-class caption only when this probe carries exclusions
+    const _mc = maskCaption((DASH.trajectory.datasets.find(d=>d.id===sid)||{}).mask_windows);
+    h.appendChild(el('span','cap','this probe only · band shading · dashed = least-squares trend' + (_mc ? ' · ' + _mc : ''))); return h; })());
   const box = el('div','chartbox tall'); const cv = el('canvas'); cv.id='detailChart'; box.appendChild(cv); tj.appendChild(box);
-  /* #922: opt-in environment overlay — only when this plant HAS context (honest-empty else);
+  /* #922: opt-in environment overlay — only when this plant HAS context (calm-empty else);
      default off, a quiet toggle; the label states "context, not cause" so it never reads as a
      watering input. Design-QA: env is a faint second layer, moisture the hero. */
   const _tset = (DASH.trajectory.datasets||[]).find(d=>d.id===sid);
@@ -1595,12 +2046,15 @@ function diurnalCard(d){
 
 function ratesCard(rates){
   const card = el('section','card');
-  card.appendChild(el('h3', null, 'Drying rate ("angle") · positive = drying'));
+  /* #1145: windows clip to the active inter-watering segment (#1133 — a fit never
+     bridges a watering); the payload's legacy 'all' key IS the segment window now,
+     so the rendered label tells that truth. */
+  card.appendChild(el('h3', null, 'Drying rate ("angle") · positive = drying · windowed within the current segment'));
   const t = el('table','grid ratetbl');
   t.appendChild((()=>{ const tr=el('tr'); ['window','c/h','±se','r²','n','trend'].forEach((h,i)=>tr.appendChild(el('th', (i>=1&&i<=4)?'num':null, h))); return tr; })());
   ['1h','6h','24h','all'].forEach(w=>{
     const r = rates[w]; const tr = el('tr');
-    tr.appendChild(el('td','mono', w));
+    tr.appendChild(el('td','mono', w==='all' ? 'segment' : w));
     if(!r){ tr.appendChild(el('td','num muted','—')); tr.appendChild(el('td','num muted','—')); tr.appendChild(el('td','num muted','—')); tr.appendChild(el('td','num muted','—')); tr.appendChild(el('td',null,'')); }
     else {
       tr.appendChild(el('td','num', (r.slope>=0?'+':'')+r.slope));
@@ -1612,7 +2066,7 @@ function ratesCard(rates){
     t.appendChild(tr);
   });
   card.appendChild(t);
-  card.appendChild(el('div','small muted', 'a trend is only "drying"/"wetting" when |slope| beats noise (>2·se) and ≥4 c/h; otherwise stable.'));
+  card.appendChild(el('div','small muted', 'a trend is only "drying"/"wetting" when |slope| beats noise (>2·se) and ≥4 c/h; otherwise stable. "segment" = since the last detected watering (the whole window when none is detected) — the cross-event "all" row retired (#1145, grill-ruled).'));
   return card;
 }
 
@@ -1647,7 +2101,9 @@ function buildDetailChart(s){
   const gb = withGapBreaks(dset.points, dset.local);
   const datasets = [{
     label:s.id, data:gb.points, parsing:false, borderColor:s.color, backgroundColor:s.color,
-    borderWidth:1.8, pointRadius:0, tension:0.25, spanGaps:false, _local:gb.locals
+    borderWidth:1.8, pointRadius:0, tension:0.25, spanGaps:false, _local:gb.locals,
+    // #1247: the masked stretch stays plotted, faint — excluded, never erased
+    segment:{ borderColor: maskSegColor(s.color, dset.mask_windows) }
   }];
   if(dset.trend){
     datasets.push({ label:'trend', data:[{x:dset.trend.x0,y:dset.trend.y0},{x:dset.trend.x1,y:dset.trend.y1}],
@@ -1677,6 +2133,7 @@ function buildDetailChart(s){
           ticks:{ color:css('--muted'), font:{size:10} },
           title:{ display:true, text:'air temp °C · RH %  (context)', color:css('--muted'), font:{size:10} } } } : {}) },
       plugins:{ legend:{display:false}, bandShade:{ bands: DASH.cal.bands }, gapShade:{ gaps: DASH.gaps },
+        maskHatch:{ windows: dset.mask_windows || [] },  // #1247: exact, this probe only
         tooltip:{ callbacks:{
           title:(items)=>{ const it=items[0]; if(it.dataset._trend) return 'trend'; if(it.dataset._env) return it.dataset.label; const loc=it.dataset._local[it.dataIndex]; return loc; },
           label:(it)=>it.dataset._trend? `trend ${fmt(Math.round(it.parsed.y))}` : (it.dataset._env? `${fmt(Math.round(it.parsed.y*10)/10)}${it.dataset._env} · context` : `raw ${fmt(it.parsed.y)}`) } } } },
@@ -1703,6 +2160,212 @@ function regSpell(id, word){   // "s03" -> "Sensor 03" (prose form); empty -> em
   const n = String(id || '').replace(/^[a-z]+/i, '');
   return n ? (word + ' ' + n) : (id || '—');
 }
+/* ================= #963 — the owner-cal wizard ==============================
+   Ratified spec: docs/design/specs/963-cal-wizard-surface.md
+
+   Register: an INSTRUMENT flow. Plain, warm, chrome — never the plant character;
+   no plant is talking while you calibrate.
+
+   The ruled UX this implements: `stored` CELEBRATES. The wizard's job is to capture
+   an envelope and make it durable, and stored completes that job — it works with no
+   board present at all. Push and confirmation are enrichment of a finished thing, so
+   the headline never withholds completion pending a board.
+
+   The sanity gate is deliberately BEFORE anything is written, and the host refuses
+   inverted anchors atomically too (apply_operations) — two layers, because a probe
+   dipped in the cup before the air reading produces a well-formed record that makes
+   every downstream band wrong and is detectable nowhere else.
+   ============================================================================ */
+var __cal = null;   // {sid, air, water, step, samples, receipt}
+
+function calSensor(sid){ return (DASH.sensors||[]).find(function(s){return s.id===sid;}) || null; }
+
+function openCalWizard(sid){
+  var s = calSensor(sid); if(!s) return;
+  __cal = { sid: sid, air: null, water: null, step: 'intro', samples: [] };
+  calRender();
+}
+function closeCalWizard(){
+  var m = document.getElementById('calmask'); if(m) m.remove();
+  __cal = null;
+}
+function calShell(inner){
+  var m = document.getElementById('calmask');
+  if(!m){
+    m = el('div','calmask'); m.id = 'calmask';
+    m.addEventListener('click', function(e){ if(e.target===m) closeCalWizard(); });
+    document.body.appendChild(m);
+  }
+  m.innerHTML = '<div class="calwiz" role="dialog" aria-modal="true"></div>';
+  m.firstChild.innerHTML = inner;
+  return m.firstChild;
+}
+
+/* live raw + a VISIBLE settle indicator: N consecutive samples inside a tight band.
+   Counted and shown — never a spinner that only means "wait". */
+var CAL_SETTLE_N = 5, CAL_SETTLE_SPREAD = 25;
+function calSettled(){
+  var v = __cal.samples;
+  if(v.length < CAL_SETTLE_N) return false;
+  var last = v.slice(-CAL_SETTLE_N);
+  return (Math.max.apply(null,last) - Math.min.apply(null,last)) <= CAL_SETTLE_SPREAD;
+}
+function calTick(){
+  if(!__cal || (__cal.step!=='air' && __cal.step!=='water')) return;
+  var s = calSensor(__cal.sid); if(!s || s.raw_last==null) return;
+  __cal.samples.push(s.raw_last);
+  if(__cal.samples.length > 40) __cal.samples.shift();
+  var box = document.getElementById('calLive');
+  if(!box) return;
+  var ok = calSettled(), n = Math.min(__cal.samples.length, CAL_SETTLE_N);
+  box.innerHTML =
+    '<div class="calreadout">' + fmt(s.raw_last) + ' <small>raw</small></div>' +
+    '<div class="calsettle ' + (ok?'ready':'settling') + '">' +
+      (ok ? 'steady — ready to capture'
+          : 'settling… ' + n + ' of ' + CAL_SETTLE_N + ' steady readings') +
+    '</div>' +
+    '<div class="calbar"><i style="width:' + Math.round(n/CAL_SETTLE_N*100) + '%"></i></div>';
+  var b = document.getElementById('calCapture');
+  if(b) b.disabled = !ok;
+}
+
+function calRender(){
+  if(!__cal) return;
+  var s = calSensor(__cal.sid), who = s ? plantLabel(s) : __cal.sid;
+
+  if(__cal.step === 'intro'){
+    calShell(
+      '<div class="step">Calibrate · step 1 of 4</div>' +
+      '<h3>Give ' + esc(who) + '’s probe its own range</h3>' +
+      '<p class="sub">Two readings — one in dry air, one in a cup of water — and this ' +
+      'sensor gets its own honest range on this board. It takes about a minute.</p>' +
+      '<p class="sub">What this gives you: a <b>measured envelope</b> for this probe. ' +
+      'What it does not: bench-grade validation — the dry-down checks can promote it later.</p>' +
+      '<div class="calrow"><span class="spacer"></span>' +
+      '<button class="btn" type="button" onclick="closeCalWizard()">Not now</button>' +
+      '<button class="btn primary" type="button" onclick="calStep(\'air\')">Start</button></div>');
+    return;
+  }
+
+  if(__cal.step === 'air' || __cal.step === 'water'){
+    var air = __cal.step === 'air';
+    calShell(
+      '<div class="step">Calibrate · step ' + (air?2:3) + ' of 4</div>' +
+      '<h3>' + (air ? 'Hold the probe in dry air' : 'Now stand it in a cup of water') + '</h3>' +
+      '<p class="sub">' + (air
+        ? 'Out of the soil, dry, not touching anything. Wait for the reading to settle.'
+        : 'To the waterline mark only — water never touches the electronics. ' +
+          'Wait for it to settle again.') + '</p>' +
+      '<div id="calLive"></div>' +
+      '<div class="calrow"><span class="spacer"></span>' +
+      '<button class="btn" type="button" onclick="closeCalWizard()">Cancel</button>' +
+      '<button class="btn primary" id="calCapture" type="button" disabled ' +
+        'onclick="calCapture()">Capture</button></div>');
+    calTick();
+    return;
+  }
+
+  if(__cal.step === 'refused'){
+    calShell(
+      '<div class="step">Calibrate</div>' +
+      '<h3>These two readings can’t both be right</h3>' +
+      '<div class="calfail"><b>Air read wetter than water.</b> On a capacitive probe the ' +
+      'air reading should be the higher number. <b>Nothing has been saved.</b><br><br>' +
+      'Usually one of: the probe went into the cup before the air reading, the wrong ' +
+      'channel is selected, or the probe is damaged. (A resistive-type sensor also reads ' +
+      'the other way round — those aren’t supported yet.)</div>' +
+      '<div class="calanchors">air ' + fmt(__cal.air) + ' · water ' + fmt(__cal.water) + '</div>' +
+      '<div class="calrow"><span class="spacer"></span>' +
+      '<button class="btn" type="button" onclick="closeCalWizard()">Close</button>' +
+      '<button class="btn primary" type="button" onclick="calStep(\'air\')">Start over</button></div>');
+    return;
+  }
+
+  if(__cal.step === 'saving'){
+    calShell('<div class="step">Calibrate · step 4 of 4</div><h3>Saving…</h3>');
+    return;
+  }
+
+  if(__cal.step === 'error'){
+    calShell(
+      '<div class="step">Calibrate</div><h3>That didn’t save</h3>' +
+      '<div class="calfail">' + esc(__cal.error || 'The host refused the record.') +
+      '<br><br>Nothing was written, so nothing is half-done.</div>' +
+      '<div class="calrow"><span class="spacer"></span>' +
+      '<button class="btn" type="button" onclick="closeCalWizard()">Close</button>' +
+      '<button class="btn primary" type="button" onclick="calSave()">Try again</button></div>');
+    return;
+  }
+
+  /* the result — stored CELEBRATES; the board line is a separate calm channel */
+  calShell(
+    '<div class="step">Calibrate · done</div>' +
+    '<div class="calwin">Saved.</div>' +
+    '<p class="sub">' + esc(who) + '’s probe has its own envelope now.</p>' +
+    '<div class="calanchors">air ' + fmt(__cal.air) + ' · water ' + fmt(__cal.water) + '</div>' +
+    '<div class="calboard">' + calBoardLine(__cal.receipt) + '</div>' +
+    '<div class="calrow"><span class="spacer"></span>' +
+    '<button class="btn primary" type="button" onclick="closeCalWizard()">Done</button></div>');
+}
+
+/* The five renderings (ratified spec). All chrome register: nothing on this screen
+   needs her action, so nothing earns amber or red. No spinner on a state that can
+   never resolve — implying "pending" when it is terminal is the same lie as
+   implying failure when it is merely pending. */
+function calBoardLine(r){
+  if(!r || r.state === 'stored')
+    return 'Living on this computer. Your board keeps using bench calibration until ' +
+           'this reaches it.';
+  if(r.state === 'confirmed')
+    return '<b>Your board is using it.</b>';
+  if(r.expected_cal_src === null || r.expected_cal_src === undefined)
+    return 'Sent. There’s no provenance recorded for this calibration, so there’s ' +
+           'nothing to match against — it won’t report back as confirmed.';
+  return 'Sent to the board — waiting for it to report back. You can close this; the ' +
+         'channel row shows it when it lands.';
+}
+
+function calStep(step){ __cal.step = step; __cal.samples = []; calRender(); }
+
+function calCapture(){
+  var s = calSensor(__cal.sid); if(!s) return;
+  if(__cal.step === 'air'){ __cal.air = s.raw_last; calStep('water'); return; }
+  __cal.water = s.raw_last;
+  /* the sanity gate — BEFORE anything is written */
+  if(!(__cal.air > __cal.water)){ __cal.step = 'refused'; calRender(); return; }
+  calSave();
+}
+
+function calSave(){
+  __cal.step = 'saving'; calRender();
+  var pid = 'cal-' + __cal.sid + '-' + Date.now().toString(36);
+  var body = { profiles: { create: [{
+    profile_id: pid, name: 'probe ' + __cal.sid + ' (owner)', sensor_type: 'capacitive',
+    anchors: { air: __cal.air, water: __cal.water },
+    provenance: { who: 'owner-field', date: new Date().toISOString().slice(0,10) },
+    tier: 'board-cal'
+  }]}};
+  fetch('/registry/apply', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body) })
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if(!res || res.ok === false){
+        __cal.error = (res && res.errors && res.errors[0] && res.errors[0].message)
+          || 'The host refused the record.';
+        __cal.step = 'error'; calRender(); return;
+      }
+      /* stored is the wizard's terminal success. A push receipt, when the server
+         reports one, only enriches the board line. */
+      __cal.receipt = res.receipt || { state: 'stored' };
+      __cal.step = 'done'; calRender();
+      if(LIVE) refresh();
+    })
+    .catch(function(e){
+      __cal.error = String((e && e.message) || e);
+      __cal.step = 'error'; calRender();
+    });
+}
+
 function regDeviceName(d){ return (d && (d.name || d.friendly_name || d.device_id)) || '—'; }  // #1038: `name` is the mutable label
 function regCalChip(profile){   // reuse the #951/#957 three-tier honesty (channel-cal is unlabeled)
   if(!profile) return null;
@@ -1735,11 +2398,12 @@ function regSection(title, cap){
 }
 // ===== #921 slice 3a: add + save — classic review-then-save (Q10) =====
 let __pending = null;
-function regPendNew(){ return {plants:{add:[],edit:[]},sensors:{add:[],edit:[]},devices:{edit:[]},mappings:{assign:[],close:[]},lifecycle:[]}; }
+function regPendNew(){ return {plants:{add:[],edit:[]},sensors:{add:[],edit:[]},devices:{add:[],edit:[]},mappings:{assign:[],close:[]},lifecycle:[]}; }
 function regPend(){ if(!__pending) __pending = regPendNew(); return __pending; }
 function regDirtyCount(){ const b = __pending; if(!b) return 0;
   return b.plants.add.length + b.plants.edit.length + b.sensors.add.length + b.sensors.edit.length
-       + b.devices.edit.length + b.mappings.assign.length + b.mappings.close.length + b.lifecycle.length; }
+       + (b.devices.add ? b.devices.add.length : 0) + b.devices.edit.length
+       + b.mappings.assign.length + b.mappings.close.length + b.lifecycle.length; }
 let __regAdding = null;   // 'plant' | 'sensor' | null — which inline add-form is open
 let __regEditing = null;  // #1038: "kind:id" whose inline rename form is open, or null
 let __regErrs = [];       // structured 400 errors from the last Save attempt
@@ -1826,9 +2490,125 @@ function regView(){
 // #921 slice 3b: the mapping picker (the anxiety) — plant-first, no hand-typed channels.
 let __regPicking = null;    // plant_id whose sensor-picker is open
 let __regPickPort = null;   // a chosen FREE port {device_id, channel} awaiting a sensor
+let __regReassign = null;   // #1501: the in-flight Flow A reassignment state, or null
+let __regReassignAdd = false;  // #1502: the inline new-plant form open inside Flow A step 1
 function regStageAssign(plantId, port){
+  // #1501: if this channel already reads a DIFFERENT plant, taking its probe DISPLACES that
+  // plant — that's a reassignment, and it must go through Flow A's disposition + backdate +
+  // consequence confirm, never a silent remap. Enter Flow A at step 2 (the new plant is known).
+  const cur = ((__registry && __registry.current_mappings) || []).find(
+    mm => mm.device_id === port.device_id && mm.channel === port.channel);
+  if(cur && cur.plant_id && cur.plant_id !== plantId){
+    __regReassign = {displacedId: cur.plant_id, sensorId: port.sensor_id, deviceId: port.device_id,
+                     channel: port.channel, step: 2, newId: plantId, disposition: 'growing', when: 'now', at: ''};
+    __regPicking = null; __regPickPort = null; __regErrs = [];
+    renderRegistry();
+    return;
+  }
   regPend().mappings.assign.push({plant_id: plantId, sensor_id: port.sensor_id, device_id: port.device_id, channel: port.channel});
   __regPicking = null; __regPickPort = null; __regErrs = [];
+  renderRegistry();
+}
+// ===== #1500/#1501/#1502 §2/§3/§4: reassignment is a DELIBERATE act, never a silent remap =====
+// #1500 §2: editing a name is ALWAYS a rename (stages plants.edit, never an assign — already
+// true). Moving a probe to a DIFFERENT plant is a separate, deliberate door → Flow A.
+// #1501 §3: the four-step flow — (1) which plant is on the probe now, (2) the displaced plant's
+// fate (still-growing→sensorless default per ADR-0028, or gone→retire with history KEPT via the
+// paused/retired convention — never the deleting purge), (3) when (backdate → assign(now=…)),
+// (4) the consequence in plain words before anything stages. #1502 §4: a new plant needs only a name.
+function regReassignStart(displacedId, m){   // m = the displaced plant's open mapping
+  __regReassign = {displacedId, sensorId: m.sensor_id, deviceId: m.device_id, channel: m.channel,
+                   step: 1, newId: null, disposition: 'growing', when: 'now', at: ''};
+  __regPicking = null; __regEditing = null; __regReassignAdd = false;
+  renderRegistry();
+}
+function regReassignCancel(){ __regReassign = null; __regReassignAdd = false; renderRegistry(); }
+// #1502 §4: Flow B — a new plant, a name is all it needs (absence-safe, ADR-0028). Reusable:
+// Flow A step 1 calls it, and so does the grid empty state / an unassigned channel.
+function regNewPlantInline(onAdded){
+  const nid = (__registry && __registry.next_ids) ? __registry.next_ids.plant : '';
+  const box = el('div', 'reflow-newplant');
+  box.appendChild(el('div', 'reflow-q', 'A new plant — a name is all it needs.'));
+  const l = el('label'); const i = el('input'); i.placeholder = 'e.g. Gertrude'; l.appendChild(i); box.appendChild(l);
+  box.appendChild(el('div', 'reflow-note muted', 'Type, pot, and location are optional — add them any time. A plant with no probe is fine; it shows as a sensorless card, never an error.'));
+  const add = el('button', 'reglink', 'Add & use');
+  add.onclick = () => {
+    const nm = i.value.trim(); if(!nm) return;
+    regPend().plants.add.push({plant_id: nid, pet_name: nm});   // entities-before-mappings: staged add precedes the assign in the batch
+    if(onAdded) onAdded(nid);
+  };
+  box.appendChild(add);
+  return box;
+}
+function regReassignPanel(V, pById){
+  const R = __regReassign; if(!R) return null;
+  const nameOf = id => regPlantName(pById[id] || {plant_id: id});
+  const oldName = nameOf(R.displacedId);
+  const wrap = el('div', 'reflow');
+  wrap.appendChild(el('div', 'reflow-h', 'Moving <strong>' + esc(regSpell(R.sensorId, 'Sensor')) + '</strong> — the probe on ' + esc(oldName)));
+  if(R.step === 1){
+    wrap.appendChild(el('div', 'reflow-q', 'What is on this probe now?'));
+    V.plants.filter(p => p.plant_id !== R.displacedId && regLifecycle('plant', p.plant_id) !== 'deleted').forEach(p => {
+      const b = el('button', 'regpickrow', esc(regPlantName(p)));
+      b.onclick = () => { R.newId = p.plant_id; R.step = 2; renderRegistry(); };
+      wrap.appendChild(b);
+    });
+    if(__regReassignAdd){
+      wrap.appendChild(regNewPlantInline((pid) => { R.newId = pid; R.step = 2; __regReassignAdd = false; renderRegistry(); }));
+    } else {
+      const nb = el('button', 'regpickrow reflow-new', '＋ a plant I haven’t added yet');
+      nb.onclick = () => { __regReassignAdd = true; renderRegistry(); };   // Flow B, returns here
+      wrap.appendChild(nb);
+    }
+  } else if(R.step === 2){
+    wrap.appendChild(el('div', 'reflow-q', 'What happened to ' + esc(oldName) + '?'));
+    const opt = (val, label, sub) => {
+      const b = el('button', 'reflow-opt' + (R.disposition === val ? ' on' : ''), '<strong>' + label + '</strong> <span class="muted">' + sub + '</span>');
+      b.onclick = () => { R.disposition = val; R.step = 3; renderRegistry(); };
+      return b;
+    };
+    wrap.appendChild(opt('growing', 'Still growing, just not probed', '— it stays, now sensorless (an invitation, not an error)'));
+    wrap.appendChild(opt('gone', 'It’s gone', '— retire it; its history is kept, nothing deleted'));
+    wrap.appendChild(el('div', 'reflow-note muted', 'Default is still growing — a plant is never destroyed by the path of least resistance.'));
+  } else if(R.step === 3){
+    wrap.appendChild(el('div', 'reflow-q', 'When did this happen?'));
+    const nowb = el('button', 'reflow-opt' + (R.when === 'now' ? ' on' : ''), 'Now');
+    nowb.onclick = () => { R.when = 'now'; R.step = 4; renderRegistry(); };
+    wrap.appendChild(nowb);
+    const eb = el('button', 'reflow-opt' + (R.when === 'earlier' ? ' on' : ''), 'Earlier…');
+    eb.onclick = () => { R.when = 'earlier'; renderRegistry(); };
+    wrap.appendChild(eb);
+    if(R.when === 'earlier'){
+      const row = el('div', 'reflow-earlier');
+      const inp = el('input'); inp.type = 'datetime-local'; inp.value = R.at;
+      inp.oninput = () => { R.at = inp.value; };
+      const go = el('button', 'reglink', 'Use this time'); go.onclick = () => { if(R.at){ R.step = 4; renderRegistry(); } };
+      row.appendChild(inp); row.appendChild(go); wrap.appendChild(row);
+      wrap.appendChild(el('div', 'reflow-note muted', 'Backdating matters: a probe swapped Tuesday and recorded Friday would otherwise attribute three days of readings to the wrong plant.'));
+    }
+  } else if(R.step === 4){
+    const whenTxt = R.when === 'now' ? 'now' : fmtLocal(R.at.replace('T', ' '));
+    const conf = el('div', 'reflow-confirm');
+    conf.innerHTML = 'Readings <strong>before ' + esc(whenTxt) + '</strong> stay with <strong>' + esc(oldName) + '</strong>.<br>'
+      + 'Readings <strong>after</strong> bind to <strong>' + esc(nameOf(R.newId)) + '</strong>.<br>'
+      + 'Nothing is deleted; both keep their own past.'
+      + (R.disposition === 'gone' ? '<br><span class="muted">' + esc(oldName) + ' is retired — its history is kept.</span>' : '');
+    wrap.appendChild(conf);
+    const commit = el('button', 'btn primary', 'Confirm the move'); commit.onclick = regReassignCommit;
+    wrap.appendChild(commit);
+  }
+  const cancel = el('button', 'reglink muted', 'Cancel'); cancel.onclick = regReassignCancel;
+  wrap.appendChild(cancel);
+  return wrap;
+}
+function regReassignCommit(){
+  const R = __regReassign; if(!R || !R.newId) return;
+  const a = {plant_id: R.newId, sensor_id: R.sensorId, device_id: R.deviceId, channel: R.channel};
+  if(R.when === 'earlier' && R.at) a.now = new Date(R.at).toISOString();   // backdate → assign(now=…)
+  regPend().mappings.assign.push(a);
+  if(R.disposition === 'gone')   // retire = paused/retired convention, history KEPT (never the purge)
+    regPend().lifecycle.push({kind: 'plant', entity_id: R.displacedId, state: 'paused'});
+  __regReassign = null; __regErrs = [];
   renderRegistry();
 }
 function regSensorPicker(plant, V, dById){
@@ -1877,6 +2657,386 @@ function regSensorPicker(plant, V, dById){
   return wrap;
 }
 
+// ===== #1027 / #1335 §5.3: the empty channel is calm, waiting, and TEACHING =====
+// A declared channel with nothing plugged into it is not a fault and not a gap in the
+// data — it is a board that is ready. ADR-0028 makes absence first-class, so this
+// renders it as a real thing with a real state rather than as a missing row.
+// The declaration (#1424) is what makes it representable at all: without declared
+// channels a board with four ports and no probes has nothing to draw.
+// Teaching copy is placeholder-real pending the ruled `for:dx` content on #1335 §5.3.
+function regChannelStrip(d){
+  const chans = d.channels || [];
+  if(!chans.length) return null;
+  const wrap = el('div', 'regchans');
+  chans.forEach(c => {
+    const free = !c.sensor_id;
+    const cell = el('div', 'regchan' + (free ? ' free' : ''));
+    // ADR-0036: on v4 rows the channel token is still `s1..s4`, which is character-for-
+    // character a sensor sticker. Rendering it bare next to "Sensor 1" would put the
+    // exact `s#` overload the ADR exists to end on screen, in one card. The word
+    // carries the layer until the v5 `chN` rename makes the token self-describing.
+    cell.appendChild(el('span', 'regchan-id', 'channel ' + esc(c.channel)));
+    cell.appendChild(el('span', free ? 'regchan-wait muted' : 'regchan-on',
+      free ? 'waiting for a probe' : esc(regSpell(c.sensor_id, 'Sensor'))));
+    wrap.appendChild(cell);
+  });
+  const free = chans.filter(c => !c.sensor_id).length;
+  if(free) wrap.appendChild(el('div', 'regchan-teach muted',
+    free === chans.length
+      ? 'This board is ready and listening. Push a probe into a pot, plug it into one of these channels, then assign it to a plant above — Sprout starts reading the moment it has something to read.'
+      : 'Room for ' + free + ' more probe' + (free === 1 ? '' : 's') + ' on this board.'));
+  return wrap;
+}
+// ===== #1027 §5.1/§5.5/§5.2: adopt an answering-but-unregistered board — calm, a guest =====
+// The poller sees boards it doesn't know (device_discovery.discover_undeclared, distinct from
+// the #1026 alarm — that alarm set is excluded by identity). Each surfaces as a calm adopt card:
+// §5.1 discovery → §5.5 show-id confirm → §5.2 the physical-config declaration (board class →
+// the recommended pins, keyed on the operator's selection per Trellis's ruling; a serial board
+// has no base_url and that's fine now, #1515). Adoption stages a devices.add; the Save commits it.
+let __regAdopt = null;   // the in-flight adoption {device_id, step, board (class token), pins:[]}
+// ===== #1545 (A2): the guided Add-a-board flow — describe it BEFORE you flash it =====
+// The #1541 wall was that a fresh checkout has no in-app way to connect hardware: the adopt
+// path (#1027) only works for a board already answering, and a brand-new contributor has
+// nothing answering yet. A1 (#1544) opened the other door — `devices.declare` mints a
+// `pending-N` id that is a real key immediately, and re-keys the operator's channels and
+// plant mappings onto the wire id when the board first reports (never closed-and-reopened,
+// so declaring early fabricates no rewiring event). This is that door's surface:
+//
+//   class -> name -> sensors (A3's pin map) -> [save the board] -> plants -> flash handoff
+//
+// Two deliberate commits, each an explicit click: saving the board is what mints its id (the
+// server owns that, ADR-0027 — the human owns the label), and the plant mappings then stage
+// into the normal review-then-Save batch (Q10) like every other registry edit.
+let __regDeclare = null;   // {step, name, board, pins:[], nch, deviceId}
+function regDeclareStart(){
+  __regDeclare = {step: 'class', name: '', board: '', pins: [], nch: 4, deviceId: null};
+  __regAdopt = null; __regErrs = [];
+  renderRegistry();
+}
+function regDeclareCancel(){ __regDeclare = null; __regErrs = []; renderRegistry(); }
+function regDeclareCard(V){
+  const D = __regDeclare; if(!D) return null;
+  const card = el('div', 'adoptcard declarecard');
+  const bpAll = (__registry && __registry.board_pinouts) || {};
+  const CLASSES = [['esp32-classic', 'Classic (ESP32-WROOM)'], ['esp32-c5', 'ESP32-C5'], ['esp32-s3', 'ESP32-S3']];
+  card.appendChild(el('div', 'adopt-id', 'A new board — <strong>describe it now, flash it after</strong>'));
+  card.appendChild(el('div', 'adopt-meta muted',
+    'Sprout records your wiring and plant choices straight away. When the board first reports, it keeps them.'));
+
+  if(D.step === 'class'){
+    card.appendChild(el('div', 'adopt-q', 'Which board is this?'));
+    const picker = el('div', 'adopt-classes');
+    CLASSES.forEach(pair => {
+      const cls = pair[0], bp = bpAll[cls] || {};
+      const b = el('button', 'classbtn' + (D.board === cls ? ' on' : ''),
+        '<strong>' + pair[1] + '</strong>' + (bp.verified
+          ? ' <span class="muted">recommended pins ✓</span>'
+          : ' <span class="muted">pins provisional</span>'));
+      b.type = 'button';
+      b.onclick = () => { D.board = cls; D.pins = (bp.pins || []).slice(); D.step = 'name'; renderRegistry(); };
+      picker.appendChild(b);
+    });
+    card.appendChild(picker);
+    card.appendChild(el('div', 'adopt-note muted',
+      'Not sure? Pick the closest — you can rename and rewire it any time.'));
+  } else if(D.step === 'name'){
+    card.appendChild(el('div', 'adopt-q', 'What will you call it?'));
+    const l = el('label'); const i = el('input');
+    i.placeholder = 'e.g. the kitchen board'; i.value = D.name;
+    i.oninput = () => { D.name = i.value; };
+    l.appendChild(i); card.appendChild(l);
+    card.appendChild(el('div', 'adopt-note muted',
+      'A name is required — until the board reports, it is the only handle you have on it. Its id is Sprout’s to mint, never yours to type.'));
+    const next = el('button', 'btn primary', 'Next — its probes');
+    next.onclick = () => { if((D.name || '').trim()){ D.step = 'sensors'; renderRegistry(); } };
+    card.appendChild(next);
+  } else if(D.step === 'sensors'){
+    const bp = bpAll[D.board] || {};
+    card.appendChild(el('div', 'adopt-q', 'How many probes, and where are they wired?'));
+    const cnt = el('div', 'declare-count');
+    [1, 2, 3, 4].forEach(k => {
+      const b = el('button', 'pinchip' + (D.nch === k ? ' on' : ''), k + (k === 1 ? ' probe' : ' probes'));
+      b.type = 'button';
+      b.onclick = () => { D.nch = k; D.pins = D.pins.slice(0, k); renderRegistry(); };
+      cnt.appendChild(b);
+    });
+    card.appendChild(cnt);
+    card.appendChild(regPinMap(D, D.nch, bp));   // #1546: the same map the adopt path uses
+    const save = el('button', 'btn primary', 'Save this board');
+    save.onclick = () => regDeclareCommit();
+    card.appendChild(save);
+  } else if(D.step === 'plants'){
+    const dev = (V.devices || []).find(d => d.device_id === D.deviceId) || {};
+    card.appendChild(el('div', 'adopt-q', 'Saved. Which plant is on each probe?'));
+    card.appendChild(el('div', 'adopt-note muted',
+      esc(D.name) + ' is registered and waiting for hardware. Assign its probes now and the mapping goes live the moment the board reports — or skip and do it later from any plant card.'));
+    (dev.channels || []).forEach(ch => {
+      const row = el('div', 'declare-chrow');
+      row.appendChild(el('span', 'regcode', 'channel ' + esc(ch.channel)));
+      const staged = (regPend().mappings.assign || []).find(
+        a => a.device_id === D.deviceId && a.channel === ch.channel);
+      if(staged){
+        const p = (V.plants || []).find(x => x.plant_id === staged.plant_id) || {plant_id: staged.plant_id};
+        row.appendChild(el('span', 'declare-chto', '→ <strong>' + esc(regPlantName(p)) + '</strong>'));
+      } else {
+        const pick = el('button', 'reglink', 'choose a plant');
+        pick.onclick = () => { D.picking = (D.picking === ch.channel ? null : ch.channel); renderRegistry(); };
+        row.appendChild(pick);
+      }
+      card.appendChild(row);
+      if(D.picking === ch.channel) card.appendChild(regDeclarePlantPicker(V, ch.channel));
+    });
+    const done = el('button', 'btn primary', 'Done — what’s next?');
+    done.onclick = () => { D.step = 'flash'; D.picking = null; renderRegistry(); };
+    card.appendChild(done);
+  } else if(D.step === 'flash'){
+    card.appendChild(el('div', 'adopt-q', 'Last step: put Sprout on the board'));
+    card.appendChild(el('div', 'adopt-note muted',
+      '<strong>' + esc(D.name) + '</strong> is registered, wired, and waiting. Flash it with the firmware and it will report in on its own — Sprout matches it to this record automatically and everything you just set up goes live.'
+      + (regDirtyCount() ? ' Your plant choices are still unsaved below — Save them when you’re ready.' : '')));
+
+    // #1549 (A6): finish the sentence the flow starts. "Flash it" was a dead end that
+    // sent a newcomer to hunt for docs; the door belongs here.
+    //
+    // BOARD-AWARE, and that is not a nicety: WEB_FLASH_VERIFIED is {"esp32"} — classic
+    // ONLY. The C5 was pulled after a bench failure (native-USB "Failed to initialize")
+    // and the S3 was never in, so factory_bin.py emits no web-flasher manifest for
+    // either (ADR-0026 D6: an unverified board "is never offered from a browser").
+    // Offering the browser flasher for a C5 would walk someone into a known-failing
+    // loop, so those boards get their real, documented path instead of a broken door.
+    if(D.board === 'esp32-classic'){
+      const go = el('a', 'btn primary');
+      go.textContent = 'Flash it in the browser';
+      go.href = 'https://orangepeachpink.github.io/sprout/flash/';
+      go.target = '_blank';
+      go.rel = 'noopener';
+      go.title = 'Opens the web flasher — plug the board in over USB and click Install.';
+      card.appendChild(go);
+      card.appendChild(el('div', 'adopt-note muted',
+        'Opens the web flasher in a new tab. Plug the board in with a USB <em>data</em> cable, click Install, and come back here — nothing else to set up.'));
+    } else {
+      card.appendChild(el('div', 'adopt-note muted',
+        'The browser flasher is verified for the classic ESP32 only, so it is not offered for this board — it would fail partway. Flash it over USB instead: <code>just flash</code> from the repo (see docs/FLASHING.md). Everything you set up here still applies the moment it reports.'));
+    }
+
+    const fin = el('button', 'btn', 'Finish');
+    fin.onclick = () => { __regDeclare = null; renderRegistry(); };
+    card.appendChild(fin);
+    return card;   // no Cancel on the last step — the board is already saved
+  }
+  const cancel = el('button', 'reglink muted', D.step === 'plants' ? 'Do this later' : 'Cancel');
+  cancel.onclick = () => { if(D.step === 'plants'){ D.step = 'flash'; renderRegistry(); } else regDeclareCancel(); };
+  card.appendChild(cancel);
+  return card;
+}
+function regDeclarePlantPicker(V, channel){
+  const D = __regDeclare;
+  const wrap = el('div', 'regpicker');
+  wrap.appendChild(el('div', 'regpickhdr', 'Which plant is on ' + esc(channel) + '?'));
+  (V.plants || []).filter(p => regLifecycle('plant', p.plant_id) !== 'deleted').forEach(p => {
+    const b = el('button', 'regpickrow', esc(regPlantName(p)));
+    b.onclick = () => { regDeclareAssign(p.plant_id, channel); };
+    wrap.appendChild(b);
+  });
+  if(D.newplant){
+    wrap.appendChild(regNewPlantInline((pid) => { D.newplant = false; regDeclareAssign(pid, channel); }));
+  } else {
+    const nb = el('button', 'regpickrow reflow-new', '＋ a plant I haven’t added yet');
+    nb.onclick = () => { D.newplant = true; renderRegistry(); };
+    wrap.appendChild(nb);
+  }
+  return wrap;
+}
+function regDeclareAssign(plantId, channel){
+  const D = __regDeclare;
+  // A sensor id is required by the mapping seam; mint the next one alongside so a declared
+  // board's probe is a real sensor entity, not a nameless port.
+  const nid = (__registry && __registry.next_ids) ? __registry.next_ids.sensor : null;
+  const p = regPend();
+  const used = p.sensors.add.length;   // successive picks each need their own number
+  const sid = nid ? nid.replace(/(\d+)$/, (m) => String(parseInt(m, 10) + used).padStart(m.length, '0')) : null;
+  if(sid) p.sensors.add.push({sensor_id: sid});
+  p.mappings.assign.push({plant_id: plantId, sensor_id: sid, device_id: D.deviceId, channel: channel});
+  D.picking = null; D.newplant = false; __regErrs = [];
+  renderRegistry();
+}
+async function regDeclareCommit(){
+  const D = __regDeclare; if(!D) return;
+  const pins = (D.pins || []).slice(0, D.nch).filter(p => p != null && !isNaN(p));
+  if(!(D.name || '').trim()){ __regErrs = [{message: 'Give the board a name first.'}]; renderRegistry(); return; }
+  if(!pins.length){ __regErrs = [{message: 'Tap the pin each probe is wired to before saving.'}]; renderRegistry(); return; }
+  try{
+    const { ok, status, data } = await apiJson('/registry/apply', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({devices: {declare: [{name: D.name.trim(), board: D.board, channels: pins}]}}),
+    });
+    if(!ok){
+      __regErrs = (data && data.errors) || [{message: 'Could not save the board (HTTP ' + status + ')'}];
+      renderRegistry(); return;
+    }
+    const reg = (data && data.registry) || null;
+    // The id is minted server-side (ADR-0027: the board owns its id, the human owns the
+    // label). A1 hands it back in `applied.declared` for exactly this — the flow maps
+    // plants onto the id it just minted, no name-matching guess.
+    const minted = ((data && data.applied && data.applied.declared) || []);
+    D.deviceId = minted.length ? minted[minted.length - 1] : null;
+    D.step = D.deviceId ? 'plants' : 'flash';
+    __regErrs = [];
+    if(reg) renderRegistry(reg); else registryPoll();
+  }catch(e){ __regErrs = [{message: 'Could not save the board: ' + e}]; renderRegistry(); }
+}
+function regAdoptCards(){
+  const und = (__registry && __registry.undeclared) || [];
+  if(!und.length) return null;
+  const wrap = el('div', 'adoptwrap');
+  wrap.appendChild(el('div', 'adopthdr', (und.length === 1 ? 'A new board is here' : und.length + ' new boards are here')
+    + ' — a guest, waiting to be adopted'));
+  und.forEach(u => wrap.appendChild(regAdoptCard(u)));
+  return wrap;
+}
+function regAdoptCard(u){
+  const active = __regAdopt && __regAdopt.device_id === u.device_id;
+  const card = el('div', 'adoptcard');
+  card.appendChild(el('div', 'adopt-id', 'It’s signing as <strong>' + esc(u.device_id) + '</strong>'));
+  const seen = u.last_seen ? fmtLocal(u.last_seen) : null;
+  const nch = (u.channels_seen || []).length;
+  const bits = [u.board ? esc(u.board) : null,
+    nch ? (nch + ' channel' + (nch === 1 ? '' : 's') + ' reporting') : null,
+    seen ? 'last heard ' + esc(seen) : null].filter(Boolean);
+  if(bits.length) card.appendChild(el('div', 'adopt-meta muted', bits.join(' · ')));
+  if(!active){
+    const b = el('button', 'btn', 'Adopt this board');
+    b.onclick = () => { __regAdopt = {device_id: u.device_id, step: 5, board: '', pins: []}; renderRegistry(); };
+    card.appendChild(b);
+    return card;
+  }
+  const A = __regAdopt;
+  if(A.step === 5){   // §5.5 — the trust step: confirm the minted id one-click
+    card.appendChild(el('div', 'adopt-q', 'This is the id it’s signing with. Is this the board you’re holding?'));
+    const yes = el('button', 'btn primary', 'Yes — adopt ' + esc(u.device_id));
+    yes.onclick = () => { A.step = 2; renderRegistry(); };
+    card.appendChild(yes);
+  } else if(A.step === 2){   // §5.2 — the physical-config declaration
+    card.appendChild(el('div', 'adopt-q', 'Which board is this?'));
+    const bpAll = (__registry && __registry.board_pinouts) || {};
+    const CLASSES = [['esp32-classic', 'Classic (ESP32-WROOM)'], ['esp32-c5', 'ESP32-C5'], ['esp32-s3', 'ESP32-S3']];
+    const picker = el('div', 'adopt-classes');
+    CLASSES.forEach(pair => {
+      const cls = pair[0], bp = bpAll[cls] || {};
+      const btn = el('button', 'classbtn' + (A.board === cls ? ' on' : ''),
+        '<strong>' + pair[1] + '</strong>' + (bp.verified ? ' <span class="muted">recommended pins ✓</span>' : ' <span class="muted">pins provisional</span>'));
+      btn.onclick = () => { A.board = cls; A.pins = (bp.pins || []).slice(); renderRegistry(); };
+      picker.appendChild(btn);
+    });
+    card.appendChild(picker);
+    if(A.board){
+      const bp = bpAll[A.board] || {};
+      const n = nch || A.pins.length || 4;
+      card.appendChild(el('div', 'adopt-q', 'Its ' + n + ' probe' + (n === 1 ? '' : 's') + ' — tap the pin each one is wired to.'));
+      card.appendChild(regPinMap(A, n, bp));
+      const go = el('button', 'btn primary', 'Adopt this board');
+      go.onclick = () => regAdoptCommit(u);
+      card.appendChild(go);
+    }
+  }
+  const cancel = el('button', 'reglink muted', 'Cancel'); cancel.onclick = () => { __regAdopt = null; renderRegistry(); };
+  card.appendChild(cancel);
+  return card;
+}
+// ===== #1546 (A3): the visual pin map — tap a channel, tap the pin it's wired to =====
+// The board's own safe pins are the targets, so wiring is a tap on a picture instead of a
+// typed GPIO number. Three rules, all from board_pinouts' own suggest-vs-ask stance:
+//   · a one-tap RECOMMENDED fill is offered ONLY where `verified` is true (classic today);
+//     on S3/C5 the map ASKS, because presenting a datasheet guess in the same voice as a
+//     measurement is how someone wires a probe to a strapping pin.
+//   · strapping pins are drawn but REFUSED, and say why — hiding them teaches nothing, and
+//     the operator holding the board can see the pin exists.
+//   · where the inventory is not exhaustive (the classic's ruled four), "another pin"
+//     stays open: absence of proof is not proof of absence.
+let __pinChan = 0;   // which channel the next pin tap assigns
+function regPinMap(A, n, bp){
+  const wrap = el('div', 'pinmap');
+  const safe = bp.safe || [], strapping = bp.strapping || [];
+  if(__pinChan >= n) __pinChan = 0;
+  // the channels — tap one to aim, its pin shows beside it
+  const chans = el('div', 'pinmap-chans');
+  for(let i = 0; i < n; i++){
+    const has = A.pins[i] != null;
+    const b = el('button', 'pinchip' + (__pinChan === i ? ' on' : ''),
+      'ch' + i + ' <span class="pinchip-pin">' + (has ? 'GPIO ' + A.pins[i] : '—') + '</span>');
+    b.type = 'button';
+    b.onclick = () => { __pinChan = i; renderRegistry(); };
+    chans.appendChild(b);
+  }
+  wrap.appendChild(chans);
+  // the board — every pin we can name, safe ones tappable, strapping ones refused
+  const board = el('div', 'pinboard');
+  const seen = [];
+  safe.concat(strapping).sort((x, y) => x - y).forEach(pin => {
+    if(seen.indexOf(pin) >= 0) return; seen.push(pin);
+    const unsafe = strapping.indexOf(pin) >= 0;
+    const takenBy = A.pins.indexOf(pin);
+    const b = el('button', 'pinbtn' + (unsafe ? ' unsafe' : '') + (takenBy >= 0 ? ' taken' : ''),
+      'GPIO ' + pin + (takenBy >= 0 ? ' <span class="muted">ch' + takenBy + '</span>' : ''));
+    b.type = 'button';
+    b.title = unsafe
+      ? 'GPIO ' + pin + ' is a strapping (boot) pin on this board — a probe here can stop it booting.'
+      : 'Assign GPIO ' + pin + ' to ch' + __pinChan;
+    if(unsafe){ b.disabled = true; }
+    else b.onclick = () => {
+      if(takenBy >= 0 && takenBy !== __pinChan) A.pins[takenBy] = null;   // a pin serves one channel
+      A.pins[__pinChan] = pin;
+      if(__pinChan < n - 1) __pinChan++;      // walk to the next channel, so a 4-probe board is 4 taps
+      renderRegistry();
+    };
+    board.appendChild(b);
+  });
+  wrap.appendChild(board);
+  // the recommendation — offered ONLY where the map is bench-verified
+  if(bp.verified && (bp.pins || []).length){
+    const rec = el('button', 'reglink', 'Use Sprout’s bench-verified pinout (' + bp.pins.join(', ') + ')');
+    rec.onclick = () => { A.pins = bp.pins.slice(0, n); __pinChan = 0; renderRegistry(); };
+    wrap.appendChild(rec);
+  }
+  const bits = [];
+  if(bp.note) bits.push(esc(bp.note));
+  if(strapping.length) bits.push('Dashed pins are strapping (boot) pins — Sprout won’t put a probe there.');
+  bits.push(bp.verified
+    ? 'This board’s pinout is bench-verified, so Sprout can suggest it.'
+    : 'Sprout has a datasheet map for this board but has <strong>not</strong> bench-verified it — so it asks instead of suggesting. Check your board and tap the pins you actually wired.');
+  wrap.appendChild(el('div', 'pinmap-legend muted', bits.join(' · ')));
+  // where the safe list isn't the whole chip (the classic's ruled four), keep a door open
+  if(bp.exhaustive === false){
+    const other = el('div', 'pinmap-other');
+    other.appendChild(el('span', 'muted', 'Wired somewhere else? GPIO'));
+    const inp = el('input'); inp.type = 'number';
+    const add = el('button', 'reglink', 'Use for ch' + __pinChan);
+    add.onclick = () => {
+      const v = parseInt(inp.value, 10);
+      if(isNaN(v)) return;
+      if(strapping.indexOf(v) >= 0){
+        __regErrs = [{message: 'GPIO ' + v + ' is a strapping (boot) pin on this board — a probe there can stop it booting.'}];
+        renderRegistry(); return;
+      }
+      A.pins[__pinChan] = v; if(__pinChan < n - 1) __pinChan++;
+      renderRegistry();
+    };
+    other.appendChild(inp); other.appendChild(add);
+    wrap.appendChild(other);
+  }
+  return wrap;
+}
+function regAdoptCommit(u){
+  const A = __regAdopt; if(!A || !A.board) return;
+  const pins = A.pins.filter(p => p != null && !isNaN(p));
+  if(!pins.length){ __regErrs = [{message: 'Give at least one channel a GPIO pin before adopting.'}]; renderRegistry(); return; }
+  const p = regPend(); p.devices.add = p.devices.add || [];
+  // `board` carries the operator-SELECTED class token (esp32-classic/-c5/-s3) — the pinout keys
+  // off it; no base_url for a serial-discovered board (optional since #1515).
+  p.devices.add.push({device_id: A.device_id, board: A.board, channels: pins});
+  __regAdopt = null; __regErrs = [];
+  renderRegistry();
+}
 function renderRegistry(reg){
   if(reg) __registry = reg;
   const host = document.getElementById('plants'); if(!host) return;
@@ -1911,13 +3071,32 @@ function renderRegistry(reg){
     } else {
       card.appendChild(el('div', 'regmap unmapped', 'no sensor yet'));
     }
-    const meta = [p.location, p.pot_description].filter(Boolean).map(esc).join(' · ');
+    const meta = [p.location, p.pot_size, p.pot_description].filter(Boolean).map(esc).join(' · ');
     if(meta) card.appendChild(el('div', 'regmeta muted', meta));
+    // #1188: a plant that has moved shows its latest move — the record made visible,
+    // so history isn't lost AND isn't hidden behind opening the editor.
+    const moves = regLocEvents(p.plant_id).filter(e => e.end_ts);
+    if(moves.length){
+      const last = moves[moves.length - 1];
+      card.appendChild(el('div', 'regmoved muted',
+        'moved to ' + esc(p.location || 'here') + ' on ' + esc(fmtDay(last.end_ts))
+        + ' · <span title="Readings before and after a move are different environmental contexts (ADR-0023).">context boundary</span>'));
+    }
     // #921 3b: the map affordance (the anxiety) — a plant-first picker, never dropdown soup.
     const act = el('button', 'reglink', m ? 'Change sensor' : 'Assign a sensor');
     act.onclick = () => { __regPicking = (__regPicking === p.plant_id ? null : p.plant_id); __regPickPort = null; renderRegistry(); };
     card.appendChild(act);
     if(__regPicking === p.plant_id) card.appendChild(regSensorPicker(p, V, dById));
+    // #1500/#1501 §2/§3: the reassignment door — beside the name, the ONLY entry to Flow A.
+    // A mapped plant whose probe moved to a DIFFERENT plant goes through the deliberate flow,
+    // never the silent remap. (Renaming stays a plain rename via the pencil below.)
+    if(m && !p._staged){
+      const door = el('button', 'reglink reassdoor', 'Move this probe to another plant');
+      door.onclick = () => regReassignStart(p.plant_id, m);
+      card.appendChild(el('div', 'reassprompt muted', '…a different plant on this probe now?'));
+      card.appendChild(door);
+      if(__regReassign && __regReassign.displacedId === p.plant_id) card.appendChild(regReassignPanel(V, pById));
+    }
     // #1038: the rename affordance (pet name / type / pot) — pencil, or the inline form when open.
     if(!p._staged) card.appendChild(__regEditing === 'plant:' + p.plant_id ? regEditForm('plant', p) : regEditPencil('plant', p.plant_id));
     // #921 3c: lifecycle rides the same card — mapping action first, destructive controls last.
@@ -1955,7 +3134,12 @@ function renderRegistry(reg){
   host.appendChild(ssec);
 
   // ---- Boards: the MCUs (taxonomy board=MCU, #921) ----
-  const bsec = regSection('Boards', 'the ESP32s — plug one in and it appears here');
+  // #1545: the caption used to promise "plug one in and it appears here" — true only for a
+  // board already flashed and answering, which a fresh checkout has none of (#1541's wall).
+  // Both doors are real now, so the caption names both.
+  const bsec = regSection('Boards', 'the ESP32s — add one here, or plug in a flashed board and it appears');
+  const adopt = regAdoptCards(); if(adopt) bsec.appendChild(adopt);   // #1027 §5.1: answering-but-unregistered boards
+  if(__regDeclare) bsec.appendChild(regDeclareCard(V));               // #1545 A2: the guided add-a-board flow
   const blist = el('div', 'reglist');
   V.devices.forEach(d => {
     const lc = regLifecycle('device', d.device_id);
@@ -1967,10 +3151,20 @@ function renderRegistry(reg){
     row.appendChild(regEditPencil('device', d.device_id));   // #1038: rename the board (#600 UI half)
     row.appendChild(regLifeCtl('device', d.device_id, regDeviceName(d)));
     blist.appendChild(row);
+    const strip = regChannelStrip(d); if(strip) blist.appendChild(strip);   // #1027 §5.3
     if(__regEditing === 'device:' + d.device_id) blist.appendChild(regEditForm('device', d));
   });
-  if(!V.devices.length) blist.appendChild(el('div', 'muted', 'No boards yet — flash one with the web flasher and it shows up here.'));
-  bsec.appendChild(blist); host.appendChild(bsec);
+  // #1545/#1541: the empty state used to point only at the flasher, which left a fresh
+  // checkout with nothing to do in-app. Name the actual state and give it the door.
+  if(!V.devices.length) blist.appendChild(el('div', 'muted',
+    'No boards yet — nothing is registered, so there is nothing to read. Add one below (you can describe it before you flash it), or flash a board and it will appear here on its own.'));
+  bsec.appendChild(blist);
+  if(!__regDeclare){   // #1545 A2: the in-app door — no hardware required to start
+    const addb = el('button', 'reglink', '+ Add a board');
+    addb.onclick = regDeclareStart;
+    bsec.appendChild(addb);
+  }
+  host.appendChild(bsec);
 
   // ---- structured errors (from a failed Save) + the dirty bar (Q10) ----
   __regErrs.forEach(e => host.appendChild(el('div', 'regerr', esc((e.op ? e.op + ' — ' : '') + e.message))));
@@ -1998,11 +3192,13 @@ function regAddControl(kind){
     i.value = val || ''; i.dataset.k = key; l.appendChild(i); return l;
   };
   if(kind === 'plant'){
-    form.appendChild(mk('number (e.g. ' + nid + ')', 'plant_id', nid));
+    // #1502 §4: a name is enough — lead with it; everything else is absence-safe (ADR-0028).
+    form.appendChild(mk('name (e.g. Gertrude)', 'pet_name', ''));
     form.appendChild(mk('type (optional)', 'plant_type', ''));
-    form.appendChild(mk('pet name (optional)', 'pet_name', ''));
     form.appendChild(mk('pot (optional)', 'pot_description', ''));
+    form.appendChild(mk('pot size (optional)', 'pot_size', ''));
     form.appendChild(mk('location (optional)', 'location', ''));
+    form.appendChild(mk('number (auto: ' + nid + ')', 'plant_id', nid));
   } else {
     form.appendChild(mk('number — required (e.g. ' + nid + ')', 'sensor_id', nid));
     form.appendChild(mk('friendly name (optional)', 'friendly_name', ''));
@@ -2027,9 +3223,89 @@ function regStageAdd(kind, form){
 // #1038: inline field-edit — pencil → prefilled form → stage into *:{edit} → Save (the 3a convention,
 // same batch, same structured 400s). IDs are immutable (edit-not-identity, #1021) — never in the form.
 function regEditPencil(kind, id){
-  const b = el('button', 'reglink', '✎ Rename');
+  // #833: a plant edits its whole detail set (type/pot/pot size/location), not just a name.
+  const b = el('button', 'reglink', kind === 'plant' ? '✎ Edit' : '✎ Rename');
   b.onclick = () => { __regEditing = kind + ':' + id; __regAdding = null; __regPicking = null; renderRegistry(); };
   return b;
+}
+// ===== #1188: a location edit is a MOVE, not a text fix — surface the consequence =====
+// The backend already routes a location edit through move_plant() (#1308): the old spot
+// closes, a new one opens, and a context boundary is written that the trend/forecast
+// consumers re-evaluate across (ADR-0023). The gap this closes is that the UI gave zero
+// signal — she thought she was correcting a string. The ruled behaviour (#921 "c"): the
+// editor asks with the why stated, history is never lost. Consumes __registry
+// .location_history (Data's #1308 payload) — never authors a second move record.
+function regLocEvents(plantId){ return ((__registry && __registry.location_history) || {})[plantId] || []; }
+// #1188: move dates are day-level events — showing seconds implies a precision the
+// operator never means ("which spot", not "which second"). The exact instant still
+// lives in the backend for backdated attribution (§3); this is display only.
+function fmtDay(iso){ if(!iso) return ''; const d=new Date(iso);
+  return isNaN(d) ? iso : d.toLocaleDateString([], {month:'short', day:'numeric'}); }
+function regLocSince(plantId){
+  const evs = regLocEvents(plantId);
+  const open = evs.filter(e => !e.end_ts).slice(-1)[0] || evs.slice(-1)[0];
+  if(!open) return null;
+  return open.start_ts ? fmtDay(open.start_ts) : null;   // null start = grandfathered ("the start")
+}
+// A move-aware location control: current spot + since-when, an input, and a live
+// consequence note that appears only once the value actually changes.
+function regLocationControl(entity){
+  const wrap = el('div', 'regloc');
+  const cur = entity.location || '';
+  const since = regLocSince(entity.plant_id);
+  wrap.appendChild(el('div', 'regloc-lbl muted',
+    cur ? ('Location — here' + (since ? ' since ' + esc(since) : '') ) : 'Location'));
+  const l = el('label'); const i = el('input');
+  i.value = cur; i.dataset.k = 'location'; l.appendChild(i); wrap.appendChild(l);
+  // the consequence line — chrome register, never a state colour (colour-roles charter)
+  const note = el('div', 'regloc-note', '');
+  note.style.display = 'none'; wrap.appendChild(note);
+  i.oninput = () => {
+    const to = i.value.trim();
+    if(!to || to === cur){ note.style.display = 'none'; return; }
+    note.style.display = '';
+    note.innerHTML = (cur
+      ? 'This records a <strong>move</strong>: ' + esc(cur) + ' &rarr; ' + esc(to) + '. '
+      : 'This sets the first tracked spot. ')
+      + 'A move adjusts the environmental tracked data — Sprout follows each spot’s light, warmth and humidity on their own, so readings before and after the move aren’t the same situation. Nothing is deleted'
+      + (cur ? '; ' + esc(cur) + ' keeps its history.' : '.');
+  };
+  // the trail of prior spots, if this plant has moved before
+  const evs = regLocEvents(entity.plant_id);
+  const past = evs.filter(e => e.end_ts);
+  if(past.length){
+    wrap.appendChild(el('div', 'regloc-trail muted',
+      'Been here before: ' + past.map(e =>
+        esc(e.location) + ' until ' + esc(fmtDay(e.end_ts))).join(' · ')));
+  }
+  // #1188 part 2 (ADR-0029 placement.ledge): the STRUCTURED side — left/right — replacing the
+  // side semantics people used to bury in the free-text location ("… (right)"). It rides the
+  // move: when the location changes, move_plant validates it against the ledge vocabulary and
+  // writes `side` onto the boundary event. A hidden input carries only a valid value, never ''.
+  const curSide = regLocSide(entity.plant_id);
+  const sideBox = el('div', 'regloc-side');
+  sideBox.appendChild(el('span', 'regloc-sidelbl muted', 'Side of the windowsill'));
+  const sideInput = el('input'); sideInput.type = 'hidden'; sideInput.value = curSide || '';
+  if(curSide) sideInput.dataset.k = 'side';   // only ever stage left/right — never an empty string
+  ['left', 'right'].forEach(val => {
+    const b = el('button', 'sidebtn' + (curSide === val ? ' on' : ''), val.charAt(0).toUpperCase() + val.slice(1));
+    b.type = 'button';
+    b.onclick = () => {
+      sideInput.value = val; sideInput.dataset.k = 'side';
+      [...sideBox.querySelectorAll('.sidebtn')].forEach(x => x.classList.toggle('on', x.textContent.toLowerCase() === val));
+    };
+    sideBox.appendChild(b);
+  });
+  sideBox.appendChild(sideInput);
+  sideBox.appendChild(el('div', 'regloc-note muted',
+    'Which side of the windowsill this pot sits on — a structured field now, not text tucked into the location. It’s recorded with the next move.'));
+  wrap.appendChild(sideBox);
+  return wrap;
+}
+function regLocSide(plantId){   // #1188 part 2: the current structured side (left/right), or ''
+  const evs = regLocEvents(plantId);
+  const open = evs.filter(e => !e.end_ts).slice(-1)[0] || evs.slice(-1)[0];
+  return (open && open.side) || '';
 }
 function regEditForm(kind, entity){
   const idKey = {plant: 'plant_id', sensor: 'sensor_id', device: 'device_id'}[kind];
@@ -2043,6 +3319,8 @@ function regEditForm(kind, entity){
     form.appendChild(mk('pet name', 'pet_name', entity.pet_name));
     form.appendChild(mk('type', 'plant_type', entity.plant_type));
     form.appendChild(mk('pot', 'pot_description', entity.pot_description));
+    form.appendChild(mk('pot size', 'pot_size', entity.pot_size));   // #833: was JSON-only
+    form.appendChild(regLocationControl(entity));                    // #1188: move-aware, not a flat field
   } else if(kind === 'sensor'){
     form.appendChild(mk('label', 'friendly_name', entity.friendly_name));
   } else {   // board — friendly_name is the client key; the server stores it as `name` (#583)
@@ -2051,7 +3329,7 @@ function regEditForm(kind, entity){
   const wrap = el('div', 'regeditwrap');
   wrap.appendChild(form);
   const act = el('div', 'regformact');
-  const save = el('button', 'reglink', 'Save name'); save.onclick = () => regStageEdit(kind, id, form);
+  const save = el('button', 'reglink', kind === 'plant' ? 'Save' : 'Save name'); save.onclick = () => regStageEdit(kind, id, form);
   const cancel = el('button', 'reglink muted', 'Cancel'); cancel.onclick = () => { __regEditing = null; renderRegistry(); };
   act.appendChild(save); act.appendChild(cancel);
   wrap.appendChild(act);
@@ -2061,7 +3339,7 @@ function regStageEdit(kind, id, form){
   const sec = {plant: 'plants', sensor: 'sensors', device: 'devices'}[kind];
   const idKey = {plant: 'plant_id', sensor: 'sensor_id', device: 'device_id'}[kind];
   const rec = {[idKey]: id};
-  form.querySelectorAll('input').forEach(i => { rec[i.dataset.k] = i.value.trim(); });   // '' clears a field
+  form.querySelectorAll('input').forEach(i => { if(i.dataset.k) rec[i.dataset.k] = i.value.trim(); });   // '' clears a keyed field; keyless inputs (the #1188 side hidden when unset) are skipped
   const p = regPend();
   p[sec].edit = p[sec].edit.filter(e => e[idKey] !== id);   // one staged edit per entity
   p[sec].edit.push(rec);
@@ -2111,8 +3389,141 @@ async function registryPoll(){
   try{ renderRegistry((await apiJson('/registry', {cache:'no-store'})).data); }
   catch(e){ /* old server without the route, or transient — leave last state */ }
 }
+// #995: the per-physical-sensor health/QA readout. Lazy-loaded when Diagnostics opens
+// (it reads the full history for drift + dropouts, so it's not on the hot boot path).
+function _hesc(s){ return String(s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function _healthMetrics(h){
+  const bits = [`<b>${h.readings}</b> reads`];
+  if(h.span_hours != null) bits.push(`${h.span_hours}h span`);
+  bits.push(h.out_of_envelope_rate == null
+    ? 'envelope: <b>uncalibrated</b>'
+    : `<b>${(h.out_of_envelope_rate*100).toFixed(1)}%</b> out-of-envelope`);
+  if(h.longest_stuck_run >= 2) bits.push(`stuck run <b>${h.longest_stuck_run}</b>`);
+  if(h.drift_raw != null) bits.push(`drift <b>${h.drift_raw>0?'+':''}${h.drift_raw}</b> raw`);
+  if(h.dropouts) bits.push(`<b>${h.dropouts}</b> dropout${h.dropouts===1?'':'s'}`);
+  if(h.faults) bits.push(`<b>${h.faults}</b> fault${h.faults===1?'':'s'}`);
+  return bits.join(' · ');
+}
+/* ---- #832: cross-board comparison — BOTH ruled renderings ------------------
+   Maintainer ruling: build both as coexisting options; neither is the sole truth.
+   Trellis owns the normalization semantics, confirmed ADR-0035-conformant:
+     A  band lanes      — bands ARE the ruled cross-board translation layer, so this
+                          view derives nothing at all.
+     B  envelope pos    — each probe 0..1 against ITS OWN anchors (ctx.anchors: the
+                          profiled per-channel anchor, else the per-board-class rails),
+                          axis labeled as a position, never as water content.
+   What this view deliberately does NOT use: `dryness`. It is computed against a single
+   fleet-wide moist_range, which is precisely the cross-board dishonesty this issue
+   opened on and which cross_board.py fences. A probe with no resolvable anchors is
+   named as such and drawn nowhere — honest absence beats a fabricated position. */
+var __cmpMode = 'bands';
+
+function cmpSensors(){
+  const retired = new Set((DASH.devices||[]).filter(d=>d.retired).map(d=>d.device_id));
+  return (DASH.sensors||[]).filter(s=>!retired.has(s.device_id));
+}
+function boardLabel(s){
+  const d = (DASH.devices||[]).find(x=>x.device_id===s.device_id);
+  return (d && (d.name || d.device_id)) || s.device_id || '';
+}
+
+function renderCompare(){
+  const box = document.getElementById('cmpView'); if(!box) return;
+  const cap = document.getElementById('cmpCap');
+  const rows = cmpSensors();
+  box.innerHTML = '';
+  if(!rows.length){ box.innerHTML = '<span class="muted">No live probes to compare.</span>'; return; }
+
+  if(__cmpMode === 'bands'){
+    if(cap) cap.textContent = 'every plant on the seven shared mood lanes — bands are the ruled '
+      + 'cross-board translation layer, so nothing here is derived or normalized';
+    const bands = (DASH.cal.bands||[]).slice().reverse();   // #1263: wet-LEFT -> drier-RIGHT
+    rows.forEach(s=>{
+      const row = el('div','cmprow');
+      row.appendChild(el('div','cmpname',
+        `${plantLabel(s)} <span class="brd">${boardLabel(s)}</span>`));
+      const lane = el('div','cmplane');
+      lane.setAttribute('role','img');
+      lane.setAttribute('aria-label', `${plantLabel(s)}: ${s.band_ui}`);
+      bands.forEach(b=>{
+        const seg = el('div','cmpseg'); seg.style.background = b.color;
+        if(b.fw === s.band_fw){ seg.classList.add('on'); seg.classList.add('cur'); }
+        seg.title = b.ui + (b.fw===s.band_fw ? ' · now' : '');
+        lane.appendChild(seg);
+      });
+      row.appendChild(lane);
+      row.appendChild(el('span','cmpval', s.band_ui));
+      box.appendChild(row);
+    });
+    return;
+  }
+
+  /* B — envelope position, per probe, against its own anchors */
+  if(cap) cap.textContent = 'position in each probe’s own wet↔dry envelope — '
+    + 'a labeled index, not water content, and never a shared 0–100';
+  const anchors = DASH.anchors || {};
+  let absent = 0;
+  rows.forEach(s=>{
+    const a = anchors[s.id];
+    const row = el('div','cmprow');
+    row.appendChild(el('div','cmpname',
+      `${plantLabel(s)} <span class="brd">${boardLabel(s)}</span>`));
+    if(!a || a.air==null || a.water==null || a.air===a.water){
+      /* honest absence: no own-envelope anchors -> no position is claimed for it */
+      absent++;
+      row.appendChild(el('div','cmpabsent','no anchors for this probe — position not shown'));
+      row.appendChild(el('span','cmpval','—'));
+      box.appendChild(row);
+      return;
+    }
+    const f = Math.max(0, Math.min(1, (s.raw_last - a.water) / (a.air - a.water)));
+    const track = el('div','cmptrack');
+    const pin = el('div','pin'); pin.style.left = (f*100).toFixed(1)+'%';
+    track.appendChild(pin);
+    track.setAttribute('role','img');
+    track.setAttribute('aria-label', `${plantLabel(s)}: ${Math.round(f*100)} percent toward its own dry anchor`);
+    row.appendChild(track);
+    row.appendChild(el('span','cmpval', Math.round(f*100)+' / 100'));
+    box.appendChild(row);
+  });
+  const note = el('div','small muted');
+  note.style.marginTop = '8px';
+  note.innerHTML = 'Each probe is measured against <b>its own</b> air/water anchors '
+    + '(profiled per-channel where present, else its board-class rails) — so two probes at '
+    + '“60” are each 60% of the way across <i>their own</i> envelope, not the same wetness. '
+    + 'Raw counts stay board-true and are never compared here.'
+    + (absent ? ` <span class="cmpabsent">${absent} probe${absent===1?'':'s'} without anchors `
+        + 'shown without a position.</span>' : '');
+  box.appendChild(note);
+}
+
+function renderHealthRow(h){
+  const reasons = (h.reasons||[]).length
+    ? `<ul class="hreasons">${h.reasons.map(r=>`<li>${_hesc(r)}</li>`).join('')}</ul>` : '';
+  const corr = h.inspect_for_corrosion ? ' 🔧 inspect for corrosion' : '';
+  return `<div class="hrow">
+    <div class="hrow-h"><span class="hsid">${_hesc(h.sensor_id||'—')}</span>`
+    + `<span class="hstat ${h.status}">${h.status}${corr}</span></div>`
+    + `<div class="hmetrics">${_healthMetrics(h)}</div>${reasons}</div>`;
+}
+async function healthPoll(){
+  const box = document.getElementById('sensorHealth'); if(!box) return;
+  try{
+    const j = await apiJson('/sensor/health', {cache:'no-store'});
+    const sensors = ((j && j.data) || j).sensors || [];  // apiJson wraps payload in .data
+    box.innerHTML = sensors.length
+      ? sensors.map(renderHealthRow).join('')
+      : '<span class="muted">No sensor readings yet — health fills in as data arrives.</span>';
+  }catch(e){ box.innerHTML = '<span class="muted">Sensor health unavailable (older server or no data).</span>'; }
+}
 function showTab(name, rerender){
   const tabs = ['monitor', 'plants', 'capture', 'diagnostics'];   // Lab is its own /lab route
+  // #1547: A4's ruled zero-state CTA deep-links `#registry` — the operator-facing name for
+  // this tab's job ("where boards are set up"), which is not the tab's internal id. Accept
+  // it as an ALIAS rather than renaming the tab: `#plants` is a shipped deep-link that
+  // showTab writes into history and #921's first-run path targets, so renaming would break
+  // existing links for a cosmetic gain. Additive — both hashes resolve here.
+  if(name === 'registry') name = 'plants';
   if(!tabs.includes(name)) name = 'monitor';
   // #921 Q10: don't browse away from unsaved registry edits without a heads-up.
   if(name !== 'plants' && typeof regDirty === 'function' && regDirty()
@@ -2128,6 +3539,7 @@ function showTab(name, rerender){
   document.getElementById('diagnostics').style.display = isDiag ? 'block' : 'none';
   const plantsEl = document.getElementById('plants');
   if(plantsEl){ plantsEl.style.display = isPlants ? 'block' : 'none'; if(isPlants) registryPoll(); }
+  if(isDiag) healthPoll();  // #995: refresh the sensor-health readout each time Diagnostics opens
   // #708: Monitor-only view controls don't ride on tabs where they do nothing (they read as dead controls).
   // Channel toggles filter only Monitor's cards/trajectory -> Monitor only. The range windows every chart
   // (Monitor + Diagnostics) -> hidden on Capture only. Refresh / auto / theme / Stop-server stay global.
@@ -2150,7 +3562,24 @@ function initTabs(){
 }
 
 /* ---- render everything (re-runnable for live refresh) ---- */
+function renderShellState(){
+  // #1018: the page is served as a fast SHELL (no analytics pipeline). Until /data.json
+  // hydrates DASH, the Monitor overview has nothing real to draw — show a light state in the
+  // CARDS slot only (the one element renderCards repopulates on hydrate). Must NOT wipe
+  // #overview: its other children (#cards, the chart canvases) are STATIC and the render
+  // functions populate them by id — replacing #overview.innerHTML would delete them and make
+  // the first real render throw. Capture/Plants tabs are display toggles, already interactive.
+  const cards = document.getElementById('cards');
+  if(cards){
+    const msg = (DASH && DASH.empty)
+      ? 'No readings yet — plug in a probe and start logging; this fills in as data arrives.'
+      : 'Loading sensors…';
+    cards.innerHTML = `<div class="muted" style="padding:18px">${msg}</div>`;
+  }
+}
 function renderAll(){
+  // #1018: a fast-shell page (or a truly-empty install) has no Monitor data to draw yet.
+  if(DASH && (DASH.shell || DASH.empty)){ renderShellState(); return; }
   if(currentDetail) renderDetail(currentDetail);  // detail mode: no hidden overview charts
   else renderOverview();
 }
@@ -2163,9 +3592,19 @@ function flash(btn, msg, ok){
 // Freshness/connection line. Driven by a ticker AND every render, so the age
 // stays honest even when no new data arrives, and a dead backend is loud rather
 // than silently frozen as "just now" (issue #48).
+// #1455: the freshness line lives in the header; the stale BANNER names the charts as
+// frozen, where a viewer reading the chart will see it — so an old window is never
+// silently trusted. Shares this function's connOk/stale/age so the two never disagree.
+function setStaleBanner(html, warn){
+  const b = document.getElementById('staleBanner'); if(!b) return;
+  if(!html){ b.hidden = true; b.innerHTML = ''; return; }
+  b.className = 'stalebanner' + (warn ? ' warn' : '');
+  b.innerHTML = html; b.hidden = false;
+}
 function renderFreshness(){
   const span = document.getElementById('refreshed'); if(!span) return;
   const m = (typeof DASH !== 'undefined' && DASH.meta) || {};
+  const asOf = m.generated_display || m.generated_local || 'the last update';
   let ageTxt = '', stale = false;
   if(m.last_local){
     const last = new Date(m.last_local.replace(' ', 'T'));
@@ -2178,12 +3617,18 @@ function renderFreshness(){
     const downTxt = downMin < 1 ? '<1 min' : downMin < 60 ? `${Math.round(downMin)} min` : `${(downMin/60).toFixed(1)} h`;
     span.textContent = `⚠ disconnected · viewer not responding for ${downTxt} · data ${ageTxt||'?'} (is serve.py running?)`;
     span.style.color = 'var(--st-dry)';
+    setStaleBanner(`Live updates paused — the charts below are <b>frozen</b> at ${esc(asOf)}${ageTxt ? ` (${esc(ageTxt)})` : ''}. Reconnecting…`, true);
     return;
   }
   let txt = `data as of ${m.generated_display || m.generated_local || '?'}`;
   if(ageTxt) txt += ` · last reading ${ageTxt}${(stale && LIVE) ? ' · STALE' : ''}`;
   span.textContent = txt;
   span.style.color = (stale && LIVE) ? 'var(--st-dry)' : 'var(--muted)';
+  // connected + fresh: no marker. Connected but the reading has aged past cadence: a calm
+  // note that the charts show the last reading, not a live one — never silently current.
+  setStaleBanner((stale && LIVE)
+    ? `The charts show the last reading, from <b>${esc(ageTxt)}</b> — the greenhouse may be between updates.`
+    : '', false);
 }
 // #976: a monotonically-increasing request generation. Every /data.json fetch stamps its
 // generation; a later range-switch or poll bumps it. On arrival a response whose stamp is
@@ -2207,6 +3652,12 @@ async function refresh(){
     const payload = await r.json();
     if(gen !== __reqGen) return;           // superseded during the parse — drop, don't paint
     DASH = payload;
+    // #1018 instrument: real data has landed — the shell → hydrated boundary. Marked here
+    // (not after renderAll) so it's the honest "data received" moment regardless of render.
+    if(typeof window !== 'undefined' && window.__boot && window.__boot.hydratedMs === null && !DASH.shell && !DASH.empty){
+      window.__boot.hydratedMs = performance.now();
+      console.info(`[boot] hydrated ${Math.round(window.__boot.hydratedMs)}ms — first /data.json paint (shell → data)`);
+    }
     connOk = true; lastOkMs = Date.now();  // recovered / still healthy (latest request only)
     renderAll();
   }catch(e){
@@ -2233,6 +3684,27 @@ function setRange(r){
   curRange = r;
   document.querySelectorAll('.rangebtn').forEach(b=> b.classList.toggle('active', b.dataset.r===r));
   if(LIVE) refresh(); else applyStaticZoom();
+}
+
+/* #822: say what the pass-anchored window actually served. Three honest states:
+   the window it anchored to; the DECLINE when no watering is on record (the chip
+   falls back to a fixed range and says so); and the partial serve when two cycles
+   were asked for but only one exists — never a silent substitution. */
+function renderCycleNote(){
+  const el = document.getElementById('cyclenote'); if(!el) return;
+  const cw = DASH.cycle_range;
+  if(!cw || (curRange!=='cycle1' && curRange!=='cycle2')){ el.innerHTML=''; return; }
+  if(cw.declined){
+    el.innerHTML = `<span class="declined">no watering on record yet</span> · showing the fixed ${cw.fallback} window instead`;
+    return;
+  }
+  const hrs = Math.round(cw.hours);
+  const span = hrs < 48 ? `${hrs}h` : `${Math.round(hrs/24)}d`;
+  const anchor = (cw.anchor||'').replace('T',' ').slice(5,16);
+  let s = `anchored to the watering round at <b>${anchor}</b> · <b>${span}</b> window (+${cw.pad_h}h lead-in)`;
+  if(cw.exact === false)
+    s += ` · <span class="declined">only ${cw.n_passes} round on record — served ${cw.label}, not ${cw.requested}</span>`;
+  el.innerHTML = s;
 }
 
 /* ---- channel on/off (E10) ---- */
@@ -2542,18 +4014,24 @@ function monRenderOwner(o){  // #330: surface a stale marker (+ recovery) or a l
   const el = document.getElementById('serialOwner'); if(!el) return;
   if(!o || !o.present){ el.hidden = true; el.innerHTML = ''; return; }
   el.hidden = false;
-  const who = `${o.mode || '?'} · pid ${o.pid} · ${o.port || 'port ?'}`;
+  // #1554: the sentence comes from the host (serial_lock.explain_owner) and is rendered
+  // VERBATIM — the lock is the only thing that knows which checkout started the holder,
+  // so the explanation belongs where that knowledge lives, not restated here. A server
+  // predating #1554 sends no `explain`; the old identity line is the fallback so an
+  // un-relaunched Sprout keeps working rather than showing a blank strip.
+  const who = `${o.mode || '?'} · pid ${o.pid}${o.origin ? ' · from ' + o.origin : ''} · ${o.port || 'port ?'}`;
   const when = o.opened_utc ? ` · opened ${fmtLocal(o.opened_utc)}` : '';
   if(o.stale){
     el.className = 'serialowner stale';
-    el.innerHTML = `<span>⚠ stale port marker — owner is gone: ${who}${when}. `
-      + `The port is free; this marker is just litter.</span>`
+    const say = o.explain || `stale port marker — owner is gone: ${who}. The port is free; this marker is just litter.`;
+    el.innerHTML = `<span>⚠ ${esc(say)}<br><span class="muted">${esc(who + when)}</span></span>`
       + `<button class="btn" id="ownerClear" type="button">Clear stale marker</button>`;
     const b = document.getElementById('ownerClear');
     if(b) b.addEventListener('click', ownerClear);
   } else {  // live holder — informational, never offer to clear (would free a held port)
     el.className = 'serialowner live';
-    el.innerHTML = `<span>● port held by ${who}${when}</span>`;
+    const say = o.explain || `port held by ${who}`;
+    el.innerHTML = `<span>● ${esc(say)}<br><span class="muted">${esc(who + when)}</span></span>`;
   }
 }
 async function ownerPoll(){
@@ -2570,6 +4048,36 @@ async function monPoll(){
   try{ monRender((await apiJson('/monitor/status', {cache:'no-store'})).data); }
   catch(e){ if(e.apiDown){ monApiDown(); } /* else transient — keep last state */ }
   ownerPoll();  // refresh the port-owner surface alongside monitor status
+}
+// #966: rig-location setup. The status is NAME-ONLY (the privacy fence: coordinates never
+// come back to a screenshottable surface). Saving writes the gitignored local config.
+async function locPoll(){
+  const el = document.getElementById('locStatus'); if(!el) return;
+  try{
+    const { data } = await apiJson('/location/status', {cache:'no-store'});
+    el.innerHTML = data.configured
+      ? `✓ Configured as <strong>${esc(data.name || 'my rig')}</strong> — day/night shading + weather are on. Coordinates stay on this machine; re-enter below to change them.`
+      : 'Not set — day/night shading, solar position, and weather are off until you add a location.';
+  }catch(e){ /* serve-only; leave the placeholder */ }
+}
+async function locSave(){
+  const st = document.getElementById('locSaveStatus');
+  const body = {
+    name: (document.getElementById('locName').value || '').trim(),
+    latitude: document.getElementById('locLat').value,
+    longitude: document.getElementById('locLon').value,
+    tz_offset_hours: document.getElementById('locTz').value || 0,
+  };
+  st.textContent = 'saving…'; st.className = 'capstatus';
+  try{
+    const { ok, data } = await apiJson('/location', { method:'POST',
+      headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    if(!ok){ st.textContent = data.error || 'save failed'; st.className = 'capstatus err'; return; }
+    st.textContent = 'saved — reload to see shading + weather'; st.className = 'capstatus run';
+    // clear the coordinate fields after save (privacy: don't leave them on screen)
+    document.getElementById('locLat').value = ''; document.getElementById('locLon').value = '';
+    locPoll();
+  }catch(e){ st.textContent = 'save failed: ' + e; st.className = 'capstatus err'; }
 }
 async function monStart(){
   if(!monApiOk){ monApiDown(); return; }
@@ -2668,6 +4176,21 @@ function renderRecordingBanner(){
   const a = document.getElementById('recStart');
   if(a) a.onclick = (e) => { e.preventDefault(); collStart(); };
 }
+// #1026: a board answering at a registered address with an id the registry never heard of
+// (a re-flashed board on another's DHCP lease, self-signing an unadopted identity). The
+// "currently true" alarm class — surfaced loudly the moment the fetch sees it, so nobody
+// screenshot-debugs a ghost. Cleared automatically once the address answers as expected.
+function renderIdentityMismatches(){
+  const el = document.getElementById('mismatchBanner');
+  if(!el) return;
+  const ms = (typeof DASH !== 'undefined' && DASH.identity_mismatches) || [];
+  el.hidden = !ms.length;
+  if(!ms.length){ el.innerHTML = ''; return; }
+  el.innerHTML = ms.map(m =>
+    `<strong>Unknown board.</strong> The board at <code>${esc(m.base_url)}</code> answers as `
+    + `<code>${esc(m.got)}</code> — expected <code>${esc(m.expected)}</code>. `
+    + `Register or investigate it.`).join('<br>');
+}
 async function collPoll(){
   try{ collRender((await apiJson('/collection/status', {cache:'no-store'})).data); }
   catch(e){ /* transient or old server without the route — keep last state */ }
@@ -2762,6 +4285,32 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
   if(LIVE){ autoTimer = setInterval(refresh, AUTO_MS); }
 
   document.querySelectorAll('.rangebtn').forEach(b=> b.addEventListener('click', ()=> setRange(b.dataset.r)));
+  // #832: the comparison toggle — its own buttons carry data-c, not data-r
+  // #1150: reveal the sticky Home once the in-flow one has scrolled away.
+  // A plain scroll/resize handler on purpose, NOT IntersectionObserver: this affordance
+  // exists to rescue someone already stranded on a long page, so it must not depend on
+  // an API that can silently never fire (it didn't, under test). getBoundingClientRect
+  // on scroll is unglamorous and always works.
+  (function(){
+    // elements are looked up INSIDE sync, not captured once: this block runs before the
+    // body exists, so a cached lookup returns null and the whole affordance silently
+    // never binds (it did — caught under test, not in review).
+    function sync(){
+      var link = document.getElementById('homeLink'), dock = document.getElementById('homeDock');
+      if(!link || !dock) return;
+      var want = !(link.getBoundingClientRect().bottom < 0);   // link visible -> hide dock
+      if(dock.hidden !== want) dock.hidden = want;             // touch the DOM only on a change
+    }
+    window.addEventListener('scroll', sync, {passive: true});
+    window.addEventListener('resize', sync, {passive: true});
+    document.addEventListener('DOMContentLoaded', sync);
+    sync();
+  })();
+  document.querySelectorAll('#cmpsel .rangebtn').forEach(b=> b.addEventListener('click', ()=>{
+    __cmpMode = b.dataset.c;
+    document.querySelectorAll('#cmpsel .rangebtn').forEach(x=> x.classList.toggle('active', x===b));
+    renderCompare();
+  }));
 
   // #725: keyboard nav in the single-plant view — ←/→ move between plants,
   // Esc goes back to the wall. Ignored while typing in a field or picker.
@@ -2792,6 +4341,8 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
     monStartBtn.addEventListener('click', monStart);
     monStopBtn.addEventListener('click', monStop);
     document.getElementById('collToggle').addEventListener('click', collToggle);  // #980
+    const locSaveBtn = document.getElementById('locSave');  // #966 rig-location setup
+    if(locSaveBtn){ locSaveBtn.addEventListener('click', locSave); locPoll(); }
     monPoll();  // reflect the logger's current state on load
     collPoll(); // ...and the combined collection plane (#588)
     monPollTimer = setInterval(() => { monPoll(); collPoll(); }, 5000);  // keep it live (handoff #129) + stoppable on API-down (#130)
@@ -2812,10 +4363,16 @@ async function quitServer(){  // in-UI stop (ADR-0005 §4) - two-step, so it's n
     monSetStatus('serve via serve.py for monitor control');
   }
 
+  // #1018 instrument: boot phase marks so this load path is never un-instrumented again
+  // (the maintainer's explicit complaint). nav-origin -> shell-interactive -> hydrated;
+  // logged to the console + parked on window.__boot for a live probe.
+  window.__boot = { originMs: (window.performance && performance.timeOrigin) || 0, hydratedMs: null };
   applyTheme();
   // #921 Q10: the browser-level guard for unsaved registry edits (close/reload/navigate away).
   window.addEventListener('beforeunload', e => { if(typeof regDirty === 'function' && regDirty()){ e.preventDefault(); e.returnValue = ''; } });
   initTabs();
+  window.__boot.shellInteractiveMs = performance.now();
+  console.info(`[boot] shell interactive ${Math.round(window.__boot.shellInteractiveMs)}ms — tabs wired, form usable (pipeline not on this path, #1018)`);
   renderAll();
   // #921: a fresh install has an empty registry — land on the setup tab (retires the launchpad, Q9).
   registryPoll().then(()=>{ if(__registry && __registry.first_run && !location.hash) showTab('plants', false); });

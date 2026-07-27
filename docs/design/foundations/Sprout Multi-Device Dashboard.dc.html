@@ -93,7 +93,7 @@
         </span>
       </div>
       </sc-if>
-      <!-- honesty banner (per-device, only when earned) -->
+      <!-- quality banner (per-device, only when earned) -->
       <sc-if value="{{ d.hasBanner }}" hint-placeholder-val="{{ false }}">
         <div style="display:flex; gap:9px; align-items:flex-start; padding:10px 18px; border-bottom:1px solid var(--border); background:color-mix(in srgb, {{ d.bannerColor }} 7%, var(--surface)); font-size:12px; line-height:1.5; color:var(--ink);">
           <span style="color:{{ d.bannerColor }}; font-weight:700; flex-shrink:0;">{{ d.bannerIcon }}</span>
@@ -303,8 +303,8 @@ class Component extends DCLogic {
       { tag:'IDENTITY', color:'var(--leaf)', text:'The friendly name + hostname come from the registry, per ADR-0020 — synthetic, re-nameable, never a MAC. A tethered device shows its port where a hostname would be.' },
       { tag:'ORDER', color:'var(--muted)', text:'Groups keep registry first-seen order. State never re-sorts them — an offline device holds its place instead of jumping around the page.' },
       { tag:'COLLAPSE', color:'var(--muted)', text:'With one registered device the header collapses to the slim ribbon and cards flow ungrouped — today\u2019s dashboard is the single-device case, unchanged.' },
-      { tag:'HONESTY', color:'var(--st-dry)', text:'Quality gates the band per card (NO_SIGNAL earns no band color); cal_verified=false gates band authority per device (bands render provisional until C1 #170). Unwired inputs show “—”, never a trend.' },
-      { tag:'NO %', color:'var(--st-dry)', text:'Raw counts + band words only, per card, same as everywhere — a second device changes the layout, never the honesty law.' },
+      { tag:'QUALITY', color:'var(--st-dry)', text:'Quality gates the band per card (NO_SIGNAL earns no band color); cal_verified=false gates band authority per device (bands render provisional until C1 #170). Unwired inputs show “—”, never a trend.' },
+      { tag:'NO %', color:'var(--st-dry)', text:'Raw counts + band words only, per card, same as everywhere — a second device changes the layout, never the data-integrity law.' },
     ];
 
     return {

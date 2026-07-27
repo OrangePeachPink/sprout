@@ -7,13 +7,10 @@ assert *shape*, not a fixed abbreviation.
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import experiments_catalog as cat
-import timefmt
+from tools.analytics import experiments_catalog as cat
+from tools.analytics import timefmt
 
 _UTC = datetime(2026, 6, 28, 18, 14, tzinfo=timezone.utc)
 

@@ -5,25 +5,37 @@
 
 [project]
 name = "sprout"
-version = "0.7.1"  # single product version line (ADR-0009 §1); synced repo-wide each release (§3)
+version = "0.8.1"  # single product version line (ADR-0009 §1); synced repo-wide each release (§3)
 description = "Sprout — an honest capacitive soil-moisture + small-pump auto-waterer (host tooling)."
 requires-python = ">=3.11"
 license = "MIT"  # SPDX; the authoritative text is the LICENSE file at the repo root
 dependencies = [
   "pyserial>=3.5",  # the host serial logger / experiment-capture runtime
-  "duckdb>=1.0",    # the Lab Notebook analysis store (derived/rebuildable tier, #155)
-  "pandas>=2.0",    # ingestion into the store + query results
+  "duckdb>=1.5.5",    # analysis stores: Lab Notebook (#155) + the #828 DuckDB/Parquet tier (#1239).
+                    # Parquet I/O is DuckDB-native (COPY/read_parquet) — no pyarrow needed (#1249).
+  "pandas>=3.0.5",    # ingestion into the store + query results
+  "pillow>=11",     # card photo intake (#875 Q4): downsample + EXIF strip, local-only
 ]
 
 [dependency-groups]
 dev = [
-  "ruff>=0.15.21",            # lint + format (policy lives in ruff.toml)
+  "ruff>=0.16.0",            # lint + format (policy lives in ruff.toml)
   "pytest>=8",            # host test harness (ADR-0002 #11)
-  "pre-commit>=3.7",      # the local enforcement layer (ADR-0002 #10)
-  "clang-format==22.1.5", # C/C++ changed-LINES format gate (#352); the wheel ships
+  "pre-commit>=4.6.1",      # the local enforcement layer (ADR-0002 #10)
+  "clang-format==22.1.8", # C/C++ changed-LINES format gate (#352); the wheel ships
                           # both the binary AND git-clang-format, hash-pinned in
                           # uv.lock — one source, no ambient toolchain (ADR-0002 #10)
 ]
 
 [tool.uv]
-package = false
+# ADR-0038 §5.4 package flip (#1528, the #1453 GO): the host tools are an editable
+# package — `tools.analytics.*` / `tools.logger.*` / `tools.capture.*` import by name
+# from anywhere in the venv, and the 200+ per-file sys.path.insert lines are gone.
+package = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["tools"]

@@ -62,12 +62,17 @@ typedef struct {
         wet_rail_raw; /* #670: board physical wet rail (BOARD_CAP.wet_rail_raw);
                               a raw below it -> SENSOR_FAULT + payload fault=<reason>.
                               0 disables the check (unknown rail -> never self-flag). */
+    uint16_t
+        air_dry_raw; /* #1152: board air rail (BOARD_CAP.air_dry_raw); a raw
+                              ABOVE it -> SENSOR_FAULT + fault=open_adc, the
+                              symmetric mirror of the sub-wet-rail fault.
+                              0 disables the check. */
     const char
         *config_id; /* #576 / ADR-0025: firmware-computed config fingerprint,
                               rides payload config_id= (never a canonical column);
                               parse_v1 reads it, never re-derives. NULL/"" omits it. */
     /* #669 board diagnostics (payload). rssi is WiFi-only: rssi_present=false on a
-     * serial/tethered row OMITS rssi= entirely - honest-absent, never a fake 0
+     * serial/tethered row OMITS rssi= entirely - absent, never a placeholder 0
      * (ADR-0028). uptime_s/heap ride every row (transport-independent). */
     bool rssi_present; /* true only when associated to WiFi              */
     int rssi_dbm; /* WiFi.RSSI() dBm (negative); ignored when !rssi_present */
@@ -108,7 +113,7 @@ uint32_t telemetry_fnv1a32(uint32_t h, const void *data, size_t len);
  * pass BOARD_CAP.wet_rail_raw; native tests pass the classic 900.
  */
 const char *telemetry_quality_flag(const moisture_state_t *st,
-                                   uint16_t wet_rail_raw);
+                                   uint16_t wet_rail_raw, uint16_t air_dry_raw);
 
 /*
  * #670 companion reason for the payload `fault=` key: "dead_adc" when the raw floats
@@ -119,7 +124,8 @@ const char *telemetry_quality_flag(const moisture_state_t *st,
  * (Trellis's #739 binding). Same wet_rail_raw the flag uses.
  */
 #define TELEMETRY_DEAD_ADC_MAX 50
-const char *telemetry_fault_reason(uint16_t raw, uint16_t wet_rail_raw);
+const char *telemetry_fault_reason(const moisture_state_t *st,
+                                   uint16_t wet_rail_raw, uint16_t air_dry_raw);
 
 /*
  * Format one soil telemetry CSV row into buf WITHOUT the trailing "*HH" checksum.
@@ -140,7 +146,7 @@ int telemetry_format_soil_row(char *buf, size_t buflen,
  * string fields so temp/RH (value+unit set) and a spectral row (channels in
  * payload) both fit one formatter. Empty string ("") = a NULL column.
  *
- * Contextual telemetry, NOT plant-truth — the placement note belongs in payload.
+ * Contextual telemetry, NOT plant data — the placement note belongs in payload.
  */
 typedef struct {
     const char *record_type; /* "plants.env"                         */
@@ -175,7 +181,7 @@ int telemetry_format_env_row(char *buf, size_t buflen,
  *     confidence=<provisional|calibrated|corroborated> scope=<channel|shared>
  * Space-separated k=v (the `# cfg:` convention, NOT the payload's `;` one);
  * bounds are the DESCENDING (dry>wet) raw ints, moisture_classifier order.
- * `date` is omitted entirely (not an empty key) when NULL/"" - same honest-NULL
+ * `date` is omitted entirely (not an empty key) when NULL/"" - same absent
  * rule as device_timestamp_utc. Returns chars written, or -1 on truncation.
  */
 int telemetry_format_cal_ch(char *buf, size_t buflen, const char *sensor_id,

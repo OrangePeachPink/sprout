@@ -79,10 +79,10 @@
       <span class="kick" style="margin-left:6px;">User guide · a 3-minute board check</span>
     </div>
     <h1>Can you trust your sensor?</h1>
-    <p class="lede">A cheap capacitive soil sensor can lie <em>before</em> Sprout ever sees the number — a large share of inexpensive boards ship with a known functional flaw. Three minutes, your eyes, and a cheap multimeter tell you whether yours is the well-made kind.</p>
+    <p class="lede">A cheap capacitive soil sensor can be wrong <em>before</em> Sprout ever sees the number — a large share of inexpensive boards ship with a known functional flaw. Three minutes, your eyes, and a cheap multimeter tell you whether yours is the well-made kind.</p>
     <div class="callout" style="display:flex; gap:14px; align-items:center; margin-top:20px; background:color-mix(in srgb,var(--leaf) 6%, var(--surface));">
       <x-import component-from-global-scope="sprout-mark" from="./sprout-mark.js" band="moist" size="40" static="" hint-size="34px,40px"></x-import>
-      <p class="voice">I can only be as honest as the sensor I'm reading — so let's make sure yours tells the truth.</p>
+      <p class="voice">I can only be as good as the sensor I'm reading — so let's make sure yours reads right.</p>
     </div>
     <div class="photo hero" style="margin-top:22px;">
 
@@ -245,7 +245,7 @@
       </div>
     </div>
 
-    <h3 style="margin:24px 0 4px;">Three honest choices if a board fails</h3>
+    <h3 style="margin:24px 0 4px;">Three plain choices if a board fails</h3>
     <div>
       <div class="choice"><span class="num">A</span><div><strong>Fix it.</strong> For Flaw 3, solder a 1 MΩ resistor across the <span class="pin">AOUT</span> and <span class="pin">GND</span> pins, or run a short wire from the resistor's floating side to ground.</div></div>
       <div class="choice"><span class="num">B</span><div><strong>Power it differently.</strong> For Flaw 1, feed it a steady voltage; for Flaw 2, run it at 4.5 V or more.</div></div>

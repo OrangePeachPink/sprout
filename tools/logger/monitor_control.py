@@ -18,6 +18,11 @@ import sys
 import threading
 from pathlib import Path
 
+from tools.capture import serial_lock
+from tools.logger.plants_logger import (
+    GIVE_UP_EXIT,
+)
+
 _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
 _LOGGER_PY = _HERE / "plants_logger.py"
@@ -28,13 +33,6 @@ _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 # serial_lock (the #64 advisory-lock contract) lives in the capture leaf.
 _CAPTURE_DIR = _REPO / "tools" / "capture"
-if str(_CAPTURE_DIR) not in sys.path:
-    sys.path.insert(0, str(_CAPTURE_DIR))
-import serial_lock  # noqa: E402  (sibling leaf)
-
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-from plants_logger import GIVE_UP_EXIT  # noqa: E402  (#813 absent-port give-up code)
 
 
 class MonitorError(RuntimeError):
@@ -69,10 +67,10 @@ class MonitorController:
             # never blocks a legitimate start — only a truly live holder does.
             owner = serial_lock.current_owner(self._lock_dir)
             if owner:
-                raise MonitorError(
-                    f"port held by {owner.get('mode')} (pid {owner.get('pid')}) "
-                    "- stop it first"
-                )
+                # #1554: "stop it first" doesn't say WHICH — and this is exactly the
+                # message the operator reads when the Start button refuses. The lock
+                # records the holder's checkout, so the refusal can name it.
+                raise MonitorError(serial_lock.explain_owner(owner, live=True))
             argv = [self._python, str(self._logger_py)]
             if port:
                 argv += ["--port", port]

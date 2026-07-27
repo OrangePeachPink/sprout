@@ -40,12 +40,12 @@ The canonical contract is **[`docs/TELEMETRY_SCHEMA.md`](../TELEMETRY_SCHEMA.md)
 re-emitted per rotation segment; a namespaced **`record_type`** discriminator; and the
 `{raw_value, value, unit}` + `quality_flag` shape shared cross-project so it stays joinable with a
 sibling air-quality sensor project. The schema is **versioned** (`schema_version`); readers map columns
-**by name** so an added/reordered column does not break them. `raw_value` is immutable truth; `value`
+**by name** so an added/reordered column does not break them. `raw_value` is the immutable reading; `value`
 is interpretation; both are kept.
 
 ### 3. Storage substrate ladder (ADR-0002 #15)
 
-Match the substrate to the data's shape; the raw is always the source of truth:
+Match the substrate to the data's shape; the raw is always the canonical source:
 
 - **Immutable raw CSV** — `logs/*.csv`, gitignored. The capture; never edited.
 - **Durable archive** — closed rotated segments gzipped to a **Git LFS** archive branch,
@@ -55,7 +55,7 @@ Match the substrate to the data's shape; the raw is always the source of truth:
   once CSV re-parse gets slow. Planned; not yet stood up.
 - A single-writer **SQLite** store is an option if a mutable app-state store is ever wanted — not today.
 
-**The DB / parquet is a derived layer, never the source of truth.** If lost, it is regenerated from the
+**The DB / parquet is a derived layer, never the canonical source.** If lost, it is regenerated from the
 raw archive.
 
 ### 4. Data quality — surface, never smooth
@@ -81,7 +81,7 @@ The standing principle: **surface gaps and anomalies; never hide them.**
   ~70–90-count offset (the s2 evidence). **Per-pin/probe calibration (C1)** — same-probe/same-water with
   neighbours powered — is the experiment that separates pin offset from probe from placement, and may
   justify per-channel boundaries.
-- Truth is **`raw_value` + band**; calibration improves the interpretation, never the raw.
+- The reading is **`raw_value` + band**; calibration improves the interpretation, never the raw.
 
 ### 6. The A2 calibration handshake (Data ↔ Firmware interface)
 
@@ -105,7 +105,7 @@ beats the classical baseline). A model, when earned, records its data provenance
 
 ## Consequences
 
-- The data layer has a recorded architecture: provenance, immutability, and honest gap-surfacing are
+- The data layer has a recorded architecture: provenance, immutability, and gap-surfacing are
   first-class, not incidental.
 - The storage substrate scales by matching shape to need, with the raw always recoverable.
 - The Data ↔ Firmware calibration interface is named, so band boundaries can't drift silently between

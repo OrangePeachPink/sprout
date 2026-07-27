@@ -6,10 +6,10 @@
 (#20) builds against it.*
 **Date:** 2026-07-04
 **Owner:** Trellis (architecture) — cross-lane: Firmware (capability descriptor), Design (absence affordance),
-Data (honest-empty reads)
+Data (calm-empty reads)
 **Lane:** architecture
 **Extends:** [ADR-0019](0019-capability-and-sensor-matrix.md) (capability & sensor matrix — the *mechanism*) ·
-[ADR-0006](0006-data-architecture.md) (honest data)
+[ADR-0006](0006-data-architecture.md) (raw-first data)
 **Relates:** #20 (display / HMI — the first W2 gate) · #19 (tank sensing — sensorless-first application) ·
 [ADR-0023](0023-contextual-env-columns.md) (env context already does this) ·
 [ADR-0014](0014-operator-control-plane.md) (the served surface is first-class) ·
@@ -46,9 +46,24 @@ peripheral for a core workflow.
 ### 2. Absence is a first-class path — never an error or a nag
 
 For every feature that *uses* a peripheral, the **without-it path is first-class**: either a real sensorless
-equivalent, or an honest-empty state (ADR-0006) — never an error, a broken view, a blocking wall, or a
+equivalent, or a calm-empty state (ADR-0006) — never an error, a broken view, a blocking wall, or a
 guilt-tripping "add hardware to continue." An absent capability is *information* ("no display configured";
 "tank level: estimated — add a sensor for measured"), presented as an **enhancement invitation**, not a defect.
+
+**The three absence patterns — the canonical vocabulary (grill-ruled, #1039 docket 2, 2026-07-18).** One family
+— *how Sprout handles legitimate nothing* — with three distinct, **internal-only** pattern names, because they
+fork the builder's decision (omit vs render-empty vs reason-carrying are three different builds):
+
+- **present-or-silent** — an optional line or field renders real information or does not render at all. No
+  placeholders, no `N/A`.
+- **calm-empty** — a surface that *must* exist shows a warm designed empty state ("— not seen yet"; the faint
+  no-photo leaf). **Retires "honest-empty"** (same pattern, pre-canon name; the #1099 wash renamed the term).
+- **first-class-absent** — absence that is *itself* information carries **a reason, not a data-pretending
+  null** (e.g. *"not probed · by design — pot too small for a sensor"*).
+
+The names **never render to users** — user-facing copy stays governed by voice; the names are how the lanes and
+the gates talk. **Gates certify against the three by name.** (The maintainer's own simplification challenge —
+*"why isn't it just 'empty'?"* — is answered by that fork: one word can't say which of the three builds applies.)
 
 ### 3. Where a sensorless equivalent exists, it is the *primary* path; the sensor is the enhancement
 
@@ -57,7 +72,7 @@ examples this doctrine generalizes:
 
 - **Tank level (#19):** predict from pump-runtime accounting (dispensed volume × pulses), zero added hardware,
   is the **primary** path; a physical level sensor is the optional precision upgrade.
-- **Env context (ADR-0023):** no plant-local sensor → honest-empty `context_source=none`; the SHT45 is one
+- **Env context (ADR-0023):** no plant-local sensor → calm-empty `context_source=none`; the SHT45 is one
   optional instance of a tier, never assumed present.
 
 ### 4. The authoritative status surface is the served dashboard, not any on-device display (the #20 gate)
@@ -89,11 +104,11 @@ product, not a starter kit with visible missing slots.
 - ADR-0019's capability matrix gains its governing doctrine: **absent = first-class**, not "degraded floor."
 - This is the same principle ADR-0027 §4 applies to *identity* (capture-time minimum = `device_uuid +
   channel + value`; all bindings optional and retroactive) and ADR-0023 applies to *env context* (no sensor →
-  honest-empty). One product philosophy, now named across the three.
+  calm-empty). One product philosophy, now named across the three.
 - Design gains a hard rule: an absent-capability surface reads as an **enhancement invitation**, never an
   error, a nag, or an empty-broken state.
-- Honest-data (ADR-0006) is reinforced: absence is recorded honestly (descriptor `has_X=false`) and read
-  honest-empty, never fabricated into a fake value — and never into a fake *requirement*.
+- Raw-first data (ADR-0006) is reinforced: absence is recorded plainly (descriptor `has_X=false`) and read
+  calm-empty, never invented into a value — and never into a fabricated *requirement*.
 
 ## Rejected alternatives
 
@@ -113,7 +128,7 @@ product, not a starter kit with visible missing slots.
 - **Design:** the absence affordance — an "add optional X" surface that reads as invitation, never error /
   nag — is a design-system decision; the #20 display work is the first to need it.
 - **Per-peripheral (W2):** each peripheral issue confirms its first-class without-it path (sensorless
-  equivalent or honest-empty) *before* build. #20 (display → served-dashboard-authoritative) and #19 (tank →
+  equivalent or calm-empty) *before* build. #20 (display → served-dashboard-authoritative) and #19 (tank →
   predict-first) are the first two, already aligned.
 
 — Trellis 🪴

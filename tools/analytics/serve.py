@@ -42,48 +42,86 @@ from pathlib import Path
 from typing import ClassVar
 from urllib.parse import parse_qs, unquote, urlparse
 
-_HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-
-from bench_packages import render_bench_detail  # noqa: E402  (bench detail #444)
-from dashboard import (  # noqa: E402  (sibling import)
-    ARCHIVE_DIR,
+from tools.analytics import (
+    serve_routes,
+)
+from tools.analytics.bench_packages import (
+    render_bench_detail,
+)
+from tools.analytics.card_context import (
+    build_context,
+)
+from tools.analytics.cycle_range import (
+    CYCLE_RANGES,
+)
+from tools.analytics.dashboard import (
     FONTS_CSS,
-    LOGS_DIR,
     RANGE_HOURS,
     TOKENS_CSS,
-    build_context,
     filter_channels,
     filter_since,
     gather_inputs,
     render,
+    render_home,
+    render_trial,
 )
-from device_registry import load_registry  # noqa: E402  (the fleet config, #486)
-from experiments_catalog import (  # noqa: E402  (Lab #154; #444 combined source)
+from tools.analytics.device_registry import (
+    load_registry,
+)
+from tools.analytics.experiments_catalog import (
     load_combined,
     render_catalog,
 )
-from lab_detail import render_detail  # noqa: E402  (Lab detail #157)
-from lab_drafts import list_drafts, load_draft  # noqa: E402  (agent drafts #326)
-from lab_notes import (  # noqa: E402  (Lab notes #158; path for save resilience #327)
+from tools.analytics.host_paths import (
+    ARCHIVE_DIR,
+    LOGS_DIR,
+)
+from tools.analytics.lab_detail import render_detail
+from tools.analytics.lab_drafts import (
+    list_drafts,
+    load_draft,
+)
+from tools.analytics.lab_notes import (
     load_notes,
     notes_rel_path,
     save_notes,
 )
-from lab_studies import (  # noqa: E402  (Lab studies #159)
+from tools.analytics.lab_studies import (
     list_studies,
     render_studies_catalog,
     render_study_detail,
     save_study,
 )
-from parse_cache import ParseCache  # noqa: E402  (parse-once corpus cache, #827)
-from source_adapter import (  # noqa: E402  (the source-adapter seam, #277/#486)
+from tools.analytics.parse_cache import (
+    ParseCache,
+)
+from tools.analytics.source_adapter import (
     DeviceAdapter,
     FleetAdapter,
     TetheredAdapter,
+    active_mismatches,
+)
+from tools.capture import (
+    handoff,
+    serial_lock,
+)
+from tools.capture.control import (
+    CaptureController,
+    ControlError,
+)
+from tools.logger.collection_control import (
+    CollectionError,
+    start_all,
+    status_all,
+    stop_all,
+)
+from tools.logger.fleet_control import FleetController, FleetError
+from tools.logger.monitor_control import (
+    MonitorController,
+    MonitorError,
 )
 
+_HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[1]
 
 # #827: parse the log corpus ONCE and hold it in memory across requests. serve.py is a
@@ -92,6 +130,12 @@ _REPO = _HERE.parents[1]
 # tethered adapter reads through ``_PARSE_CACHE.load`` below). Freshness is bounded by
 # the request cadence, never a frozen snapshot.
 _PARSE_CACHE = ParseCache()
+
+# #1027 §5.1: how far back a board counts as an "answering" adoption candidate. A board
+# that logged within this window is a live discovery; one last seen months ago is not
+# "new to adopt". 7 days = the default range, generous enough for an intermittently-on
+# board without resurfacing the long-dead.
+_DISCOVERY_WINDOW_H = 7 * 24
 
 # #808: the Diagnostics "Reference" front-door links (#758) point at docs/ files,
 # but serve.py had no /docs route so they 404'd live. A scoped, read-only,
@@ -136,26 +180,8 @@ def resolve_docs_path(rel: str, *, root: Path = _DOCS_ROOT) -> Path | None:
 
 
 _CAPTURE_DIR = _REPO / "tools" / "capture"
-if str(_CAPTURE_DIR) not in sys.path:
-    sys.path.insert(0, str(_CAPTURE_DIR))
-import handoff  # noqa: E402  (capture sibling - the Monitor<->Experiment handoff, #129)
-import serial_lock  # noqa: E402  (capture sibling - the #64 advisory-lock contract)
-from control import CaptureController, ControlError  # noqa: E402  (capture sibling)
 
 _LOGGER_DIR = _REPO / "tools" / "logger"
-if str(_LOGGER_DIR) not in sys.path:
-    sys.path.insert(0, str(_LOGGER_DIR))
-from collection_control import (  # noqa: E402  (logger sibling - #588)
-    CollectionError,
-    start_all,
-    status_all,
-    stop_all,
-)
-from fleet_control import FleetController, FleetError  # noqa: E402  (#588)
-from monitor_control import (  # noqa: E402  (logger sibling)
-    MonitorController,
-    MonitorError,
-)
 
 # The operator control plane (ADR-0011, extended #128): serve.py owns the lifecycle of
 # both modes - Experiment captures AND the Monitor logger - launching each as its own
@@ -172,6 +198,63 @@ _FLEET = FleetController()
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 
+
+# ---- #1468 AC2: the localhost floor (ADR-0014 / ADR-0038 §5 rung 3) ---------- #
+# ADR-0014 claims the control plane is localhost-only. Two things made that claim
+# soft: `--host` accepted any bind, and the loopback guard was a per-handler
+# `_is_local()` sprinkled over SOME state-changing routes. The floor here is
+# proportionate hardening, NOT authentication (that stays on the not-at-our-scale
+# ledger): refuse a non-loopback bind outright, and gate every control-plane POST on
+# one central check — loopback peer + loopback Host header (the DNS-rebinding fence:
+# a page on evil.com resolving to 127.0.0.1 still sends `Host: evil.com`) + a
+# loopback Origin when a browser sends one (the cross-site POST fence).
+
+
+def _is_loopback_host(host: str | None) -> bool:
+    """True for a loopback name/address: ``localhost``, ``::1``, or a literal dotted
+    quad in 127/8. Deliberately NOT a DNS resolve — a name like ``127.evil.com`` or a
+    rebinding domain must not pass on its spelling."""
+    h = (host or "").strip().strip("[]").lower()
+    if h in ("localhost", "::1"):
+        return True
+    parts = h.split(".")
+    return (
+        len(parts) == 4
+        and all(p.isdigit() and int(p) <= 255 for p in parts)
+        and parts[0] == "127"
+    )
+
+
+def _host_header_name(hostport: str | None) -> str:
+    """The name half of a ``Host`` header value: strips ``:port``, unwraps a bracketed
+    IPv6. A bare IPv6 with no brackets has >= 2 colons and passes through whole."""
+    v = (hostport or "").strip()
+    if v.startswith("["):
+        return v[1 : v.index("]")] if "]" in v else v
+    if v.count(":") == 1:
+        return v.split(":", 1)[0]
+    return v
+
+
+# #822: the pass-anchored range labels (Data's contract, consumed not re-authored)
+# and the fixed window served when no watering is on record.
+
+_CYCLE_FALLBACK = "7d"
+
+
+def _cycle_window_for(inputs):
+    """A resolver bound to this server's inputs: label -> the pass-anchored window
+    dict, or None when no anchor exists. Reads the same series the tier reads."""
+
+    def resolve(which: str):
+        from tools.analytics.cycle_range import cycle_window
+        from tools.analytics.multiplant_history import read_series
+
+        return cycle_window(read_series(), which=which)
+
+    return resolve
+
+
 _EID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")  # no traversal from a status id
 
 # #969: a client that gives up mid-response (tab close / refresh / back) aborts the
@@ -185,6 +268,49 @@ _CLIENT_GONE = (ConnectionAbortedError, BrokenPipeError, ConnectionResetError)
 # off-switch is always prompt even under a slow-build pileup - no terminal Ctrl-C dance.
 _STOPPING = threading.Event()
 _STOP_GRACE_S = 2.5
+
+# #1392: the #972 design above is bounded only where it remembered to be. Every wait on
+# the stop path carries a timeout EXCEPT the lock acquisitions inside the controllers'
+# stop() - `with self._lock:` has no deadline - so a controller lock held by any
+# concurrent request parks the shutdown thread before it ever reaches os._exit. The
+# process then lives forever in the _STOPPING state, answering 503 on a bound port:
+# Stop didn't stop, `just processes` reports nothing (the children really are gone), and
+# the next `just start` sees the bound port and cheerfully opens a tab to a dead server.
+#
+# The fix is structural rather than a patch on the one blocker I found. A watchdog armed
+# BEFORE any blocking work guarantees the exit against every unbounded step, including
+# ones nobody has hit yet - "the operator pressed Stop" must not depend on which lock is
+# free. The deadline sits just past the cooperative path's own worst case (three
+# controllers at their 5s + 2s fallback, plus the grace), so it can never preempt a
+# legitimately-draining stop; it only ever fires on a genuine hang.
+_SHUTDOWN_DEADLINE_S = 25.0
+
+
+def _arm_shutdown_watchdog(
+    deadline_s: float = _SHUTDOWN_DEADLINE_S,
+) -> threading.Thread:
+    """Guarantee the process dies once Stop is pressed, whatever blocks (#1392).
+
+    Exits 0: the operator asked the server to stop, and it stopped - a hard exit after
+    a hang is still the outcome they requested, so it is not a failure code. The stderr
+    line is loud and names the cause, because a silent hard exit would trade one
+    mystery for another.
+    """
+
+    def _watchdog() -> None:
+        time.sleep(deadline_s)
+        sys.stderr.write(
+            f"Sprout server: shutdown exceeded {deadline_s:g}s - forcing exit. "
+            "Something on the stop path blocked; the port is released either way.\n"
+        )
+        sys.stderr.flush()
+        os._exit(0)
+
+    thread = threading.Thread(
+        target=_watchdog, daemon=True, name="sprout-stop-watchdog"
+    )
+    thread.start()
+    return thread
 
 
 class NoDataYet(Exception):
@@ -200,7 +326,44 @@ class NoDataYet(Exception):
         self.had_any_logged = had_any_logged
 
 
-def _empty_state_html(had_any_logged: bool) -> str:
+def _zero_state(model=None) -> tuple[str, dict]:
+    """Which zero state is this, really? (#1547 / A4)
+
+    The #1541 wall in one function: the first screen knew only ``had_any_logged``, so
+    a fresh checkout with **no boards registered** was told "waiting for the first
+    reading" — which would wait forever, and never said why. Three situations were
+    rendering as one sentence, and only one of them was true.
+
+    Returns ``(state, facts)``:
+
+    * ``no-boards`` — nothing is registered, so nothing will ever report. The next
+      action is to add a board, not to press Start.
+    * ``waiting`` — a board has been DECLARED (#1544) and hasn't reported yet. Naming
+      it is the payoff of declaring it: "waiting for Windowsill" is a status; "waiting
+      for the first reading" is a shrug.
+    * ``ready`` — boards are registered and bound; there is genuinely something to poll,
+      so the #644 Start launchpad is the right control (DX's correction: that control
+      solved a real chicken-and-egg and a fix must not delete it).
+
+    Registry failure degrades to ``ready`` — the pre-#1547 behavior. A broken registry
+    should not replace the operator's launchpad with a lecture about boards."""
+    try:
+        if model is None:
+            from tools.analytics.registry_model import load_registry_model
+
+            model = load_registry_model()
+        pending = model.pending_devices()
+        live = [d for d in model.devices if d.get("lifecycle") != "deleted"]
+        if not live:
+            return "no-boards", {}
+        if pending and len(pending) == len(live):
+            return "waiting", {"names": [d.get("name") for d in pending]}
+        return "ready", {}
+    except Exception:
+        return "ready", {}
+
+
+def _empty_state_html(had_any_logged: bool, model=None) -> str:
     """A genuine first-run page (#543) - no readings yet is not an error state, so
     it gets its own honest, on-tone response rather than the 500 error path.
 
@@ -224,21 +387,59 @@ def _empty_state_html(had_any_logged: bool) -> str:
         launchpad = ""
         script = ""
     else:
-        message = (
-            "<p>No readings yet - this is a fresh checkout with nothing logged.</p>"
-            "<p>Press <strong>Start logging</strong> below to begin polling "
-            "every registered device. This page opens the live dashboard the moment "
-            "the first reading lands.</p>"
-        )
-        launchpad = (
-            '<div class="launch">'
-            # #923: one collection action, consistent vocab with the Monitor card
-            '<button class="btn primary" id="collStart" type="button">'
-            "▶ Start logging</button>"
-            '<p class="status" id="collStatus" role="status" aria-live="polite"></p>'
-            "</div>"
-        )
-        script = _EMPTY_STATE_SCRIPT
+        state, facts = _zero_state(model)
+        if state == "no-boards":
+            # #1547: name the ACTUAL blocker. "Waiting for the first reading" was
+            # true of a state where nothing can ever arrive — no board sends readings.
+            message = (
+                "<p><strong>No boards yet.</strong> Sprout is running, but nothing is "
+                "reporting — there's no board set up to send readings.</p>"
+                "<p>Add a board to describe your hardware: which board, how many "
+                "probes, and which plants they're in.</p>"
+            )
+            launchpad = (
+                '<div class="launch">'
+                '<a class="btn primary" href="/classic#registry">Add a board</a>'
+                '<p class="status">Takes you to Plants &amp; Sensors, where boards '
+                "are set up.</p>"
+                "</div>"
+            )
+            script = ""
+        elif state == "waiting":
+            # A declared board (#1544) that hasn't reported. Naming it is the payoff
+            # of declaring it — it makes the wait legible instead of a shrug.
+            names = [n for n in facts.get("names", []) if n]
+            who = names[0] if len(names) == 1 else f"{len(names)} boards"
+            message = (
+                f"<p><strong>Waiting for {who} to report.</strong> You described "
+                "this hardware — Sprout is listening for it.</p>"
+                "<p>Plug it in and flash it; your plants appear here the moment it "
+                "sends its first reading.</p>"
+            )
+            launchpad = (
+                '<div class="launch">'
+                '<a class="btn primary" href="/classic#registry">Check setup</a>'
+                '<p class="status" id="collStatus" role="status" aria-live="polite">'
+                "</p></div>"
+            )
+            script = _EMPTY_STATE_SCRIPT  # still hands off the instant data lands
+        else:
+            message = (
+                "<p>No readings yet - this is a fresh checkout with nothing logged.</p>"
+                "<p>Press <strong>Start logging</strong> below to begin polling "
+                "every registered device. This page opens the live dashboard the "
+                "moment the first reading lands.</p>"
+            )
+            launchpad = (
+                '<div class="launch">'
+                # #923: one collection action, consistent vocab with the Monitor card
+                '<button class="btn primary" id="collStart" type="button">'
+                "▶ Start logging</button>"
+                '<p class="status" id="collStatus" role="status" '
+                'aria-live="polite"></p>'
+                "</div>"
+            )
+            script = _EMPTY_STATE_SCRIPT
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -374,13 +575,13 @@ def _fleet_adapter(registry=None):
     if not served:
         return tethered
     try:
-        from weather_pressure import latest_pressure as _pressure
+        from tools.analytics.weather_pressure import latest_pressure as _pressure
     except ImportError:
         _pressure = None
     # #676: address each board by its stable mDNS hostname first (sprout-<id>.local,
     # survives DHCP), the configured IP as a fallback; self-heal the registry when a
     # board answers at a fresh address. A missing mDNS responder degrades to the IP.
-    from fleet_resolve import candidate_base_urls, make_healer
+    from tools.analytics.fleet_resolve import candidate_base_urls, make_healer
 
     return FleetAdapter(
         [
@@ -391,6 +592,8 @@ def _fleet_adapter(registry=None):
                     candidates=candidate_base_urls(d),
                     on_resolved=make_healer(d),
                     pressure_source=_pressure,
+                    expected_id=d.device_id,  # #1026: loud on a ghost identity
+                    previous_ids=getattr(d, "previous_ids", ()),
                 )
                 for d in served
             ),
@@ -421,7 +624,7 @@ def _window_inputs(inputs: list[str], hours: float | None, now: datetime) -> lis
     if hours is None:
         return inputs
     try:
-        from parse_v1 import _resolve
+        from tools.analytics.parse_v1 import _resolve
     except Exception:
         return inputs
     files = _resolve(inputs)
@@ -481,10 +684,30 @@ class _PhaseTimer:
         self._t0 = now
 
     def snapshot(self, **counts: int) -> dict:
-        return {
+        snap = {
             "phases": {k: round(v * 1000) for k, v in self._phases.items()},
             **counts,
         }
+        # #1456: process RSS at the end of the build. Design asked for RSS-per-request
+        # to tell "the data got bigger" from "the process is leaking" — a session
+        # degradation shows as RSS that climbs and never falls across a fixed-window
+        # render loop. Sampled here so it rides the perf line the maintainer already
+        # watches; None (never a crash) if the measure is unavailable on the host.
+        rss = _rss_mb()
+        if rss is not None:
+            snap["rss_mb"] = rss
+        return snap
+
+
+def _rss_mb() -> int | None:
+    """Resident set size in MB, or None. Lazy + guarded: psutil is a convenience, not a
+    hard dependency of the serve path, so its absence must never break a request."""
+    try:
+        import psutil  # lazy by design — an optional diagnostic, never a hard dep
+
+        return round(psutil.Process().memory_info().rss / (1024 * 1024))
+    except Exception:
+        return None
 
 
 def _perf_log(ctx: dict, final_name: str, final_s: float, rng: str) -> None:
@@ -511,6 +734,21 @@ def _perf_log(ctx: dict, final_name: str, final_s: float, rng: str) -> None:
         f"[perf] range={rng} {parts} total={total}ms "
         f"({perf.get('readings', '?')} readings, {perf.get('files', '?')} files)\n"
     )
+
+
+def _has_segments(inputs) -> bool:
+    """#1018: cheap (parse-free) check that there IS data to hydrate, so the fast-shell
+    page route keeps a genuinely-fresh checkout on its empty-state page. Expands dirs to
+    segment files; explicit CLI inputs and the real ``gather_inputs()`` both work."""
+    for p in inputs or gather_inputs():
+        pp = Path(p)
+        if pp.is_file() and pp.name.endswith((".csv", ".csv.gz")):
+            return True
+        if pp.is_dir() and (
+            next(pp.glob("*.csv"), None) or next(pp.glob("*.csv.gz"), None)
+        ):
+            return True
+    return False
 
 
 def _context(
@@ -553,6 +791,10 @@ def _context(
         raise NoDataYet(resolved, had_any_logged=had_any_logged)  # #543
     ctx = build_context(data, registry=reg)
     perf.mark("build")
+    # #1026: surface any ghost identity the fleet fetch above just detected — a board
+    # answering at a registered address with an id the registry never heard of. A
+    # calm-but-unmissable notice, never a silent unadopted group.
+    ctx["identity_mismatches"] = active_mismatches()
     ctx["meta"]["all_channels"] = all_ch  # full set, so the toggles can re-enable
     # #953: attach the phase breakdown so the caller (do_GET) can log it alongside the
     # render/serialize phase it owns. Additive meta only — no behavior change.
@@ -560,6 +802,66 @@ def _context(
         readings=len(data.readings), files=len(windowed), fetch_ms=fetch_ms
     )
     return ctx
+
+
+def attach_pulse_anchors(ctx: dict, model) -> dict:
+    """#1235: per-dataset cal anchors onto the served context — ``ctx["anchors"] =
+    {<dataset id>: {"air": int, "water": int}}`` so the Home's pulse charts span the
+    FULL in-soil envelope (all 7 moods), not just the bounded interior (which clipped
+    Soaked + Faint off the histogram by construction).
+
+    ONE anchor definition (the #1152 coordination note), resolved per sensor:
+
+    1. a **profiled per-channel anchor** (registry cal chain via the open assignment —
+       the same source the #995 health readout reads) wins when present (ADR-0019);
+    2. else the **per-board-class rails** (``parse_v1.BOARD_CLASS_ANCHORS`` — the host
+       sibling of firmware board_capability, which the #1152 exception layer keys off
+       too). This is what fires on today's fleet, whose profile chain is still empty.
+
+    A sensor resolving to nothing valid is absent; the render falls back to the bounded
+    interior (honest degradation, never an invented envelope). Returns ctx."""
+    from tools.analytics.parse_v1 import BOARD_CLASS_ANCHORS, board_class
+
+    profiles = {p.profile_id: p for p in model.profiles}
+    by_dev_port: dict = {}
+    for a in model.open_assignments():
+        prof = profiles.get(a.profile_id)
+        if prof and prof.anchors:
+            by_dev_port[(a.device_id, a.channel)] = prof.anchors
+    board_by_dev = {
+        d.get("device_id"): d.get("board") for d in getattr(model, "devices", [])
+    }
+
+    def _valid(a: dict | None) -> dict | None:
+        air, water = (a or {}).get("air"), (a or {}).get("water")
+        if isinstance(air, int) and isinstance(water, int) and water < air:
+            return {"air": air, "water": water}
+        return None
+
+    anchors: dict = {}
+    for s in ctx.get("sensors", []):
+        dev = s.get("device_id")
+        got = _valid(by_dev_port.get((dev, s.get("sensor_id")))) or _valid(
+            BOARD_CLASS_ANCHORS[board_class(board_by_dev.get(dev))]
+        )
+        if got:  # a malformed profiled cal falls back to the class rails, never junk
+            anchors[s["id"]] = got
+    ctx["anchors"] = anchors
+    return ctx
+
+
+def _anchors_by_sensor(model) -> dict:
+    """#995: map each currently-mapped sensor_id to its cal envelope ``{air, water}``,
+    pulled from the profile its open assignment references (#952/#963 cal chain). A
+    sensor with no profile (or a profile without anchors) is simply absent — the health
+    readout then reports its envelope checks as None (honest: uncalibrated)."""
+    profiles = {p.profile_id: p for p in model.profiles}
+    out: dict = {}
+    for a in model.open_assignments():
+        prof = profiles.get(a.profile_id)
+        if prof and prof.anchors:
+            out[a.sensor_id] = prof.anchors
+    return out
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
@@ -631,6 +933,23 @@ class DashboardHandler(BaseHTTPRequestHandler):
         # so the initial root render + a bare data.json don't parse the whole corpus.
         rng = q.get("range", [_DEFAULT_RANGE])[0]  # the label, for the #953 perf log
         hours = RANGE_HOURS.get(rng)  # "all" -> None
+        # #822: the pass-anchored cycle ranges. The window is resolved from the
+        # RESOLVED watering pass (Data's cycle_range, ruling B — the fleet's pass,
+        # never one plant's event) and handed to the same hours-based reader every
+        # other range uses, so this composes instead of forking the machinery.
+        # Honest decline: no watering on record -> cycle_window returns None, we keep
+        # the fixed fallback AND tell the client why, rather than silently serving a
+        # different window.
+        cycle_win = None
+        if rng in CYCLE_RANGES:
+            try:
+                cycle_win = _cycle_window_for(self.inputs)(rng)
+            except Exception:
+                cycle_win = None
+            if cycle_win:
+                hours = cycle_win["hours"]
+            else:
+                hours = RANGE_HOURS.get(_CYCLE_FALLBACK)
         channels = [c for c in q.get("channels", [""])[0].split(",") if c] or None
         # #972 test hook: a deliberately-slow handler to prove Stop preempts an
         # in-flight build. Gated behind SPROUT_TEST_SLOW; absent in a real run.
@@ -639,73 +958,280 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send_json({"slept": True})
             return
         try:
-            if parsed.path in ("/", "/index.html"):
+            route = serve_routes.match("GET", parsed.path)  # #1452 extracted table
+            if route == "home":
+                # #875 (grill night 1, locked): HOME — the plant-card grid — is the
+                # app's landing surface; the Workbench tucks behind it at /classic.
+                # A genuinely fresh checkout keeps the install-day launchpad
+                # (#543/#644 — the "one Start" stays reachable at zero data); the
+                # moment anything is logged, Home takes the front door. Home is a
+                # pure shell (the #1018 fast-shell rule holds — no pipeline here;
+                # the page hydrates itself from /cards.json).
+                if not _has_segments(self.inputs):
+                    self._send(_empty_state_html(False), "text/html; charset=utf-8")
+                else:
+                    self._send(render_home(), "text/html; charset=utf-8")
+            elif route == "trial_data":  # #1148 the evaluation substrate
+                # ONE payload behind all three candidates (multiplant_history,
+                # Data's half): same window, same plants, same numbers — so a prune
+                # verdict compares SURFACES, not accidental data differences.
+                from tools.analytics import multiplant_history
+
+                self._send_json(multiplant_history.build_payload())
+            elif route == "trial":  # #1148 the evaluation surfaces
+                # Shell-only like /classic (#1018): the page hydrates itself from
+                # /data.json + /cards.json, so no pipeline run to hand back HTML.
+                self._send(render_trial(), "text/html; charset=utf-8")
+            elif route == "classic":
+                # The Workbench — "Classic Sprout" (ADR-0033): the numeric
+                # instrument behind Home, retired piece-by-piece as the new design
+                # subsumes its utility. #1018: serve the SHELL fast - do NOT run
+                # the analytics pipeline (fetch + build, ~10 s) just to hand back
+                # the HTML; Monitor re-fetches /data.json on boot. A genuinely-
+                # fresh checkout (no segments) keeps its empty-state page.
+                if not _has_segments(self.inputs):
+                    self._send(_empty_state_html(False), "text/html; charset=utf-8")
+                else:
+                    _t = time.perf_counter()
+                    html = render({"shell": True})
+                    with contextlib.suppress(Exception):  # #1018: render-only cost
+                        sys.stderr.write(
+                            "[perf] route=/classic shell render="
+                            f"{round((time.perf_counter() - _t) * 1000)}ms"
+                            " (pipeline skipped, #1018)\n"
+                        )
+                        sys.stderr.flush()
+                    self._send(html, "text/html; charset=utf-8")
+            elif route == "data_json":
                 ctx = _context(self.inputs, hours, channels)
-                _t = time.perf_counter()
-                html = render(ctx)
-                _perf_log(ctx, "render", time.perf_counter() - _t, rng)  # #953
-                self._send(html, "text/html; charset=utf-8")
-            elif parsed.path == "/data.json":
-                ctx = _context(self.inputs, hours, channels)
+                # #1235: the pulse envelope spans the profiled anchors (all 7 moods)
+                from tools.analytics.registry_model import load_registry_model as _lrm
+
+                attach_pulse_anchors(ctx, _lrm())
+                # #822: what the cycle chip should SAY — the served window, or the
+                # honest reason there isn't one. Absent for non-cycle ranges.
+                if rng in CYCLE_RANGES:
+                    ctx["cycle_range"] = cycle_win or {
+                        "declined": "no watering on record yet",
+                        "fallback": _CYCLE_FALLBACK,
+                    }
                 _t = time.perf_counter()
                 blob = json.dumps(ctx, separators=(",", ":"), ensure_ascii=False)
                 _perf_log(ctx, "serialize", time.perf_counter() - _t, rng)  # #953
                 self._send(blob, "application/json; charset=utf-8")
-            elif parsed.path == "/capture/status":
+            elif route == "capture_status":
                 st = _CAPTURE.status()
                 if st.get("state") == "running":  # live trajectory for the panel (#161)
                     st = {**st, "trace": _live_trace(st.get("experiment_id"))}
                 self._send_json(st)
-            elif parsed.path == "/monitor/status":
+            elif route == "monitor_status":
                 self._send_json(_MONITOR.status())
-            elif parsed.path == "/fleet/status":  # the fleet poller (#588)
-                self._send_json(_FLEET.status())
-            elif parsed.path == "/collection/status":  # both paths, one view (#588)
+            elif route == "fleet_status":  # the fleet poller (#588)
+                # #1026: count ghost identities alongside the poller status so the
+                # mismatch is visible without a screenshot.
+                mism = active_mismatches()
+                self._send_json(
+                    {
+                        **_FLEET.status(),
+                        "identity_mismatches": mism,
+                        "mismatch_count": len(mism),
+                    }
+                )
+            elif route == "collection_status":  # both paths, one view (#588)
                 self._send_json(status_all(_MONITOR, _FLEET))
-            elif parsed.path == "/registry":  # #921 the Plants & Sensors tab seam
-                from registry_model import load_registry_model, registry_payload
+            elif route == "location_status":  # #966: name-only, never coords
+                from tools.analytics import env_solar
 
-                self._send_json(registry_payload(load_registry_model()))
-            elif parsed.path == "/serial/owner":  # who holds the port (#330)
+                self._send_json(env_solar.location_status())
+            elif route == "registry":  # #921 the Plants & Sensors tab seam
+                from tools.analytics.registry_model import (
+                    load_registry_model,
+                    registry_payload,
+                )
+
+                model = load_registry_model()
+                # #1027 §5.1: the calm discovery set - answering boards not yet
+                # registered, distinct from #1026's alarm (excluded by identity below).
+                # Sourced from a bounded recent window so a currently-active-but-
+                # unadopted board surfaces and a long-dead one does not; the parse cache
+                # keeps the load cheap after the first dashboard hit. Never fatal - a
+                # discovery failure degrades to no candidates, never a broken tab.
+                undeclared: list = []
+                try:
+                    from tools.analytics.device_discovery import discover_undeclared
+
+                    data = filter_since(
+                        _PARSE_CACHE.load(gather_inputs()), _DISCOVERY_WINDOW_H
+                    )
+                    undeclared = discover_undeclared(
+                        data.readings,
+                        {d.get("device_id") for d in model.devices},
+                        alarm_ids={
+                            m.get("got") for m in active_mismatches() if m.get("got")
+                        },
+                    )
+                except Exception:
+                    undeclared = []
+                self._send_json(registry_payload(model, undeclared))
+            elif route == "watering_precision":  # #1203 detector QA readout
+                # Workbench-Diagnostics only: how the detector is doing against HER
+                # rulings. Both numerals ship (never a bare %), and precision is None
+                # until something is ruled — an unreviewed detection is not a miss.
+                from tools.analytics.watering_log import event_id_for, precision_so_far
+
+                ctx = _context(self.inputs, hours, channels)
+                ids = [
+                    event_id_for(e["plant_id"], (e.get("rewater") or {})["ts"])
+                    for e in ctx.get("band_history", [])
+                    if e.get("plant_id") and (e.get("rewater") or {}).get("ts")
+                ]
+                self._send_json(precision_so_far(ids))
+            elif route == "sensor_health":  # #995 per-sensor QA/health readout
+                from tools.analytics.registry_model import load_registry_model
+                from tools.analytics.sensor_health import fleet_health
+
+                # Health reads over ALL available history — drift, dropouts, and the
+                # corrosion signals need the long record, and the Monitor range selector
+                # is not a health concept — so it deliberately ignores ?range.
+                model = load_registry_model()
+                anchors = _anchors_by_sensor(model)
+                resolved = self.inputs or gather_inputs()
+                windowed = _window_inputs(resolved, None, datetime.now(timezone.utc))
+                data = _fleet_adapter(load_registry()).load(windowed)
+                fleet = fleet_health(data.readings, anchors_by_sensor=anchors)
+                self._send_json(
+                    {
+                        "sensors": [h.to_dict() for h in fleet],
+                        "any_calibrated": bool(anchors),
+                    }
+                )
+            elif route == "cards_json":  # #875 the Home plant-card payloads
+                from tools.analytics.attention_queue import attention_queue
+                from tools.analytics.card_payload import (
+                    cards_from_context,
+                    load_mood_map,
+                    load_voice_pool,
+                    system_cal_state,
+                )
+                from tools.analytics.registry_model import load_registry_model
+                from tools.analytics.watering_log import (
+                    latest_by_plant,  # #1137 manual waterings
+                    open_sessions_by_plant,  # #1671 the in-progress session
+                )
+
+                # The Home reads the SAME served context as the Workbench (one truth,
+                # ADR-0008): live band/mood/forecast from build_context, rich identity
+                # (name/pot/location/photo) bridged from the temporal registry.
+                model = load_registry_model()
+                plants_by_id = {p.plant_id: p for p in model.plants}
+                try:
+                    ctx = _context(self.inputs, hours, channels)
+                except NoDataYet as exc:  # first-run: the Home's honest empty state
+                    self._send_json(
+                        {
+                            "cards": [],
+                            "empty": True,
+                            "had_any_logged": exc.had_any_logged,
+                            # #1579: the same shape on the empty path, so a consumer
+                            # reads `queue.queue` unconditionally instead of guarding.
+                            "queue": attention_queue([]),
+                        }
+                    )
+                    return
+                allcards = cards_from_context(
+                    ctx,
+                    plants_by_id=plants_by_id,
+                    mood_map=load_mood_map(),
+                    voice_pool=load_voice_pool(),
+                    # #1137: a logged manual watering outranks the detected heuristic
+                    # for last_watered. Absent journal -> {} -> detected, as before.
+                    manual_by_plant=latest_by_plant(),
+                    # #1671: many pours, one watering — the card tallies the session
+                    # she is standing in front of so a top-up is informed.
+                    sessions_by_plant=open_sessions_by_plant(),
+                )
+                # #875 Q3: the normal thirst grid stays readable; off-normal readings
+                # (air-dry / fault / no-signal) go to their own exceptions lane so the
+                # extremes never compress the meaningful middle.
+                cards = [c for c in allcards if not c["exception"]["is"]]
+                exceptions = [c for c in allcards if c["exception"]["is"]]
+                self._send_json(
+                    {
+                        "cards": cards,
+                        "exceptions": exceptions,
+                        "count": len(cards),
+                        "exception_count": len(exceptions),
+                        # #1579 (R2): the ranked queue rides the SAME payload, so the
+                        # order and the cards can never come from two different reads of
+                        # the context. Built from `allcards` deliberately — an
+                        # excepted plant is the model's Can't-tell, which LEADS the
+                        # queue; ranking only the display list would drop exactly
+                        # the plants someone has to go look at.
+                        "queue": attention_queue(allcards),
+                        # #1039 → resolved (#995/#1174, #1218): the interior brackets
+                        # ratified, so the system cal chip is settled.
+                        "cal_state": system_cal_state(),
+                    }
+                )
+            elif route == "photo":  # #875 Q4: a plant's small avatar
+                pid = parsed.path[len("/photo/") :]
+                if not re.fullmatch(r"[A-Za-z0-9]+", pid):  # no traversal from the id
+                    self._send("bad photo id", "text/plain", status=400)
+                else:
+                    f = _REPO / "config" / "photos" / f"{pid}.jpg"
+                    if f.is_file():
+                        self._send_raw(f.read_bytes(), "image/jpeg")
+                    else:
+                        self._send("no photo", "text/plain", status=404)
+            elif route == "serial_owner":  # who holds the port (#330)
                 self._send_json(serial_lock.owner_status())
-            elif parsed.path.startswith("/docs/"):  # #808: front-door docs, guarded
+            elif route == "serial_ports":  # #1550 A7: what's plugged in, for the picker
+                # No in-app way to choose a port existed — `--port` was CLI-only, which
+                # on a multi-board desk meant editing a command line to do the most
+                # basic setup step. Read-only: enumerating never opens a port, so it
+                # can't steal one from a running logger (#64's advisory lock is about
+                # opening, not listing).
+                from tools.analytics.serial_ports import ports_payload
+
+                self._send_json(ports_payload())
+            elif route == "docs":  # #808: front-door docs, guarded
                 self._serve_docs(unquote(parsed.path[len("/docs/") :]))
-            elif parsed.path == "/lab":  # the Lab Notebook catalog (#154 + bench #444)
+            elif route == "lab":  # the Lab Notebook catalog (#154 + bench #444)
                 self._send(render_catalog(load_combined()), "text/html; charset=utf-8")
-            elif parsed.path == "/lab/experiments.json":
+            elif route == "lab_experiments":
                 self._send_json(load_combined())
-            elif parsed.path == "/lab/drafts":  # agent-prepared draft list (#326)
+            elif route == "lab_drafts":  # agent-prepared draft list (#326)
                 self._send_json({"drafts": list_drafts()})
-            elif parsed.path.startswith("/lab/draft/"):  # one draft, for prefill (#326)
+            elif route == "lab_draft":  # one draft, for prefill (#326)
                 name = unquote(parsed.path[len("/lab/draft/") :])
                 draft = load_draft(name)
                 if draft is None:
                     self._send_json({"error": "draft not found"}, status=404)
                 else:
                     self._send_json(draft)
-            elif parsed.path == "/lab/studies":  # the studies catalog (#159)
+            elif route == "lab_studies":  # the studies catalog (#159)
                 self._send(
                     render_studies_catalog(list_studies()),
                     "text/html; charset=utf-8",
                 )
-            elif parsed.path.startswith("/lab/study/"):  # a study detail (#159)
+            elif route == "lab_study":  # a study detail (#159)
                 sid = unquote(parsed.path[len("/lab/study/") :])
                 page = render_study_detail(sid)
                 if page is None:
                     self._send("study not found", "text/plain", status=404)
                 else:
                     self._send(page, "text/html; charset=utf-8")
-            elif parsed.path.startswith("/lab/") and parsed.path.endswith("/notes"):
+            elif route == "lab_notes":
                 eid = unquote(parsed.path[len("/lab/") : -len("/notes")])  # notes #158
                 self._send_json(load_notes(eid))
-            elif parsed.path.startswith("/lab/bench/"):  # a bench-package detail (#444)
+            elif route == "lab_bench":  # a bench-package detail (#444)
                 pkg = unquote(parsed.path[len("/lab/bench/") :])
                 page = render_bench_detail(pkg)
                 if page is None:
                     self._send("bench package not found", "text/plain", status=404)
                 else:
                     self._send(page, "text/html; charset=utf-8")
-            elif parsed.path.startswith("/lab/"):  # an experiment detail page (#157)
+            elif route == "lab_detail":  # an experiment detail page (#157)
                 eid = unquote(parsed.path[len("/lab/") :])
                 page = render_detail(eid)
                 if page is None:
@@ -728,9 +1254,15 @@ class DashboardHandler(BaseHTTPRequestHandler):
         if _STOPPING.is_set():  # #972: already stopping — refuse further control posts
             self._send_json({"stopping": True}, status=503)
             return
+        # #1468 AC2: EVERY control-plane POST passes the one central local-origin
+        # floor — no more per-route guards, no more unguarded write routes.
+        if not self._local_origin():
+            self._send_json({"error": "control plane is localhost-only"}, status=403)
+            return
         parsed = urlparse(self.path)
         try:
-            if parsed.path == "/capture/start":
+            route = serve_routes.match("POST", parsed.path)  # #1452 extracted table
+            if route == "capture_start":
                 b = self._body()
                 # Route through the handoff (#129): a serial start auto-pauses the
                 # monitor (frees COM6) and resumes it when the experiment ends.
@@ -747,35 +1279,86 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         port=b.get("port"),
                     )
                 )
-            elif parsed.path == "/capture/stop":
+            elif route == "capture_stop":
                 self._send_json(_CAPTURE.stop())
-            elif parsed.path == "/monitor/start":
+            elif route == "monitor_start":
                 self._send_json(_MONITOR.start(port=self._body().get("port")))
-            elif parsed.path == "/monitor/stop":
+            elif route == "monitor_stop":
                 self._send_json(_MONITOR.stop())
-            elif parsed.path == "/fleet/start":  # single-flight (#588)
+            elif route == "fleet_start":  # single-flight (#588)
                 self._send_json(_FLEET.start())
-            elif parsed.path == "/fleet/stop":
+            elif route == "fleet_stop":
                 self._send_json(_FLEET.stop())
-            elif parsed.path == "/collection/start":
+            elif route == "collection_start":
                 # ADR-0014: ONE operator action = all collection running; each
                 # absent path skips with a stated reason (policy lives in
                 # collection_control, not here - serve stays wiring, section 5)
                 self._send_json(
                     start_all(_MONITOR, _FLEET, port=self._body().get("port"))
                 )
-            elif parsed.path == "/collection/stop":
+            elif route == "collection_stop":
                 self._send_json(stop_all(_MONITOR, _FLEET))
-            elif (
-                parsed.path == "/registry/apply"
-            ):  # #921 slice 3 — classic-save a batch
-                # Mutates the local registry config; localhost-only (as /quit).
-                if not self._is_local():
-                    self._send_json(
-                        {"error": "registry edits are localhost-only"}, status=403
+            elif route == "location":  # #966: write the gitignored rig location
+                # Writes local config + involves coordinates; localhost-only (as /quit).
+                from tools.analytics import env_solar
+
+                try:
+                    # returns NAME-ONLY status; save_location never logs the coordinates
+                    self._send_json(env_solar.save_location(self._body()))
+                except ValueError as exc:
+                    self._send_json({"error": str(exc)}, status=400)
+            elif route == "watering_log":  # #1137: log a manual watering
+                # Appends to the local watering journal; localhost-only (as /quit). The
+                # logged event becomes the authoritative last_watered (beats detection).
+                from tools.analytics.watering_log import log_manual
+
+                b = self._body()
+                try:
+                    event = log_manual(
+                        b.get("plant_id", ""), ml=b.get("ml"), note=b.get("note")
                     )
-                    return
-                from registry_model import (
+                    self._send_json({"ok": True, "event": event})
+                except (ValueError, TypeError) as exc:
+                    self._send_json({"ok": False, "error": str(exc)}, status=400)
+            elif route == "watering_verdict":  # #1203: rule on a detection
+                # The operator's confirm/reject on a DETECTED watering. Append-only
+                # (a rejection is kept, never erased — the rejection IS the detector's
+                # training signal). Localhost-only, like the rest of the write plane.
+                from tools.analytics.watering_log import log_verdict
+
+                b = self._body()
+                try:
+                    rec = log_verdict(b.get("event_id", ""), b.get("state", ""))
+                    self._send_json({"ok": True, "verdict": rec})
+                except (ValueError, TypeError) as exc:
+                    self._send_json({"ok": False, "error": str(exc)}, status=400)
+            elif route == "photo":  # #875 Q4: ingest a plant avatar
+                # Writes a local file + mutates the registry; localhost-only. The image
+                # is downsampled + EXIF-stripped before it ever lands (no home GPS).
+                from tools.analytics.photo_intake import MAX_UPLOAD_BYTES
+
+                pid = parsed.path[len("/photo/") :]
+                clen = int(self.headers.get("Content-Length", 0) or 0)
+                if not re.fullmatch(r"[A-Za-z0-9]+", pid):
+                    self._send_json({"error": "bad photo id"}, status=400)
+                elif clen > MAX_UPLOAD_BYTES:
+                    # #1039 Q4: reject an oversize upload BEFORE reading it into memory
+                    self._send_json(
+                        {"error": f"image too large (> {MAX_UPLOAD_BYTES} bytes)"},
+                        status=413,
+                    )
+                else:
+                    raw = self._raw_body()
+                    if not raw:
+                        self._send_json(
+                            {"error": "empty upload — send the image as the body"},
+                            status=400,
+                        )
+                    else:
+                        self._ingest_photo(pid, raw)
+            elif route == "registry_apply":  # #921 slice 3 — classic-save a batch
+                # Mutates the local registry config; localhost-only (as /quit).
+                from tools.analytics.registry_model import (
                     apply_operations,
                     load_registry_model,
                     purge_device_files,
@@ -800,14 +1383,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     )
                 result["registry"] = registry_payload(model)  # fresh state, no 2nd GET
                 self._send_json(result)
-            elif parsed.path == "/serial/owner/clear":  # clear a STALE marker (#330)
+            elif route == "serial_owner_clear":  # clear a STALE marker (#330)
                 self._send_json(serial_lock.clear_if_stale())
-            elif parsed.path.startswith("/lab/study/"):  # save a study (#159)
+            elif route == "lab_study":  # save a study (#159)
                 sid = unquote(parsed.path[len("/lab/study/") :])
                 self._send_json(save_study(sid, self._body()))
-            elif parsed.path.startswith("/lab/bench/") and parsed.path.endswith(
-                "/notes"
-            ):
+            elif route == "lab_bench_notes":
                 # Back-fill notes onto a landed bench package (#450 slice 3). Must
                 # precede the generic /lab/*/notes route, which mis-reads "bench/<id>".
                 pkg = unquote(parsed.path[len("/lab/bench/") : -len("/notes")])
@@ -819,7 +1400,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self._send_json(
                         {"error": str(exc), "path": notes_rel_path(pkg)}, status=500
                     )
-            elif parsed.path.startswith("/lab/") and parsed.path.endswith("/notes"):
+            elif route == "lab_notes":
                 eid = unquote(parsed.path[len("/lab/") : -len("/notes")])  # notes #158
                 try:
                     body = self._body()
@@ -835,17 +1416,18 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self._send_json(
                         {"error": str(exc), "path": notes_rel_path(eid)}, status=500
                     )
-            elif parsed.path == "/quit":
+            elif route == "quit":
                 # In-UI stop (ADR-0005 §4): a localhost-gated shutdown so the operator
                 # stops the server from the browser (no terminal to Ctrl-C when it was
                 # launched by a double-click). Ack first, then shut down from a separate
                 # thread - serve_forever can't be stopped from its own request thread.
-                if not self._is_local():
-                    self._send_json({"error": "shutdown is localhost-only"}, status=403)
-                    return
                 self._send_json({"stopped": True})
 
                 def _shutdown() -> None:
+                    # #1392: arm the deadline FIRST - before the ack sleep, the
+                    # controller stops, and server.shutdown(). Anything armed later is
+                    # unprotected against exactly the steps most likely to block.
+                    _arm_shutdown_watchdog()
                     time.sleep(0.25)  # let the {stopped:true} ack flush to the browser
                     # #972: refuse new work NOW, so a live-view poll can't replenish the
                     # in-flight pile and starve the stop. The console entry is loud -
@@ -892,9 +1474,65 @@ class DashboardHandler(BaseHTTPRequestHandler):
             raise ControlError("request body must be a JSON object")
         return data
 
-    def _is_local(self) -> bool:  # loopback-only guard for the shutdown endpoint
+    def _raw_body(self) -> bytes:
+        """The raw request body bytes (for a binary upload — #875 Q4 photo intake)."""
+        length = int(self.headers.get("Content-Length", 0) or 0)
+        return self.rfile.read(length) if length else b""
+
+    def _ingest_photo(self, pid: str, raw: bytes) -> None:
+        """#875 Q4: downsample + EXIF-strip the uploaded bytes into the gitignored
+        avatar, then link it on the plant's registry entry. The strip happens before the
+        file lands, so home GPS never touches disk."""
+        from tools.analytics.photo_intake import ingest_photo, registry_photo_path
+        from tools.analytics.registry_model import (
+            apply_operations,
+            load_registry_model,
+            registry_payload,
+            save_registry_model,
+        )
+
+        try:
+            ingest_photo(raw, pid)  # → config/photos/<pid>.jpg (small, no metadata)
+        except (ValueError, OSError) as exc:
+            self._send_json({"error": f"not a readable image: {exc}"}, status=400)
+            return
+        rel = registry_photo_path(pid)
+        model = load_registry_model()
+        result = apply_operations(
+            model, {"plants": {"edit": [{"plant_id": pid, "photo": rel}]}}
+        )
+        if result.get("ok"):
+            save_registry_model(model)
+            self._send_json(
+                {"ok": True, "photo": rel, "registry": registry_payload(model)}
+            )
+        else:
+            # the avatar saved, but this plant isn't in the temporal registry yet — the
+            # file serves from /photo/<pid>; the surface links it once the plant exists.
+            self._send_json({"ok": True, "photo": rel, "not_linked": result})
+
+    def _is_local(self) -> bool:  # the PEER half of the #1468 central gate
         host = self.client_address[0] if self.client_address else ""
         return host in ("127.0.0.1", "::1", "::ffff:127.0.0.1")
+
+    def _local_origin(self) -> bool:
+        """#1468 AC2 — the ONE control-plane gate, replacing the per-route
+        ``_is_local()`` sprinkle (six routes had it, the rest of the write plane did
+        not — a security inconsistency, not merely maintainability). Three floors,
+        all local: the TCP peer is loopback; the ``Host`` header names loopback (a
+        rebinding page reaches 127.0.0.1 but still says ``Host: evil.com``); and any
+        ``Origin`` a browser attaches is a loopback origin (a cross-site form POST
+        carries its own site's Origin — refused; ``Origin: null`` likewise)."""
+        if not self._is_local():
+            return False
+        if not _is_loopback_host(_host_header_name(self.headers.get("Host"))):
+            return False
+        origin = self.headers.get("Origin")
+        if origin:
+            o = urlparse(origin)
+            if o.scheme not in ("http", "https") or not _is_loopback_host(o.hostname):
+                return False
+        return True
 
     def log_message(self, *args: object) -> None:  # quiet the per-request log
         return
@@ -907,6 +1545,39 @@ def _port_in_use(host: str, port: int) -> bool:
     with socket.socket() as probe:
         probe.settimeout(0.3)
         return probe.connect_ex((host, port)) == 0
+
+
+def _looks_like_sprout(url: str) -> bool:
+    """Does whatever holds this port answer like a Sprout server? (#1555)
+
+    Probes a cheap, read-only Sprout route (GETs are ungated, #1468). We say "Sprout is
+    already running" a lot; before this the claim rested on *something* accepting a TCP
+    connection, which is equally true of a stray dev server on 8765. Telling an operator
+    their Sprout is running when it isn't sends them hunting for a window that does not
+    exist — so the claim now has evidence behind it, and the honest fallback ("something
+    else is using this port") is a different sentence with a different fix."""
+    with contextlib.suppress(Exception):
+        req = urllib.request.Request(url + "monitor/status")
+        with urllib.request.urlopen(req, timeout=1.5) as resp:
+            return resp.status == 200 and "state" in json.loads(resp.read() or b"{}")
+    return False
+
+
+def _port_busy_advice(url: str, port: int) -> list[str]:
+    """What to actually DO about a busy port (#1555) — named separately because the
+    right advice differs by who holds it, and the old message gave one answer for both
+    cases and never mentioned the recipe that exists to fix the common one."""
+    if _looks_like_sprout(url):
+        return [
+            f"Sprout is already running at {url}",
+            '  Open that tab, or stop it ("Stop server" in the dashboard).',
+            "  To take over the port with current code:  just restart",
+        ]
+    return [
+        f"Port {port} is in use, but whatever holds it is not answering as Sprout.",
+        "  Another program has the port (or a Sprout that is wedged mid-shutdown).",
+        f"  Free it, or serve elsewhere:  just serve -p {port + 1}",
+    ]
 
 
 def _stop_existing(url: str, host: str, port: int) -> bool:
@@ -969,6 +1640,17 @@ def _auto_start_collection(
         )
 
 
+def _tier_tick() -> None:
+    """#1292/#1466: the launcher owns tier maintenance - no Windows scheduled task, no
+    operator command (the one-click doctrine). The POLICY (fill-then-compact, throttle,
+    failure isolation) lives in ``compaction_hook``; this is only the call site.
+    Imported lazily so startup never pays for DuckDB. #1466: this ingests (fills) the
+    store as well as compacting - a compaction-only tick left it empty."""
+    from tools.analytics.compaction_hook import maybe_ingest_and_compact
+
+    maybe_ingest_and_compact()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Serve the live plants dashboard.")
     ap.add_argument(
@@ -1018,6 +1700,18 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
 
+    # #1468 AC2: refuse a non-loopback bind OUTRIGHT — this makes ADR-0014's
+    # "localhost-only" a property of the process, not a default someone can flip with
+    # a flag. Exposing the control plane beyond the machine is the authn redesign the
+    # not-at-our-scale ledger declines, so the bind that would need it is refused.
+    if not _is_loopback_host(args.host):
+        sys.stderr.write(
+            f"serve: refusing non-loopback bind {args.host!r} — the Sprout control "
+            "plane is localhost-only (ADR-0014 / #1468). Use 127.0.0.1, localhost, "
+            "or ::1.\n"
+        )
+        return 2
+
     url = f"http://{args.host}:{args.port}/"
     if args.print_port:  # the launcher reads this; never retypes the port literal
         print(args.port)
@@ -1032,6 +1726,10 @@ def main(argv: list[str] | None = None) -> int:
     # launcher default) is single-instance - open the existing tab and bow out, so a
     # second double-click never spawns a second server or window (#151 AC1/AC2/AC4);
     # otherwise say so + exit non-zero.
+    # #1555: announce the port BEFORE anything can fail on it. The old order printed the
+    # URL only after a successful bind, so the one case where you most need to know the
+    # port Sprout wanted — it couldn't get it — was the case that never told you.
+    print(f"Sprout: starting on {url}")
     if _port_in_use(args.host, args.port):
         if args.restart and _stop_existing(url, args.host, args.port):
             pass  # took over the port; fall through to bind our own
@@ -1041,11 +1739,8 @@ def main(argv: list[str] | None = None) -> int:
                 webbrowser.open(url)
             return 0  # single-instance: exactly one server, no second window
         else:
-            print(f"Sprout is already running at {url}")
-            print(
-                '  Open that tab, or stop it first ("Stop server" in the dashboard, '
-                "or close its window)."
-            )
+            for line in _port_busy_advice(url, args.port):
+                print(line)
             return 1
 
     # Explicit CLI inputs are pinned; otherwise leave None so each request
@@ -1065,7 +1760,8 @@ def main(argv: list[str] | None = None) -> int:
                 if args.open:
                     webbrowser.open(url)
                 return 0
-            print(f"Sprout is already running at {url} - stop it first.")
+            for line in _port_busy_advice(url, args.port):  # #1555, same honest split
+                print(line)
             return 1
         raise
     src = DashboardHandler.inputs or "logs/ + B8 archive (auto-discovered each request)"
@@ -1078,6 +1774,11 @@ def main(argv: list[str] | None = None) -> int:
         # daemon thread) so the dashboard is reachable immediately even while collection
         # spins up. The off state becomes a deliberate Stop, not a silent default.
         threading.Thread(target=_auto_start_collection, daemon=True).start()
+        # #1292: same launch, same daemon-thread shape - keep store I/O off the startup
+        # path. maybe_compact self-throttles (once an hour) and swallows its own
+        # failures, so it is safe on every launch; a separate thread from collection so
+        # neither can take the other down.
+        threading.Thread(target=_tier_tick, daemon=True).start()
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

@@ -3,7 +3,7 @@
 Runs under `just test-dx` (pytest tools/dx/). Mirrors the import style of
 test_lint_epic_subissues.py (tools/dx on sys.path)."""
 
-from link_check import (
+from tools.dx.link_check import (
     check_link,
     extract_links,
     find_findings,

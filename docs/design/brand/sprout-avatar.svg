@@ -1,0 +1,45 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sprout avatar — a two-leaf seedling on a green ground">
+  <!-- Sprout profile/avatar mark. Square canvas, but composed CIRCLE-SAFE: the seedling sits
+       inside the inscribed circle, so a circular crop (Google/GitHub/etc.) only ever loses the
+       corner ground. Brand greens over a soil-mode radial ground; reads down to ~40px.
+       Master source — export a PNG at the size the surface needs (sprout-avatar.png is 1024). -->
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="75%">
+      <stop offset="0" stop-color="#1e5233"/>
+      <stop offset="0.55" stop-color="#103019"/>
+      <stop offset="1" stop-color="#07130d"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="45%" r="42%">
+      <stop offset="0" stop-color="#8BD24F" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#8BD24F" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="leaf" x1="0" y1="1" x2="0.35" y2="0">
+      <stop offset="0" stop-color="#2f9a4d"/>
+      <stop offset="1" stop-color="#A8E85C"/>
+    </linearGradient>
+    <linearGradient id="leafDim" x1="0" y1="1" x2="0.35" y2="0">
+      <stop offset="0" stop-color="#26803f"/>
+      <stop offset="1" stop-color="#7FC24A"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#glow)"/>
+
+  <g transform="translate(256,270) scale(1.22)">
+    <!-- stem -->
+    <path d="M0 96 C -7 52, -7 26, 0 -4" fill="none" stroke="#2b7a41" stroke-width="15" stroke-linecap="round"/>
+    <!-- back / left leaf -->
+    <g transform="rotate(-34)">
+      <path d="M0 8 C -46 -6, -50 -78, -6 -120 C 30 -78, 30 -30, 0 8 Z" fill="url(#leafDim)"/>
+      <path d="M-4 -2 C -22 -30, -20 -70, -6 -104" fill="none" stroke="#1c6a35" stroke-width="5" stroke-linecap="round" opacity="0.55"/>
+    </g>
+    <!-- front / right leaf -->
+    <g transform="rotate(32)">
+      <path d="M0 8 C 46 -6, 50 -78, 6 -120 C -30 -78, -30 -30, 0 8 Z" fill="url(#leaf)"/>
+      <path d="M4 -2 C 22 -30, 20 -70, 6 -104" fill="none" stroke="#1c6a35" stroke-width="5" stroke-linecap="round" opacity="0.55"/>
+    </g>
+    <!-- seed node -->
+    <circle cx="0" cy="2" r="9" fill="#A8E85C"/>
+  </g>
+</svg>

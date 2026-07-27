@@ -7,11 +7,9 @@ merge-ordering casualty that left two 0029 rows), and a live-repo guard.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import lint_adr_register_status as L
+from tools.dx import lint_adr_register_status as L
 
 
 def _adr(adr_dir: Path, num: str, status_line: str) -> None:

@@ -64,7 +64,7 @@ sensor responding to a changed environment. Re-running the dry-air and wet-soil 
 > the **[3-minute board check](trust-your-sensor.md)** first — especially Flaw 3 (the hidden ungrounded
 > resistor), which causes a board to return the same stale number regardless of soil state.
 
-## This is Sprout's honest chain
+## This is Sprout's reading chain
 
 ```text
 probe reading  ->  seven calibrated bands  ->  mood + first-person voice  ->  (once calibration passes) a pump
@@ -75,5 +75,5 @@ is right, everything downstream is right.
 
 ---
 
-*The honest-data explainer for the User Front Door (issue #143). A later Design pass adds the band color chips
+*The reading explainer for the User Front Door (issue #143). A later Design pass adds the band color chips
 and Sprout's visual mood marks — the words and the structure are here.*

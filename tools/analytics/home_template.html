@@ -1,0 +1,1388 @@
+<!doctype html>
+<!-- #875 — the HOME surface (the Sprout Voice UI's landing page).
+
+     The locked contracts this renders (grill 2026-07-18, night 1 + 2nd half; #875 / #1039):
+       · Home = the plant-card grid, the app's landing surface — "which plant" + "how
+         thirsty," in Sprout's voice. Workbench ("Classic Sprout") tucks behind it.
+       · Three questions → three element groups: WHAT ACTION (mark + words + last-watered)
+         · HOW URGENTLY (the frame color — state, never identity) · WHICH PLANT (photo/
+         icon + pot + location — the muted identity register).
+       · The mark sits BESIDE the identity visual — two pictorial elements, never merged.
+         Thumbnail ladder: photo → chosen icon → generic, one slot, replace-never-both.
+       · ONE vocabulary: the 7 mood words ARE the band names (Soaked → Faint); diagnostics
+         live off-ladder in the exceptions lane. The card headline is the mood word.
+       · Absence patterns (canonical, internal names — never rendered): present-or-silent
+         (voice line, next-need render-or-not) · calm-empty (water story "—" placeholders,
+         the no-photo leaf, the first-run page) · first-class-absent (sensorless: a reason,
+         not a data-pretending null).
+       · Cal-provisional stays OFF the card face (Workbench detail; payload still carries it).
+       · Raw numbers never render here — Workbench-side only. The hero's pulse chart uses
+         the in-soil envelope axis with mood-word labels, no raw numerals.
+       · The hero ships ≥1 per-plant chart (histogram minimum) — the pulse visual, because
+         the tagline is a promise: "Plants with a pulse."
+
+     Data seam: GET /cards.json (card_payload.py — one truth, nothing re-derived here).
+     The hero's chart hydrates lazily from GET /data.json (the same served context the
+     Workbench reads). Tokens/fonts are injected server-side (render_home), same pattern
+     as the Workbench shell. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sprout — home</title>
+<style>
+/*__SPROUT_TOKENS__*/
+</style>
+<style>
+  /* ---- chrome: the muted neutral family only (charter rule 2) ---- */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--font-ui); }
+  a { color: inherit; }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 24px 64px; }
+
+  /* masthead — identity + the ratified tagline; Workbench tucks behind a quiet link */
+  .mast { display: flex; align-items: center; gap: 14px; padding: 6px 0 18px; }
+  .mast .word { font-family: var(--font-display); font-weight: 800; font-size: 30px;
+    line-height: 1; }
+  .mast .tagline { color: var(--muted); font-size: 14.5px; margin-top: 3px; }
+  .mast nav { margin-left: auto; display: flex; gap: 8px; }
+  .mast nav a { color: var(--muted); text-decoration: none; font-size: 14px;
+    border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px;
+    background: var(--surface); }
+  .mast nav a:hover { color: var(--ink); border-color: var(--muted); }
+
+  /* the grid's invitation line — "Tend a tiny jungle." placement proposal A (#1039) */
+  /* #1585 G3: the calm signal — chrome register, never a celebration (spec §3: Sprout is
+     fond, not perky). Quiet, above the grid, present only when it is true. */
+  .calm { color: var(--muted); font-size: 14px; margin: 12px 0 -4px; }
+  .invite { font-family: var(--font-display); font-weight: 700; font-size: 19px;
+    margin: 10px 0 14px; }
+  .invite small { font-family: var(--font-ui); font-weight: 400; font-size: 13.5px;
+    color: var(--muted); margin-left: 10px; }
+
+  /* ---- the card grid — scale-not-zoom: the responsive grid IS the zoom ---- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px; }
+
+  /* ---- one plant card. Frame = state (the ONLY saturated element, charter rule 1) ---- */
+  .card { position: relative; background: var(--surface);
+    border: 3px solid var(--frame, var(--border)); border-radius: 18px;
+    padding: 14px 16px 12px; cursor: pointer; text-align: left; width: 100%;
+    font: inherit; color: inherit; display: flex; flex-direction: column; gap: 10px; }
+  .card:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+  .card.neutral { border-color: var(--border); cursor: default; }
+
+  .top { display: flex; gap: 12px; align-items: flex-start; }
+  /* WHICH PLANT — the muted identity register: thumb + name/pot/location */
+  .thumb { flex: 0 0 56px; width: 56px; height: 56px; border-radius: 12px;
+    background: var(--surface-2); border: 1px solid var(--border); overflow: hidden;
+    display: flex; align-items: center; justify-content: center; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb svg { width: 44px; height: 44px; display: block; }
+  .who { flex: 1 1 auto; min-width: 0; }
+  .name { font-family: var(--font-display); font-weight: 700; font-size: 17.5px;
+    margin: 1px 0 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meta { color: var(--muted); font-size: 12.5px; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; margin-top: 5px;
+    font-size: 11.5px; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px;
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip::before { content: ""; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--muted); flex: 0 0 auto; }
+  /* WHAT ACTION's glyph — the living mark, vivid state, BESIDE the thumb (never merged) */
+  .mark { flex: 0 0 auto; margin-left: 2px; }
+
+  /* the state group: mood word (the band name — one vocabulary) + first-person line */
+  .state { border-radius: 12px; padding: 8px 12px 9px;
+    background: color-mix(in srgb, var(--frame, var(--border)) 9%, var(--surface)); }
+  .mood { display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-display); font-weight: 800; font-size: 19px; }
+  .mood .dot { width: 10px; height: 10px; border-radius: 50%;
+    background: var(--frame, var(--muted)); flex: 0 0 auto; }
+  .line { margin: 3px 0 0; font-size: 14px; line-height: 1.45; color: var(--ink); }
+
+  /* the water story — last-watered (detected) + next-need (forecast, its own channel) */
+  .water { display: flex; gap: 14px; flex-wrap: wrap; align-items: baseline;
+    font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--border);
+    padding-top: 8px; margin-top: auto; }
+  .water b { color: var(--ink); font-weight: 600; }
+  .water .src { font-size: 10.5px; letter-spacing: .06em; color: var(--muted); }
+  .nn-known { color: var(--st-predicted); }  /* forecast = the violet channel, never a mood */
+  /* #1582 §6 rule 3: an attention level is NOT a reading, so it never wears a mood colour.
+     The harm level takes the state channel's act-now token — plant-side urgency, distinct
+     from --st-fault, which is the instrument axis (R12) and would collapse the two. */
+  .water .harm { color: var(--st-due); font-weight: 600; }
+  /* #1580 R3: the how-sure chip rides the SAME violet channel as the figure it qualifies —
+     provenance-about-a-number, the DETECTED/MANUAL chip shape, never a mood colour (R8).
+     Scoped `.water .src.nn-conf` deliberately: `.water .src` sets muted at (0,2,0) and
+     beats a bare `.nn-conf` (0,1,0), which renders the chip grey and silently breaks R3's
+     own "rides the predicted channel" rule. Caught by reading the computed colour. */
+  .water .src.nn-conf { color: var(--st-predicted); border: 1px solid currentColor;
+    border-radius: 3px; padding: 0 3px; letter-spacing: .04em; cursor: help; }
+  /* #1137 the glug button — chrome register (an affordance, not a state): quiet
+     pill at the water row's end; ink on hover; watering-teal droplet only. */
+  .glug { margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11.5px; font-weight: 600; color: var(--muted); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px;
+    cursor: pointer; user-select: none; white-space: nowrap; }
+  .glug svg { width: 9px; height: 11px; color: var(--st-watering); flex: 0 0 auto; }
+  .glug:hover, .glug:focus-visible { color: var(--ink); border-color: var(--muted); }
+  .glug:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .hero .glug { font-size: 12.5px; padding: 5px 13px; }
+  /* #1643 the amount opener + cup chips. Chrome register like .glug — an affordance,
+     never a state. Deliberately SEPARATE from the glug button rather than a mode on
+     it: the plain watering must stay one tap, so the no-amount path is the existing
+     control, physically unchanged. This sits beside it and is skipped by not touching
+     it. An amount sometimes recorded beats a field that discourages logging. */
+  .glugmore { display: inline-flex; align-items: center; margin-left: 4px;
+    font-size: 11.5px; font-weight: 600; color: var(--muted); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px;
+    cursor: pointer; user-select: none; white-space: nowrap; }
+  .glugmore:hover, .glugmore:focus-visible { color: var(--ink); border-color: var(--muted); }
+  .glugmore:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .cups { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px;
+    align-items: center; }
+  .cup { font-size: 11px; font-weight: 600; color: var(--muted); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px;
+    cursor: pointer; user-select: none; white-space: nowrap; }
+  .cup:hover, .cup:focus-visible { color: var(--ink); border-color: var(--muted); }
+  .cup:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .cupunit { font-size: 10.5px; letter-spacing: .04em; color: var(--muted); }
+  /* #1671 the running session tally. Leaf-tinted like .glugged — a completed good
+     thing — but it does NOT end the interaction: the amount control stays beside it,
+     because a session is open until she walks away, not until she taps once. */
+  .tally { display: inline-flex; align-items: center; gap: 5px; margin-left: auto;
+    font-size: 11.5px; font-weight: 700; color: var(--leaf);
+    background: color-mix(in srgb, var(--leaf) 10%, var(--surface));
+    border: 1.5px solid color-mix(in srgb, var(--leaf) 45%, transparent);
+    border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+  .tally .part { font-weight: 600; color: var(--muted); }
+  /* #1203 the verdict pair — an UNCONFIRMED detection asks; it never asserts.
+     Chrome register on purpose: these are affordances, not states. Nothing here
+     touches the frame, the mood, or the voice line — an unreviewed detection is
+     not ground truth, so it must not colour the plant's face. */
+  .verdict { display: inline-flex; gap: 6px; margin-left: auto; align-items: center; }
+  .vbtn { font-size: 11px; font-weight: 600; color: var(--muted); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 999px; padding: 3px 9px;
+    cursor: pointer; user-select: none; white-space: nowrap; }
+  .vbtn:hover, .vbtn:focus-visible { color: var(--ink); border-color: var(--muted); }
+  .vbtn:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .vask { font-size: 10.5px; letter-spacing: .04em; color: var(--muted); }
+  .hero .vbtn { font-size: 12px; padding: 4px 11px; }
+
+  /* #1229: the RETAINED logged state — unmistakable, not a flash; replaces the
+     button so a double-tap is impossible. Leaf-tinted: a completed good thing. */
+  .glugged { margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11.5px; font-weight: 700; color: var(--leaf);
+    background: color-mix(in srgb, var(--leaf) 10%, var(--surface));
+    border: 1.5px solid color-mix(in srgb, var(--leaf) 45%, transparent);
+    border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+  /* #1229: the explicit re-sort control — present-or-silent (only when the served
+     order drifted from the frozen one); chrome register, never auto-fires. */
+  .resort { display: inline-flex; align-items: center; gap: 5px; margin-left: 12px;
+    font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--muted);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+    padding: 3px 11px; cursor: pointer; user-select: none; vertical-align: 2px; }
+  .resort:hover, .resort:focus-visible { color: var(--ink); border-color: var(--muted); }
+
+  .quiet { color: var(--muted); font-size: 12.5px; }
+
+  /* ---- the exceptions lane (#875 Q3): off-ladder readings, calm, below the grid ---- */
+  .lane-h { font-family: var(--font-display); font-weight: 700; font-size: 16px;
+    margin: 28px 0 10px; color: var(--ink); }
+  .lane-h small { font-family: var(--font-ui); font-weight: 400; color: var(--muted);
+    font-size: 12.5px; margin-left: 8px; }
+  .lane .card { border-width: 1.5px; }
+
+  /* #1556 B6: hardware health, greenhouse-level. Calm when everything is fine — one
+     quiet line — and specific when it is not, naming the sensors rather than making her
+     go looking. It never wears a band colour: a probe's condition is not a reading. */
+  .hardware { max-width: 1180px; margin: 22px auto 0; padding: 10px 12px;
+    border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
+    font-size: 13px; color: var(--muted); }
+  .hardware b { color: var(--ink); font-weight: 600; }
+  .hardware .hw-inspect { color: var(--st-fault); font-weight: 700; }
+  .hardware .hw-watch { color: var(--st-due); font-weight: 600; }
+  .hardware .hw-ids { color: var(--ink); }
+  .hardware .hw-unknown { color: var(--muted); }
+  .hardware a { color: var(--ink); }
+
+  /* #1551 B1: the stop control is chrome, not content — quiet until you look for it,
+     and never competing with a plant for attention. It wears --st-fault only ARMED:
+     the colour is the confirm step's signal, so a resting button that already looked
+     dangerous would spend the one visual cue it has before the decision point. */
+  .dangerzone { max-width: 1180px; margin: 28px auto 40px; padding: 0 4px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .btn.danger { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 8px;
+    background: transparent; color: var(--muted); border: 1px solid var(--border);
+    cursor: pointer; }
+  .btn.danger:hover { color: var(--ink); }
+  .btn.danger.armed { background: var(--st-fault); color: #fff;
+    border-color: var(--st-fault); font-weight: 700; }
+  .btn.danger[disabled] { opacity: .7; cursor: default; }
+  .danger-note { color: var(--muted); font-size: 12.5px; }
+  .danger-note.armed { color: var(--st-fault); font-weight: 700; }
+
+  /* ---- first-run / calm-empty ---- */
+  .empty { max-width: 560px; margin: 8vh auto 0; text-align: center;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    padding: 36px 30px; }
+  .empty h2 { font-family: var(--font-display); font-weight: 800; font-size: 24px;
+    margin: 14px 0 6px; }
+  .empty p { color: var(--muted); font-size: 14.5px; line-height: 1.55; margin: 6px 0 0; }
+  .empty a { color: var(--ink); }
+
+  /* ---- the hero overlay: one plant, large — mark + ladder + the pulse ---- */
+  .overlay { position: fixed; inset: 0; background: color-mix(in srgb, var(--ink) 42%, transparent);
+    display: none; align-items: flex-start; justify-content: center; overflow: auto;
+    padding: 4vh 16px; z-index: 30; }
+  .overlay.open { display: flex; }
+  .hero { background: var(--surface); border: 3px solid var(--frame, var(--border));
+    border-radius: 22px; max-width: 620px; width: 100%; padding: 22px 24px 20px;
+    position: relative; }
+  .hero .close { position: absolute; top: 12px; right: 14px; border: 0;
+    background: none; font-size: 22px; color: var(--muted); cursor: pointer;
+    line-height: 1; padding: 6px; }
+  .hero .top { margin-bottom: 4px; }
+  .hero .thumb { flex-basis: 84px; width: 84px; height: 84px; }
+  .hero .thumb svg { width: 64px; height: 64px; }
+  .hero .name { font-size: 24px; white-space: normal; }
+  .hero .state { margin: 10px 0; }
+  .hero .mood { font-size: 24px; }
+  .hero .line { font-size: 15.5px; }
+
+  /* the 7-step ladder — ONE vocabulary; dimmed-same-palette must READ as dimmed:
+     non-current steps drop to low opacity AND lose their border; the current step
+     keeps full color + an ink ring + its word. (#1039 ladder-legibility ruling) */
+  .ladder { display: flex; gap: 5px; margin: 14px 0 4px; }
+  .ladder .step { flex: 1; height: 26px; border-radius: 7px; opacity: .22;
+    position: relative; }
+  .ladder .step.cur { opacity: 1; outline: 2.5px solid var(--ink); outline-offset: 1.5px; }
+  .ladder-words { display: flex; gap: 5px; margin-bottom: 10px; }
+  .ladder-words span { flex: 1; text-align: center; font-size: 10px;
+    color: var(--muted); visibility: hidden; }
+  .ladder-words span.cur { visibility: visible; color: var(--ink); font-weight: 600; }
+  /* #1136 the band-journey: start marker + travel arrow drawn ON the ladder, plus
+     one measured sentence. All numbers are counted, never derived. */
+  .ladder { position: relative; }
+  .ladder .jstart { position: absolute; top: 50%; width: 14px; height: 14px;
+    margin: -7px 0 0 -7px; border-radius: 50%; background: var(--surface);
+    border: 3px solid var(--ink); box-sizing: border-box; }
+  .ladder svg.jarrow { position: absolute; inset: 0; width: 100%; height: 100%;
+    overflow: visible; pointer-events: none; }
+  .journey { display: flex; gap: 8px; align-items: baseline; font-size: 13px;
+    color: var(--muted); margin: 2px 0 10px; }
+  .journey b { color: var(--ink); font-weight: 700; }
+  .journey .src { font-size: 10.5px; letter-spacing: .06em; color: var(--muted);
+    font-family: var(--font-data, monospace); }
+
+  /* the pulse — Tufte-esque: bare canvas, band-tinted ground, no gridlines/numerals */
+  .pulse h4 { font-family: var(--font-display); font-weight: 700; font-size: 14px;
+    margin: 14px 0 6px; }
+  .pulse h4 small { font-family: var(--font-ui); font-weight: 400; color: var(--muted);
+    margin-left: 8px; font-size: 11.5px; }
+  .pulse canvas { width: 100%; height: 96px; display: block; border-radius: 8px; }
+  .pulse .axis { display: flex; justify-content: space-between; font-size: 10.5px;
+    color: var(--muted); margin-top: 3px; }
+  /* #1171: the sparkline is the second pulse element; calm-empty stays quiet, never loud */
+  .pulse.spark { margin-top: 4px; }
+  .pulse .calm { font-size: 12.5px; color: var(--muted); margin: 2px 0 0;
+    padding: 14px 12px; background: var(--surface-2, rgba(0,0,0,.04)); border-radius: 8px; }
+  .wb-link { display: inline-block; margin-top: 14px; font-size: 13px;
+    color: var(--muted); }
+
+  @media (prefers-reduced-motion: reduce) { .overlay, .card { transition: none; } }
+</style>
+<script src="/docs/design/components/sprout-mark.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <sprout-mark mood="thriving" size="46" aria-hidden="true"></sprout-mark>
+    <div>
+      <div class="word">Sprout</div>
+      <div class="tagline">Plants with a pulse.</div>
+    </div>
+    <!-- #1148: a quiet chrome link to the evaluation surfaces while the three
+         multi-plant-history candidates are on trial. The Home stays the product —
+         its three-question grid is untouched; this is one nav pill, and it goes
+         away with the trial. -->
+    <nav><a href="/trial" title="the multi-plant history candidates, on trial (#1148)">Trial</a><a href="/classic" title="the Workbench — Classic Sprout, raw numbers and all">Workbench &rarr;</a></nav>
+  </header>
+  <main id="main" aria-live="polite"></main>
+  <!-- #1551 B1: the no-terminal door. It lives HERE, in the page chrome outside
+       <main>, and not inside paint() — the zero state returns early, so a control
+       painted with the cards would be missing on first run, which is exactly the
+       moment someone most needs to stop an app they started to look at nothing.
+       Two-step arm-then-confirm, the semantics classic already ships (#721): a
+       destructive action is never one click, and an armed button auto-cancels so a
+       stray press never lingers hot. -->
+  <!-- #1556 B6: hardware health on the DEFAULT surface. It was reachable only from
+       classic Diagnostics, which means the one surface she actually looks at could not
+       tell her a probe was going bad. Greenhouse-level ROLL-UP only: R12 already puts
+       the per-plant instrument condition on the card, and repeating it here would be
+       two answers to one question (coordinate, don't duplicate). -->
+  <section class="hardware" id="hardware" hidden></section>
+  <footer class="dangerzone">
+    <button class="btn danger" id="quitBtn" type="button"
+      title="Stops the local Sprout server (this app). Logging pauses until you start it again. Press once to arm, then again to confirm.">⏻ Stop server</button>
+    <span class="danger-note" id="quitNote">Shuts down the app · press twice to confirm</span>
+  </footer>
+</div>
+
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-label="plant detail">
+  <div class="hero" id="hero"></div>
+</div>
+
+<script>
+"use strict";
+/* Pre-#875 deep-links: the classic tabs lived on "/" as hash anchors. Anyone
+   arriving with one (a bookmark, the launcher's capture tab) belongs on the
+   Workbench — forward before first paint, hash intact. */
+if (/^#(capture|plants|monitor|lab|registry)/.test(location.hash))
+  location.replace("/classic" + location.hash);
+
+/* ---- ONE vocabulary (#1039): the mood words ARE the band names, wet → dry. ----
+   Order matters: it is the ladder. Tokens stay the shipped --band-* CSS names
+   (a token rename is a contract change; the RULING renames the words). */
+var LADDER = [
+  { mood: "soaked",    token: "--band-saturated" },
+  { mood: "refreshed", token: "--band-wet" },
+  { mood: "thriving",  token: "--band-moist" },
+  { mood: "content",   token: "--band-ideal" },
+  { mood: "thirsty",   token: "--band-drying" },
+  { mood: "parched",   token: "--band-dry" },
+  { mood: "faint",     token: "--band-parched" }
+];
+function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+/* ---- the identity icon set — my #1121 silhouettes, inlined for the live fleet's
+   types + the generic seedling fallback. Muted register only (charter rule 3);
+   the chosen-icon registry field arrives with the picker (#1121 follow-up). ---- */
+var F1 = "#7E9B6B", F2 = "#6B8659", F3 = "#93A87E";
+var ICONS = {
+  pothos: '<g><line x1="22" y1="34" x2="14" y2="20" stroke="' + F2 + '" stroke-width="2"/><line x1="22" y1="34" x2="30" y2="20" stroke="' + F2 + '" stroke-width="2"/><line x1="22" y1="34" x2="22" y2="16" stroke="' + F2 + '" stroke-width="2"/><ellipse cx="14" cy="17" rx="6" ry="7" fill="' + F1 + '"/><ellipse cx="30" cy="17" rx="6" ry="7" fill="' + F2 + '"/><ellipse cx="22" cy="13" rx="6" ry="7" fill="' + F1 + '"/><path d="M18 34 Q8 38 10 46" fill="none" stroke="' + F2 + '" stroke-width="1.6"/><path d="M26 34 Q36 39 34 46" fill="none" stroke="' + F2 + '" stroke-width="1.6"/><ellipse cx="10" cy="43" rx="3.6" ry="4.4" fill="' + F1 + '"/><ellipse cx="34" cy="44" rx="3.6" ry="4.4" fill="' + F1 + '"/></g>',
+  dracaena: '<g><rect x="20" y="22" width="4" height="20" rx="1.5" fill="#7C6A4E"/><path d="M20 24 Q12 18 8 8 L11 9 Q16 17 22 23 Z" fill="' + F1 + '"/><path d="M21 23 Q19 13 16 5 L19 6 Q22 14 23 22 Z" fill="' + F2 + '"/><path d="M22 22 Q24 12 24 4 L27 5 Q26 14 24 22 Z" fill="' + F1 + '"/><path d="M23 23 Q28 14 32 6 L34 8 Q30 16 24 23 Z" fill="' + F2 + '"/><path d="M23 24 Q30 19 36 12 L37 15 Q31 21 24 25 Z" fill="' + F1 + '"/></g>',
+  anthurium: '<g><line x1="22" y1="40" x2="14" y2="24" stroke="' + F2 + '" stroke-width="2"/><line x1="22" y1="40" x2="28" y2="20" stroke="' + F2 + '" stroke-width="2"/><path d="M14 30 C7 22 10 14 14 18 C18 14 21 22 14 30 Z" fill="' + F2 + '"/><path d="M28 26 C21 18 24 10 28 14 C32 10 35 18 28 26 Z" fill="' + F1 + '"/><line x1="22" y1="40" x2="33" y2="30" stroke="' + F2 + '" stroke-width="1.8"/><path d="M33 34 C28 28 31 22 34 25 C37 22 39 28 33 34 Z" fill="#C56B5C"/><path d="M34 25 Q36 20 35 17" stroke="#E7D9A8" stroke-width="2.2" fill="none"/></g>',
+  bromeliad: '<g><path d="M20 40 Q10 34 6 22 L10 22 Q15 31 22 38 Z" fill="' + F1 + '"/><path d="M21 39 Q16 28 15 16 L19 17 Q21 28 23 38 Z" fill="' + F2 + '"/><path d="M23 38 Q26 27 27 15 L31 17 Q28 28 24 39 Z" fill="' + F2 + '"/><path d="M24 38 Q31 31 36 21 L39 23 Q34 33 25 40 Z" fill="' + F1 + '"/><path d="M20 26 L17 12 L23 12 Z" fill="#CE8A6E"/><path d="M24 26 L22 10 L28 11 Z" fill="#CE8A6E"/></g>',
+  monstera: '<g><line x1="22" y1="42" x2="14" y2="26" stroke="' + F2 + '" stroke-width="2"/><line x1="22" y1="42" x2="30" y2="24" stroke="' + F2 + '" stroke-width="2"/><path d="M14 30 C4 27 3 13 13 9 C23 13 24 25 14 30 Z" fill="' + F2 + '"/><path d="M13 26 L7 22 M12 19 L6 16" stroke="var(--surface-2,#F7FAF2)" stroke-width="2"/><path d="M30 28 C20 25 19 11 29 7 C39 11 40 23 30 28 Z" fill="' + F1 + '"/><path d="M29 24 L23 20 M28 17 L22 14" stroke="var(--surface-2,#F7FAF2)" stroke-width="2"/></g>',
+  snake: '<g><path d="M12 42 Q11 26 14 12 Q17 26 16 42 Z" fill="' + F1 + '"/><path d="M19 42 Q18 22 22 6 Q26 22 25 42 Z" fill="' + F2 + '"/><path d="M28 42 Q28 24 32 12 Q34 27 32 42 Z" fill="' + F1 + '"/></g>',
+  zz: '<g><path d="M22 42 Q14 30 10 16" fill="none" stroke="' + F2 + '" stroke-width="2"/><path d="M22 42 Q30 30 34 16" fill="none" stroke="' + F2 + '" stroke-width="2"/><ellipse cx="11" cy="17" rx="4" ry="5.5" fill="' + F1 + '"/><ellipse cx="14" cy="24" rx="4" ry="5.5" fill="' + F1 + '"/><ellipse cx="17" cy="31" rx="4" ry="5.5" fill="' + F1 + '"/><ellipse cx="33" cy="17" rx="4" ry="5.5" fill="' + F1 + '"/><ellipse cx="30" cy="24" rx="4" ry="5.5" fill="' + F1 + '"/><ellipse cx="27" cy="31" rx="4" ry="5.5" fill="' + F1 + '"/></g>',
+  generic: '<g><path d="M22 40 L22 24" stroke="#4F7D34" stroke-width="3" stroke-linecap="round"/><path d="M22 26 C12 24 10 12 20 10 C24 16 24 22 22 26 Z" fill="' + F1 + '"/><path d="M22 26 C32 24 34 12 24 10 C20 16 20 22 22 26 Z" fill="' + F2 + '"/></g>'
+};
+/* keyword → icon; matched against the identity name (the live fleet names its types) */
+var ICON_KEYS = [
+  ["pothos", "pothos"], ["dracaena", "dracaena"], ["corn", "dracaena"],
+  ["anthurium", "anthurium"], ["bromeliad", "bromeliad"], ["monstera", "monstera"],
+  ["snake", "snake"], ["sansevieria", "snake"], ["zz", "zz"]
+];
+function iconFor(name) {
+  var n = (name || "").toLowerCase();
+  for (var i = 0; i < ICON_KEYS.length; i++)
+    if (n.indexOf(ICON_KEYS[i][0]) !== -1) return ICONS[ICON_KEYS[i][1]];
+  return ICONS.generic;
+}
+
+function el(tag, cls, html) {
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html !== undefined) e.innerHTML = html;
+  return e;
+}
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+/* the muted identity thumbnail — ONE slot, best-available: photo → icon → generic */
+function thumbHTML(card) {
+  var ident = card.identity || {};
+  if (ident.photo && card.plant_id)
+    return '<img src="/photo/' + encodeURIComponent(card.plant_id) + '" alt=""' +
+      ' onerror="this.parentNode.innerHTML=window.__iconFor(this.dataset.n)"' +
+      ' data-n="' + esc(ident.name) + '">';
+  return '<svg viewBox="0 0 44 48" aria-hidden="true">' + iconFor(ident.name) + "</svg>";
+}
+window.__iconFor = function (n) { return '<svg viewBox="0 0 44 48">' + iconFor(n) + "</svg>"; };
+
+/* #1534 D2: why there is no next-water figure, in the plant's own terms. The forecast
+   already reports WHY it declined (forecast.py returns an `insufficient` / `stable`
+   reason and card_payload carries it into next_need.reason) — this reads that instead of
+   flattening every case into one warm sentence. Three states, three truths:
+     · not enough history yet      -> still learning (the one case "learning" is true)
+     · measured flat / no trend    -> holding steady; there is no dry-down to measure
+     · anything else               -> the reason as given, never invented */
+/* #1585 (G3): the calm signal — the affirmative all-clear, not the absence of alarm.
+   "For a calm character, 'nothing needs you until Thursday' is as valuable a prediction as
+   a warning." Composed from the ruled §8 order (docs/design/specs/attention-model.md) using
+   only fields already on the card — no second vocabulary, nothing re-derived:
+     · any plant at Needs-you-now (at/past Thirsty) -> not calm, say nothing
+     · any plant whose reading can't be trusted     -> not calm; "fine" and "I can't see"
+       are opposite claims and must never collapse (the §8 rule)
+     · otherwise -> calm, and it names WHEN the calm ends, because "all fine" with no time
+       bound is unfalsifiable comfort. With no usable forecast it drops to the present
+       tense it can actually support rather than inventing a horizon. */
+/* #1587: the calm horizon is no longer declared here. It lives host-side, once, in
+   attention.CALM_HORIZON_H — the composer decides which plants are inside it, and the
+   summary counts the answer. A client-side copy of a tunable constant is the same drift
+   the R3 vocabulary extraction (#1598) just closed, one constant instead of one word. */
+function calmSignal(cards) {
+  /* #1587 G7 renamed nothing and kept this entry point: the calm signal is now the
+     ALL-CLEAR CASE of the greenhouse summary, not a separate computation. G3 shipped
+     this re-deriving the levels itself (an exception scan, a mood list, a horizon
+     compare) because the composer did not exist yet; it does now, so the summary counts
+     the model's levels and defines none of its own (§5). */
+  return greenhouseSummary(cards);
+}
+/* #1587 G7 — the greenhouse-wide summary. It AGGREGATES the attention model's words and
+   mints none: a summary that invents its own vocabulary is a second answer to "which
+   plants need you", which is R11's complaint one layer up. Counts only; the ordering is
+   §8's, so the most serious thing she can act on is read first. */
+function greenhouseSummary(cards) {
+  var list = (cards || []).filter(function (c) { return c && c.frame; });
+  if (!list.length) return "";
+  var n = { cant_tell: 0, heading_for_harm: 0, needs_you_now: 0, watch: 0, all_clear: 0 },
+      unavailable = 0, soonest = null;
+  for (var i = 0; i < list.length; i++) {
+    var att = list[i].attention;
+    if (!att) { unavailable++; continue; }   /* not probed — first-class absent, counted */
+    if (n[att.state] === undefined) continue;
+    n[att.state]++;
+    var h = att.evidence && att.evidence.hours;
+    if (att.state === "all_clear" && typeof h === "number" &&
+        (soonest === null || h < soonest)) soonest = h;
+  }
+  var parts = [];
+  /* the model's words, count-conjugated (one vocabulary — a plural verb is not a new
+     word). Present-or-silent: a level with nobody in it says nothing at all. */
+  if (n.cant_tell) parts.push(n.cant_tell + " can’t tell");
+  if (n.heading_for_harm) parts.push(n.heading_for_harm + " heading for harm");
+  if (n.needs_you_now) parts.push(n.needs_you_now + (n.needs_you_now === 1 ? " needs you now" : " need you now"));
+  if (n.watch) parts.push(n.watch + " to watch");
+  if (unavailable) parts.push(unavailable + " unavailable");
+  if (!parts.length) {
+    /* everyone is fine — G3's affirmative all-clear, word for word as it shipped. */
+    if (soonest === null) return "Nothing needs you right now.";
+    /* floor, never round: rounding UP over-promises the calm — 60h would read "about 3
+       days" for a plant that wants water at 2.5. A calm claim must understate. */
+    var days = Math.floor(soonest / 24);
+    return "Nothing needs you for about " + (days <= 1 ? "a day" : days + " days") + ".";
+  }
+  /* the rest are fine, and the tail says so rather than leaving them uncounted — but it
+     only claims a horizon when a forecast supports one (§6 rule 4). */
+  if (n.all_clear) {
+    var tail = "the rest fine";
+    if (soonest !== null) {
+      var d = Math.floor(soonest / 24);
+      tail += " for about " + (d <= 1 ? "a day" : d + " days");
+    }
+    parts.push(tail);
+  }
+  return parts.join(" · ") + ".";
+}
+/* #1580 R3: the confidence vocabulary's two formatters — the ONE place the form lives on the
+   surface (docs/design/foundations/confidence-vocabulary.md). R6/R11/G2/G3/G7 consume these;
+   none of them re-mints a second how-sure vocabulary able to disagree with this one. */
+function nextNeedSpanHours(nn) {   // the model's own interval, or null — never fabricated
+  var lo = nn && nn.hours_lo, hi = nn && nn.hours_hi;
+  return (typeof lo === "number" && typeof hi === "number" && hi > lo) ? [lo, hi] : null;
+}
+function nextNeedFigure(nn) {
+  var span = nextNeedSpanHours(nn), mid = nn.hours;
+  /* sub-36h reads in hours, longer in days — the same threshold the watered-ago line uses,
+     so both halves of the water story stay in one register. */
+  var asHours = (span ? span[1] : mid) < 36;
+  var unit = asHours ? "h" : "d", div = asHours ? 1 : 24;
+  var fmt = function (v) { return Math.max(1, Math.round(v / div)); };
+  if (!span) return "~" + fmt(mid) + unit;                     // midpoint only: no invented range
+  var a = fmt(span[0]), b = fmt(span[1]);
+  return a === b ? "~" + a + unit : a + "–" + b + unit;    // collapsed range: honest "~"
+}
+function nextNeedChip(nn) {
+  /* #1598: the word is CONSUMED, never re-derived. R3's thresholds live once, host-side in
+     card_payload.confidence_word(), because the attention model's Watch level is a second
+     consumer and two copies of a ruled vocabulary drift silently. No word => no chip, which
+     is the doc's rule (a midpoint with no span makes no how-sure claim) and is now decided
+     in one place rather than by each surface's own guard. */
+  var word = nn && nn.confidence_word;
+  if (!word) return "";
+  return ' <span class="src nn-conf" title="How sure this is: the model\'s range is ' +
+    esc(nextNeedFigure(nn)) + ' wide relative to the estimate.">' + word + "</span>";
+}
+function nextNeedWhy(nn) {
+  var why = String((nn && nn.reason) || "").toLowerCase();
+  if (!why) return "learning its rhythm";
+  if (/insufficient|not enough|too few|need\b|only \d/.test(why)) return "still learning its rhythm";
+  if (/stable|flat|no significant|no trend/.test(why)) return "holding steady — no dry-down to measure yet";
+  return "not enough to call it yet";
+}
+/* the water story — calm-empty: a quiet "—", never a data-pretending value */
+function waterHTML(card) {
+  var lw = card.last_watered || {}, nn = card.next_need || {};
+  /* #1582 R11: the composed attention state, resolved host-side in ONE place
+     (tools/analytics/attention.py, the model's §8 order). The branches below READ it —
+     they no longer each re-derive their own answer to "does this need me", which is how
+     two surfaces come to disagree (the #1534 D1 class). Absent for a not-probed plant. */
+  var att = card.attention || {};
+  var h = "";
+  if (lw.known)
+    /* the chip wears its honest provenance: MANUAL (logged, #1137) or DETECTED */
+    h += '<span>watered <b>' + esc(lw.ago) + '</b> <span class="src">' +
+      esc(String(lw.source || "detected").toUpperCase()) + "</span></span>";
+  else
+    h += '<span>watered <b>&mdash;</b> <span class="src">not seen yet</span></span>';
+  /* #1583 R12 (the ruled §8 order, level 1): if the MEASUREMENT can't be trusted, nothing
+     derived from it can be either. The card already replaces the mood with the instrument
+     reason — but the water story rendered on regardless, so a faulted probe still asserted
+     "next water ~2d" (or, since D3, "water now") one line below "reading can't be trusted".
+     That is the R12 failure exactly: the sensor's unhappiness reading as the plant's.
+     `last watered` survives — it is a detected EVENT from history, not a claim derived from
+     the suspect reading — and the forecast half says plainly that it cannot say. */
+  if (att.state === "cant_tell") {
+    h += '<span>next <b>&mdash;</b> <span class="src">can’t say while the reading is off</span></span>';
+    return h;
+  }
+  /* #1584 G2 (§8 level 2): the one level with no render before this — a TRAJECTORY, not
+     a position. It sits above needs-you-now because a thirsty plant recovers from a late
+     watering and a plant trending badly may not (#410's asymmetric-failure principle).
+     The water story still renders under it: the reading is trustworthy here, so when-next
+     is still worth saying — this line adds what the mood alone cannot tell her. */
+  if (att.state === "heading_for_harm")
+    h += '<span class="harm">getting worse faster than a normal dry-down</span>';
+  /* #1534 D3: a plant already AT or past Thirsty needs no forecast — the answer is now.
+     Showing an ETA-to-Thirsty (or an absence) for a plant that is ALREADY thirsty is the
+     one case where the forecast channel has nothing useful to add, and saying "—" reads
+     as "no idea" about a plant that is telling you plainly. The mood is the authority
+     here (the ratified in-soil ladder, Soaked -> Faint); the forecast defers to it. */
+  if (att.state === "needs_you_now")
+    h += '<span class="nn-known">water now</span>';
+  else if (nn.known)
+    /* #1580 R3: the interval IS the confidence (docs/design/foundations/confidence-vocabulary.md).
+       The model computes hours_lo/hours_hi from the slope +/- its standard error and the card used
+       to render only the midpoint — the span was already honest and simply invisible. */
+    h += '<span class="nn-known">next water ' + esc(nextNeedFigure(nn)) + "</span>" + nextNeedChip(nn);
+  else
+    /* #1534 D2: the payload hands us the forecast's OWN reason; a blanket "learning its
+       rhythm" threw it away and over-promised — a plant on a dry-end plateau is not
+       learning, it measured flat, and more time yields no slope. Tell the truth per
+       state; keep the warm phrasing only for the state where it is actually true. */
+    h += '<span>next <b>&mdash;</b> <span class="src">' + esc(nextNeedWhy(nn)) + "</span></span>";
+  /* #1229: once glugged THIS SESSION (or the journal already says manual·just now),
+     the card wears a retained confirmed chip and the button is GONE — a double-tap
+     becomes impossible, a missed plant becomes visible at a glance. */
+  /* #1671: an OPEN session replaces the old dead-end chip. "✓ logged just now" ended
+     the interaction after one tap, which is why a two-minute top-up was unrecordable —
+     the button was gone for the whole hour a top-up happens in. Now the card tallies
+     what she has poured and keeps the amount control available beside it. */
+  var ses = card.watering_session;
+  if (ses && ses.pours) {
+    var bits = ses.pours + (ses.pours === 1 ? " dose" : " doses");
+    if (ses.total_ml) bits += " · " + mlToCupWords(ses.total_ml);
+    /* #1671: the spread, once there is one. A single pour has no span worth saying;
+       "over 9 min" is what turns three taps into one watering in her head. The richer
+       session facts (the pour sequence, the gaps, the rate, the size trend) ride in the
+       payload for the analysis surfaces — the card stays a glance, not a report. */
+    if (ses.span_min >= 1) bits += " · over " + Math.round(ses.span_min) + " min";
+    /* a session mixing measured and unmeasured pours reports a FLOOR, never a total
+       that looks complete — the corpus must be able to tell them apart (ADR-0028). */
+    if (ses.unmeasured)
+      bits += ' <span class="part">+ ' + ses.unmeasured + " unmeasured</span>";
+    h += '<span class="tally">✓ ' + bits + "</span>";
+    if (card.plant_id)
+      h += '<span class="glugmore" role="button" tabindex="0" data-pid="' +
+        esc(card.plant_id) + '" aria-label="add another pour for ' +
+        esc((card.identity || {}).name || card.plant_id) + '">+ more</span>';
+    return h;
+  }
+  var confirmed = (card.plant_id && _glugged.has(card.plant_id)) ||
+    (lw.known && lw.source === "manual" && lw.ago === "just now");
+  if (confirmed) {
+    h += '<span class="glugged">✓ logged just now</span>';
+    return h;
+  }
+  /* #1203: a DETECTED event she hasn't ruled on asks for a verdict, on the water
+     row where the chip already lives — never near the mood. Present-or-silent:
+     nothing renders unless there is an unruled detection with a stable event id. */
+  if (lw.known && lw.source === "detected" && lw.event_id &&
+      lw.detection_state === "proposed" && !_ruled.has(lw.event_id)) {
+    h += '<span class="verdict"><span class="vask">DID YOU?</span>' +
+      '<span class="vbtn" role="button" tabindex="0" data-vid="' + esc(lw.event_id) +
+      '" data-vstate="confirmed">✓ I watered</span>' +
+      '<span class="vbtn" role="button" tabindex="0" data-vid="' + esc(lw.event_id) +
+      '" data-vstate="rejected">✗ not a watering</span></span>';
+    return h;
+  }
+  /* #1137 the "glug glug" one-tap: log a manual watering against Data's journal
+     (POST /watering/log). span[role=button] because the card itself is a <button>
+     (nested buttons are invalid); needs a plant_id to post against. */
+  if (card.plant_id)
+    h += '<span class="glug" role="button" tabindex="0" data-pid="' +
+      esc(card.plant_id) + '" aria-label="log a watering for ' +
+      esc((card.identity || {}).name || card.plant_id) + '">' +
+      '<svg viewBox="0 0 10 12" aria-hidden="true"><path d="M5 0.5 C8 4 9.5 6 9.5 8 ' +
+      'a4.5 4.5 0 0 1 -9 0 C0.5 6 2 4 5 0.5 Z" fill="currentColor"/></svg>' +
+      "Glug glug</span>" +
+      /* #1643: the optional amount. A second, quieter control — tapping it reveals the
+         cup chips; ignoring it leaves the one-tap watering exactly as it was. */
+      '<span class="glugmore" role="button" tabindex="0" data-pid="' +
+      esc(card.plant_id) + '" aria-label="log a watering with an amount for ' +
+      esc((card.identity || {}).name || card.plant_id) + '">+ amount</span>';
+  return h;
+}
+
+/* #1643 — the amounts she actually measures with. Every one of the 32 doses in the
+   experiment corpus was recorded as a cup fraction from a 2-cup kitchen cup, so the
+   SURFACE speaks cups; a free-text mL box would be a fidelity downgrade and would not
+   join cleanly to the existing corpus. mL is the canonical unit on the wire and in the
+   journal — one conversion, here at the boundary, never scattered. */
+var CUP_ML = 236.588;
+/* #1671: mL back to the words she poured in. Snaps to the eighth — every amount on
+   record is an eighth-multiple, and "1 1/4 cups" is the sentence she thinks in, where
+   "295.7 mL" is one she would have to convert. Off-grid totals (a future pump, a
+   half-remembered pour) fall back to a decimal rather than being forced to a fraction
+   that would misreport what happened. */
+var EIGHTHS = ["", "⅛", "¼", "⅜", "½", "⅝", "¾", "⅞"];
+function mlToCupWords(ml) {
+  var eighths = Math.round((ml / CUP_ML) * 8);
+  if (!eighths) return "a splash";
+  if (Math.abs(eighths / 8 * CUP_ML - ml) > 3) return (ml / CUP_ML).toFixed(2) + " cups";
+  var whole = Math.floor(eighths / 8), rest = EIGHTHS[eighths % 8];
+  var n = (whole ? String(whole) : "") + (whole && rest ? " " : "") + rest;
+  /* "1/4 cup", not "1/4 cups" — a fraction of one cup is still one cup's worth of
+     noun. Plural only once there is more than a cup. */
+  return n + (eighths > 8 ? " cups" : " cup");
+}
+var CUPS = [["⅛", 0.125], ["¼", 0.25], ["⅓", 1 / 3], ["½", 0.5],
+            ["¾", 0.75], ["1", 1], ["1½", 1.5], ["2", 2]];
+function cupsToMl(c) { return Math.round(c * CUP_ML * 10) / 10; }
+
+/* #1643: swap the "+ amount" opener for the chip row, in place. Nothing is posted
+   until she picks one — opening this is not a watering. */
+function glugAmountOpen(el) {
+  var pid = el.dataset.pid;
+  var row = document.createElement("span");
+  row.className = "cups";
+  for (var i = 0; i < CUPS.length; i++) {
+    var b = document.createElement("span");
+    b.className = "cup";
+    b.setAttribute("role", "button");
+    b.setAttribute("tabindex", "0");
+    b.dataset.pid = pid;
+    b.dataset.ml = String(cupsToMl(CUPS[i][1]));
+    b.setAttribute("aria-label", CUPS[i][0] + " cup");
+    b.textContent = CUPS[i][0];
+    row.appendChild(b);
+  }
+  var u = document.createElement("span");
+  u.className = "cupunit";
+  u.textContent = "cups";
+  row.appendChild(u);
+  el.parentNode.replaceChild(row, el);
+  var first = row.querySelector(".cup");
+  if (first) first.focus();
+}
+
+/* #1137: post the manual watering, calm states all the way — never blocks. */
+function glugPost(el) {
+  if (el.dataset.busy) return;
+  el.dataset.busy = "1";
+  var label = el.lastChild;
+  var was = label.nodeValue;
+  label.nodeValue = "logging…";
+  /* #1643: the key is OMITTED when she didn't choose an amount — never 0, never a
+     default. A row with no amount must stay distinguishable from a real 0 mL pour, or
+     the corpus gains rows that look like measurements and aren't (ADR-0028). */
+  var body = { plant_id: el.dataset.pid };
+  if (el.dataset.ml) body.ml = parseFloat(el.dataset.ml);
+  fetch("/watering/log", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  }).then(function (r) { return r.json(); }).then(function (doc) {
+    if (doc && doc.ok) { _glugged.add(el.dataset.pid); refresh(); }
+    else { label.nodeValue = "couldn’t save"; delete el.dataset.busy; }
+  }).catch(function () {
+    label.nodeValue = was; delete el.dataset.busy;
+  });
+}
+/* #1203: record her ruling on a detected event. A REJECT is an append, never an
+   erase — the rejection is the detector's training signal, so the journal keeps it.
+   The event leaves the card face either way (it has been ruled), which is why the
+   session set is keyed by event_id rather than plant. */
+function verdictPost(el) {
+  if (el.dataset.busy) return;
+  var eid = el.dataset.vid, state = el.dataset.vstate;
+  if (!eid || !state) return;
+  el.dataset.busy = "1";
+  var was = el.firstChild;
+  fetch("/watering/verdict", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event_id: eid, state: state })
+  }).then(function (r) { return r.json(); }).then(function (j) {
+    if (j && j.ok) { _ruled.add(eid); refresh(); }
+    else { delete el.dataset.busy; }
+  }).catch(function () { delete el.dataset.busy; if (was) {} });
+}
+document.addEventListener("click", function (e) {
+  var g = e.target.closest ? e.target.closest(".glug") : null;
+  if (g) { e.stopPropagation(); e.preventDefault(); glugPost(g); return; }
+  var m = e.target.closest ? e.target.closest(".glugmore") : null;
+  if (m) { e.stopPropagation(); e.preventDefault(); glugAmountOpen(m); return; }
+  var c = e.target.closest ? e.target.closest(".cup") : null;
+  if (c) { e.stopPropagation(); e.preventDefault(); glugPost(c); return; }
+  var v = e.target.closest ? e.target.closest(".vbtn") : null;
+  if (v) { e.stopPropagation(); e.preventDefault(); verdictPost(v); }
+}, true);
+document.addEventListener("keydown", function (e) {
+  if (!(e.key === "Enter" || e.key === " ") || !e.target.classList) return;
+  if (e.target.classList.contains("glug")) {
+    e.stopPropagation(); e.preventDefault(); glugPost(e.target);
+  } else if (e.target.classList.contains("glugmore")) {
+    e.stopPropagation(); e.preventDefault(); glugAmountOpen(e.target);
+  } else if (e.target.classList.contains("cup")) {
+    e.stopPropagation(); e.preventDefault(); glugPost(e.target);
+  } else if (e.target.classList.contains("vbtn")) {
+    e.stopPropagation(); e.preventDefault(); verdictPost(e.target);
+  }
+}, true);
+
+/* one plant card against the locked contract (frame=state; mark BESIDE thumb) */
+function renderCard(card, opts) {
+  var o = opts || {};
+  var frame = card.frame || {};
+  var ident = card.identity || {};
+  var isExcFrame = !!(card.exception && card.exception.is);
+  var tag = o.neutral ? "div" : "button";
+  var c = el(tag, "card" + (o.neutral ? " neutral" : ""));
+  /* off-ladder readings get the NEUTRAL frame — state color is for states */
+  if (frame.token && !isExcFrame)
+    c.style.setProperty("--frame", "var(" + frame.token + ")");
+  var metaBits = [];
+  if (ident.number && ident.number !== ident.name) metaBits.push(esc(ident.number));
+  if (ident.pot) metaBits.push(esc(ident.pot));
+  /* #1039: diagnostics live OFF the ladder — an exception card never wears a mood
+     word or the state mark; it leads with its plain reason (the calm lane). */
+  var isExc = !!(card.exception && card.exception.is);
+  var top =
+    '<div class="top">' +
+    '<div class="thumb">' + thumbHTML(card) + "</div>" +
+    '<div class="who"><h3 class="name">' + esc(ident.name) + "</h3>" +
+    '<div class="meta">' + metaBits.join(" · ") + "</div>" +
+    (ident.location ? '<span class="chip">' + esc(ident.location) + "</span>" : "") +
+    "</div>" +
+    (frame.mood && !isExc
+      ? '<sprout-mark class="mark" mood="' + esc(frame.mood) + '" size="42"' +
+        (frame.asleep || frame.motion === "none" ? " static" : "") + "></sprout-mark>"
+      : "") +
+    "</div>";
+  var state = "";
+  if (isExc) {
+    state = '<div class="quiet">' + esc(card.exception.reason || "") + "</div>" +
+      (card.voice ? '<p class="line">' + esc(card.voice) + "</p>" : "");
+  } else if (frame.mood) {
+    state =
+      '<div class="state"><div class="mood"><span class="dot"></span>' +
+      esc(cap(frame.mood)) + "</div>" +
+      (card.voice ? '<p class="line">' + esc(card.voice) + "</p>" : "") +
+      "</div>";
+  } else if (frame.state === "sensorless") {
+    /* first-class-absent: present by design, not probed — never fake-degraded */
+    state = '<div class="quiet">living here &middot; not probed</div>';
+  }
+  c.innerHTML = top + state + '<div class="water">' + waterHTML(card) + "</div>";
+  if (!o.neutral) {
+    c.setAttribute("aria-label", esc(ident.name) + (frame.mood ? " — " + frame.mood : ""));
+    c.addEventListener("click", function () { openHero(card); });
+  }
+  return c;
+}
+
+/* ---- first paint ---- */
+var _cards = null;
+/* #1229: the glugs logged THIS SESSION — drives the retained confirmed chip. */
+var _glugged = new Set(), _ruled = new Set();
+/* #1229 fix 2: cards NEVER move mid-session. The order is captured at first paint
+   and held; a served-order drift surfaces an EXPLICIT re-sort chip instead of a
+   silent reshuffle (the operator, live: cards moved out from under her watering
+   pass — 11 taps, 3 doubles, 3 misses). New plants append; departed ones drop. */
+var _order = null;
+function _key(c) { return c.plant_id || "name:" + (((c.identity || {}).name) || "?"); }
+function stableCards(list) {
+  if (!_order) return list;
+  var idx = {};
+  _order.forEach(function (k, i) { idx[k] = i; });
+  return list.slice().sort(function (a, b) {
+    var ia = idx[_key(a)], ib = idx[_key(b)];
+    if (ia === undefined && ib === undefined) return 0;  // both new: served order
+    if (ia === undefined) return 1;   // new plants join at the end
+    if (ib === undefined) return -1;
+    return ia - ib;
+  });
+}
+/* #1551 B1 — the in-UI stop (ADR-0005 §4 / ADR-0014), two-step so it is never a
+   one-click kill of the running app. Deliberately the SAME semantics as classic's
+   (#721) rather than a second design: two doors onto one destructive action should
+   not behave differently depending on which surface you happened to be looking at.
+   The auto-cancel matters — an armed button left hot is a trap for the next click. */
+var _quitArmed = false, _quitTimer = null;
+function stopServer() {
+  var btn = document.getElementById("quitBtn"), note = document.getElementById("quitNote");
+  if (!btn) return;
+  if (!_quitArmed) {
+    _quitArmed = true;
+    btn.classList.add("armed");
+    btn.textContent = "⏻ Press again to confirm";
+    if (note) {
+      note.textContent = "This stops the app — press again to confirm, or wait to cancel";
+      note.classList.add("armed");
+    }
+    _quitTimer = setTimeout(function () {
+      if (!_quitArmed) return;
+      _quitArmed = false;
+      btn.classList.remove("armed");
+      btn.textContent = "⏻ Stop server";
+      if (note) {
+        note.textContent = "Shuts down the app · press twice to confirm";
+        note.classList.remove("armed");
+      }
+    }, 4000);
+    return;
+  }
+  _quitArmed = false;
+  if (_quitTimer) { clearTimeout(_quitTimer); _quitTimer = null; }
+  btn.classList.remove("armed");
+  btn.disabled = true;
+  btn.textContent = "stopping…";
+  if (note) { note.textContent = "stopping the server…"; note.classList.remove("armed"); }
+  /* stop the poll first: a refresh racing the shutdown paints a network error over
+     a deliberate action, which reads as a crash rather than as "you stopped it". */
+  if (_poll) { clearInterval(_poll); _poll = null; }
+  fetch("/quit", { method: "POST" })["catch"](function () {
+    /* the socket drops as the server exits — expected, not an error to report */
+  });
+  btn.textContent = "⏻ server stopped";
+  if (note) note.textContent = "you can close this tab";
+  document.body.style.opacity = "0.55";
+}
+
+function paint(doc) {
+  var main = document.getElementById("main");
+  main.innerHTML = "";
+  if (doc.empty || !((doc.cards || []).length + (doc.exceptions || []).length)) {
+    /* calm-empty first run — the one-card principle's older sibling */
+    var e = el("div", "empty");
+    e.innerHTML =
+      '<sprout-mark mood="content" size="72"></sprout-mark>' +
+      "<h2>Tend a tiny jungle.</h2>" +
+      "<p>No readings yet &mdash; once a plant is listening, it shows up here " +
+      'and speaks for itself.</p>' +
+      '<p><a href="/classic">Start logging on the Workbench &rarr;</a></p>';
+    main.appendChild(e);
+    return;
+  }
+  var served = (doc.cards || []).concat(doc.exceptions || []).map(_key);
+  if (!_order) _order = served;
+  var cards = stableCards(doc.cards || []);
+  var exceptions = stableCards(doc.exceptions || []);
+  /* the drift chip — present-or-silent: only when a fresh sort would move cards */
+  var painted = cards.concat(exceptions).map(_key);
+  var drifted = served.join("") !== painted.join("");
+  var calm = calmSignal(cards);   /* #1585 G3 — the affirmative all-clear, when it is true */
+  if (calm) main.appendChild(el("div", "calm", calm));
+  var invite = el("div", "invite",
+    "Tend a tiny jungle. <small>most thirsty first</small>" +
+    (drifted
+      ? '<span class="resort" role="button" tabindex="0" ' +
+        'title="the thirst order changed while you were here — re-sort when you’re ready">' +
+        "re-sort · most thirsty first</span>"
+      : ""));
+  main.appendChild(invite);
+  if (drifted) {
+    var rs = invite.querySelector(".resort");
+    var go = function () { _order = served; paint(_cards); };
+    rs.addEventListener("click", go);
+    rs.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); }
+    });
+  }
+  var grid = el("div", "grid");
+  cards.forEach(function (c) { grid.appendChild(renderCard(c)); });
+  main.appendChild(grid);
+  if (exceptions.length) {
+    /* the exceptions lane (#875 Q3) — off-ladder, quiet, below the meaningful middle */
+    main.appendChild(el("h2", "lane-h",
+      "Needs a look <small>off the ladder &mdash; placement, physics, or signal</small>"));
+    var lane = el("div", "grid lane");
+    exceptions.forEach(function (c) { lane.appendChild(renderCard(c)); });
+    main.appendChild(lane);
+  }
+}
+
+function refresh() {
+  fetch("/cards.json").then(function (r) { return r.json(); }).then(function (doc) {
+    _cards = doc; paint(doc);
+  }).catch(function () { /* keep the last good paint; the next tick retries */ });
+}
+/* #1556 B6 — the hardware roll-up. Reads /sensor/health, the SAME endpoint classic's
+   Diagnostics reads; promoting a surface must not mean minting a second source able to
+   disagree with the first. Present-or-silent on failure: an older server or a fetch
+   error HIDES the strip rather than claiming hardware is fine, because "I could not
+   ask" and "everything is well" are different statements (ADR-0028). */
+var HW_NAME_CAP = 4;   /* how many ids the strip will name before it counts instead */
+function paintHardware(sensors) {
+  var box = document.getElementById("hardware");
+  if (!box) return;
+  var inspect = [], watch = [], ok = 0, unknown = 0;
+  for (var i = 0; i < (sensors || []).length; i++) {
+    var h = sensors[i] || {};
+    if (h.status === "inspect") inspect.push(h.sensor_id || "?");
+    else if (h.status === "watch") watch.push(h.sensor_id || "?");
+    else if (h.status === "unknown") unknown++;
+    else ok++;
+  }
+  if (!(inspect.length + watch.length + ok + unknown)) { box.hidden = true; return; }
+  var bits = [];
+  /* worst first: what needs a screwdriver outranks what needs an eye.
+     NAMES ONLY FOR `inspect`, and capped. Measured against the live greenhouse, the raw
+     list is 4 inspect + 7 watch + 0 ok across BOTH soil channels and non-soil sensors
+     (spectral, temp/humidity, die) — naming eleven ids in a chrome strip is noise, and a
+     permanently-loud strip is one she learns to stop reading. `watch` is the "keep an
+     eye" class, so it gets a count; `inspect` is the actionable one, so it gets names. */
+  if (inspect.length) {
+    var named = inspect.slice(0, HW_NAME_CAP).map(esc).join(", ");
+    var more = inspect.length - HW_NAME_CAP;
+    bits.push('<span class="hw-inspect">' + inspect.length + " to inspect</span> " +
+      '<span class="hw-ids">(' + named + (more > 0 ? ", +" + more + " more" : "") +
+      ")</span>");
+  }
+  if (watch.length)
+    bits.push('<span class="hw-watch">' + watch.length + " to watch</span>");
+  if (ok) bits.push(ok + " fine");
+  /* #1626/#1632: no soil readings -> NO VERDICT, counted and never folded into "fine".
+     Without this branch `else ok++` calls three non-soil instruments healthy, which
+     trades "unknown rendered as a mild claim" for "unknown rendered as a clean bill of
+     health" — strictly worse. Muted, not a warning colour: an absence is calm. It sits
+     AFTER `fine` because both are counts, so the verdict-bearing number leads and the
+     caveat reads as the footnote it is. (Design's copy, #1626 — verbatim.) */
+  if (unknown) bits.push('<span class="hw-unknown">' + unknown + " unknown</span>");
+  /* the DETAIL still lives on the Workbench — this is a promotion, not a move. */
+  box.innerHTML = "<b>Sensors</b> · " + bits.join(" · ") +
+    ' · <a href="/classic#diagnostics">details on the Workbench &rarr;</a>';
+  box.hidden = false;
+}
+function refreshHardware() {
+  var box = document.getElementById("hardware");
+  fetch("/sensor/health", { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) {
+      if (!j) { if (box) box.hidden = true; return; }
+      paintHardware((j.data || j).sensors || []);
+    })["catch"](function () {
+      if (box) box.hidden = true;   /* could not ask -> silent, never "all fine" */
+    });
+}
+
+refresh();
+refreshHardware();
+/* #1551 B1: the handle is kept so the stop path can cancel the poll. Without it a
+   refresh fires into a server that is deliberately going away, and the resulting
+   network error paints as a crash over an action she chose. */
+var _poll = setInterval(refresh, 90000);
+/* a real <button>, so Enter and Space come for free — no key handler to get wrong. */
+(function () {
+  var b = document.getElementById("quitBtn");
+  if (b) b.addEventListener("click", stopServer);
+})();
+
+/* ---- the hero: one plant, large — ladder + the pulse (chart, histogram minimum) ---- */
+var _ctx = null, _ctxAt = 0;
+function ctxFetch() {
+  var now = Date.now();
+  if (_ctx && now - _ctxAt < 120000) return Promise.resolve(_ctx);
+  return fetch("/data.json?range=7d").then(function (r) { return r.json(); })
+    .then(function (c) { _ctx = c; _ctxAt = Date.now(); return c; });
+}
+
+function ladderHTML(mood) {
+  var steps = "", words = "";
+  LADDER.forEach(function (s) {
+    var cur = s.mood === mood ? " cur" : "";
+    steps += '<div class="step' + cur + '" style="background:var(' + s.token + ')"></div>';
+    words += '<span class="' + (cur ? "cur" : "") + '">' + cap(s.mood) + "</span>";
+  });
+  return '<div class="ladder" aria-label="the seven bands, wet to dry">' + steps +
+    '</div><div class="ladder-words">' + words + "</div>";
+}
+
+function openHero(card) {
+  var frame = card.frame || {};
+  var hero = document.getElementById("hero");
+  var ov = document.getElementById("overlay");
+  /* the off-ladder rule holds in the hero too: no mood crown, no ladder step,
+     neutral frame — the diagnostic reason leads, the pulse helps diagnose. */
+  var isExc = !!(card.exception && card.exception.is);
+  if (frame.token && !isExc)
+    hero.style.setProperty("--frame", "var(" + frame.token + ")");
+  else hero.style.removeProperty("--frame");
+  var ident = card.identity || {};
+  hero.innerHTML =
+    '<button class="close" aria-label="close">&times;</button>' +
+    '<div class="top">' +
+    '<div class="thumb">' + thumbHTML(card) + "</div>" +
+    '<div class="who"><h3 class="name">' + esc(ident.name) + "</h3>" +
+    '<div class="meta">' + [ident.number, ident.pot].filter(Boolean).map(esc).join(" · ") + "</div>" +
+    (ident.location ? '<span class="chip">' + esc(ident.location) + "</span>" : "") +
+    "</div>" +
+    (frame.mood && !isExc
+      ? '<sprout-mark mood="' + esc(frame.mood) + '" size="64"' +
+        (frame.asleep ? " static" : "") + "></sprout-mark>"
+      : "") +
+    "</div>" +
+    (isExc
+      ? '<div class="quiet">' + esc(card.exception.reason || "") + "</div>" +
+        (card.voice ? '<p class="line">' + esc(card.voice) + "</p>" : "")
+      : "") +
+    (frame.mood && !isExc
+      ? '<div class="state"><div class="mood"><span class="dot"></span>' +
+        esc(cap(frame.mood)) + "</div>" +
+        (card.voice ? '<p class="line">' + esc(card.voice) + "</p>" : "") + "</div>"
+      : "") +
+    (frame.mood && !isExc ? ladderHTML(frame.mood) : "") +
+    '<div id="journey"></div>' +
+    '<div class="water">' + waterHTML(card) + "</div>" +
+    '<div class="pulse" id="pulse"></div>' +
+    '<a class="wb-link" href="/classic">raw numbers &amp; history on the Workbench &rarr;</a>';
+  ov.classList.add("open");
+  hero.querySelector(".close").addEventListener("click", closeHero);
+  hero.querySelector(".close").focus();
+  drawPulse(card);
+}
+function closeHero() { document.getElementById("overlay").classList.remove("open"); }
+document.getElementById("overlay").addEventListener("click", function (e) {
+  if (e.target === this) closeHero();
+});
+document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeHero(); });
+
+/* ---- #1335 slice 2 / ADR-0038 §3: the ONE place this surface matches a card to a
+   sibling record. Templates may CONSUME a resolved identity; they may never compute
+   one. Both keys here come already-resolved from the server — plant_id from the
+   registry projection, sensor_id as the canonical channel token after the #1366 fold
+   — so this is a lookup, not a second resolution.
+
+   The defect it closes (#1315): the same match was written inline twice, each with its
+   own two-key fallback. When the registry re-keyed to chN and the boards still emitted
+   s1..s4, those joins found nothing and the Home lost all eight plants — a second
+   identity path living where no import graph reaches. One helper means one place to
+   fix, and one place to delete when the payload carries an explicit join key.
+
+   Data ask (posted on #1335): a single server-computed `join_key` on both the card and
+   its sibling records would remove the last of the policy from this file entirely. */
+function sameEntity(card, rec) {
+  if (!card || !rec) return false;
+  if (card.plant_id && rec.plant_id) return card.plant_id === rec.plant_id;
+  /* unregistered channel: no plant exists yet, so the canonical channel token is the
+     only identity there is. Absent-safe — never matches null to null. */
+  var a = card.sensor_id, b = rec.sensor_id != null ? rec.sensor_id : rec.id;
+  return !!a && !!b && a === b;
+}
+
+/* #1136 the band-journey (maintainer-craved): since the last watering — where it
+   started, where it is, which way it's pointed, how fast. Start ring + travel
+   arrow ON the ladder; one sentence of counted facts ("2 bands in 3d") — the
+   band_movement substrate's own numbers, nothing derived here. Present-or-silent
+   when there's no journey to tell (steady, or no band history). */
+var FW_TO_MOOD = { /* mirrors mood-band-map.json (canonical) — lookup only.
+   air-dry -> faint: an in-soil mood per the #1218 ratified ladder. */
+  "submerged": "soaked", "overwatered": "refreshed", "well watered": "thriving",
+  "ok": "content", "needs water": "thirsty", "dry": "parched", "air-dry": "faint" };
+function moodOfFw(fw) { return FW_TO_MOOD[String(fw || "").toLowerCase()] || null; }
+function ladderIdx(mood) {
+  for (var i = 0; i < LADDER.length; i++) if (LADDER[i].mood === mood) return i;
+  return -1;
+}
+function tsMs(ts) {
+  var t = new Date(String(ts || "").replace(" ", "T")).getTime();
+  return isFinite(t) ? t : null;
+}
+function renderJourney(card, ctx) {
+  var box = document.getElementById("journey");
+  if (!box) return;
+  box.innerHTML = "";
+  /* one consumption point (#1335 slice 2) — see sameEntity above */
+  var bh = null, list = ctx.band_history || [];
+  for (var i = 0; i < list.length; i++) {
+    if (sameEntity(card, list[i])) { bh = list[i]; break; }
+  }
+  if (!bh || !bh.current || !(bh.transitions || []).length) return;  /* silent */
+  /* the honest window: since the DETECTED re-water when there is one, else the
+     served range. Start band = the trail step at/before the window's origin. */
+  var trail = bh.transitions, rw = bh.rewater ? tsMs(bh.rewater.ts) : null;
+  var start = trail[0], t0 = tsMs(trail[0].ts);
+  if (rw !== null) {
+    for (var j = 0; j < trail.length; j++) {
+      var tj = tsMs(trail[j].ts);
+      if (tj !== null && tj <= rw) { start = trail[j]; t0 = rw; } else break;
+    }
+  }
+  var startMood = moodOfFw(start.band), nowMood = moodOfFw(bh.current.band);
+  if (!startMood || !nowMood || startMood === nowMood) return;  /* no story — silent */
+  var si = ladderIdx(startMood), ni = ladderIdx(nowMood);
+  if (si < 0 || ni < 0) return;
+  var bands = Math.abs(ni - si);
+  var days = null;
+  if (t0 !== null) {
+    var ms = Date.now() - t0;
+    if (ms > 0) days = ms / 86400000;
+  }
+  var dtxt = days === null ? "" :
+    days < 1 ? " in " + Math.max(1, Math.round(days * 24)) + "h" :
+    " in " + (days < 10 ? (Math.round(days * 10) / 10) : Math.round(days)) + "d";
+  /* the start ring + travel arrow, drawn ON the ladder (wet-left, drier points
+     right — the #1263 horizontal orientation) */
+  var lad = document.querySelector(".hero .ladder");
+  if (lad) {
+    var stale = lad.querySelectorAll(".jstart, svg.jarrow");   /* idempotent redraw */
+    for (var k = 0; k < stale.length; k++) lad.removeChild(stale[k]);
+    var n = LADDER.length;
+    var cs = ((si + 0.5) / n) * 100, cn = ((ni + 0.5) / n) * 100;
+    var ring = document.createElement("span");
+    ring.className = "jstart"; ring.style.left = cs + "%";
+    lad.appendChild(ring);
+    var dirRight = ni > si;
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "jarrow");
+    svg.setAttribute("viewBox", "0 0 100 26");
+    svg.setAttribute("preserveAspectRatio", "none");
+    var pad = 1.6, x1 = cs + (dirRight ? pad : -pad), x2 = cn + (dirRight ? -pad : pad);
+    var jstroke = 'style="stroke:var(--ink,#1E2A18)" stroke-width="2.5"' +
+      ' vector-effect="non-scaling-stroke"';
+    svg.innerHTML =
+      '<line x1="' + x1 + '" y1="13" x2="' + x2 + '" y2="13" ' + jstroke + "/>" +
+      '<path d="M' + x2 + ' 13 l' + (dirRight ? -3 : 3) + ' -4 M' + x2 + ' 13 l' +
+      (dirRight ? -3 : 3) + ' 4" fill="none" ' + jstroke + "/>";
+    lad.appendChild(svg);
+  }
+  var since = rw !== null ? "since watering" : "this window";
+  box.innerHTML =
+    '<div class="journey"><span class="src">' + since.toUpperCase() + "</span>" +
+    "<span><b>" + cap(startMood) + "</b> &rarr; <b>" + cap(nowMood) + "</b></span>" +
+    "<span>" + bands + (bands === 1 ? " band" : " bands") + esc(dtxt) + "</span></div>";
+}
+
+/* The pulse (locked contract): >=1 per-plant chart, HISTOGRAM minimum, Tufte-esque —
+   plus a sparkline of the same window. Axis = the in-soil envelope (#372 ingredient),
+   labelled in mood words; NO raw numerals anywhere (raw stays Workbench-side). */
+function drawPulse(card) {
+  var box = document.getElementById("pulse");
+  box.innerHTML = "";
+  ctxFetch().then(function (ctx) {
+    renderJourney(card, ctx);  /* #1136 — independent of the chart's own gates */
+    /* one consumption point (#1335 slice 2) — see sameEntity above.
+       present-or-silent when nothing binds. */
+    var sensors = ctx.sensors || [];
+    var s = null;
+    for (var i = 0; i < sensors.length; i++) {
+      if (sameEntity(card, sensors[i])) { s = sensors[i]; break; }
+    }
+    if (!s) return; /* present-or-silent: no series, no chart */
+    var ds = null, sets = (ctx.trajectory || {}).datasets || [];
+    for (var j = 0; j < sets.length; j++)
+      if (sets[j].id === s.id) { ds = sets[j]; break; }
+    var pts = ds ? (ds.points || []).map(function (p) { return p.y; })
+      .filter(function (y) { return typeof y === "number"; }) : [];
+    if (pts.length < 8) return; /* too few to be a pulse — silent, never a fake shape */
+
+    /* #1235: the envelope spans the profiled ANCHORS (water rail .. air rail) so all
+       7 moods draw — the bounded interior alone clipped Soaked + Faint off the chart
+       by construction. No anchors served for this sensor -> the old interior span
+       (honest degradation: 5 zones, never an invented envelope). */
+    var bounds = ((ctx.cal || {}).bounds || []).slice().map(Number)
+      .filter(function (b) { return !isNaN(b); }).sort(function (a, b) { return a - b; });
+    var anc = (ctx.anchors || {})[s.id];
+    var haveAnc = anc && typeof anc.water === "number" && typeof anc.air === "number";
+    var lo = haveAnc ? anc.water : (bounds.length ? bounds[0] : Math.min.apply(null, pts));
+    var hi = haveAnc ? anc.air : (bounds.length ? bounds[bounds.length - 1] : Math.max.apply(null, pts));
+    if (hi <= lo) return;
+    /* with anchors ALL 6 cuts are interior (7 zones = the whole mood ladder) */
+    var inner = haveAnc ? bounds.slice() : bounds.slice(1, -1);
+
+    box.innerHTML =
+      "<h4>The pulse <small>last 7 days &middot; where it lived, wetter &rarr; drier</small></h4>" +
+      '<canvas id="pulseHist" aria-label="time spent across the bands, last 7 days"></canvas>' +
+      '<div class="axis"><span>wetter</span><span>drier</span></div>';
+    var cv = document.getElementById("pulseHist");
+    var W = (cv.width = cv.clientWidth * 2), H = (cv.height = 192);
+    var g = cv.getContext("2d");
+    var css = getComputedStyle(document.documentElement);
+    function tok(n, f) { return (css.getPropertyValue(n) || f).trim() || f; }
+
+    /* band-tinted ground: the ladder's own hues at ground opacity (state speaks) */
+    var zones = [lo].concat(inner, [hi]);
+    g.globalAlpha = 0.16;
+    for (var z = 0; z + 1 < zones.length; z++) {
+      var x0 = ((zones[z] - lo) / (hi - lo)) * W;
+      var x1 = ((zones[z + 1] - lo) / (hi - lo)) * W;
+      var li = Math.min(z, LADDER.length - 1);
+      g.fillStyle = tok(LADDER[li].token, "#ccc");
+      g.fillRect(x0, 0, x1 - x0, H);
+    }
+    g.globalAlpha = 1;
+
+    /* the histogram: time spent per envelope slice (ink bars, no chartjunk) */
+    var BINS = 28, counts = new Array(BINS).fill(0), maxC = 0;
+    pts.forEach(function (y) {
+      var t = (y - lo) / (hi - lo);
+      if (t < 0) t = 0; if (t > 1) t = 1;
+      var b = Math.min(BINS - 1, Math.floor(t * BINS));
+      if (++counts[b] > maxC) maxC = counts[b];
+    });
+    g.fillStyle = tok("--ink", "#1E2A18");
+    var bw = W / BINS;
+    for (var b2 = 0; b2 < BINS; b2++) {
+      var h = maxC ? (counts[b2] / maxC) * (H - 14) : 0;
+      g.fillRect(b2 * bw + 1.5, H - h, bw - 3, h);
+    }
+
+    /* the now-marker: today's position on the envelope (a position, not a numeral) */
+    if (typeof s.raw_last === "number") {
+      var tx = ((s.raw_last - lo) / (hi - lo)); if (tx < 0) tx = 0; if (tx > 1) tx = 1;
+      g.strokeStyle = tok("--ink", "#1E2A18"); g.lineWidth = 3;
+      g.setLineDash([7, 5]);
+      g.beginPath(); g.moveTo(tx * W, 0); g.lineTo(tx * W, H); g.stroke();
+      g.setLineDash([]);
+    }
+
+    /* #1171: the sparkline — the pulse mandate's SECOND element. Same window, but the
+       TIME shape of the current inter-watering segment (#1133), envelope-scaled y,
+       Tufte-quiet: no gridlines, no numerals, a band-tinted ground, the now-point
+       emphasized. Never a cross-event line — clips to ds.segment_x; calm-empty when
+       there's no detected re-water to anchor a segment. */
+    drawSparkline(box, ds, lo, hi, inner, tok, card);   /* #1581 R6: card carries next_need */
+  }).catch(function () { /* silent — the hero stands without its chart */ });
+}
+
+/* the segment sparkline. y = the in-soil envelope, DRIER AT TOP / wetter at the bottom
+   (#1263 ratified vertical convention, fleet-wide) — so a dry-down climbs. x = time across
+   the current segment. Absent-safe: a segment with too few points, or none at all, renders
+   a calm-empty caption, never a fabricated line. */
+function drawSparkline(box, ds, lo, hi, inner, tok, card) {
+  var sec = document.createElement("div");
+  sec.className = "pulse spark";
+  box.appendChild(sec);
+  var all = (ds && ds.points) || [];
+  var segX = ds && typeof ds.segment_x === "number" ? ds.segment_x : null;
+  /* clip to the current segment (x >= segment_x); drop break/null-y points. With no
+     detected re-water (segment_x null) there is no honest segment to draw. */
+  var seg = segX === null ? [] : all.filter(function (p) {
+    return p && typeof p.x === "number" && typeof p.y === "number" && p.x >= segX;
+  });
+  if (seg.length < 4) {                       /* calm-empty, never a fake shape */
+    sec.innerHTML =
+      "<h4>Since last watering</h4>" +
+      '<p class="calm">' +
+      (segX === null ? "No watering detected yet in this window — the line begins at the next drink."
+                     : "Just watered — the fresh segment is still taking shape.") +
+      "</p>";
+    return;
+  }
+  sec.innerHTML =
+    "<h4>Since last watering <small>the current dry-down, drier &uarr;</small></h4>" +
+    '<canvas id="pulseSpark" aria-label="moisture trajectory since the last watering"></canvas>';
+  var cv = document.getElementById("pulseSpark");
+  var W = (cv.width = cv.clientWidth * 2), H = (cv.height = 192);
+  var g = cv.getContext("2d");
+  var x0 = seg[0].x, x1 = seg[seg.length - 1].x;
+  /* #1581 R6: the forecast is drawn ON this chart, so the x-axis has to make room for it.
+     `next_need.hours` is hours-from-now and `x` is hours-since-window-start, so the
+     horizon is simply x1 + hours — same unit, no conversion. Only a KNOWN forecast
+     extends the axis; with none, the span is exactly the observed span it always was
+     (byte-identical chart for a plant with no prediction). The horizon is capped at the
+     observed span so a far-off ETA cannot squeeze the history it was derived from. */
+  var nn6 = (card && card.next_need) || {};
+  var fcH = (nn6.known && typeof nn6.hours === "number" && nn6.hours > 0) ? nn6.hours : 0;
+  var obsSpan = x1 - x0 || 1;
+  if (fcH > obsSpan) fcH = obsSpan;
+  var xspan = obsSpan + fcH;
+  function px(p) { return ((p.x - x0) / xspan) * W; }
+  function pxh(h) { return ((h - x0) / xspan) * W; }   /* an x in raw hours */
+  /* #1263: DRIER AT TOP — fraction 0 (wettest, lo) -> y H (bottom); 1 (driest, hi) -> y 0. */
+  function py(p) { var f = (p.y - lo) / (hi - lo); if (f < 0) f = 0; if (f > 1) f = 1; return (1 - f) * H; }
+
+  /* band-tinted ground: the envelope's own hues as horizontal stripes, dry(top)->wet */
+  var zones = [lo].concat(inner, [hi]);
+  g.globalAlpha = 0.16;
+  for (var z = 0; z + 1 < zones.length; z++) {
+    /* #1263: flipped with the line — the wettest zone sits at the BOTTOM. The
+       ladder index still runs wettest->driest with z, only the y placement inverts. */
+    var y0 = (1 - (zones[z + 1] - lo) / (hi - lo)) * H;
+    var y1 = (1 - (zones[z] - lo) / (hi - lo)) * H;
+    var li = Math.min(z, LADDER.length - 1);
+    g.fillStyle = tok(LADDER[li].token, "#ccc");
+    g.fillRect(0, y0, W, y1 - y0);
+  }
+  g.globalAlpha = 1;
+
+  /* the line — the segment's moisture trajectory (ink, no chartjunk) */
+  g.strokeStyle = tok("--ink", "#1E2A18"); g.lineWidth = 3;
+  g.lineJoin = "round"; g.lineCap = "round";
+  g.beginPath();
+  for (var i = 0; i < seg.length; i++) {
+    var X = px(seg[i]), Y = py(seg[i]);
+    if (i === 0) g.moveTo(X, Y); else g.lineTo(X, Y);
+  }
+  g.stroke();
+
+  /* #1581 R6: the forecast, drawn on the same chart with a boundary a viewer cannot
+     misread. THREE cues, never colour alone (the ratified requirement):
+       1. line STYLE — observed is solid ink, predicted is dashed;
+       2. SHADING — the future region carries a faint wash the past does not;
+       3. a LABEL — "now" on the boundary rule, "predicted" over the future.
+     The predicted curve runs from the last real reading to the Thirsty entry edge at the
+     predicted hour — the same crossing the ETA was computed from, so the picture and the
+     number cannot disagree. The lo/hi interval (R3's confidence) renders as a wedge: its
+     width IS the how-sure, the same claim the card's chip makes in words. */
+  var last = seg[seg.length - 1];
+  if (fcH > 0) {
+    var xNow = px(last);
+    var thirstyRaw = zones.length > 4 ? zones[4] : null;   /* the Content->Thirsty edge */
+    var yT = thirstyRaw === null ? py(last) : (1 - ((thirstyRaw - lo) / (hi - lo))) * H;
+    /* 2. the future wash — shading, not a hue: the region past "now" is visibly a
+          different KIND of space, legible with colour vision absent entirely. */
+    g.globalAlpha = 0.07; g.fillStyle = tok("--ink", "#1E2A18");
+    g.fillRect(xNow, 0, W - xNow, H); g.globalAlpha = 1;
+    /* the interval wedge — only when the model gave one; never fabricated */
+    var loH = nn6.hours_lo, hiH = nn6.hours_hi;
+    if (typeof loH === "number" && typeof hiH === "number" && hiH > loH) {
+      var xa = pxh(x1 + Math.min(loH, fcH)), xb = pxh(x1 + Math.min(hiH, fcH));
+      g.globalAlpha = 0.16; g.fillStyle = tok("--st-predicted", "#7C5CFF");
+      g.beginPath(); g.moveTo(xNow, py(last)); g.lineTo(xa, yT); g.lineTo(xb, yT);
+      g.closePath(); g.fill(); g.globalAlpha = 1;
+    }
+    /* 1. the predicted line — dashed, in the predicted channel */
+    g.save();
+    g.setLineDash([10, 8]); g.lineWidth = 3; g.lineCap = "round";
+    g.strokeStyle = tok("--st-predicted", "#7C5CFF");
+    g.beginPath(); g.moveTo(xNow, py(last)); g.lineTo(pxh(x1 + fcH), yT); g.stroke();
+    /* the boundary rule itself — dashed, full height, muted (chrome, not a state) */
+    g.setLineDash([4, 6]); g.lineWidth = 2; g.strokeStyle = tok("--muted", "#6F7E62");
+    g.beginPath(); g.moveTo(xNow, 0); g.lineTo(xNow, H); g.stroke();
+    g.restore();
+    /* 3. the labels — the cue that survives a greyscale print or a colour-blind reader */
+    g.font = "600 20px " + (tok("--font-ui", "") || "system-ui, sans-serif");
+    g.fillStyle = tok("--muted", "#6F7E62");
+    g.textAlign = "right"; g.fillText("now", xNow - 8, 22);
+    g.textAlign = "left";
+    g.fillStyle = tok("--st-predicted", "#7C5CFF");
+    g.fillText("predicted", xNow + 10, 22);
+  }
+  /* the now-point: the segment's latest reading, emphasized (a dot, not a numeral) */
+  g.fillStyle = tok("--leaf", "#2E7D32");
+  g.beginPath(); g.arc(px(last), py(last), 6, 0, 2 * Math.PI); g.fill();
+}
+</script>
+</body>
+</html>

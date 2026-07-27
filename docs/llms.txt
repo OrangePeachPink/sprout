@@ -1,0 +1,16 @@
+# Sprout
+
+> Sprout is a local-first, open-source plant-monitoring system for ESP32 devices. It reads soil moisture and
+> gives each plant a simple, at-a-glance mood — voiced in a friendly first person ("I'm a little dry today")
+> — though Sprout itself is software you run on your own hardware.
+
+Sprout is an open-source software project for ESP32 devices. Its repository contains C++ firmware and
+Python host tooling and uses the MIT License.
+
+## Key URLs
+
+- Project site: https://orangepeachpink.github.io/sprout/
+- Browser flasher: https://orangepeachpink.github.io/sprout/flash/
+- Sensor explanation: https://orangepeachpink.github.io/sprout/design/onboarding/Sprout%20Trust%20Your%20Sensor.dc.html
+- Design library: https://orangepeachpink.github.io/sprout/design/Sprout%20Design%20Library.dc.html
+- Source code and developer documentation: https://github.com/OrangePeachPink/sprout

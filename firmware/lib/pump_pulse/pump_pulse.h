@@ -3,6 +3,13 @@
  * -----------------------------------------------------------------------------
  * Bounded single-pulse manual pump actuator (#215, parent epic #94).
  *
+ * Status: legacy - superseded by the irrigation supervisor's operator forced-dose
+ * path (irrigation.h forced[]/forced_ms[], ADR-0016). `!water` routes through
+ * g_irrig as a forced dose, not through here. ADR-0016 makes the supervisor the
+ * SINGLE actuation authority, so this is a second path to a pump rather than inert
+ * dead code; Firmware recommends deletion before a relay is wired (#215/#191).
+ * Retained pending the maintainer's word - see lib/README.md.
+ *
  * This is the FIRST, deliberately minimal actuation rung: an OPERATOR-COMMANDED,
  * bounded, single-channel pump pulse (driven by `!water,<ch>[,<ms>]` over the #92
  * command registry). It is NOT autonomous dosing - the closed-loop irrig_tick engine

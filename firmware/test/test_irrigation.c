@@ -4,7 +4,7 @@
  * parser (#63), and the run-metadata !label / !pos handlers (#321).
  *
  * The engine is framework-agnostic C, so we compile it for the host alongside a
- * synthetic ADC+pump rig and drive it with a fake millisecond clock - no ESP32,
+ * synthetic ADC+pump rig and drive it with a mock millisecond clock - no ESP32,
  * no flash. Asserts cover the A1 health veto/latch, the two hard invariants
  * (<=1 pump at a time; never sample while pumping), and the preserved
  * no-improvement and pump-overrun failsafes.
@@ -16,6 +16,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <unity.h>
+#include "fw_verify.h"
+#include "ota_gate.h"
+#include "ota_pull.h"
+#include "monocypher-ed25519.h"
 #include "irrigation.h"
 #include "serial_cmd.h"
 #include "pump_pulse.h"
@@ -30,6 +34,7 @@
 #include "device_uid.h" /* #601 stable-id base32 mint (ADR-0027 §1b) */
 #include "cal_resolver.h" /* #952 per-board-type cal resolution chain */
 #include "cal_class_defaults.h" /* #952 Layer-2 class defaults */
+#include "dose_control.h" /* #414 bounded re-wetting + absorbed/ran-through */
 
 /* -------------------------------------------------------------------------- */
 /* synthetic rig: ADC source + pump observer + event sink                     */
@@ -211,6 +216,48 @@ void t_health_veto_and_latch(void)
                              "accessor clears after manual clear");
 }
 
+/* #2: the INVISIBLE LATCH. `quality_flag` answers "can I trust this reading?";
+ * irrig_health_warn() answers "may this channel be watered?". They are different
+ * questions and they DIVERGE exactly where the bug lived: once the sustained
+ * latch has fired, the supervisor benches the channel permanently, but a later
+ * clean read makes quality_flag say OK - so a display carrying only quality
+ * shows a healthy channel that will never be watered again.
+ *
+ * This pins the divergence as a CONTRACT, so the served status / banner must
+ * carry BOTH (the `withheld=` field). If someone ever "simplifies" by deriving
+ * withheld from quality_flag, this test fails - which is the point. */
+void t_withheld_diverges_from_quality(void)
+{
+    base_cfg(/*mhw*/ 3, /*mdoses*/ 3, /*pmax*/ 5000, /*dose*/ 2000);
+    RIG.sim[0] = (chan_sim_t){.target_raw = 2400, .noisy = true};
+    start();
+
+    for (int i = 0; i < 3; i++)
+        step(SYS.sample_period_ms); /* -> latch */
+    TEST_ASSERT_TRUE_MESSAGE(irrig_health_warn(&CTRL, 0),
+                             "precondition: latched");
+
+    RIG.sim[0].noisy = false; /* the probe recovers - reads clean now */
+    step(SYS.sample_period_ms);
+    step(SYS.sample_period_ms);
+
+    /* measurement trust: the CURRENT read is fine */
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "OK", telemetry_quality_flag(&CTRL.mstate[0], 900, 3400),
+        "clean read -> quality_flag says OK");
+    /* actuation policy: the supervisor is STILL holding this channel */
+    TEST_ASSERT_TRUE_MESSAGE(irrig_health_warn(&CTRL, 0),
+                             "...but the channel is still withheld (latched)");
+    TEST_ASSERT_TRUE_MESSAGE(RIG.pump_on_count[0] == 0,
+                             "and it genuinely never waters while withheld");
+
+    /* the two axes must be independently reportable - that is the whole fix */
+    TEST_ASSERT_TRUE_MESSAGE(
+        irrig_health_warn(&CTRL, 0) &&
+            telemetry_quality_flag(&CTRL.mstate[0], 900, 3400)[0] == 'O',
+        "withheld=true WITH quality=OK is reachable -> display needs both");
+}
+
 /* Control: a healthy dry channel DOES get watered (proves the veto above is the
  * only thing stopping ch0), with both hard invariants intact. */
 void t_healthy_dry_waters(void)
@@ -306,47 +353,240 @@ static moisture_level_t band_of(uint16_t raw)
     return st.committed;
 }
 
+/* ===== #302 S1: the ed25519 firmware-signature primitive (#1282) ============
+ * Vectors are REAL: generated with openssl ed25519 over the domain-separated
+ * message the CI signer produces ("sprout-fw\x00" || image). Throwaway key. */
+/* GENERATED KAT (openssl ed25519). Throwaway test key - NOT the release key. */
+static const uint8_t KAT_PUBKEY[32] = {
+    0xca, 0x3a, 0x30, 0x07, 0x09, 0x03, 0x4a, 0xb1, 0xa0, 0xe5, 0xbb,
+    0x29, 0x95, 0x62, 0xb3, 0x46, 0xa3, 0x61, 0x5b, 0xe1, 0x75, 0x22,
+    0xd4, 0xdc, 0x16, 0x16, 0x5f, 0xbc, 0x61, 0x07, 0x0e, 0x2d};
+static const uint8_t KAT_IMAGE[] = {0x53, 0x50, 0x52, 0x4f, 0x55, 0x54, 0x2d,
+                                    0x4b, 0x41, 0x54, 0x2d, 0x49, 0x4d, 0x41,
+                                    0x47, 0x45, 0x2d, 0x76, 0x31};
+static const uint8_t KAT_SIG[64] = {
+    0xa9, 0x3b, 0x79, 0xa4, 0xec, 0xe3, 0xcb, 0xd7, 0x16, 0xdc, 0x32,
+    0x00, 0xd0, 0xdb, 0xc4, 0xdb, 0x6e, 0x4d, 0x10, 0x00, 0x5d, 0x0e,
+    0xc2, 0x8a, 0x04, 0x2d, 0x4c, 0x85, 0xb2, 0xf4, 0x53, 0x7d, 0xd5,
+    0x4b, 0x1f, 0x05, 0xc9, 0x77, 0xfc, 0xa0, 0xc1, 0x71, 0xcd, 0x4f,
+    0x54, 0xd7, 0xdb, 0xf2, 0xc8, 0xab, 0x17, 0x6e, 0x35, 0x61, 0x69,
+    0xe7, 0x9a, 0x74, 0x3c, 0x01, 0x27, 0xfd, 0xb8, 0x01};
+static const uint8_t KAT_SIG_BARE[64] = {
+    0xa4, 0x62, 0xdb, 0xcb, 0xd5, 0x66, 0x21, 0x2e, 0x84, 0xed, 0x74,
+    0x4e, 0x91, 0xa0, 0x85, 0xef, 0xf7, 0xa4, 0xb5, 0xad, 0xd9, 0x45,
+    0xde, 0x26, 0x21, 0xea, 0x04, 0x3f, 0x00, 0x90, 0x96, 0xed, 0xbb,
+    0x0d, 0x84, 0xeb, 0x07, 0xcc, 0xf0, 0xcb, 0xf7, 0x2b, 0x07, 0xf6,
+    0x39, 0x0d, 0xb3, 0x52, 0xb8, 0xb6, 0x62, 0xe2, 0xdc, 0x06, 0x0f,
+    0x82, 0xdc, 0x56, 0x47, 0x11, 0x6f, 0xe9, 0x37, 0x02};
+
+void t_fw_verify_ed25519(void)
+{
+    const size_t n = sizeof(KAT_IMAGE);
+
+    /* 1. the happy path - a genuine release signature */
+    TEST_ASSERT_TRUE_MESSAGE(
+        sprout_fw_verify(KAT_IMAGE, n, KAT_SIG, KAT_PUBKEY),
+        "a valid domain-separated signature verifies");
+
+    /* 2. DOMAIN SEPARATION - Trellis's explicit KAT. A signature made over the
+     * BARE image (what CI produced before #1314) must NOT verify. */
+    TEST_ASSERT_FALSE_MESSAGE(
+        sprout_fw_verify(KAT_IMAGE, n, KAT_SIG_BARE, KAT_PUBKEY),
+        "a signature over the BARE image must be rejected");
+
+    /* 3. one flipped IMAGE byte */
+    {
+        uint8_t tampered[sizeof(KAT_IMAGE)];
+        memcpy(tampered, KAT_IMAGE, n);
+        tampered[n / 2] ^= 0x01u;
+        TEST_ASSERT_FALSE_MESSAGE(
+            sprout_fw_verify(tampered, n, KAT_SIG, KAT_PUBKEY),
+            "one flipped image byte must fail");
+    }
+
+    /* 4. one flipped SIGNATURE byte */
+    {
+        uint8_t badsig[64];
+        memcpy(badsig, KAT_SIG, 64);
+        badsig[10] ^= 0x01u;
+        TEST_ASSERT_FALSE_MESSAGE(
+            sprout_fw_verify(KAT_IMAGE, n, badsig, KAT_PUBKEY),
+            "one flipped signature byte must fail");
+    }
+
+    /* 5. wrong key */
+    {
+        uint8_t wrongkey[32];
+        memcpy(wrongkey, KAT_PUBKEY, 32);
+        wrongkey[0] ^= 0x01u;
+        TEST_ASSERT_FALSE_MESSAGE(
+            sprout_fw_verify(KAT_IMAGE, n, KAT_SIG, wrongkey),
+            "the wrong public key must fail");
+    }
+
+    /* 6. EQUIVALENCE. We feed the tag and the image as two chunks of the
+     * SHA-512 stream rather than concatenating (so a mapped multi-MB partition
+     * needs no copy). Prove that is identical to monocypher's own one-shot call
+     * on a concatenated buffer - the chunked form is not a re-implementation. */
+    {
+        uint8_t joined[SPROUT_FW_DOMAIN_TAG_LEN + sizeof(KAT_IMAGE)];
+        memcpy(joined, SPROUT_FW_DOMAIN_TAG, SPROUT_FW_DOMAIN_TAG_LEN);
+        memcpy(joined + SPROUT_FW_DOMAIN_TAG_LEN, KAT_IMAGE, n);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(
+            0,
+            crypto_ed25519_check(KAT_SIG, KAT_PUBKEY, joined, sizeof(joined)),
+            "monocypher one-shot accepts the same vector");
+        TEST_ASSERT_TRUE_MESSAGE(
+            sprout_fw_verify(KAT_IMAGE, n, KAT_SIG, KAT_PUBKEY),
+            "...and the chunked form agrees with it");
+    }
+
+    /* 7. defensive: NULL image is only legal at len 0 */
+    TEST_ASSERT_FALSE_MESSAGE(
+        sprout_fw_verify(NULL, 4, KAT_SIG, KAT_PUBKEY),
+        "NULL image with non-zero len is rejected, not dereferenced");
+}
+
+/* ===== #302 S2: the OTA gate — verify BEFORE the boot slot switches ========
+ * The fence. What matters is not just the verdict but the EFFECT: the commit
+ * callback (on-device: esp_ota_set_boot_partition) must be unreachable on every
+ * rejection path. These tests assert the call COUNT, not only the return. */
+static int s_commit_calls;
+static bool s_commit_result;
+static bool test_commit(void *ctx)
+{
+    (void)ctx;
+    s_commit_calls++;
+    return s_commit_result;
+}
+
+void t_ota_gate_fence(void)
+{
+    const size_t n = sizeof(KAT_IMAGE);
+    ota_verdict_t v;
+
+#define GATE_RESET()                                                           \
+    do {                                                                       \
+        s_commit_calls = 0;                                                    \
+        s_commit_result = true;                                                \
+    } while (0)
+
+    /* 1. genuinely signed -> accepted, and the slot switch happens exactly once */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG, 64, KAT_PUBKEY, test_commit,
+                       NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_ACCEPT, v, "valid signature -> accept");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, s_commit_calls,
+                                  "the boot slot switches exactly once");
+
+    /* 2. THE FENCE: a signature over the BARE image (no domain tag) is refused,
+     * and the slot is never switched. This is the pre-#1314 CI shape. */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG_BARE, 64, KAT_PUBKEY, test_commit,
+                       NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_BAD_SIG, v,
+                                  "bare-image signature -> rejected");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls,
+                                  "NO slot switch on a bad signature");
+
+    /* 3. tampered image */
+    GATE_RESET();
+    {
+        uint8_t bad[sizeof(KAT_IMAGE)];
+        memcpy(bad, KAT_IMAGE, n);
+        bad[0] ^= 0x01u;
+        v = ota_gate_apply(bad, n, KAT_SIG, 64, KAT_PUBKEY, test_commit, NULL);
+    }
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_BAD_SIG, v,
+                                  "tampered -> rejected");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "NO slot switch");
+
+    /* 4. FAIL-CLOSED: an ABSENT signature is a rejection, never "nothing to
+     * check, proceed" - the classic way a verify gate rots into a no-op. */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, NULL, 0, KAT_PUBKEY, test_commit, NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_NO_SIG, v,
+                                  "absent signature -> rejected, not skipped");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "NO slot switch");
+
+    /* 5. truncated / wrong-length signature */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG, 63, KAT_PUBKEY, test_commit,
+                       NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_SIG_LEN, v,
+                                  "short sig -> rejected");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "NO slot switch");
+
+    /* 6. no key available */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG, 64, NULL, test_commit, NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_NO_KEY, v, "no key -> rejected");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "NO slot switch");
+
+    /* 7. empty / absent image */
+    GATE_RESET();
+    v = ota_gate_apply(NULL, 0, KAT_SIG, 64, KAT_PUBKEY, test_commit, NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_NO_IMAGE, v,
+                                  "no image -> rejected");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "NO slot switch");
+
+    /* 8. verified, but the switch itself fails -> reported, not silently OK */
+    GATE_RESET();
+    s_commit_result = false;
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG, 64, KAT_PUBKEY, test_commit,
+                       NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_REJECT_COMMIT_FAILED, v,
+                                  "a failed slot switch is surfaced");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, s_commit_calls, "it was attempted once");
+
+    /* 9. dry run: verify with no effect (commit == NULL) */
+    GATE_RESET();
+    v = ota_gate_apply(KAT_IMAGE, n, KAT_SIG, 64, KAT_PUBKEY, NULL, NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_ACCEPT, v, "dry verify still accepts");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_commit_calls, "and changes nothing");
+
+    /* 10. the verdict tokens are stable for logs */
+    TEST_ASSERT_EQUAL_STRING("accept", ota_verdict_name(OTA_ACCEPT));
+    TEST_ASSERT_EQUAL_STRING("reject_bad_sig",
+                             ota_verdict_name(OTA_REJECT_BAD_SIG));
+#undef GATE_RESET
+}
+
 void t_band_anchors(void)
 {
-    /* probe in air -> air-dry diagnostic (never waters) */
-    TEST_ASSERT_TRUE_MESSAGE(band_of(3180) == MOIST_AIR_DRY,
-                             "air ~3180 -> air-dry (out of soil)");
-    /* THE FIX: bone-dry / parched soil now reads DRY, not air-dry. 2760 was the
-     * old air-dry edge; ~2900 is a loose, air-gappy dry-soil hole. */
-    TEST_ASSERT_TRUE_MESSAGE(band_of(2900) == MOIST_DRY,
-                             "parched soil ~2900 -> DRY (waters)");
-    TEST_ASSERT_TRUE_MESSAGE(band_of(2760) == MOIST_DRY,
-                             "old air-dry edge 2760 -> DRY now");
-    TEST_ASSERT_TRUE_MESSAGE(band_of(2440) == MOIST_DRY,
-                             "bone-dry soil ~2440 -> DRY");
-    TEST_ASSERT_TRUE_MESSAGE(moisture_level_is_display(band_of(2900)),
-                             "parched soil is a watering display band");
-    /* field capacity -> well-watered (healthy; no too-wet alarm) */
-    TEST_ASSERT_TRUE_MESSAGE(band_of(1300) == MOIST_WELL_WATERED,
-                             "field capacity ~1300 -> well-watered");
-    /* saturated soil / standing water -> the 'too wet / check probe'
-     * diagnostics */
-    TEST_ASSERT_TRUE_MESSAGE(band_of(1060) == MOIST_OVERWATERED,
-                             "saturated soil ~1060 -> overwatered");
-    TEST_ASSERT_TRUE_MESSAGE(band_of(1010) == MOIST_SUBMERGED,
-                             "standing water ~1010 -> submerged");
+    /* #995 ratified 7-in-soil ladder (classic default {2293,2086,1879,1636,
+     * 1393,1150}). ALL seven levels are in-soil display bands now (Faint..
+     * Soaked); the off-ladder air/water exceptions are the #1152 anchor layer.
+     * One representative raw per band, driest -> wettest: */
+    TEST_ASSERT_TRUE_MESSAGE(band_of(2600) == MOIST_AIR_DRY,
+                             "Faint  ~2600 (>=2293) driest in-soil");
+    TEST_ASSERT_TRUE_MESSAGE(band_of(2200) == MOIST_DRY,
+                             "Parched ~2200 (2086..2293)");
+    TEST_ASSERT_TRUE_MESSAGE(band_of(2000) == MOIST_NEEDS_WATER,
+                             "Thirsty ~2000 (1879..2086)");
+    TEST_ASSERT_TRUE_MESSAGE(band_of(1780) == MOIST_OK,
+                             "Content ~1780 (1636..1879) healthy");
+    TEST_ASSERT_TRUE_MESSAGE(band_of(1570) == MOIST_WELL_WATERED,
+                             "Thriving ~1570 (1393..1636)");
+    TEST_ASSERT_TRUE_MESSAGE(band_of(1360) == MOIST_OVERWATERED,
+                             "Refreshed ~1360 (1150..1393)");
+    TEST_ASSERT_TRUE_MESSAGE(band_of(1100) == MOIST_SUBMERGED,
+                             "Soaked ~1100 (<1150) wettest in-soil");
 
-    /* #248 ratified ENDPOINTS (common-cup, 4-probe measured): the endpoint
-     * bands must bracket the real anchors. Air-dry center 3170 (per-probe
-     * 3151..3191) and saturated center 978 (per-probe 926..1020, s2 the
-     * wet-biased min) - the boundaries are unchanged; these assertions are what
-     * take "proposed" off the endpoints + guard them. */
-    TEST_ASSERT_TRUE_MESSAGE(band_of(3170) == MOIST_AIR_DRY,
-                             "#248 air-dry center 3170 -> air-dry");
-    TEST_ASSERT_TRUE_MESSAGE(band_of(3151) == MOIST_AIR_DRY,
-                             "#248 air-dry min (s2 3151) -> air-dry");
-    TEST_ASSERT_TRUE_MESSAGE(band_of(978) == MOIST_SUBMERGED,
-                             "#248 saturated center 978 -> submerged");
-    TEST_ASSERT_TRUE_MESSAGE(
-        band_of(926) == MOIST_SUBMERGED,
-        "#248 saturated min (s2 wet-bias 926) -> submerged");
-    TEST_ASSERT_TRUE_MESSAGE(band_of(1020) == MOIST_SUBMERGED,
-                             "#248 saturated max (s3 1020) -> submerged");
+    /* #995: all seven are watering-display bands (Faint + Soaked included). */
+    for (int lvl = MOIST_AIR_DRY; lvl <= MOIST_SUBMERGED; lvl++) {
+        TEST_ASSERT_TRUE_MESSAGE(
+            moisture_level_is_display((moisture_level_t)lvl),
+            "every in-soil band is a display band");
+    }
+
+    /* Off-ladder extremes (until #1152's anchor check): a probe in air still
+     * lands in Faint - which doubles as the "probe may not be in soil" hint per
+     * the mood-band-map - and a probe in water lands in Soaked. */
+    TEST_ASSERT_TRUE_MESSAGE(band_of(3180) == MOIST_AIR_DRY,
+                             "air ~3180 -> Faint (probe-maybe-air, see #1152)");
+    TEST_ASSERT_TRUE_MESSAGE(band_of(950) == MOIST_SUBMERGED,
+                             "standing water ~950 -> Soaked (see #1152)");
 }
 
 /* #92: the host->device command registry + dispatcher - register/dispatch, the
@@ -959,7 +1199,7 @@ void t_env_row(void)
 
 /* #278 device-owned time (ADR-0018 / schema v2 §11.1-§11.2): device_seq +
  * time_source ride the soil row's payload; device_timestamp_utc is OMITTED
- * (not printed as an empty key) when unsynced - the honest NULL, never a
+ * (not printed as an empty key) when unsynced - a true NULL, never a
  * guessed value. Pins BOTH states: today's real unsynced case, and the
  * synced case the fields are already ready for once #21 (WiFi/NTP) lands. */
 void t_soil_row_time_provenance(void)
@@ -970,7 +1210,7 @@ void t_soil_row_time_provenance(void)
                   1300); /* WELL_WATERED-range raw, any valid state */
     char buf[300];
 
-    /* unsynced (today's honest reality): device_timestamp_utc key absent entirely */
+    /* unsynced (today's actual state): device_timestamp_utc key absent entirely */
     telemetry_soil_row_t unsynced = {
         "plants.soil",
         "3f9a1c",
@@ -978,7 +1218,7 @@ void t_soil_row_time_provenance(void)
         "0.7.0",
         123456ULL,
         "UMLIFE_v2_TLC555",
-        "s3",
+        "ch0",
         "origplant",
         "soil_moisture",
         36,
@@ -1011,7 +1251,7 @@ void t_soil_row_time_provenance(void)
         "0.7.0",
         123456ULL,
         "UMLIFE_v2_TLC555",
-        "s3",
+        "ch0",
         "origplant",
         "soil_moisture",
         36,
@@ -1188,11 +1428,11 @@ void t_board_capability(void)
 
     /* #436: per-board calibration. Host/fallback carries the classic endpoint
      * VALUES (the placeholder every unverified board also uses) but, like
-     * has_wifi/storage, is honestly NOT a real board -> cal_verified=false. This
+     * has_wifi/storage, is NOT a real board -> cal_verified=false. This
      * pins the value/flag as two independent facts: the numbers can match
      * classic's without the board being claimed as bench-verified. */
-    const uint16_t cal[BOARD_CAL_BOUNDARY_COUNT] = {3050, 2140, 1830,
-                                                    1520, 1150, 1050};
+    const uint16_t cal[BOARD_CAL_BOUNDARY_COUNT] = {2293, 2086, 1879,
+                                                    1636, 1393, 1150};
     for (int i = 0; i < BOARD_CAL_BOUNDARY_COUNT; i++) {
         TEST_ASSERT_EQUAL_MESSAGE(cal[i], BOARD_CAP.cal_boundary[i],
                                   "host cal boundary matches the placeholder");
@@ -1248,41 +1488,39 @@ static moisture_level_t band_on_channel(int ch, uint16_t raw)
     return st.committed;
 }
 
-/* #170: per-channel raw->band calibration. Pins the MECHANISM (each channel
- * classifies against its OWN boundary[]), NOT the provisional values (Data's
- * #192 owns those, so this test survives a value regen). The seam: an identical
- * raw lands in different bands on two channels whose outer rails differ, while
- * the still-shared interior keeps the watering decision uniform (Step 1). */
+/* #170 mechanism / #995 values: each channel classifies against its OWN
+ * boundary[] (the seam survives a value regen - Data owns the values). #995
+ * ratified ONE board-level in-soil ladder, so all four classic channels now
+ * carry byte-identical boundaries and band uniformly; per-instance divergence
+ * is a later registry+cal job. */
 void t_per_channel_cal(void)
 {
-    /* the table covers every channel and is genuinely per-channel (not a copy) */
+    /* the table covers every channel */
     TEST_ASSERT_EQUAL_INT_MESSAGE(IRRIG_CHANNELS, SENSOR_CAL_CHANNELS,
                                   "cal table covers every channel");
-    TEST_ASSERT_TRUE_MESSAGE(SENSOR_CAL_BOUNDARY[0][5] !=
-                                 SENSOR_CAL_BOUNDARY[3][5],
-                             "ch0(s3) and ch3(s2) have distinct wet rails");
 
-    /* a raw between s2's wet rail (ch3 ~900) and s3's wet rail (ch0 ~969):
-     * submerged on s3 (below its rail) but NOT on s2 (above its rail). */
-    const uint16_t raw = 930;
-    TEST_ASSERT_TRUE_MESSAGE(band_on_channel(0, raw) == MOIST_SUBMERGED,
-                             "raw 930 < s3 wet rail -> submerged on ch0");
-    TEST_ASSERT_TRUE_MESSAGE(band_on_channel(3, raw) != MOIST_SUBMERGED,
-                             "raw 930 > s2 wet rail -> NOT submerged on ch3");
-
-    /* Step-1 invariant: interior [1..4] stays SHARED, so a mid-soil raw bands
-     * the SAME on every channel — the watering decision is unchanged until the
-     * Step-2 per-channel field-capacity anchor lands. */
+    /* #995 collapsed the per-channel classic rails to ONE board-level in-soil
+     * ladder (per-instance refinement is a later registry+cal job) - so every
+     * channel now carries byte-identical boundaries. */
     for (int ch = 1; ch < SENSOR_CAL_CHANNELS; ch++) {
-        TEST_ASSERT_EQUAL_MESSAGE(band_on_channel(0, 1300),
-                                  band_on_channel(ch, 1300),
-                                  "shared interior -> same mid-soil band");
+        TEST_ASSERT_EQUAL_UINT16_ARRAY_MESSAGE(
+            SENSOR_CAL_BOUNDARY[0], SENSOR_CAL_BOUNDARY[ch],
+            MOISTURE_BOUNDARY_COUNT,
+            "all classic channels share the #995 board-level ladder");
+    }
+
+    /* the mechanism still holds: each channel classifies against its own
+     * boundary[]; identical (board-level) boundaries -> uniform watering. */
+    for (int ch = 1; ch < SENSOR_CAL_CHANNELS; ch++) {
+        TEST_ASSERT_EQUAL_MESSAGE(band_on_channel(0, 1780),
+                                  band_on_channel(ch, 1780),
+                                  "board-level ladder -> same mid-soil band");
     }
 }
 
 /* #404: the cal_ch header line - pins the EXACT wire format Data's #507 parser
  * (_parse_cal_channel) reads, byte-for-byte, using ch0's real calibration.h
- * values + the provenance constants. Also pins the honest-NULL date rule:
+ * values + the provenance constants. Also pins the absent date rule:
  * a NULL/empty date omits the key entirely, never emits `date=`. */
 void t_cal_ch_line(void)
 {
@@ -1290,18 +1528,18 @@ void t_cal_ch_line(void)
 
     /* full line, ch0 values straight from calibration.h */
     int n = telemetry_format_cal_ch(
-        buf, sizeof(buf), "s3", SENSOR_CAL_BOUNDARY[0], MOISTURE_BOUNDARY_COUNT,
-        SENSOR_CAL_SRC, SENSOR_CAL_DATE, SENSOR_CAL_CONFIDENCE,
-        SENSOR_CAL_SCOPE);
+        buf, sizeof(buf), "ch0", SENSOR_CAL_BOUNDARY[0],
+        MOISTURE_BOUNDARY_COUNT, SENSOR_CAL_SRC, SENSOR_CAL_DATE,
+        SENSOR_CAL_CONFIDENCE, SENSOR_CAL_SCOPE);
     TEST_ASSERT_TRUE_MESSAGE(n > 0, "cal_ch line formatted");
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
-        "# cal_ch s3: bounds=3123,2140,1830,1520,1150,969 "
-        "src=wipe_airdry_bench date=2026-06-28 confidence=provisional "
+        "# cal_ch ch0: bounds=2293,2086,1879,1636,1393,1150 "
+        "src=wet_rederive_1236 date=2026-07-19 confidence=provisional "
         "scope=channel",
         buf, "exact wire format the #507 parser reads");
 
-    /* honest-NULL date: key omitted entirely, not printed empty */
-    n = telemetry_format_cal_ch(buf, sizeof(buf), "s2", SENSOR_CAL_BOUNDARY[3],
+    /* absent date: key omitted entirely, not printed empty */
+    n = telemetry_format_cal_ch(buf, sizeof(buf), "ch3", SENSOR_CAL_BOUNDARY[3],
                                 MOISTURE_BOUNDARY_COUNT, "manual", NULL,
                                 "provisional", "channel");
     TEST_ASSERT_TRUE_MESSAGE(n > 0, "dateless cal_ch line formatted");
@@ -1313,7 +1551,7 @@ void t_cal_ch_line(void)
     /* truncation is reported, never a silently-clipped line */
     char tiny[24];
     TEST_ASSERT_EQUAL_MESSAGE(-1,
-                              telemetry_format_cal_ch(tiny, sizeof(tiny), "s3",
+                              telemetry_format_cal_ch(tiny, sizeof(tiny), "ch0",
                                                       SENSOR_CAL_BOUNDARY[0],
                                                       MOISTURE_BOUNDARY_COUNT,
                                                       "x", "y", "z", "w"),
@@ -1378,6 +1616,110 @@ void t_config_id_hash(void)
 /* #670: a raw STRICTLY below the board's physical wet rail is a fault, not moisture
  * and not "saturated" (the old raw<=5 bug that masked the dead s3-1 board). Coarse
  * SENSOR_FAULT in quality_flag; specific reason (dead_adc/stuck_wet) in payload. */
+/* #1152 emit: the two source-detectable exception rows TELEMETRY_SCHEMA S4
+ * ratified - open_adc (physics, the symmetric mirror of the sub-wet-rail fault)
+ * and rate_spike (kinematics). Raw is preserved in every case (ADR-0006); only
+ * the trust flag and the payload reason change. */
+void t_exceptions_open_adc_and_rate_spike(void)
+{
+    moisture_cfg_t cfg = (moisture_cfg_t)MOISTURE_CFG_DEFAULT;
+    moisture_state_t st;
+    const uint16_t rail = 900, air = 3400;
+
+    /* --- physics: impossibly DRY -> open circuit / disconnected lead --------- */
+    moisture_init(&st, &cfg, 1300);
+    st.last_raw = 3600; /* above the air rail, below the peg */
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "SENSOR_FAULT", telemetry_quality_flag(&st, rail, air),
+        "above the air rail = SENSOR_FAULT (mirror of the sub-wet-rail fault)");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("open_adc",
+                                     telemetry_fault_reason(&st, rail, air),
+                                     "impossibly dry -> open_adc reason");
+
+    /* the PEG keeps its own distinct value - open_adc must not swallow it */
+    st.last_raw = 4095;
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "SATURATED", telemetry_quality_flag(&st, rail, air),
+        "pegged high stays SATURATED (clamp), not open_adc");
+
+    /* a genuinely dry-but-plausible soil reading is NOT a fault */
+    st.last_raw = 3000;
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "OK", telemetry_quality_flag(&st, rail, air),
+        "dry but below the air rail = real soil, never flagged");
+    TEST_ASSERT_NULL_MESSAGE(telemetry_fault_reason(&st, rail, air),
+                             "plausible dry raw -> no fault reason");
+
+    /* air==0 disables the check (unknown rail -> never self-flag) */
+    st.last_raw = 3600;
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("OK", telemetry_quality_flag(&st, rail, 0),
+                                     "air rail 0 disables the open_adc check");
+
+    /* --- kinematics: a step soil cannot physically make ---------------------- */
+    moisture_init(&st, &cfg, 1500);
+    /* #1434 AC0: a fresh seed has no prior sample -> zero step */
+    TEST_ASSERT_EQUAL_INT16_MESSAGE(0, st.last_delta,
+                                    "seed has no previous step -> step=0");
+    moisture_update(&st, &cfg, 1560); /* 60 counts: ordinary drift */
+    TEST_ASSERT_FALSE_MESSAGE(st.rate_spike, "ordinary step is not a spike");
+    TEST_ASSERT_EQUAL_INT16_MESSAGE(
+        60, st.last_delta, "#1434 AC0: step is the SIGNED delta (+60 drier)");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "OK", telemetry_quality_flag(&st, rail, air), "ordinary step stays OK");
+
+    moisture_update(&st, &cfg, 3000); /* +1440 in one step */
+    TEST_ASSERT_TRUE_MESSAGE(st.rate_spike,
+                             "implausible step flags rate_spike");
+    /* #1434 AC0: the auditability contract - the emitted step IS the quantity the
+     * flag compares. (|step| > max_delta_raw) <=> rate_spike, verifiable on-wire. */
+    TEST_ASSERT_EQUAL_INT16_MESSAGE(
+        1440, st.last_delta, "step carries the exact compared magnitude");
+    TEST_ASSERT_TRUE_MESSAGE(
+        (uint16_t)(st.last_delta < 0 ? -st.last_delta : st.last_delta) >
+            cfg.max_delta_raw,
+        "|step| > threshold agrees with rate_spike being set");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "SUSPECT", telemetry_quality_flag(&st, rail, air),
+        "rate_spike -> SUSPECT (the reading may be real; the JUMP is not)");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("rate_spike",
+                                     telemetry_fault_reason(&st, rail, air),
+                                     "kinematics reason on the payload");
+    TEST_ASSERT_EQUAL_UINT16_MESSAGE(
+        3000, st.last_raw, "raw is PRESERVED (ADR-0006), never masked");
+
+    /* the flag is per-step: a settled step clears it */
+    moisture_update(&st, &cfg, 3010);
+    TEST_ASSERT_FALSE_MESSAGE(st.rate_spike, "spike clears once steps settle");
+    TEST_ASSERT_EQUAL_INT16_MESSAGE(10, st.last_delta, "settled step = +10");
+
+    /* #1434 AC0: SIGN carries direction - a wetter jump is NEGATIVE (the board-face
+     * vs connector-water discriminator, #1434 taxonomy). This one clears the
+     * threshold too, so it is a spike AND negative. */
+    moisture_update(&st, &cfg,
+                    1400); /* 3010 -> 1400: wetter by 1610 (> 1200) */
+    TEST_ASSERT_EQUAL_INT16_MESSAGE(-1610, st.last_delta,
+                                    "a wetter step is a NEGATIVE step");
+    TEST_ASSERT_TRUE_MESSAGE(st.rate_spike,
+                             "and, over threshold, still a spike");
+
+    /* a HARD fault outranks a kinematics hint */
+    moisture_update(&st, &cfg, 100); /* huge step AND below the wet rail */
+    TEST_ASSERT_TRUE_MESSAGE(st.rate_spike, "precondition: also a spike");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "stuck_wet", telemetry_fault_reason(&st, rail, air),
+        "physically-impossible fault outranks the rate_spike hint (raw 100 is "
+        "sub-rail but not near-zero, so stuck_wet - not dead_adc)");
+}
+
+/* set the raw on the state, then ask for the reason - the reason now reads the
+ * state (it needs rate_spike as well as raw). */
+static const char *fault_of(moisture_state_t *st, uint16_t raw, uint16_t rail,
+                            uint16_t air)
+{
+    st->last_raw = raw;
+    return telemetry_fault_reason(st, rail, air);
+}
+
 void t_sensor_fault(void)
 {
     moisture_cfg_t cfg = (moisture_cfg_t)MOISTURE_CFG_DEFAULT;
@@ -1385,47 +1727,47 @@ void t_sensor_fault(void)
     moisture_init(&st, &cfg,
                   1300); /* neutral spread/health; raw set per case */
     const uint16_t rail = 900; /* classic wet rail (BOARD_CAP.wet_rail_raw) */
+    const uint16_t air = 3400; /* classic air rail  (BOARD_CAP.air_dry_raw)  */
 
     /* dead ADC floating to ~0 (the live s3-1 0/7/4/1 case). */
     st.last_raw = 4;
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
-        "SENSOR_FAULT", telemetry_quality_flag(&st, rail),
+        "SENSOR_FAULT", telemetry_quality_flag(&st, rail, air),
         "raw 4 (dead ADC) below the wet rail = SENSOR_FAULT, not SATURATED");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("dead_adc",
-                                     telemetry_fault_reason(4, rail),
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("dead_adc", fault_of(&st, 4, rail, air),
                                      "near-zero raw -> dead_adc reason");
 
     /* shorted / contaminated probe reading impossibly wet (the P11 s3 ~420). */
     st.last_raw = 420;
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
-        "SENSOR_FAULT", telemetry_quality_flag(&st, rail),
+        "SENSOR_FAULT", telemetry_quality_flag(&st, rail, air),
         "raw 420 below the wet rail = SENSOR_FAULT");
     TEST_ASSERT_EQUAL_STRING_MESSAGE(
-        "stuck_wet", telemetry_fault_reason(420, rail),
+        "stuck_wet", fault_of(&st, 420, rail, air),
         "sub-rail but not near-zero -> stuck_wet reason");
 
     /* genuine full saturation (>= the rail) is NOT a fault (acceptance: no false
      * flag of real saturation). */
     st.last_raw = 930;
     TEST_ASSERT_TRUE_MESSAGE(
-        strcmp("SENSOR_FAULT", telemetry_quality_flag(&st, rail)) != 0,
+        strcmp("SENSOR_FAULT", telemetry_quality_flag(&st, rail, air)) != 0,
         "raw 930 (genuine saturation) is NOT a fault");
-    TEST_ASSERT_NULL_MESSAGE(telemetry_fault_reason(930, rail),
+    TEST_ASSERT_NULL_MESSAGE(fault_of(&st, 930, rail, air),
                              "genuine saturation has no fault reason");
     TEST_ASSERT_NULL_MESSAGE(
-        telemetry_fault_reason(900, rail),
+        fault_of(&st, 900, rail, air),
         "exactly at the rail is not a fault (strict below)");
 
     /* wet_rail==0 disables self-flagging (unknown rail -> never claim a fault). */
     st.last_raw = 4;
     TEST_ASSERT_TRUE_MESSAGE(
-        strcmp("SENSOR_FAULT", telemetry_quality_flag(&st, 0)) != 0,
+        strcmp("SENSOR_FAULT", telemetry_quality_flag(&st, 0, air)) != 0,
         "wet_rail=0 disables the fault check");
-    TEST_ASSERT_NULL_MESSAGE(telemetry_fault_reason(4, 0),
+    TEST_ASSERT_NULL_MESSAGE(fault_of(&st, 4, 0, air),
                              "wet_rail=0 -> no fault reason");
 }
 
-/* #739 v4 soil-row emit: config_id + honest-absent rssi + uptime_s/heap in payload,
+/* #739 v4 soil-row emit: config_id + absent rssi + uptime_s/heap in payload,
  * and the #670 fault flag/reason with raw preserved (ADR-0006). */
 void t_soil_row_v4(void)
 {
@@ -1442,7 +1784,7 @@ void t_soil_row_v4(void)
         "0.7.0",
         123456ULL,
         "UMLIFE_v2_TLC555",
-        "s3",
+        "ch0",
         "origplant",
         "soil_moisture",
         36,
@@ -1454,6 +1796,7 @@ void t_soil_row_v4(void)
         "",
         "classic",
         /* v4: */ 900 /*wet_rail*/,
+        3400 /*air_dry_raw (#1152)*/,
         "a1b2c3d4" /*config_id*/,
         true /*rssi_present*/,
         -57 /*rssi_dbm*/,
@@ -1483,15 +1826,33 @@ void t_soil_row_v4(void)
                              "healthy row is not SENSOR_FAULT");
     TEST_ASSERT_NULL_MESSAGE(strstr(buf, ";fault="),
                              "healthy row has no fault key");
+    /* #1434 AC0: step= rides the base payload (always present) - seed row is 0. */
+    TEST_ASSERT_NOT_NULL_MESSAGE(
+        strstr(buf, ";step=0;"),
+        "#1434 step= present on every soil row; seed = 0");
 
-    /* honest-absent (ADR-0028): a serial/tethered row OMITS rssi= entirely. */
+    /* a real signed step reaches the wire verbatim (auditability): drive one
+     * update and confirm the emitted token equals st.last_delta, sign and all. */
+    moisture_update(&st, &cfg, 1000); /* 1300 -> 1000: wetter by 300 */
+    row.raw = 1000;
+    TEST_ASSERT_EQUAL_INT16(-300, st.last_delta);
+    TEST_ASSERT_TRUE_MESSAGE(telemetry_format_soil_row(buf, sizeof(buf), &row) >
+                                 0,
+                             "stepped row formatted");
+    TEST_ASSERT_NOT_NULL_MESSAGE(
+        strstr(buf, ";step=-300;"),
+        "#1434 the emitted step is the signed classifier delta, on the wire");
+    st.last_raw = 1300; /* restore for the rest of the test */
+    row.raw = 1300;
+
+    /* absent (ADR-0028): a serial/tethered row OMITS rssi= entirely. */
     row.rssi_present = false;
     TEST_ASSERT_TRUE_MESSAGE(telemetry_format_soil_row(buf, sizeof(buf), &row) >
                                  0,
                              "tethered row formatted");
     TEST_ASSERT_NULL_MESSAGE(
         strstr(buf, "rssi="),
-        "#669/ADR-0028 rssi OMITTED off WiFi (never a fake 0)");
+        "#669/ADR-0028 rssi OMITTED off WiFi (never a placeholder 0)");
     TEST_ASSERT_NULL_MESSAGE(
         strstr(buf, "cal_tier="),
         "#997 cal_tier OMITTED off WiFi (header derivation governs tethered)");
@@ -1550,6 +1911,340 @@ void t_device_hostname(void)
 
 /* --- #952 cal_resolver: the resolution chain + byte-preservation ---------- */
 
+/* #963 Layer 1: the runtime-writable OWNER slot. A user flashes a SIGNED
+ * PREBUILT binary and cannot rebuild firmware to bake in a cal for a sensor
+ * Sprout has never seen - so this slot is the only mechanism compatible with our
+ * own supply chain. Pins the RESOLUTION CONTRACT (instance > class > factory)
+ * and the two safety properties the store must have. */
+void t_owner_cal_instance_slot(void)
+{
+    cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
+    for (int ch = 0; ch < 4; ch++)
+        cal_instance_clear(ch);
+
+    /* baseline: with no owner record, ch0 resolves to the class default */
+    const cal_record_t *base =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_NOT_NULL(base);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CAL_TIER_CHANNEL, base->tier,
+                                  "no owner cal -> class default resolves");
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_present(0), "slot starts empty");
+
+    /* the owner runs the wizard: a record for a sensor we have never seen */
+    uint16_t owner_anchors[MOISTURE_BOUNDARY_COUNT] = {2000, 1800, 1600,
+                                                       1400, 1200, 1000};
+    {
+        /* deliberately SCOPED so the source buffers die before we read back -
+         * the slot must own copies, not the caller's pointers. */
+        char board[16];
+        char prov[24];
+        strcpy(board, "esp32-classic");
+        strcpy(prov, "owner_wizard_x");
+        cal_record_t rec = {
+            board, SENSOR_CLASS_CAPACITIVE_V2, {0}, prov, CAL_TIER_CHANNEL};
+        memcpy(rec.anchors, owner_anchors, sizeof(owner_anchors));
+        cal_instance_set(0, &rec);
+        memset(board, 'X', sizeof(board)); /* scribble the caller's buffers */
+        memset(prov, 'X', sizeof(prov));
+    }
+
+    /* PRECEDENCE: the owner record now wins over the class default */
+    const cal_record_t *r =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_NOT_NULL(r);
+    TEST_ASSERT_EQUAL_UINT16_ARRAY_MESSAGE(
+        owner_anchors, r->anchors, MOISTURE_BOUNDARY_COUNT,
+        "owner cal outranks the class table");
+    /* STRING OWNERSHIP: survives the caller's buffers being destroyed */
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "owner_wizard_x", r->provenance,
+        "the slot COPIED provenance - caller's buffer is gone");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("esp32-classic", r->board_class,
+                                     "the slot COPIED board_class too");
+
+    /* ISOLATION: only ch0 was written */
+    TEST_ASSERT_TRUE_MESSAGE(cal_instance_present(0),
+                             "ch0 has an owner record");
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_present(1), "ch1 untouched");
+    const cal_record_t *r1 =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 1);
+    TEST_ASSERT_TRUE_MESSAGE(r1->anchors[0] != owner_anchors[0],
+                             "ch1 still resolves its own record");
+
+    /* BOARD-CLASS GUARD: a probe moved to a different board must NOT silently
+     * inherit the old board's owner calibration - raw scales differ per board. */
+    const cal_record_t *other =
+        cal_resolve("esp32-c5", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_NOT_NULL(other);
+    TEST_ASSERT_TRUE_MESSAGE(
+        other->anchors[0] != owner_anchors[0],
+        "a classic owner record must not leak onto a C5 channel");
+
+    /* CLEAR: falls back down the chain, never to NULL */
+    cal_instance_clear(0);
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_present(0), "cleared");
+    const cal_record_t *after =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_NOT_NULL_MESSAGE(after, "chain always returns a record");
+    TEST_ASSERT_EQUAL_UINT16_ARRAY_MESSAGE(
+        base->anchors, after->anchors, MOISTURE_BOUNDARY_COUNT,
+        "clearing the owner slot restores the class default");
+}
+
+/* An INDEPENDENT CRC-16/CCITT-FALSE, deliberately not shared with the codec:
+ * a test that reuses the implementation's own checksum proves only that the
+ * function is self-consistent. This one lets a hand-forged blob carry a VALID
+ * crc, so the semantic checks below (descending anchors, channel count) are
+ * exercised on their own merits rather than being masked by a crc reject. */
+static uint16_t test_crc16(const uint8_t *d, size_t n)
+{
+    uint16_t crc = 0xFFFFu;
+    for (size_t i = 0; i < n; i++) {
+        crc ^= (uint16_t)((uint16_t)d[i] << 8);
+        for (int b = 0; b < 8; b++)
+            crc = (crc & 0x8000u) ? (uint16_t)((crc << 1) ^ 0x1021u)
+                                  : (uint16_t)(crc << 1);
+    }
+    return crc;
+}
+
+static void test_reseal(uint8_t *b, size_t len) /* re-stamp a mutated blob */
+{
+    uint16_t c = test_crc16(b, len - 2u);
+    b[len - 2u] = (uint8_t)(c & 0xFFu);
+    b[len - 1u] = (uint8_t)(c >> 8);
+}
+
+void t_owner_cal_blob_roundtrip(void)
+{
+    /* #963: the owner slot survives a reboot. WHERE the bytes rest (device NVS
+     * vs host registry) is still open, so this is the storage-AGNOSTIC codec -
+     * both destinations need the same encoding. */
+    cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
+    for (int ch = 0; ch < CAL_MAX_CHANNELS; ch++)
+        cal_instance_clear(ch);
+
+    uint8_t blob[CAL_BLOB_MAX];
+
+    /* an EMPTY store is still a valid blob - "the owner has calibrated nothing"
+     * is a real state that must round-trip, not a special case. */
+    size_t n0 = cal_instance_serialize(blob, sizeof(blob));
+    TEST_ASSERT_GREATER_THAN_UINT32(0, n0);
+    TEST_ASSERT_TRUE(cal_instance_deserialize(blob, n0));
+    for (int ch = 0; ch < CAL_MAX_CHANNELS; ch++)
+        TEST_ASSERT_FALSE_MESSAGE(cal_instance_present(ch),
+                                  "empty blob restores an empty store");
+
+    /* two channels calibrated, two not - the sparse case is the realistic one */
+    uint16_t a0[MOISTURE_BOUNDARY_COUNT] = {2000, 1800, 1600, 1400, 1200, 1000};
+    uint16_t a2[MOISTURE_BOUNDARY_COUNT] = {1990, 1770, 1550, 1330, 1110, 900};
+    {
+        char board[16], prov[24];
+        strcpy(board, "esp32-classic");
+        strcpy(prov, "owner_wizard_a");
+        cal_record_t r = {
+            board, SENSOR_CLASS_CAPACITIVE_V2, {0}, prov, CAL_TIER_CHANNEL};
+        memcpy(r.anchors, a0, sizeof(a0));
+        cal_instance_set(0, &r);
+        strcpy(prov, "owner_wizard_c");
+        memcpy(r.anchors, a2, sizeof(a2));
+        cal_instance_set(2, &r);
+    }
+
+    size_t n = cal_instance_serialize(blob, sizeof(blob));
+    TEST_ASSERT_GREATER_THAN_UINT32(0, n);
+    TEST_ASSERT_LESS_OR_EQUAL_UINT32(CAL_BLOB_MAX, n);
+
+    /* the reboot: RAM is gone */
+    for (int ch = 0; ch < CAL_MAX_CHANNELS; ch++)
+        cal_instance_clear(ch);
+    TEST_ASSERT_FALSE(cal_instance_present(0));
+
+    TEST_ASSERT_TRUE_MESSAGE(cal_instance_deserialize(blob, n),
+                             "a blob we just wrote must restore");
+    TEST_ASSERT_TRUE(cal_instance_present(0));
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_present(1), "ch1 was never set");
+    TEST_ASSERT_TRUE(cal_instance_present(2));
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_present(3), "ch3 was never set");
+
+    /* restored records must RESOLVE, not merely exist - the chain is the point */
+    const cal_record_t *r0 =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_NOT_NULL(r0);
+    TEST_ASSERT_EQUAL_UINT16_ARRAY_MESSAGE(
+        a0, r0->anchors, MOISTURE_BOUNDARY_COUNT,
+        "ch0 owner anchors survive the round-trip and win the chain");
+    TEST_ASSERT_EQUAL_STRING("owner_wizard_a", r0->provenance);
+    TEST_ASSERT_EQUAL_STRING("esp32-classic", r0->board_class);
+    const cal_record_t *r2 =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 2);
+    TEST_ASSERT_EQUAL_UINT16_ARRAY(a2, r2->anchors, MOISTURE_BOUNDARY_COUNT);
+    TEST_ASSERT_EQUAL_STRING("owner_wizard_c", r2->provenance);
+
+    /* a restore STATES the whole store: ch1 falls back to the class default,
+     * it does not keep a stale owner record from before the restore. */
+    const cal_record_t *r1 =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 1);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CAL_TIER_CHANNEL, r1->tier,
+                                  "ch1 resolves to the class default");
+
+    /* a buffer that cannot hold the max NEVER gets a partial write */
+    uint8_t small[8];
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(
+        0, cal_instance_serialize(small, sizeof(small)),
+        "too-small buffer -> 0, never a prefix");
+}
+
+void t_owner_cal_blob_fail_closed(void)
+{
+    /* A BAD calibration is worse than NO calibration: it shifts every band edge,
+     * therefore every watering decision, and nothing looks broken while it does.
+     * So every malformed blob must restore NOTHING and leave the good store
+     * standing. Each case below re-asserts the SURVIVING state, not just the
+     * false return - "it rejected" and "it rejected without damage" are
+     * different claims, and only the second one is safe. */
+    cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
+    for (int ch = 0; ch < CAL_MAX_CHANNELS; ch++)
+        cal_instance_clear(ch);
+
+    uint16_t good[MOISTURE_BOUNDARY_COUNT] = {2000, 1800, 1600,
+                                              1400, 1200, 1000};
+    {
+        char board[16], prov[24];
+        strcpy(board, "esp32-classic");
+        strcpy(prov, "owner_good");
+        cal_record_t r = {
+            board, SENSOR_CLASS_CAPACITIVE_V2, {0}, prov, CAL_TIER_CHANNEL};
+        memcpy(r.anchors, good, sizeof(good));
+        cal_instance_set(0, &r);
+    }
+    uint8_t ref[CAL_BLOB_MAX];
+    size_t n = cal_instance_serialize(ref, sizeof(ref));
+    TEST_ASSERT_GREATER_THAN_UINT32(0, n);
+
+    uint8_t bad[CAL_BLOB_MAX];
+#define ASSERT_STORE_INTACT(msg)                                               \
+    do {                                                                       \
+        TEST_ASSERT_TRUE_MESSAGE(cal_instance_present(0), msg);                \
+        TEST_ASSERT_EQUAL_UINT16_ARRAY_MESSAGE(                                \
+            good,                                                              \
+            cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 0)        \
+                ->anchors,                                                     \
+            MOISTURE_BOUNDARY_COUNT, msg);                                     \
+    } while (0)
+
+    /* 1. TRUNCATED - the power-loss-mid-NVS-write case */
+    memcpy(bad, ref, n);
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_deserialize(bad, n - 5u),
+                              "a truncated blob must be rejected");
+    ASSERT_STORE_INTACT("truncated blob left the good store standing");
+
+    /* 2. SINGLE BIT FLIP that ONLY the crc can catch. Offset 9 is anchor[0]'s
+     * low byte, so this reads 2000 -> 2001: still strictly descending, still a
+     * plausible calibration, semantically invisible. Deliberately NOT a flip
+     * that breaks the ordering - that one is caught by the descending check
+     * even with the crc removed, which would make this case prove nothing about
+     * the crc. (Found by mutation: dropping the crc left the earlier version of
+     * this assertion green.) */
+    memcpy(bad, ref, n);
+    bad[9] ^= 0x01u;
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_deserialize(bad, n),
+                              "an order-preserving bit flip must fail the crc");
+    ASSERT_STORE_INTACT("bit-flipped blob left the good store standing");
+
+    /* 2b. a bit flip in the PROVENANCE text - no numeric check can see this one,
+     * so it is crc-or-nothing. Provenance is what tells the owner where a
+     * calibration came from; silently corrupting it is a lie about lineage. */
+    memcpy(bad, ref, n);
+    bad[n - 3u] ^= 0x01u;
+    TEST_ASSERT_FALSE_MESSAGE(
+        cal_instance_deserialize(bad, n),
+        "a corrupted provenance string must fail the crc");
+    ASSERT_STORE_INTACT("provenance-flipped blob left the good store standing");
+
+    /* 3. WRONG MAGIC - some other NVS key's bytes handed to us */
+    memcpy(bad, ref, n);
+    bad[0] = 'X';
+    test_reseal(bad, n); /* valid crc, still not our format */
+    TEST_ASSERT_FALSE_MESSAGE(
+        cal_instance_deserialize(bad, n),
+        "foreign bytes with a good crc are still foreign");
+    ASSERT_STORE_INTACT("wrong-magic blob left the good store standing");
+
+    /* 4. WRONG VERSION - an OTA changed the layout; ADR-0026 section 5 preserves
+     * NVS, so the NEW build is handed the OLD blob. Reject, never reinterpret. */
+    memcpy(bad, ref, n);
+    bad[4] = (uint8_t)(CAL_BLOB_VERSION + 1u);
+    test_reseal(bad, n);
+    TEST_ASSERT_FALSE_MESSAGE(
+        cal_instance_deserialize(bad, n),
+        "a future-version blob must not be reinterpreted");
+    ASSERT_STORE_INTACT("version-bumped blob left the good store standing");
+
+    /* 5. MORE CHANNELS THAN THIS BUILD HAS - a wider board's blob. Two reasons
+     * this guard is load-bearing: reading the first four and dropping the rest
+     * is an INVISIBLE cal loss on the channels we ignored, and the slot index
+     * runs to `channels`, so an unchecked count indexes past a CAL_MAX_CHANNELS
+     * array.
+     *
+     * The blob must genuinely CARRY the fifth slot, or the parse simply runs out
+     * of bytes and the length check rejects it - which looks identical from the
+     * outside and tests nothing. (Found by mutation: with the count check
+     * removed, the earlier version of this case still passed.) So: splice in a
+     * real fifth slot byte before the crc and re-seal. */
+    memcpy(bad, ref, n - 2u); /* header + payload, without the crc */
+    bad[5] = (uint8_t)(CAL_MAX_CHANNELS + 1u);
+    bad[n - 2u] = 0u; /* the fifth slot: present = 0, fully parseable */
+    test_reseal(bad, n + 1u);
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_deserialize(bad, n + 1u),
+                              "a wider board's blob must be rejected whole");
+    ASSERT_STORE_INTACT("wide-channel blob left the good store standing");
+
+    /* 6. NON-DESCENDING ANCHORS - would break the moisture_classifier contract
+     * (boundary[] strictly descending). Carries a VALID crc, so only the
+     * semantic check can catch it. */
+    memcpy(bad, ref, n);
+    {
+        /* anchors start after magic(4)+ver(1)+chan(1)+present(1)+sc(1)+tier(1) */
+        size_t at = 9;
+        uint16_t asc[MOISTURE_BOUNDARY_COUNT] = {1000, 1200, 1400,
+                                                 1600, 1800, 2000};
+        for (size_t i = 0; i < MOISTURE_BOUNDARY_COUNT; i++) {
+            bad[at++] = (uint8_t)(asc[i] & 0xFFu);
+            bad[at++] = (uint8_t)(asc[i] >> 8);
+        }
+    }
+    test_reseal(bad, n);
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_deserialize(bad, n),
+                              "ascending anchors violate the classifier "
+                              "contract - reject, not repair");
+    ASSERT_STORE_INTACT("non-descending blob left the good store standing");
+
+    /* 7. TRAILING GARBAGE - a prefix that parses is not a blob that validates */
+    memcpy(bad, ref, n);
+    bad[n] = 0xAAu;
+    bad[n + 1u] = 0xBBu;
+    test_reseal(bad, n + 2u);
+    TEST_ASSERT_FALSE_MESSAGE(cal_instance_deserialize(bad, n + 2u),
+                              "trailing bytes must be rejected");
+    ASSERT_STORE_INTACT("trailing-garbage blob left the good store standing");
+
+    /* 8. NULL / absurd length */
+    TEST_ASSERT_FALSE(cal_instance_deserialize(NULL, n));
+    TEST_ASSERT_FALSE(cal_instance_deserialize(ref, 0));
+    TEST_ASSERT_FALSE(cal_instance_deserialize(ref, CAL_BLOB_MAX + 1u));
+    ASSERT_STORE_INTACT("degenerate inputs left the good store standing");
+#undef ASSERT_STORE_INTACT
+
+    /* and the reference blob STILL restores - none of the above corrupted it */
+    for (int ch = 0; ch < CAL_MAX_CHANNELS; ch++)
+        cal_instance_clear(ch);
+    TEST_ASSERT_TRUE(cal_instance_deserialize(ref, n));
+    TEST_ASSERT_TRUE(cal_instance_present(0));
+    for (int ch = 0; ch < CAL_MAX_CHANNELS; ch++)
+        cal_instance_clear(ch);
+}
+
 void t_cal_resolver_chain_order(void)
 {
     cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
@@ -1592,10 +2287,10 @@ void t_cal_resolver_classic_byte_preserved(void)
 void t_cal_resolver_c5_board_envelope(void)
 {
     /* C5 resolves to its PER-BOARD envelope - the SAME record for every channel,
-     * tier BOARD, byte-matching the #898/#899 measured values. */
+     * tier BOARD, byte-matching the #995-ratified measured C5 envelope. */
     cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
-    static const uint16_t c5[MOISTURE_BOUNDARY_COUNT] = {2740, 1939, 1666,
-                                                         1394, 1068, 980};
+    static const uint16_t c5[MOISTURE_BOUNDARY_COUNT] = {2037, 1861, 1685,
+                                                         1478, 1272, 1065};
     for (int ch = 0; ch < 4; ch++) {
         const cal_record_t *r =
             cal_resolve("esp32-c5", SENSOR_CLASS_CAPACITIVE_V2, ch);
@@ -1604,7 +2299,7 @@ void t_cal_resolver_c5_board_envelope(void)
                                       "C5 is board-cal");
         TEST_ASSERT_EQUAL_UINT16_ARRAY_MESSAGE(
             c5, r->anchors, MOISTURE_BOUNDARY_COUNT,
-            "C5 anchors must byte-match the #898 envelope on every channel");
+            "C5 anchors must byte-match the #995 envelope on every channel");
     }
 }
 
@@ -1618,15 +2313,930 @@ void t_cal_tier_label(void)
     TEST_ASSERT_EQUAL_STRING("uncalibrated", cal_tier_label(CAL_TIER_FACTORY));
 }
 
+/* ============================================================================
+ * #302 S3a - the pull DECISION core (ADR-0026 D1/D4).
+ * ==========================================================================*/
+
+static ota_pull_artifact_t mk_art(const char *board, const char *ver,
+                                  const char *img, const char *sig)
+{
+    ota_pull_artifact_t a;
+    memset(&a, 0, sizeof(a));
+    if (board) snprintf(a.board_class, sizeof(a.board_class), "%s", board);
+    if (ver) snprintf(a.version, sizeof(a.version), "%s", ver);
+    if (img) snprintf(a.image_url, sizeof(a.image_url), "%s", img);
+    if (sig) snprintf(a.sig_url, sizeof(a.sig_url), "%s", sig);
+    return a;
+}
+
+void t_ota_pull_board_match(void)
+{
+    /* The feed carries one artifact per board class. Flashing a C5 image onto a
+     * classic is a brick that only USB recovers, so the match is EXACT and
+     * absence is refusal - never "take the first one". */
+    ota_pull_artifact_t feed[2] = {
+        mk_art("esp32-classic", "0.8.1", "https://x/classic.bin",
+               "https://x/classic.bin.sig"),
+        mk_art("esp32-c5", "0.8.1", "https://x/c5.bin", "https://x/c5.bin.sig"),
+    };
+    const ota_pull_artifact_t *pick = NULL;
+
+    TEST_ASSERT_EQUAL_INT(OTA_PULL_UPDATE,
+                          ota_pull_decide(feed, 2, "esp32-c5", "0.7.3", &pick));
+    TEST_ASSERT_NOT_NULL(pick);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("https://x/c5.bin", pick->image_url,
+                                     "must pick THIS board's artifact");
+
+    /* a board the feed does not carry gets nothing - not the other one */
+    pick = NULL;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_NO_ARTIFACT_FOR_BOARD,
+        ota_pull_decide(feed, 2, "esp32-s3", "0.7.3", &pick),
+        "an unlisted board must be refused, never given a sibling image");
+    TEST_ASSERT_NULL(pick);
+
+    /* prefix similarity must NOT match: "esp32-c" is not "esp32-c5" */
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_NO_ARTIFACT_FOR_BOARD,
+        ota_pull_decide(feed, 2, "esp32-c", "0.7.3", NULL),
+        "a prefix is not a match - different silicon");
+
+    /* the same board listed twice is ambiguous; picking either is a guess */
+    ota_pull_artifact_t dup[2] = {
+        mk_art("esp32-c5", "0.8.1", "https://x/a.bin", "https://x/a.sig"),
+        mk_art("esp32-c5", "0.8.2", "https://x/b.bin", "https://x/b.sig"),
+    };
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_FEED_INVALID,
+        ota_pull_decide(dup, 2, "esp32-c5", "0.7.3", NULL),
+        "a duplicated board class must reject the feed, not pick one");
+}
+
+void t_ota_pull_downgrade_is_allowed(void)
+{
+    /* THE POINT OF THIS MODULE. ADR-0026 D4 declined anti-rollback and named
+     * feed curation as the remediation for a bad release: pull it, serve the
+     * fixed one. That only works if devices APPLY what the feed offers.
+     *
+     * An "if (newer) update;" would silently disable it - curate a bad 0.9.1
+     * away, re-serve 0.9.0, and every device refuses the fix because the fix is
+     * older than what it runs. So the rule is DIFFERENT, not NEWER, and this
+     * test is what stops a future reviewer tidying it into a > comparison. */
+    ota_pull_artifact_t feed[1] = {mk_art("esp32-classic", "0.9.0",
+                                          "https://x/fixed.bin",
+                                          "https://x/fixed.bin.sig")};
+    const ota_pull_artifact_t *pick = NULL;
+
+    /* running the WITHDRAWN 0.9.1; the feed now serves 0.9.0 */
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_UPDATE,
+        ota_pull_decide(feed, 1, "esp32-classic", "0.9.1", &pick),
+        "a curated DOWNGRADE must be applied - it is ADR-0026 D4 remediation");
+    TEST_ASSERT_NOT_NULL(pick);
+    TEST_ASSERT_EQUAL_STRING("https://x/fixed.bin", pick->image_url);
+
+    /* the ordinary upgrade direction still works */
+    TEST_ASSERT_EQUAL_INT(
+        OTA_PULL_UPDATE,
+        ota_pull_decide(feed, 1, "esp32-classic", "0.8.1", NULL));
+
+    /* and the same version is a no-op, so a device does not reflash on a loop */
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_UP_TO_DATE,
+        ota_pull_decide(feed, 1, "esp32-classic", "0.9.0", NULL),
+        "same version must not re-apply");
+
+    /* non-semver strings are handled because nothing is PARSED - equality only */
+    ota_pull_artifact_t odd[1] = {mk_art(
+        "esp32-classic", "0.9.0-rc2", "https://x/rc.bin", "https://x/rc.sig")};
+    TEST_ASSERT_EQUAL_INT(
+        OTA_PULL_UPDATE,
+        ota_pull_decide(odd, 1, "esp32-classic", "0.9.0", NULL));
+    TEST_ASSERT_EQUAL_INT(
+        OTA_PULL_UP_TO_DATE,
+        ota_pull_decide(odd, 1, "esp32-classic", "0.9.0-rc2", NULL));
+}
+
+void t_ota_pull_fail_closed(void)
+{
+    /* Absence and malformation are refusals, never defaults. */
+    ota_pull_artifact_t good[1] = {
+        mk_art("esp32-classic", "0.8.1", "https://x/a.bin", "https://x/a.sig")};
+
+    /* NO ARRAY AT ALL is a caller error - nothing to reason about. */
+    TEST_ASSERT_EQUAL_INT(
+        OTA_PULL_FEED_INVALID,
+        ota_pull_decide(NULL, 0, "esp32-classic", "0.7.3", NULL));
+
+    /* An EMPTY feed is NOT a broken one (#1284). This assertion used to expect
+     * FEED_INVALID; #1524 then made the banner-only feed the ruled, committed
+     * pre-first-release state ("offers nothing, boards stay put"), which turned
+     * that expectation into the device calling a healthy feed broken. Behaviour
+     * is unchanged either way (the board stays put) - the REASON is now honest,
+     * so a pre-cut !otapull doesn't send an operator debugging a working feed. */
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_NO_ARTIFACT_FOR_BOARD,
+        ota_pull_decide(good, 0, "esp32-classic", "0.7.3", NULL),
+        "an empty feed offers nothing - it is not structurally broken");
+
+    /* not knowing what we are is a refusal, not a guess */
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_SELF_UNKNOWN, ota_pull_decide(good, 1, NULL, "0.7.3", NULL),
+        "unknown board identity must refuse, never default");
+    TEST_ASSERT_EQUAL_INT(OTA_PULL_SELF_UNKNOWN,
+                          ota_pull_decide(good, 1, "esp32-classic", "", NULL));
+
+    /* an image with NO SIGNATURE is not offerable. ota_gate would reject it
+     * anyway - but only after a multi-megabyte download. */
+    ota_pull_artifact_t nosig[1] = {
+        mk_art("esp32-classic", "0.8.1", "https://x/a.bin", NULL)};
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_FEED_INVALID,
+        ota_pull_decide(nosig, 1, "esp32-classic", "0.7.3", NULL),
+        "no .sig -> not offerable, cheaper to refuse before the download");
+
+    /* ONE malformed entry rejects the WHOLE feed - acting on the half we happen
+     * to parse is how partial-trust bugs start. Ours here is valid. */
+    ota_pull_artifact_t mixed[2] = {
+        mk_art("esp32-classic", "0.8.1", "https://x/a.bin", "https://x/a.sig"),
+        mk_art("esp32-c5", "0.8.1", NULL, "https://x/b.sig"), /* no image url */
+    };
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_FEED_INVALID,
+        ota_pull_decide(mixed, 2, "esp32-classic", "0.7.3", NULL),
+        "a feed we only partly understand is a feed we do not act on");
+
+    /* an UNTERMINATED field must reject, not read past its buffer */
+    ota_pull_artifact_t raw;
+    memset(&raw, 0, sizeof(raw));
+    memset(raw.board_class, 'x', sizeof(raw.board_class)); /* no NUL */
+    snprintf(raw.version, sizeof(raw.version), "0.8.1");
+    snprintf(raw.image_url, sizeof(raw.image_url), "https://x/a.bin");
+    snprintf(raw.sig_url, sizeof(raw.sig_url), "https://x/a.sig");
+    TEST_ASSERT_FALSE_MESSAGE(ota_pull_artifact_valid(&raw),
+                              "an unterminated field is a reject");
+
+    TEST_ASSERT_EQUAL_STRING("update",
+                             ota_pull_decision_label(OTA_PULL_UPDATE));
+    TEST_ASSERT_EQUAL_STRING("up-to-date",
+                             ota_pull_decision_label(OTA_PULL_UP_TO_DATE));
+}
+
+/* ============================================================================
+ * #302 S3b - the feed PARSER (format ruled 2026-07-21: line-oriented,
+ * Pages-served, unsigned pointer).
+ * ==========================================================================*/
+
+static const char *k_feed_ok =
+    "# sprout-ota-feed v1\n"
+    "board=esp32-classic version=0.8.0 image=https://x/c.bin "
+    "sig=https://x/c.sig\n"
+    "board=esp32-c5 version=0.8.0 image=https://x/5.bin sig=https://x/5.sig\n";
+
+void t_ota_pull_feed_parse(void)
+{
+    ota_pull_artifact_t a[4];
+    size_t n = 99;
+
+    TEST_ASSERT_EQUAL_INT(
+        OTA_PULL_PARSE_OK,
+        ota_pull_parse_feed(k_feed_ok, strlen(k_feed_ok), a, 4, &n));
+    TEST_ASSERT_EQUAL_UINT32(2, n);
+    TEST_ASSERT_EQUAL_STRING("esp32-classic", a[0].board_class);
+    TEST_ASSERT_EQUAL_STRING("0.8.0", a[0].version);
+    TEST_ASSERT_EQUAL_STRING("https://x/c.bin", a[0].image_url);
+    TEST_ASSERT_EQUAL_STRING("https://x/c.sig", a[0].sig_url);
+    TEST_ASSERT_EQUAL_STRING("esp32-c5", a[1].board_class);
+
+    /* the ruled board token is the FIRMWARE vocabulary, and it feeds decide()
+     * straight through - this is the join the vocabulary ruling was about */
+    const ota_pull_artifact_t *pick = NULL;
+    TEST_ASSERT_EQUAL_INT(
+        OTA_PULL_UPDATE,
+        ota_pull_decide(a, n, "esp32-classic", "0.7.3", &pick));
+    TEST_ASSERT_EQUAL_STRING("https://x/c.bin", pick->image_url);
+
+    /* blank lines, comments, CRLF, and extra whitespace are all tolerated -
+     * the feed is hand-curatable by design (that is what makes D4's
+     * pull-the-bad-release remediation an action rather than an aspiration) */
+    const char *messy = "# sprout-ota-feed v1\r\n"
+                        "\r\n"
+                        "# the classic, re-served after 0.8.1 was withdrawn\r\n"
+                        "  board=esp32-classic   version=0.8.0   "
+                        "image=https://x/c.bin   sig=https://x/c.sig  \r\n"
+                        "\n";
+    n = 99;
+    TEST_ASSERT_EQUAL_INT(OTA_PULL_PARSE_OK,
+                          ota_pull_parse_feed(messy, strlen(messy), a, 4, &n));
+    TEST_ASSERT_EQUAL_UINT32(1, n);
+    TEST_ASSERT_EQUAL_STRING("esp32-classic", a[0].board_class);
+    TEST_ASSERT_EQUAL_STRING("https://x/c.bin", a[0].image_url);
+}
+
+void t_ota_pull_feed_evolution(void)
+{
+    /* THE ASYMMETRY, and it is deliberate.
+     *
+     * UNKNOWN KEYS ARE IGNORED: a newer generator must be able to add a field
+     * without stranding every deployed board. That is the additive-never-stitch
+     * discipline the wire contract already runs on.
+     *
+     * MISSING KEYS ARE FATAL: a device must never fill in a default for something
+     * the feed failed to say. Silence is not consent. */
+    ota_pull_artifact_t a[4];
+    size_t n = 99;
+
+    const char *future = "# sprout-ota-feed v1\n"
+                         "board=esp32-classic version=0.8.0 "
+                         "image=https://x/c.bin sig=https://x/c.sig "
+                         "size=1175728 notes=security-fix\n";
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_OK,
+        ota_pull_parse_feed(future, strlen(future), a, 4, &n),
+        "an unknown key must not strand an older device");
+    TEST_ASSERT_EQUAL_UINT32(1, n);
+    TEST_ASSERT_EQUAL_STRING("https://x/c.bin", a[0].image_url);
+
+    /* every required key, dropped one at a time, must be fatal */
+    static const char *missing[] = {
+        "# sprout-ota-feed v1\nversion=0.8.0 image=https://x/c.bin "
+        "sig=https://x/c.sig\n",
+        "# sprout-ota-feed v1\nboard=esp32-classic image=https://x/c.bin "
+        "sig=https://x/c.sig\n",
+        "# sprout-ota-feed v1\nboard=esp32-classic version=0.8.0 "
+        "sig=https://x/c.sig\n",
+        "# sprout-ota-feed v1\nboard=esp32-classic version=0.8.0 "
+        "image=https://x/c.bin\n",
+    };
+    for (size_t i = 0; i < sizeof(missing) / sizeof(missing[0]); i++) {
+        n = 99;
+        TEST_ASSERT_EQUAL_INT_MESSAGE(
+            OTA_PULL_PARSE_MALFORMED,
+            ota_pull_parse_feed(missing[i], strlen(missing[i]), a, 4, &n),
+            "a missing required key must be fatal, never defaulted");
+        TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, n,
+                                         "a rejected feed yields NOTHING");
+    }
+}
+
+void t_ota_pull_feed_fail_closed(void)
+{
+    ota_pull_artifact_t a[4];
+    size_t n = 99;
+
+    /* the banner is the format's own schema boundary: a v2 feed is refused
+     * WHOLE rather than read as a v1 feed that happens to parse */
+    const char *v2 = "# sprout-ota-feed v2\n"
+                     "board=esp32-classic version=0.8.0 image=https://x/c.bin "
+                     "sig=https://x/c.sig\n";
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_NO_BANNER, ota_pull_parse_feed(v2, strlen(v2), a, 4, &n),
+        "a future format version must be refused, not half-understood");
+    TEST_ASSERT_EQUAL_UINT32(0, n);
+
+    /* someone else's document that happens to be line-oriented */
+    const char *foreign = "board=esp32-classic version=0.8.0\n";
+    n = 99;
+    TEST_ASSERT_EQUAL_INT(
+        OTA_PULL_PARSE_NO_BANNER,
+        ota_pull_parse_feed(foreign, strlen(foreign), a, 4, &n));
+
+    /* an empty document is not an empty feed - it is no feed */
+    n = 99;
+    TEST_ASSERT_EQUAL_INT(OTA_PULL_PARSE_NO_BANNER,
+                          ota_pull_parse_feed("", 0, a, 4, &n));
+
+    /* MORE BOARDS THAN THE CALLER CAN HOLD is a refusal, not a truncation. A
+     * silently-shortened feed reads as "this board isn't offered an update",
+     * which is indistinguishable from a real up-to-date state. */
+    const char *many =
+        "# sprout-ota-feed v1\n"
+        "board=b1 version=1 image=https://x/1 sig=https://x/1s\n"
+        "board=b2 version=1 image=https://x/2 sig=https://x/2s\n"
+        "board=b3 version=1 image=https://x/3 sig=https://x/3s\n";
+    ota_pull_artifact_t small[2];
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_TOO_MANY,
+        ota_pull_parse_feed(many, strlen(many), small, 2, &n),
+        "an over-long feed must refuse, never truncate");
+    TEST_ASSERT_EQUAL_UINT32(0, n);
+
+    /* an over-long VALUE must reject rather than truncate - a shortened URL
+     * fetches the wrong thing, and a shortened board class could collide */
+    /* Sized from what is actually written: the header line + the longest line
+     * prefix + an OVER-length url + the newline. The first version of this sized
+     * the buffer OTA_PULL_URL_MAX + 64 and wrote prefix(91) + 256 + 1 into it -
+     * a 28-byte stack overflow that MinGW tolerated locally and glibc caught in
+     * CI as SIGABRT. Sized by arithmetic now, and asserted, rather than by a
+     * guess at how much slack "feels" like enough. */
+    char big[512];
+    int w = snprintf(big, sizeof(big),
+                     "# sprout-ota-feed v1\nboard=esp32-classic version=0.8.0 "
+                     "sig=https://x/c.sig image=https://x/");
+    TEST_ASSERT_TRUE_MESSAGE(w > 0 && (size_t)w + OTA_PULL_URL_MAX + 1u <
+                                          sizeof(big),
+                             "the test's own buffer must hold what it writes");
+    for (size_t i = 0; i < OTA_PULL_URL_MAX; i++)
+        big[w + i] = 'a';
+    big[w + OTA_PULL_URL_MAX] = '\n';
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_MALFORMED,
+        ota_pull_parse_feed(big, (size_t)w + OTA_PULL_URL_MAX + 1u, a, 4, &n),
+        "an over-long url must reject, never truncate");
+
+    /* a malformed line poisons the WHOLE feed - a partially-parsed feed looks
+     * like a smaller feed, and "not listed" would be indistinguishable from
+     * "the line for this board was garbled" */
+    const char *partial = "# sprout-ota-feed v1\n"
+                          "board=esp32-classic version=0.8.0 "
+                          "image=https://x/c.bin sig=https://x/c.sig\n"
+                          "this-line-has-no-equals-sign\n";
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_MALFORMED,
+        ota_pull_parse_feed(partial, strlen(partial), a, 4, &n),
+        "one bad line rejects the whole feed");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, n, "never a partial parse");
+
+    /* A BARE TOKEN alongside valid ones. Found by mutation: making a no-'='
+     * token silently ignorable left the suite green, because my no-equals case
+     * above was a line with NOTHING else on it - the artifact then failed
+     * validation anyway and the reject came from the wrong check. This is the
+     * input that separates them.
+     *
+     * The distinction is real: "unknown keys are ignored" means `foo=bar` with an
+     * unrecognised `foo`. A token with no '=' is not a key-value at all, so it
+     * means we are misreading the line's STRUCTURE - and a line we are misreading
+     * must not yield an artifact we then act on. */
+    const char *junk_tail = "# sprout-ota-feed v1\n"
+                            "board=esp32-classic version=0.8.0 "
+                            "image=https://x/c.bin sig=https://x/c.sig "
+                            "GARBAGE\n";
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_MALFORMED,
+        ota_pull_parse_feed(junk_tail, strlen(junk_tail), a, 4, &n),
+        "a bare token means we are misreading the line - reject, do not "
+        "ignore");
+    TEST_ASSERT_EQUAL_UINT32(0, n);
+
+    /* A DUPLICATE BOARD CLASS REJECTS THE WHOLE FEED (#1570). Mirrors the desk
+     * twin's vector (tools/dx/test_ota_feed.py::test_duplicate_board_rejects_
+     * the_feed: GOOD + a repeat of a board line) so generator and device are
+     * held to one contract by two suites that cannot drift silently. */
+    const char *dup_same = "# sprout-ota-feed v1\n"
+                           "board=esp32-classic version=0.8.1 "
+                           "image=https://x/c.bin sig=https://x/c.sig\n"
+                           "board=esp32-classic version=0.8.1 "
+                           "image=https://x/c.bin sig=https://x/c.sig\n";
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_MALFORMED,
+        ota_pull_parse_feed(dup_same, strlen(dup_same), a, 4, &n),
+        "two entries for one class is a corrupt feed - refuse it whole");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, n, "never a partial parse");
+
+    /* The case the refusal actually exists for: the duplicates DISAGREE. Picking
+     * either one is a silent guess about which image to flash, and the wrong
+     * guess is a board recovered over USB. first-wins and last-wins are both
+     * wrong answers to a question the feed failed to answer. */
+    const char *dup_conflict =
+        "# sprout-ota-feed v1\n"
+        "board=esp32-classic version=0.8.1 "
+        "image=https://x/new.bin sig=https://x/new.sig\n"
+        "board=esp32-classic version=0.7.9 "
+        "image=https://x/old.bin sig=https://x/old.sig\n";
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_MALFORMED,
+        ota_pull_parse_feed(dup_conflict, strlen(dup_conflict), a, 4, &n),
+        "conflicting duplicates must refuse, never pick one");
+    TEST_ASSERT_EQUAL_UINT32(0, n);
+
+    /* Rejected for ANY class, not just the reading board's own: a duplicate
+     * anywhere is evidence the document was mangled, and the parser is pure - it
+     * never knows which board is reading. A classic reading a feed whose C5 lines
+     * are doubled still refuses. */
+    const char *dup_other = "# sprout-ota-feed v1\n"
+                            "board=esp32-classic version=0.8.1 "
+                            "image=https://x/c.bin sig=https://x/c.sig\n"
+                            "board=esp32-c5 version=0.8.1 "
+                            "image=https://x/5.bin sig=https://x/5.sig\n"
+                            "board=esp32-c5 version=0.8.1 "
+                            "image=https://x/5.bin sig=https://x/5.sig\n";
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_MALFORMED,
+        ota_pull_parse_feed(dup_other, strlen(dup_other), a, 4, &n),
+        "a duplicate of ANY class rejects - the parser never guesses which "
+        "board is reading");
+    TEST_ASSERT_EQUAL_UINT32(0, n);
+
+    /* The other side of the cut: DISTINCT classes that share a prefix must still
+     * parse. Guards the check against a future refactor to a prefix/strncmp
+     * compare, which would refuse legitimate feeds as the fleet grows. */
+    const char *near_miss = "# sprout-ota-feed v1\n"
+                            "board=esp32-c5 version=0.8.1 "
+                            "image=https://x/5.bin sig=https://x/5.sig\n"
+                            "board=esp32-c55 version=0.8.1 "
+                            "image=https://x/55.bin sig=https://x/55.sig\n";
+    n = 99;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        OTA_PULL_PARSE_OK,
+        ota_pull_parse_feed(near_miss, strlen(near_miss), a, 4, &n),
+        "distinct classes sharing a prefix are not duplicates");
+    TEST_ASSERT_EQUAL_UINT32(2, n);
+
+    TEST_ASSERT_EQUAL_STRING("ok", ota_pull_parse_label(OTA_PULL_PARSE_OK));
+    TEST_ASSERT_EQUAL_STRING("no-banner",
+                             ota_pull_parse_label(OTA_PULL_PARSE_NO_BANNER));
+}
+
+/* ---- #1284 S3: the pull TRANSPORT orchestrator ---------------------------
+ * A scriptable transport: the test sets what fetch_feed returns and what the
+ * `apply` callback verdicts, and records whether apply was REACHED (and with
+ * which artifact). The property under test is the fail-closed sequencing -
+ * apply is reached iff the decision was UPDATE, and only OTA_ACCEPT updates. */
+typedef struct {
+    const char *feed_text; /* NULL => fetch_feed reports transport failure    */
+    int fetch_override; /* nonzero => force this fetch_feed return code       */
+    ota_verdict_t apply_verdict; /* what the mocked S2 gate returns           */
+    int apply_calls; /* times apply was REACHED (the fence witness)           */
+    char applied_board[OTA_PULL_BOARD_MAX]; /* which artifact apply saw       */
+    char applied_version[OTA_PULL_VERSION_MAX];
+} pull_harness_t;
+
+static int harness_fetch(void *ctx, char *buf, size_t cap)
+{
+    pull_harness_t *h = (pull_harness_t *)ctx;
+    if (h->fetch_override)
+        return h->fetch_override; /* forced fail / overflow */
+    if (!h->feed_text) return -1; /* transport failure, NOT an empty feed */
+    size_t len = strlen(h->feed_text);
+    if (len > cap) return -1;
+    memcpy(buf, h->feed_text, len);
+    return (int)len;
+}
+
+static ota_verdict_t harness_apply(void *ctx, const ota_pull_artifact_t *chosen,
+                                   const uint8_t *pubkey)
+{
+    pull_harness_t *h = (pull_harness_t *)ctx;
+    h->apply_calls++;
+    if (chosen) {
+        snprintf(h->applied_board, sizeof(h->applied_board), "%s",
+                 chosen->board_class);
+        snprintf(h->applied_version, sizeof(h->applied_version), "%s",
+                 chosen->version);
+    }
+    (void)pubkey; /* borrowed through; the real gate verifies against it */
+    return h->apply_verdict;
+}
+
+static void t_ota_pull_run_orchestrator(void)
+{
+    const uint8_t pk[32] = {0}; /* passed through; apply is mocked here */
+    char buf[512];
+    ota_pull_artifact_t scratch[4];
+    const char *feed = OTA_PULL_FEED_BANNER
+        "\n"
+        "board=esp32-classic version=0.8.1 image=https://x/c.bin "
+        "sig=https://x/c.sig\n"
+        "board=esp32-c5 version=0.8.1 image=https://x/5.bin "
+        "sig=https://x/5.sig\n";
+
+    /* UPDATE: a different version is offered and the gate accepts -> UPDATED,
+     * and apply was reached EXACTLY once with THIS board's artifact. */
+    {
+        pull_harness_t h = {.feed_text = feed, .apply_verdict = OTA_ACCEPT};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL(OTA_PULL_RUN_UPDATED,
+                          ota_pull_run(&t, "esp32-classic", "0.8.0", pk, buf,
+                                       sizeof(buf), scratch, 4));
+        TEST_ASSERT_EQUAL_INT(1, h.apply_calls);
+        TEST_ASSERT_EQUAL_STRING("esp32-classic", h.applied_board);
+        TEST_ASSERT_EQUAL_STRING("0.8.1", h.applied_version);
+    }
+
+    /* UP-TO-DATE: the feed offers the version we already run -> apply NEVER
+     * reached (the effect is gated, not merely the verdict). */
+    {
+        pull_harness_t h = {.feed_text = feed, .apply_verdict = OTA_ACCEPT};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL(OTA_PULL_RUN_UP_TO_DATE,
+                          ota_pull_run(&t, "esp32-classic", "0.8.1", pk, buf,
+                                       sizeof(buf), scratch, 4));
+        TEST_ASSERT_EQUAL_INT(0, h.apply_calls);
+    }
+
+    /* NO-ARTIFACT: our board class is not in the feed -> apply never reached. */
+    {
+        pull_harness_t h = {.feed_text = feed, .apply_verdict = OTA_ACCEPT};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL(OTA_PULL_RUN_NO_ARTIFACT,
+                          ota_pull_run(&t, "esp32-s3", "0.8.0", pk, buf,
+                                       sizeof(buf), scratch, 4));
+        TEST_ASSERT_EQUAL_INT(0, h.apply_calls);
+    }
+
+    /* THE #1227 SEAM: a fetch failure is NOT an empty feed. fetch returns -1 ->
+     * FEED_UNAVAILABLE (stay put), never NO_ARTIFACT, and apply never reached. */
+    {
+        pull_harness_t h = {.feed_text = NULL, .apply_verdict = OTA_ACCEPT};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL(OTA_PULL_RUN_FEED_UNAVAILABLE,
+                          ota_pull_run(&t, "esp32-classic", "0.8.0", pk, buf,
+                                       sizeof(buf), scratch, 4));
+        TEST_ASSERT_EQUAL_INT(0, h.apply_calls);
+    }
+
+    /* A fetch that OVERFLOWS the buffer is also unavailable, not parsed past. */
+    {
+        pull_harness_t h = {.feed_text = feed,
+                            .fetch_override = 99999,
+                            .apply_verdict = OTA_ACCEPT};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL(OTA_PULL_RUN_FEED_UNAVAILABLE,
+                          ota_pull_run(&t, "esp32-classic", "0.8.0", pk, buf,
+                                       sizeof(buf), scratch, 4));
+        TEST_ASSERT_EQUAL_INT(0, h.apply_calls);
+    }
+
+    /* INVALID FEED: no banner -> FEED_INVALID (S3b all-or-nothing), no apply. */
+    {
+        pull_harness_t h = {.feed_text = "garbage without a banner\n",
+                            .apply_verdict = OTA_ACCEPT};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL(OTA_PULL_RUN_FEED_INVALID,
+                          ota_pull_run(&t, "esp32-classic", "0.8.0", pk, buf,
+                                       sizeof(buf), scratch, 4));
+        TEST_ASSERT_EQUAL_INT(0, h.apply_calls);
+    }
+
+    /* REJECTED: UPDATE decided, but the S2 gate refuses (bad sig / wrong board /
+     * commit fail). apply IS reached; the running image is kept. */
+    {
+        pull_harness_t h = {.feed_text = feed,
+                            .apply_verdict = OTA_REJECT_BAD_SIG};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL(OTA_PULL_RUN_REJECTED,
+                          ota_pull_run(&t, "esp32-classic", "0.8.0", pk, buf,
+                                       sizeof(buf), scratch, 4));
+        TEST_ASSERT_EQUAL_INT(1, h.apply_calls);
+    }
+
+    /* SELF-UNKNOWN: an empty board identity is refused BEFORE any fetch. */
+    {
+        pull_harness_t h = {.feed_text = feed, .apply_verdict = OTA_ACCEPT};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL(
+            OTA_PULL_RUN_SELF_UNKNOWN,
+            ota_pull_run(&t, "", "0.8.0", pk, buf, sizeof(buf), scratch, 4));
+        TEST_ASSERT_EQUAL_INT(0, h.apply_calls);
+    }
+
+    /* THE SHIPPED PRE-FIRST-RELEASE FEED, end to end (#1284 desk re-verify).
+     * This is the shape docs/ota/feed.txt is committed in today: the banner plus
+     * #-comments, no board lines. Running the REAL parser over the REAL committed
+     * bytes is what surfaced this - the twin's guard prints "parses on-device"
+     * but runs the Python twin, so only the C path can prove the device's answer.
+     * The whole chain must read it as "offers nothing", NOT "feed is broken":
+     * an operator running !otapull before the first cut should see no-artifact. */
+    {
+        const char *shipped =
+            "# sprout-ota-feed v1\n"
+            "# No release carries signed assets yet - the first pullable "
+            "release "
+            "is v0.8.1.\n"
+            "# At the cut: just ota-feed vX.Y.Z --write\n"
+            "# Devices skip #-comments; a banner-only feed offers nothing and "
+            "boards stay put.\n";
+        pull_harness_t h = {.feed_text = shipped, .apply_verdict = OTA_ACCEPT};
+        ota_pull_transport_t t = {harness_fetch, harness_apply, &h};
+        TEST_ASSERT_EQUAL_INT_MESSAGE(OTA_PULL_RUN_NO_ARTIFACT,
+                                      ota_pull_run(&t, "esp32-classic", "0.8.0",
+                                                   pk, buf, sizeof(buf),
+                                                   scratch, 4),
+                                      "the committed banner-only feed offers "
+                                      "nothing - it is not invalid");
+        TEST_ASSERT_EQUAL_INT_MESSAGE(0, h.apply_calls,
+                                      "nothing offered -> nothing applied");
+    }
+
+    /* Labels are total + stable (log/banner tokens, never a secret). */
+    TEST_ASSERT_EQUAL_STRING("updated",
+                             ota_pull_run_label(OTA_PULL_RUN_UPDATED));
+    TEST_ASSERT_EQUAL_STRING("feed-unavailable",
+                             ota_pull_run_label(OTA_PULL_RUN_FEED_UNAVAILABLE));
+    TEST_ASSERT_EQUAL_STRING("rejected",
+                             ota_pull_run_label(OTA_PULL_RUN_REJECTED));
+}
+
+/* ============================================================================
+ * #1153 - parameterized band re-partition invariant suite
+ * ----------------------------------------------------------------------------
+ * The grill (#1039) locked the ladder = 7 in-soil mood bands (Soaked -> Faint),
+ * both physical anchors OFF-ladder. This suite asserts the grill-locked
+ * invariants against ANY candidate bracket set, so ratification (#995) reduces
+ * to: paste Data's numbers into the fixtures below, run, open the (V1) PR.
+ *
+ * A set is 8 ascending raw edges (7 in-soil brackets) plus the two #898 board
+ * anchors that sit OUTSIDE the ladder:
+ *   edge[0] = Soaked floor (wettest in-soil, lowest raw)
+ *   edge[7] = Faint  top   (driest  in-soil, highest raw)  [grill-locked top:
+ *                                                classic 2800 / C5 2443]
+ *   water_anchor <= edge[0]  (cup-water rail, #898; Option A #995: coincident OK)
+ *   air_anchor   > edge[7]   (air-dry   rail, #898)
+ *
+ * The sets below are the RATIFIED sets (#995, 2026-07-19) - Data's re-derivation
+ * against the fresh dual-envelope in-situ dry-down (both classic + C5 measured,
+ * supersedes the June proposal). Water-anchor A (coincident: water rail = Soaked
+ * floor); Faint-ceiling 2500 (D1, measured wilt-onset).
+ * ==========================================================================*/
+#define BAND_INSOIL_BRACKETS 7
+#define BAND_INSOIL_EDGES (BAND_INSOIL_BRACKETS + 1) /* 8 edges -> 7 brackets */
+_Static_assert(BAND_INSOIL_EDGES - 1 == 7,
+               "the ladder is exactly 7 in-soil partitions");
+
+/* Cross-board fractional tolerance: the same soil-moisture fraction should read
+ * at the same fractional position within each board's [water..air] envelope
+ * (#898 linear scaling). 0.03 allows real per-board dry-down variance while
+ * still catching a set that ignores the board relationship. */
+#define BAND_XBOARD_FRAC_TOL 0.03
+
+typedef struct {
+    const char *board_class;
+    uint16_t water_anchor; /* #898 cup-water rail (at or below Soaked floor) */
+    uint16_t edge
+        [BAND_INSOIL_EDGES]; /* ascending raw; [0]=Soaked floor..[7]=Faint top */
+    uint16_t air_anchor; /* #898 air-dry rail (above Faint top)     */
+} band_partition_t;
+
+/* RATIFIED #995 (Data's re-derived dual-envelope sets). boundary[] descending
+ * wet->dry: classic {2293,2086,1879,1636,1393,1150} · C5 {2037,1861,1685,1478,
+ * 1272,1065}. Water-anchor A coincident; Faint-ceiling 2500 (D1). Air anchors
+ * from the D2 spans (classic 2085 / C5 1772 -> measured factor 0.850). */
+static const band_partition_t BAND_SET_CLASSIC_RATIFIED = {
+    "esp32-classic",
+    1052, /* Water-anchor A (#995): water rail = Soaked floor (coincident) */
+    {1052, 1150, 1393, 1636, 1879, 2086, 2293, 2500},
+    3137};
+static const band_partition_t BAND_SET_C5_RATIFIED = {
+    "esp32-c5", 982, {982, 1065, 1272, 1478, 1685, 1861, 2037, 2213}, 2754};
+
+static double band_dabs(double x)
+{
+    return x < 0.0 ? -x : x;
+}
+
+/* fractional position of a raw value within this board's physical envelope. */
+static double band_frac(uint16_t raw, const band_partition_t *s)
+{
+    return (double)((int)raw - (int)s->water_anchor) /
+           (double)((int)s->air_anchor - (int)s->water_anchor);
+}
+
+/* Assert the grill invariants for one candidate set. */
+static void band_assert_invariants(const band_partition_t *s)
+{
+    char msg[96];
+
+    /* monotonic: 8 edges strictly ascending in raw (no zero-width/inverted band) */
+    for (int i = 0; i + 1 < BAND_INSOIL_EDGES; ++i) {
+        snprintf(msg, sizeof(msg),
+                 "%s: edge[%d]=%u must be < edge[%d]=%u (monotonic)",
+                 s->board_class, i, s->edge[i], i + 1, s->edge[i + 1]);
+        TEST_ASSERT_TRUE_MESSAGE(s->edge[i] < s->edge[i + 1], msg);
+    }
+
+    /* both anchors OUTSIDE the ladder */
+    /* Option A (#995 ruling): the water anchor may EQUAL the Soaked floor -
+     * physically honest, no in-soil reading is wetter than the saturated rail.
+     * It must still not sit ABOVE the floor (inside the ladder). */
+    snprintf(msg, sizeof(msg), "%s: water_anchor=%u must be <= Soaked floor=%u",
+             s->board_class, s->water_anchor, s->edge[0]);
+    TEST_ASSERT_TRUE_MESSAGE(s->water_anchor <= s->edge[0], msg);
+    snprintf(msg, sizeof(msg), "%s: air_anchor=%u must be > Faint top=%u",
+             s->board_class, s->air_anchor, s->edge[BAND_INSOIL_EDGES - 1]);
+    TEST_ASSERT_TRUE_MESSAGE(s->air_anchor > s->edge[BAND_INSOIL_EDGES - 1],
+                             msg);
+}
+
+/* 7 in-soil partitions (compile-time) + monotonic + anchors-outside (runtime). */
+void t_band_partition_invariants(void)
+{
+    band_assert_invariants(&BAND_SET_CLASSIC_RATIFIED);
+    band_assert_invariants(&BAND_SET_C5_RATIFIED);
+}
+
+/* Cross-board: both sets describe the SAME fractional partition within tolerance
+ * (#898 linear anchor-to-anchor scaling round-trips the ladder). */
+void t_band_partition_xboard_roundtrip(void)
+{
+    const band_partition_t *a = &BAND_SET_CLASSIC_RATIFIED;
+    const band_partition_t *b = &BAND_SET_C5_RATIFIED;
+    for (int i = 0; i < BAND_INSOIL_EDGES; ++i) {
+        double drift =
+            band_dabs(band_frac(a->edge[i], a) - band_frac(b->edge[i], b));
+        char msg[96];
+        snprintf(msg, sizeof(msg),
+                 "edge[%d] cross-board fractional drift %.4f exceeds tol %.2f",
+                 i, drift, BAND_XBOARD_FRAC_TOL);
+        TEST_ASSERT_TRUE_MESSAGE(drift <= BAND_XBOARD_FRAC_TOL, msg);
+    }
+}
+
+/* ============================================================================
+ * #414 - tuning-sim: bounded re-wetting control + absorbed/ran-through
+ * ----------------------------------------------------------------------------
+ * Drives dose_control against a spectrum of synthetic pots (standing in for the
+ * P01-P11 classes) to TUNE + PROVE the control params without hardware:
+ *   - the absorbed / ran-through classification is correct across the spectrum,
+ *   - the 3 decision bands (ACT/WAIT/HOLD) stay separable (#410),
+ *   - every cycle stays bounded (over-water safety, #93/ADR-0022).
+ * The tuned cfg below is what #382 wires to a real pump later.
+ * ==========================================================================*/
+
+/* Band edges sit in the in-soil raw range (Data's #995 proposal): ACT at the
+ * Thirsty/Parched onset, HOLD at Content, WAIT the gap between. */
+static const dose_cfg_t DOSE_CFG_TUNED = {.act_at_raw = 2200,
+                                          .hold_at_raw = 1600,
+                                          .absorbed_drop = 80,
+                                          .max_pulses = 8,
+                                          .pulse_ms = 800,
+                                          .observe_ms = 60000};
+
+/* A synthetic pot. A pulse wets an ABSORBED fraction of the soil (raw drops);
+ * the pass-through fraction fills the tray, and a hydrophobic pot hits runoff
+ * fast while its soil barely moves. */
+typedef struct {
+    int raw; /* current sensor raw (higher = drier)         */
+    int wet_per_pulse; /* raw drop of a fully-absorbed pulse           */
+    int passthrough_pct; /* 0 = absorbs .. 100 = fully hydrophobic       */
+    int runoff_after; /* pulses of pass-through before runoff asserts  */
+    int pulses; /* internal                                     */
+    bool runoff; /* internal                                     */
+} sim_pot_t;
+
+static void sim_pot_pulse(uint32_t ms, void *u)
+{
+    (void)ms;
+    sim_pot_t *p = (sim_pot_t *)u;
+    int absorbed = (p->wet_per_pulse * (100 - p->passthrough_pct)) / 100;
+    p->raw -= absorbed; /* wet-ward */
+    if (p->raw < 0) p->raw = 0;
+    p->pulses++;
+    if (p->passthrough_pct >= 50 && p->pulses >= p->runoff_after)
+        p->runoff = true;
+}
+static uint16_t sim_pot_read(void *u)
+{
+    return (uint16_t)((sim_pot_t *)u)->raw;
+}
+static bool sim_pot_runoff(void *u)
+{
+    return ((sim_pot_t *)u)->runoff;
+}
+
+/* 3 bands reachable + separable, and mis-tunings that collapse them rejected. */
+void t_dose_bands_and_separability(void)
+{
+    const dose_cfg_t *c = &DOSE_CFG_TUNED;
+    TEST_ASSERT_EQUAL(DOSE_ACT, dose_decide(2400, c)); /* dry    */
+    TEST_ASSERT_EQUAL(DOSE_ACT, dose_decide(2200, c)); /* edge   */
+    TEST_ASSERT_EQUAL(DOSE_WAIT, dose_decide(1900, c)); /* center */
+    TEST_ASSERT_EQUAL(DOSE_HOLD, dose_decide(1600, c)); /* edge   */
+    TEST_ASSERT_EQUAL(DOSE_HOLD, dose_decide(1200, c)); /* wet    */
+    TEST_ASSERT_TRUE_MESSAGE(dose_bands_separable(c),
+                             "tuned cfg keeps 3 bands separable");
+
+    /* NEGATIVE: collapsed / inverted / gapless / no-pulse configs rejected. */
+    dose_cfg_t inv = *c;
+    inv.act_at_raw = 1600; /* == hold -> inverted */
+    TEST_ASSERT_FALSE_MESSAGE(dose_bands_separable(&inv),
+                              "inverted bands rejected");
+    dose_cfg_t nogap = *c;
+    nogap.hold_at_raw = 2199;
+    nogap.act_at_raw = 2200; /* gap < 2 -> no WAIT */
+    TEST_ASSERT_FALSE_MESSAGE(dose_bands_separable(&nogap),
+                              "zero WAIT gap rejected");
+    dose_cfg_t nopulse = *c;
+    nopulse.max_pulses = 0;
+    TEST_ASSERT_FALSE_MESSAGE(dose_bands_separable(&nopulse),
+                              "zero max_pulses rejected");
+}
+
+/* The load-bearing signal: absorbed vs ran-through (what Child B #413 branches on). */
+void t_dose_classify_outcomes(void)
+{
+    const dose_cfg_t *c = &DOSE_CFG_TUNED; /* absorbed_drop = 80 */
+    TEST_ASSERT_EQUAL(DOSE_ABSORBED,
+                      dose_classify(2400, 2300, false, c)); /* drop 100      */
+    TEST_ASSERT_EQUAL(DOSE_ABSORBED,
+                      dose_classify(2400, 2300, true, c)); /* absorbs>runoff */
+    TEST_ASSERT_EQUAL(DOSE_RAN_THROUGH,
+                      dose_classify(2400, 2390, true, c)); /* drop 10+runoff */
+    TEST_ASSERT_EQUAL(DOSE_INCONCLUSIVE,
+                      dose_classify(2400, 2390, false, c)); /* drop 10, dry */
+    TEST_ASSERT_EQUAL(DOSE_INCONCLUSIVE,
+                      dose_classify(2400, 2500, false, c)); /* drifted drier */
+}
+
+/* Run the spectrum: each class hits its expected outcome, always bounded, and
+ * the hydrophobic pot is NOT flooded. */
+void t_dose_sim_spectrum(void)
+{
+    const dose_cfg_t *c = &DOSE_CFG_TUNED;
+    struct {
+        const char *name;
+        sim_pot_t pot;
+        dose_cycle_result_t want;
+    } cases[] = {
+        {"normal-thirsty",
+         {.raw = 2400, .wet_per_pulse = 200},
+         DOSE_CYCLE_TARGET},
+        {"slow-absorb",
+         {.raw = 2400, .wet_per_pulse = 90, .passthrough_pct = 10},
+         DOSE_CYCLE_TARGET},
+        {"already-content",
+         {.raw = 1500, .wet_per_pulse = 200},
+         DOSE_CYCLE_TARGET},
+        {"in-wait-band",
+         {.raw = 1900, .wet_per_pulse = 200},
+         DOSE_CYCLE_TARGET},
+        {"hydrophobic",
+         {.raw = 2500,
+          .wet_per_pulse = 200,
+          .passthrough_pct = 80,
+          .runoff_after = 1},
+         DOSE_CYCLE_PASSTHROUGH},
+        {"too-slow-bound",
+         {.raw = 2790, .wet_per_pulse = 60},
+         DOSE_CYCLE_BOUND},
+    };
+    for (unsigned k = 0; k < sizeof(cases) / sizeof(cases[0]); ++k) {
+        sim_pot_t pot = cases[k].pot;
+        dose_io_t io = {sim_pot_read, sim_pot_pulse, sim_pot_runoff, NULL,
+                        &pot};
+        dose_cycle_report_t r = dose_cycle_run(c, &io);
+        char msg[96];
+        snprintf(msg, sizeof(msg), "%s: result %d want %d (pulses %d)",
+                 cases[k].name, r.result, cases[k].want, r.pulses);
+        TEST_ASSERT_EQUAL_MESSAGE(cases[k].want, r.result, msg);
+        snprintf(msg, sizeof(msg), "%s: pulses %d exceeded bound %d",
+                 cases[k].name, r.pulses, c->max_pulses);
+        TEST_ASSERT_TRUE_MESSAGE(r.pulses <= c->max_pulses,
+                                 msg); /* always bounded */
+    }
+
+    /* the hydrophobic pot bails on the FIRST ran-through - it is not flooded. */
+    sim_pot_t hyd = {.raw = 2500,
+                     .wet_per_pulse = 200,
+                     .passthrough_pct = 80,
+                     .runoff_after = 1};
+    dose_io_t io = {sim_pot_read, sim_pot_pulse, sim_pot_runoff, NULL, &hyd};
+    dose_cycle_report_t r = dose_cycle_run(c, &io);
+    TEST_ASSERT_EQUAL_MESSAGE(
+        1, r.ran_through, "hydrophobic: one ran-through then stop (no flood)");
+    TEST_ASSERT_TRUE_MESSAGE(r.pulses <= 2, "hydrophobic: bailed fast");
+
+    /* TEETH: a mis-tuned absorbed_drop too low reads the pass-through pulse as
+     * ABSORBED -> the loop floods the pass-through pot instead of bailing. The
+     * sim surfaces the mis-tuning (contrast with the bail above). */
+    dose_cfg_t mistuned = DOSE_CFG_TUNED;
+    mistuned.absorbed_drop = 30; /* < the 40 raw a hydrophobic pulse moves */
+    sim_pot_t hyd2 = {.raw = 2500,
+                      .wet_per_pulse = 200,
+                      .passthrough_pct = 80,
+                      .runoff_after = 1};
+    dose_io_t io2 = {sim_pot_read, sim_pot_pulse, sim_pot_runoff, NULL, &hyd2};
+    dose_cycle_report_t rm = dose_cycle_run(&mistuned, &io2);
+    TEST_ASSERT_TRUE_MESSAGE(
+        rm.pulses > 1,
+        "mis-tuned absorbed_drop floods the pass-through pot (sim catches it)");
+}
+
 int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(t_health_veto_and_latch);
+    RUN_TEST(t_withheld_diverges_from_quality);
     RUN_TEST(t_healthy_dry_waters);
     RUN_TEST(t_invariants_two_channels);
     RUN_TEST(t_no_improvement_fault);
     RUN_TEST(t_overrun_failsafe);
     RUN_TEST(t_last_water_ms);
+    RUN_TEST(t_fw_verify_ed25519);
+    RUN_TEST(t_ota_gate_fence);
+    RUN_TEST(t_ota_pull_board_match);
+    RUN_TEST(t_ota_pull_downgrade_is_allowed);
+    RUN_TEST(t_ota_pull_fail_closed);
+    RUN_TEST(t_ota_pull_feed_parse);
+    RUN_TEST(t_ota_pull_feed_evolution);
+    RUN_TEST(t_ota_pull_feed_fail_closed);
+    RUN_TEST(t_ota_pull_run_orchestrator);
     RUN_TEST(t_band_anchors);
     RUN_TEST(t_board_capability);
     RUN_TEST(t_sensor_type_resistive);
@@ -1642,6 +3252,7 @@ int main(void)
     RUN_TEST(t_soil_row_time_provenance);
     RUN_TEST(t_config_id_hash);
     RUN_TEST(t_sensor_fault);
+    RUN_TEST(t_exceptions_open_adc_and_rate_spike);
     RUN_TEST(t_soil_row_v4);
     RUN_TEST(t_per_channel_cal);
     RUN_TEST(t_cal_ch_line);
@@ -1649,8 +3260,16 @@ int main(void)
     RUN_TEST(t_device_uid_encode);
     RUN_TEST(t_device_hostname);
     RUN_TEST(t_cal_resolver_chain_order);
+    RUN_TEST(t_owner_cal_instance_slot);
+    RUN_TEST(t_owner_cal_blob_roundtrip);
+    RUN_TEST(t_owner_cal_blob_fail_closed);
     RUN_TEST(t_cal_resolver_classic_byte_preserved);
     RUN_TEST(t_cal_resolver_c5_board_envelope);
     RUN_TEST(t_cal_tier_label);
+    RUN_TEST(t_band_partition_invariants);
+    RUN_TEST(t_band_partition_xboard_roundtrip);
+    RUN_TEST(t_dose_bands_and_separability);
+    RUN_TEST(t_dose_classify_outcomes);
+    RUN_TEST(t_dose_sim_spectrum);
     return UNITY_END();
 }

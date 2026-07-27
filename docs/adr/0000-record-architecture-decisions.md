@@ -59,54 +59,181 @@ prototype scope. Rather than port it forward verbatim, it is **archived and supe
 - The archived v0 is marked **Superseded by ADR-0001**.
 
 This keeps `0001` an accurate, current decision a new contributor can trust, while preserving the
-prototype's history honestly. (Execution belongs to the architecture/firmware lane.)
+prototype's history faithfully. (Execution belongs to the architecture/firmware lane.)
 
 ## The register
 
-| # | Title | Status | Owner / Lane |
-|---|---|---|---|
-| [0000](0000-record-architecture-decisions.md) | Record architecture (and process) decisions | Accepted | Maintainer / meta |
-| [0001](0001-architecture-and-control-loop.md) | Architecture & control loop | **Accepted** — informed by, and supersedes, the archived v0 record | Firmware lane / architecture |
-| [0002](0002-process-tiers.md) | Process tiers (the project's engineering process choices) | **Accepted** | Maintainer / cross-lane |
-| [0003](0003-work-pipeline.md) | Work pipeline: ideas, specs, backlog, issues & releases | **Accepted** | Workflow lane |
-| [0004](0004-design-system.md) | Design system & token-consumption contract | **Accepted** | Design lane |
-| [0005](0005-application-surface-and-frontend.md) | Application surface & frontend | **Accepted** | Data lane |
-| [0006](0006-data-architecture.md) | Data architecture (telemetry schema, calibration, quality, analysis tier) | **Accepted** | Data lane |
-| [0007](0007-brand-guidelines.md) | Brand guidelines & voice | **Accepted** | Design lane |
-| [0008](0008-design-system-v3-personality-layer.md) | Design system v3: the personality layer | **Accepted** | Design lane |
-| [0009](0009-versioning-and-release-policy.md) | Versioning & release policy | **Accepted** | Workflow lane |
-| [0010](0010-design-library-front-door.md) | The Design Library is the single front door for design assets | **Accepted** | Design lane |
-| [0011](0011-experiment-capture-control-plane.md) | Experiment capture control plane (browser→host) | **Proposed** — direction agreed (Firmware #57); detail at sub-issue cut | Data + Firmware lanes |
-| [0012](0012-experiment-data-architecture.md) | Experiment data architecture (extends ADR-0006) | **Proposed** — schema agreed (Firmware #57); detail at sub-issue cut | Data lane |
-| [0013](0013-environmental-data-architecture.md) | Environmental data architecture (extends ADR-0006) | **Proposed** — Data-led; on-device section co-authored with Firmware at sub-issue cut | Data lane |
-| [0014](0014-operator-control-plane.md) | Operator control plane (Monitor + Experiment under one plane; extends ADR-0011) | **Accepted** — maintainer-ratified 2026-07-03; shipped via the Operator-Experience epic #125; ratification note: the fleet poller (#582) rides the Monitor lifecycle (one Start governs both collection paths) | Data lane |
-| [0015](0015-no-personal-information-policy.md) | No personal information policy (no PII / hardware identifiers collected, generated, committed, or published) | **Accepted** — drafted by Trellis, maintainer-ratified 2026-06-26 | Maintainer + Workflow / meta |
-| [0016](0016-actuation-wiring-seam.md) | Actuation wiring seam: the supervisor is the single sample & actuation authority (extends ADR-0001) | **Accepted** — drafted by Trellis; Firmware + Data rows confirmed (#94 / #232), maintainer-ratified 2026-06-27 | Firmware / architecture (Data co-owns telemetry-derivation + health rows) |
-| [0017](0017-experiment-notebook-and-notes-durability.md) | Experiment notebook data model + notes durability (extends ADR-0012 §5, ADR-0006) | **Accepted** — Data-led; ratified by Workflow on maintainer delegation 2026-06-27 | Data lane (Lab Notebook; model matches Design's notebook spec) |
-| [0018](0018-dual-mode-transport-and-durability.md) | Dual-mode transport & durability: source-adapter seam + device-owned time, one schema across transports (untethered; extends ADR-0006) | **Accepted** — maintainer-ratified 2026-07-01, alongside schema v2 §11 (#492) (#268) | Data lane / architecture (cross-lane: Firmware) |
-| [0019](0019-capability-and-sensor-matrix.md) | Capability & sensor matrix: per-board capability descriptor (contributor extension point) + per-channel sensor_type model (untethered) | **Accepted** — Firmware-confirmed + maintainer-ratified 2026-06-28 (#269) | Firmware lane / architecture (cross-lane: Design) |
-| [0020](0020-network-identity-and-credentials.md) | Network identity & secrets: NVS-local credentials, synthetic hostname (no hardware IDs), no inbound exposure (untethered; extends ADR-0015) | **Accepted** — Firmware-confirmed + maintainer-ratified 2026-06-28 (#270) | Firmware lane / architecture |
-| [0021](0021-parse-v1-telemetry-contract-boundary.md) | parse_v1 is the single telemetry contract boundary (extends ADR-0006) | **Accepted** — maintainer-ratified 2026-07-03; battle-tested before ratification (#294/#295 fixed; context/pressure/untethered all extended the one boundary); the schema-v2 revisit trigger already fired + is satisfied | Trellis (author) + Data lane |
-| [0022](0022-calibration-confidence-layer.md) | Calibration-confidence layer: local-truth vs pot-truth gating — confidence stages + microzone-disagreement veto + contact-quality + plant-pathway profiles; the promotion gate for plant-deployed -> autonomous-enabled (extends ADR-0016) | **Accepted** — model ratified by maintainer 2026-06-30 (#400/#402); 5-prerequisite arm-gate incl. #18 + #410 (#411); thresholds tracked as non-blocking inputs (#412/#414/#416) | Trellis (author) + Firmware (enforcement) |
-| [0023](0023-contextual-env-columns.md) | Two context families: interior ambient (proximity-class fill: plant_local → room → none; weather fenced out of interior temp/RH, pressure excepted) vs exterior conditions (weather+solar drive light/season analytics, never projected); die-temp excluded from context | **Accepted** — v2 reworked from the maintainer's design review + ratified same day (2026-07-02); Data confirms post-ratification | Data lane (v2 drafted by Workflow from maintainer direction) |
-| [0024](0024-multiplatform-pinning.md) | Toolchain pinning: one *exact* pin for the whole active matrix on pioarduino (revised 2026-07-01, maintainer direction — supersedes the original per-target-isolation posture); exact-pin discipline survives, isolation is now a staging state for unproven platforms only (extends ADR-0019 / #283) | **Accepted** — revised + ratified by maintainer direction 2026-07-01 (#283) | Trellis (author) + DX/Firmware (execution) |
-| [0025](0025-config-provenance.md) | Config provenance & no-auto-adjust: every reading-shaping setting exposed in the header + tagged on the data; inline volatile knobs (gain/itime) + a `config_id` snapshot for the stable surface; settings dialed-in-and-held, never silently auto-adjusted (extends ADR-0006) | **Accepted** — maintainer-ratified (2026-07-04 spare-word directive; register reconciled 2026-07-06 at the maintainer's cut-readiness ruling); the config_id mechanism SHIPPED in the v4 bundle (#754 firmware-computed emit + #759 header-authoritative parse, both merged + test-verified) | Trellis (author) + Data (config_id/header) |
-| [0026](0026-firmware-delivery-and-update-security.md) | Firmware delivery & update security: OTA is **pull-only** (preserves ADR-0020 no-inbound) + **signed-images-only** (preserves ADR-0016 actuation authority) + A/B rollback + anti-rollback + NVS/identity preserved; web-flasher rides the existing provenance block + a bench-verified-only manifest gate; captive-AP stays config-only (extends ADR-0020 / ADR-0016) | **Accepted** — maintainer-ratified 2026-07-10 (ADR batch) with the maker-first scaling: software-verified signatures, NO eFuse burns ever on kit boards, USB always reflashable; Trellis edits the body (Phase-0 acknowledgment + scaling)  | Trellis (author) + Firmware (OTA/secure-boot) + DX (flasher page) |
-| [0027](0027-identity-model.md) | Identity model: minted stable ids for device / channel / probe / plant / site + a naming-independent mapping table (extends ADR-0018/0019/0020; reframes #602 coalescing as the legacy bridge) | **Accepted** — maintainer-concluded 2026-07-04 (1b = B: the 6-char base32 minted id at `schema_version=3`, ratification riders appended); substrate shipped end-to-end (#622/#624/#631/#632/#633), three nonces live on silicon; calibration portability stays tracked on #621 | Trellis (owner) + Firmware (author) + Data (registry substrate) |
-| [0028](0028-optional-peripherals-doctrine.md) | Optional-peripherals doctrine: the minimum Sprout (1 MCU + 1 soil sensor) is *complete*; every peripheral optional; **absence is a first-class path** (sensorless-primary or honest-empty), never degraded/nag; the served dashboard is the authoritative status surface, on-device displays a redundant glance (extends ADR-0019) | **Accepted** — maintainer-ratified 2026-07-04 (drafted by Trellis from the maintainer's principle, #20/#19); gates the W2 display build (#20) | Trellis (author) + Firmware (descriptor) + Design (absence affordance) |
-| [0029](0029-plant-pot-site-profile-registry.md) | Plant / pot / site profile registry: a slowly-changing **dimension** (pot geometry, hydrology, care history) keyed by the stable `plant_id`, joined to telemetry facts in the analysis tier — *not* identity, *not* telemetry; storage mirrors the device registry (committed schema + gitignored local instance, ADR-0015); every field absent-safe (ADR-0028); the covariate set the predictor conditions on (extends ADR-0027 / ADR-0006) | **Accepted** — maintainer-ratified 2026-07-10 (ADR batch); dimensions extend-as-needed by design; Data builds loader (v0.8.0), the v0.7.2 registry editor builds on it  | Trellis (schema) + Data (loader) |
-| [0030](0030-version-identity-and-display-contract.md) | Version identity, build provenance & display contract: name every versioned thing (product · fw semver · **build-instance id** = git-hash+timestamp · wire `schema_version` · `config_id` · server) with one owner-constant + one authoritative display each; the OTA receipt = a changed build-instance id on any push (same-source included); fw semver bumps **before** a coordinated reflash; masthead = product + live-fleet fw (retired excluded), Diagnostics = full table (elaborates ADR-0009) | **Accepted** — maintainer-ratified 2026-07-10 (ADR batch); packaging = standalone (concern-separation); added AC: build-instance granularity on EVERY surface incl. the served dashboard (Diagnostics shows server git hash)  | Trellis (scheme) + Firmware (build-id/OTA) + Design (display) + Workflow (bump ritual) |
-| [0031](0031-read-path-rollup-tiers.md) | Read-path rollup tiers: materialized aggregates over immutable raw — raw is Tier 0 (immutable, kept forever), Tier 1/2/3 are **derived, disposable, rebuilt-from-raw** rollups picked by window; the envelope contract (`mean/min/max/spread/n` + quality rollup per `(device_id, channel)`, over `raw_value`, per-board only); **events never downsampled** (band transitions, waterings, faults, sessions survive at exact timestamps in every tier); rollups labeled + rendered as envelopes, never fake-smooth (realizes/extends ADR-0006 §3) | **Accepted** — maintainer-ratified 2026-07-10 (ADR batch); fork 1 = DuckDB/parquet, forks 2-4 at the Trellis leans; Data builds materializer (v0.8.0), sequenced after the v0.7.2 perf interim  | Trellis (contract) + Data (materializer) |
-| [0032](0032-github-pages-design-library-serving.md) | GitHub Pages serving for the Design Library: source = "Deploy from a branch" `main` / `/docs` (no build; `.nojekyll` static); **serving boundary** — Pages serves the HTML assets only, markdown stays on github.com (never link `github.io/…/*.md`); live md links = absolute `%20`-encoded Pages URLs, historical docs (`adr/`, `_archive/`, dated handoffs) keep point-in-time links; root = relative-URL redirect landing; unpkg React at render time **accepted deliberately** (vendoring = standing follow-up); custom domain not-now; indexing accepted (extends ADR-0010) | **Accepted** — records the maintainer's executed #876 ruling (Pages enabled 2026-07-09); drafted by Workflow 2026-07-10 to close #876 AC-3 | DX (serving/links) + DesignQA (render surface) |
+*Grouped by domain, hub-first — the crawl to current truth is one hop. One line per ADR; the *why* lives
+in each ADR. (First-cut grouping, #1462 — Workflow may re-slot a borderline row; a fold updates one line.)*
+
+### Process & governance — how the project runs
+
+| ADR | Decision | Status | Owner |
+| --- | --- | --- | --- |
+| [0000](0000-record-architecture-decisions.md) | This ADR: the register, numbering, status lifecycle, and **when a decision earns an ADR** | **Accepted** | Maintainer / meta |
+| [0002](0002-process-tiers.md) | Process tiers — the project's engineering-process choices | **Accepted** | Maintainer |
+| [0003](0003-work-pipeline.md) | Work pipeline — idea → spec → issue → release; the decision-vehicle ladder | **Accepted** | Workflow |
+| [0015](0015-no-personal-information-policy.md) | No personal information in the repo — PII / hardware-id scrub on public export | **Accepted** | Maintainer / Workflow |
+
+### Architecture & the control loop
+
+| ADR | Decision | Status | Owner |
+| --- | --- | --- | --- |
+| [0001](0001-architecture-and-control-loop.md) | Architecture & control loop — closed-loop on soil moisture only *(hub)* | **Accepted** | Firmware |
+| [0016](0016-actuation-wiring-seam.md) | Actuation wiring seam — the supervisor is the single ADC sampler | **Accepted** | Firmware / Data |
+| [0038](0038-module-boundaries-and-the-import-rule.md) | Module boundaries & the import rule — five layers, imports go strictly down | **Accepted** | Trellis / DX / Data |
+
+### Identity *(hub: 0027)*
+
+| ADR | Decision | Status | Owner |
+| --- | --- | --- | --- |
+| [0027](0027-identity-model.md) | Identity model — device / channel / probe / plant / site; minted UUIDs, time-versioned bindings *(hub)* | **Accepted** | Trellis / Firmware |
+| [0036](0036-sensor-identity-layers.md) | Sensor-identity layers — the wire carries the channel, never the probe *(satellite of 0027)* | **Accepted** | Trellis / Firmware / Data |
+| [0019](0019-capability-and-sensor-matrix.md) | Capability & sensor matrix — per-board channel/sensor map *(satellite of 0027)* | **Accepted** | Firmware |
+
+### Data, telemetry & the tiers *(hub: 0006)*
+
+| ADR | Decision | Status | Owner |
+| --- | --- | --- | --- |
+| [0006](0006-data-architecture.md) | Data architecture — raw-immutable schema, calibration, quality *(hub)* | **Accepted** | Data |
+| [0021](0021-parse-v1-telemetry-contract-boundary.md) | parse_v1 is the single telemetry-contract boundary | **Accepted** | Trellis / Data |
+| [0031](0031-read-path-rollup-tiers.md) | Read-path rollup tiers — materialized aggregates over immutable raw | **Accepted** | Trellis / Data |
+| [0025](0025-config-provenance.md) | Config provenance & no-auto-adjust — settings dialed-in-and-held, tagged on the data | **Accepted** | Trellis / Data |
+| [0037](0037-production-epoch-and-data-admissibility.md) | Production epoch, data admissibility & the archive boundary | **Accepted** | Trellis / Data |
+| [0012](0012-experiment-data-architecture.md) | Experiment data architecture — extends 0006 *(satellite of 0006)* | **Accepted** | Data |
+| [0013](0013-environmental-data-architecture.md) | Environmental data architecture — external context + location privacy *(satellite of 0006)* | **Accepted** | Data |
+
+### Experiment & lab capture
+
+| ADR | Decision | Status | Owner |
+| --- | --- | --- | --- |
+| [0011](0011-experiment-capture-control-plane.md) | Experiment capture control plane — browser → host | **Accepted** | Data / Firmware |
+| [0017](0017-experiment-notebook-and-notes-durability.md) | Experiment notebook data model & notes durability | **Accepted** | Data |
+| [0014](0014-operator-control-plane.md) | Operator control plane — Monitor + Experiment under one plane | **Accepted** | Data |
+| [0023](0023-contextual-env-columns.md) | Two context families — interior ambient vs exterior conditions | **Accepted** | Data |
+
+### Calibration & the band model
+
+| ADR | Decision | Status | Owner |
+| --- | --- | --- | --- |
+| [0022](0022-calibration-confidence-layer.md) | Calibration-confidence layer — local-reading vs pot-need gating; cal ownership | **Accepted** | Trellis / Firmware |
+| [0029](0029-plant-pot-site-profile-registry.md) | Plant / pot / site profile registry — the inference dimensions | **Accepted** | Trellis / Data |
+| [0035](0035-band-model-and-instrument-exceptions.md) | The band model & the instrument-exceptions taxonomy | **Accepted** | Trellis / Data |
+| [0028](0028-optional-peripherals-doctrine.md) | Optional-peripherals doctrine — the minimum Sprout is one MCU + one sensor | **Accepted** | Trellis / Firmware |
+
+### Transport & connectivity
+
+| ADR | Decision | Status | Owner |
+| --- | --- | --- | --- |
+| [0018](0018-dual-mode-transport-and-durability.md) | Dual-mode transport & durability (untethered) | **Accepted** | Data |
+| [0020](0020-network-identity-and-credentials.md) | Network identity & secrets (untethered) | **Accepted** | Firmware |
+
+### Delivery, versioning & release *(hub: 0009)*
+
+| ADR | Decision | Status | Owner |
+| --- | --- | --- | --- |
+| [0009](0009-versioning-and-release-policy.md) | Versioning & release policy — SemVer, auto-notes, release-feed curation *(hub)* | **Accepted** | Workflow |
+| [0024](0024-multiplatform-pinning.md) | Toolchain pinning — one exact pin for the active matrix | **Accepted** | Trellis / DX |
+| [0026](0026-firmware-delivery-and-update-security.md) | Firmware delivery & update security — web-flasher + signed pull OTA | **Accepted** | Trellis / Firmware |
+| [0030](0030-version-identity-and-display-contract.md) | Version identity, build provenance & the display contract | **Accepted** | Trellis / Firmware |
+
+### Design, brand & the surfaces *(hub: 0004)*
+
+| ADR | Decision | Status | Owner |
+| --- | --- | --- | --- |
+| [0004](0004-design-system.md) | Design system & the token-consumption contract *(hub)* | **Accepted** | Design |
+| [0007](0007-brand-guidelines.md) | Brand guidelines & voice | **Accepted** | Design |
+| [0008](0008-design-system-v3-personality-layer.md) | Design system v3 — the personality layer | **Accepted** | Design |
+| [0010](0010-design-library-front-door.md) | The Design Library is the single front door for design assets | **Accepted** | Design |
+| [0032](0032-github-pages-design-library-serving.md) | GitHub Pages serving for the Design Library | **Accepted** | DX / Design |
+| [0005](0005-application-surface-and-frontend.md) | Application surface & frontend — host presents as one app | **Accepted** | Data |
+| [0033](0033-two-surface-architecture-home-and-workbench.md) | Home + Classic Sprout — a converging two-surface architecture | **Accepted** | Trellis / Design / Data |
+| [0034](0034-pages-root-is-the-public-front-door.md) | The Pages root is Sprout's public front door | **Accepted** | Trellis / Design |
+
+### Archived
+
+| ADR | Decision | Status | Owner |
+| --- | --- | --- | --- |
 | — | *(archived)* [Sprout v0 combined architecture record](archive/sprout-v0-architecture.md) | Superseded by ADR-0001 | history |
 
 *New ADRs append a row here when proposed. Any lane may author an ADR for an ADR-sized decision in its
-own area — see [ADR-0003 §10](0003-work-pipeline.md) "When a decision merits an ADR."*
+own area — the test for whether it earns one is below.*
+
+## When a decision earns an ADR
+
+*(Consolidated here 2026-07-21, #1462 — "how ADRs work" belongs in the ADR-about-ADRs, not split across the
+work-pipeline ADR. [ADR-0003 §10](0003-work-pipeline.md) keeps the decision-vehicle ladder; the ADR-specific
+test lives here.)*
+
+An ADR is the **top rung** of the change ladder (commit → issue + PR → ADR), reserved for decisions a future
+contributor will need the *why* for. **Write an ADR when** any of these is true:
+
+- **Hard or expensive to reverse** — architecture, data substrate, a public schema/API, repo structure, a
+  framework choice.
+- **Binds more than one lane** — a shared contract, interface, or cross-cutting policy.
+- **Chooses among real alternatives** where the rejected options matter ("why not X?").
+- **Establishes a convention everyone must follow** — naming, branching policy, the label taxonomy, the gate.
+- **Sets a foundational default/boundary** — born-correct things, cheap now and painful to retrofit (line
+  endings, env tool, data store, directory layout).
+- You'd otherwise **re-explain the same "why" repeatedly** to new contributors.
+
+**Good ADR material:** "GitHub Issues is the work ledger; IDs are `#N`" *(cross-lane convention)* · "Closed-loop
+on soil moisture only; environmental sensors are logging-only" *(architecture; alternatives rejected)* · "Raw
+CSV is immutable; the DuckDB tier is rebuildable" *(substrate; hard to reverse)*.
+
+### NOT an ADR — use the lighter rung instead
+
+- A bug fix or a single feature → an **issue + PR**.
+- A reversible, low-stakes tweak (rename a var, nudge a threshold) → just the change.
+- A routine choice with no real alternative → no record needed.
+- Restating a decision already in another ADR → **link it**, don't duplicate.
+- A how-to, runbook, or frequently-edited reference → **docs** (an ADR is a *decision*, not a living reference;
+  pre-1.0 the ADR text is editable in place, §4).
+- **An ADR that opens by restating another and extending it** → a **section of that ADR**, not a new one.
+  *(Harvested #1462 — 0012/0013 both opened "ADR-0006 defines the data architecture…" → folded into 0006.)*
+- **A stack of amendments on one ADR** → the reader should never reconstruct the current decision by applying
+  ten patches. **Fold into clean current-state text + a dated changelog** (§ maintaining the set, below).
+  *(Harvested #1462 — ADR-0035 carried ten.)*
+- **A second doc for a concept that already has a hub ADR** → extend the hub, or file a **named satellite** the
+  register groups under it — never a peer. *(Harvested #1462 — identity: 0027 is the hub; 0036/0019 satellites.)*
+
+Rule of thumb: *if you'll edit it often, it's a doc; if you'll defend it later, it's an ADR.*
+
+### The gate — prove you don't need a new ADR before you earn one
+
+The antipatterns are only useful if consulted *before* minting. So a new ADR **carries its own justification**
+— three lines near the top, answered honestly:
+
+1. **Why this needs a new ADR** — which "write an ADR when" trigger it hits.
+2. **Which existing ADRs you considered folding it under** — name them; the nearest-domain hub is first to check.
+3. **Why it can't go under one of them** — the specific reason a section of an existing ADR won't do.
+
+If you can't answer 3 convincingly, it's a section, an issue, or a doc — not a new ADR. **Certification checks
+the block exists and is answered; a new ADR without it goes back.** The pass that trims the set is one-time; this
+gate is permanent, and it is the only thing that keeps the set from re-sprawling.
+
+*(Applied to its own author: the consolidation doctrine did **not** mint ADR-0039. Its ADR-governance half lives
+here; the decision-vehicle ladder stays in ADR-0003 §10. Two existing homes, no new number — the gate
+demonstrated on the first thing it governed.)*
+
+## Maintaining the set — how the ADRs stay lean
+
+*(Consolidated here 2026-07-21, #1462.)*
+
+- **Fold-in-place, don't stack.** A material change rewrites the affected section to clean current-state text
+  and records the change in a **dated changelog** at the ADR's foot. The reader gets one coherent decision, not
+  a decision plus patches — history lives in the changelog and in git, never in the body's flow.
+- **One domain, one hub.** A concept has a single **hub** ADR; extensions are **named satellites** the register
+  groups under it, never peers. Identity: 0027 is the hub, 0036/0019 satellites.
+- **Supersede-and-retire.** A superseded ADR is marked `Superseded by ADR-NNNN` and moved to the archived rows;
+  it is never deleted (the citation must still resolve) and never left as a live-looking peer.
+- **The register answers a question, it doesn't just list files.** Grouped by domain, hub-first, one line per
+  ADR — the crawl to current truth is one hop.
 
 ## Consequences
 
 - Contributors can read the project's decisions in order, with rationale, in one place.
-- Decision history is preserved honestly: the prototype record is archived, not overwritten.
+- Decision history is preserved faithfully: the prototype record is archived, not overwritten.
 - Each lane owns its own ADR rows; no lane silently rewrites another's decision.
 
 ## Revisit triggers

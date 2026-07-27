@@ -6,14 +6,11 @@ python tools/capture/test_handoff.py
 
 from __future__ import annotations
 
-import sys
 import time
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-import handoff  # noqa: E402
+from tools.capture import handoff  # noqa: E402
 
 _FAILS: list[str] = []
 

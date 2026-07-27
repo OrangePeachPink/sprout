@@ -1,0 +1,5 @@
+# Vendored code: NEVER formatted (the third fence leg — pre-commit and markdownlint
+# are excluded in their configs; this one is tool-native and travels with the dir).
+# Upstream bytes must stay byte-identical for provenance (see README.md).
+DisableFormat: true
+SortIncludes: false

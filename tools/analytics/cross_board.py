@@ -1,5 +1,11 @@
 """Cross-board comparability guard (#832) — raw is not comparable across boards.
 
+Status: legacy — the prohibition this module guarded was PROMOTED, not dropped: it
+now lives in ADR constants and the seam suite, and the comparison capability ships
+in #832's renderings. Kept because the rule still holds and this is where its
+reasoning is written down (#1388). Marked legacy so the protection reads as
+promoted rather than abandoned — the distinction a bare "unused" would destroy.
+
 Different boards have different ADCs (the classic ESP32 and the C5 differ in
 reference / attenuation / dynamic range), so a raw ADC count — and anything derived
 from it on one shared ruler, like the ``dryness`` scalar (a single ``mrange`` maps

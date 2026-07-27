@@ -17,7 +17,8 @@ on:
         type: string
 
 permissions:
-  contents: write
+  contents: write # draft the release
+  actions: write # best-effort dispatch of sign-release.yml (#1438); notice is the fallback
 
 jobs:
   draft:
@@ -28,11 +29,21 @@ jobs:
         id: v
         env:
           MS_TITLE: ${{ github.event.milestone.title }}
+          MS_CLOSED: ${{ github.event.milestone.closed_issues }}
           INPUT_V: ${{ inputs.version }}
         run: |
           v="${INPUT_V:-$MS_TITLE}"
           if ! echo "$v" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "not a version milestone ('$v') — nothing to draft"; echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif [ -z "$INPUT_V" ] && [ "${MS_CLOSED:-0}" -eq 0 ]; then
+            # #1346 — a milestone closed with ZERO completed issues was COLLAPSED or
+            # abandoned, not shipped. v0.8.2 was emptied into v0.8.1 and closed; drafting
+            # a release for it produces a ghost: notes for a version that will never exist,
+            # sitting in the releases list looking like a real cut someone forgot to
+            # publish. Manual dispatch is never skipped by this — passing a version IS the
+            # decision to draft it.
+            echo "milestone '$v' closed with 0 completed issues — collapsed, not shipped; nothing to draft"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "version=$v" >> "$GITHUB_OUTPUT"; echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
@@ -52,4 +63,12 @@ jobs:
             --generate-notes \
             --target "$GITHUB_SHA" \
             --title "$V"
-          echo "::notice title=Release drafted::$V drafted with generated notes — curate against the ADR-0009 quality bar, then publish (publishing creates the tag)."
+          # #1438 — the signing MUST attach while this is a draft; a published (immutable)
+          # release refuses assets. sign-release.yml can't self-trigger here: a draft
+          # created by GITHUB_TOKEN doesn't fire `release: created` (the recursion guard),
+          # so the ceremony is one explicit dispatch, run BEFORE publishing. Best-effort
+          # auto-dispatch below; the notice hands the maintainer the exact command in case
+          # the token can't trigger it (no PAT here — the honest fallback).
+          gh workflow run sign-release.yml -f tag="$V" 2>/dev/null \
+            && dispatched="auto-dispatched" || dispatched="NOT dispatched (run it yourself)"
+          echo "::notice title=Release drafted — sign it before publishing::$V drafted ($dispatched). Sign the draft's factory bins with:  gh workflow run sign-release.yml -f tag=$V  — then curate the notes (ADR-0009) and Publish. Publishing seals the signed assets immutable and creates the tag (#1438)."

@@ -31,17 +31,15 @@ import time
 from datetime import datetime, timedelta, timezone
 
 try:
-    import serial
-    from serial.tools import list_ports
+    import serial  # the port ENUMERATION moved to analytics.serial_ports (#1550)
 except ImportError:
     sys.exit("pyserial not installed.  Run:  pip install pyserial")
 
 # Optional B8 archive step (tools/archive/archive_logs.py). Best-effort: if it is
 # missing or git fails, logging continues uninterrupted.
 _ARCHIVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "archive")
-sys.path.insert(0, _ARCHIVE_DIR)
 try:
-    import archive_logs
+    from tools.archive import archive_logs
 except Exception:
     archive_logs = None
 
@@ -51,15 +49,14 @@ except Exception:
 # open is the real mutex; this dotfile is the courtesy that avoids a reset-to-ask
 # and surfaces a stale lock from a crashed owner. Both writers use the same schema.
 _CAPTURE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "capture")
-sys.path.insert(0, _CAPTURE_DIR)
 try:
-    import serial_lock
+    from tools.capture import serial_lock
 except Exception:
     serial_lock = None
 # #566-B / #712: open the port WITHOUT asserting DTR/RTS, so a monitor reconnect
 # never resets the board (which minted a new session every ~30 s -> the storm).
 try:
-    from serial_open import open_no_reset
+    from tools.capture.serial_open import open_no_reset
 except Exception:
     open_no_reset = None
 
@@ -249,15 +246,13 @@ def reconnect_seam_line(gap_s, now, reason):
 
 
 def autodetect_port():
-    ports = list(list_ports.comports())
-    for p in ports:  # prefer a known USB-serial bridge
-        blob = " ".join(x for x in (p.description, p.manufacturer, p.hwid) if x).lower()
-        if any(
-            k in blob
-            for k in ("cp210", "ch340", "ftdi", "silicon labs", "usb serial", "wch")
-        ):
-            return p.device
-    return ports[0].device if ports else None
+    """The port to open when none was named. #1550 (A7): the heuristic moved to
+    `serial_ports` so the in-app picker and this logger cannot disagree about which
+    port is "the board" — a picker offering COM4 while the logger opens COM6, with
+    nothing explaining why, is the failure this consolidation prevents."""
+    from tools.analytics.serial_ports import autodetect
+
+    return autodetect()
 
 
 def parse_device_line(text):
@@ -555,16 +550,10 @@ def run(
     # on a socket (the dashboard's env path owns refreshing the cache). A
     # missing weather layer degrades to no pressure fill, nothing else.
     try:
-        from context_fill import ContextFiller
+        from tools.logger.context_fill import ContextFiller
 
         try:
-            sys.path.insert(
-                0,
-                os.path.join(
-                    os.path.dirname(os.path.abspath(__file__)), "..", "analytics"
-                ),
-            )
-            from weather_pressure import latest_pressure as _pressure
+            from tools.analytics.weather_pressure import latest_pressure as _pressure
         except Exception:
             _pressure = None
         filler = ContextFiller(pressure_source=_pressure)

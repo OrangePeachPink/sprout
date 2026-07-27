@@ -6,7 +6,7 @@ found it). Drafted by Workflow from the maintainer's direction; Data confirms as
 **Date:** 2026-06-30 (v1) · 2026-07-02 (v2 rework)
 **Owner:** Data — host logger / analytics substrate
 **Lane:** data (relates: Firmware emits the raw `plants.env` rows · Sage bench placement · Trellis schema register)
-**Extends:** [ADR-0006](0006-data-architecture.md) (honest data / source trust classes) ·
+**Extends:** [ADR-0006](0006-data-architecture.md) (raw-first data / source trust classes) ·
 [ADR-0021](0021-parse-v1-telemetry-contract-boundary.md) (single parse boundary)
 **Relates:** #418 (this decision) · #345 (ESP32 die-temp — *excluded from context, see Decision 5*) · #377
 (`plants.env`) · #366/#367 (solar geometry + weather ingestion — the exterior family) · ADR-0022 (surface
@@ -49,7 +49,7 @@ exclusively. Fill precedence is by **proximity class**, not by instrument brand:
 - The class is the tier; the `context_source` value records the actual instrument (provenance). An `SHT45` is
   one *instance* of `plant_local` — most deployments will have no plant-local sensor and a growing share will
   have some room-class source; the model must welcome whatever instrument a user actually has.
-- **A weather feed never fills interior temperature or humidity. Empty is honest; projected weather is not.**
+- **A weather feed never fills interior temperature or humidity. Empty is accurate; projected weather is not.**
 - Exactly one source fills a given row's interior columns — never a blend, never synthesis (ADR-0022 posture).
   Other concurrent sources remain their own `plants.env` rows, fully queryable.
 - A context value without its `context_source` tag is not allowed; the tag maps deterministically to a trust
@@ -82,19 +82,19 @@ itself.
 ### 5. ESP32 die temperature is not context — at all
 
 Die temp (#345/#536) is chip junction temperature: a **development and drift diagnostic**, self-heated well
-above ambient, honestly labeled `board-proxy — never ambient` by its own implementation. It stays exactly what
+above ambient, plainly labeled `board-proxy — never ambient` by its own implementation. It stays exactly what
 it is — its own labeled `plants.env` row type for dev-team analytics — and never fills any context column in
 any tier. It is not a production runtime value for a deployed Sprout.
 
 ### 6. Reconciliation is a later view, not a column
 
 When multiple interior sources exist, a future confidence/agreement view (mirroring ADR-0022) compares them
-from their own rows and flags disagreement. The context columns stay a single honest projection.
+from their own rows and flags disagreement. The context columns stay a single accurate projection.
 
 ## Consequences
 
 - A soil row becomes ambient-aware join-free **with the right quantity**: interior air, from the nearest real
-  instrument, or honestly empty.
+  instrument, or plainly empty.
 - The exterior family needs **no new storage** — weather + solar layers already exist; they gain a stated
   purpose and a fence.
 - The only cross-lane schema item is unchanged from v1: adding `context_source` to TELEMETRY_SCHEMA v2 +

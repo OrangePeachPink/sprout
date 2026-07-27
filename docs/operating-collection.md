@@ -59,6 +59,47 @@ If a process refuses to stop, `just stop-collection` reports its pid and the exa
 powershell -Command "Stop-Process -Id <pid> -Force"
 ```
 
+## Adding a board that hasn't reported yet (#1544)
+
+A board can be **declared before it ever runs Sprout** — you have hardware in hand, nothing
+flashed, nothing reporting. That is the normal day-one shape, and it does not require editing
+`config/devices.local.json` by hand.
+
+A declaration records what you know now: a **name** you choose, the board class, and **which pins
+your probes are wired to** (the channel declaration — a board with no wiring described is not yet
+a usable board). Sprout assigns a provisional id (`pending-0N`); you never type a device id,
+because the board mints its own on first boot (ADR-0027) and the host cannot know it in advance.
+Plants can be mapped onto a declared board immediately — your wiring and plant choices are saved
+as real registry history the moment you enter them, not held in limbo until hardware appears.
+
+The board stays **pending** until something reports. On **first contact** Sprout *reconciles*: the
+answering board takes over the declaration — the record is re-keyed to the id the board minted,
+the provisional id is kept as prior-identity lineage (#602) so nothing written against it is
+orphaned, and the plants you mapped light up. There is never a second record for one board. If a
+*different*, unknown board answers instead, that is adoption (#1027), not a bind — the two paths
+meet here rather than competing.
+
+## "Port already in use" — what the startup message means (#1555)
+
+Sprout prints the URL it is **about to** use before it tries to bind, so a start that fails
+still tells you which port it wanted:
+
+```text
+Sprout: starting on http://127.0.0.1:8765/
+```
+
+If the port is taken, the next lines say **who has it**, because the fix differs:
+
+- **A Sprout is already there** — open that tab, stop it from the dashboard, or take the port
+  over with current code: `just restart`.
+- **Something else has it** (or a Sprout wedged mid-shutdown) — Sprout says so rather than
+  claiming a Sprout is running: whatever holds the port did not answer as one. Free it, or
+  serve elsewhere with `just serve -p 8766`.
+
+The distinction is a probe of a read-only Sprout route, not a guess: accepting a TCP
+connection is not evidence of being Sprout, and sending you to look for a dashboard window
+that does not exist is worse than saying "I don't know what this is."
+
 ## Fleet addressing — name, not IP (#676)
 
 The WiFi fleet is reached **by name**, not by a hardcoded IP. Each board advertises an mDNS

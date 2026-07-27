@@ -13,7 +13,7 @@ consumed from `sprout-tokens.css`, never redefined elsewhere.
 ## The two invariants (why this is safe)
 
 1. **Mood follows the band, never the index.** Every character state derives 1:1 from the seven calibrated
-   moisture bands — the same source of truth as the instrument — so the character can never contradict the
+   moisture bands — the same canonical source as the instrument — so the character can never contradict the
    data (ADR-0007 §5).
 2. **Character layers on; it never restyles the instrument.** Sprout appears beside the data on
    ambient / empty / loading / onboarding / notification / single-plant-hero surfaces — never inside dense
@@ -35,7 +35,7 @@ consumed from `sprout-tokens.css`, never redefined elsewhere.
 
 ## The deltas (v1 → with v3 layered on)
 
-- **v1 instrument components:** unchanged. No recolor, no relayout. v1 stays the source of truth for the
+- **v1 instrument components:** unchanged. No recolor, no relayout. v1 stays the canonical source for the
   dashboard/instrument UI.
 - **New (additive):** a band→mood bridge, a reusable animated mark, a voice-string pool, and a motion
   stylesheet — consumed *on top of* v1, only on surfaces the boundary allows.
@@ -45,12 +45,12 @@ consumed from `sprout-tokens.css`, never redefined elsewhere.
   reviewed and approved.
 - **Net effect:** the dashboards can grow a Sprout-flavored single-plant hero, empty/loading/onboarding
   states, and notification copy — and soil mode reads refined instead of dank — while every dense readout
-  stays exactly as honest and legible as today.
+  stays exactly as clear and legible as today.
 
 ## Rationale
 
 Phase 1 ([ADR-0007](../../adr/0007-brand-guidelines.md)) locked the identity, voice, and the
-character↔instrument boundary. The cleanest reconciliation of "playful living character" with "honest
+character↔instrument boundary. The cleanest reconciliation of "playful living character" with "precise
 instrument" is not to restyle v1 but to add a thin, band-derived layer beside it — plus a measured refinement
 of the dark neutrals that were reading muddy. Packaging it as v3 keeps v1/v2 coherent and lets each lane adopt
 at its own pace.

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://orangepeachpink.github.io/sprout/sitemap.xml

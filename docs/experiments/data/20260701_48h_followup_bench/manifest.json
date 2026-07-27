@@ -22,8 +22,8 @@
         "original_bytes": 1489311,
         "split": true,
         "files": [
-          "experiment_captures/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to_part01.csv",
-          "experiment_captures/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to_part02.csv"
+          "experiment_captures/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to/part01.csv",
+          "experiment_captures/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to/part02.csv"
         ],
         "part_count": 2,
         "part_sha256": [
@@ -203,8 +203,8 @@
       "excluded_probes": {},
       "row_count": 4136,
       "csv_files": [
-        "experiment_captures/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to_part01.csv",
-        "experiment_captures/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to_part02.csv"
+        "experiment_captures/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to/part01.csv",
+        "experiment_captures/20260701_171140_p1_48_hours_later_baseline_air_to_soil_settle_to/part02.csv"
       ]
     },
     {

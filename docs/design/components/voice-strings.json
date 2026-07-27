@@ -1,24 +1,79 @@
 {
   "$comment": "Sprout v3 — voice string pool. PROPOSED (Phase 2). First-person, fact-then-feeling, one line, no baby-talk/emoji/guilt/fake-numbers (ADR-0007 §3). byMood lines derive from the calibrated band (pair with mood-band-map.json). bySurface lines are non-mood surfaces. Consumers should pick one line; never concatenate.",
   "version": "3.0.0-proposed",
-  "rules": "first-person 'I'; fact then feeling; one short line; calm/fond/honest; calm under fault; no baby-talk, no emoji, no guilt, no invented % or ETA",
+  "rules": [
+    "first-person 'I'; fact then feeling; one short line; calm/fond/honest; calm under fault; no baby-talk, no emoji, no guilt, no invented % or ETA",
+    "byMood lines are SOIL-STATE only — no watering-event claims; every mood keeps at least one such line so the picker always has an honest floor.",
+    "byMoodElapsed lines carry an {ago} placeholder and may render ONLY when a detected last_watered supplies it; {ago} is the served humanized string (the same one the card chip shows), so voice and chip can never disagree."
+  ],
   "byMood": {
-    "soaked":    ["Whoa — that's plenty. I'm soaking it all in."],
-    "refreshed": ["Ahh — just had a good drink. All better."],
-    "thriving":  ["I'm thriving. My last drink was two days ago.", "Feeling great today, thanks for asking."],
-    "content":   ["Comfortable and green. Just sipping slowly.", "All good here — no notes."],
-    "thirsty":   ["Getting a little thirsty — no rush, maybe tomorrow.", "Could go for a drink soon, whenever suits you."],
-    "parched":   ["I'm properly thirsty now. A drink soon would be lovely."],
-    "faint":     ["I can barely feel my soil — am I truly bone-dry, or has my sensor slipped?"]
+    "soaked": [
+      "Whoa — that's plenty. I'm soaking it all in.",
+      "It's very wet down here — I've had all I can hold."
+    ],
+    "refreshed": [
+      "Ahh — just had a good drink. All better.",
+      "Cool and damp around my roots — feeling fresh."
+    ],
+    "thriving": [
+      "Feeling great today, thanks for asking.",
+      "My soil feels just right — deep, dark, and comfortable."
+    ],
+    "content": [
+      "Comfortable and green. Just sipping slowly.",
+      "All good here — no notes.",
+      "Settled and steady. Nothing to report."
+    ],
+    "thirsty": [
+      "Getting a little thirsty — no rush, maybe tomorrow.",
+      "Could go for a drink soon, whenever suits you.",
+      "My soil is heading toward dry — keep me in mind."
+    ],
+    "parched": [
+      "I'm properly thirsty now. A drink soon would be lovely.",
+      "Properly dry down here. I'd take that drink whenever you're ready."
+    ],
+    "faint": [
+      "I can barely feel my soil — am I truly bone-dry, or has my sensor slipped?",
+      "Very little moisture reaching me — I could really use some water."
+    ]
   },
   "bySurface": {
-    "fault_sensor": ["I can't feel my soil sensor — I've paused my pump to be safe."],
-    "fault_pump":   ["Something's off with my pump, so I've stopped it. Best to check me."],
-    "empty":        ["No plants yet — add one and I'll start watching."],
-    "loading":      ["One moment — reading the soil."],
-    "onboarding":   ["Hi, I'm Sprout. Pop a probe in the soil and I'll take it from here."],
-    "readme":       ["Hi, I'm Sprout. Here's how I keep four plants happy."],
-    "orientation":  ["I'm Sprout — I watch the soil in every pot, so you can tell at a glance who needs water and who's happy.", "I keep an eye on each plant's soil and surface who's thirsty first — so watering is a quick glance, not a guess."],
-    "social":       ["Day 30: still alive, still green. We're a good team."]
+    "fault_sensor": [
+      "I can't feel my soil sensor — I've paused my pump to be safe."
+    ],
+    "fault_pump": [
+      "Something's off with my pump, so I've stopped it. Best to check me."
+    ],
+    "empty": [
+      "No plants yet — add one and I'll start watching."
+    ],
+    "loading": [
+      "One moment — reading the soil."
+    ],
+    "onboarding": [
+      "Hi, I'm Sprout. Pop a probe in the soil and I'll take it from here."
+    ],
+    "readme": [
+      "Hi, I'm Sprout. Here's how I keep four plants happy."
+    ],
+    "orientation": [
+      "I'm Sprout — I watch the soil in every pot, so you can tell at a glance who needs water and who's happy.",
+      "I keep an eye on each plant's soil and surface who's thirsty first — so watering is a quick glance, not a guess."
+    ],
+    "social": [
+      "Day 30: still alive, still green. We're a good team."
+    ]
+  },
+  "byMoodElapsed": {
+    "thriving": [
+      "I'm thriving. My last drink was {ago}."
+    ],
+    "refreshed": [
+      "That drink {ago} did the trick — all better."
+    ],
+    "content": [
+      "Watered {ago}, and still perfectly comfortable."
+    ]
   }
 }

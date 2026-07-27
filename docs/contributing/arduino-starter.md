@@ -5,7 +5,7 @@ GitHub Codespaces), and that's a wonderful place to end up. But if you've never 
 shouldn't have to learn a whole professional toolchain just to feel your sensor come alive. So here's a tiny
 Arduino door you can walk through *today*. 🌱
 
-## First, an honest word about what this is
+## First, a plain word about what this is
 
 This starter is **deliberately small and single-purpose**: read your capacitive soil sensor, show the number,
 maybe blink something. That's it. It's here so you can do one real thing with your own sensor and
@@ -34,8 +34,8 @@ The starter quietly teaches the same vocabulary the full project uses, so nothin
 graduate. A handful you'll meet here and see again in the [Sprout glossary](../GLOSSARY.md):
 
 - **Capacitive sensor** — reads moisture without bare metal in the soil (so it doesn't corrode away).
-- **Raw reading** — the honest number straight off the sensor, before anyone interprets it. Sprout treats the
-  raw reading and the calibrated **band** as the truth, never a polished percentage.
+- **Raw reading** — the raw number straight off the sensor, before anyone interprets it. Sprout treats the
+  raw reading and the calibrated **band** as the reading, not a polished percentage.
 - **Wet / dry calibration** — finding *your* sensor's soaked-soil and bone-dry numbers, so its readings mean
   something. You'll do this by hand here; Sprout does it per-channel later.
 - **Moisture band** — turning a raw number into a plain word (dry / ideal / wet) — the same idea Sprout uses to
@@ -45,7 +45,7 @@ Learn these four here and you're already speaking Sprout.
 
 ## When you're ready, come all the way in
 
-The moment you want **more than one plant, real watering, a dashboard, honest logged data, or a project you can
+The moment you want **more than one plant, real watering, a dashboard, clean logged data, or a project you can
 actually contribute to** — that's your cue. Open the full Sprout project in **VS Code + PlatformIO** or in
 **GitHub Codespaces** (zero install, right in your browser) and follow the
 [developer front door](developer-front-door.copy.md). Same sensors, same words, a real home. We'll be glad to
@@ -70,11 +70,11 @@ built:
   [Lumics/Plantwatery][gh-lumics], and [thijstriemstra/garduino][gh-garduino] — real, complete plant-watering
   projects (WiFi, pump, dashboards) to explore once the basics feel comfortable.
 
-> *One honest heads-up:* most of these (and most tutorials everywhere) finish by turning the reading into a
-> **moisture percentage** with `map()`. That's a fine way to *start* — but here, and in Sprout, we deliberately
-> stick to **bands** ("dry / ideal / wet") instead, because a single percentage pretends to a precision the
-> sensor doesn't actually have. Both approaches will get you reading soil today; we just think bands tell the
-> truth more honestly. Learn from everyone, then decide for yourself.
+> *One quick heads-up:* most of these (and most tutorials everywhere) finish by turning the reading into a
+> **moisture percentage** with `map()`. That's a fine way to *start* — but here, and in Sprout, we lean on
+> **bands** ("dry / ideal / wet") instead, because bands keep the whole range the reading lives in rather
+> than flattening it to one number. Both approaches will get you reading soil today; we just find bands a
+> friendlier way to read what the sensor's saying. Learn from everyone, then decide for yourself.
 
 [adafruit]: https://learn.adafruit.com/adafruit-stemma-soil-sensor-i2c-capacitive-moisture-sensor/overview
 [sparkfun]: https://learn.sparkfun.com/tutorials/soil-moisture-sensor-hookup-guide/all

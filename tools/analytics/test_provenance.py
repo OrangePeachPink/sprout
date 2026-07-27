@@ -4,13 +4,11 @@ build_context provenance block (server / device / contract / calibration).
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import provenance
-from dashboard import build_context
-from parse_v1 import parse_files
+from tools.analytics import provenance
+from tools.analytics.dashboard import build_context
+from tools.analytics.parse_v1 import parse_files
 
 
 def _header(schema: int = 1) -> str:

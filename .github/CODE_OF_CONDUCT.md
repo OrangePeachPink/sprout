@@ -59,13 +59,24 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement at
-**[@OrangePeachPink](https://github.com/OrangePeachPink)** (via a private GitHub
-message or report). All complaints will be reviewed and investigated promptly
-and fairly.
+reported to **[@OrangePeachPink](https://github.com/OrangePeachPink)** by private
+GitHub message. All reports will be reviewed and investigated promptly and
+fairly, and the privacy and security of the reporter will be respected.
 
-All community leaders are obligated to respect the privacy and security of the
-reporter of any incident.
+**Please don't use the security channel for this.** The repository's
+*Security → Report a vulnerability* form is for **software vulnerabilities**, and
+it is the wrong venue for a conduct concern — different purpose, different
+handling. Conduct reports go to the maintainer directly, as above.
+
+**Being straight with you about our scale.** This document says "community
+leaders" because it is adapted from the Contributor Covenant, but Sprout has one
+maintainer — so today that is a single person, and a report about her would reach
+only her. That is a real limitation, not one we'd rather you discovered on your
+own. If you ever need a path that doesn't run through this project, GitHub's own
+[abuse reporting](https://github.com/contact/report-abuse) is independent of us. A
+dedicated confidential channel arrives when the project's governance grows to
+warrant it; until then we'd rather name the gap than imply a structure we don't
+have.
 
 ## Enforcement Guidelines
 

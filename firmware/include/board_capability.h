@@ -63,14 +63,29 @@ typedef struct {
      * Classic is bench-real (900, below the #248 saturated anchors: center 978,
      * min probe 926; equals config.h SENSOR_WET_RAW by design). The unverified
      * boards carry the classic placeholder until #443 measures their real rail -
-     * same honesty posture as their placeholder cal_boundary (cal_verified=false). */
+     * same provisional stance as their placeholder cal_boundary (cal_verified=false). */
     uint16_t wet_rail_raw;
+    /* #1152 (TELEMETRY_SCHEMA S4, Data-ratified): the SYMMETRIC MIRROR of
+     * wet_rail_raw at the dry end. A capacitive probe in air cannot read ABOVE
+     * this - a higher raw means an open circuit / disconnected lead, not
+     * "very dry soil". Firmware self-declares SENSOR_FAULT + fault=open_adc
+     * from it, exactly as it does below wet_rail_raw.
+     * NOT the same thing as the ADR-0035 air ANCHOR (classic 3137 / C5 2754):
+     * the anchor is the measured air-dry READING, this is the impossible-above
+     * RAIL, which must sit above the anchor's per-probe spread with margin.
+     * PROVISIONAL, same stance as the unverified boards' wet rails: derived
+     * with margin over the measured anchor spread, pending a bench measurement
+     * (Data owns cal values; #443 measures the real rails). 0 disables. */
+    uint16_t air_dry_raw;
 } board_capability_t;
 
 /* --- the capability matrix (add a board = add a #elif) -------------------- */
 #if defined(CONFIG_IDF_TARGET_ESP32)
-/* the classic baseline - EXACT values, unchanged from config.h's prior literals.
- * cal_boundary: the #248 common-cup-anchored endpoints, real bench data. */
+/* the classic baseline. cal_boundary: the #995-ratified 7-in-soil band edges
+ * (2026-07-19, both envelopes measured; supersedes the #248 common-cup rails).
+ * boundary[] is now FULLY in-soil dividers (Faint floor 2293 .. Soaked ceiling
+ * 1150); the air/water RAILS left boundary[] for the off-ladder anchors
+ * (wet_rail_raw + the #1152 probe-in-air/water exception layer). */
 #define BOARD_CAPABILITY                                                       \
     {"esp32-classic",                                                          \
      true,                                                                     \
@@ -82,9 +97,10 @@ typedef struct {
      2,                                                                        \
      21,                                                                       \
      22,                                                                       \
-     {3050, 2140, 1830, 1520, 1150, 1050},                                     \
+     {2293, 2086, 1879, 1636, 1393, 1150},                                     \
      true,                                                                     \
-     900}
+     900,                                                                      \
+     3400}
 #elif defined(CONFIG_IDF_TARGET_ESP32S3)
 /* ANTICIPATED map (docs/hardware/BOARDS.md) - all VALID S3 GPIOs, continuity
  * NOT yet meter-verified (B1) so cal_verified=false. Refined 2026-07-03: the
@@ -107,9 +123,10 @@ typedef struct {
      BOARD_LED_NONE,                                                           \
      8,                                                                        \
      9,                                                                        \
-     {3050, 2140, 1830, 1520, 1150, 1050},                                     \
+     {2293, 2086, 1879, 1636, 1393, 1150},                                     \
      false,                                                                    \
-     900}
+     900,                                                                      \
+     3400}
 #elif defined(CONFIG_IDF_TARGET_ESP32C5)
 /* ANTICIPATED map - C5 datasheet + DevKitC-1 v1.2 user guide (#443 candidates).
  * VALID existent GPIOs (C5 = GPIO0-28). Replaces the classic placeholder
@@ -118,8 +135,10 @@ typedef struct {
  * `Pin 36 is not ADC pin!` / `IO 32 is not set as GPIO` errors that starved the
  * loop before WiFi could come up. Valid pins fix that. Continuity + GPIO map
  * are bench-verified now (deployed 2026-07-09, 8gtt1h). cal_boundary below is
- * the #898-measured C5 envelope (air ~2740 / wet ~980, interior linear-scaled;
- * Data signs the values). cal_verified stays FALSE because this is a per-BOARD
+ * the #995-ratified C5 in-soil band edges (2026-07-19, 8gtt1h envelope MEASURED
+ * directly - not #898-derived; Data signs the values). The air/water rails moved
+ * off boundary[] to the #1152 anchor layer, same as the classic.
+ * cal_verified stays FALSE because this is a per-BOARD
  * cal, not the per-channel #170 bench table the classic carries - the #899 seam
  * routes unverified boards to cal_boundary, so false is what makes the C5 use
  * its OWN scale (flipping true wrongly re-applies the classic per-channel table).
@@ -129,20 +148,27 @@ typedef struct {
  *          plain I/O on C5, not strapping - verify it isn't the boot button at B1).
  *   i2c  : NOMINAL - no env sensors planned on the C5 (the single SHT45/AS7263
  *          instance lives on the classic); set to valid pins for completeness. */
-#define BOARD_CAPABILITY                                                       \
-    {"esp32-c5",                                                               \
-     true,                                                                     \
-     4,                                                                        \
-     12,                                                                       \
-     "nvs",                                                                    \
-     {1, 4, 5, 6},                                                             \
-     {0, 8, 9, 10},                                                            \
-     BOARD_LED_NONE,                                                           \
-     23,                                                                       \
-     24,                                                                       \
-     {2740, 1939, 1666, 1394, 1068, 980},                                      \
-     false,                                                                    \
-     900}
+#define BOARD_CAPABILITY                                                             \
+    {"esp32-c5",                                                                     \
+     true,                                                                           \
+     4,                                                                              \
+     12,                                                                             \
+     "nvs",                                                                          \
+     {1, 4, 5, 6},                                                                   \
+     {0, 8, 9, 10},                                                                  \
+     BOARD_LED_NONE,                                                                 \
+     23,                                                                             \
+     24,                                                                             \
+     {2037, 1861, 1685, 1478, 1272, 1065},                                           \
+     false, /* Rails from the measured C5 envelope, NOT placeholders (#1433,       \
+      * Data-ratified 2026-07-22; provenance bench_20260710, installed      \
+      * positions: air-dry 2742-2792, water-cup 934-1020). The old 3000     \
+      * put air_dry ABOVE the real air rail, so open_adc (raw>air_dry)      \
+      * could never fire; 2850 sits +58 past the max, 920 -14 below the     \
+      * min - normal reads can't false-fire, a real open/short does.        \
+      * Per-channel granularity is the owner-cal instance layer (#963). */ \
+     920,                                                                            \
+     2850}
 #else
 /* host / native tests / an unknown target: assume the Tier-0 floor - tethered
  * monitor, no WiFi, no persistence. A real no-WiFi board (e.g. an AVR) adds its
@@ -158,9 +184,10 @@ typedef struct {
      2,                                                                        \
      21,                                                                       \
      22,                                                                       \
-     {3050, 2140, 1830, 1520, 1150, 1050},                                     \
+     {2293, 2086, 1879, 1636, 1393, 1150},                                     \
      false,                                                                    \
-     900}
+     900,                                                                      \
+     3400}
 #endif
 
 static const board_capability_t BOARD_CAP = BOARD_CAPABILITY;

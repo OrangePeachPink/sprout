@@ -7,11 +7,7 @@ empty basin, over-full clamp).
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import runway as rw
+from tools.analytics import runway as rw
 
 
 def test_daily_draw_from_schedule() -> None:

@@ -1,12 +1,30 @@
 # Contributing to Sprout
 
-Welcome — glad you're here. Sprout is a small, honest project with one clean path from idea to merge, and this
+Welcome — glad you're here. Sprout is a small, friendly project with one clean path from idea to merge, and this
 guide walks it in about five minutes. However you've arrived — fixing a typo, wiring up a pump, or just curious —
-there's a place for you. We keep it calm, plain, and kind: the watering's honest, the board's clean, and there's
-one path now. **Tend well.**
+there's a place for you. We keep it calm, plain, and kind: the plant speaks plainly, the board's clean, and
+there's one path now. **Tend well.**
 
 Sprout is built with AI assistance, and AI-assisted contributions are as welcome as hand-written ones — use
 whatever tools fit how you work, or none. The bar is the same either way.
+
+## Using a coding agent?
+
+Welcome — plenty of us do too. If an agent is helping you contribute, three quick checks before you push keep
+your work clearly *yours*:
+
+1. **The commit identity is yours.** Run `git log -1 --format='%an %ae'` — it should show *your* name and
+   email, not ours. Your contribution graph deserves the credit. If it shows someone else, set your
+   `git config user.name` / `user.email` and re-commit.
+2. **Skip our internal conventions.** No `Lane:` trailers, no lane sign-offs — those are the maintainer team's
+   internal routing metadata. Your GitHub handle is your signature.
+3. **This file and [`AGENTS.md`](../AGENTS.md) are both yours — follow them.** They're the whole contract;
+   nothing else is a convention to match. The maintainer team's internal operating doctrine lives in
+   [`docs/team/OPERATIONS.md`](../docs/team/OPERATIONS.md) — it describes *us*, and it's hard-marked out of
+   scope for you and your tools.
+
+**Write in the language you're comfortable in.** Issues, PRs, and questions are welcome in any language — we'll
+meet you where you are.
 
 ## Where things go
 
@@ -72,51 +90,92 @@ a Size.
 
 ## Opening an issue
 
-Use the **issue forms** (New issue → Feature / Bug / Task). They capture the area, layer, and details a
-maintainer needs to triage. Don't worry about labels — the form applies the `type:` label, and a
-maintainer confirms `area:` / `layer:` at triage.
+Use the **issue forms** (New issue → Feature / Bug / Task). They capture the details a maintainer
+needs to triage. Don't worry about labels — the form applies the `type:` label, and the maintainer
+team routes ownership on its project board at triage.
+
+## Claiming an issue
+
+So two people never unknowingly build the same thing:
+
+- **Comment to claim** — say you'd like to take it, and a maintainer will **assign** you. The assignee
+  badge at the top of the issue is how everyone sees it's yours.
+- **Already assigned?** It's taken — pick [another good first issue](https://github.com/OrangePeachPink/sprout/contribute),
+  or just ask and we'll point you at one.
+- **No rush, no race.** First to claim gets it, there's plenty to go around, and starting is never a
+  competition. If two claims cross in the mail, we'll sort it kindly and find you both something. 🌱
+
+New to how we work? **[What to expect](../docs/contributing/what-to-expect.md)** is the friendly one-page
+version — claiming, review, timing, and our no-guilt timeout.
+
+## Your editor
+
+Sprout ships its editor config, so **open the repo folder in VS Code and accept the "Recommended
+Extensions" prompt** — that's the whole setup. You get ruff formatting on save, markdownlint, spell-check,
+YAML and TOML support, PlatformIO for firmware, and C tooling for the native tests: the same checks
+`just check` runs, reported inline while you type instead of at commit time.
+
+The list lives in [`.vscode/extensions.json`](../.vscode/extensions.json), and the **Codespaces
+devcontainer installs the same set**, so a browser contributor and a local one get the same editor (a
+test keeps the two in sync). Any other editor is entirely fine — nothing here is VS Code-only, and
+`just check` is the real gate either way.
 
 ## Making a change
 
-1. **Pick up** an issue (a maintainer can assign it and move its card to *In Progress* on the board).
+1. **Claim it first** ([Claiming an issue](#claiming-an-issue)) — a maintainer assigns you and moves the
+   card to *In Progress* on the board.
 2. **Branch** from `main`, named `type/short-desc` — e.g. `feat/tank-level`, `fix/banner-spacing`.
    (Outside collaborators: fork, then branch.)
 3. **Commit** with [Conventional Commits](https://www.conventionalcommits.org/):
    `type(scope): imperative subject`, where `type` is `feat | fix | docs | refactor | chore` (plus
    `test | ci | style` for finer changes). State the *result* in the subject when that's the point.
-4. **Run the checks** before pushing: **`just check`** (lint + format + tests — exactly what CI runs).
+4. **Run the checks** before pushing: **`just check`** (lint + format + the host test suites — needs only
+   `uv` and `just`, never a compiler).
    Even better, run **`uv run pre-commit install`** once and the format/lint runs automatically on every
    commit. (First-time setup: `uv sync`, or open the repo in **Codespaces** — see the
    [README quick start](../README.md#quick-start).)
 5. **Open a PR** and fill in the template. Link the issue with **`Refs #N`** or **`Part of #N`** —
-   **not** `Closes #N` (see the gate below). Include how you verified the change.
+   **not** `Closes #N` (see the gate below). Include how you verified the change. **And add your name to
+   [`CONTRIBUTORS.md`](../CONTRIBUTORS.md) in the same PR** — write yourself into the project; the
+   *"and contributors"* in Sprout's copyright line becomes, literally, you. 🌱
+   *(If a commit here lands under the maintainer's identity — easy if your tooling copied our config — a
+   friendly **credit bot** drops a two-line fix. It's protecting **your** contribution-graph credit, never
+   flagging a problem.)*
 6. PRs are **squash-merged** — one clean commit per change; the branch auto-deletes after merge.
 7. **It gets reviewed, then merged.** Someone other than the author checks your PR against the issue's
    acceptance criteria; once it passes, it's merged. **Community contributions always get direct maintainer
    review** — no exceptions. *(How the maintainer's internal review runs — including a faster path used only
-   for pre-scoped internal work — is in [AGENTS.md](../AGENTS.md); you don't need it to contribute.)*
+   for pre-scoped internal work — is in [docs/team/OPERATIONS.md](../docs/team/OPERATIONS.md); you don't need
+   it to contribute.)*
 
-> **`just check` needs one more tool than `just start` does.** `uv sync` + `just` alone are enough to run the
-> dashboard and the *lint/format* hooks — but `just check` also runs `just test`, which **unconditionally**
-> compiles and runs the native C firmware-logic suite (`test-native`), even for a docs-only change. That step
-> needs **PlatformIO** (`pip install platformio`) and a **host C compiler** (`gcc` on PATH — e.g. a winget
-> MinGW install on Windows) *in addition to* `uv`/`just`. If you'd rather skip installing those locally,
-> **GitHub Codespaces already has both** (its base image bundles `gcc`, and `pip install platformio` is a
-> quick add) — see the Firmware section below, or just push and let CI run the full gate for you.
+> **Docs / UI / Python / graphics change? `just check` is your whole local gate — and it needs no compiler.**
+> It runs every pre-commit hook plus the host Python / DX / analytics test suites, on `uv` + `just` alone.
+> Most contributions land here, so it's the default. It is *not* the full gate — CI always runs everything,
+> including the firmware tests — and `just check` tells you so when it finishes rather than letting you
+> assume otherwise. *(`just check-host` is the old name for this and still works.)*
 >
-> **Why CI is designed to run everything (the default posture — currently overridden; see the sprint note
-> below):** `just check` is the same full gate as your machine — on purpose. Pre-commit *hooks* are
+> **Touching firmware? Use `just check-firmware`.** It runs everything above **plus** the native C
+> firmware-logic suite (`test-native`), which needs **PlatformIO** (`pip install platformio`) and a **host C
+> compiler** on PATH, in addition to `uv`/`just`:
+>
+> | Your OS | One command that lands a compiler `pio test -e native` accepts |
+> |---|---|
+> | **Windows** | `winget install BrechtSanders.WinLibs.POSIX.UCRT` — gcc on PATH (verified here with `pio test -e native`) |
+> | **macOS** | `xcode-select --install` — Apple Clang |
+> | **Linux** (Debian/Ubuntu) | `sudo apt install build-essential` — gcc |
+>
+> *(Windows verified on a maintainer host; macOS/Linux are the standard toolchains — if one doesn't satisfy
+> `pio test -e native` on your setup, open an issue and we'll fix the line.)* Prefer not to install locally?
+> **GitHub Codespaces already has both** (its base image bundles `gcc`, and `pip install platformio` is a quick
+> add) — see the Firmware section below, or just push and let CI run the full gate for you.
+>
+> **Why CI is designed to run everything (the default posture):** CI runs the full battery on every PR —
+> `just check-firmware` is the local equivalent, and `just check` is that minus the compiler-dependent part.
+> Nothing is path-filtered or skipped remotely. Pre-commit *hooks* are
 > file-type-scoped for speed (e.g. `clang-format` only touches `.c`/`.h` files) — but the *test* step above is
 > not type-scoped, so don't read "hooks are scoped" as "a docs change skips firmware tests." Running
 > everything is what buys predictability and prevents local≠remote drift; path-filtering would re-introduce
 > exactly the class of surprise we deliberately closed.
->
-> ⚠️ **Temporary sprint posture (#740, private phase only):** remote per-PR CI currently runs the *fast lane
-> only* (lint + hygiene + host tests); the firmware compile, native C tests, and experimental boards run in a
-> **weekly full battery** (+ on-demand dispatch) instead — an Actions-minutes decision, velocity over
-> per-commit remote coverage. **`just check` locally is therefore the real full gate during the sprint** —
-> run it before pushing, and post local `just test-native` + `just build` evidence on firmware-touching PRs.
-> This posture is reverted per #740's launch checklist before the repo goes public.
 >
 > **The one exception — clang-format:** it runs on the *lines you changed*, not `--all-files`, because the
 > firmware carries intentional manual column alignment a full-tree reformat would destroy (AGENTS.md
@@ -146,8 +205,9 @@ without the IDE or a hand-assembled cross-compiler). **Two first-class ways in �
 - **VS Code + PlatformIO (local).** Install the PlatformIO extension; it fetches the ESP32 toolchain for you.
   Your own editor, full local control, the board on your own USB.
 - **GitHub Codespaces (browser).** *Open in Codespaces* → the devcontainer builds the toolchain for you →
-  `just check` runs green. Zero local install — ideal for editing, building, and the native tests; flashing a
-  board you're holding stays a local USB step.
+  `just check` runs green — and because the image bundles a compiler, `just check-firmware` works there too.
+  Zero local install — ideal for editing, building, and the native tests; flashing a board you're holding
+  stays a local USB step.
 
 Neither is "the" way. Once you're in, the commands are identical:
 
@@ -175,119 +235,35 @@ and gives a safe clean-reset runbook.
 > ([#387](https://github.com/OrangePeachPink/sprout/issues/387)) — it hands back the tunable constants and
 > shared terms, then graduates you to this VS Code / Codespaces project.
 
+## The analysis store (analytics tier)
+
+Analytics work runs against a local **DuckDB/Parquet store** derived from the raw logs — the #828 tier,
+whose contract is [`docs/TIER_STORE_CONTRACT.md`](../docs/TIER_STORE_CONTRACT.md). Three one-liners, and
+**no firmware toolchain** — this is the analytics-only path (pairs with `just check-host`):
+
+| Do | Command |
+|---|---|
+| **Build / refresh** the store from `logs/` | `just store-rebuild` (idempotent; `--skip-existing` resumes) |
+| **Verify** it (µs-exact fidelity + provenance) | `just store-verify` |
+| **Query** it ad-hoc | `just store-query "SELECT device, band, COUNT(*) FROM store GROUP BY 1, 2"` |
+
+The store lives under **`reports/tier/` — gitignored and regenerable**: never commit it; delete it and
+`just store-rebuild` to rebuild clean. The tier tests self-build fixtures, so `just check-host` stays green
+with no store present. Raw `logs/` live on the `data` branch (also gitignored here).
+
 ## How a change gets reviewed and merged
 
 **In one line:** you open a PR; someone *other than the author* checks it against the issue's acceptance
 criteria; once it passes, it's merged. That independent check is the whole point — nothing merges on the
 author's say-so alone.
 
-**You don't need the rest of this section to contribute.** What follows is how that review runs *internally* —
-written for the maintainer and the AI workstreams (we call them "lanes") that do the day-to-day building. Read
-it if you're curious how the sausage is made; skip it if you just want to open a good PR.
-
-A PR is never merged until it's been *independently* verified — not rubber-stamped by whoever built it. The
-full pipeline, with who owns each stage:
-
-**Backlog → In Progress → Needs Verification → Ready to Merge → Done** · *Won't Do*
-
-### Backlog — triaged ideas
-
-An item here has a clear, done-definable goal and carries **acceptance criteria**: a short, testable list of
-what "done" means. Shape the requirement *here* (comments, an ADR, outside opinions) — it's far cheaper than
-reworking it after it's built.
-
-### In Progress — the lane builds
-
-Before moving on, the implementer:
-
-- **confirms / sharpens the acceptance criteria** on the issue (weigh in early if the requirement needs shaping),
-- **implements** the work,
-- **tests** it (the relevant `pytest` / native harness),
-- runs **lint + format + commit hooks** and confirms **local == CI green**,
-- opens a PR with **`Refs #N`** (never `Closes`).
-
-### → Needs Verification — post evidence, then stop *(Workflow's inbox)*
-
-The move is gated on a **requirement-by-requirement evidence map**: for each acceptance criterion, show *how*
-it's met with a concrete artifact — PR # + commit SHA, file/function (`path:line`), the test that covers it
-*and that it passes*, CI status, plus any manual / bench check. Not "defaults fixed ✓" — instead
-`AC #1 (serial default) → dashboard_template.html:265 + test_control.py::test_serial_default passing, PR #338
-@d4315ef`. The implementer does **not** self-merge or move further. **Needs Verification is Workflow's
-review inbox, not the maintainer's.**
-
-### Workflow review *(at Needs Verification)*
-
-Workflow **independently validates** — beyond the lane's self-report — against:
-
-- the **source docs** (PRD / ADR / issue) and the requirement's stated goals,
-- the **AC-by-AC evidence map**,
-- **commit history** and **issue / PR comments**,
-- **CI green — local hooks *and* remote CI** — and **mergeable** (no conflicts, no dependency / stacked-PR traps),
-
-plus Workflow's own judgment that the work is:
-
-- **fully implemented** — not a minor slice that happened to move the card,
-- **substantially meeting the *entirety* of the requirement's goals**, as written and intended,
-- **quality** — correct, no bugs / regressions / build issues, in-lane, honest-data-compliant where it applies.
-
-On pass, Workflow posts a **Ready to Merge certification** (what was verified + which lanes approved the
-design + any **merge-order / ordering** notes) and moves the card to **Ready to Merge**. Strong evidence
-certifies fast; a weak map, a missed goal, or a dependency snag **bounces back** with specifics.
-
-### → Ready to Merge — the maintainer merges *(the maintainer's inbox)*
-
-When a card reaches this column it carries the full evidence chain **plus Workflow's independent
-certification** that the issue is fully implemented, substantively meets the *entirety* of its goals, is
-quality work, is mergeable-green (local + remote), and carries any ordering notes. The maintainer relies on
-**all of it** — source docs, AC evidence, commit history, issue comments, merge-readiness, GitHub-green,
-valid local + remote CI runs — *and* Workflow's review — to **merge with confidence it's ready for the
-codebase.** PRs squash-merge.
-
-### Done — and Won't Do
-
-On merge the issue closes (auto-Done moves the card; because PRs use `Refs`, the close is explicit).
-**Won't Do** is the terminal for "decided against": close the issue as **"not planned"** (not "completed")
-with a one-line reason — distinct from Done, which means *shipped*.
-
-**Partials:** if a merged PR met an issue's *core* requirement but a clean, separable follow-on fell out,
-Workflow spins a **new issue** for the remainder (linked both ways, with the context of what fell out) and
-closes the original — so a tail never gets swept into the merge dustbin and lost. A PR that misses the
-issue's *main point* is not closed — it's flagged back.
-
-**Closing a duplicate or superseded issue — leave a top-of-body banner (#635).** The close-reason
-("not planned") and board column ("Won't Do") say *what* but never *why*, and your explanatory comment sits
-at the **bottom** of the thread — so a developer onboarded later lands at the top of the body with zero
-context. When you close as a duplicate or superseded, **prepend** this banner to the original body (never
-replace it — the original text is history), and optionally prefix the title `[DUPE → #NNN]`:
-
-```markdown
-> [!IMPORTANT]
-> **DUPLICATE — closed, not on the roadmap.** Superseded by **#NNN** (reason — e.g. *first-filed wins, parallel-cut collision*). Anything of value here was folded into #NNN. Nothing in this thread is planned work. *(Banner per the duplicate-context convention, #635.)*
-```
-
-Use **SUPERSEDED** in place of **DUPLICATE** when the work was overtaken by shipped functionality rather than a
-single newer issue. **Look before you label:** banner only genuinely dead threads — verify the issue wasn't
-*reopened and merged* as the real implementation before tombstoning it.
-
-Use **DECIDED AGAINST** when the issue was *considered and declined* — not a duplicate, not superseded. This is
-the **highest-value** variant: a duplicate's lost context is mildly annoying, but a rejection's is expensive —
-it's where a contributor burns a day re-proposing something already ruled out, or where a good idea with a
-**revisit trigger** stays buried because nobody can see the trigger. Two rules keep it honest:
-
-- **Cite, never reconstruct.** Quote or link the recorded decision (closing comment / ADR / PRD non-goal)
-  *verbatim*. If no rationale is findable, flag it for a fresh maintainer ruling rather than inventing one — a
-  confident-sounding banner with a reconstructed "why" launders guesswork into doctrine.
-- **Closed work only.** Parked-but-alive items keep their `parked` label (no tombstone); delivered work gets
-  nothing. The banner means "this ended" — diluting that meaning kills its value.
-
-Preserve any **revisit trigger** in the banner — the narrow condition that would reopen it:
-
-```markdown
-> [!IMPORTANT]
-> **DECIDED AGAINST — closed, not on the roadmap.** \<one-line rationale, quoting the recorded decision + who decided>. **Revisit trigger:** \<the narrow condition that would reopen it, or "none recorded">. Nothing here is planned work. *(Banner per the decided-against convention, #635.)*
-```
-
-`Refs #N` / `Part of #N` (non-closing links), never `Closes #N`; the repo's auto-close setting stays **off**.
+**You don't need more than that to contribute.** How that review runs *internally* — the per-stage pipeline
+(Backlog → In Progress → Needs Verification → Ready to Merge → Done), Workflow's independent certification, the
+velocity modes, and the tombstone-banner conventions for closing issues — lives in
+**[docs/team/OPERATIONS.md](../docs/team/OPERATIONS.md#the-verification-pipeline)**, the operating
+manual for the maintainer and the AI
+workstreams ("lanes") that do the day-to-day building. Open a PR with **`Refs #N`** (never `Closes`) plus a
+note on how you verified it, and it'll be reviewed there.
 
 ## Releases & versioning
 
@@ -312,77 +288,12 @@ labels, issue/PR templates, protected `main`.** If a process here looks bespoke,
 prefer the native primitive, and if you spot a custom thing doing a native thing's job, **say so.** The
 less custom machinery you have to learn, the faster you can help — that's the whole point.
 
-## Lane self-sync — check before you start, check before you stop
-
-Lanes run **concurrently**, so the board and your PRs change *while you're heads-down*. Don't wait for the
-maintainer to assemble a status round and relay it — **the maintainer is not your messenger, and the issue is
-the message bus.** Keep the system moving by syncing yourself.
-
-**Self-sync at three moments:**
-
-1. **At the start** of a session — before you pick up work.
-2. **Just before you stop** — catch what landed while you were heads-down.
-3. **When you post a status brief / share-out** — whether someone requested it or you're posting proactively.
-
-**The sweep — check your slice of the board:**
-
-- **Your open PRs** — did any **move** (review, conformance, certification) or **merge** while you were away?
-- **Issues newly labeled `for:<your-lane>`** — work routed to you.
-- **Comments / questions / RFCs** aimed at your lane on issues and PRs.
-- **What recently merged that unblocks you** — a dependency landed, or a base PR merged so your stacked PR
-  can rebase.
-- **Backlog *and* In Progress** items in your area that are now actionable — an item doesn't have to be sitting
-  in Backlog to be untouched. Workflow (or another lane) can move a card's *status* without anyone touching
-  *your* item yet — check for a PR or a comment from your own lane, not just the column it's in. But **skip
-  anything labelled `needs:hardware`**: those are the maintainer's hardware/bench queue (wiring, pump/relay
-  setup, hardware you don't have yet), not lane-advanceable. Filter your board view to
-  `for:<your-lane> -label:needs:hardware`, across both columns.
-- **A board *status* or *priority* change generates no GitHub notification** — only a comment, label, or
-  assignee change does. So don't rely on your notifications/mentions alone to catch new work: **re-pull the
-  live board (Project #2) each sync**, per the instructions above. If you only ever check "what's new in my
-  notifications," a silent status flip is invisible to you.
-
-**Which item do you pick? No ambiguity — the board answers it:**
-
-- **Your queue** = the board filtered to `for:<your-lane> -label:needs:hardware -label:needs:maintainer`,
-  **sorted by Priority**.
-- **Your next task** = the **top-priority *sliced* item** in that queue — P0/P1 before P2 before P3. Every
-  P1/P2 is triaged to be **owned, sliced, and actionable**; you don't need permission to start it.
-- **Epics are not tasks.** An item labelled `epic` is a *parent* — work its **sliced children**, never the epic
-  card itself. If an epic has no open sliced children, *that* is the thing to flag (`for:workflow`).
-- **`needs:hardware` / `needs:maintainer` are out of your queue** — the maintainer's bench and decision queues.
-  The filter above already excludes them; don't pull from them.
-- The **only** thing you escalate is a top item that genuinely isn't actionable (missing slice, unclear AC) —
-  and that should be rare, because the backlog is kept triaged. Route it `for:workflow` and take the next item
-  meanwhile.
-
-**Then act — don't wait, don't ask when you can do:**
-
-- **Your PR merged** → reconcile it (confirm what it satisfies) and **chase what it unblocks downstream.**
-- **A dependency landed** → pick up the now-unblocked work and **advance it this session.**
-- **A new `for:<your-lane>` issue, or an RFC for you** → triage, answer, or act.
-- **You have a question for another lane** → **post it on the issue and route it `for:<lane>` right then.**
-  Do *not* hold it for the maintainer to relay.
-- **Default to action over questions.** If something is unblocked and in your lane, do it. Reserve escalation
-  to the maintainer for genuinely maintainer-only calls (merges, hardware approvals, product direction).
-
-**The anti-patterns this kills:**
-
-- Discovering unblocked work only when the maintainer's next status round happens to surface it.
-- Answering a status request with questions you could have **answered or routed** yourself.
-- Making the maintainer relay a message between two lanes that the **issue thread** could carry directly.
-
-A lane that self-syncs keeps the whole system advancing between the maintainer's check-ins — instead of
-stalling until the next relay.
-
 ## Labels (quick reference)
 
 - `type:*` — the kind of work (mirrors the commit `type:` vocabulary)
-- `area:*` — the subsystem (control / logging / sensing / actuators / analytics)
-- `layer:*` — `firmware` (needs a reflash) vs `host` (build anytime)
-- `for:*` — routing hint to a lane (a best-guess owner, not a commitment — Workflow still triages):
-  `for:firmware` (incl. bench) · `for:data` · `for:design` (→ DesignQA) · `for:dx` · `for:trellis` ·
-  `for:workflow` · `for:maintainer`. See the lane roster in [AGENTS.md](../AGENTS.md#the-lanes).
+- `for:*` — the maintainer team's internal consult-routing (a lane owes an input); contributors
+  never need to apply these. Ownership lives on the team's project board, not in labels.
+- `blocked` — waiting on a named party/event (the applying comment names the unblock)
 - `blocks:*` — milestone **gates**, independent of Priority: `blocks:pumps`, `blocks:public-release`,
   `blocks:data-integrity`. Filter by these to see what stands between us and pumps / a public release /
   trustworthy data.

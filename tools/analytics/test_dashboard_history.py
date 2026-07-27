@@ -6,12 +6,10 @@ downsampling. These are the deep-history deliverables; they had no coverage.
 from __future__ import annotations
 
 import gzip
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dashboard
-from parse_v1 import parse_files
+from tools.analytics import card_context, dashboard
+from tools.analytics.parse_v1 import parse_files
 
 _HEADER = (
     "# fw=0.7.0  git=t  run=h\n# device_id=d  schema_version=1\n"
@@ -36,11 +34,11 @@ def _seg(ts_list: list[tuple[str, int]]) -> str:
 
 
 def test_dec_idx_under_cap_is_identity() -> None:
-    assert dashboard._dec_idx(5, 10) == [0, 1, 2, 3, 4]
+    assert card_context._dec_idx(5, 10) == [0, 1, 2, 3, 4]
 
 
 def test_dec_idx_thins_to_cap() -> None:
-    idx = dashboard._dec_idx(1000, 100)
+    idx = card_context._dec_idx(1000, 100)
     assert len(idx) == 100  # capped
     assert idx[0] == 0
     assert all(0 <= i < 1000 for i in idx)
@@ -49,7 +47,7 @@ def test_dec_idx_thins_to_cap() -> None:
 
 def test_max_traj_points_keeps_30d_responsive() -> None:
     # the contract that keeps a 30-day series light enough to render
-    assert dashboard.MAX_TRAJ_POINTS <= 2000
+    assert card_context.MAX_TRAJ_POINTS <= 2000
 
 
 # --------------------------------------------------------------------------- #

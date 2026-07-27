@@ -37,6 +37,23 @@ def test_naming_is_plant_first_not_the_machine_id() -> None:
     assert "regSpell" in _H and "'Sensor'" in _H
 
 
+def test_pot_size_and_location_are_editable_in_app() -> None:
+    # #833: the two fields that used to force config-file surgery. pot_size must be
+    # settable (it was nowhere in the UI); location must be EDITABLE (it was add-only).
+    add = _H[_H.index("function regAddControl(") : _H.index("function regStageAdd(")]
+    assert "'pot_size'" in add and "'location'" in add  # both offered at add-time
+    edit = _H[_H.index("function regEditForm(") : _H.index("function regStageEdit(")]
+    assert "'pot_size'" in edit  # pot size now settable after creation
+    # location stays editable after creation — #1188 replaced the flat field with the
+    # move-aware control (a location edit is a MOVE), so the guard follows it there and
+    # still checks it binds an editable `location` input, not just that it renders.
+    assert "regLocationControl(entity)" in edit  # the control is wired into the editor
+    ctrl = _H[
+        _H.index("function regLocationControl(") : _H.index("function regEditForm(")
+    ]
+    assert "i.dataset.k = 'location'" in ctrl  # and it binds an editable location input
+
+
 def test_first_run_landing_retires_the_launchpad() -> None:
     # Q9: an empty registry makes this tab the setup landing; boot auto-lands there.
     assert "first_run" in _H
@@ -68,7 +85,9 @@ def test_pending_batch_matches_the_apply_seam_shape() -> None:
     for key in (
         "plants:{add:[],edit:[]}",
         "sensors:{add:[],edit:[]}",
-        "devices:{edit:[]}",
+        # #1027: devices grew `add` — adoption stages a devices.add, which
+        # apply_operations has accepted since the structural half (#1063/#1424).
+        "devices:{add:[],edit:[]}",
         "mappings:{assign:[],close:[]}",
         "lifecycle:[]",
     ):

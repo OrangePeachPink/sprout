@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+<!-- Sprout desktop app icon (#1359) — the master.
+
+     Joins the favicon family rather than forking it: same tile ground (#18231F), same
+     mark, same three greens. Small sizes keep their own hand-tuned siblings
+     (favicon-16x16.svg / favicon-32.svg, #1124) because a scaled-down mark mushes on
+     the pixel grid — at-size design is why those exist.
+
+     Why a filled tile at all: the previous desktop icon was a thin stroked mark on pure
+     transparency, so it read as a small target even though the whole square was
+     clickable (#1359, her words: "I only have a small click target to aim for"). Mass
+     is the entire point of this change.
+
+     The mark is scaled to fill the tile more generously than the favicon proportion —
+     A/B'd at 48 px and 96 px, the real desktop sizes. The family proportion left too
+     much dark margin and kept reading as a small thing inside a big square, which is
+     the complaint this icon exists to answer. Tips clear the rounded corners. -->
+<rect width="256" height="256" rx="48" fill="#18231F"/>
+<g transform="translate(128 132) scale(1.14) translate(-128 -132)">
+  <rect x="120" y="112" width="24" height="96" rx="8" fill="#5FA23C"/>
+  <path d="M124 120 C120 80 88 48 40 48 C40 96 72 124 116 124 Z" fill="#34A853"/>
+  <path d="M140 120 C144 80 176 48 224 48 C224 96 192 124 148 124 Z" fill="#8BD24F"/>
+  <rect x="88" y="208" width="80" height="16" rx="8" fill="#2C3A24"/>
+</g>
+</svg>

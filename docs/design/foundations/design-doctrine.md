@@ -7,8 +7,8 @@ This is the north star every Sprout surface is judged against. It is short on pu
 card, chart, label, or control can't pass the tests below, it isn't done — regardless of how correct
 the data behind it is.
 
-It sits alongside the other decisions of record it must cohere with: the **honesty rules** (raw counts +
-the calibrated band are truth; a percentage is a labelled index, never VWC — ADR-0004, ADR-0007 §5), the
+It sits alongside the other decisions of record it must cohere with: the **reading rules** (raw counts +
+the calibrated band are the reading; a percentage is a labelled index, never VWC — ADR-0004, ADR-0007 §5), the
 **character ↔ instrument boundary** (ADR-0008), and the **canonical band vocabulary**
 ([`mood-band-map.json`](../components/mood-band-map.json)).
 

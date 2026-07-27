@@ -4,11 +4,11 @@ Sprout runs on cheap, common parts — but *which* parts depends on what you wan
 and what sensor you grabbed. Answer three quick questions and you'll know exactly what your parts bin can build.
 No dense spec sheet — just follow the path. 🌱
 
-> **One thing first, whatever you build: the single setup moment.** Sprout's brain (the board) gets flashed
-> *once*. That's the only time you need a computer: plug the board in with a USB cable, open the flasher page in
-> **Chrome or Edge**, and click **Install** — no Arduino IDE, no code. After that, updates arrive over Wi-Fi
-> (over-the-air), so you never plug in again. *(A computer + cable + Chrome/Edge — not Safari or an iPhone, which
-> can't talk to USB.)*
+> **One thing first, whatever you build: the setup moment.** Sprout's brain (the board) gets flashed from a
+> computer: plug the board in with a USB cable, open the flasher page in
+> **Chrome or Edge**, and click **Install** — no Arduino IDE, no code. Keep that cable handy, though: for now an
+> update means flashing again from the same page — Sprout pulling its own updates down over Wi-Fi isn't shipped
+> yet. *(A computer + cable + Chrome/Edge — not Safari or an iPhone, which can't talk to USB.)*
 
 ## 1. What do you want Sprout to do? → your tier
 
@@ -41,7 +41,7 @@ If you want Sprout untethered, get an **ESP32** — they're a few dollars and Wi
 ## Putting it together (your kit, by tier)
 
 - **Tier 0 — Watch:** an **ESP32** + **1 capacitive sensor** + a **USB cable** + a computer with **Chrome/Edge**
-  (just for the one-time flash). That's it — phone setup is next.
+  (just for the initial flash). That's it — phone setup is next.
 - **Tier 1 — Water:** all of the above, **plus** a small **pump**, a **relay**, a **reservoir**, and **tubing**.
 - **Tier N — Grow:** Tier 1 plus more sensors/zones, added when you want them.
 
@@ -52,7 +52,8 @@ If you want Sprout untethered, get an **ESP32** — they're a few dollars and Wi
 1. **Flash once** — USB cable + Chrome/Edge + click Install.
 2. **Meet Sprout on your phone** — it makes its own Wi-Fi hotspot; connect, pick your home Wi-Fi, name your
    plants.
-3. **Walk away** — from then on it reads, reports, and (Tier 1+) waters on its own; updates come over Wi-Fi.
+3. **Walk away** — from then on it reads, reports, and (Tier 1+) waters on its own. (An update still means a
+   quick re-flash from the browser; automatic over-the-air updates aren't shipped yet.)
 
 ## Onward
 

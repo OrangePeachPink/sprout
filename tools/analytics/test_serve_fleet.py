@@ -7,14 +7,12 @@ real http.server serving the exact #276 /telemetry shape, not a mock.
 from __future__ import annotations
 
 import http.server
-import sys
 import threading
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from device_registry import Device, Registry
-from serve import _context, _fleet_adapter
-from source_adapter import FleetAdapter, TetheredAdapter
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.serve import _context, _fleet_adapter
+from tools.analytics.source_adapter import FleetAdapter, TetheredAdapter
 
 _COLS = (
     "record_type,timestamp_utc,timestamp_local,session_id,device_id,"

@@ -14,7 +14,7 @@ evidence (2026-07-06). The loader, analysis-tier join, and seed back-fill are Da
 [ADR-0028](0028-optional-peripherals-doctrine.md) (absence is first-class — every field optional; species never
 gates) · [ADR-0019](0019-capability-and-sensor-matrix.md) (per-channel calibration — the cross-board raw caveat, §6)
 **Relates:** #675 (this — the transitional home + the tracked work) · #834 (the dose→response session grounding the
-field model) · PRD-0008 / #25 (the predictor that conditions on this) · #833 / #822 / #832 (Predict-wave consumers
+field model) · PRD-0009 / #25 (the predictor that conditions on this) · #833 / #822 / #832 (Predict-wave consumers
 that join to this) · #674 (the install prose this supersedes as the *live* home)
 
 ---
@@ -29,7 +29,7 @@ the inference layer can join to.
 
 A raw ADC count means *different things* in a 2-inch succulent vs a 10-inch drought-cycled pothos vs a
 terracotta drip-tray resoaker. Pot geometry, soil-retention class, and care history are exactly the covariates
-that turn a bare raw into a plant-aware prediction. This is the **dimension table the predictor (PRD-0008) will
+that turn a bare raw into a plant-aware prediction. This is the **dimension table the predictor (PRD-0009) will
 condition on.**
 
 **The field model is now empirically grounded.** The 2026-07-06 #834 dose→response session measured, per plant,
@@ -78,7 +78,7 @@ prediction. The three hard cases the maintainer's data forces are called out inl
 
 | Group | Fields |
 |---|---|
-| Identity | `plant_id` (stable, ADR-0027), `label` (`p01`…); `species` (asserted — a real recorded id, e.g. a nursery sticker; truth has a chain) **and/or** `species_guess` + `species_confidence` (inferred). Both absent-safe; **species never gates** (ADR-0028) |
+| Identity | `plant_id` (stable, ADR-0027), `label` (`p01`…); `species` (asserted — a real recorded id, e.g. a nursery sticker; provenance has a chain) **and/or** `species_guess` + `species_confidence` (inferred). Both absent-safe; **species never gates** (ADR-0028) |
 | Placement | wired ⇒ *resolved* via `plant_id`→device registry (§3). Sensorless ⇒ `sensorless: true`, `side` (`left`/`right`), `window` carried here |
 | Pot — **nominal** | `diameter_in` (measured top ⌀), `shape` (`standard`/`wide-shallow`), `depth_class` (`normal`/`shallow`), `material` (`terracotta`/`plastic`), `has_drip_tray`, `outer_pot_seal` (`none`/`loose`/`watertight-tight`) |
 | Pot — **effective** *(Case 1: separable from nominal)* | `effective_size_class` — an explicit judgement of the volume that actually holds active root+soil, **distinct from `diameter_in`**; `effective_reduction_factors` (multi: `dead-rootball-voids`, `decorative-moss-top`, `shallow-shape`, `rootbound`) — *why* effective < nominal (p04: all but rootbound) |
@@ -96,18 +96,18 @@ pot volume** (two explicit sub-groups + the reduction factors that link them), *
 **soil condition** (a `soil_condition` *state* split from `care_origin` the *cause*). The p07 insight — a probe
 that reads dry over flooded gap water — becomes `probe_reading_caveat`, the tell a predictor must honour.
 
-### 5. Honest reference data — a guess is labelled a guess, an observation is dated (ADR-0006)
+### 5. Plain reference data — a guess is labelled a guess, an observation is dated (ADR-0006)
 
 The profile is **human-asserted reference data** (the maintainer's observations), not measured or derived — it is
 labelled as such, and now **carries its own provenance** (`observed_by` / `observed_date` / `method`). Uncertainty
 travels with the value: `species_guess` carries `species_confidence`, and is distinct from an asserted `species`
-(a recorded sticker beats an inference — truth has a chain); `effective_size_class` is an explicit judgement,
+(a recorded sticker beats an inference — provenance has a chain); `effective_size_class` is an explicit judgement,
 separate from the measured `diameter_in`. **Open questions are first-class** (`open_questions`) — the model does
 not force false certainty where the maintainer has none (e.g. "does p05 need a beyond-the-windowsill floor-pot
 strategy?" stays an open question, not a fabricated field). The field model is **validated against the full #675
 seed** — every observation maps to a field.
 
-### 6. Prediction-consumer caveats (what PRD-0008 must honour)
+### 6. Prediction-consumer caveats (what PRD-0009 must honour)
 
 The profile *conditions* inference; it does not by itself make readings comparable. Two caveats travel with it:
 
@@ -117,7 +117,7 @@ The profile *conditions* inference; it does not by itself make readings comparab
   substitute for it.
 - **A probe reading can misrepresent the plant.** Where `probe_reading_caveat` is set (p07), the profile is
   telling the predictor to *distrust that channel's raw as a proxy for the plant's water state* — the reading is
-  honest about the sensor, but the sensor is not seeing the water that matters.
+  accurate about the sensor, but the sensor is not seeing the water that matters.
 
 ### 7. Scope
 
@@ -132,9 +132,9 @@ The profile *conditions* inference; it does not by itself make readings comparab
 
 - The install-day observations become a first-class, queryable, **versioned** dimension keyed by the stable
   `plant_id` — no more stale references to a closed PR.
-- The predictor (PRD-0008) conditions on real covariates — *effective* pot volume, drainage pathology, soil
+- The predictor (PRD-0009) conditions on real covariates — *effective* pot volume, drainage pathology, soil
   *condition* — instead of a bare raw, and is warned where a probe reading cannot be trusted as a water proxy.
-- Nominal and effective size stay separable, so the honest measurement (`diameter_in`) is preserved *and* the
+- Nominal and effective size stay separable, so the recorded measurement (`diameter_in`) is preserved *and* the
   judgement that p04 behaves smaller is captured — neither overwrites the other.
 - Home placement stays gitignored (ADR-0015); the public-bound repo carries only the schema + placeholder example;
   wired placement is not duplicated out of the device registry.
@@ -149,7 +149,7 @@ The profile *conditions* inference; it does not by itself make readings comparab
 - **Put the profile in the telemetry stream.** Rejected: it is a slowly-changing dimension, not a per-reading
   fact; repeating pot geometry on every row is a modelling error. It belongs in a dimension joined on `plant_id`.
 - **Collapse nominal and effective size into one number.** Rejected: a predictor keyed on nominal Ø is badly wrong
-  (p04), but the nominal measurement is still the honest, re-checkable fact. Keep both, linked by
+  (p04), but the nominal measurement is still the recorded, re-checkable fact. Keep both, linked by
   `effective_reduction_factors`.
 - **Trust every probe reading equally.** Rejected: p07 proves a probe can systematically misread the plant's water
   state; the profile must carry that caveat so the predictor can down-weight it.

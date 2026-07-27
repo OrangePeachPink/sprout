@@ -56,11 +56,11 @@ from collections import Counter
 from datetime import datetime, timedelta
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
+from tools.analytics.parse_v1 import (
+    CANONICAL_COLUMNS,
+)
 
-from parse_v1 import CANONICAL_COLUMNS  # noqa: E402  (sibling; keeps columns in sync)
+_HERE = Path(__file__).resolve().parent
 
 _REPO = _HERE.parents[1]
 

@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import cross_board as cb
+from tools.analytics import cross_board as cb
 
 
 def test_single_board_raw_is_comparable() -> None:

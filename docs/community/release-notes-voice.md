@@ -12,7 +12,7 @@ like this:
 ```markdown
 ## Sprout {version} — "{codename}"
 
-Hi, it's Sprout. Here's what changed this time — short version: {one honest sentence}.
+Hi, it's Sprout. Here's what changed this time — short version: {one plain sentence}.
 
 <!-- GitHub's generated, type:-categorized notes go here -->
 
@@ -23,11 +23,11 @@ Hi, it's Sprout. Here's what changed this time — short version: {one honest se
 ## Tone
 
 - **Speak as Sprout, first person** — the header/footer are plant-facing, so they follow the voice rules
-  (calm, fond, honest, one short line; no hype, no emoji, no fake metrics). See
+  (calm, fond, plain, one short line; no hype, no emoji, no invented metrics). See
   [ADR-0007 §3](../adr/0007-brand-guidelines.md).
 - **The generated body stays plain.** The per-PR lines are technical and factual — don't rewrite them in
   character. Sprout only frames the release (the header + footer); the changelog itself is just the work.
-- **One honest sentence up top.** What actually changed and why it matters — no "exciting", no "huge".
+- **One plain sentence up top.** What actually changed and why it matters — no "exciting", no "huge".
   *"I can finally tell three plants apart by their drying speed."* beats *"Massive analytics update!"*
 
 ## Codenames (optional, light)

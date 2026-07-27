@@ -33,7 +33,7 @@ first-class view. The calibration ladder was a static setup/config artifact; thi
 - **Reuse the seven calibrated band lanes and tokens** so it reads as one system with the calibration ladder.
 - Serve **both** a short event window (~15 min) and a long horizon (24h / 7d / "since last re-water") from
   the same control.
-- Stay inside the **honesty laws**: raw + band words only, never %; movement shown as discrete transitions,
+- Stay inside the **reading rules**: raw + band words only, never %; movement shown as discrete transitions,
   never fabricated continuity; unwired / NO_SIGNAL / uncalibrated entities handled honestly.
 
 ## Non-goals
@@ -55,8 +55,8 @@ first-class view. The calibration ladder was a static setup/config artifact; thi
 - **R5.** **Window selector:** choose the review window, with presets for a short event (~15 min) and long
   horizons (24h / 7d / "since last re-water"), reusing the existing range vocabulary where it fits.
 - **R6.** **Live:** updates in place on the dashboard's refresh cadence, tracking the logger as it appends.
-- **R7.** **Honesty:** raw + band words only, no %; unwired / NO_SIGNAL entities render **no band**;
-  `cal_verified=false` renders **provisional** — consistent with the card honesty rules and the #486 findings.
+- **R7.** **The reading:** raw + band words only, no %; unwired / NO_SIGNAL entities render **no band**;
+  `cal_verified=false` renders **provisional** — consistent with the card reading rules and the #486 findings.
 - **R8.** **Per-device fencing:** respect the #575 grouping — an entity belongs to exactly one device; no
   cross-device roll-up.
 - **R9.** **Identity + provenance:** each row labeled by plant name / sensor id from the registry

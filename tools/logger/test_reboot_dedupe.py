@@ -13,16 +13,13 @@ silently break it over a long unattended run.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fleet_logger import seed_store_from_disk
+from tools.logger.fleet_logger import seed_store_from_disk
 
 _ANALYTICS = Path(__file__).resolve().parents[1] / "analytics"
-sys.path.insert(0, str(_ANALYTICS))
-from ingest_store import Store  # noqa: E402
-from parse_v1 import parse_files  # noqa: E402
+from tools.analytics.ingest_store import Store  # noqa: E402
+from tools.analytics.parse_v1 import parse_files  # noqa: E402
 
 _HEADER = (
     "# schema_version=4  fw=0.8.0  git=t  device_id=dev-0\n"

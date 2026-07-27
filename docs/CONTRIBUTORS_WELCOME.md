@@ -16,8 +16,11 @@ community than owned by a small team.
 **We promise only what we can test.** Everything here is explicitly contributor territory, not a core-team
 deliverable — which is exactly why your PR matters.
 
-> **Status:** seeded pre-release. At public launch, each item becomes a labeled **`help wanted`** /
-> **`good first issue`** issue. Until then, this is the durable idea list.
+> **Status:** the repo is public and open to contributions **right now** — outside contributors have
+> already landed merged PRs here. What's still ahead is the public *launch push*, not your ability to
+> take part. These live as a durable idea list rather than a wall of labeled issues because the list
+> outlives any one milestone — but if you want one turned into a real, grabbable issue, say so on it
+> and we'll label it.
 
 ## How it works
 
@@ -27,7 +30,7 @@ deliverable — which is exactly why your PR matters.
    names its seam, so you know exactly where you're plugging in.
 3. **Build it in your PR.** Add support for the thing you love; the maintainer reviews it (and validates on real
    hardware where she has it).
-4. **It ships when it's proven** — no gate-keeping beyond "does it work, and is it honest about what it does?"
+4. **It ships when it's proven** — no gate-keeping beyond "does it work, and does it do what it says?"
 
 ## Where you can help
 
@@ -54,14 +57,12 @@ deliverable — which is exactly why your PR matters.
 
 Surfaced a "designed-for, not core-committed" idea in a discussion? **Add a bullet here and sign it** — name the
 seam if you know it, plus a one-line "how to start." This page is meant to *grow*: the ideas that escaped memory
-belong here too. At launch, Workflow converts each into a labeled `help wanted` issue so contributors can grab
-them.
+belong here too. Ask and we'll label one `help wanted` so you can grab it — no need to wait for launch.
+
+## Wear the badge
+
+Landed a PR — or just cheering us on? There's a little **[contributor card](design/brand/contributor-card.png)**
+you're welcome to post anywhere you like — there's a [square one](design/brand/contributor-card-square.png) for
+Instagram, and light-theme versions too. Zero pressure; it's just here if you're proud of what we're growing. 🌱
 
 *New to contributing? [Your first contribution](contributing/your-first-pr.md) walks the whole flow.*
-
----
-
-*Crafted from the #265 seed into the Contributors Welcome surface (#266). Content + experience by DX; a Design
-pass may dress it in Sprout tokens/voice.*
-
-— DX 🌱

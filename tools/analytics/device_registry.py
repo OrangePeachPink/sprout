@@ -94,11 +94,41 @@ class Device:
     # view. Reversible: clear the flag and it returns to the live fleet.
     retired: bool = False
 
+    def _channel_entry(self, channel: str) -> dict | None:
+        """Resolve a channel key to its binding, folding BOTH sides through the
+        canonical ``chN`` namespace (#1315 / ADR-0036).
+
+        This is the single identity fold for the static registry, and it lives here
+        rather than at the call sites for the reason ADR-0038 opens with: on
+        2026-07-20 the v5 migration re-keyed the registry to ``chN`` while boards
+        still emitted v4 ``sN``, and the live Home lost all eight probed plants
+        because *this* lookup missed. The analysis paths had been folded; this one
+        had not. Folding at the lookup means every caller — present and future,
+        including ones nobody enumerated — is covered by construction.
+
+        Exact match wins first, so a registry that uses raw keys keeps working with
+        zero behaviour change; the canonical comparison is the fallback."""
+        from tools.analytics.parse_v1 import (
+            canonical_channel,  # local: keeps this module leaf-ish
+        )
+
+        chans = self.channels or {}
+        a = chans.get(channel)
+        if isinstance(a, dict):
+            return a
+        want = canonical_channel(channel)
+        for key, val in chans.items():
+            if canonical_channel(key) == want and isinstance(val, dict):
+                return val
+        return None
+
     def plant_for(self, channel: str) -> dict | None:
         """The plant on a channel: {plant_id, plant_name, plant_type, pot_size}, or
         None if unassigned. #713 leads with the plant, so type/pot_size ride along
-        as optional plant-first enrichment - absent-safe (None when not configured)."""
-        a = self.channels.get(channel)
+        as optional plant-first enrichment - absent-safe (None when not configured).
+        The channel key folds to canonical chN (#1315), so a v4 `sN` row resolves
+        against a migrated `chN` registry and vice versa."""
+        a = self._channel_entry(channel)
         if not isinstance(a, dict) or not a.get("plant_id"):
             return None
         return {
@@ -111,8 +141,9 @@ class Device:
     def probe_for(self, channel: str) -> str | None:
         """The probe sticker (s1..s12, ADR-0027 §5) plugged into this port, or
         None if unassigned - the "which probe" answer, W1 labels-only (#619).
-        A probe carries its own QA/cal history (W2); here it is just the label."""
-        a = self.channels.get(channel)
+        A probe carries its own QA/cal history (W2); here it is just the label.
+        Folds through the canonical channel namespace, same as ``plant_for``."""
+        a = self._channel_entry(channel)
         if not isinstance(a, dict):
             return None
         probe = a.get("probe")
@@ -248,15 +279,36 @@ def _device_from_dict(raw: dict) -> Device | None:
     )
 
 
-def load_registry(path: str | Path | None = None) -> Registry:
-    """The fleet registry, preferring the local config, then the example template.
+def resolve_registry_path(path: str | Path | None = None) -> Path | None:
+    """WHICH file ``load_registry`` would read — the same discovery ladder, exposed.
 
-    ``path`` overrides discovery (used by tests). With no path: the gitignored
-    ``config/devices.local.json`` if present, else the committed
-    ``config/devices.example.json``, else an **empty** registry. A malformed or
-    non-conforming file also yields an empty registry - never raises, so the
-    monitor-all view degrades cleanly to raw streams."""
+    A tool that both reads and WRITES the registry (the #1315 migration) must operate
+    on one resolved path: reading via discovery and then writing via a second, separate
+    resolution can silently target a different file than the one the dry-run showed.
+    Returns None when no registry exists (`load_registry` yields an empty one)."""
     candidates = [Path(path)] if path is not None else [_LOCAL, _EXAMPLE]
+    return next((p for p in candidates if p.exists()), None)
+
+
+def load_registry(path: str | Path | None = None) -> Registry:
+    """The fleet registry: the gitignored local config, else an **empty** registry.
+
+    ``path`` overrides discovery (used by tests, and the way the example template is
+    still loadable on purpose).
+
+    **The example is documentation, not data (#1594).** It used to be an implicit
+    fallback, so a fresh clone reported three devices — ``ESPclassic``, ``the S3``,
+    ``C5Official`` — that the user does not own. That is not merely a wrong empty-state
+    message: the fallback feeds everything that counts devices, so Home would render
+    plant cards for phantom hardware, the Plants & Sensors tab would list it, and A5's
+    reconcile would weigh it as a real pending board. Marking the rows instead would put
+    the duty to filter on every consumer forever, and a boundary that depends on
+    remembering is not a boundary (ADR-0038's own framing). Removing it at the source
+    fixes every consumer at once.
+
+    A malformed or non-conforming file also yields an empty registry - never raises, so
+    the monitor-all view degrades cleanly to raw streams."""
+    candidates = [Path(path)] if path is not None else [_LOCAL]
     src = next((p for p in candidates if p.exists()), None)
     if src is None:
         return Registry()

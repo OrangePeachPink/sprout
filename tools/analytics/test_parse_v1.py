@@ -5,14 +5,12 @@ The comprehensive golden round-trip suite (plants_logger + parse_v1) lives in #2
 
 from __future__ import annotations
 
-import sys
 import textwrap
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import DEFAULT_CAL_BOUNDS, parse_file
+from tools.analytics.parse_v1 import DEFAULT_CAL_BOUNDS, parse_file
 
 # --------------------------------------------------------------------------- #
 # fixtures — minimal column set; parse_v1 maps by name so a subset CSV is valid
@@ -64,8 +62,9 @@ def csv_without_bounds(tmp_path: Path) -> Path:
 
 
 def test_default_cal_bounds_matches_firmware() -> None:
-    """DEFAULT_CAL_BOUNDS must match the reconciled firmware values."""
-    assert DEFAULT_CAL_BOUNDS == (3050, 2140, 1830, 1520, 1150, 1050)
+    """DEFAULT_CAL_BOUNDS must sibling the firmware classic default — the ratified
+    ladder with the #1236 wet-end re-derive (ADR-0035; pair-merged host mirror)."""
+    assert DEFAULT_CAL_BOUNDS == (2293, 2086, 1879, 1636, 1393, 1150)
 
 
 # --------------------------------------------------------------------------- #

@@ -30,15 +30,28 @@ def _load(path: str) -> dict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def combine(primary: str, extra: list[str]) -> dict:
+def combine(
+    primary: str,
+    extra: list[str],
+    built_utc: str | None = None,
+    parts_prefix: str = "",
+) -> dict:
     base = _load(primary)
+    prov_top = dict(base.get("provenance", {}))
+    if built_utc:
+        # #1599 AC2: the alpha panel renders `provenance.built_utc` ("Built"), and
+        # factory_bin does not emit one — a per-build timestamp belongs to the publish,
+        # not to the image (the same bins can be republished). Passed in rather than
+        # read from the clock here so the value is the workflow's single notion of "now"
+        # and both manifests in one run agree.
+        prov_top["built_utc"] = built_utc
     out = {
         "name": base.get("name", "Sprout"),
         "version": base.get("version", "0.0.0"),
         "new_install_prompt_erase": base.get("new_install_prompt_erase", True),
         "builds": [],
         # pre-connect provenance panel = the primary (close-criterion) board.
-        "provenance": base.get("provenance", {}),
+        "provenance": prov_top,
     }
     seen: set[str] = set()
     for path in [primary, *extra]:
@@ -56,7 +69,19 @@ def combine(primary: str, extra: list[str]) -> dict:
                 continue
             seen.add(fam)
             # per-board provenance rides its build entry (post-connect display).
-            out["builds"].append({**build, "provenance": prov})
+            entry = {**build, "provenance": prov}
+            if parts_prefix:
+                # #1648: ESP Web Tools resolves `parts[].path` RELATIVE TO THE MANIFEST
+                # URL, and factory_bin writes a bare basename. Both channels emit the
+                # same filenames, so serving different bytes per channel means the two
+                # payloads live in different directories while both manifests stay at
+                # the URLs the page fetches (./manifest.json, ./manifest-alpha.json).
+                # The prefix is what re-points a manifest at its own payload directory.
+                entry["parts"] = [
+                    {**p, "path": f"{parts_prefix}{p['path']}"}
+                    for p in build.get("parts", [])
+                ]
+            out["builds"].append(entry)
     return out
 
 
@@ -73,9 +98,25 @@ def main(argv: list[str] | None = None) -> int:
         help="additional per-board manifest-<mcu>.json paths",
     )
     ap.add_argument("--out", required=True, help="combined manifest.json output path")
+    ap.add_argument(
+        "--built-utc",
+        default="",
+        help="publish timestamp to stamp into provenance.built_utc (#1599)",
+    )
+    ap.add_argument(
+        "--parts-prefix",
+        default="",
+        help="prefix each parts[].path with this (e.g. 'stable/') so the manifest "
+        "points at its own channel's payload directory (#1648)",
+    )
     a = ap.parse_args(argv)
 
-    combined = combine(a.primary, a.extra)
+    combined = combine(
+        a.primary,
+        a.extra,
+        built_utc=a.built_utc or None,
+        parts_prefix=a.parts_prefix,
+    )
     if not combined["builds"]:
         print("error: no builds in any input manifest", file=sys.stderr)
         return 1

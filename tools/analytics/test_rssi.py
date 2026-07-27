@@ -9,13 +9,11 @@ stale or 0 dBm value.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import _rssi_band, build_context
-from device_registry import Device, Registry
-from parse_v1 import parse_files
+from tools.analytics.dashboard import _rssi_band, build_context
+from tools.analytics.device_registry import Device, Registry
+from tools.analytics.parse_v1 import parse_files
 
 _COLS = (
     "record_type,timestamp_utc,timestamp_local,session_id,device_id,"

@@ -10,15 +10,13 @@ real HTTP server (the actual byte-level contract, no physical hardware needed).
 from __future__ import annotations
 
 import http.server
-import sys
 import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import parse_files
-from source_adapter import (
+from tools.analytics.parse_v1 import parse_files
+from tools.analytics.source_adapter import (
     DEVICE_ADAPTER_VERSION,
     DeviceAdapter,
     FleetAdapter,
@@ -195,7 +193,7 @@ def test_device_adapter_unreachable_device_is_empty_not_a_crash() -> None:
     assert data.readings == [] and data.segments == []
 
 
-def test_device_adapter_empty_response_is_honest_empty() -> None:
+def test_device_adapter_empty_response_is_calm_empty() -> None:
     # every channel empty (g_last_row[ch][0] == '\0') -> just the header line
     da = DeviceAdapter("http://192.0.2.1", fetch=lambda url: _DEVICE_COLS_HEADER + "\n")
     data = da.load()
@@ -325,7 +323,7 @@ def test_fleet_inputs_reach_only_the_first_adapter() -> None:
 
         def load(self, inputs=None):  # matches the SourceAdapter contract
             seen[self._name] = inputs
-            from parse_v1 import LogData
+            from tools.analytics.parse_v1 import LogData
 
             return LogData()
 

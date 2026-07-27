@@ -2,10 +2,16 @@
 
 **Status:** Accepted — *maintainer-ratified 2026-07-10 (v0.7.2 ADR batch), **with the maker-first scaling ruling**:
 the fence is pull-only + software-verified signatures + A/B confirmed-boot rollback — and **no permanent eFuse burns,
-ever, on kit boards** (no hardware Secure Boot, no fused anti-rollback counters; downgrade protection is a software
-check). Boards must always remain USB-reflashable for any other project — the maker door is a feature of the threat
+ever, on kit boards** (no hardware Secure Boot, no fused anti-rollback counters — no permanent hardware locks of
+any kind). Boards must always remain USB-reflashable for any other project — the maker door is a feature of the threat
 model, not a hole. Trellis edits this scaling + the Phase-0 acknowledgment into the body (living-document policy,
 ADR-0000 §4).*
+
+**Phase-1 staged amendment — ratified 2026-07-19 (#877, maintainer):** the phasing is now formal. Phase 0 (LAN +
+password interim, shipped) is ratified retroactively; **Phase 1 = signed + pull-only, both landing v0.8.0**
+(Firmware sequences, signing-first). **Anti-rollback is DECLINED for this device class** (old Decision 4
+rewritten — release-feed curation is the SBOM remediation instead). The public Phase-0 password is cleared
+**first**, standalone (new Decision 8). Folded into the body below.*
 
 **Date:** 2026-07-03
 **Owner:** Trellis (architecture) — Firmware owns OTA / secure-boot mechanics, DX owns the flasher page
@@ -14,8 +20,9 @@ ADR-0000 §4).*
 [ADR-0016](0016-actuation-wiring-seam.md) (single actuation authority — whoever controls the firmware controls
 the pumps)
 **Relates:** #271 (web-flasher, DX spike) · #302 (OTA) · #275 (captive portal — OTA's WiFi prereq) · #457
-(flasher page, merged) · #59 (go-public / hosting / encryption-at-rest) · #573 (identifier-guard) · epic #267 /
-PRD-0005
+(flasher page, merged) · #59 (go-public / hosting / encryption-at-rest) · #573 (identifier-guard) · #877 (the
+v0.8.0 Phase-1 staged-amendment ratification) · #302 Phase 1 · #826 (WiFi command parity — held behind Phase-1
+auth) · epic #267 / PRD-0005
 
 ---
 
@@ -52,9 +59,10 @@ there is no unverified S3/C5 image to offer.
 plus A/B confirmed-boot rollback with a watchdog-feed, C5 recovery/OTA envs, and a board-aware `just ota`. It
 realizes Decision 3 (A/B rollback), but as a bench mechanism it is **push to an inbound receiver — not yet the
 pull-only, no-inbound model of Decision 1** — with a **placeholder password** and **no signature check**. So
-**pull-only (Decision 1)**, the signed-only fence (Decision 2), and software anti-rollback (Decision 4) are all
-hardening still to layer on before OTA is exposed beyond the trusted bench LAN. Phase-0 proved the *transport*
-(image write + rollback); the pull + signing + anti-rollback fence is what makes it shippable.
+**pull-only (Decision 1)** and the **signed-only fence (Decision 2)** are the Phase-1 hardening to layer on before
+OTA is exposed beyond the trusted bench LAN — **both ratified for v0.8.0** (2026-07-19). Phase-0 proved the
+*transport* (image write + rollback); **signing + pull** is what makes it shippable. (Anti-rollback was
+considered and **declined** for this device class — see Decision 4.)
 
 ## Decision
 
@@ -88,14 +96,27 @@ OTA uses the standard ESP-IDF dual-partition path (`esp_ota` + `app_rollback`): 
 **confirm health, else roll back to the last-good image.** #302's own AC ("fail-safe to last-good, no bricking")
 is met by the platform mechanism, not a hand-rolled one.
 
-### 4. Anti-rollback (downgrade protection) — required for OTA
+### 4. Anti-rollback is DECLINED for this device class — release-feed curation is the remediation
 
-A monotonic version check prevents the **remote** OTA path from applying a **signed-but-known-vulnerable** older
-image — a **software** counter (persisted in NVS / the app, per the maker-first ruling), **never a fused one-way
-eFuse counter.** The no-burn consequence: a *physically-present* owner can still USB-flash any version (the maker
-door), so this is best-effort downgrade protection on the *remote* path, not an absolute hardware lock — which
-matches the home-hobby threat model (the LAN attacker is fenced; the owner is trusted). **Open (Firmware /
-maintainer):** whether the software check lands in the first OTA slice or a fast-follow.
+*(Amended 2026-07-19, #877 — reverses the original "anti-rollback required.")* A blanket monotonic downgrade
+counter is **not built.** For a non-permanent maker device that measures dirt, it is the wrong tool: it earns
+almost nothing — signing (Decision 2) already stops arbitrary / malicious code, so the only residual it covers is
+a *downgrade-replay* of an old **legitimately-signed** image over the OTA path, which is already fenced by
+CI-sole-signing + HTTPS + LAN-only — and it pays for that thin residual by fighting the maker ethos (a monotonic
+counter blocks *every* legitimate downgrade, not just bad ones). **The USB maker door is untouched either way** —
+no eFuse, always USB-reflashable (Decision 2).
+
+**What actually invalidates a bad release: pull it from the feed.** When the SBOM / dependency-audit process
+confirms a shipped release carries a known-vulnerable package, the remediation is at the **source**, not on the
+device: **stop serving that release from the OTA feed** and serve the fixed one (+ a security note in the release
+record). In the pull model (Decision 1) the maintainer controls what is offered, so every OTA device pulls the
+fix and the bad build is simply no longer available — free, immediate, and maker-clean. *(This lives in the
+release / SBOM process — [ADR-0009](0009-versioning-and-release-policy.md) / RELEASE_CUT — not the firmware.)*
+
+**Revisit trigger:** if Sprout ever grows a **beyond-LAN update fleet** where a downgrade-replay is genuinely
+reachable *and* devices hold high-value secrets an old version could leak, reconsider — and even then the right
+shape is a **surgical, SBOM-keyed security floor** (a minimum-safe-version raised only when a vuln is confirmed,
+blocking the *specific* bad versions while preserving legitimate downgrades), **never a blanket counter.**
 
 ### 5. An update preserves identity + secrets, and never leaks them
 
@@ -122,6 +143,17 @@ update log names the *version*, never the secret).
 ADR-0020 §4's setup AP is local-link, short-lived, **config-only.** It never becomes a firmware-accepting surface
 — no "reflash from the setup page." OTA is pull-only (Decision 1); the AP's scope is unchanged.
 
+### 8. Clear the Phase-0 placeholder password first — a secret does not live in a public tree
+
+*(Added 2026-07-19, #877.)* The Phase-0 OTA receiver is password-gated with a documented **placeholder**
+(`docs/OTA_FLASH.md` + `firmware/include/config.h`). With the repo now public, that placeholder is a *published*
+secret — low real risk (LAN-only; and once signing lands the OTA password is largely security-moot), but a public
+codebase must not ship its own password, full stop. **It is cleared first, standalone, ahead of the Phase-1
+slices.** The fix is **structural, not a new value:** the real password moves to a **gitignored local config**
+(the migration `docs/OTA_FLASH.md` already documents), leaving only a non-secret default in-tree. Firmware makes
+the config-structure change; the maintainer sets the real value locally; **no secret is ever committed.** Once
+signing lands, Phase-1 decides whether the OTA password survives at all (signing may make it redundant).
+
 ## Consequences
 
 - The device gains an update path **without gaining an inbound surface** — ADR-0020 §3 stays literally true, and
@@ -129,14 +161,16 @@ ADR-0020 §4's setup AP is local-link, short-lived, **config-only.** It never be
 - The web-flasher stays **low-risk by construction** (desktop-USB, user gesture, provenance-before-install,
   classic-only-by-omission) — the ADR keeps its requirements light (provenance + HTTPS + verified-marker) rather
   than over-engineering a USB path.
-- **No brick, no silent downgrade:** A/B rollback + software anti-rollback make a failed or hostile update fail safe.
+- **No brick:** A/B confirmed-boot rollback (Decision 3) makes a failed or hostile update fail safe. *(Downgrade
+  protection is handled by curating the release feed, not an on-device counter — Decision 4.)*
 - **The maker door stays open by design:** no eFuse is ever burned, so a board is always USB-reflashable for any
   other project — the software signature check fences the *remote* OTA path, not the owner's cable. A feature of the
   threat model (LAN attacker fenced, physically-present owner trusted), not a hole.
 - The do-not-flash safety rule becomes **enforceable** (the verified-marker gate) instead of documentation.
-- **Named residual risks (not solved here):** signing-key custody + anti-rollback sequencing (Firmware);
-  encryption-at-rest for NVS credentials remains #59's (ADR-0020 already flagged it); a compromised release
-  origin is out of scope for the home-hobby model but bounded by signing (a MITM cannot forge a signed image).
+- **Named residual risks (not solved here):** signing-key custody mechanics (Firmware; the *scheme* is
+  concretized in Decision 2); encryption-at-rest for NVS credentials remains #59's (ADR-0020 already flagged it);
+  a compromised release origin is out of scope for the home-hobby model but bounded by signing (a MITM cannot
+  forge a signed image) — and a known-vulnerable release is pulled from the feed (Decision 4).
 
 ## Rejected alternatives
 
@@ -144,16 +178,23 @@ ADR-0020 §4's setup AP is local-link, short-lived, **config-only.** It never be
   ADR-0016's no-remote-actuation rule.
 - **Unsigned OTA "for convenience."** Rejected: an unsigned update = arbitrary code = a full actuation bypass on
   a semi-trusted LAN (ADR-0020's stated threat model).
+- **Blanket / fused anti-rollback for this device class.** Rejected (2026-07-19, #877): a monotonic downgrade
+  counter fights the maker ethos and guards a residual already fenced by signing + HTTPS + LAN-only; the SBOM
+  remediation is to curate the release feed, not lock the device (Decision 4).
 - **A device-served reflash page.** Rejected: it makes the config AP a firmware surface (Decision 7).
 - **Hand-rolled dual-partition / rollback.** Rejected: ESP-IDF ships it; reinventing it is how a device bricks.
 
 ## Open (routed)
 
-- **`for:firmware`** — signing-key custody + fuse strategy (Decision 2); anti-rollback slice-vs-fast-follow
-  (Decision 4); the `factory_bin` "verified" marker (Decision 6 — DX's spike flagged it as Firmware's call).
+- **`for:firmware`** — **clear the Phase-0 password first** (Decision 8, standalone); then **Phase 1 = signing +
+  pull-only for v0.8.0** (Decisions 1 & 2, signing-first sequencing); the `factory_bin` "verified" marker
+  (Decision 6). The signing *scheme* is concretized (ed25519, #989); custody *mechanics* remain Firmware's.
+- **`for:workflow`** — fold the **release/SBOM remediation** (Decision 4) into
+  [ADR-0009](0009-versioning-and-release-policy.md) / RELEASE_CUT: on a confirmed known-vulnerable shipped
+  release, pull it from the OTA feed + note it in the release record.
 - **`for:dx`** — on-page browser-support copy (desktop-Chromium-only) + the provenance-before-install UX;
   hosting rides #59.
-- **Maintainer** — ratify the fence (pull-only + signed + verified-marker) before the W2 build starts, so the
-  slices build against a reviewed contract instead of retrofitting one.
+- **Maintainer** — ✓ **ratified** the fence + the Phase-1 staged amendment (2026-07-19, #877): signed + pull in
+  v0.8.0, anti-rollback declined, password cleared first.
 
 — Trellis 🪴

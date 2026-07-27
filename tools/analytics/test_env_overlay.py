@@ -9,12 +9,10 @@ earn their space) is the companion doc, docs/analysis/env-value-verdict.md.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dashboard import build_context
-from parse_v1 import parse_files
+from tools.analytics.dashboard import build_context
+from tools.analytics.parse_v1 import parse_files
 
 _HEADER = (
     "# fw=0.8.0  git=test123  run=envtest\n"
@@ -68,7 +66,7 @@ def test_no_context_means_no_toggle_and_null_points(tmp_path: Path) -> None:
             _soil("2026-07-03T00:30:30.000Z", 1520),
         ],
     )
-    assert d["has_env"] is False  # honest-empty: the overlay toggle never appears
+    assert d["has_env"] is False  # calm-empty: the overlay toggle never appears
     assert all(p["temp_c"] is None and p["rh_pct"] is None for p in d["env_points"])
 
 

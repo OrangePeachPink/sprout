@@ -28,6 +28,10 @@
 docs/design/**          linguist-documentation
 **/*.dc.html            linguist-generated
 docs/design/_archive/** linguist-vendored
+# Monocypher is vendored third-party crypto (#1282), not our code — ~148 KB, about a
+# third of the repo's C. Counting it as ours overstates the C we actually wrote, which
+# is the same reasoning as the three lines above.
+firmware/lib/monocypher/** linguist-vendored
 
 # Append-only registries: auto-resolve "keep both" conflicts with the built-in `union`
 # merge driver (both sides' added lines kept), so two lanes appending in parallel don't

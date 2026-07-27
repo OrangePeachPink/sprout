@@ -11,17 +11,16 @@ single-flight, auto-stop vs operator-stop, and input sanitization.
 from __future__ import annotations
 
 import shutil
-import sys
 import tempfile
 import time
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
+from tools.capture import (
+    control,
+    serial_lock,
+)
 
-import control  # noqa: E402
-import serial_lock  # noqa: E402
+_HERE = Path(__file__).resolve().parent
 
 _FAILS: list[str] = []
 

@@ -28,9 +28,9 @@ check, and it's worth doing *before* you wire, not after you get a strange readi
 Wiring more than one sensor? Every sensor's power and ground can share the same `3V3`/`GND` rail
 (a breadboard row works fine); only the signal wires need their own separate pin.
 
-## 3. Flash Sprout onto the board (the one-time step)
+## 3. Flash Sprout onto the board (the setup step)
 
-This is the *only* time you need a computer plugged in:
+You'll need a computer plugged in for this:
 
 1. Plug the board in with a **USB data cable** (not a charge-only cable).
 2. Open the flasher page in **Chrome or Edge** on a desktop or laptop — not Safari, not a phone
@@ -39,7 +39,8 @@ This is the *only* time you need a computer plugged in:
 
 Full walkthrough, including what the browser prompts mean: **[FLASHING.md](../FLASHING.md)**.
 
-After this, updates arrive over Wi-Fi — you won't need the cable again for routine use.
+After this, Sprout runs on its own — but keep the cable: for now, updating means re-flashing from this page,
+since automatic over-the-air updates aren't shipped yet.
 
 ## 4. See your first reading
 
@@ -55,7 +56,7 @@ change as you touch the probe or move it between dry air and a cup of water.
 
 **What that number means (and what it doesn't):** the raw reading isn't a percentage — a soil
 sensor can't measure moisture as precisely as a number like "42%" implies. Sprout instead sorts
-readings into honest **bands** (dry, ideal, wet, and so on). Read
+readings into **bands** (dry, ideal, wet, and so on). Read
 **[What Sprout is telling you](what-sprout-is-telling-you.md)** to understand the bands and know
 when a reading means what it says.
 
@@ -65,7 +66,7 @@ Sprout can already take an **operator-commanded** watering action — you can te
 for a moment. But the automatic "water this plant when it's dry" loop is intentionally **not
 turned on yet**: the safety checks that make unattended watering trustworthy come first, in order
 (that's Sprout's rule — *make watering correct before it's possible*). This section grows as that
-work lands; for now, this guide gets you to a live, honest reading, which is the real foundation
+work lands; for now, this guide gets you to a live reading, which is the real foundation
 everything else builds on.
 
 ## If something looks off

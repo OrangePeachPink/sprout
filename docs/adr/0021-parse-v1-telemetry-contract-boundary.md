@@ -69,7 +69,7 @@ not open CSV, split lines, or parse `#` headers itself.
 ### 2. `DEFAULT_CAL_BOUNDS` is a temporary scaffold, not a caller export
 
 `DEFAULT_CAL_BOUNDS` is an interim fallback for log segments that pre-date the `# cal bounds`
-provenance header. It **must not be imported as calibration truth** by callers. Once #295 lands
+provenance header. It **must not be imported as calibration** by callers. Once #295 lands
 and `parse_v1` derives cal bounds from the log header, `DEFAULT_CAL_BOUNDS` becomes an internal
 fallback only; callers that need the effective bounds for a dataset read them from `LogData` (a
 field to be added by #295), not from the module constant.

@@ -8,11 +8,9 @@ de-duplicated all_plants() roll-up the monitor-all view (#486) consumes.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import device_registry as dr
+from tools.analytics import device_registry as dr
 
 _CONFIG = Path(__file__).resolve().parents[1] / "config"
 

@@ -7,12 +7,7 @@ The reclaim loop is the risky part (it stops live processes), so it takes inject
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-from collection import build_parser, reclaim
+from tools.dx.collection import build_parser, reclaim
 
 
 def _recorder():

@@ -59,6 +59,53 @@
   --space-lg: 24px;
   --space-xl: 40px;
 
+  /* ---- #930 the full creative palette (charter-ruled, 2026-07-19) ------------- */
+  /* chrome aliases - the charter's muted-neutral family named (rule 2). Semantic
+   * names over the existing neutrals; never a new hue, never near the state ramp. */
+  --sprout-soft: var(--bg);
+  --mist: var(--surface-2);
+  --sand: var(--surface);
+  --soil-line: var(--border);
+  --soil-muted: var(--muted);
+  --soil-ink: var(--ink);
+
+  /* identity materials - the MUTED register (charter rule 3, two-register
+   * principle): pot / foliage / per-plant identity colour. Capped saturation by
+   * construction; can never be mistaken for a state hue. 12 for a full fleet. */
+  --mat-terracotta: #B98F6F;
+  --mat-clay: #C08A6A;
+  --mat-persimmon: #CB763E;
+  --mat-stoneware: #9AA6A0;
+  --mat-stone: #A59E93;
+  --mat-ceramic: #8FA3B0;
+  --mat-cream: #E3DAC2;
+  --mat-sage-glaze: #A9B7A0;
+  --mat-charcoal: #52585A;
+  --mat-moss: #7E9B6B;
+  --mat-bark: #7C6A4E;
+  --mat-slate: #6E7B86;
+
+  /* chart series - the charter's chart-series pass (#930/#1039): a line is a
+   * plant's IDENTITY, so series strokes come from the muted materials register;
+   * the band-ground carries state; focus-on-interaction saturates ONE series to
+   * ink and drops the rest. Order is legibility-first: adjacent channels get
+   * maximally-different strokes; cream sits last (too light for a thin line).
+   * NEVER a fleet-wide 0-100 raw normalization behind these (#1039 ruling 3). */
+  --series-1: var(--mat-terracotta);
+  --series-2: var(--mat-ceramic);
+  --series-3: var(--mat-moss);
+  --series-4: var(--mat-charcoal);
+  --series-5: var(--mat-persimmon);
+  --series-6: var(--mat-slate);
+  --series-7: var(--mat-sage-glaze);
+  --series-8: var(--mat-bark);
+  --series-9: var(--mat-clay);
+  --series-10: var(--mat-stoneware);
+  --series-11: var(--mat-stone);
+  --series-12: var(--mat-cream);
+  --series-focus: var(--ink);   /* the one saturated line under interaction */
+  --series-faint: 0.28;         /* unfocused-line opacity while one is focused */
+
   /* radius */
   --r-control: 8px;
   --r-tile: 14px;
@@ -88,5 +135,20 @@
   --leaf: #93DD6A;
   --st-watering: #3FD0DE;
   --st-fault: #FF6B5E;
+  /* #930 materials on dark soil - lifted a step so thin strokes stay legible on
+   * the deep ground; same hue family, never the state ramp. */
+  --mat-terracotta: #C9A183;
+  --mat-clay: #D09C7E;
+  --mat-persimmon: #DC8A55;
+  --mat-stoneware: #AAB6B0;
+  --mat-stone: #B5AEA3;
+  --mat-ceramic: #9FB3C0;
+  --mat-cream: #E9E2CE;
+  --mat-sage-glaze: #B9C7B0;
+  --mat-charcoal: #8A9298;
+  --mat-moss: #93AE80;
+  --mat-bark: #9A8768;
+  --mat-slate: #8493A0;
+
   /* live status dots: add  box-shadow: 0 0 8px currentColor  for the glow */
 }

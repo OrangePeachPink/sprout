@@ -7,14 +7,16 @@ and the ADR-0022 confidence-vocabulary guard.
 
 from __future__ import annotations
 
-import sys
 import textwrap
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parse_v1 import DEFAULT_CAL_BOUNDS, cal_bounds_for_channel, parse_file
+from tools.analytics.parse_v1 import (
+    DEFAULT_CAL_BOUNDS,
+    cal_bounds_for_channel,
+    parse_file,
+)
 
 _COLS = "record_type,timestamp_utc,session_id,raw_value,quality_flag,payload"
 _ROW = "plants.soil,2026-06-27T00:00:30.000Z,sess001,1312,OK,level=well watered;gpio=36"
