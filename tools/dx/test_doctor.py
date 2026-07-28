@@ -8,6 +8,7 @@ guard that owns it.
 
 import json
 import socket
+from pathlib import Path
 
 import pytest
 
@@ -121,3 +122,75 @@ def test_every_check_returns_a_graded_result(name) -> None:
     r = getattr(d, name)()
     assert r.status in (d.OK, d.WARN, d.FAIL)
     assert r.name and r.detail
+
+
+# ---- #1688: a worktree can read a registry the running app never sees ----------
+# Measured when filed: root checkout had `hydrology` on 11/11 plants, a worktree had
+# 7/11. The dangerous case is a TEST asserting profile-dependent behaviour in a
+# worktree — it asserts against a registry nobody runs, so it can pass while the
+# product is broken, and the failure is invisible because both files legitimately exist.
+
+
+def _config(root: Path, **files: str) -> Path:
+    (root / "config").mkdir(parents=True, exist_ok=True)
+    for name, body in files.items():
+        (root / "config" / name.replace("__", ".")).write_text(body, encoding="utf-8")
+    return root
+
+
+def test_backup_files_are_not_treated_as_registries(tmp_path: Path) -> None:
+    """The operator's backups live only in the main checkout, by design.
+
+    `*.local.json*` also matches devices.local.json.bak-20260706_200920 and eight
+    siblings. Listing twelve files, nine of them noise, produces a warning people skim —
+    and a warning people skim is not a warning.
+    """
+    root = _config(
+        tmp_path,
+        devices__local__json="{}",
+    )
+    (root / "config" / "devices.local.json.bak-20260706_200920").write_text(
+        "{}", "utf-8"
+    )
+    (root / "config" / "devices.local.json.v5-parked-20260720").write_text(
+        "{}", "utf-8"
+    )
+    found = d._local_configs(root)
+    assert set(found) == {"devices.local.json"}
+
+
+def test_jsonl_registries_are_included(tmp_path: Path) -> None:
+    """watering_log.local.jsonl is a registry too — the list is not just .json."""
+    root = _config(tmp_path, watering_log__local__jsonl="{}\n")
+    assert "watering_log.local.jsonl" in d._local_configs(root)
+
+
+def test_a_checkout_with_no_config_dir_is_not_an_error(tmp_path: Path) -> None:
+    assert d._local_configs(tmp_path) == {}
+
+
+def test_git_names_the_main_worktree() -> None:
+    """The whole reason this needs no env var or marker file.
+
+    #1688 weighed a canonical-root scheme against 'make it loud', noting that a
+    canonical root 'couples every worktree to a path outside itself'. Git already
+    maintains exactly that coupling — `git worktree list` reports it — so whoever wants
+    the canonical-root shape has a cheaper path than the issue assumed.
+    """
+    root = d.main_worktree()
+    assert root is not None and root.exists()
+
+
+def test_the_drift_check_is_registered() -> None:
+    assert d.check_local_config_drift in d.CHECKS
+
+
+def test_drift_is_a_warn_never_a_fail() -> None:
+    """It reports; it does not resolve.
+
+    Redirecting reads to one canonical root is a behaviour change in another lane's
+    modules, and #1688 filed shapes rather than a decision. A `fail` here would also
+    make `doctor` non-zero in every worktree, which trains people to stop running it.
+    """
+    c = d.check_local_config_drift()
+    assert c.status in (d.OK, d.WARN)

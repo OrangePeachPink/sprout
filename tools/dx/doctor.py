@@ -230,6 +230,110 @@ def check_boards_declared() -> Check:
     return Check("boards declared", OK, f"{len(devices)} device(s) declared")
 
 
+def main_worktree() -> Path | None:
+    """The checkout the app actually runs from, per git itself.
+
+    #1688: `git worktree list` names the main worktree on its first line. This is why
+    the drift below needs no env var and no marker file — git already maintains the
+    coupling that a canonical-root scheme would have to invent.
+    """
+    out = subprocess.run(
+        ["git", "worktree", "list", "--porcelain"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        cwd=REPO_ROOT,
+    )
+    if out.returncode != 0:
+        return None
+    for line in out.stdout.splitlines():
+        if line.startswith("worktree "):
+            return Path(line[len("worktree ") :].strip())
+    return None
+
+
+# Gitignored operator state. Each is resolved by its module RELATIVE TO THAT MODULE'S
+# OWN checkout, so every worktree carries a private copy that diverges the moment
+# anyone edits one.
+#
+# EXACT suffixes, not `*.local.json*`. The loose glob also matches the operator's
+# backups — devices.local.json.bak-20260706_200920 and eight siblings — which live only
+# in the main checkout by design. Listing twelve files, nine of them noise, produces a
+# warning people skim, and a warning people skim is not a warning.
+LOCAL_CONFIG_SUFFIXES = (".local.json", ".local.jsonl")
+
+
+def _local_configs(checkout: Path) -> dict[str, Path]:
+    d = checkout / "config"
+    if not d.is_dir():
+        return {}
+    return {
+        p.name: p
+        for p in d.iterdir()
+        if p.is_file() and p.name.endswith(LOCAL_CONFIG_SUFFIXES)
+    }
+
+
+def check_local_config_drift() -> Check:
+    """#1688 — a worktree can silently read a registry the running app never sees.
+
+    Measured when this was filed: the root checkout had `hydrology` on 11/11 plants,
+    a worktree had 7/11. The first verification of #1644's write ran with the worktree
+    on `sys.path`, read that stale copy, and reported a field missing on data that had
+    just been written correctly to the file the app actually reads.
+
+    **The dangerous case is the opposite one.** A test asserting profile-dependent
+    behaviour, run in a worktree, is asserting against a registry nobody runs — it can
+    pass while the product is broken, or fail while the product is fine, and the failure
+    is invisible because both files legitimately exist.
+
+    This announces the drift rather than resolving it. Redirecting reads to one
+    canonical root is a behaviour change in another lane's modules, and #1688 filed it
+    as options rather than a decision.
+    """
+    root = main_worktree()
+    if root is None:
+        return Check("local config", WARN, "cannot ask git for the main worktree")
+    here = REPO_ROOT.resolve()
+    if root.resolve() == here:
+        return Check(
+            "local config", OK, "this IS the main checkout — no drift possible"
+        )
+
+    mine = _local_configs(here)
+    theirs = _local_configs(root)
+    names = sorted(set(mine) | set(theirs))
+    if not names:
+        return Check("local config", OK, "no local operator config in either checkout")
+
+    drifted: list[str] = []
+    for n in names:
+        a, b = mine.get(n), theirs.get(n)
+        if a is None:
+            drifted.append(f"{n} (missing here, present in the main checkout)")
+        elif b is None:
+            drifted.append(f"{n} (present here, missing from the main checkout)")
+        else:
+            try:
+                if a.read_bytes() != b.read_bytes():
+                    drifted.append(n)
+            except OSError:
+                drifted.append(f"{n} (unreadable)")
+    if not drifted:
+        return Check(
+            "local config", OK, f"{len(names)} local file(s) match the main checkout"
+        )
+    return Check(
+        "local config",
+        WARN,
+        f"DIFFERS from the main checkout ({root}): {', '.join(drifted)}. Anything you "
+        "read here is not what the running app reads (#1688)",
+        "copy from the main checkout, or run profile-dependent work from there — a "
+        "test that reads this file is asserting against a registry nobody runs",
+    )
+
+
 def check_serial_ports() -> Check:
     """Optional by design: a contributor with no hardware is not broken."""
     try:
@@ -265,6 +369,7 @@ CHECKS = (
     check_clone_path,
     check_port,
     check_boards_declared,
+    check_local_config_drift,
     check_serial_ports,
     check_firmware_toolchain,
 )
