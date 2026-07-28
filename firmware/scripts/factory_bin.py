@@ -16,6 +16,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 
 Import("env")  # noqa: F821 - injected by PlatformIO
 
@@ -42,15 +43,12 @@ def _fw_version():
 # alpha label is built so it CANNOT be mistaken for a release - the "-alpha+<sha>"
 # suffix is structural, not cosmetic, so the exact commit always travels and no
 # bare release version can appear on a non-release build.
-def channel_label(fw_version, exact_tag, dirty):
-    """(channel, version_label) from the config version + git state. Pure - the
-    git calls live in the caller so this is testable without a repo."""
-    if exact_tag and not dirty:
-        return "stable", exact_tag.lstrip("v")
-    suffix = "-alpha"
-    if dirty:
-        suffix = "-alpha-dirty"
-    return "alpha", f"{fw_version}{suffix}"
+# #1614: ONE definition, consumed twice. git_rev.py compiles the same channel into
+# the firmware, so the manifest and the board can never disagree about which channel
+# produced the image. Re-exported here so existing callers/tests keep working.
+# $PROJECT_DIR, not __file__ - PlatformIO execs extra_scripts without one.
+sys.path.insert(0, os.path.join(env.subst("$PROJECT_DIR"), "scripts"))  # noqa: F821
+from build_channel import channel_label  # noqa: E402
 
 
 def _exact_tag(root):

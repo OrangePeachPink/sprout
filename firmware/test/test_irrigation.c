@@ -29,6 +29,7 @@
 #include "as7263.h"
 #include "telemetry.h"
 #include "board_capability.h" /* #273 capability descriptor + gate seam */
+#include "build_identity.h" /* #1614 channel + built_utc (+ fallbacks) */
 #include "board_variant.h" /* #1681 runtime variant -> measured rails        */
 #include "calibration.h" /* SENSOR_CAL_BOUNDARY — per-channel raw->band (#170) */
 #include "wifi_net.h" /* #21 connect-scaffold state machine */
@@ -1440,6 +1441,37 @@ void t_board_capability(void)
     }
     TEST_ASSERT_FALSE_MESSAGE(BOARD_CAP.cal_verified,
                               "host is not a real board -> not bench-verified");
+}
+
+/* #1614: the build must be able to say WHICH channel produced it. version+commit
+ * could not separate "the stable v0.8.0 release" from "an alpha build sitting on a
+ * commit tagged 0.8.0" - and on the #1334 B3 bench the honest answer was alpha with
+ * nothing on the wire saying so. A channel that cannot be read back is a claim, not
+ * a fact, so these two macros must always be present and non-empty. */
+void t_build_identity_channel_and_built_utc(void)
+{
+    const char *ch = PLANTS_BUILD_CHANNEL;
+    const char *bu = PLANTS_BUILT_UTC;
+
+    TEST_ASSERT_NOT_NULL(ch);
+    TEST_ASSERT_NOT_NULL(bu);
+    TEST_ASSERT_TRUE_MESSAGE(strlen(ch) > 0, "channel must never be empty");
+    TEST_ASSERT_TRUE_MESSAGE(strlen(bu) > 0, "built_utc must never be empty");
+
+    /* The vocabulary is closed. "unknown" is the honest fallback for a build made
+     * outside the normal path - what must NEVER happen is an unset channel quietly
+     * reading as "stable", because the trusted value is the dangerous default. */
+    bool known = (strcmp(ch, "stable") == 0) || (strcmp(ch, "alpha") == 0) ||
+                 (strcmp(ch, "unknown") == 0);
+    TEST_ASSERT_TRUE_MESSAGE(known,
+                             "channel is stable|alpha|unknown, nothing else");
+
+    /* The compile-time fallback must not impersonate a real release. */
+    if (strcmp(ch, "unknown") == 0) {
+        TEST_ASSERT_EQUAL_STRING_MESSAGE(
+            "unknown", bu,
+            "a build that cannot name its channel must not claim a build time");
+    }
 }
 
 /* #1681: two S3s share ONE board class and must NOT share one calibration.
@@ -3359,6 +3391,7 @@ int main(void)
     RUN_TEST(t_ota_pull_run_orchestrator);
     RUN_TEST(t_band_anchors);
     RUN_TEST(t_board_capability);
+    RUN_TEST(t_build_identity_channel_and_built_utc);
     RUN_TEST(t_board_variant_rails);
     RUN_TEST(t_board_variant_closes_the_open_probe_gap);
     RUN_TEST(t_sensor_type_resistive);
