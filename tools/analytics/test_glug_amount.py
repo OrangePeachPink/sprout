@@ -121,8 +121,55 @@ def test_a_third_of_a_cup_round_trips_back_to_a_third() -> None:
 # opening the picker is not a watering
 # --------------------------------------------------------------------------- #
 def test_the_chips_carry_every_amount_she_actually_measures_with() -> None:
-    for frac in ("⅛", "¼", "⅓", "½", "¾", "1½"):
+    """#1675: ⅔ joined them — she poured it on 07-26 and, with no chip for it, entered
+    it as ⅓ twice, which minted a two-pour session for a single pour."""
+    for frac in ("⅛", "¼", "⅓", "½", "⅔", "¾", "1½"):
         assert frac in _JS, frac
+
+
+def test_EVERY_chip_round_trips_through_the_readback() -> None:
+    """#1675, Design's catch: the strip and the readback are one vocabulary or they are
+    a bug. `mlToCupWords` snapped to eighths only, so ⅓ — a chip since #1643 — came back
+    as "0.33 cups". She taps a fraction and is answered in a decimal: the same class as
+    a manufactured `shape`, with the readback doing the manufacturing.
+
+    This is the property, not the values: whatever the strip offers, the card can
+    say back."""
+    out = _run(
+        "var said = CUPS.map(function (c) "
+        "{ return [c[0], mlToCupWords(cupsToMl(c[1]))]; });\n"
+        "_posts.push({url: 'chips', body: said});\n"
+    )
+    for label, words in out["posts"][0]["body"]:
+        # the space in "1 ½ cups" is a separator, not a different amount — compare on
+        # the characters, which is what she reads
+        assert label in words.replace(" ", ""), f"chip {label!r} reads back {words!r}"
+        assert "." not in words, f"chip {label!r} fell to a decimal: {words!r}"
+
+
+def test_an_off_grid_amount_still_falls_to_a_decimal() -> None:
+    """The guard must survive the wider vocabulary: an amount on NEITHER grid — a pump,
+    a free entry, a jug — is reported as a decimal rather than forced onto the nearest
+    fraction, which would misreport what she actually poured."""
+    out = _run(
+        "_posts.push({url: 'x', body: [mlToCupWords(300), mlToCupWords(276)]});\n"
+    )
+    for words in out["posts"][0]["body"]:
+        assert "cups" in words and "." in words, words
+
+
+def test_exactly_one_cup_is_singular() -> None:
+    """236.6 mL is the stored value for one cup and divides to 1.00005 — a float compare
+    read that as plural and printed "1 cups". The plural is decided from what was
+    rendered, not from the ratio."""
+    out = _run(
+        "_posts.push({url: 'x', body: [mlToCupWords(cupsToMl(1)), "
+        "mlToCupWords(cupsToMl(1.5)), mlToCupWords(cupsToMl(0.25))]});\n"
+    )
+    one, one_half, quarter = out["posts"][0]["body"]
+    assert one == "1 cup"
+    assert one_half.endswith(" cups")
+    assert quarter == "¼ cup"
 
 
 def test_the_amount_control_is_separate_from_the_glug_button() -> None:
