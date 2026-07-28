@@ -1,0 +1,9 @@
+plant_id,plant,role,device_id,sensor_id,first_utc,first_raw,last_utc,last_raw,first_to_last_delta,window_min_raw,window_max_raw,rows
+p01,Pothos (small),control,8gtt1h,ch0,2026-07-27T16:03:19.536Z,1224,2026-07-27T17:20:04.312Z,1221,-3,1201,1225,152
+p03,Pothos (XL),control,8gtt1h,ch1,2026-07-27T16:03:19.536Z,1336,2026-07-27T17:20:04.312Z,1335,-1,1313,1338,152
+p10,Pothos (office),treated,8gtt1h,ch2,2026-07-27T16:03:19.536Z,1726,2026-07-27T17:20:04.312Z,1112,-614,992,1727,152
+p07,Bromeliad?,control,8gtt1h,ch3,2026-07-27T16:03:19.536Z,1594,2026-07-27T17:20:04.312Z,1594,0,1573,1600,152
+p06,Anthurium 'Lovable Hearts',control,y9d41p,ch0,2026-07-27T16:03:19.386Z,1526,2026-07-27T17:20:04.276Z,1544,18,1515,1553,152
+p04,Dracaena? (cane-type),control,y9d41p,ch1,2026-07-27T16:03:19.386Z,1599,2026-07-27T17:20:04.276Z,1630,31,1587,1630,152
+p11,Corn-plant? (mini),treated,y9d41p,ch2,2026-07-27T16:03:19.386Z,1823,2026-07-27T17:20:04.276Z,1363,-460,1336,1852,152
+p02,Pothos (XXL),treated,y9d41p,ch3,2026-07-27T16:03:19.386Z,1807,2026-07-27T17:20:04.276Z,1479,-328,1369,1839,152

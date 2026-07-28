@@ -1,0 +1,9 @@
+plant_id,plant,role,device_id,sensor_id,observed_utc,raw,band,quality,spread,capture_window_min_raw,capture_window_min_utc,capture_window_max_raw,capture_start_raw,change_since_capture_start,event_utc,elapsed_hours,dose_ml,dose_cup,baseline_raw,delta_from_baseline,one_hour_raw,change_since_one_hour,change_from_capture_window_min
+p01,Pothos (small),control,8gtt1h,ch0,2026-07-28T14:36:59.117Z,1221,overwatered,OK,10,1200,2026-07-27T17:55:59.156Z,1240,1224,-3,,,,,,,,,
+p03,Pothos (XL),control,8gtt1h,ch1,2026-07-28T14:36:59.117Z,1392,well watered,OK,22,1313,2026-07-27T16:08:25.083Z,1412,1336,56,,,,,,,,,
+p10,Pothos (office),treated,8gtt1h,ch2,2026-07-28T14:36:59.117Z,1282,overwatered,OK,12,992,2026-07-27T16:06:53.426Z,1727,,,2026-07-27T16:08:46Z,22.4703,177.4,0.75,1727,-445,1104,178,290
+p07,Bromeliad?,control,8gtt1h,ch3,2026-07-28T14:36:59.117Z,1597,OK,OK,16,1573,2026-07-27T17:15:00.827Z,1618,1594,3,,,,,,,,,
+p06,Anthurium 'Lovable Hearts',control,y9d41p,ch0,2026-07-28T14:36:58.838Z,1595,well watered,OK,21,1515,2026-07-27T17:02:52.029Z,1596,1526,69,,,,,,,,,
+p04,Dracaena? (cane-type),control,y9d41p,ch1,2026-07-28T14:36:58.838Z,1725,OK,OK,38,1587,2026-07-27T16:36:57.392Z,1730,1599,126,,,,,,,,,
+p11,Corn-plant? (mini),treated,y9d41p,ch2,2026-07-28T14:36:58.838Z,1377,overwatered,OK,31,1321,2026-07-27T20:28:18.851Z,1852,,,2026-07-27T16:15:00Z,22.3663,177.4,0.75,1823,-446,1368,9,56
+p02,Pothos (XXL),treated,y9d41p,ch3,2026-07-28T14:36:58.838Z,1463,well watered,OK,7,1369,2026-07-27T16:18:36.486Z,1839,,,2026-07-27T16:18:20Z,22.3108,354.8,1.5,1807,-344,1481,-18,94

@@ -1,0 +1,4 @@
+capture_utc,plant_id,plant,baseline_raw,immediate_raw,local_min_raw,settled_raw,settled_delta_raw,acute_to_settled_ratio,band,quality,dose_ml,dose_cup,delivery,tray_state
+2026-07-27T16:29:17.2995347Z,p10,Pothos office,1727,1030,992,1073,-654,1.07,submerged,OK,177.4,0.75,single_pass,no_visible_water
+2026-07-27T16:29:17.2995347Z,p11,Corn-plant mini,1823,1713,1372,1393,-430,0.26,well watered,OK,177.4,0.75,center_first_then_unmeasured_wider_remainder,no_visible_water
+2026-07-27T16:29:17.2995347Z,p02,Pothos XXL,1807,1400,1369,1511,-296,1.38,well watered,OK,354.9,1.5,two_pass_0.75_plus_0.75_cup,small_typical_or_less
