@@ -1,0 +1,4 @@
+plant_id,device_id,sensor_id,dose_ml,dose_cup,target_utc,observed_utc,offset_s,raw,band,quality,spread,delta_from_baseline,early_reference_min_raw,change_from_early_reference_min,capture_window_min_raw,capture_window_min_utc,change_from_capture_window_min
+p10,8gtt1h,ch2,177.4,0.75,2026-07-27T17:08:46Z,2026-07-27T17:08:57.026Z,11.026,1104,overwatered,OK,14,-623,992,112,992,2026-07-27T16:06:53.426Z,112
+p11,y9d41p,ch2,177.4,0.75,2026-07-27T17:15:00Z,2026-07-27T17:15:00.732Z,0.732,1368,overwatered,OK,36,-455,1372,-4,1336,2026-07-27T17:07:24.621Z,32
+p02,y9d41p,ch3,354.8,1.5,2026-07-27T17:18:20Z,2026-07-27T17:18:33.432Z,13.432,1481,well watered,OK,7,-326,1369,112,1369,2026-07-27T16:18:36.486Z,112

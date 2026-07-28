@@ -1,0 +1,6 @@
+capture_utc,device_timestamp_utc,plant_id,plant,device_id,channel,gpio,baseline_raw,immediate_raw,delta_raw,band,quality,spread,dose_ml,dose_cup,journal_recorded_plant_id
+2026-07-27T16:07:32.6914484Z,2026-07-27T16:07:32.146Z,p10,Pothos office,8gtt1h,ch2,5,1727,1030,-697,submerged,OK,5,177.4,0.75,p02
+2026-07-27T16:15:22.4751476Z,2026-07-27T16:15:16.236Z,p11,Corn-plant mini,y9d41p,ch2,34,1823,1713,-110,OK,OK,28,177.4,0.75,not_logged_ui_suspended
+2026-07-27T16:18:56.1174350Z,2026-07-27T16:18:32.146Z,p10,Pothos office,8gtt1h,ch2,5,1727,1051,-676,submerged,OK,19,177.4,0.75,p10
+2026-07-27T16:18:56.1174350Z,2026-07-27T16:18:46.236Z,p11,Corn-plant mini,y9d41p,ch2,34,1823,1444,-379,well watered,OK,21,177.4,0.75,not_logged_ui_suspended
+2026-07-27T16:18:56.1174350Z,2026-07-27T16:18:46.236Z,p02,Pothos XXL,y9d41p,ch3,35,1807,1400,-407,well watered,OK,25,354.9,1.5,p02_first_half_only

@@ -1,0 +1,4 @@
+{"plant_id": "p02", "source": "manual", "ts": "2026-07-27T16:07:32Z", "ml": 177.4}
+{"plant_id": "p10", "source": "manual", "ts": "2026-07-27T16:08:46Z", "ml": 177.4}
+{"plant_id": "p11", "source": "manual", "ts": "2026-07-27T16:15:00Z", "ml": 177.4, "note": "backfilled 2026-07-27 from operator ground truth; estimated within physical pour window 16:14:46Z–16:15:16Z"}
+{"plant_id": "p02", "source": "manual", "ts": "2026-07-27T16:18:20Z", "ml": 177.4, "note": "backfilled 2026-07-27 from operator ground truth; second 0.75 cup pass estimated within logger window 16:18:06Z–16:18:36Z"}

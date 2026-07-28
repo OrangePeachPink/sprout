@@ -1,0 +1,3 @@
+# Evidence is byte-preserved: no EOL normalization, ever. FILELIST.sha256.tsv
+# hashes are computed on these exact bytes and must verify after checkout.
+** -text

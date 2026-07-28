@@ -1,0 +1,4 @@
+capture_utc,device_timestamp_utc,plant_id,plant,device_id,channel,gpio,raw,band,quality,spread,cal_tier,config_id,planned_dose_ml,planned_dose_cup
+2026-07-27T16:03:57.8905029Z,2026-07-27T16:03:32.146Z,p10,Pothos office,8gtt1h,ch2,5,1727,needs water,OK,12,board-cal,170b1c1e,177.4,0.75
+2026-07-27T16:03:57.8905029Z,2026-07-27T16:03:46.236Z,p11,Corn-plant mini,y9d41p,ch2,34,1852,OK,OK,30,channel-cal,257fa022,177.4,0.75
+2026-07-27T16:03:57.8905029Z,2026-07-27T16:03:46.236Z,p02,Pothos XXL,y9d41p,ch3,35,1839,OK,OK,26,channel-cal,257fa022,354.9,1.5
