@@ -119,8 +119,8 @@ const int  DRY_READING   = 600;    // what you saw with the probe in dry AIR
 const int  WET_READING   = 260;    // what you saw with the probe in a CUP OF WATER
 
 // --- Where the 3 bands split (between your two numbers above) ---
-const int  THIRSTY_ABOVE = 500;    // drier (bigger) than this  -> "thirsty"
-const int  SOAKED_BELOW  = 340;    // wetter (smaller) than this -> "just watered"
+const int  THIRSTY_ABOVE = 500;    // drier (bigger) than this  -> "Thirsty"
+const int  SOAKED_BELOW  = 340;    // wetter (smaller) than this -> "Soaked"
 //                         (anything in between -> "all good")
 
 const bool BLINK_WHEN_THIRSTY = true;  // light up the onboard LED (LED_BUILTIN) when it needs water
@@ -144,13 +144,15 @@ Why these knobs, specifically:
 
 ### The three bands (the conceptual foundation)
 
-Exactly three, in Sprout's voice — the baby version of Full's seven:
+Exactly three, in Sprout's voice — and they are **Full's own words**, not a beginner dialect: three of the
+seven real band names (**Thirsty · Content · Soaked**), so graduating to Full adds four words rather than
+replacing the three already learned.
 
 | Band | Condition | What the plant says |
 | --- | --- | --- |
-| **All good** | between the two thresholds | `🌱 Comfy. Nothing to do — I'm happy.` |
-| **High and dry** | drier than `THIRSTY_ABOVE` | `🚰 I'm parched! Grab the watering can.` |
-| **Just watered** | wetter than `SOAKED_BELOW` | `💧 Ahh, just drank — let me soak it up. (If the outer pot's swimming, tip the extra out.)` |
+| **Content** | between the two thresholds | `🌱 Content - comfy, nothing to do. I'm happy.` |
+| **Thirsty** | drier than `THIRSTY_ABOVE` | `🚰 Thirsty - I could really use a drink. Grab the watering can.` |
+| **Soaked** | wetter than `SOAKED_BELOW` | `💧 Soaked - ahh, just drank; let me soak it up. (If the outer pot's swimming, tip the extra out.)` |
 
 Three is the magic number: enough to be *useful and alive*, few enough to hold in your head, and a clean
 ladder to Full's seven. The "tip out the excess" line is pure care — it teaches that *more water isn't better*,

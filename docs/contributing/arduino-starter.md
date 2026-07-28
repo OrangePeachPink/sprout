@@ -38,8 +38,8 @@ graduate. A handful you'll meet here and see again in the [Sprout glossary](../G
   raw reading and the calibrated **band** as the reading, not a polished percentage.
 - **Wet / dry calibration** — finding *your* sensor's soaked-soil and bone-dry numbers, so its readings mean
   something. You'll do this by hand here; Sprout does it per-channel later.
-- **Moisture band** — turning a raw number into a plain word (dry / ideal / wet) — the same idea Sprout uses to
-  decide a plant's mood.
+- **Moisture band** — turning a raw number into a plain word (Thirsty / Content / Soaked) — not merely the
+  same *idea* Sprout uses, but the same *words*: three of its seven real band names.
 
 Learn these four here and you're already speaking Sprout.
 
@@ -72,7 +72,7 @@ built:
 
 > *One quick heads-up:* most of these (and most tutorials everywhere) finish by turning the reading into a
 > **moisture percentage** with `map()`. That's a fine way to *start* — but here, and in Sprout, we lean on
-> **bands** ("dry / ideal / wet") instead, because bands keep the whole range the reading lives in rather
+> **bands** ("Thirsty / Content / Soaked") instead, because bands keep the whole range the reading lives in rather
 > than flattening it to one number. Both approaches will get you reading soil today; we just find bands a
 > friendlier way to read what the sensor's saying. Learn from everyone, then decide for yourself.
 

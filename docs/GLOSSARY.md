@@ -227,17 +227,23 @@ every lane. If two lanes use the same word for different things, or different wo
 
 ## User-facing 👤 (DX / Design) — *DX-drafted; Design ratifies the wording*
 
-- **Band names 👤** — the seven plain-language moisture labels an owner reads:
-  **Saturated · Wet · Moist · Ideal · Drying · Dry · Parched** (Parched & Saturated are diagnostic edges).
-  Use these in owner-facing copy; the firmware class names (`air-dry`…`submerged`) stay code-side.
+- **Band names 👤** — the seven plain-language moisture labels an owner reads, wettest→driest:
+  **Soaked · Refreshed · Thriving · Content · Thirsty · Parched · Faint**. Per #1039/#995 the seven **mood
+  words ARE the band names** (see *Band* above) — all seven are in-soil display bands. Use these in
+  owner-facing copy; the firmware class names (`air-dry`…`submerged`) and the `--band-*` CSS tokens keep
+  their older spellings deliberately — **a token rename is a contract change; the ruling renamed the
+  words, not the keys**, so `--band-ideal` is the token for *Content* and that is not a bug.
 - **Relative index 👤** — the 0–100 number: a **labelled position between this probe's wet and dry anchors**,
   for *trends on one probe over time*. **NEVER** call it moisture %, VWC, or compare it across probes.
 - **Reading 👤** — what Sprout takes from the soil. Warm, plain. **not** "capture" or "sample" in owner copy
   (those are bench/code words).
-- **On-ramp bands 👤** — the beginner Arduino on-ramp's own **three** plain-language moisture states (#435):
-  **High and dry · All good · Just watered**. **Not** the same vocabulary as Full's seven **Band names**
-  above — deliberately simpler, so don't conflate the two systems or reuse Full's seven names in on-ramp copy.
-  Full's seven bands are what the three graduate into, not a synonym for them. See
+- **On-ramp bands 👤** — the beginner Arduino on-ramp speaks **three of Full's seven real band names**:
+  **Thirsty · Content · Soaked** (#1494). It is a **subset, not a second vocabulary** — graduating to Full
+  adds the other four words, it does not replace the three already learned.
+  *(This entry formerly named three on-ramp-only states — High and dry · All good · Just watered — and told
+  contributors not to reuse Full's names. That rule was right when Full's words were technical; once #1039
+  made the seven warm mood words, the reason for a beginner dialect dissolved, and the maintainer ruled the
+  sketch speaks the real ones. Recorded rather than deleted, because the old rule is still quoted.)* See
   [`arduino-onramp-north-star.md`](contributing/arduino-onramp-north-star.md).
 - **Calibrate by hand 👤** — the on-ramp's own act of measuring your probe's dry and wet readings and typing
   them into the sketch's tunable-constants block (#435). The **teaching**, not a gap to be automated away — Full
