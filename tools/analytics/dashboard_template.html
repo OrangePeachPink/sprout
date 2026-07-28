@@ -2804,7 +2804,14 @@ function regDeclareCard(V){
     // either (ADR-0026 D6: an unverified board "is never offered from a browser").
     // Offering the browser flasher for a C5 would walk someone into a known-failing
     // loop, so those boards get their real, documented path instead of a broken door.
-    if(D.board === 'esp32-classic'){
+    // #1679 (2026-07-26): the S3 JOINED WEB_FLASH_VERIFIED. It booted (DIO, #1034/
+    // #1055) and then web-flashed end to end on EWT 10.0.0 - the version already
+    // pinned here - so it needs no version bump and carries none of that bump's risk
+    // to the classic. The C5 is still OUT, awaiting the EWT bump (#1606). This door
+    // is held in step with firmware/scripts/factory_bin.py by
+    // tools/dx/test_flash_handoff_verified.py - change one and that guard fails until
+    // the other follows.
+    if(D.board === 'esp32-classic' || D.board === 'esp32-s3'){
       const go = el('a', 'btn primary');
       go.textContent = 'Flash it in the browser';
       go.href = 'https://orangepeachpink.github.io/sprout/flash/';

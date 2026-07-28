@@ -112,7 +112,20 @@ CHIP_MAP = {
 # held, while esptool/pio flashes the SAME board fine on the same cable + host. So the
 # C5 web-flash is NOT verified. Re-add "esp32c5" once EWT is bumped to a C5-supporting
 # version and re-verified on the bench; the C5 keeps its documented pio-flash path.
-WEB_FLASH_VERIFIED = {"esp32"}  # classic only (C5 pulled - see above)
+# S3 ADDED (#1679 bench, 2026-07-26): the ESP32-S3 web-flashes end to end through ESP
+# Web Tools - erase + write + verify COMPLETED from the browser, then booted mode:DIO
+# with a full 30 s telemetry sweep. Two independent gates had to pass and both did: the
+# board BOOTS (#1034/#1055 - the QIO header the ROM could not read back is now DIO) and
+# the browser can DRIVE it. On EWT 10.0.0 - the version already pinned in
+# docs/flash/index.html - so the S3 does NOT depend on the 10.3.0/10.4.0 bump the C5
+# needs (#1606), and therefore does not inherit that bump's regression risk to the
+# classic, which is the only board web-flashing works for today.
+#
+# ORDERING, and it is load-bearing: this entry is only safe while the S3 builds DIO.
+# The trial flashed the DIO image; a QIO-stamped S3 factory bin boot-loops (#1034). So
+# this line must never land ahead of firmware/platformio.ini's flash_mode - which is
+# why this change is stacked ON that commit rather than trusting a merge order.
+WEB_FLASH_VERIFIED = {"esp32", "esp32s3"}  # classic + S3 (C5 pulled - see above)
 
 
 def make_factory(source, target, env):
