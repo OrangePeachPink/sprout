@@ -24,6 +24,18 @@ on:
       - "firmware/**"
       - "tools/pages/**"
       - ".github/workflows/pages.yml"
+  # #1697: publishing a release MUST redeploy the front door. Since #1650 the stable
+  # channel is a projection of the latest release's signed assets — the projection is
+  # sound, but until this trigger existed nothing scheduled it. Measured: v0.8.1
+  # published 07-26T01:20Z and the next deploy landed 07-27T02:25Z, ~25 hours later,
+  # and only because unrelated pushes happened to touch docs/**. For that whole window
+  # the front door served the PREVIOUS release's bytes — correctly signed, correctly
+  # checksum-verified against the OLD receipt, and wrong.
+  #
+  # Checksums prove integrity. Only a trigger proves freshness; a stale artifact
+  # verifies perfectly against its own receipt.
+  release:
+    types: [published]
   workflow_dispatch:
 
 # Least privilege: read the repo, write the Pages deployment (OIDC token for deploy-pages).
@@ -177,7 +189,13 @@ jobs:
                 --built-utc "$built_utc" \
                 --parts-prefix "stable/" \
                 --out "$site/flash/manifest.json"
-              echo "stable channel: published from the latest release"
+              # Name the tag in the log. #1697's window was invisible partly because
+              # the run said only "the latest release" — which is true at every moment
+              # and therefore evidence of nothing. A run that records WHICH release it
+              # projected makes staleness legible after the fact.
+              stable_tag="$(jq -r '.provenance.release_tag // "unknown"' \
+                "$site/flash/manifest.json" 2>/dev/null || echo unknown)"
+              echo "stable channel: projected from release ${stable_tag}"
             else
               echo "::warning title=No stable manifest::the latest release has no manifest-esp32.json; stable will not be offered."
             fi
