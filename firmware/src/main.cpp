@@ -36,7 +36,8 @@
 #include "telemetry.h"
 #include "commands.h"
 #include "run_meta.h"
-#include "board_capability.h" /* per-board capability descriptor + gate seam (#273) */
+#include "board_capability.h"
+#include "board_variant.h" /* #1681: measured rails per hardware variant */ /* per-board capability descriptor + gate seam (#273) */
 #include "device_uid.h" /* #601 stable-id base32 mint (ADR-0027 §1b) */
 #include "calibration.h" /* SENSOR_CAL_BOUNDARY[ch] — per-channel raw->band (#170) */
 #include "cal_resolver.h" /* #952 per-board-type cal resolution chain */
@@ -234,6 +235,14 @@ static moisture_state_t state[NUM_SENSORS];
  * every loop. Autonomous dosing ships DISARMED (see setup) — the bench arms it
  * with !auto only after the dry-safety chain (#93/#191/#2/#215) passes. */
 static irrig_ctrl_t g_irrig;
+
+/* #1681: the rails ACTUALLY in force, resolved once at boot from measured
+ * memory. Default to BOARD_CAP so every board behaves exactly as before until
+ * setup() resolves it; an unmeasured variant keeps these values for good. */
+static uint16_t g_wet_rail_raw = BOARD_CAP.wet_rail_raw;
+static uint16_t g_air_dry_raw = BOARD_CAP.air_dry_raw;
+static const char *g_cal_rail_src = "placeholder";
+static char g_mem_label[24] = "unknown";
 static moisture_cfg_t g_mcfg
     [NUM_SENSORS]; /* per-channel: shared cfg + per-channel boundary (#170) */
 static irrig_chan_cfg_t
@@ -629,12 +638,22 @@ static void printHeader()
              BOARD_CAP.storage,
              board_has_wifi() ? "untethered-ready" : "tethered");
     Serial.println(buf);
-    /* Calibration provenance (#436): a non-verified board runs on the CLASSIC
-     * placeholder endpoints - never silently presented as this board's own
-     * calibration (matches the config-provenance principle, #416/ADR-0025). */
+    /* Calibration provenance (#436 / #1681): a board runs on the CLASSIC
+     * placeholder endpoints unless its OWN rails were measured - never silently
+     * presented as this board's calibration (#416/ADR-0025). #1681 splits the
+     * two halves that used to be one line: the RAILS (fault thresholds) may now
+     * be measured per hardware variant while the BAND EDGES stay placeholder,
+     * so the banner reports them separately rather than implying either. */
+    snprintf(buf, sizeof(buf),
+             "# board mem: flash/psram=%s  cal rails: %s (%s)", g_mem_label,
+             strcmp(g_cal_rail_src, "placeholder") == 0 ? "PLACEHOLDER"
+                                                        : "MEASURED",
+             g_cal_rail_src);
+    Serial.println(buf);
     if (!BOARD_CAP.cal_verified) {
-        Serial.println("# board cal: PLACEHOLDER (classic endpoints, not "
-                       "bench-verified for this board - #443)");
+        Serial.println("# board cal: band edges PLACEHOLDER (classic "
+                       "boundaries, no dry-down measured for this board "
+                       "- #1681)");
     }
     snprintf(
         buf, sizeof(buf), "# session_id=%s  cadence_ms=%lu  cadence_src=%s",
@@ -653,10 +672,10 @@ static void printHeader()
     for (int i = 0; i < NUM_SENSORS && n < (int)sizeof(buf); i++)
         /* composed (#2 + #1152): `quality` is measurement trust - now including
          * the air-rail open_adc check - and `/withheld` is actuation policy. */
-        n += snprintf(buf + n, sizeof(buf) - n, " ch%d=%s%s", i,
-                      telemetry_quality_flag(&state[i], BOARD_CAP.wet_rail_raw,
-                                             BOARD_CAP.air_dry_raw),
-                      irrig_health_warn(&g_irrig, i) ? "/withheld" : "");
+        n += snprintf(
+            buf + n, sizeof(buf) - n, " ch%d=%s%s", i,
+            telemetry_quality_flag(&state[i], g_wet_rail_raw, g_air_dry_raw),
+            irrig_health_warn(&g_irrig, i) ? "/withheld" : "");
     if (n < (int)sizeof(buf))
         snprintf(
             buf + n, sizeof(buf) - n,
@@ -792,8 +811,7 @@ static void handleRoot()
             "ch%d: level=%s raw=%u quality=%s%s\n", ch,
             moisture_level_name(state[ch].committed),
             (unsigned)state[ch].last_raw,
-            telemetry_quality_flag(&state[ch], BOARD_CAP.wet_rail_raw,
-                                   BOARD_CAP.air_dry_raw),
+            telemetry_quality_flag(&state[ch], g_wet_rail_raw, g_air_dry_raw),
             irrig_health_warn(&g_irrig, ch) ? " withheld=health_spread" : "");
     }
     g_http.send(200, "text/plain", buf);
@@ -1000,6 +1018,30 @@ static void portalDown()
 void setup()
 {
     allRelaysOff(); /* FIRST: actuators de-energized before anything else (#93) */
+
+    /* #1681: resolve the rails from MEASURED memory before anything reads a
+     * channel. Two S3s share one board class and one BOARD_CAP, so the rails
+     * cannot come from the build alone - the shipped S3 placeholder is the
+     * CLASSIC board's air rail (3400), which sits ABOVE the S3's real one
+     * (~3222) and makes open_adc unfirable on that whole family.
+     *
+     * PSRAM is reported but NOT required to match: [env:esp32s3] builds the N8
+     * board def with PSRAM unmapped, so getPsramSize() returns 0 on both
+     * variants - "did not look", not "absent" (ADR-0028). psramFound() is what
+     * separates those two, so it decides whether the number is trustworthy. */
+    {
+        uint32_t flash_bytes = ESP.getFlashChipSize();
+        bool psram_known = psramFound();
+        uint32_t psram_bytes = psram_known ? (uint32_t)ESP.getPsramSize() : 0u;
+        board_variant_memory_label(g_mem_label, sizeof(g_mem_label),
+                                   flash_bytes, psram_bytes, psram_known);
+        board_rails_t rails = board_variant_rails(
+            BOARD_CAP.name, flash_bytes, psram_bytes, psram_known,
+            BOARD_CAP.wet_rail_raw, BOARD_CAP.air_dry_raw);
+        g_wet_rail_raw = rails.wet_rail_raw;
+        g_air_dry_raw = rails.air_dry_raw;
+        g_cal_rail_src = rails.provenance;
+    }
 
     Serial.begin(SERIAL_BAUD);
     delay(200);
@@ -1386,8 +1428,8 @@ void loop()
                 synced ? TIME_SOURCE_DEVICE_SYNCED : TIME_SOURCE_DEVICE_UPTIME,
                 ts, /* real UTC when synced; "" = NULL until synced (#278) */
                 g_device_name, /* #601: friendly name -> payload name= on every row */
-                BOARD_CAP.wet_rail_raw, /* #670: sub-rail raw -> SENSOR_FAULT */
-                BOARD_CAP.air_dry_raw, /* #1152: above-rail raw -> open_adc */
+                g_wet_rail_raw, /* #670: sub-rail raw -> SENSOR_FAULT */
+                g_air_dry_raw, /* #1152: above-rail raw -> open_adc */
                 g_config_id, /* #576 / ADR-0025: payload config_id= */
                 wifi_up, /* #669 rssi_present */
                 rssi_now, /* #669 rssi_dbm (ignored when !wifi_up) */

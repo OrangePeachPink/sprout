@@ -29,6 +29,7 @@
 #include "as7263.h"
 #include "telemetry.h"
 #include "board_capability.h" /* #273 capability descriptor + gate seam */
+#include "board_variant.h" /* #1681 runtime variant -> measured rails        */
 #include "calibration.h" /* SENSOR_CAL_BOUNDARY — per-channel raw->band (#170) */
 #include "wifi_net.h" /* #21 connect-scaffold state machine */
 #include "device_uid.h" /* #601 stable-id base32 mint (ADR-0027 §1b) */
@@ -1439,6 +1440,125 @@ void t_board_capability(void)
     }
     TEST_ASSERT_FALSE_MESSAGE(BOARD_CAP.cal_verified,
                               "host is not a real board -> not bench-verified");
+}
+
+/* #1681: two S3s share ONE board class and must NOT share one calibration.
+ * The rails follow MEASURED memory, and a variant nobody measured inherits
+ * nothing — the 2026-07-26 BOARDS.md ruling, pinned. */
+void t_board_variant_rails(void)
+{
+    const uint16_t FB_WET = 900, FB_AIR = 3400; /* the classic placeholders */
+
+    /* The MEASURED board: N16R8, 16 MB flash + 8 MB PSRAM (bench 2026-07-26,
+     * ch0/GPIO1 probe-verified air 3219-3222 / submerged 1053-1057). */
+    board_rails_t n16r8 = board_variant_rails(
+        "esp32-s3", 16u * 1024 * 1024, 8u * 1024 * 1024, true, FB_WET, FB_AIR);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(BOARD_CAL_MEASURED, n16r8.source,
+                                  "the measured variant reports measured");
+    TEST_ASSERT_EQUAL_UINT16_MESSAGE(
+        1039, n16r8.wet_rail_raw, "wet rail sits just below the measured min");
+    TEST_ASSERT_EQUAL_UINT16_MESSAGE(
+        3280, n16r8.air_dry_raw, "air rail sits just above the measured max");
+    TEST_ASSERT_EQUAL_STRING("s3-n16r8@bench_20260726", n16r8.provenance);
+
+    /* THE RULING (BOARDS.md, 2026-07-26): the N8R2 is the SAME CLASS and must
+     * NOT inherit the N16R8's anchors. 8 MB flash / 2 MB PSRAM -> placeholder.
+     * "We measured a board like it" is not "we measured this board". */
+    board_rails_t n8r2 = board_variant_rails(
+        "esp32-s3", 8u * 1024 * 1024, 2u * 1024 * 1024, true, FB_WET, FB_AIR);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        BOARD_CAL_PLACEHOLDER, n8r2.source,
+        "an unmeasured variant of a measured class inherits NOTHING");
+    TEST_ASSERT_EQUAL_UINT16(FB_WET, n8r2.wet_rail_raw);
+    TEST_ASSERT_EQUAL_UINT16(FB_AIR, n8r2.air_dry_raw);
+
+    /* Unknown memory can never match: matching on a zero would hand one
+     * variant's rails to a board we failed to measure. */
+    board_rails_t unknown =
+        board_variant_rails("esp32-s3", 0, 0, true, FB_WET, FB_AIR);
+    TEST_ASSERT_EQUAL_INT(BOARD_CAL_PLACEHOLDER, unknown.source);
+
+    /* THE SHIPPED REALITY: [env:esp32s3] builds the N8 board def with PSRAM
+     * unmapped, so getPsramSize() reads 0 on BOTH variants — "did not look",
+     * not "absent". Flash alone must therefore still identify the N16R8, or the
+     * check would never fire on real hardware. */
+    board_rails_t unasked = board_variant_rails("esp32-s3", 16u * 1024 * 1024,
+                                                0, false, FB_WET, FB_AIR);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        BOARD_CAL_MEASURED, unasked.source,
+        "flash identifies the variant even when PSRAM was never mapped");
+    TEST_ASSERT_EQUAL_UINT16(3280, unasked.air_dry_raw);
+
+    /* ...and the N8R2 still inherits nothing under that same condition. */
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        BOARD_CAL_PLACEHOLDER,
+        board_variant_rails("esp32-s3", 8u * 1024 * 1024, 0, false, FB_WET,
+                            FB_AIR)
+            .source,
+        "the ruling holds with PSRAM unknown: 8MB flash inherits nothing");
+
+    /* When PSRAM IS genuinely known it TIGHTENS the match: same 16 MB flash but
+     * a contradicted PSRAM figure is a different board, so no measured rails. */
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        BOARD_CAL_PLACEHOLDER,
+        board_variant_rails("esp32-s3", 16u * 1024 * 1024, 2u * 1024 * 1024,
+                            true, FB_WET, FB_AIR)
+            .source,
+        "known-but-contradicting PSRAM refuses the match");
+
+    /* Another class with the same memory shape is a different board. */
+    board_rails_t other =
+        board_variant_rails("esp32-classic", 16u * 1024 * 1024,
+                            8u * 1024 * 1024, true, FB_WET, FB_AIR);
+    TEST_ASSERT_EQUAL_INT(BOARD_CAL_PLACEHOLDER, other.source);
+    TEST_ASSERT_EQUAL_INT(BOARD_CAL_PLACEHOLDER,
+                          board_variant_rails(NULL, 16u * 1024 * 1024,
+                                              8u * 1024 * 1024, true, FB_WET,
+                                              FB_AIR)
+                              .source);
+
+    /* Memory labels keep ABSENT and UNASKED distinct (ADR-0028). */
+    char lbl[24];
+    TEST_ASSERT_EQUAL_STRING(
+        "16MB/8MB",
+        board_variant_memory_label(lbl, sizeof(lbl), 16u * 1024 * 1024,
+                                   8u * 1024 * 1024, true));
+    TEST_ASSERT_EQUAL_STRING(
+        "8MB/none", board_variant_memory_label(lbl, sizeof(lbl),
+                                               8u * 1024 * 1024, 0, true));
+    TEST_ASSERT_EQUAL_STRING(
+        "8MB/?", board_variant_memory_label(lbl, sizeof(lbl), 8u * 1024 * 1024,
+                                            0, false));
+    TEST_ASSERT_EQUAL_STRING(
+        "unknown", board_variant_memory_label(lbl, sizeof(lbl), 0, 0, true));
+}
+
+/* #1681, the defect this closes: with the CLASSIC placeholder rails an S3 could
+ * not report an open probe at all. The S3's measured air rail is ~3222, but the
+ * shipped air_dry_raw was the classic 3400 — so a disconnected probe reading
+ * 3300 (impossibly dry for this board, and ABOVE its real air rail) came back
+ * OK. Same reading, same code, measured rails: SENSOR_FAULT / open_adc. */
+void t_board_variant_closes_the_open_probe_gap(void)
+{
+    moisture_state_t st;
+    memset(&st, 0, sizeof(st));
+    st.last_raw =
+        3300; /* above the S3's real air rail (3222), below classic's 3400 */
+    st.last_spread = 10;
+
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "OK", telemetry_quality_flag(&st, 900, 3400),
+        "the shipped classic rails let an impossible reading pass as OK");
+
+    board_rails_t r = board_variant_rails("esp32-s3", 16u * 1024 * 1024,
+                                          8u * 1024 * 1024, true, 900, 3400);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "SENSOR_FAULT",
+        telemetry_quality_flag(&st, r.wet_rail_raw, r.air_dry_raw),
+        "measured rails make the open probe detectable");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "open_adc", telemetry_fault_reason(&st, r.wet_rail_raw, r.air_dry_raw),
+        "and name it as an open circuit, not a thirsty plant");
 }
 
 /* #274 sensor-type seam (ADR-0019 §3): a RESISTIVE channel INVERTS the raw->band
@@ -3239,6 +3359,8 @@ int main(void)
     RUN_TEST(t_ota_pull_run_orchestrator);
     RUN_TEST(t_band_anchors);
     RUN_TEST(t_board_capability);
+    RUN_TEST(t_board_variant_rails);
+    RUN_TEST(t_board_variant_closes_the_open_probe_gap);
     RUN_TEST(t_sensor_type_resistive);
     RUN_TEST(t_serial_cmd_registry);
     RUN_TEST(t_pump_pulse);
