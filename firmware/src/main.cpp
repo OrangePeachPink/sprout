@@ -64,9 +64,7 @@ static_assert(SENSOR_CAL_CHANNELS == NUM_SENSORS,
 #include "as7263.h"
 #endif
 
-#ifndef GIT_REV
-#define GIT_REV "nogit"  /* overridden by scripts/git_rev.py at build */
-#endif
+#include "build_identity.h" /* #1614: GIT_REV / channel / built_utc + fallbacks */
 
 /* Identity (ADR-0027 §1b / #601). device_id is the STABLE minted id - a 6-char
  * base32 nonce (device_uid lib), minted once in setup() after RF is up and
@@ -618,9 +616,12 @@ static void printHeader()
                    "!wedge strands ch0 + hangs the loop -> watchdog must "
                    "reset. NOT a ship build.");
 #endif
-    snprintf(buf, sizeof(buf), "# fw=%s  git=%s  built=%s  run=%s",
-             PLANTS_FW_VERSION, GIT_REV, __DATE__ " " __TIME__,
-             run_meta_label(&g_run_meta));
+    /* #1614: channel + built_utc travel with version/commit. __DATE__/__TIME__
+     * stays as the compiler LOCAL stamp; built_utc is the comparable one. */
+    snprintf(buf, sizeof(buf),
+             "# fw=%s  git=%s  channel=%s  built_utc=%s  built=%s  run=%s",
+             PLANTS_FW_VERSION, GIT_REV, PLANTS_BUILD_CHANNEL, PLANTS_BUILT_UTC,
+             __DATE__ " " __TIME__, run_meta_label(&g_run_meta));
     Serial.println(buf);
     snprintf(buf, sizeof(buf),
              "# device_id=%s  name=%s (%s)  chip=%s  "
@@ -789,13 +790,15 @@ static void printHeader()
 static void handleRoot()
 {
     char buf[512];
-    int n = snprintf(
-        buf, sizeof(buf),
-        "Sprout %s\ndevice_id=%s fw=%s git=%s board=%s\nwifi=%s ip=%s\n"
-        "uptime_ms=%lu\n\n",
-        g_device_name, g_device_id, PLANTS_FW_VERSION, GIT_REV, BOARD_CAP.name,
-        wifi_net_state_name(g_wifi.state), WiFi.localIP().toString().c_str(),
-        millis());
+    int n =
+        snprintf(buf, sizeof(buf),
+                 "Sprout %s\ndevice_id=%s fw=%s git=%s channel=%s built_utc=%s "
+                 "board=%s\nwifi=%s ip=%s\n"
+                 "uptime_ms=%lu\n\n",
+                 g_device_name, g_device_id, PLANTS_FW_VERSION, GIT_REV,
+                 PLANTS_BUILD_CHANNEL, PLANTS_BUILT_UTC, BOARD_CAP.name,
+                 wifi_net_state_name(g_wifi.state),
+                 WiFi.localIP().toString().c_str(), millis());
     for (int ch = 0; ch < NUM_SENSORS && n > 0 && (size_t)n < sizeof(buf);
          ch++) {
         /* #2: `quality` is MEASUREMENT trust; `withheld` is ACTUATION policy -

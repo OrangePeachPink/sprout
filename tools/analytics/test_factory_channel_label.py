@@ -27,8 +27,13 @@ def _load():
     src = _SCRIPT.read_text(encoding="utf-8")
     mod = types.ModuleType("factory_bin_under_test")
     mod.__dict__["Import"] = lambda _name: None
+    # $PROJECT_DIR must resolve: factory_bin locates its sibling build_channel module
+    # through it (#1614). PlatformIO sets no __file__, so this IS the real mechanism,
+    # not a convenience — stubbing it wrong is how the build broke once already.
+    _fw = str(_SCRIPT.parent.parent)
     mod.__dict__["env"] = types.SimpleNamespace(
-        subst=lambda s: "", AddPostAction=lambda *a, **k: None
+        subst=lambda s: _fw if s == "$PROJECT_DIR" else "",
+        AddPostAction=lambda *a, **k: None,
     )
     exec(compile(src, str(_SCRIPT), "exec"), mod.__dict__)
     return mod
