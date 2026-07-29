@@ -32,6 +32,7 @@
 #include <stdint.h>
 
 #include "moisture_classifier.h" /* MOISTURE_BOUNDARY_COUNT, boundary contract */
+#include "cal_transfer.h" /* #1449 per-board ADC transfer (ADR-0027 6)  */
 
 #ifdef __cplusplus
 extern "C" {
@@ -73,6 +74,24 @@ typedef struct {
     int channel;
     cal_record_t record;
 } cal_class_default_t;
+
+/* ---- #1449: the per-board ADC transfer (ADR-0027 6) ----------------------
+ *
+ * Arm the chain to REMAP an instance record whose origin board differs from the
+ * board now reading it. Shipped state is CAL_TRANSFER_ABSENT + no envelopes,
+ * which means the cross-board case keeps today's behaviour exactly: the record is
+ * refused and the channel drops to its own board's class default. That refusal is
+ * the honest answer, and it stays the answer until Data ratifies a model AND both
+ * boards' envelopes are measured - never an identity copy (see cal_transfer.h).
+ *
+ * `envs` is borrowed, not copied; it must outlive the resolver (a static table). */
+void cal_resolver_set_transfer(cal_transfer_model_t model,
+                               const cal_board_envelope_t *envs, size_t count);
+
+/* What the last cross-board resolution did for this channel, so the boot banner
+ * can SAY that a probe is running on its new board's tier rather than leaving the
+ * operator to infer it. CAL_XFER_OK means a transfer was applied. */
+cal_xfer_result_t cal_transfer_last(int channel);
 
 /* Install the Layer-2 class-default table (cal_class_defaults.h). Call once at
  * boot before cal_resolve(). Passing NULL/0 leaves only the factory fallback. */

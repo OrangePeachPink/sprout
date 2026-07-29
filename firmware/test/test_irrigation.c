@@ -30,7 +30,8 @@
 #include "telemetry.h"
 #include "board_capability.h" /* #273 capability descriptor + gate seam */
 #include "build_identity.h" /* #1614 channel + built_utc (+ fallbacks) */
-#include "board_variant.h" /* #1681 runtime variant -> measured rails        */
+#include "board_variant.h"
+#include "cal_transfer.h" /* #1449 per-board ADC transfer      */ /* #1681 runtime variant -> measured rails        */
 #include "calibration.h" /* SENSOR_CAL_BOUNDARY — per-channel raw->band (#170) */
 #include "wifi_net.h" /* #21 connect-scaffold state machine */
 #include "device_uid.h" /* #601 stable-id base32 mint (ADR-0027 §1b) */
@@ -1472,6 +1473,194 @@ void t_build_identity_channel_and_built_utc(void)
             "unknown", bu,
             "a build that cannot name its channel must not claim a build time");
     }
+}
+
+/* #1449 (ADR-0027 6): a probe's cal is probe-intrinsic (+) the board's ADC
+ * transfer. The headline behaviour is the REFUSAL: with no ratified model, or an
+ * unmeasured board, nothing is transformed and `out` is never written - an
+ * identity copy would look exactly like a calibration while being the very
+ * untranslated-transfer bug this exists to prevent. */
+void t_cal_transfer_refuses_before_it_guesses(void)
+{
+    const cal_board_envelope_t classic = {"esp32-classic", 900, 3400};
+    const cal_board_envelope_t c5 = {"esp32-c5", 920, 2850};
+    const uint16_t src[6] = {2293, 2086, 1879, 1636, 1393, 1150};
+    uint16_t out[6];
+    const uint16_t CANARY = 0xBEEF;
+
+    /* NO MODEL is the shipped state. Refuse, and leave out[] untouched. */
+    for (int i = 0; i < 6; i++)
+        out[i] = CANARY;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        CAL_XFER_NO_MODEL,
+        cal_transfer_anchors(CAL_TRANSFER_ABSENT, &classic, &c5, src, 6, out),
+        "absent model must refuse, never copy the anchors across");
+    for (int i = 0; i < 6; i++)
+        TEST_ASSERT_EQUAL_UINT16_MESSAGE(CANARY, out[i],
+                                         "a refusal must not write out[]");
+
+    /* An UNMEASURED board fails loud (#1449 scope: never guess a transfer). */
+    TEST_ASSERT_EQUAL_INT(CAL_XFER_NO_ENVELOPE,
+                          cal_transfer_anchors(CAL_TRANSFER_RAILS_RATIO,
+                                               &classic, NULL, src, 6, out));
+
+    /* A PLACEHOLDER rail is not an envelope: 0 is the never-measured sentinel. */
+    const cal_board_envelope_t unmeasured = {"esp32-s3", 0, 0};
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CAL_XFER_BAD_ENVELOPE,
+                                  cal_transfer_anchors(CAL_TRANSFER_RAILS_RATIO,
+                                                       &classic, &unmeasured,
+                                                       src, 6, out),
+                                  "a zero rail means never measured - refuse");
+
+    /* Degenerate: air must be ABOVE wet for a capacitive probe. */
+    const cal_board_envelope_t inverted = {"weird", 3000, 1000};
+    TEST_ASSERT_EQUAL_INT(CAL_XFER_BAD_ENVELOPE,
+                          cal_transfer_anchors(CAL_TRANSFER_RAILS_RATIO,
+                                               &classic, &inverted, src, 6,
+                                               out));
+    for (int i = 0; i < 6; i++)
+        TEST_ASSERT_EQUAL_UINT16(CANARY, out[i]);
+
+    TEST_ASSERT_EQUAL_STRING("no-model",
+                             cal_xfer_result_label(CAL_XFER_NO_MODEL));
+    TEST_ASSERT_EQUAL_STRING("ok", cal_xfer_result_label(CAL_XFER_OK));
+}
+
+/* The model, armed. Identity is only ever reached DELIBERATELY - same envelope in
+ * and out - which is the difference between "no transfer needed" and "we never
+ * measured the transfer". */
+void t_cal_transfer_applies_when_armed(void)
+{
+    const cal_board_envelope_t classic = {"esp32-classic", 900, 3400};
+    const uint16_t src[6] = {2293, 2086, 1879, 1636, 1393, 1150};
+    uint16_t out[6];
+
+    TEST_ASSERT_EQUAL_INT(
+        CAL_XFER_OK, cal_transfer_anchors(CAL_TRANSFER_RAILS_RATIO, &classic,
+                                          &classic, src, 6, out));
+    for (int i = 0; i < 6; i++)
+        TEST_ASSERT_EQUAL_UINT16_MESSAGE(
+            src[i], out[i],
+            "same board in and out = the anchors are unchanged");
+
+    /* The ladder stays strictly descending - the moisture_cfg_t contract. */
+    const cal_board_envelope_t c5 = {"esp32-c5", 920, 2850};
+    TEST_ASSERT_EQUAL_INT(CAL_XFER_OK,
+                          cal_transfer_anchors(CAL_TRANSFER_RAILS_RATIO,
+                                               &classic, &c5, src, 6, out));
+    for (int i = 1; i < 6; i++)
+        TEST_ASSERT_TRUE_MESSAGE(out[i] < out[i - 1],
+                                 "transferred anchors stay descending");
+    /* ...and land inside the destination board's own envelope. */
+    TEST_ASSERT_TRUE(out[0] < c5.air_dry_raw && out[5] > c5.wet_rail_raw);
+}
+
+/* THE ACCEPTANCE TEST #1449's scope asks for, and it needs no new bench time:
+ * "bands derived from transferred cal must match a freshly re-derived cal within
+ * the documented tolerance."
+ *
+ * We hold both halves already. The classic's per-channel ladder and the C5's own
+ * INDEPENDENTLY measured class-default ladder were derived from separate bench
+ * work. So transfer the classic ladder into C5 space with the rails Data ratified
+ * (#1433) and check it reproduces the C5's real ladder.
+ *
+ * It does, to within 48 raw counts on a ~1930-count span (~2.5%) - which is the
+ * evidence FOR the rails-ratio model, produced rather than asserted. The bound
+ * here is deliberately a hair looser than the observed worst case so the test
+ * pins the CLAIM without breaking on a one-count rounding change; Data owns the
+ * tolerance it ratifies. */
+void t_cal_transfer_reproduces_the_measured_c5_ladder(void)
+{
+    const cal_board_envelope_t classic = {"esp32-classic", 900, 3400};
+    const cal_board_envelope_t c5 = {"esp32-c5", 920, 2850};
+    const uint16_t classic_anchors[6] = {2293, 2086, 1879, 1636, 1393, 1150};
+    /* The C5's OWN measured ladder (board_capability.h, #995-ratified) - derived
+     * from C5 bench data, never from the classic's. */
+    const uint16_t c5_measured[6] = {2037, 1861, 1685, 1478, 1272, 1065};
+    uint16_t out[6];
+
+    TEST_ASSERT_EQUAL_INT(
+        CAL_XFER_OK, cal_transfer_anchors(CAL_TRANSFER_RAILS_RATIO, &classic,
+                                          &c5, classic_anchors, 6, out));
+    for (int i = 0; i < 6; i++) {
+        int diff = (int)out[i] - (int)c5_measured[i];
+        if (diff < 0) diff = -diff;
+        char msg[96];
+        snprintf(msg, sizeof(msg),
+                 "anchor %d: transferred %u vs measured %u (diff %d)", i,
+                 (unsigned)out[i], (unsigned)c5_measured[i], diff);
+        TEST_ASSERT_TRUE_MESSAGE(diff <= 60, msg);
+    }
+}
+
+/* #1449 end to end through the CHAIN: a probe recorded on the classic, now read
+ * by a C5. Unarmed it must behave exactly as it did before this landed - refuse,
+ * drop to the C5's own class default - and armed it must return the remapped
+ * ladder. The first half is the regression that matters most. */
+void t_cal_transfer_through_the_resolver(void)
+{
+    static const cal_board_envelope_t ENVS[] = {
+        {"esp32-classic", 900, 3400},
+        {"esp32-c5", 920, 2850},
+    };
+    cal_resolver_init(CAL_CLASS_DEFAULTS, CAL_CLASS_DEFAULTS_COUNT);
+    for (int ch = 0; ch < 4; ch++)
+        cal_instance_clear(ch);
+
+    /* An owner record measured on the CLASSIC. */
+    cal_record_t owner = {"esp32-classic",
+                          SENSOR_CLASS_CAPACITIVE_V2,
+                          {2293, 2086, 1879, 1636, 1393, 1150},
+                          "owner_wizard_20260710",
+                          CAL_TIER_CHANNEL};
+    cal_instance_set(0, &owner);
+
+    /* SHIPPED STATE (no model armed): the C5 must NOT get the classic's numbers.
+     * It falls through to the C5's own class default, exactly as before #1449. */
+    cal_resolver_set_transfer(CAL_TRANSFER_ABSENT, NULL, 0);
+    const cal_record_t *r =
+        cal_resolve("esp32-c5", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_NOT_NULL(r);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(
+        "esp32-c5", r->board_class,
+        "unarmed: the moved probe resolves on its NEW board's tier");
+    TEST_ASSERT_TRUE_MESSAGE(
+        r->anchors[0] != owner.anchors[0],
+        "unarmed: the classic ladder must NOT be inherited");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CAL_XFER_NO_MODEL, cal_transfer_last(0),
+                                  "and the refusal is visible, not silent");
+
+    /* The SAME board still resolves to the owner record untouched. */
+    const cal_record_t *same =
+        cal_resolve("esp32-classic", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_EQUAL_UINT16_MESSAGE(owner.anchors[0], same->anchors[0],
+                                     "same board: owner cal applies as-is");
+
+    /* ARMED: the ladder is remapped into C5 space and marked as transferred. */
+    cal_resolver_set_transfer(CAL_TRANSFER_RAILS_RATIO, ENVS, 2);
+    r = cal_resolve("esp32-c5", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_NOT_NULL(r);
+    TEST_ASSERT_EQUAL_INT(CAL_XFER_OK, cal_transfer_last(0));
+    TEST_ASSERT_EQUAL_STRING("xfer:rails-ratio", r->provenance);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("esp32-c5", r->board_class,
+                                     "the record now applies to THIS board");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CAL_TIER_CHANNEL, r->tier,
+                                  "still per-channel probe evidence");
+    for (int i = 1; i < MOISTURE_BOUNDARY_COUNT; i++)
+        TEST_ASSERT_TRUE(r->anchors[i] < r->anchors[i - 1]);
+    TEST_ASSERT_TRUE_MESSAGE(r->anchors[0] < owner.anchors[0],
+                             "the C5 span is narrower - anchors compress");
+
+    /* A board with NO measured envelope refuses even while armed (#1449 scope:
+     * a future board class is blocked until its transfer is measured). */
+    r = cal_resolve("esp32-s3", SENSOR_CLASS_CAPACITIVE_V2, 0);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(
+        CAL_XFER_NO_ENVELOPE, cal_transfer_last(0),
+        "armed, but an unmeasured board is still a refusal - never a guess");
+
+    /* leave the resolver as shipped for every test after this one */
+    cal_resolver_set_transfer(CAL_TRANSFER_ABSENT, NULL, 0);
+    cal_instance_clear(0);
 }
 
 /* #1681: two S3s share ONE board class and must NOT share one calibration.
@@ -3392,6 +3581,10 @@ int main(void)
     RUN_TEST(t_band_anchors);
     RUN_TEST(t_board_capability);
     RUN_TEST(t_build_identity_channel_and_built_utc);
+    RUN_TEST(t_cal_transfer_refuses_before_it_guesses);
+    RUN_TEST(t_cal_transfer_through_the_resolver);
+    RUN_TEST(t_cal_transfer_applies_when_armed);
+    RUN_TEST(t_cal_transfer_reproduces_the_measured_c5_ladder);
     RUN_TEST(t_board_variant_rails);
     RUN_TEST(t_board_variant_closes_the_open_probe_gap);
     RUN_TEST(t_sensor_type_resistive);
