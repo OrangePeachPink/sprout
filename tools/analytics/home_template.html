@@ -645,18 +645,48 @@ var CUP_ML = 236.588;
    "295.7 mL" is one she would have to convert. Off-grid totals (a future pump, a
    half-remembered pour) fall back to a decimal rather than being forced to a fraction
    that would misreport what happened. */
-var EIGHTHS = ["", "⅛", "¼", "⅜", "½", "⅝", "¾", "⅞"];
+/* #1675: the readback's vocabulary is the UNION of the grids the chips offer —
+   eighths AND thirds. Design caught the half-bug I shipped: `mlToCupWords` snapped to
+   eighths only, so ⅓ (a chip since #1643) round-tripped to "0.33 cups". She taps a
+   fraction and is answered in a decimal, which is the same class of defect as a
+   manufactured `shape` — a value produced by the mechanism rather than by the act,
+   except here it is the readback doing the manufacturing.
+
+   The rule is now literal: **the card can say back exactly what the strip can offer,
+   and nothing else.** Off-grid amounts (a pump, a free entry, a hand-typed jug) still
+   fall to a decimal rather than being forced onto a fraction that would misreport what
+   she poured — the tolerance guard below is what refuses to call ⅔ "⅝". */
+var FRACTIONS = [
+  [1, 8, "⅛"], [1, 4, "¼"], [1, 3, "⅓"], [3, 8, "⅜"], [1, 2, "½"],
+  [5, 8, "⅝"], [2, 3, "⅔"], [3, 4, "¾"], [7, 8, "⅞"],
+];
+var FRACTION_TOL_ML = 3;   /* how far off-grid before we stop naming a fraction */
 function mlToCupWords(ml) {
-  var eighths = Math.round((ml / CUP_ML) * 8);
-  if (!eighths) return "a splash";
-  if (Math.abs(eighths / 8 * CUP_ML - ml) > 3) return (ml / CUP_ML).toFixed(2) + " cups";
-  var whole = Math.floor(eighths / 8), rest = EIGHTHS[eighths % 8];
-  var n = (whole ? String(whole) : "") + (whole && rest ? " " : "") + rest;
-  /* "1/4 cup", not "1/4 cups" — a fraction of one cup is still one cup's worth of
-     noun. Plural only once there is more than a cup. */
-  return n + (eighths > 8 ? " cups" : " cup");
+  var cups = ml / CUP_ML;
+  if (Math.round(cups * 8) === 0 && Math.round(cups * 3) === 0) return "a splash";
+  var whole = Math.floor(cups + 1e-9);
+  var rem = cups - whole;
+  /* nearest fraction on EITHER grid, plus the exact-whole case */
+  var best = null, bestErr = Math.abs(rem) * CUP_ML;   /* candidate: no fraction */
+  for (var i = 0; i < FRACTIONS.length; i++) {
+    var f = FRACTIONS[i], err = Math.abs((f[0] / f[1] - rem) * CUP_ML);
+    if (err < bestErr) { bestErr = err; best = f[2]; }
+  }
+  if (bestErr > FRACTION_TOL_ML) return cups.toFixed(2) + " cups";
+  var n = (whole ? String(whole) : "") + (whole && best ? " " : "") + (best || "");
+  if (!n) return "a splash";
+  /* "¼ cup" and "1 cup", but "1 ¼ cups" and "2 cups" — a fraction of one cup is still
+     one cup's worth of noun. Decided from what was RENDERED, not from a float compare:
+     236.6 mL is the stored value for one cup and divides to 1.00005, which read as
+     plural and printed "1 cups". */
+  return n + (whole > 1 || (whole === 1 && best) ? " cups" : " cup");
 }
-var CUPS = [["⅛", 0.125], ["¼", 0.25], ["⅓", 1 / 3], ["½", 0.5],
+/* #1675 AC1: ⅔ in one tap — she poured it on 07-26 and had to enter it as ⅓ twice,
+   which minted a two-pour session for a single pour. Membership of the rest is
+   Design's call on the frequency count posted to #1675 (38 recorded pours: ½ 9 ·
+   1 7 · ¼ 5 · ⅛ 4 · ¾ 3 · ⅔ 2). This keeps every amount that count ranks and adds
+   the missing one; trimming to a one-row strip + free entry is the surface half. */
+var CUPS = [["⅛", 0.125], ["¼", 0.25], ["⅓", 1 / 3], ["½", 0.5], ["⅔", 2 / 3],
             ["¾", 0.75], ["1", 1], ["1½", 1.5], ["2", 2]];
 function cupsToMl(c) { return Math.round(c * CUP_ML * 10) / 10; }
 
