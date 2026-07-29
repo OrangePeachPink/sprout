@@ -353,6 +353,27 @@ If any step surprises you, the real cut is not ready — fix the pipeline, re-wa
       `git ls-remote origin refs/tags/vX.Y.Z` returns the ship commit, **and**
       `gh release view vX.Y.Z --json isDraft,assets -q '"published=\(.isDraft==false) assets=\(.assets|length)"'`
       prints `published=true` with a non-zero asset count.
+- [ ] **CONFIRM THE FRONT DOOR IS SERVING THIS RELEASE — publishing is not deploying (#1697):**
+
+          just release-state vX.Y.Z          # the `front door` row must read this tag
+
+      The stable channel is a **projection** of the release's signed assets (#1650), and a projection
+      that has not run yet serves the **previous** release's bytes — correctly signed, correctly
+      checksum-verified **against the old receipt**, and wrong. `pages.yml` now triggers on
+      `release: [published]`, so this should already be true by the time you look; the step exists
+      because *should* is not *is*, and this is the one property no other gate can see.
+
+      > **Checksums prove integrity. Only this proves freshness.** A stale artifact verifies
+      > perfectly against its own receipt — that is what a receipt is for. `release-verify` will
+      > report a flawless release while every visitor downloads the previous one.
+      >
+      > **Measured, not hypothesised:** v0.8.1 published `07-26T01:20Z`; the next Pages deploy landed
+      > `07-27T02:25Z` — **~25 hours**, and only because unrelated pushes happened to touch `docs/**`.
+      > For that entire window the front door served v0.8.0's bytes with a valid signature.
+
+      If it is stale, dispatch `pages.yml` and re-check. Do not close the cut on a stale front door:
+      the release page says one thing and the thing people actually click says another.
+
 - [ ] **OTA feed (#1524 / #1284 AC5): `just ota-feed vX.Y.Z --write`** → review the diff
       (`docs/ota/feed.txt` now points every board class at this release's signed assets) → commit.
       The feed is the Pages-served pointer fielded boards poll — **this commit, not the release,

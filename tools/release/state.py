@@ -37,6 +37,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 DEFAULT_REPO = "OrangePeachPink/sprout"
 SIGNER_WORKFLOW = "sign-release.yml"
 UNKNOWN = "unknown"
+FRONT_DOOR = "https://orangepeachpink.github.io/sprout/flash/manifest.json"
 
 
 def _out(args: list[str]) -> str | None:
@@ -180,7 +181,56 @@ def observe(tag: str, repo: str) -> tuple[list[Field], dict]:
                 "records no tag and there is no draft target to match it against"
             )
         fields.append(Field("last signer run", f"{r0['databaseId']} {state}", note))
+
+    # #1697. Fetched for every phase, not only after publish: knowing which release the
+    # front door is projecting is useful throughout, and it is the ONE field that
+    # verify/preflight structurally cannot supply — they check integrity, and integrity
+    # is exactly what a stale artifact has.
+    fd = check_front_door(tag)
+    facts["front_door"] = fd.value
+    fields.append(fd)
     return fields, facts
+
+
+def front_door_tag(url: str = FRONT_DOOR) -> str | None:
+    """The release tag the LIVE front door is currently projecting, or None.
+
+    #1697: the stable channel is a verified projection of a release's signed assets,
+    and until `release: [published]` existed nothing scheduled the projection. v0.8.1
+    published 07-26T01:20Z; the next deploy landed ~25 hours later. For that window the
+    front door served the previous release's bytes — correctly signed and correctly
+    checksum-verified against the OLD receipt.
+
+    **Checksums prove integrity, never freshness.** A stale artifact verifies perfectly
+    against its own receipt, which is exactly why this needs its own check and cannot
+    be folded into `release-verify`.
+    """
+    import urllib.request
+
+    try:
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "sprout-release-state"}
+        )
+        with urllib.request.urlopen(req, timeout=20) as r:
+            m = json.loads(r.read().decode("utf-8"))
+    except Exception:
+        return None
+    return (m.get("provenance") or {}).get("release_tag")
+
+
+def check_front_door(tag: str, url: str = FRONT_DOOR) -> Field:
+    """Is the live front door serving THIS release yet? (#1697 §6 confirmation.)"""
+    live = front_door_tag(url)
+    if live is None:
+        return Field("front door", None, "(not fetchable — cannot confirm freshness)")
+    if live == tag:
+        return Field("front door", live, "serving THIS release")
+    return Field(
+        "front door",
+        live,
+        f"STALE — still projecting {live}, not {tag}. The Pages deploy has not run "
+        "since publish; dispatch pages.yml.",
+    )
 
 
 def phase_and_next(tag: str, repo: str, facts: dict) -> tuple[str, str]:
@@ -214,10 +264,29 @@ def phase_and_next(tag: str, repo: str, facts: dict) -> tuple[str, str]:
         )
 
     if not rel.get("isDraft"):
+        # #1697: publishing is not the last step. The front door is a PROJECTION of the
+        # release, and a projection that has not run yet serves the previous release's
+        # bytes — correctly signed, correctly checksum-verified against the old receipt,
+        # and wrong. Publishing seals the assets; it does not deploy them.
+        live = facts.get("front_door")
+        if live is None:
+            return (
+                "§6 published, front door unconfirmed",
+                f"{tag} is PUBLISHED and sealed, but the live front door could not be "
+                "read, so freshness is unknown. Check it before calling the cut done.",
+            )
+        if live != tag:
+            return (
+                "§6 published, FRONT DOOR STALE",
+                f"{tag} is published, but the front door still projects {live}. Every "
+                "visitor is being handed the previous release right now. Dispatch "
+                "pages.yml — and note the checksum gate cannot see this, because a "
+                "stale artifact verifies perfectly against its own receipt.",
+            )
         return (
             "§6 done",
-            f"{tag} is PUBLISHED and its assets are sealed. Nothing further can be "
-            "attached — a correction needs a new tag (#1438).",
+            f"{tag} is PUBLISHED, sealed, and the front door is serving it. A "
+            "correction from here needs a new tag (#1438).",
         )
 
     if not facts.get("assets"):

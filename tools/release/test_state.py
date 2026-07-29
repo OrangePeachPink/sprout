@@ -64,8 +64,17 @@ def test_a_signed_draft_points_at_verify_not_at_publish() -> None:
 
 
 def test_a_published_release_says_the_assets_are_sealed() -> None:
+    """Amended by #1697: publishing seals the assets, it does not deploy them.
+
+    This test previously passed a published release with no front-door fact and
+    expected `§6 done` — encoding the belief that publishing ends the cut. It doesn't,
+    and for 25 hours after v0.8.1 it demonstrably didn't. `front_door` is now required
+    to reach done, which is the correction, not a fixture detail.
+    """
     phase, action = s.phase_and_next(
-        "v0.8.1", REPO, _facts(release={"isDraft": False}, assets=["a"])
+        "v0.8.1",
+        REPO,
+        {**_facts(release={"isDraft": False}, assets=["a"]), "front_door": "v0.8.1"},
     )
     assert phase == "§6 done"
     assert "sealed" in action and "new tag" in action
@@ -100,3 +109,72 @@ def test_the_signer_run_is_not_attributed_without_evidence() -> None:
     body = inspect.getsource(s.observe)
     assert "cannot be attributed to" in body
     assert "NOT this draft's target" in body
+
+
+# ---- #1697: publishing is not deploying ----------------------------------------
+# The stable channel is a PROJECTION of the release. Until `release: [published]`
+# existed, nothing scheduled the projection: v0.8.1 published 07-26T01:20Z and the
+# next deploy landed ~25h later, only because unrelated pushes touched docs/**.
+
+
+def test_a_published_release_is_not_done_until_the_front_door_serves_it() -> None:
+    """The whole point of #1697.
+
+    Sealed assets and a stale front door is the DEFAULT state for ~the length of one
+    deploy, and it was the state for 25 hours after v0.8.1. Calling that "§6 done"
+    would be the tool asserting a completion nobody observed.
+    """
+    phase, action = s.phase_and_next(
+        "v0.8.2",
+        REPO,
+        {**_facts(release={"isDraft": False}, assets=["a"]), "front_door": "v0.8.1"},
+    )
+    assert "STALE" in phase
+    assert "v0.8.1" in action and "pages.yml" in action
+
+
+def test_the_stale_message_says_why_checksums_cannot_see_it() -> None:
+    """A reader who trusts release-verify needs to know why it is silent here.
+
+    A stale artifact verifies PERFECTLY against its own receipt. Integrity and
+    freshness are different properties, and only one of them has a gate.
+    """
+    _, action = s.phase_and_next(
+        "v0.8.2",
+        REPO,
+        {**_facts(release={"isDraft": False}, assets=["a"]), "front_door": "v0.8.1"},
+    )
+    assert "own receipt" in action
+
+
+def test_an_unreadable_front_door_is_unconfirmed_not_done() -> None:
+    """`unknown` is a real answer here too — it must not round up to done."""
+    phase, _ = s.phase_and_next(
+        "v0.8.2",
+        REPO,
+        {**_facts(release={"isDraft": False}, assets=["a"]), "front_door": None},
+    )
+    assert "unconfirmed" in phase and "done" not in phase.split(",")[0]
+
+
+def test_a_fresh_front_door_completes_the_cut() -> None:
+    phase, _ = s.phase_and_next(
+        "v0.8.2",
+        REPO,
+        {**_facts(release={"isDraft": False}, assets=["a"]), "front_door": "v0.8.2"},
+    )
+    assert phase == "§6 done"
+
+
+def test_pages_deploys_on_release_published() -> None:
+    """The three-line fix, asserted — it is the only thing that SCHEDULES the
+    projection, and its absence is invisible in every other check."""
+    from pathlib import Path
+
+    wf = (
+        Path(s.__file__).resolve().parents[2] / ".github/workflows/pages.yml"
+    ).read_text(encoding="utf-8")
+    assert "release:" in wf and "types: [published]" in wf, (
+        "pages.yml no longer redeploys on release publish — the front door will serve "
+        "the previous release's bytes after every cut (#1697)"
+    )
