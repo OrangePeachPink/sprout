@@ -38,6 +38,47 @@ typedef struct {
 
 static cal_instance_slot_t s_instance[CAL_MAX_CHANNELS];
 
+/* ---- #1449: cross-board transfer state -----------------------------------
+ * Shipped ABSENT with no envelopes: the cross-board case behaves exactly as it
+ * did before this landed (refuse -> class default). Arming is a deliberate act
+ * by whoever ratified the model. */
+static cal_transfer_model_t s_xfer_model = CAL_TRANSFER_ABSENT;
+static const cal_board_envelope_t *s_envs = NULL;
+static size_t s_env_count = 0;
+
+/* The last cross-board verdict per channel, so the banner can state it. NOT a
+ * cache: recomputed on every lookup, only recorded here for display. */
+static cal_xfer_result_t s_xfer_last[CAL_MAX_CHANNELS];
+
+/* Where a transferred record lives. Static per channel - the resolver returns
+ * borrowed pointers and allocates nothing (the module contract). */
+static cal_record_t s_xfer_rec[CAL_MAX_CHANNELS];
+static uint16_t s_xfer_anchors[CAL_MAX_CHANNELS][MOISTURE_BOUNDARY_COUNT];
+
+void cal_resolver_set_transfer(cal_transfer_model_t model,
+                               const cal_board_envelope_t *envs, size_t count)
+{
+    s_xfer_model = model;
+    s_envs = envs;
+    s_env_count = envs ? count : 0;
+}
+
+cal_xfer_result_t cal_transfer_last(int channel)
+{
+    if (channel < 0 || channel >= CAL_MAX_CHANNELS) return CAL_XFER_NO_MODEL;
+    return s_xfer_last[channel];
+}
+
+static const cal_board_envelope_t *envelope_for(const char *board_class)
+{
+    if (board_class == NULL) return NULL;
+    for (size_t i = 0; i < s_env_count; i++)
+        if (s_envs[i].board_class &&
+            strcmp(s_envs[i].board_class, board_class) == 0)
+            return &s_envs[i];
+    return NULL; /* unknown board -> the caller refuses (never guesses) */
+}
+
 static void copy_str(char *dst, const char *src)
 {
     size_t i = 0;
@@ -236,10 +277,35 @@ const cal_record_t *cal_instance_lookup(const char *board_class,
     const cal_instance_slot_t *s = &s_instance[channel];
     if (!s->present) return NULL;
     /* An owner record is for THIS board class + sensor class - a probe moved to
-     * a different board must not silently inherit the old board's calibration. */
+     * a different board must not silently inherit the old board's calibration.
+     *
+     * #1449: it may however be TRANSFERRED, if Data has ratified a model and both
+     * boards' envelopes are measured. Anything short of that still refuses, and
+     * the reason is recorded so the banner can say the channel is running on its
+     * new board's tier rather than leaving the operator to infer it. */
     if (board_class && s->rec.board_class[0] &&
-        strcmp(board_class, s->rec.board_class) != 0)
-        return NULL;
+        strcmp(board_class, s->rec.board_class) != 0) {
+        cal_xfer_result_t r = cal_transfer_anchors(
+            s_xfer_model, envelope_for(s->rec.board_class),
+            envelope_for(board_class), s->rec.anchors, MOISTURE_BOUNDARY_COUNT,
+            s_xfer_anchors[channel]);
+        s_xfer_last[channel] = r;
+        if (r != CAL_XFER_OK) return NULL; /* honest no-transfer, as before */
+
+        /* Present the remapped ladder as a record for THIS board. The tier is
+         * carried over - it is still per-channel probe evidence, not a board
+         * envelope - but the provenance says plainly that it was transferred, so
+         * nothing downstream can mistake it for a fresh measurement here. */
+        cal_record_t *x = &s_xfer_rec[channel];
+        x->board_class = board_class;
+        x->sensor_class = s->rec.sensor_class;
+        for (int i = 0; i < MOISTURE_BOUNDARY_COUNT; i++)
+            x->anchors[i] = s_xfer_anchors[channel][i];
+        x->provenance = "xfer:rails-ratio";
+        x->tier = s->rec.tier;
+        return x;
+    }
+    s_xfer_last[channel] = CAL_XFER_OK; /* same board - nothing to translate */
     if (s->rec.sensor_class != sensor_class) return NULL;
     return &s->rec;
 }
