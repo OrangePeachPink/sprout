@@ -19,7 +19,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-  "ruff>=0.16.0",            # lint + format (policy lives in ruff.toml)
+  "ruff>=0.16.1",            # lint + format (policy lives in ruff.toml)
   "pytest>=8",            # host test harness (ADR-0002 #11)
   "pre-commit>=4.6.1",      # the local enforcement layer (ADR-0002 #10)
   "clang-format==22.1.8", # C/C++ changed-LINES format gate (#352); the wheel ships
