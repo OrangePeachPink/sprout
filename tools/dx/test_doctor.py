@@ -7,6 +7,7 @@ guard that owns it.
 """
 
 import json
+import os
 import socket
 from pathlib import Path
 
@@ -194,3 +195,107 @@ def test_drift_is_a_warn_never_a_fail() -> None:
     """
     c = d.check_local_config_drift()
     assert c.status in (d.OK, d.WARN)
+
+
+# --------------------------------------------------------------------------- #
+# #1718 — the records lane: is the corpus actually off this machine?
+# --------------------------------------------------------------------------- #
+def _lane(monkeypatch, tmp_path, *, unpushed=0, pending=(), age_days=0):
+    """Stand up a fake data worktree and the git answers the check reads.
+
+    The real failure was invisible to every cheaper question, so the fake has to be able
+    to reproduce it: a working tree full of records, no local commits, and a remote that
+    has none of it.
+    """
+    import time as _t
+
+    wt = tmp_path / ".data-worktree"
+    (wt / "data" / "archive").mkdir(parents=True)
+    porcelain = ""
+    for name in pending:
+        f = wt / "data" / "archive" / name
+        f.write_text("x", encoding="utf-8")
+        old = _t.time() - age_days * 86400
+        os.utime(f, (old, old))
+        porcelain += f"A  data/archive/{name}\n"
+    stamp = str(int(_t.time() - age_days * 86400))
+
+    def fake_run(cmd, timeout=20):
+        if "rev-list" in cmd:
+            return 0, str(unpushed)
+        if "status" in cmd:
+            return 0, porcelain
+        if "log" in cmd:
+            return 0, "\n".join([stamp] * unpushed)
+        return 0, ""
+
+    monkeypatch.setattr(d, "_DATA_WORKTREE", wt)
+    monkeypatch.setattr(d, "_run", fake_run)
+    return d.check_records_lane()
+
+
+def test_a_landed_lane_is_ok(monkeypatch, tmp_path) -> None:
+    assert _lane(monkeypatch, tmp_path).status == d.OK
+
+
+def test_records_older_than_the_window_FAIL_because_they_are_one_copy(
+    monkeypatch, tmp_path
+) -> None:
+    """The #1718 case, reproduced: files staged and never landed, ageing on one disk.
+    Every cheaper question said fine — the branch had no local commits, and 'is the
+    worktree clean' was never asked of a tree holding 236 unlanded records."""
+    c = _lane(
+        monkeypatch,
+        tmp_path,
+        pending=("y9d41p_20260705_002734.csv.gz", "8gtt1h_20260705_002735.csv.gz"),
+        age_days=70,
+    )
+    assert c.status == d.FAIL
+    assert "ONE copy" in c.detail
+    assert "archive_logs" in c.fix
+
+
+def test_a_fresh_backlog_only_WARNS(monkeypatch, tmp_path) -> None:
+    """Yesterday's segment not yet pushed is normal operation, not an alarm — the lane
+    lands on a timer. Severity is age, not count."""
+    c = _lane(
+        monkeypatch, tmp_path, pending=("y9d41p_20260904_000100.csv.gz",), age_days=1
+    )
+    assert c.status == d.WARN
+
+
+def test_UNPUSHED_COMMITS_count_even_with_a_clean_worktree(
+    monkeypatch, tmp_path
+) -> None:
+    """The blind spot that hid this for ten weeks: 'committed' is not 'safe'. A clean
+    worktree with commits the remote has never seen is still one copy on one disk."""
+    c = _lane(monkeypatch, tmp_path, unpushed=3, age_days=30)
+    assert c.status == d.FAIL
+    assert "3 unpushed" in c.detail
+
+
+def test_the_check_measures_against_the_REMOTE(monkeypatch, tmp_path) -> None:
+    """Pinning the mechanism, not just the verdict: the comparison must be
+    `origin/data..data`. A local-only check is what this issue is about."""
+    seen = []
+
+    def fake_run(cmd, timeout=20):
+        seen.append(cmd)
+        return 0, "0"
+
+    wt = tmp_path / ".data-worktree"
+    (wt / "data").mkdir(parents=True)
+    monkeypatch.setattr(d, "_DATA_WORKTREE", wt)
+    monkeypatch.setattr(d, "_run", fake_run)
+    d.check_records_lane()
+    flat = [" ".join(c) for c in seen]
+    assert any("origin/data..data" in f for f in flat), flat
+    assert any("fetch" in f for f in flat), "must refresh the remote ref before judging"
+
+
+def test_a_machine_with_no_data_worktree_is_not_a_failure(
+    monkeypatch, tmp_path
+) -> None:
+    """A contributor's clone has no records lane; do not fail them for it."""
+    monkeypatch.setattr(d, "_DATA_WORKTREE", tmp_path / "nope")
+    assert d.check_records_lane().status == d.OK

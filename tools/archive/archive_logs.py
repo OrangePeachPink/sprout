@@ -39,9 +39,27 @@ DEFAULT_WORKTREE = os.path.join(REPO, ".data-worktree")
 DEFAULT_RETENTION_DAYS = 14
 
 
+# #1718: the lane died silently on 2026-06-26, the day pre-commit hooks landed on main
+# (a626a08). Worktrees SHARE `.git/hooks`, and the `data` branch is an orphan holding
+# only records — it has no `.pre-commit-config.yaml`, so every commit here aborted with
+# "No .pre-commit-config.yaml file was found" (exit 1). `archive()` caught that by
+# design and logged "retry next run", which was false: the next run failed identically.
+# Ten weeks of irreplaceable records sat staged, in one copy, on one disk.
+#
+# This is pre-commit's own documented answer for a repo that legitimately has no config
+# — narrower than `--no-verify`, which would also skip any future records-appropriate
+# hook. The records branch is not exempt from review; it has nothing for THIS config to
+# review.
+_GIT_ENV = {**os.environ, "PRE_COMMIT_ALLOW_NO_CONFIG": "1"}
+
+
 def _git(worktree, *args, check=True):
     return subprocess.run(
-        ["git", "-C", worktree, *args], check=check, capture_output=True, text=True
+        ["git", "-C", worktree, *args],
+        check=check,
+        capture_output=True,
+        text=True,
+        env=_GIT_ENV,
     )
 
 
@@ -120,7 +138,18 @@ def archive(
             else:
                 log(f"[archive] push failed (retry next run): {r.stderr.strip()[:120]}")
     except subprocess.CalledProcessError as e:
-        log(f"[archive] git error (retry next run): {(e.stderr or '').strip()[:120]}")
+        # #1718: distinguish "transient, will retry" from "stuck, will never self-heal".
+        # If the index still holds staged records after a failed commit, the next run
+        # will stage more and fail the same way — which is exactly how a ten-week
+        # backlog accrued behind a message that said "retry next run". Staying
+        # non-fatal is right (live collection must not break on a git problem), but
+        # saying the wrong thing about it is not. `check_records_lane` in the doctor is
+        # the supervisor this hands off to; the log line here is for whoever is looking.
+        stuck = (
+            _git(worktree, "diff", "--cached", "--quiet", check=False).returncode != 0
+        )
+        how = "STUCK — staged records are not landing" if stuck else "retry next run"
+        log(f"[archive] git error ({how}): {(e.stderr or '').strip()[:120]}")
 
     # #1035: eviction — the bounded-growth half. Runs AFTER the commit/push above, so a
     # freshly-written .gz that hasn't committed yet is still protected by the age gate.

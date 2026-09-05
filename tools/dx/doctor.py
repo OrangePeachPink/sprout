@@ -41,6 +41,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -334,6 +335,93 @@ def check_local_config_drift() -> Check:
     )
 
 
+# #1718: how stale the records lane may get before the doctor says so. Seven days is
+# a week of collection — long enough not to nag over a laptop that was shut for the
+# weekend, short enough that the ten-week silence this check exists to prevent would
+# have been caught on day eight.
+RECORDS_STALE_DAYS = 7
+_DATA_WORKTREE = REPO_ROOT / ".data-worktree"
+
+
+def check_records_lane() -> Check:
+    """Are the telemetry records actually OFF this machine? (#1718)
+
+    Measured against **origin/data**, never against the local branch. "Committed" was
+    precisely the state that hid a ten-week gap: the archive lane staged every segment,
+    failed its commit on a hook that could never pass, and reported "retry next run" to
+    a log nobody reads. A check that asked "is the worktree clean?" would have said yes
+    to a working tree holding 236 unlanded files, and a check that asked "are there
+    local commits?" would have said no.
+
+    So this asks the only question that means anything about durability: **is there
+    anything here that the remote does not have, and how old is it?** Records are
+    irreplaceable — a re-run cannot recreate a day of soil readings — so age is the
+    severity axis, not count.
+    """
+    if not _DATA_WORKTREE.is_dir():
+        return Check("records lane", OK, "no data worktree on this machine")
+    code, _ = _run(
+        ["git", "-C", str(_DATA_WORKTREE), "fetch", "--quiet", "origin", "data"]
+    )
+    fetched = code == 0
+    code, out = _run(
+        ["git", "-C", str(_DATA_WORKTREE), "rev-list", "--count", "origin/data..data"]
+    )
+    unpushed = int(out.strip() or 0) if code == 0 and out.strip().isdigit() else 0
+    code, out = _run(["git", "-C", str(_DATA_WORKTREE), "status", "--porcelain"])
+    pending = len([ln for ln in out.splitlines() if ln.strip()]) if code == 0 else 0
+
+    if not unpushed and not pending:
+        note = "everything landed at origin/data"
+        return Check("records lane", OK, note if fetched else note + " (offline check)")
+
+    # Age of the oldest thing that is not at the remote — the number that matters.
+    oldest_days = _oldest_unlanded_days(unpushed, pending)
+    detail = f"{unpushed} unpushed commit(s), {pending} uncommitted file(s)"
+    if oldest_days is not None:
+        detail += f"; oldest ~{oldest_days}d"
+    fix = "python tools/archive/archive_logs.py   (then verify at origin/data)"
+    if oldest_days is not None and oldest_days >= RECORDS_STALE_DAYS:
+        return Check("records lane", FAIL, detail + " — records exist in ONE copy", fix)
+    return Check("records lane", WARN, detail, fix)
+
+
+def _oldest_unlanded_days(unpushed: int, pending: int) -> int | None:
+    """Age in days of the oldest record not yet at the remote, or None if unknowable.
+
+    Two populations, and the older wins: unpushed COMMITS carry their own dates, while
+    uncommitted FILES only have an mtime. Both are read rather than assumed — a backlog
+    is only alarming in proportion to how long it has been the only copy."""
+    oldest = None
+    if unpushed:
+        code, out = _run(
+            [
+                "git",
+                "-C",
+                str(_DATA_WORKTREE),
+                "log",
+                "--format=%ct",
+                "origin/data..data",
+            ]
+        )
+        stamps = [int(s) for s in out.split() if s.isdigit()] if code == 0 else []
+        if stamps:
+            oldest = min(stamps)
+    if pending:
+        code, out = _run(["git", "-C", str(_DATA_WORKTREE), "status", "--porcelain"])
+        for line in out.splitlines():
+            rel = line[3:].strip().strip('"')
+            f = _DATA_WORKTREE / rel
+            try:
+                mt = int(f.stat().st_mtime)
+            except OSError:
+                continue
+            oldest = mt if oldest is None else min(oldest, mt)
+    if oldest is None:
+        return None
+    return max(0, int((time.time() - oldest) / 86400))
+
+
 def check_serial_ports() -> Check:
     """Optional by design: a contributor with no hardware is not broken."""
     try:
@@ -370,6 +458,7 @@ CHECKS = (
     check_port,
     check_boards_declared,
     check_local_config_drift,
+    check_records_lane,
     check_serial_ports,
     check_firmware_toolchain,
 )
