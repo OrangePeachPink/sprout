@@ -1,0 +1,143 @@
+{
+  "tombstone_utc": "2026-07-20T19:00:48.299933+00:00",
+  "issue": "#1330",
+  "epoch_ruling": {
+    "production_epoch": "2026-07-06T00:00:06+00:00",
+    "source": "ADR-0037 (maintainer-ratified)"
+  },
+  "approving_authority": "maintainer ruling, #1330 comment 2026-07-20T18:08Z",
+  "citation_ruling": "A \u2014 cited slice unavailable; doc amended",
+  "removed": [
+    {
+      "file": "n3jhsp_20260707_010957.csv",
+      "path": "C:\\Users\\PV\\dev\\plants\\logs\\n3jhsp_20260707_010957.csv",
+      "size_bytes": 12122,
+      "sha256": "b851c282b70a802e721b0c088095d0f35d895c3261f1e8f2f96d57ead62544e2",
+      "devices": [
+        "n3jhsp"
+      ],
+      "rows": 24,
+      "first": "2026-07-07T01:09:57.417000+00:00",
+      "last": "2026-07-07T01:12:55.583000+00:00",
+      "rule_applied": "unwired -> delete (ADR-0037 \u00a72): post-epoch output from a device never registered/wired to a plant is noise, not evidence"
+    },
+    {
+      "file": "n3jhsp_20260707_011322.csv",
+      "path": "C:\\Users\\PV\\dev\\plants\\logs\\n3jhsp_20260707_011322.csv",
+      "size_bytes": 393885,
+      "sha256": "c6d17463d2decbdfd56cfa653843d389f654975d21939a77ff87d5a49987c959",
+      "devices": [
+        "n3jhsp"
+      ],
+      "rows": 808,
+      "first": "2026-07-07T01:13:22.626000+00:00",
+      "last": "2026-07-07T03:13:49.440000+00:00",
+      "rule_applied": "unwired -> delete (ADR-0037 \u00a72): post-epoch output from a device never registered/wired to a plant is noise, not evidence"
+    },
+    {
+      "file": "n3jhsp_20260712_000704.csv",
+      "path": "C:\\Users\\PV\\dev\\plants\\logs\\n3jhsp_20260712_000704.csv",
+      "size_bytes": 171905,
+      "sha256": "86929cce14047ce6a43663a6b8629762b4b766fdb4c0f9a8a116deb62a0d1d0f",
+      "devices": [
+        "n3jhsp"
+      ],
+      "rows": 296,
+      "first": "2026-07-12T00:07:04.971000+00:00",
+      "last": "2026-07-12T00:45:01.655000+00:00",
+      "rule_applied": "unwired -> delete (ADR-0037 \u00a72): post-epoch output from a device never registered/wired to a plant is noise, not evidence"
+    },
+    {
+      "file": "n3jhsp_20260712_004533.csv",
+      "path": "C:\\Users\\PV\\dev\\plants\\logs\\n3jhsp_20260712_004533.csv",
+      "size_bytes": 151443,
+      "sha256": "699bc7d05de4728d69a6ca1f8842fe213c7956c8c54907ee0e84b150e38d60fb",
+      "devices": [
+        "n3jhsp"
+      ],
+      "rows": 260,
+      "first": "2026-07-12T00:45:33.349000+00:00",
+      "last": "2026-07-12T01:18:15.515000+00:00",
+      "rule_applied": "unwired -> delete (ADR-0037 \u00a72): post-epoch output from a device never registered/wired to a plant is noise, not evidence"
+    },
+    {
+      "file": "n3jhsp_20260712_011847.csv",
+      "path": "C:\\Users\\PV\\dev\\plants\\logs\\n3jhsp_20260712_011847.csv",
+      "size_bytes": 49231,
+      "sha256": "2cb60cb7db097503dcc9aa183adbd494d616a1e42393573b54d444506f3e0eea",
+      "devices": [
+        "n3jhsp"
+      ],
+      "rows": 84,
+      "first": "2026-07-12T01:18:47.356000+00:00",
+      "last": "2026-07-12T01:28:56.027000+00:00",
+      "rule_applied": "unwired -> delete (ADR-0037 \u00a72): post-epoch output from a device never registered/wired to a plant is noise, not evidence"
+    },
+    {
+      "file": "n3jhsp_20260707_010957.csv.gz",
+      "path": "C:\\Users\\PV\\dev\\plants\\.data-worktree\\data\\archive\\n3jhsp_20260707_010957.csv.gz",
+      "size_bytes": 1240,
+      "sha256": "d231f9d3f0346d5cda329618da83498bd24851dbf089e08fd7ebeef2418f2a03",
+      "devices": [
+        "n3jhsp"
+      ],
+      "rows": 24,
+      "first": "2026-07-07T01:09:57.417000+00:00",
+      "last": "2026-07-07T01:12:55.583000+00:00",
+      "rule_applied": "unwired -> delete (ADR-0037 \u00a72): post-epoch output from a device never registered/wired to a plant is noise, not evidence"
+    },
+    {
+      "file": "n3jhsp_20260707_011322.csv.gz",
+      "path": "C:\\Users\\PV\\dev\\plants\\.data-worktree\\data\\archive\\n3jhsp_20260707_011322.csv.gz",
+      "size_bytes": 17122,
+      "sha256": "8fe4062b376c6e0863f0a51fc6647de717d95f86eb7d48d2da27e7f210793522",
+      "devices": [
+        "n3jhsp"
+      ],
+      "rows": 808,
+      "first": "2026-07-07T01:13:22.626000+00:00",
+      "last": "2026-07-07T03:13:49.440000+00:00",
+      "rule_applied": "unwired -> delete (ADR-0037 \u00a72): post-epoch output from a device never registered/wired to a plant is noise, not evidence"
+    },
+    {
+      "file": "n3jhsp_20260712_000704.csv.gz",
+      "path": "C:\\Users\\PV\\dev\\plants\\.data-worktree\\data\\archive\\n3jhsp_20260712_000704.csv.gz",
+      "size_bytes": 7307,
+      "sha256": "abd5678e6023d64071c571ff7cabee6ad513296a04b499e5833a01c035f89c74",
+      "devices": [
+        "n3jhsp"
+      ],
+      "rows": 296,
+      "first": "2026-07-12T00:07:04.971000+00:00",
+      "last": "2026-07-12T00:45:01.655000+00:00",
+      "rule_applied": "unwired -> delete (ADR-0037 \u00a72): post-epoch output from a device never registered/wired to a plant is noise, not evidence"
+    },
+    {
+      "file": "n3jhsp_20260712_004533.csv.gz",
+      "path": "C:\\Users\\PV\\dev\\plants\\.data-worktree\\data\\archive\\n3jhsp_20260712_004533.csv.gz",
+      "size_bytes": 6328,
+      "sha256": "7646e86052693fdfd69356c12717702299f71e051370486a668bba48d56ce83c",
+      "devices": [
+        "n3jhsp"
+      ],
+      "rows": 260,
+      "first": "2026-07-12T00:45:33.349000+00:00",
+      "last": "2026-07-12T01:18:15.515000+00:00",
+      "rule_applied": "unwired -> delete (ADR-0037 \u00a72): post-epoch output from a device never registered/wired to a plant is noise, not evidence"
+    },
+    {
+      "file": "n3jhsp_20260712_011847.csv.gz",
+      "path": "C:\\Users\\PV\\dev\\plants\\.data-worktree\\data\\archive\\n3jhsp_20260712_011847.csv.gz",
+      "size_bytes": 2620,
+      "sha256": "5283d1095f21819e40a02c04b11a3b669a31b4e94ab27c35912a2572dd2b6fa1",
+      "devices": [
+        "n3jhsp"
+      ],
+      "rows": 84,
+      "first": "2026-07-12T01:18:47.356000+00:00",
+      "last": "2026-07-12T01:28:56.027000+00:00",
+      "rule_applied": "unwired -> delete (ADR-0037 \u00a72): post-epoch output from a device never registered/wired to a plant is noise, not evidence"
+    }
+  ],
+  "n_removed": 10
+}
