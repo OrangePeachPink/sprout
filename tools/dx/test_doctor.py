@@ -299,3 +299,91 @@ def test_a_machine_with_no_data_worktree_is_not_a_failure(
     """A contributor's clone has no records lane; do not fail them for it."""
     monkeypatch.setattr(d, "_DATA_WORKTREE", tmp_path / "nope")
     assert d.check_records_lane().status == d.OK
+
+
+# ---- #1710: six days of silence looked identical to six days of health ---------
+# A Windows-update restart shut the host down 08-13 and it never came back up until the
+# operator powered it on by hand on 08-20. Both boards' logs stop mid-day; no files
+# exist for five days. Nothing said so before, during, or after.
+
+DAY = 86400.0
+
+
+def _logs(root: Path, *ages_seconds: float, now: float = 1_000_000.0) -> Path:
+    """A logs dir whose newest reading is `min(ages)` old."""
+    (root / "logs").mkdir(parents=True, exist_ok=True)
+    for i, age in enumerate(ages_seconds):
+        f = root / "logs" / f"dev_2026010{i}_000000.csv"
+        f.write_text("t,raw\n", encoding="utf-8")
+        os.utime(f, (now - age, now - age))
+    return root
+
+
+def test_no_readings_at_all_is_ok_not_a_failure(tmp_path, monkeypatch) -> None:
+    """Doctor's standing rule: a contributor with no hardware is not broken.
+
+    Grading this red is how red stops meaning anything — and this check exists
+    precisely so that its FAIL still means something.
+    """
+    monkeypatch.setattr(d, "main_worktree", lambda: tmp_path)
+    assert d.check_collection_silence(now=1_000_000.0).status == d.OK
+
+
+def test_a_recent_reading_is_ok(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(d, "main_worktree", lambda: tmp_path)
+    _logs(tmp_path, 5 * 60)
+    r = d.check_collection_silence(now=1_000_000.0)
+    assert r.status == d.OK and "ago" in r.detail
+
+
+def test_hours_of_quiet_is_a_warn_with_a_way_out(tmp_path, monkeypatch) -> None:
+    """Not collecting right now is an ordinary state, not a fault."""
+    monkeypatch.setattr(d, "main_worktree", lambda: tmp_path)
+    _logs(tmp_path, 6 * 3600)
+    r = d.check_collection_silence(now=1_000_000.0)
+    assert r.status == d.WARN and r.fix
+
+
+def test_the_six_day_outage_fails_loudly(tmp_path, monkeypatch) -> None:
+    """THE case. 6.3 days, and every reading in it is unrecoverable.
+
+    A WARN here would be a WARN in a list of WARNs, which is exactly how the silence
+    stayed invisible. The severity axis is age, mirroring the records lane: what is lost
+    cannot be re-run.
+    """
+    monkeypatch.setattr(d, "main_worktree", lambda: tmp_path)
+    _logs(tmp_path, 6.3 * DAY)
+    r = d.check_collection_silence(now=1_000_000.0)
+    assert r.status == d.FAIL
+    assert "6.3d" in r.detail
+    assert "cannot be re-collected" in r.detail
+
+
+def test_the_newest_reading_wins_not_the_oldest(tmp_path, monkeypatch) -> None:
+    """A directory full of old files plus one fresh one is a HEALTHY collector."""
+    monkeypatch.setattr(d, "main_worktree", lambda: tmp_path)
+    _logs(tmp_path, 30 * DAY, 10 * DAY, 60.0)
+    assert d.check_collection_silence(now=1_000_000.0).status == d.OK
+
+
+def test_silence_is_measured_at_the_main_worktree_not_this_checkout(
+    tmp_path, monkeypatch
+) -> None:
+    """#1688's lesson, one layer down.
+
+    `logs/` is gitignored, so a worktree has none. Measuring locally would report a
+    six-day silence that reflects only where the agent happens to be standing — an alarm
+    manufactured by the tool, which is worse than the silence it was built to catch.
+    """
+    main = tmp_path / "main"
+    _logs(main, 60.0)
+    (tmp_path / "wt").mkdir()
+    monkeypatch.setattr(d, "main_worktree", lambda: main)
+    monkeypatch.setattr(d, "REPO_ROOT", tmp_path / "wt")
+    r = d.check_collection_silence(now=1_000_000.0)
+    assert r.status == d.OK
+    assert "measured at" in r.detail
+
+
+def test_the_collection_check_is_registered() -> None:
+    assert d.check_collection_silence in d.CHECKS

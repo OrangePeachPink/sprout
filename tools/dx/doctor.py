@@ -422,6 +422,110 @@ def _oldest_unlanded_days(unpushed: int, pending: int) -> int | None:
     return max(0, int((time.time() - oldest) / 86400))
 
 
+# #1710. Two thresholds, and the gap between them is deliberate: a few hours of quiet is
+# the normal state of a machine nobody is collecting on right now, and multiple days is
+# unrecoverable loss. Readings cannot be re-collected — a day of soil moisture that was
+# never sampled is gone — which is the same reason the records lane grades by AGE.
+COLLECTION_QUIET_H = 2
+COLLECTION_SILENT_DAYS = 2
+
+
+def _last_reading_epoch(logs_dir: Path) -> tuple[float | None, int]:
+    """(newest reading mtime, how many reading files) for a logs directory.
+
+    Filesystem-level on purpose. The doctor does not import the app, and this must keep
+    answering when the collector, the server or the environment is broken — which is
+    precisely when someone runs it.
+    """
+    if not logs_dir.is_dir():
+        return None, 0
+    newest, count = None, 0
+    for f in logs_dir.iterdir():
+        if not f.is_file() or f.suffix.lower() != ".csv":
+            continue
+        count += 1
+        try:
+            m = f.stat().st_mtime
+        except OSError:
+            continue
+        if newest is None or m > newest:
+            newest = m
+    return newest, count
+
+
+def _human_age(seconds: float) -> str:
+    if seconds < 3600:
+        return str(int(seconds // 60)) + "m"
+    if seconds < 86400:
+        return str(round(seconds / 3600, 1)) + "h"
+    return str(round(seconds / 86400, 1)) + "d"
+
+
+def check_collection_silence(now: float | None = None) -> Check:
+    """How long since the last reading landed? (#1710)
+
+    The greenhouse went silent for **6.3 days** and nothing said so — before, during or
+    after. A Windows-update restart shut the host down on 08-13 and it never came back
+    up until the operator powered it on by hand on 08-20. Both boards' logs stop mid-day
+    and no files exist for five days.
+
+    **Six days of silence looked identical to six days of health**, and that is the part
+    a check can fix. The dashboard's own gap machinery (``gaps_by_device``) is
+    window-scoped, so a six-day hole is not merely unflagged — it is not even *in* a
+    "last 24h" view to be flagged.
+
+    Measured at the MAIN worktree, never this checkout: ``logs/`` is gitignored, so a
+    worktree has none and would otherwise report a silence that only reflects where the
+    agent happens to be standing (#1688, the same lesson one layer down).
+
+    **Grading.** No readings at all is OK — a contributor with no hardware is not
+    broken, and that is doctor's standing rule. Hours is a WARN: not collecting right
+    now is an ordinary state. Days is a FAIL, because every hour in that window is
+    unrecoverable
+    and because a WARN buried in a list of WARNs is how the silence stayed invisible in
+    the first place.
+
+    This is item 3's minimum bar reached through the surface DX owns. It does NOT
+    satisfy "on next launch the app should SAY" — that surface is serve.py, which is
+    Data's — and it does nothing about start-on-boot (item 1) or return-to-power
+    (item 2), both of which are machine-configuration decisions for the maintainer.
+    """
+    root = main_worktree() or REPO_ROOT
+    logs = root / "logs"
+    newest, count = _last_reading_epoch(logs)
+    if newest is None:
+        return Check(
+            "collection",
+            OK,
+            "no readings collected on this machine yet"
+            if count == 0
+            else "reading files present but none readable",
+        )
+    age = max(0.0, (now if now is not None else time.time()) - newest)
+    where = "" if root == REPO_ROOT else " (measured at " + str(root) + ")"
+    if age < COLLECTION_QUIET_H * 3600:
+        return Check(
+            "collection", OK, "last reading " + _human_age(age) + " ago" + where
+        )
+    if age < COLLECTION_SILENT_DAYS * 86400:
+        return Check(
+            "collection",
+            WARN,
+            "no reading for "
+            + _human_age(age)
+            + " — the collector is not running"
+            + where,
+            "just start   (then press Start logging)",
+        )
+    return Check(
+        "collection",
+        FAIL,
+        "SILENT for " + _human_age(age) + " — readings in that window are gone and "
+        "cannot be re-collected" + where,
+        "just start, then check the host came back from its last restart (#1710)",
+    )
+
+
 def check_serial_ports() -> Check:
     """Optional by design: a contributor with no hardware is not broken."""
     try:
@@ -459,6 +563,7 @@ CHECKS = (
     check_boards_declared,
     check_local_config_drift,
     check_records_lane,
+    check_collection_silence,
     check_serial_ports,
     check_firmware_toolchain,
 )
