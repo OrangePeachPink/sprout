@@ -110,7 +110,11 @@ def test_device_behind_latest_firmware_is_flagged(monkeypatch) -> None:
     assert v["firmware"]["latest"] == "0.7.1"
     behind = {b["device"] for b in v["firmware"]["behind"]}
     assert behind == {"old"}  # only the lower board, and only because it parses
-    assert v["restart_needed"] is True
+    # #1712: this used to assert restart_needed is True — the defect, written down as
+    # an expectation. A board on older firmware is fixed by FLASHING IT; restarting
+    # the Monitor cannot help, and saying so trains the operator to ignore the cue.
+    assert v["restart_needed"] is False
+    assert v["server_stale"] is False
 
 
 def test_stale_server_sets_restart_needed(monkeypatch) -> None:
@@ -127,3 +131,74 @@ def test_no_false_behind_when_latest_unknown(monkeypatch) -> None:
     assert v["firmware"]["latest"] is None
     assert v["firmware"]["behind"] == []
     assert v["restart_needed"] is False
+
+
+# --------------------------------------------------------------------------- #
+# #1712 — restart_needed means A RESTART HELPS
+# --------------------------------------------------------------------------- #
+# Observed live 2026-08-20: the masthead showed "newer build - restart the Monitor"
+# while app == server == 0.8.1, app_server_match true and server_stale false. The
+# working tree, origin/main and the running process were all 98f17f3. Nothing newer
+# existed to restart into.
+
+
+def test_a_behind_board_does_not_ask_for_a_restart(monkeypatch) -> None:
+    """THE bug. `restart_needed` was `stale or behind`, conflating two remedies.
+
+    A stale server is fixed by restarting the Monitor. A board on older firmware is
+    fixed by flashing the board. Telling the operator to restart for the second one is
+    an instruction that cannot work — and a prompt that fires when no restart helps
+    trains them to ignore it, which costs exactly when it is real.
+    """
+    monkeypatch.setattr(card_context, "_declared_fw_version", lambda: "0.8.1")
+    v = _versions_block(
+        [_dev("classic", "0.8.1"), _dev("c5", "0.7.3")],
+        {"version": "0.8.1", "stale": False},
+    )
+    assert v["firmware"]["behind"], "the fixture must actually have a behind board"
+    assert v["restart_needed"] is False
+
+
+def test_the_behind_fact_is_still_published(monkeypatch) -> None:
+    """The fix must not silence a true statement — only stop it asking for a restart.
+
+    The masthead's own accurate cue ("N boards on older fw") reads this. It sits in an
+    `else if` AFTER restart_needed, so while `behind` fed that flag the correct message
+    was unreachable: every behind board rendered the restart prompt instead.
+    """
+    monkeypatch.setattr(card_context, "_declared_fw_version", lambda: "0.8.1")
+    v = _versions_block([_dev("c5", "0.7.3")], {"version": "0.8.1", "stale": False})
+    assert [b["device"] for b in v["firmware"]["behind"]] == ["c5"]
+    assert v["firmware"]["latest"] == "0.8.1"
+
+
+def test_matching_tree_and_server_render_no_restart_cue(monkeypatch) -> None:
+    """AC2: with tree == running build, the banner does not render."""
+    monkeypatch.setattr(card_context, "_declared_fw_version", lambda: "0.8.1")
+    v = _versions_block(
+        [_dev("classic", "0.8.1")], {"version": "0.8.1", "stale": False}
+    )
+    assert v["app"] == v["server"] == "0.8.1"
+    assert v["app_server_match"] is True
+    assert v["restart_needed"] is False
+
+
+def test_a_genuinely_newer_checkout_still_triggers_it(monkeypatch) -> None:
+    """AC3, the regression that matters: the cue must still fire when it is true."""
+    monkeypatch.setattr(card_context, "_declared_fw_version", lambda: "0.8.1")
+    v = _versions_block([_dev("classic", "0.8.1")], {"version": "0.8.1", "stale": True})
+    assert v["restart_needed"] is True
+
+
+def test_restart_needed_tracks_server_stale_exactly(monkeypatch) -> None:
+    """AC1's intent: the flag derives from the versions block's own facts.
+
+    The filing guessed at an mtime-vs-process-start comparison. There is none — the
+    flag is one expression, and `behind` was the other half of it. Pinning the
+    equivalence keeps a third condition from being folded in later without a cue and a
+    remedy of its own.
+    """
+    monkeypatch.setattr(card_context, "_declared_fw_version", lambda: "0.8.1")
+    for stale in (True, False):
+        v = _versions_block([_dev("a", "0.7.0")], {"version": "0.8.1", "stale": stale})
+        assert v["restart_needed"] is v["server_stale"] is stale
