@@ -377,7 +377,18 @@ def _versions_block(device_groups: list, server: dict) -> dict:
         },
         # running server predates the checked-out code -> a restart shows newer app
         "server_stale": bool(server.get("stale")),
-        "restart_needed": bool(server.get("stale")) or bool(behind),
+        # #1712: RESTART_NEEDED MEANS A RESTART HELPS. It used to be
+        # `stale or behind`, which conflated two conditions with different remedies:
+        # a stale server is fixed by restarting the Monitor, a board on older
+        # firmware is fixed by FLASHING THE BOARD, and restarting does nothing for it.
+        #
+        # The masthead already carries the correct, specific cue for behind boards
+        # ("N boards on older fw (latest X)") — but it sits in an `else if` after this
+        # flag, so while `behind` fed this flag that accurate message was UNREACHABLE.
+        # Every behind board rendered "newer build - restart the Monitor" instead, an
+        # instruction that cannot work. `behind` is untouched and still published in
+        # the firmware block; it simply no longer claims a restart is the answer.
+        "restart_needed": bool(server.get("stale")),
     }
 
 

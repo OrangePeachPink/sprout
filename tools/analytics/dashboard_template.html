@@ -1000,7 +1000,7 @@ function renderHeader(){
   const V = DASH.versions || {};
   const appBit = V.app ? ` · app <span class="mono">${V.app}</span>` : '';
   let cue = '';
-  if(V.restart_needed) cue = ` · <span class="vercue warn" title="the running server predates the checked-out code, or a board is behind — restart the Monitor to pick it up">↻ newer build — restart the Monitor</span>`;
+  if(V.restart_needed) cue = ` · <span class="vercue warn" title="the running server predates the checked-out code — restart the Monitor to pick it up (a board on older firmware is a separate cue; restarting does not reflash a board)">↻ newer build — restart the Monitor</span>`;
   else if(V.firmware && V.firmware.behind && V.firmware.behind.length)
     cue = ` · <span class="vercue warn" title="${V.firmware.behind.map(b=>b.device+' @ fw '+b.fw).join(', ')}">${V.firmware.behind.length} board${V.firmware.behind.length===1?'':'s'} on older fw${V.firmware.latest?' (latest '+V.firmware.latest+')':''}</span>`;
   document.getElementById('subline').innerHTML =
